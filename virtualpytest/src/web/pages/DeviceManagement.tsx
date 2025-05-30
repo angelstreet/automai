@@ -6,6 +6,7 @@ import {
   Cancel as CancelIcon,
   DevicesOther as DeviceIcon,
   Search as SearchIcon,
+  Launch as LaunchIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -36,6 +37,8 @@ import {
 import React, { useState, useEffect } from 'react';
 import CreateDeviceDialog from '../src/components/CreateDeviceDialog';
 import { deviceApi, Device, DeviceCreatePayload } from '../src/services/deviceService';
+import { getDeviceType } from '../src/components/RemoteController';
+import { EditControllerParametersDialog, ControllerConfig } from '../src/components/remote/EditControllerParametersDialog';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -52,6 +55,11 @@ const DeviceManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Edit Controller Parameters state
+  const [editControllerOpen, setEditControllerOpen] = useState(false);
+  const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
+  const [currentControllerType, setCurrentControllerType] = useState<'remote' | 'av' | 'power' | 'network'>('remote');
 
   useEffect(() => {
     fetchDevices();
@@ -160,6 +168,86 @@ const DeviceManagement: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setError(null);
+  };
+
+  // Helper function to handle opening edit controller parameters
+  const handleOpenEditController = async (device: Device, controllerType: 'remote' | 'av' | 'power' | 'network' = 'remote') => {
+    try {
+      console.log(`[@component:DeviceManagement] Loading ${controllerType} controller config for device:`, {
+        device: device,
+        controllerType
+      });
+
+      // Load the device's current controller configuration
+      const deviceWithConfig = await deviceApi.getDevice(device.id);
+      
+      console.log(`[@component:DeviceManagement] Loaded device config:`, deviceWithConfig.controller_configs);
+
+      setSelectedDeviceForEdit(deviceWithConfig);
+      setCurrentControllerType(controllerType);
+      setEditControllerOpen(true);
+      setError(null);
+    } catch (err) {
+      console.error('[@component:DeviceManagement] Error loading device controller config:', err);
+      setError('Failed to load device controller configuration');
+    }
+  };
+
+  // Individual handlers for each controller type
+  const handleOpenRemoteController = (device: Device) => {
+    handleOpenEditController(device, 'remote');
+  };
+
+  const handleOpenAVController = (device: Device) => {
+    handleOpenEditController(device, 'av');
+  };
+
+  const handleOpenPowerController = (device: Device) => {
+    handleOpenEditController(device, 'power');
+  };
+
+  const handleOpenNetworkController = (device: Device) => {
+    handleOpenEditController(device, 'network');
+  };
+
+  // Save controller configuration
+  const handleSaveControllerConfig = async (deviceId: string, config: ControllerConfig) => {
+    try {
+      console.log(`[@component:DeviceManagement] Saving ${currentControllerType} controller config for device ${deviceId}:`, config);
+      
+      // Update the device's controller configuration in the database
+      const deviceToUpdate = devices.find(d => d.id === deviceId);
+      if (!deviceToUpdate) {
+        throw new Error('Device not found');
+      }
+
+      const updatedControllerConfigs = {
+        ...deviceToUpdate.controller_configs,
+        [currentControllerType]: config
+      };
+
+      await deviceApi.updateDevice(deviceId, {
+        name: deviceToUpdate.name,
+        description: deviceToUpdate.description,
+        model: deviceToUpdate.model,
+        controllerConfigs: updatedControllerConfigs
+      });
+      
+      // Reload devices to reflect the changes
+      await fetchDevices();
+      
+      console.log(`[@component:DeviceManagement] Successfully saved ${currentControllerType} controller config for device ${deviceId}`);
+      
+      // Close the dialog
+      setEditControllerOpen(false);
+      setSelectedDeviceForEdit(null);
+      setCurrentControllerType('remote');
+      
+    } catch (err) {
+      console.error('[@component:DeviceManagement] Error saving controller config:', err);
+      setError('Failed to save controller configuration');
+      throw err;
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -319,6 +407,10 @@ const DeviceManagement: React.FC = () => {
                     <TableCell><strong>Description</strong></TableCell>
                     <TableCell><strong>Model</strong></TableCell>
                     <TableCell><strong>Created</strong></TableCell>
+                    <TableCell align="center"><strong>Remote Controller</strong></TableCell>
+                    <TableCell align="center"><strong>AV Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Power Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Network Controller</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -377,6 +469,102 @@ const DeviceManagement: React.FC = () => {
                             minute: '2-digit'
                           })}
                         </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* Remote Controller Column */}
+                        {device.controller_configs?.remote ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<LaunchIcon fontSize="small" />}
+                            onClick={() => handleOpenRemoteController(device)}
+                            disabled={getDeviceType(device) === 'unknown'}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 0.5,
+                              py: 0.25,
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            Remote
+                          </Button>
+                        ) : (
+                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* AV Controller Column */}
+                        {device.controller_configs?.av ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<LaunchIcon fontSize="small" />}
+                            onClick={() => handleOpenAVController(device)}
+                            disabled={getDeviceType(device) === 'unknown'}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 0.5,
+                              py: 0.25,
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            AV
+                          </Button>
+                        ) : (
+                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* Power Controller Column */}
+                        {device.controller_configs?.power ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<LaunchIcon fontSize="small" />}
+                            onClick={() => handleOpenPowerController(device)}
+                            disabled={getDeviceType(device) === 'unknown'}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 0.5,
+                              py: 0.25,
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            Power
+                          </Button>
+                        ) : (
+                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* Network Controller Column */}
+                        {device.controller_configs?.network ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<LaunchIcon fontSize="small" />}
+                            onClick={() => handleOpenNetworkController(device)}
+                            disabled={getDeviceType(device) === 'unknown'}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 0.5,
+                              py: 0.25,
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            Network
+                          </Button>
+                        ) : (
+                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                            -
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell align="center">
                         {editingId === device.id ? (
@@ -465,6 +653,21 @@ const DeviceManagement: React.FC = () => {
         onClose={() => setSuccessMessage(null)}
         message={successMessage}
       />
+
+      {/* Edit Controller Parameters Modal */}
+      {selectedDeviceForEdit && (
+        <EditControllerParametersDialog
+          device={selectedDeviceForEdit}
+          open={editControllerOpen}
+          onClose={() => {
+            console.log('[@component:DeviceManagement] Closing edit controller parameters');
+            setEditControllerOpen(false);
+            setSelectedDeviceForEdit(null);
+            setCurrentControllerType('remote');
+          }}
+          onSave={(deviceId, config) => handleSaveControllerConfig(deviceId, config)}
+        />
+      )}
     </Box>
   );
 };

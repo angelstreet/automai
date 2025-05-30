@@ -38,8 +38,6 @@ import {
 import React, { useState, useEffect } from 'react';
 import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
 import { deviceApi, Device } from '../src/services/deviceService';
-import { getDeviceType } from '../src/components/RemoteController';
-import { EditControllerParametersDialog, ControllerConfig } from '../src/components/remote/EditControllerParametersDialog';
 
 
 const UserInterface: React.FC = () => {
@@ -50,20 +48,19 @@ const UserInterface: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
     name: '', 
-    models: [] as string[]
+    models: [] as string[],
+    min_version: '', 
+    max_version: '' 
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [newInterface, setNewInterface] = useState({ 
     name: '', 
-    models: [] as string[]
+    models: [] as string[],
+    min_version: '', 
+    max_version: '' 
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Edit Controller Parameters state
-  const [editControllerOpen, setEditControllerOpen] = useState(false);
-  const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
-  const [currentControllerType, setCurrentControllerType] = useState<'remote' | 'av' | 'power' | 'network'>('remote');
 
   // Extract unique models from devices
   const availableModels = Array.from(new Set(
@@ -111,6 +108,8 @@ const UserInterface: React.FC = () => {
     setEditForm({
       name: userInterface.name,
       models: userInterface.models,
+      min_version: userInterface.min_version,
+      max_version: userInterface.max_version,
     });
   };
 
@@ -147,6 +146,8 @@ const UserInterface: React.FC = () => {
       const payload: UserInterfaceCreatePayload = {
         name: editForm.name.trim(),
         models: editForm.models,
+        min_version: editForm.min_version.trim(),
+        max_version: editForm.max_version.trim(),
       };
 
       const updatedInterface = await userInterfaceApi.updateUserInterface(editingId!, payload);
@@ -168,7 +169,7 @@ const UserInterface: React.FC = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditForm({ name: '', models: [] });
+    setEditForm({ name: '', models: [], min_version: '', max_version: '' });
     setError(null);
   };
 
@@ -223,13 +224,15 @@ const UserInterface: React.FC = () => {
       const payload: UserInterfaceCreatePayload = {
         name: newInterface.name.trim(),
         models: newInterface.models,
+        min_version: newInterface.min_version.trim(),
+        max_version: newInterface.max_version.trim(),
       };
 
       const createdInterface = await userInterfaceApi.createUserInterface(payload);
       
       // Update local state
       setUserInterfaces([...userInterfaces, createdInterface]);
-      setNewInterface({ name: '', models: [] });
+      setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
       setOpenDialog(false);
       console.log('[@component:UserInterface] Successfully created user interface:', createdInterface.name);
     } catch (err) {
@@ -242,7 +245,7 @@ const UserInterface: React.FC = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewInterface({ name: '', models: [] });
+    setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
     setError(null);
   };
 
@@ -269,106 +272,6 @@ const UserInterface: React.FC = () => {
         ...newInterface, 
         models: newInterface.models.filter(model => model !== modelToRemove) 
       });
-    }
-  };
-
-  // Helper function to handle opening edit controller parameters
-  const handleOpenEditController = async (userInterface: UserInterfaceType, controllerType: 'remote' | 'av' | 'power' | 'network' = 'remote') => {
-    if (userInterface.models.length === 0) {
-      setError('No models configured for this user interface');
-      return;
-    }
-
-    // Find compatible devices for the user interface models
-    const compatibleDevices = devices.filter(device => 
-      userInterface.models.includes(device.model)
-    );
-
-    if (compatibleDevices.length === 0) {
-      setError(`No devices found for models: ${userInterface.models.join(', ')}. Please ensure devices are configured for these models.`);
-      return;
-    }
-
-    // Use the first compatible device
-    const selectedDevice = compatibleDevices[0];
-    
-    try {
-      console.log(`[@component:UserInterface] Loading ${controllerType} controller config for device:`, {
-      device: selectedDevice,
-        userInterface: userInterface.name,
-        controllerType
-      });
-
-      // Load the device's current controller configuration
-      const deviceWithConfig = await deviceApi.getDevice(selectedDevice.id);
-      
-      console.log(`[@component:UserInterface] Loaded device config:`, deviceWithConfig.controller_configs);
-
-      setSelectedDeviceForEdit(deviceWithConfig);
-      setCurrentControllerType(controllerType);
-    setEditControllerOpen(true);
-    setError(null);
-    } catch (err) {
-      console.error('[@component:UserInterface] Error loading device controller config:', err);
-      setError('Failed to load device controller configuration');
-    }
-  };
-
-  // Individual handlers for each controller type
-  const handleOpenRemoteController = (userInterface: UserInterfaceType) => {
-    handleOpenEditController(userInterface, 'remote');
-  };
-
-  const handleOpenAVController = (userInterface: UserInterfaceType) => {
-    handleOpenEditController(userInterface, 'av');
-  };
-
-  const handleOpenPowerController = (userInterface: UserInterfaceType) => {
-    handleOpenEditController(userInterface, 'power');
-  };
-
-  const handleOpenNetworkController = (userInterface: UserInterfaceType) => {
-    handleOpenEditController(userInterface, 'network');
-  };
-
-  // Save controller configuration
-  const handleSaveControllerConfig = async (deviceId: string, config: ControllerConfig) => {
-    try {
-      console.log(`[@component:UserInterface] Saving ${currentControllerType} controller config for device ${deviceId}:`, config);
-      
-      // Update the device's controller configuration in the database
-      // We need to update the device with the new controller_configs
-      const deviceToUpdate = devices.find(d => d.id === deviceId);
-      if (!deviceToUpdate) {
-        throw new Error('Device not found');
-      }
-
-      const updatedControllerConfigs = {
-        ...deviceToUpdate.controller_configs,
-        [currentControllerType]: config
-      };
-
-      await deviceApi.updateDevice(deviceId, {
-        name: deviceToUpdate.name,
-        description: deviceToUpdate.description,
-        model: deviceToUpdate.model,
-        controllerConfigs: updatedControllerConfigs
-      });
-      
-      // Reload devices to reflect the changes
-      await loadDevices();
-      
-      console.log(`[@component:UserInterface] Successfully saved ${currentControllerType} controller config for device ${deviceId}`);
-      
-      // Close the dialog
-      setEditControllerOpen(false);
-      setSelectedDeviceForEdit(null);
-      setCurrentControllerType('remote');
-      
-    } catch (err) {
-      console.error('[@component:UserInterface] Error saving controller config:', err);
-      setError('Failed to save controller configuration');
-      throw err;
     }
   };
 
@@ -453,11 +356,8 @@ const UserInterface: React.FC = () => {
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
                     <TableCell><strong>Models</strong></TableCell>
-                    <TableCell align="center"><strong>Navigation</strong></TableCell>
-                    <TableCell align="center"><strong>Remote Controller</strong></TableCell>
-                    <TableCell align="center"><strong>AV Controller</strong></TableCell>
-                    <TableCell align="center"><strong>Power Controller</strong></TableCell>
-                    <TableCell align="center"><strong>Network Controller</strong></TableCell>
+                    <TableCell align="center"><strong>Min Version</strong></TableCell>
+                    <TableCell align="center"><strong>Max Version</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -560,195 +460,31 @@ const UserInterface: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<LaunchIcon fontSize="small" />}
-                          onClick={() => {
-                            const rootTree = userInterface.root_tree;
-                            if (rootTree && rootTree.id && rootTree.name) {
-                              window.open(`/navigation-editor/${encodeURIComponent(rootTree.name)}/${encodeURIComponent(rootTree.id)}`, '_blank');
-                            } else {
-                              console.error('[@component:UserInterface] No root navigation tree found for user interface:', userInterface.id);
-                              alert('No root navigation tree found for this user interface. Please create one first.');
-                            }
-                          }}
-                          sx={{ 
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.25,
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          Navigation
-                        </Button>
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Remote Controller Column - Simplified */}
-                        {userInterface.models.length > 0 ? (
-                          (() => {
-                            const compatibleDevice = devices.find(device => 
-                              userInterface.models.includes(device.model)
-                            );
-                            
-                            if (compatibleDevice && compatibleDevice.controller_configs?.remote) {
-                              const deviceType = getDeviceType(compatibleDevice);
-                              
-                              return (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<LaunchIcon fontSize="small" />}
-                                  onClick={() => handleOpenRemoteController(userInterface)}
-                                  disabled={deviceType === 'unknown'}
-                                  sx={{ 
-                                    minWidth: 'auto',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    fontSize: '0.7rem'
-                                  }}
-                                >
-                                  Remote
-                                </Button>
-                              );
-                            } else {
-                              return (
-                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  -
-                                </Typography>
-                              );
-                            }
-                          })()
+                        {editingId === userInterface.id ? (
+                          <TextField
+                            size="small"
+                            value={editForm.min_version}
+                            onChange={(e) => setEditForm({ ...editForm, min_version: e.target.value })}
+                            fullWidth
+                            variant="outlined"
+                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                          />
                         ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
+                          userInterface.min_version
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        {/* AV Controller Column */}
-                        {userInterface.models.length > 0 ? (
-                          (() => {
-                            const compatibleDevice = devices.find(device => 
-                              userInterface.models.includes(device.model)
-                            );
-                            
-                            if (compatibleDevice && compatibleDevice.controller_configs?.av) {
-                              const deviceType = getDeviceType(compatibleDevice);
-                              
-                              return (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<LaunchIcon fontSize="small" />}
-                                  onClick={() => handleOpenAVController(userInterface)}
-                                  disabled={deviceType === 'unknown'}
-                                  sx={{ 
-                                    minWidth: 'auto',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    fontSize: '0.7rem'
-                                  }}
-                                >
-                                  AV
-                                </Button>
-                              );
-                            } else {
-                              return (
-                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  -
-                                </Typography>
-                              );
-                            }
-                          })()
+                        {editingId === userInterface.id ? (
+                          <TextField
+                            size="small"
+                            value={editForm.max_version}
+                            onChange={(e) => setEditForm({ ...editForm, max_version: e.target.value })}
+                            fullWidth
+                            variant="outlined"
+                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                          />
                         ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Power Controller Column */}
-                        {userInterface.models.length > 0 ? (
-                          (() => {
-                            const compatibleDevice = devices.find(device => 
-                              userInterface.models.includes(device.model)
-                            );
-                            
-                            if (compatibleDevice && compatibleDevice.controller_configs?.power) {
-                              const deviceType = getDeviceType(compatibleDevice);
-                              
-                              return (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<LaunchIcon fontSize="small" />}
-                                  onClick={() => handleOpenPowerController(userInterface)}
-                                  disabled={deviceType === 'unknown'}
-                                  sx={{ 
-                                    minWidth: 'auto',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    fontSize: '0.7rem'
-                                  }}
-                                >
-                                  Power
-                                </Button>
-                              );
-                            } else {
-                              return (
-                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  -
-                                </Typography>
-                              );
-                            }
-                          })()
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Network Controller Column */}
-                        {userInterface.models.length > 0 ? (
-                          (() => {
-                            const compatibleDevice = devices.find(device => 
-                              userInterface.models.includes(device.model)
-                            );
-                            
-                            if (compatibleDevice && compatibleDevice.controller_configs?.network) {
-                              const deviceType = getDeviceType(compatibleDevice);
-                              
-                              return (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<LaunchIcon fontSize="small" />}
-                                  onClick={() => handleOpenNetworkController(userInterface)}
-                                  disabled={deviceType === 'unknown'}
-                                  sx={{ 
-                                    minWidth: 'auto',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    fontSize: '0.7rem'
-                                  }}
-                                >
-                                  Network
-                                </Button>
-                              );
-                            } else {
-                              return (
-                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                                  -
-                                </Typography>
-                              );
-                            }
-                          })()
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
+                          userInterface.max_version
                         )}
                       </TableCell>
                       <TableCell align="center">
@@ -888,6 +624,29 @@ const UserInterface: React.FC = () => {
                 )}
               </Select>
             </FormControl>
+
+            <TextField
+              margin="dense"
+              label="Min Version"
+              fullWidth
+              variant="outlined"
+              value={newInterface.min_version}
+              onChange={(e) => setNewInterface({ ...newInterface, min_version: e.target.value })}
+              sx={{ mb: 1.5 }}
+              size="small"
+              placeholder="e.g., 1.0.0"
+            />
+            
+            <TextField
+              margin="dense"
+              label="Max Version"
+              fullWidth
+              variant="outlined"
+              value={newInterface.max_version}
+              onChange={(e) => setNewInterface({ ...newInterface, max_version: e.target.value })}
+              size="small"
+              placeholder="e.g., 2.0.0"
+            />
           </Box>
         </DialogContent>
         <DialogActions sx={{ pt: 1, pb: 2, px: 3, gap: 1 }}>
@@ -905,21 +664,6 @@ const UserInterface: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Edit Controller Parameters Modal */}
-      {selectedDeviceForEdit && (
-        <EditControllerParametersDialog
-          device={selectedDeviceForEdit}
-          open={editControllerOpen}
-          onClose={() => {
-            console.log('[@component:UserInterface] Closing edit controller parameters');
-            setEditControllerOpen(false);
-            setSelectedDeviceForEdit(null);
-            setCurrentControllerType('remote');
-          }}
-          onSave={(deviceId, config) => handleSaveControllerConfig(deviceId, config)}
-        />
-      )}
     </Box>
   );
 };
