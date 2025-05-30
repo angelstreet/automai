@@ -35,8 +35,8 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({
       maxWidth={false}
       sx={{
         '& .MuiDialog-paper': {
-          width: '900px',
-          height: '650px',
+          width: '1200px',
+          height: '700px',
           maxWidth: '90vw',
           maxHeight: '90vh',
         }

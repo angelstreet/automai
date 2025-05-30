@@ -192,79 +192,81 @@ export function AndroidTVRemotePanel({
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', ...sx }}>
       <Grid container spacing={3} sx={{ flex: 1 }}>
         {/* Screenshot Section */}
-        {showScreenshot && (
-          <Grid item xs={12} md={6}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              height: '100%',
-              p: 2,
-              border: '2px dashed #ccc',
-              borderRadius: 2,
-              bgcolor: 'grey.50'
-            }}>
-              {screenshotError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {screenshotError}
-                </Alert>
+        <Grid item xs={12} md={8}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+            p: 2,
+            border: '2px dashed #ccc',
+            borderRadius: 2,
+            bgcolor: 'transparent'
+          }}>
+            {screenshotError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {screenshotError}
+              </Alert>
+            )}
+            
+            <Box 
+              sx={{ 
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 250,
+                maxHeight: 400,
+                bgcolor: androidScreenshot ? 'transparent' : 'grey.100',
+                borderRadius: 1,
+                mb: 2,
+                aspectRatio: '16/9',
+                overflow: 'hidden'
+              }}
+            >
+              {androidScreenshot ? (
+                <img 
+                  src={`data:image/png;base64,${androidScreenshot}`} 
+                  alt="Android TV Screenshot"
+                  style={{ 
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+              ) : (
+                <Typography variant="body2" color="textSecondary" textAlign="center">
+                  No screenshot available
+                  <br />
+                  Click "Take Screenshot" to capture the current screen
+                </Typography>
               )}
-              
-              <Box 
-                sx={{ 
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: 250,
-                  maxHeight: 400,
-                  bgcolor: androidScreenshot ? 'transparent' : 'grey.100',
-                  borderRadius: 1,
-                  mb: 2,
-                  aspectRatio: '16/9',
-                  overflow: 'hidden'
-                }}
-              >
-                {androidScreenshot ? (
-                  <img 
-                    src={`data:image/png;base64,${androidScreenshot}`} 
-                    alt="Android TV Screenshot"
-                    style={{ 
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain'
-                    }}
-                  />
-                ) : (
-                  <Typography variant="body2" color="textSecondary" textAlign="center">
-                    No screenshot available
-                    <br />
-                    Click "Take Screenshot" to capture the current screen
-                  </Typography>
-                )}
-              </Box>
-              
-              <Button
-                variant="contained"
-                onClick={handleScreenshotClick}
-                disabled={isScreenshotLoading}
-                fullWidth
-                size="large"
-              >
-                {isScreenshotLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2">Taking Screenshot...</Typography>
-                  </Box>
-                ) : (
-                  'Take Screenshot'
-                )}
-              </Button>
             </Box>
-          </Grid>
-        )}
+            
+            <Button
+              variant="contained"
+              onClick={handleScreenshotClick}
+              disabled={isScreenshotLoading}
+              fullWidth
+              size="small"
+              sx={{ 
+                mt: 2, 
+                height: '36px'
+              }}
+            >
+              {isScreenshotLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2">Taking Screenshot...</Typography>
+                </Box>
+              ) : (
+                'Take Screenshot'
+              )}
+            </Button>
+          </Box>
+        </Grid>
         
         {/* Remote Section */}
-        <Grid item xs={12} md={showScreenshot ? 6 : 12}>
+        <Grid item xs={12} md={4}>
           <AndroidTVRemoteCore
             isConnected={session.connected}
             remoteConfig={remoteConfig}
