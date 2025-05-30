@@ -27,10 +27,8 @@ import {
 } from '@mui/icons-material';
 
 import { ControllerTypes, ControllerType } from '../../types/remote/types';
-import { AndroidTVModal } from '../modals/remote/AndroidTVModal';
+import { RemoteModal } from '../modals/remote/RemoteModal';
 import { AndroidMobileModal } from '../modals/remote/AndroidMobileModal';
-import { IRRemoteModal } from '../modals/remote/IRRemoteModal';
-import { BluetoothRemoteModal } from '../modals/remote/BluetoothRemoteModal';
 import { HDMIStreamModal } from '../modals/remote/HDMIStreamModal';
 
 interface ControllerImplementationsProps {
@@ -146,7 +144,8 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       </Card>
 
       {/* Controller Modals */}
-      <AndroidTVModal 
+      <RemoteModal 
+        remoteType="android-tv"
         open={androidTVModalOpen} 
         onClose={() => setAndroidTVModalOpen(false)} 
       />
@@ -154,11 +153,13 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
         open={androidMobileModalOpen} 
         onClose={() => setAndroidMobileModalOpen(false)} 
       />
-      <IRRemoteModal 
+      <RemoteModal 
+        remoteType="ir"
         open={irRemoteModalOpen} 
         onClose={() => setIrRemoteModalOpen(false)} 
       />
-      <BluetoothRemoteModal 
+      <RemoteModal 
+        remoteType="bluetooth"
         open={bluetoothModalOpen} 
         onClose={() => setBluetoothModalOpen(false)} 
       />

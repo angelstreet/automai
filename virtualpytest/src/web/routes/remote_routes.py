@@ -593,9 +593,21 @@ def android_mobile_click_element():
                 'error': 'No element ID provided'
             }), 400
             
-        # For now, just use the element ID to click
-        # The backend controller should handle clicking by element ID
-        success = app.android_mobile_controller.click_element_by_id(element_id)
+        # Find the element by ID from the last UI dump
+        target_element = None
+        for element in app.android_mobile_controller.last_ui_elements:
+            if element.id == element_id:
+                target_element = element
+                break
+                
+        if target_element is None:
+            return jsonify({
+                'success': False,
+                'error': f'Element with ID {element_id} not found in last UI dump'
+            }), 400
+            
+        # Click the element using the correct method signature
+        success = app.android_mobile_controller.click_element(target_element)
         
         return jsonify({
             'success': success,
