@@ -85,11 +85,22 @@ export function CompactRemote({
 
   // Separate effect for auto-connect logic
   useEffect(() => {
-    if (autoConnect && connectionConfig && !session.connected && !connectionLoading && isInitializedRef.current) {
+    // Check if connection form has all required fields populated
+    const hasRequiredFields = connectionForm.host_ip && 
+                             connectionForm.host_username && 
+                             connectionForm.host_password && 
+                             connectionForm.device_ip;
+                             
+    if (autoConnect && 
+        connectionConfig && 
+        !session.connected && 
+        !connectionLoading && 
+        isInitializedRef.current && 
+        hasRequiredFields) {
       console.log(`[@component:CompactRemote] Auto-connecting to ${remoteType}...`);
       handleTakeControl();
     }
-  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl, remoteType]);
+  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl, remoteType, connectionForm]);
 
   const handleDisconnect = useCallback(async () => {
     try {
