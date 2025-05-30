@@ -62,6 +62,7 @@ import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
+import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -410,7 +411,7 @@ const NavigationEditorContent: React.FC = () => {
             position: 'fixed',
             right: 0,
             top: '130px', // Adjust based on your header height
-            width: '300px',
+            width: '350px', // Slightly wider for remote controls
             height: 'calc(100vh - 130px)',
             bgcolor: 'background.paper',
             borderLeft: '1px solid',
@@ -420,19 +421,41 @@ const NavigationEditorContent: React.FC = () => {
             flexDirection: 'column',
             boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
           }}>
-            {/* Remote panel content - empty for now */}
+            {/* Remote Panel Header */}
             <Box sx={{ 
-              flex: 1, 
-              p: 2,
+              p: 2, 
+              borderBottom: '1px solid', 
+              borderColor: 'divider',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'text.secondary'
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}>
-              <Typography variant="body2">
-                Remote view will be displayed here
+              <Typography variant="h6" component="div">
+                Remote Control
               </Typography>
+              <Button
+                size="small"
+                onClick={handleToggleRemotePanel}
+                startIcon={<CloseIcon />}
+              >
+                Close
+              </Button>
             </Box>
+            
+            {/* Android Mobile Remote Panel */}
+            <AndroidMobileRemotePanel
+              connectionConfig={undefined} // TODO: Get from user interface device config
+              autoConnect={false}
+              compact={true} // Use compact mode for NavigationEditor
+              showScreenshot={false} // Hide screenshot in navigation editor to save space
+              sx={{ 
+                flex: 1,
+                height: '100%',
+                '& .MuiTypography-h6': {
+                  fontSize: '1rem' // Smaller headings in compact mode
+                }
+              }}
+            />
           </Box>
         )}
       </Box>

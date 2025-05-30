@@ -5,6 +5,7 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Launch as LaunchIcon,
+  ControlCamera as ControlPanelIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -38,6 +39,8 @@ import {
 import React, { useState, useEffect } from 'react';
 import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
 import { deviceApi, Device } from '../services/deviceService';
+import { RemoteController, getDeviceType } from '../components/RemoteController';
+import { EditControllerParametersDialog, ControllerConfig } from '../components/remote/EditControllerParametersDialog';
 
 
 const UserInterface: React.FC = () => {
@@ -61,6 +64,14 @@ const UserInterface: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Remote Controller state
+  const [remoteControllerOpen, setRemoteControllerOpen] = useState(false);
+  const [selectedDeviceForRemote, setSelectedDeviceForRemote] = useState<Device | null>(null);
+
+  // Edit Controller Parameters state
+  const [editControllerOpen, setEditControllerOpen] = useState(false);
+  const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
 
   // Extract unique models from devices
   const availableModels = Array.from(new Set(
@@ -275,6 +286,94 @@ const UserInterface: React.FC = () => {
     }
   };
 
+  // Helper function to handle opening remote controller
+  const handleOpenRemoteController = (userInterface: UserInterfaceType) => {
+    if (userInterface.models.length === 0) {
+      setError('No models configured for this user interface');
+      return;
+    }
+
+    // Find compatible devices for the user interface models
+    const compatibleDevices = devices.filter(device => 
+      userInterface.models.includes(device.model)
+    );
+
+    if (compatibleDevices.length === 0) {
+      setError(`No devices found for models: ${userInterface.models.join(', ')}. Please ensure devices are configured for these models.`);
+      return;
+    }
+
+    // Use the first compatible device (or could show selection dialog for multiple)
+    const selectedDevice = compatibleDevices[0];
+    const deviceType = getDeviceType(selectedDevice);
+    
+    if (deviceType === 'unknown') {
+      setError(`Remote controller not supported for device "${selectedDevice.name}" (${selectedDevice.model}). Please configure controller settings for this device.`);
+      return;
+    }
+
+    console.log(`[@component:UserInterface] Opening remote controller for device:`, {
+      device: selectedDevice,
+      type: deviceType,
+      userInterface: userInterface.name
+    });
+
+    setSelectedDeviceForRemote(selectedDevice);
+    setRemoteControllerOpen(true);
+    setError(null); // Clear any previous errors
+  };
+
+  // Helper function to handle opening edit controller parameters
+  const handleOpenEditController = (userInterface: UserInterfaceType) => {
+    if (userInterface.models.length === 0) {
+      setError('No models configured for this user interface');
+      return;
+    }
+
+    // Find compatible devices for the user interface models
+    const compatibleDevices = devices.filter(device => 
+      userInterface.models.includes(device.model)
+    );
+
+    if (compatibleDevices.length === 0) {
+      setError(`No devices found for models: ${userInterface.models.join(', ')}. Please ensure devices are configured for these models.`);
+      return;
+    }
+
+    // Use the first compatible device
+    const selectedDevice = compatibleDevices[0];
+    
+    console.log(`[@component:UserInterface] Opening edit controller for device:`, {
+      device: selectedDevice,
+      userInterface: userInterface.name
+    });
+
+    setSelectedDeviceForEdit(selectedDevice);
+    setEditControllerOpen(true);
+    setError(null);
+  };
+
+  // Save controller configuration
+  const handleSaveControllerConfig = async (deviceId: string, config: ControllerConfig) => {
+    try {
+      console.log(`[@component:UserInterface] Saving controller config for device ${deviceId}:`, config);
+      
+      // TODO: Implement API call to save controller configuration
+      // await deviceApi.updateDeviceControllerConfig(deviceId, { remote: config });
+      
+      // For now, simulate the API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Reload devices to reflect the changes
+      await loadDevices();
+      
+      console.log(`[@component:UserInterface] Successfully saved controller config for device ${deviceId}`);
+    } catch (err) {
+      console.error('[@component:UserInterface] Error saving controller config:', err);
+      throw err;
+    }
+  };
+
   // Loading state component
   const LoadingState = () => (
     <Box 
@@ -359,6 +458,7 @@ const UserInterface: React.FC = () => {
                     <TableCell><strong>Min Version</strong></TableCell>
                     <TableCell><strong>Max Version</strong></TableCell>
                     <TableCell align="center"><strong>Navigation</strong></TableCell>
+                    <TableCell align="center"><strong>Remote Controller</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -513,6 +613,75 @@ const UserInterface: React.FC = () => {
                         >
                           Edit Navigation
                         </Button>
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* Remote Controller Column */}
+                        {userInterface.models.length > 0 ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                            {/* Show controller name */}
+                            {(() => {
+                              const compatibleDevice = devices.find(device => 
+                                userInterface.models.includes(device.model)
+                              );
+                              
+                              if (compatibleDevice) {
+                                const deviceType = getDeviceType(compatibleDevice);
+                                const controllerName = deviceType !== 'unknown' 
+                                  ? `${deviceType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Remote`
+                                  : 'Unsupported Device';
+                                
+                                return (
+                                  <>
+                                    <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                                      {controllerName}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<ControlPanelIcon fontSize="small" />}
+                                        onClick={() => handleOpenRemoteController(userInterface)}
+                                        disabled={deviceType === 'unknown'}
+                                        sx={{ 
+                                          minWidth: 'auto',
+                                          px: 1,
+                                          py: 0.25,
+                                          fontSize: '0.65rem'
+                                        }}
+                                      >
+                                        Control
+                                      </Button>
+                                      <Button
+                                        size="small"
+                                        variant="text"
+                                        startIcon={<EditIcon fontSize="small" />}
+                                        onClick={() => handleOpenEditController(userInterface)}
+                                        sx={{ 
+                                          minWidth: 'auto',
+                                          px: 0.5,
+                                          py: 0.25,
+                                          fontSize: '0.65rem'
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
+                                    </Box>
+                                  </>
+                                );
+                              } else {
+                                return (
+                                  <Typography variant="caption" color="error" sx={{ fontSize: '0.7rem' }}>
+                                    No Compatible Device
+                                  </Typography>
+                                );
+                              }
+                            })()}
+                          </Box>
+                        ) : (
+                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                            No Models
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell align="center">
                         {editingId === userInterface.id ? (
@@ -691,6 +860,34 @@ const UserInterface: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Remote Controller Modal */}
+      {selectedDeviceForRemote && (
+        <RemoteController
+          deviceType={getDeviceType(selectedDeviceForRemote)}
+          device={selectedDeviceForRemote}
+          open={remoteControllerOpen}
+          onClose={() => {
+            console.log('[@component:UserInterface] Closing remote controller');
+            setRemoteControllerOpen(false);
+            setSelectedDeviceForRemote(null);
+          }}
+        />
+      )}
+
+      {/* Edit Controller Parameters Modal */}
+      {selectedDeviceForEdit && (
+        <EditControllerParametersDialog
+          device={selectedDeviceForEdit}
+          open={editControllerOpen}
+          onClose={() => {
+            console.log('[@component:UserInterface] Closing edit controller parameters');
+            setEditControllerOpen(false);
+            setSelectedDeviceForEdit(null);
+          }}
+          onSave={(deviceId, config) => handleSaveControllerConfig(deviceId, config)}
+        />
+      )}
     </Box>
   );
 };
