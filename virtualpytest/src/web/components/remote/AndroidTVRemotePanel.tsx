@@ -46,7 +46,7 @@ export function AndroidTVRemotePanel({
 }: AndroidTVRemotePanelProps) {
   // UI state
   const [showOverlays, setShowOverlays] = useState(false);
-  const [remoteScale, setRemoteScale] = useState(1);
+  const [remoteScale] = useState(1); // Fixed scale of 1, removed setRemoteScale
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
@@ -252,11 +252,6 @@ export function AndroidTVRemotePanel({
     }
   };
 
-  // Initialize scale from config
-  useEffect(() => {
-    setRemoteScale(1); // Set fixed scale of 1
-  }, []);
-
   const handleScreenshotClick = async () => {
     setIsScreenshotLoading(true);
     setScreenshotError(null);
@@ -339,25 +334,24 @@ export function AndroidTVRemotePanel({
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
-      overflow: 'hidden', // Prevent scrolling
+      overflow: 'hidden',
       ...sx 
     }}>
-      {/* Remote Control Interface */}
       <Box sx={{ 
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
         height: '100%',
-        position: 'relative', // Add relative positioning for absolute child
-        overflow: 'hidden' // Prevent scrolling
+        position: 'relative',
+        overflow: 'hidden'
       }}>
         {/* Show Overlays button - positioned in top right corner */}
         <Box sx={{ 
           position: 'absolute',
           top: 0,
           right: 0,
-          zIndex: 10, // Ensure it's above the remote
-          m: 1 // Margin to prevent it from being right at the edge
+          zIndex: 10,
+          m: 1
         }}>
           <Button
             variant={showOverlays ? "contained" : "outlined"}
@@ -367,8 +361,8 @@ export function AndroidTVRemotePanel({
               minWidth: 'auto', 
               px: 1, 
               fontSize: '0.7rem',
-              opacity: 0.7, // Slightly transparent
-              '&:hover': { opacity: 1 } // Full opacity on hover
+              opacity: 0.7,
+              '&:hover': { opacity: 1 }
             }}
           >
             {showOverlays ? 'Hide Overlay' : 'Show Overlay'}
@@ -388,7 +382,7 @@ export function AndroidTVRemotePanel({
           }}>
             <RemoteInterface
               remoteConfig={localRemoteConfig}
-              scale={remoteScale}
+              scale={1} // Fixed scale of 1
               showOverlays={showOverlays}
               onCommand={handleRemoteCommand}
               fallbackImageUrl="/android-tv-remote.png"
@@ -405,7 +399,6 @@ export function AndroidTVRemotePanel({
         onClick={async () => {
           try {
             await handleReleaseControl();
-            // Call the callback after successful disconnect
             if (onDisconnectComplete) {
               onDisconnectComplete();
             }
@@ -416,7 +409,7 @@ export function AndroidTVRemotePanel({
         disabled={connectionLoading}
         size="small"
         fullWidth
-        sx={{ mt: 0, height: '28px' }} // Reduced margin-top and height
+        sx={{ mt: 0, height: '28px' }}
       >
         {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
       </Button>
