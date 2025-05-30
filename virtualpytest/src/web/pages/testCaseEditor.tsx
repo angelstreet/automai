@@ -360,7 +360,16 @@ const TestCaseEditor: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table>
+        <Table 
+          sx={{
+            '& .MuiTableRow-root:hover': {
+              backgroundColor: (theme) => 
+                theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.08) !important' 
+                  : 'rgba(0, 0, 0, 0.04) !important'
+            }
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Test ID</TableCell>

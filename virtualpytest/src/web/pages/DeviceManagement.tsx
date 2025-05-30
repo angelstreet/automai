@@ -385,7 +385,18 @@ const DeviceManagement: React.FC = () => {
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-              <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
+              <Table 
+                size="small" 
+                sx={{ 
+                  '& .MuiTableCell-root': { py: 0.5, px: 1 },
+                  '& .MuiTableRow-root:hover': {
+                    backgroundColor: (theme) => 
+                      theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08) !important' 
+                        : 'rgba(0, 0, 0, 0.04) !important'
+                  }
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
@@ -401,16 +412,7 @@ const DeviceManagement: React.FC = () => {
                     const controllerSummary = getControllerSummary(device);
                     
                     return (
-                      <TableRow 
-                        key={device.id} 
-                        sx={{ 
-                          '&:hover': { 
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.08)' 
-                              : 'rgba(0, 0, 0, 0.04)' 
-                          } 
-                        }}
-                      >
+                      <TableRow key={device.id}>
                         <TableCell>
                           {editingId === device.id ? (
                             <TextField

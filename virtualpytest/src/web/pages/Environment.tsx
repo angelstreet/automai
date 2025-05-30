@@ -178,7 +178,18 @@ const Environment: React.FC = () => {
       <Card sx={{ boxShadow: 1 }}>
         <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
           <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-            <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
+            <Table 
+              size="small" 
+              sx={{ 
+                '& .MuiTableCell-root': { py: 0.5, px: 1 },
+                '& .MuiTableRow-root:hover': {
+                  backgroundColor: (theme) => 
+                    theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.08) !important' 
+                      : 'rgba(0, 0, 0, 0.04) !important'
+                }
+              }}
+            >
               <TableHead>
                 <TableRow>
                   <TableCell><strong>Key</strong></TableCell>
@@ -189,7 +200,7 @@ const Environment: React.FC = () => {
               </TableHead>
               <TableBody>
                 {variables.map((variable) => (
-                  <TableRow key={variable.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}>
+                  <TableRow key={variable.id}>
                     <TableCell>
                       {editingId === variable.id ? (
                         <TextField
