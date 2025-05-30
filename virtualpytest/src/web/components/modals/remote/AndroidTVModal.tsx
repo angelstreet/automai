@@ -3,15 +3,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   Box,
   Typography,
   CircularProgress,
   IconButton,
-  Android
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Android } from '@mui/icons-material';
 import { useAndroidTVConnection } from '../../../hooks/remote/useAndroidTVConnection';
 import { AndroidTVRemotePanel } from '../../remote/AndroidTVRemotePanel';
 
@@ -49,11 +47,18 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
     <Dialog 
       open={open} 
       onClose={handleCloseModal}
-      maxWidth="sm"
-      fullWidth
+      maxWidth={false}
+      sx={{
+        '& .MuiDialog-paper': {
+          width: '900px', // Increased width by more than 200px (from ~600px to 900px)
+          height: '650px', // Increased height by 50px (from ~600px to 650px)
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+        }
+      }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Typography variant="h6" component="div">
+        <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Android color="primary" />
           Android TV Remote Control
         </Typography>
@@ -68,16 +73,16 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '400px' }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, p: 0 }}>
         {/* Show error message if connection fails */}
         {connectionError && (
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1, width: '100%' }}>
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 1, mx: 2, mt: 2 }}>
             <Typography color="error">{connectionError}</Typography>
           </Box>
         )}
 
-        {/* Fixed height container for remote */}
-        <Box sx={{ height: '400px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+        {/* Full height container for remote panel */}
+        <Box sx={{ flex: 1, display: 'flex' }}>
           <AndroidTVRemotePanel
             connectionConfig={{
               host_ip: connectionForm.host_ip,
@@ -87,34 +92,11 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({ open, onClose })
               device_ip: connectionForm.device_ip,
               device_port: connectionForm.device_port,
             }}
-            autoConnect={true}
             compact={false}
             showScreenshot={true}
           />
         </Box>
       </DialogContent>
-      
-      {/* Dialog Actions - Always visible */}
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button 
-          variant="outlined"
-          onClick={handleCloseModal}
-          sx={{ minWidth: 100 }}
-        >
-          Close
-        </Button>
-        {session.connected && (
-          <Button 
-            variant="contained" 
-            color="error"
-            onClick={handleReleaseControl}
-            disabled={connectionLoading}
-            sx={{ minWidth: 120 }}
-          >
-            {connectionLoading ? <CircularProgress size={16} /> : 'Release Control'}
-          </Button>
-        )}
-      </DialogActions>
     </Dialog>
   );
 }; 
