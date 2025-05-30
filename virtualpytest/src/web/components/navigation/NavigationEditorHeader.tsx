@@ -24,7 +24,6 @@ import {
   Tv as TvIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './TreeFilterControls';
-import { deviceApi, Device } from '../../services/deviceService';
 
 interface NavigationEditorHeaderProps {
   // Navigation state
@@ -46,13 +45,16 @@ interface NavigationEditorHeaderProps {
   historyIndex: number;
   historyLength: number;
   
-  // Remote control props
-  isRemotePanelOpen: boolean;
-  selectedDevice: string | null;
-  isControlActive: boolean;
-  
   // User interface props
   userInterface: any;
+  
+  // Device props
+  devices: any[];
+  devicesLoading: boolean;
+  selectedDevice: string | null;
+  isControlActive: boolean;
+  isRemotePanelOpen: boolean;
+  remoteConfig: any;
   
   // Action handlers
   onNavigateToParent: () => void;
@@ -90,10 +92,13 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   error,
   historyIndex,
   historyLength,
-  isRemotePanelOpen,
+  userInterface,
+  devices,
+  devicesLoading,
   selectedDevice,
   isControlActive,
-  userInterface,
+  isRemotePanelOpen,
+  remoteConfig,
   onNavigateToParent,
   onNavigateToTreeLevel,
   onNavigateToParentView,
@@ -110,147 +115,153 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onDeviceSelect,
   onTakeControl,
 }) => {
-  // Device state management
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
 
-  // Fetch devices on component mount
-  useEffect(() => {
-    fetchDevices();
-  }, []);
+  // Check if selected device has remote capabilities
+  const hasRemoteCapability = !!remoteConfig;
 
-  const fetchDevices = async () => {
-    console.log('[@component:NavigationEditorHeader] Fetching devices');
-    try {
-      setDevicesLoading(true);
-      const fetchedDevices = await deviceApi.getAllDevices();
-      setDevices(fetchedDevices);
-      console.log(`[@component:NavigationEditorHeader] Successfully loaded ${fetchedDevices.length} devices`);
-    } catch (error: any) {
-      console.error('[@component:NavigationEditorHeader] Error fetching devices:', error);
-      // Set empty array on error to prevent dropdown issues
-      setDevices([]);
-    } finally {
-      setDevicesLoading(false);
+  // Handle take control click with auto-connect logic
+  const handleTakeControlClick = () => {
+    if (!hasRemoteCapability) {
+      console.log('[@component:NavigationEditorHeader] Device has no remote capability');
+      return;
+    }
+    
+    if (!isControlActive && selectedDevice) {
+      // Taking control - auto-connect and show panel
+      console.log(`[@component:NavigationEditorHeader] Taking control of ${selectedDevice}`);
+      onTakeControl(); // Sets isControlActive = true
+      if (!isRemotePanelOpen) {
+        onToggleRemotePanel(); // Opens panel
+      }
+    } else if (isControlActive) {
+      // Releasing control - auto-disconnect and hide panel
+      console.log(`[@component:NavigationEditorHeader] Releasing control of ${selectedDevice}`);
+      onTakeControl(); // Sets isControlActive = false
+      if (isRemotePanelOpen) {
+        onToggleRemotePanel(); // Closes panel
+      }
     }
   };
 
-  // Filter devices based on current tree's user interface models
-  const getFilteredDevices = () => {
-    if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
-      console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
-      return devices;
+  // Get controller type name for display
+  const getControllerTypeName = () => {
+    if (!remoteConfig) return 'No Remote';
+    
+    switch (remoteConfig.type) {
+      case 'android_mobile': return 'Android Mobile';
+      case 'android_tv': return 'Android TV';
+      case 'ir_remote': return 'IR Remote';
+      case 'bluetooth_remote': return 'Bluetooth';
+      default: return 'Remote';
     }
-
-    const interfaceModels = userInterface.models;
-    const filteredDevices = devices.filter(device => 
-      interfaceModels.includes(device.model)
-    );
-
-    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filteredDevices.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
-    return filteredDevices;
   };
 
   // Extract device names for the dropdown
-  const availableDevices = getFilteredDevices().map(device => device.name);
+  const availableDevices = devices.map(device => device.name);
 
   return (
     <AppBar position="static" color="default" elevation={1}>
-      <Toolbar variant="dense" sx={{ minHeight: 48, px: 2 }}>
-        {/* Grid Layout with 4 sections - Fixed widths */}
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: '200px 340px 310px 240px',
-          gap: 1,
-          alignItems: 'center',
-          width: '100%'
-        }}>
+      <Toolbar variant="dense" sx={{ minHeight: 48, px: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
           
-          {/* Section 1: Tree Name */}
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            {/* Simple Tree Name Display */}
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 'medium',
-                color: 'text.primary',
-                fontSize: '1rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+          {/* Section 1: Navigation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: '0 1 auto' }}>
+            <IconButton 
+              onClick={onNavigateToParent} 
+              size="small" 
+              title="Return to User Interfaces"
             >
-              {/* Show tree name from multiple possible sources */}
-              {navigationNamePath.length > 0 
-                ? decodeURIComponent(navigationNamePath[navigationNamePath.length - 1])
-                : viewPath.length > 0 
-                  ? viewPath[viewPath.length - 1].name
-                  : 'Navigation Tree'
-              }
-              {hasUnsavedChanges && (
-                <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
-                  *
-                </Typography>
+              <ArrowBackIcon />
+            </IconButton>
+            
+            {/* Breadcrumb navigation - compact display */}
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: 300 }}>
+              {viewPath.length > 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  {viewPath.map((pathItem, index) => (
+                    <React.Fragment key={pathItem.id}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => onNavigateToParentView(index)}
+                        sx={{ 
+                          fontSize: '0.7rem', 
+                          minWidth: 'auto', 
+                          px: 0.5,
+                          textTransform: 'none',
+                          maxWidth: 100,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={pathItem.name}
+                      >
+                        {pathItem.name}
+                      </Button>
+                      {index < viewPath.length - 1 && <Typography variant="caption" sx={{ mx: 0.25 }}>{'>'}</Typography>}
+                    </React.Fragment>
+                  ))}
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  {navigationNamePath.map((name, index) => (
+                    <React.Fragment key={index}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => onNavigateToTreeLevel(index)}
+                        sx={{ 
+                          fontSize: '0.7rem', 
+                          minWidth: 'auto', 
+                          px: 0.5,
+                          textTransform: 'none',
+                          maxWidth: 100,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={name}
+                      >
+                        {name}
+                      </Button>
+                      {index < navigationNamePath.length - 1 && <Typography variant="caption" sx={{ mx: 0.25 }}>{'>'}</Typography>}
+                    </React.Fragment>
+                  ))}
+                </Box>
               )}
-            </Typography>
+            </Box>
           </Box>
-          
-          {/* Section 2: Node Controls (TreeFilterControls) */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            minWidth: 0,
-            width: '100%',
-            '& > *': {
-              gap: 1,
-              '& .MuiFormControl-root': {
-                minWidth: '70px !important',
-                marginRight: '8px',
-              },
-              '& .MuiButton-root': {
-                fontSize: '0.75rem',
-                minWidth: 'auto',
-                padding: '4px 8px',
-              },
-              '& .MuiTypography-root': {
-                fontSize: '0.75rem',
-                whiteSpace: 'nowrap',
-              }
-            }
-          }}>
+
+          {/* Section 2: Tree Filtering Controls */}
+          <Box sx={{ flex: '1 1 auto', display: 'flex', justifyContent: 'center', minWidth: 0 }}>
             <TreeFilterControls
               focusNodeId={focusNodeId}
               availableFocusNodes={availableFocusNodes}
-              onFocusNodeChange={onFocusNodeChange}
               maxDisplayDepth={maxDisplayDepth}
-              onDepthChange={onDepthChange}
-              onResetFocus={onResetFocus}
               totalNodes={totalNodes}
               visibleNodes={visibleNodes}
+              onFocusNodeChange={onFocusNodeChange}
+              onDepthChange={onDepthChange}
+              onResetFocus={onResetFocus}
+              compact={true}
             />
           </Box>
-          
-          {/* Section 3: Action Buttons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, minWidth: 0 }}>
-            <Button
-              startIcon={<AddIcon />}
-              onClick={onAddNewNode}
-              size="small"
+
+          {/* Section 3: Editor Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: '0 0 auto' }}>
+            <IconButton 
+              onClick={onAddNewNode} 
+              size="small" 
+              title="Add New Node"
               disabled={isLoading || !!error}
-              variant="outlined"
-              sx={{ 
-                minWidth: 'auto',
-                whiteSpace: 'nowrap',
-                fontSize: '0.75rem'
-              }}
             >
-              Add&nbsp;Node
-            </Button>
+              <AddIcon />
+            </IconButton>
             
             <IconButton 
               onClick={onFitView} 
               size="small" 
-              title="Fit View" 
+              title="Fit to Screen"
               disabled={isLoading || !!error}
             >
               <FitScreenIcon />
@@ -259,7 +270,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
             <IconButton 
               onClick={onUndo} 
               size="small" 
-              title="Undo" 
+              title={`Undo (${historyIndex + 1}/${historyLength})`}
               disabled={historyIndex <= 0 || isLoading || !!error}
             >
               <UndoIcon />
@@ -268,7 +279,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
             <IconButton 
               onClick={onRedo} 
               size="small" 
-              title="Redo" 
+              title={`Redo (${historyIndex + 1}/${historyLength})`}
               disabled={historyIndex >= historyLength - 1 || isLoading || !!error}
             >
               <RedoIcon />
@@ -277,11 +288,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
             <IconButton 
               onClick={onSaveToDatabase} 
               size="small" 
-              title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
-              disabled={isLoading || !!error}
+              title={hasUnsavedChanges ? "Save Unsaved Changes" : "Save Navigation Tree"}
               color={hasUnsavedChanges ? "primary" : "default"}
+              disabled={isLoading || !!error}
             >
-              {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
+              <SaveIcon />
             </IconButton>
             
             <IconButton 
@@ -298,7 +309,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           {/* Section 4: Device Controls */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, minWidth: 0 }}>
             {/* Device Selection Dropdown */}
-            <FormControl size="small" sx={{ minWidth: 120, maxWidth: 120 }}>
+            <FormControl size="small" sx={{ minWidth: 120, maxWidth: 140 }}>
               <InputLabel id="device-select-label">Device</InputLabel>
               <Select
                 labelId="device-select-label"
@@ -319,40 +330,36 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               </Select>
             </FormControl>
 
-            {/* Combined Take Control & Remote Panel Button */}
+            {/* Take Control Button */}
             <Button
               variant={isControlActive ? "contained" : "outlined"}
               size="small"
-              onClick={() => {
-                // Handle both take control and remote panel toggle
-                onTakeControl();
-                // If taking control, show the remote panel; if releasing, hide it
-                if (!isControlActive && selectedDevice) {
-                  // Taking control - ensure remote panel is open
-                  if (!isRemotePanelOpen) {
-                    onToggleRemotePanel();
-                  }
-                } else if (isControlActive) {
-                  // Releasing control - hide remote panel
-                  if (isRemotePanelOpen) {
-                    onToggleRemotePanel();
-                  }
-                }
-              }}
-              disabled={!selectedDevice || isLoading || !!error || devicesLoading}
+              onClick={handleTakeControlClick}
+              disabled={!selectedDevice || !hasRemoteCapability || isLoading || !!error || devicesLoading}
               startIcon={isControlActive ? <TvIcon /> : <TvIcon />}
               color={isControlActive ? "success" : "primary"}
               sx={{ 
                 height: 32, 
                 fontSize: '0.6rem', 
-                minWidth: 100,
-                maxWidth: 100,
+                minWidth: 110,
+                maxWidth: 110,
                 whiteSpace: 'nowrap',
                 px: 0.5
               }}
+              title={hasRemoteCapability ? 
+                `${isControlActive ? 'Release' : 'Take'} control of ${getControllerTypeName()} remote` :
+                'Selected device has no remote control capability'
+              }
             >
-              {isControlActive ? 'Stop Remote' : 'Take Control'}
+              {isControlActive ? 'Stop Remote' : (hasRemoteCapability ? 'Take Control' : 'No Remote')}
             </Button>
+            
+            {/* Optional: Show remote type indicator */}
+            {selectedDevice && hasRemoteCapability && (
+              <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'textSecondary', minWidth: 'fit-content' }}>
+                {getControllerTypeName()}
+              </Typography>
+            )}
           </Box>
         </Box>
       </Toolbar>

@@ -66,7 +66,16 @@ import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemo
 import { AndroidTVRemotePanel } from '../components/remote/AndroidTVRemotePanel';
 import { IRRemotePanel } from '../components/remote/IRRemotePanel';
 import { BluetoothRemotePanel } from '../components/remote/BluetoothRemotePanel';
-import { HDMIStreamPanel } from '../components/remote/HDMIStreamPanel';
+
+// Import remote connection hooks
+import { useAndroidMobileConnection } from '../hooks/remote/useAndroidMobileConnection';
+import { useAndroidTVConnection } from '../hooks/remote/useAndroidTVConnection';
+import { useIRRemoteConnection } from '../hooks/remote/useIRRemoteConnection';
+import { useBluetoothRemoteConnection } from '../hooks/remote/useBluetoothRemoteConnection';
+
+// Import device utilities
+import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
+import { deviceApi, Device } from '../services/deviceService';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -80,11 +89,105 @@ const edgeTypes = {
 };
 
 const NavigationEditorContent: React.FC = () => {
-  // Add new state for remote control functionality
+  // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
-  const [selectedDeviceType, setSelectedDeviceType] = useState<'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream'>('android_mobile');
+  
+  // Device state
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+
+  // Get the selected device data
+  const selectedDeviceData = devices.find(d => d.name === selectedDevice);
+  const remoteConfig = selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
+
+  // Connection hooks for different device types
+  const androidMobileHook = useAndroidMobileConnection();
+  const androidTVHook = useAndroidTVConnection();
+  const irRemoteHook = useIRRemoteConnection();
+  const bluetoothRemoteHook = useBluetoothRemoteConnection();
+
+  // Get the appropriate hook based on remote type
+  const getActiveHook = () => {
+    if (!remoteConfig) return null;
+    
+    switch (remoteConfig.type) {
+      case 'android_mobile':
+        return androidMobileHook;
+      case 'android_tv':
+        return androidTVHook;
+      case 'ir_remote':
+        return irRemoteHook;
+      case 'bluetooth_remote':
+        return bluetoothRemoteHook;
+      default:
+        return null;
+    }
+  };
+
+  const activeHook = getActiveHook();
+
+  // Fetch devices
+  const fetchDevices = async () => {
+    console.log('[@component:NavigationEditor] Fetching devices');
+    try {
+      setDevicesLoading(true);
+      const fetchedDevices = await deviceApi.getAllDevices();
+      setDevices(fetchedDevices);
+      console.log(`[@component:NavigationEditor] Successfully loaded ${fetchedDevices.length} devices`);
+    } catch (error: any) {
+      console.error('[@component:NavigationEditor] Error fetching devices:', error);
+      setDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  // Auto-populate connection form when device is selected
+  useEffect(() => {
+    if (selectedDeviceData?.controller_configs?.remote && activeHook) {
+      const remoteConfig = selectedDeviceData.controller_configs.remote;
+      
+      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`);
+      
+      if (remoteConfig.type === 'android_mobile' || remoteConfig.type === 'android_tv') {
+        const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
+        activeHook.setConnectionForm(connectionConfig);
+      } else if (remoteConfig.type === 'ir_remote') {
+        const connectionConfig = extractConnectionConfigForIR(remoteConfig);
+        activeHook.setConnectionForm(connectionConfig);
+      } else if (remoteConfig.type === 'bluetooth_remote') {
+        const connectionConfig = extractConnectionConfigForBluetooth(remoteConfig);
+        activeHook.setConnectionForm(connectionConfig);
+      }
+    }
+  }, [selectedDeviceData, activeHook]);
+
+  // Auto-connect/disconnect based on control state
+  useEffect(() => {
+    if (!activeHook || !remoteConfig) return;
+
+    if (isControlActive && selectedDeviceData && !activeHook.session.connected) {
+      console.log(`[@component:NavigationEditor] Auto-connecting to ${remoteConfig.type} device: ${selectedDeviceData.name}`);
+      if (remoteConfig.type === 'android_tv') {
+        activeHook.handleTakeControl?.();
+      } else {
+        activeHook.handleConnect?.();
+      }
+    } else if (!isControlActive && activeHook.session.connected) {
+      console.log(`[@component:NavigationEditor] Auto-disconnecting from ${remoteConfig.type} device`);
+      if (remoteConfig.type === 'android_tv') {
+        activeHook.handleReleaseControl?.();
+      } else {
+        activeHook.handleDisconnect?.();
+      }
+    }
+  }, [isControlActive, selectedDeviceData, activeHook, remoteConfig]);
 
   const {
     // State
@@ -205,11 +308,32 @@ const NavigationEditorContent: React.FC = () => {
   };
 
   const handleDeviceSelect = (device: string | null) => {
+    // If changing device while connected, disconnect first
+    if (selectedDevice && selectedDevice !== device && isControlActive) {
+      console.log('[@component:NavigationEditor] Switching devices, stopping current control');
+      setIsControlActive(false);
+    }
     setSelectedDevice(device);
   };
 
   const handleTakeControl = () => {
     setIsControlActive(!isControlActive);
+  };
+
+  // Filter devices based on user interface models
+  const getFilteredDevices = () => {
+    if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
+      console.log('[@component:NavigationEditor] No user interface models found, showing all devices');
+      return devices;
+    }
+
+    const interfaceModels = userInterface.models;
+    const filteredDevices = devices.filter(device => 
+      interfaceModels.includes(device.model)
+    );
+
+    console.log(`[@component:NavigationEditor] Filtered devices: ${filteredDevices.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
+    return filteredDevices;
   };
 
   return (
@@ -237,6 +361,12 @@ const NavigationEditorContent: React.FC = () => {
         historyIndex={historyIndex}
         historyLength={history.length}
         userInterface={userInterface}
+        devices={getFilteredDevices()}
+        devicesLoading={devicesLoading}
+        selectedDevice={selectedDevice}
+        isControlActive={isControlActive}
+        isRemotePanelOpen={isRemotePanelOpen}
+        remoteConfig={remoteConfig}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
@@ -249,10 +379,6 @@ const NavigationEditorContent: React.FC = () => {
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
-        // Remote control props
-        isRemotePanelOpen={isRemotePanelOpen}
-        selectedDevice={selectedDevice}
-        isControlActive={isControlActive}
         onToggleRemotePanel={handleToggleRemotePanel}
         onDeviceSelect={handleDeviceSelect}
         onTakeControl={handleTakeControl}
@@ -272,7 +398,7 @@ const NavigationEditorContent: React.FC = () => {
           minHeight: '500px',
           overflow: 'hidden',
           transition: 'margin-right',
-          marginRight: isRemotePanelOpen ? '160px' : '0px'
+          marginRight: isRemotePanelOpen ? '350px' : '0px'
         }}>
           {isLoading ? (
             <Box sx={{ 
@@ -410,8 +536,8 @@ const NavigationEditorContent: React.FC = () => {
           )}
         </Box>
 
-        {/* Remote Control Panel */}
-        {isRemotePanelOpen && (
+        {/* Remote Control Panel - Only show if device has remote capabilities */}
+        {isRemotePanelOpen && remoteConfig && (
           <Box sx={{
             position: 'fixed',
             right: 0,
@@ -436,7 +562,11 @@ const NavigationEditorContent: React.FC = () => {
               alignItems: 'center'
             }}>
               <Typography variant="h6" component="div">
-                Remote Control
+                {remoteConfig.type === 'android_mobile' ? 'Android Mobile Remote' :
+                 remoteConfig.type === 'android_tv' ? 'Android TV Remote' :
+                 remoteConfig.type === 'ir_remote' ? 'IR Remote' :
+                 remoteConfig.type === 'bluetooth_remote' ? 'Bluetooth Remote' :
+                 'Remote Control'}
               </Typography>
               <Button
                 size="small"
@@ -447,123 +577,74 @@ const NavigationEditorContent: React.FC = () => {
               </Button>
             </Box>
             
-            {/* Device Type Selection */}
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Device Type
+            {/* Connection Status */}
+            <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="caption" color={activeHook?.session.connected ? "success.main" : "textSecondary"}>
+                {activeHook?.session.connected ? `Connected to ${selectedDevice}` : `Connecting to ${selectedDevice}...`}
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  size="small"
-                  variant={selectedDeviceType === 'android_mobile' ? 'contained' : 'outlined'}
-                  onClick={() => setSelectedDeviceType('android_mobile')}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  Android Mobile
-                </Button>
-                <Button
-                  size="small"
-                  variant={selectedDeviceType === 'android_tv' ? 'contained' : 'outlined'}
-                  onClick={() => setSelectedDeviceType('android_tv')}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  Android TV
-                </Button>
-                <Button
-                  size="small"
-                  variant={selectedDeviceType === 'ir_remote' ? 'contained' : 'outlined'}
-                  onClick={() => setSelectedDeviceType('ir_remote')}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  IR Remote
-                </Button>
-                <Button
-                  size="small"
-                  variant={selectedDeviceType === 'bluetooth_remote' ? 'contained' : 'outlined'}
-                  onClick={() => setSelectedDeviceType('bluetooth_remote')}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  Bluetooth Remote
-                </Button>
-                <Button
-                  size="small"
-                  variant={selectedDeviceType === 'hdmi_stream' ? 'contained' : 'outlined'}
-                  onClick={() => setSelectedDeviceType('hdmi_stream')}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  HDMI Stream
-                </Button>
-              </Box>
             </Box>
             
-            {/* Remote Panel Content */}
-            {selectedDeviceType === 'android_mobile' ? (
+            {/* Remote Panel Content - Dynamic based on device type */}
+            {remoteConfig.type === 'android_mobile' ? (
               <AndroidMobileRemotePanel
-                connectionConfig={undefined} // TODO: Get from user interface device config
-                autoConnect={false}
-                compact={true} // Use compact mode for NavigationEditor
-                showScreenshot={false} // Hide screenshot in navigation editor to save space
+                connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                autoConnect={isControlActive}
+                compact={true}
+                showScreenshot={false}
                 sx={{ 
                   flex: 1,
                   height: '100%',
                   '& .MuiTypography-h6': {
-                    fontSize: '1rem' // Smaller headings in compact mode
+                    fontSize: '1rem'
                   }
                 }}
               />
-            ) : selectedDeviceType === 'android_tv' ? (
+            ) : remoteConfig.type === 'android_tv' ? (
               <AndroidTVRemotePanel
-                connectionConfig={undefined} // TODO: Get from user interface device config
-                autoConnect={false}
-                compact={true} // Use compact mode for NavigationEditor
-                showScreenshot={false} // Hide screenshot in navigation editor to save space
+                connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                autoConnect={isControlActive}
+                compact={true}
+                showScreenshot={false}
                 sx={{ 
                   flex: 1,
                   height: '100%',
                   '& .MuiTypography-h6': {
-                    fontSize: '1rem' // Smaller headings in compact mode
+                    fontSize: '1rem'
                   }
                 }}
               />
-            ) : selectedDeviceType === 'ir_remote' ? (
+            ) : remoteConfig.type === 'ir_remote' ? (
               <IRRemotePanel
-                connectionConfig={undefined} // TODO: Get from user interface device config
-                autoConnect={false}
-                compact={true} // Use compact mode for NavigationEditor
+                connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote)}
+                autoConnect={isControlActive}
+                compact={true}
                 sx={{ 
                   flex: 1,
                   height: '100%',
                   '& .MuiTypography-h6': {
-                    fontSize: '1rem' // Smaller headings in compact mode
+                    fontSize: '1rem'
                   }
                 }}
               />
-            ) : selectedDeviceType === 'bluetooth_remote' ? (
+            ) : remoteConfig.type === 'bluetooth_remote' ? (
               <BluetoothRemotePanel
-                connectionConfig={undefined} // TODO: Get from user interface device config
-                autoConnect={false}
-                compact={true} // Use compact mode for NavigationEditor
+                connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote)}
+                autoConnect={isControlActive}
+                compact={true}
                 sx={{ 
                   flex: 1,
                   height: '100%',
                   '& .MuiTypography-h6': {
-                    fontSize: '1rem' // Smaller headings in compact mode
+                    fontSize: '1rem'
                   }
                 }}
               />
             ) : (
-              <HDMIStreamPanel
-                connectionConfig={undefined} // TODO: Get from user interface device config
-                autoConnect={false}
-                compact={true} // Use compact mode for NavigationEditor
-                sx={{ 
-                  flex: 1,
-                  height: '100%',
-                  '& .MuiTypography-h6': {
-                    fontSize: '1rem' // Smaller headings in compact mode
-                  }
-                }}
-              />
+              <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="textSecondary">
+                  Unsupported remote type: {remoteConfig.type}
+                </Typography>
+              </Box>
             )}
           </Box>
         )}
