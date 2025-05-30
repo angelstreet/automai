@@ -239,20 +239,29 @@ def test_controller():
         else:
             return jsonify({'error': f'Unknown controller type: {controller_type}'}), 400
         
-        # Get status without testing connection to avoid UI flicker
+        # Test connection
+        connection_result = controller.connect()
         status = controller.get_status()
         
-        # Return configuration validation instead of connection testing
+        # Perform basic functionality test
         test_results = {
-            'configuration_valid': True,
-            'status': status,
-            'message': 'Controller configuration validated successfully'
+            'connection': connection_result,
+            'status': status
         }
+        
+        # Type-specific tests
+        if controller_type == 'remote' and connection_result:
+            # Test basic key press
+            test_results['key_press_test'] = controller.press_key('OK')
+            test_results['text_input_test'] = controller.input_text('TEST')
+        
+        # Disconnect after test
+        controller.disconnect()
         
         return jsonify({
             'test_results': test_results,
-            'success': True,
-            'message': 'Controller configuration validated successfully'
+            'success': connection_result,
+            'message': 'Controller test completed successfully' if connection_result else 'Controller test failed'
         })
         
     except Exception as e:
@@ -284,15 +293,19 @@ def create_device_set():
             **device_config.get('overrides', {})
         )
         
-        # Get status without testing connection to avoid UI flicker
+        # Test connection to all controllers
+        connection_results = controllers.connect_all()
         status = controllers.get_status()
+        
+        # Disconnect after test
+        controllers.disconnect_all()
         
         return jsonify({
             'status': 'success',
             'device_set': {
                 'device_name': device_name,
                 'device_type': device_type,
-                'configuration_valid': True,
+                'connection_test': connection_results,
                 'controllers_status': status
             }
         })
