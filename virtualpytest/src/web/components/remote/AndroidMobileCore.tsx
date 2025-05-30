@@ -51,8 +51,26 @@ export function AndroidMobileCore({
   handleOverlayElementClick,
   onDisconnect
 }: AndroidMobileCoreProps) {
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  
+  const handleDisconnect = () => {
+    setIsDisconnecting(true);
+    onDisconnect();
+  };
+  
+  // Reset disconnecting state when connection changes
+  useEffect(() => {
+    if (session.connected) {
+      setIsDisconnecting(false);
+    }
+  }, [session.connected]);
+  
   return (
-    <Box>
+    <Box sx={{ 
+      maxWidth: '250px',
+      margin: '0 auto',
+      width: '100%'
+    }}>
       {/* App Launcher Section */}
       <Box sx={{ mb: 1 }}>
         <Typography variant="subtitle2" gutterBottom>
@@ -282,11 +300,11 @@ export function AndroidMobileCore({
         <Button 
           variant="contained" 
           color="error"
-          onClick={onDisconnect}
-          disabled={connectionLoading}
+          onClick={handleDisconnect}
+          disabled={connectionLoading || isDisconnecting}
           fullWidth
         >
-          {connectionLoading ? <CircularProgress size={20} /> : 'Disconnect'}
+          Disconnect
         </Button>
       </Box>
     </Box>
