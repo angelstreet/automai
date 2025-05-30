@@ -319,36 +319,40 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               </Select>
             </FormControl>
 
-            {/* Take Control Button */}
+            {/* Combined Take Control & Remote Panel Button */}
             <Button
               variant={isControlActive ? "contained" : "outlined"}
               size="small"
-              onClick={onTakeControl}
+              onClick={() => {
+                // Handle both take control and remote panel toggle
+                onTakeControl();
+                // If taking control, show the remote panel; if releasing, hide it
+                if (!isControlActive && selectedDevice) {
+                  // Taking control - ensure remote panel is open
+                  if (!isRemotePanelOpen) {
+                    onToggleRemotePanel();
+                  }
+                } else if (isControlActive) {
+                  // Releasing control - hide remote panel
+                  if (isRemotePanelOpen) {
+                    onToggleRemotePanel();
+                  }
+                }
+              }}
               disabled={!selectedDevice || isLoading || !!error || devicesLoading}
-              startIcon={<ControlCameraIcon />}
+              startIcon={isControlActive ? <TvIcon /> : <TvIcon />}
               color={isControlActive ? "success" : "primary"}
               sx={{ 
                 height: 32, 
                 fontSize: '0.6rem', 
-                minWidth: 80,
-                maxWidth: 80,
+                minWidth: 100,
+                maxWidth: 100,
                 whiteSpace: 'nowrap',
                 px: 0.5
               }}
             >
-              {isControlActive ? 'Release' : 'Take Ctrl'}
+              {isControlActive ? 'Stop Remote' : 'Take Control'}
             </Button>
-
-            {/* Toggle Remote Panel Button */}
-            <IconButton 
-              onClick={onToggleRemotePanel} 
-              size="small" 
-              title={isRemotePanelOpen ? "Hide Remote Panel" : "Show Remote Panel"}
-              color={isRemotePanelOpen ? "primary" : "default"}
-              disabled={isLoading || !!error}
-            >
-              <TvIcon />
-            </IconButton>
           </Box>
         </Box>
       </Toolbar>
