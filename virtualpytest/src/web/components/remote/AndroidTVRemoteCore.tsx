@@ -380,7 +380,7 @@ export function AndroidTVRemoteCore({
               
               <Box sx={{ 
                 position: 'absolute',
-                top: 50,
+                top: 0,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 130 * defaultScale,
