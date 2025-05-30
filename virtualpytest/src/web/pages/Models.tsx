@@ -36,8 +36,8 @@ import {
   Snackbar,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { CreateModelDialog } from '../src/components/model';
-import { deviceModelApi, Model } from '../src/services/deviceModelService';
+import { CreateModelDialog } from '../components/model';
+import { deviceModelApi, Model } from '../services/deviceModelService';
 
 const modelTypes = [
   'Android Phone',

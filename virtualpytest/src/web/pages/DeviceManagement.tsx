@@ -35,9 +35,9 @@ import {
   DialogContentText,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import CreateDeviceDialog from '../src/components/CreateDeviceDialog';
-import EditDeviceDialog from '../src/components/EditDeviceDialog';
-import { deviceApi, Device, DeviceCreatePayload } from '../src/services/deviceService';
+import CreateDeviceDialog from '../components/CreateDeviceDialog';
+import EditDeviceDialog from '../components/EditDeviceDialog';
+import { deviceApi, Device, DeviceCreatePayload } from '../services/deviceService';
 import { useTheme } from '@mui/material/styles';
 
 const DeviceManagement: React.FC = () => {

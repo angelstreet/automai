@@ -1,5 +1,3 @@
-// This file is now deprecated and replaced by the modular controller structure
-// Import the new refactored controller page
 import React from 'react';
 import {
   Box,
@@ -10,8 +8,8 @@ import {
   Container,
 } from '@mui/material';
 
-import { ControllerTypesOverview, ControllerImplementations } from '../src/components/remote';
-import { useControllerTypes } from '../src/hooks/remote';
+import { ControllerTypesOverview, ControllerImplementations } from '../components/remote';
+import { useControllerTypes } from '../hooks/remote';
 
 const ControllerPage: React.FC = () => {
   const { controllerTypes, loading, error, refetch } = useControllerTypes();
@@ -61,4 +59,4 @@ const ControllerPage: React.FC = () => {
   );
 };
 
-export default ControllerPage;
+export default ControllerPage; 

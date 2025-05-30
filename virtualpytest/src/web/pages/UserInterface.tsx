@@ -36,8 +36,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../src/services/userInterfaceApi';
-import { deviceApi, Device } from '../src/services/deviceService';
+import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../services/userInterfaceApi';
+import { deviceApi, Device } from '../services/deviceService';
 
 
 const UserInterface: React.FC = () => {
