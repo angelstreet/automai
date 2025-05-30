@@ -283,7 +283,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 1, mb: 1 }}>
+      <DialogContent sx={{ pt: 1, mb: 0.5 }}>
         <Box sx={{ width: '100%' }}>
           {/* Stepper */}
           <Stepper 
@@ -308,7 +308,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
 
           {/* Step Content for non-mobile */}
           {!isMobile && (
-            <Box sx={{ mt: 2, mb: 2, minHeight: 300 }}>
+            <Box sx={{ mt: 1.5, mb: 1.5, minHeight: 200 }}>
               {renderStepContent(activeStep)}
             </Box>
           )}

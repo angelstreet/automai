@@ -164,11 +164,11 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
     if (fields.length === 0) return null;
 
     return (
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary' }}>
+      <Box sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
           {title}
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={1}>
           {fields.map((field) => (
             <Grid item xs={12} sm={6} key={field.name}>
               {renderField(field)}
@@ -193,7 +193,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
 
       {/* Other Fields */}
       {fieldGroups.other.length > 0 && (
-        <Grid container spacing={2}>
+        <Grid container spacing={1}>
           {fieldGroups.other.map((field) => (
             <Grid item xs={12} sm={6} key={field.name}>
               {renderField(field)}
