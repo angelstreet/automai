@@ -145,7 +145,20 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
   const handleCloseModal = () => {
     // Clear overlay when closing modal
     handleClearOverlay();
+    // Clear all errors when closing
+    setDumpError(null);
     onClose();
+  };
+
+  // Enhanced release control handler with error clearing
+  const handleReleaseControlWithCleanup = async () => {
+    try {
+      await handleReleaseControl();
+      // Clear all errors after successful release
+      setDumpError(null);
+    } catch (error) {
+      console.error('[@component:AndroidMobileModal] Release control failed:', error);
+    }
   };
 
   // Update device resolution when screenshot is available
@@ -545,7 +558,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   <Button 
                     variant="contained" 
                     color="error"
-                    onClick={handleReleaseControl}
+                    onClick={handleReleaseControlWithCleanup}
                     disabled={connectionLoading}
                     sx={{ flex: 1 }}
                   >

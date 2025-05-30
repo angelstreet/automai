@@ -109,16 +109,9 @@ export function useRemoteConnection(remoteType: RemoteType) {
     setConnectionError(null);
 
     try {
-      console.log('[@hook:useRemoteConnection] Starting take control process with form:', {
-        host_ip: connectionForm.host_ip,
-        device_ip: connectionForm.device_ip,
-        host_username: connectionForm.host_username,
-        host_port: connectionForm.host_port,
-        device_port: connectionForm.device_port,
-        // Don't log password for security
-      });
+      console.log('[@hook:useRemoteConnection] Starting take control process with form:', connectionForm);
 
-      // Validate required fields
+      // Validate required fields - all remote types require these four fields
       const requiredFields = ['host_ip', 'host_username', 'host_password', 'device_ip'];
       const missingFields = requiredFields.filter(field => !connectionForm[field]);
       
@@ -171,25 +164,26 @@ export function useRemoteConnection(remoteType: RemoteType) {
     if (!deviceConfig) return;
     
     setConnectionLoading(true);
+    setConnectionError(null); // Clear any connection errors
 
     try {
+      console.log('[@hook:useRemoteConnection] Releasing control...');
       await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.disconnect}`, {
         method: 'POST',
       });
       
-      setSession(initialSession);
-      setConnectionError(null);
-      setAndroidScreenshot(null);
-      // Clear Android mobile specific data
-      setAndroidElements([]);
-      setAndroidApps([]);
+      console.log('[@hook:useRemoteConnection] Control released successfully');
     } catch (err: any) {
-      // Still reset session even if release fails
-      setSession(initialSession);
+      console.error('[@hook:useRemoteConnection] Release control error:', err);
+      // Continue with reset even if release fails
+    } finally {
+      // Always reset session state and clear data (even if backend call fails)
+      setSession(initialSession); // This sets connected: false
+      setAndroidScreenshot(null);
       setAndroidElements([]);
       setAndroidApps([]);
-    } finally {
       setConnectionLoading(false);
+      console.log('[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled');
     }
   }, [deviceConfig]);
 
@@ -399,4 +393,4 @@ export function useRemoteConnection(remoteType: RemoteType) {
     
     deviceConfig,
   };
-} 
+}
