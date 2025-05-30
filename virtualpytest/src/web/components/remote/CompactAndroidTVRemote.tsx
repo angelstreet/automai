@@ -1,4 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import {
+  Box,
+  Button,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
+import { useAndroidTVConnection } from '../../hooks/remote/useAndroidTVConnection';
 import { AndroidTVRemoteCore } from './AndroidTVRemoteCore';
 
 interface CompactAndroidTVRemoteProps {
@@ -28,17 +35,164 @@ export function CompactAndroidTVRemote({
   sx = {},
   onDisconnectComplete
 }: CompactAndroidTVRemoteProps) {
+  // Use the Android TV connection hook - single source of truth
+  const {
+    session,
+    connectionForm,
+    setConnectionForm,
+    connectionLoading,
+    connectionError,
+    handleTakeControl,
+    handleReleaseControl,
+    handleRemoteCommand,
+    fetchDefaultValues,
+    remoteConfig,
+  } = useAndroidTVConnection();
+
+  // Initialize connection form with provided config or fetch defaults
+  useEffect(() => {
+    if (connectionConfig) {
+      console.log('[@component:CompactAndroidTVRemote] Initializing with provided config');
+      setConnectionForm({
+        host_ip: connectionConfig.host_ip,
+        host_port: connectionConfig.host_port || '22',
+        host_username: connectionConfig.host_username,
+        host_password: connectionConfig.host_password,
+        device_ip: connectionConfig.device_ip,
+        device_port: connectionConfig.device_port || '5555',
+      });
+      
+      // Auto-connect if requested and not already connected
+      if (autoConnect && !session.connected && !connectionLoading) {
+        console.log('[@component:CompactAndroidTVRemote] Auto-connecting...');
+        handleTakeControl();
+      }
+    } else {
+      console.log('[@component:CompactAndroidTVRemote] No config provided, fetching defaults');
+      fetchDefaultValues();
+    }
+  }, [connectionConfig, fetchDefaultValues, setConnectionForm, autoConnect, session.connected, connectionLoading, handleTakeControl]);
+
+  const handleDisconnect = async () => {
+    try {
+      await handleReleaseControl();
+      if (onDisconnectComplete) {
+        onDisconnectComplete();
+      }
+    } catch (error) {
+      console.error('[@component:CompactAndroidTVRemote] Error during disconnect:', error);
+    }
+  };
+
+  // For compact view, show loading or remote directly
+  if (!session.connected) {
+    // If auto-connecting or has config, show minimal loading state
+    if (autoConnect && connectionConfig) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          height: '100%',
+          ...sx 
+        }}>
+          {connectionLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="info.main">
+                Connecting...
+              </Typography>
+            </Box>
+          ) : connectionError ? (
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="body2" color="error" gutterBottom>
+                Connection Failed
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleTakeControl}
+                disabled={connectionLoading}
+                size="small"
+              >
+                Retry
+              </Button>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              Initializing...
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+    
+    // Manual connection display (when no auto-connect)
+    return (
+      <Box sx={{ 
+        p: 2, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        height: '100%',
+        ...sx 
+      }}>
+        <Typography variant="body2" color="textSecondary" gutterBottom>
+          Android TV Not Connected
+        </Typography>
+        
+        {connectionLoading ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <CircularProgress size={16} />
+            <Typography variant="caption" color="info.main">
+              Connecting...
+            </Typography>
+          </Box>
+        ) : connectionConfig ? (
+          <Button
+            variant="contained"
+            onClick={handleTakeControl}
+            disabled={connectionLoading}
+            size="small"
+            sx={{ mb: 2 }}
+          >
+            Connect
+          </Button>
+        ) : (
+          <Typography variant="caption" color="warning.main" textAlign="center" sx={{ mb: 2 }}>
+            No device configuration
+          </Typography>
+        )}
+        
+        {connectionError && (
+          <Box sx={{ 
+            mt: 1, 
+            p: 1, 
+            bgcolor: 'error.light', 
+            borderRadius: 1, 
+            maxWidth: '100%',
+            wordBreak: 'break-word'
+          }}>
+            <Typography variant="caption" color="error" textAlign="center">
+              {connectionError}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  // Connected state - Use AndroidTVRemoteCore with compact style
   return (
     <AndroidTVRemoteCore
-      connectionConfig={connectionConfig}
-      layout={{
-        showConnectionForm: false, // Compact doesn't show full form
-        showScreenshot: false, // Compact doesn't show screenshot
-        direction: 'column', // Single column layout
-        remoteStyle: 'absolute', // Absolute positioning like original
-        sx: sx
-      }}
-      onDisconnectComplete={onDisconnectComplete}
+      isConnected={session.connected}
+      remoteConfig={remoteConfig}
+      connectionLoading={connectionLoading}
+      onCommand={handleRemoteCommand}
+      onDisconnect={handleDisconnect}
+      style="compact"
+      sx={sx}
     />
   );
 } 

@@ -61,7 +61,6 @@ export const AndroidTVModal: React.FC<AndroidTVModalProps> = ({
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, p: 0 }}>
         <AndroidTVRemotePanel
           connectionConfig={connectionConfig}
-          compact={false}
           showScreenshot={true}
         />
       </DialogContent>
