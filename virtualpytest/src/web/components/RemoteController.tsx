@@ -1,12 +1,7 @@
 import React from 'react';
-import { AndroidMobileModal } from './modals/remote/AndroidMobileModal';
-import { AndroidMobileRemotePanel } from './remote/AndroidMobileRemotePanel';
-import { AndroidTVRemotePanel } from './remote/AndroidTVRemotePanel';
-import { IRRemotePanel } from './remote/IRRemotePanel';
-import { BluetoothRemotePanel } from './remote/BluetoothRemotePanel';
-import { HDMIStreamPanel } from './remote/HDMIStreamPanel';
 import { Dialog, DialogTitle, DialogContent, Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { RemotePanel } from './remote/RemotePanel';
 
 interface RemoteControllerProps {
   deviceType: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream' | 'unknown';
@@ -23,7 +18,6 @@ interface RemoteControllerProps {
 export function RemoteController({ deviceType, device, open, onClose }: RemoteControllerProps) {
   console.log(`[@component:RemoteController] Rendering remote controller for device type: ${deviceType}`);
 
-  // Extract connection config from device if available
   const getAndroidConnectionConfig = () => {
     if (!device?.controller_configs?.remote) return undefined;
     
@@ -60,70 +54,56 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
     };
   };
 
-  const getHDMIStreamConnectionConfig = () => {
-    if (!device?.controller_configs?.remote) return undefined;
-    
-    const config = device.controller_configs.remote;
-    return {
-      host_ip: config.host_ip,
-      host_port: config.host_port,
-      host_username: config.host_username,
-      host_password: config.host_password,
-      stream_path: config.stream_path,
-      video_device: config.video_device,
-      resolution: config.resolution,
-      fps: config.fps,
-    };
-  };
-
   // Render appropriate remote controller based on device type
   const renderRemoteController = () => {
     switch (deviceType) {
       case 'android_mobile':
         return (
-          <AndroidMobileRemotePanel
+          <RemotePanel
+            remoteType="android-mobile"
             connectionConfig={getAndroidConnectionConfig()}
-            autoConnect={false} // Let user manually connect
-            compact={false}
             showScreenshot={true}
           />
         );
         
       case 'android_tv':
         return (
-          <AndroidTVRemotePanel
+          <RemotePanel
+            remoteType="android-tv"
             connectionConfig={getAndroidConnectionConfig()}
-            autoConnect={false}
-            compact={false}
             showScreenshot={true}
           />
         );
         
       case 'ir_remote':
         return (
-          <IRRemotePanel
-            connectionConfig={getIRConnectionConfig()}
-            autoConnect={false}
-            compact={false}
+          <RemotePanel
+            remoteType="ir"
+            connectionConfig={getIRConnectionConfig() as any}
+            showScreenshot={false}
           />
         );
         
       case 'bluetooth_remote':
         return (
-          <BluetoothRemotePanel
-            connectionConfig={getBluetoothConnectionConfig()}
-            autoConnect={false}
-            compact={false}
+          <RemotePanel
+            remoteType="bluetooth"
+            connectionConfig={getBluetoothConnectionConfig() as any}
+            showScreenshot={false}
           />
         );
         
       case 'hdmi_stream':
+        // HDMI Stream doesn't have a generic component yet, show unsupported message
         return (
-          <HDMIStreamPanel
-            connectionConfig={getHDMIStreamConnectionConfig()}
-            autoConnect={false}
-            compact={false}
-          />
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom color="warning">
+              HDMI Stream Remote
+            </Typography>
+            <Typography color="textSecondary">
+              HDMI Stream remote is not yet supported by the generic remote system.
+            </Typography>
+          </Box>
         );
         
       case 'unknown':

@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AndroidTVSession, ConnectionForm, RemoteConfig } from '../../types/remote/types';
+import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
+import { getRemoteConfig } from './remoteConfigs';
 import { androidTVRemote } from '../../../config/remote';
 
 const initialConnectionForm: ConnectionForm = {
@@ -17,23 +19,30 @@ const initialSession: AndroidTVSession = {
   device_ip: ''
 };
 
-export function useAndroidTVConnection() {
+export function useRemoteConnection(remoteType: RemoteType) {
   const [session, setSession] = useState<AndroidTVSession>(initialSession);
   const [connectionForm, setConnectionForm] = useState<ConnectionForm>(initialConnectionForm);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(androidTVRemote as RemoteConfig);
+  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
 
-  // Load the remote configuration from JSON
+  // Get device configuration
+  const deviceConfig = getRemoteConfig(remoteType);
+  
+  // Load the remote configuration from JSON (Android TV specific for now)
   useEffect(() => {
-    // We already imported the config, but log for clarity
-    console.log('[@hook:useAndroidTVConnection] Loaded remote configuration from local JSON file');
-  }, []);
+    if (remoteType === 'android-tv') {
+      setRemoteConfig(androidTVRemote as RemoteConfig);
+      console.log('[@hook:useRemoteConnection] Loaded remote configuration from local JSON file');
+    }
+  }, [remoteType]);
 
   const fetchDefaultValues = useCallback(async () => {
+    if (!deviceConfig) return;
+    
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/defaults');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.defaults}`);
       const result = await response.json();
       
       if (result.success && result.defaults) {
@@ -45,35 +54,39 @@ export function useAndroidTVConnection() {
     } catch (error) {
       console.log('Could not load default values:', error);
     }
-  }, []);
+  }, [deviceConfig]);
 
   // Kept for backward compatibility, now it just uses the local JSON
   const fetchAndroidTVConfig = useCallback(async () => {
+    if (!deviceConfig || remoteType !== 'android-tv') return;
+    
     // We're now using the imported JSON config
-    console.log('[@hook:useAndroidTVConnection] Using local remote configuration');
+    console.log('[@hook:useRemoteConnection] Using local remote configuration');
     
     // Only fetch from backend if needed for dynamic configurations
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/config');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.config}`);
       const result = await response.json();
       
       if (result.success && result.config) {
         // Only update if the backend has different config
         // This ensures we prioritize our local config but can be overridden by backend
-        console.log('[@hook:useAndroidTVConnection] Updated config from backend');
+        console.log('[@hook:useRemoteConnection] Updated config from backend');
         setRemoteConfig(result.config);
       }
     } catch (error) {
-      console.log('[@hook:useAndroidTVConnection] Using default config, backend not available:', error);
+      console.log('[@hook:useRemoteConnection] Using default config, backend not available:', error);
     }
-  }, []);
+  }, [deviceConfig, remoteType]);
 
   const handleTakeControl = useCallback(async () => {
+    if (!deviceConfig) return;
+    
     setConnectionLoading(true);
     setConnectionError(null);
 
     try {
-      console.log('[@hook:useAndroidTVConnection] Starting take control process with form:', {
+      console.log('[@hook:useRemoteConnection] Starting take control process with form:', {
         host_ip: connectionForm.host_ip,
         device_ip: connectionForm.device_ip,
         host_username: connectionForm.host_username,
@@ -88,7 +101,7 @@ export function useAndroidTVConnection() {
       
       if (missingFields.length > 0) {
         const errorMsg = `Missing required connection fields: ${missingFields.join(', ')}`;
-        console.error('[@hook:useAndroidTVConnection]', errorMsg);
+        console.error('[@hook:useRemoteConnection]', errorMsg);
         setConnectionError(errorMsg);
         return;
       }
@@ -97,8 +110,8 @@ export function useAndroidTVConnection() {
       // Only fetch from backend for updating purposes
       await fetchAndroidTVConfig();
 
-      console.log('[@hook:useAndroidTVConnection] Sending take-control request to backend...');
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/take-control', {
+      console.log('[@hook:useRemoteConnection] Sending take-control request to backend...');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.connect}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,10 +120,10 @@ export function useAndroidTVConnection() {
       });
 
       const result = await response.json();
-      console.log('[@hook:useAndroidTVConnection] Backend response:', result);
+      console.log('[@hook:useRemoteConnection] Backend response:', result);
 
       if (result.success) {
-        console.log('[@hook:useAndroidTVConnection] Successfully connected to Android TV');
+        console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
         setSession({
           connected: true,
           host_ip: connectionForm.host_ip,
@@ -118,24 +131,26 @@ export function useAndroidTVConnection() {
         });
         setConnectionError(null);
       } else {
-        const errorMsg = result.error || 'Failed to connect to Android TV device';
-        console.error('[@hook:useAndroidTVConnection] Connection failed:', errorMsg);
+        const errorMsg = result.error || `Failed to connect to ${deviceConfig.name} device`;
+        console.error('[@hook:useRemoteConnection] Connection failed:', errorMsg);
         setConnectionError(errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Connection failed - network or server error';
-      console.error('[@hook:useAndroidTVConnection] Exception during connection:', err);
+      console.error('[@hook:useRemoteConnection] Exception during connection:', err);
       setConnectionError(errorMsg);
     } finally {
       setConnectionLoading(false);
     }
-  }, [connectionForm, fetchAndroidTVConfig]);
+  }, [connectionForm, fetchAndroidTVConfig, deviceConfig]);
 
   const handleReleaseControl = useCallback(async () => {
+    if (!deviceConfig) return;
+    
     setConnectionLoading(true);
 
     try {
-      await fetch('http://localhost:5009/api/virtualpytest/android-tv/release-control', {
+      await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.disconnect}`, {
         method: 'POST',
       });
       
@@ -148,33 +163,39 @@ export function useAndroidTVConnection() {
     } finally {
       setConnectionLoading(false);
     }
-  }, []);
+  }, [deviceConfig]);
 
   const handleScreenshot = useCallback(async () => {
+    if (!deviceConfig?.apiEndpoints.screenshot) {
+      throw new Error('Screenshot not supported for this device type');
+    }
+    
     try {
-      console.log('[@hook:useAndroidTVConnection] Taking screenshot...');
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/screenshot', {
+      console.log('[@hook:useRemoteConnection] Taking screenshot...');
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.screenshot}`, {
         method: 'POST',
       });
 
       const result = await response.json();
       if (result.success) {
         setAndroidScreenshot(result.screenshot);
-        console.log('[@hook:useAndroidTVConnection] Screenshot captured successfully');
+        console.log('[@hook:useRemoteConnection] Screenshot captured successfully');
       } else {
         const errorMessage = result.error || 'Screenshot failed';
-        console.error('[@hook:useAndroidTVConnection] Screenshot failed:', errorMessage);
+        console.error('[@hook:useRemoteConnection] Screenshot failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error('[@hook:useAndroidTVConnection] Screenshot error:', err);
+      console.error('[@hook:useRemoteConnection] Screenshot error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
-  }, []);
+  }, [deviceConfig]);
 
   const handleRemoteCommand = useCallback(async (command: string, params: any = {}) => {
+    if (!deviceConfig) return;
+    
     try {
-      console.log(`[@hook:useAndroidTVConnection] Sending remote command: ${command}`, params);
+      console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
       
       // Format the command for the backend API
       // The backend expects: { command: 'press_key', params: { key: 'POWER' } }
@@ -183,7 +204,7 @@ export function useAndroidTVConnection() {
         params: { key: command }
       };
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/command', {
+      const response = await fetch(`http://localhost:5009${deviceConfig.apiEndpoints.command}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,14 +214,14 @@ export function useAndroidTVConnection() {
 
       const result = await response.json();
       if (result.success) {
-        console.log(`[@hook:useAndroidTVConnection] Successfully sent command: ${command}`);
+        console.log(`[@hook:useRemoteConnection] Successfully sent command: ${command}`);
       } else {
-        console.error(`[@hook:useAndroidTVConnection] Remote command failed:`, result.error);
+        console.error(`[@hook:useRemoteConnection] Remote command failed:`, result.error);
       }
     } catch (err: any) {
-      console.error(`[@hook:useAndroidTVConnection] Remote command error:`, err);
+      console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
     }
-  }, []);
+  }, [deviceConfig]);
 
   return {
     session,
@@ -215,5 +236,6 @@ export function useAndroidTVConnection() {
     handleScreenshot,
     handleRemoteCommand,
     fetchDefaultValues,
+    deviceConfig,
   };
 } 

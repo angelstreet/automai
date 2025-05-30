@@ -5,8 +5,11 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { RemoteInterface } from './RemoteInterface';
+import { RemoteType } from '../../types/remote/remoteTypes';
 
-interface AndroidTVRemoteCoreProps {
+interface RemoteCoreProps {
+  /** The type of remote device */
+  remoteType: RemoteType;
   /** Whether device is connected */
   isConnected: boolean;
   /** Remote configuration */
@@ -23,7 +26,8 @@ interface AndroidTVRemoteCoreProps {
   sx?: any;
 }
 
-export function AndroidTVRemoteCore({
+export function RemoteCore({
+  remoteType,
   isConnected,
   remoteConfig,
   connectionLoading,
@@ -31,7 +35,7 @@ export function AndroidTVRemoteCore({
   onDisconnect,
   style = 'compact',
   sx = {}
-}: AndroidTVRemoteCoreProps) {
+}: RemoteCoreProps) {
   const [showOverlays, setShowOverlays] = useState(false);
 
   // Don't render if not connected

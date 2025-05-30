@@ -62,16 +62,10 @@ import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
-import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
-import { CompactAndroidTVRemote } from '../components/remote/CompactAndroidTVRemote';
-import { IRRemotePanel } from '../components/remote/IRRemotePanel';
-import { BluetoothRemotePanel } from '../components/remote/BluetoothRemotePanel';
 
-// Import remote connection hooks
-import { useAndroidMobileConnection } from '../hooks/remote/useAndroidMobileConnection';
-import { useAndroidTVConnection } from '../hooks/remote/useAndroidTVConnection';
-import { useIRRemoteConnection } from '../hooks/remote/useIRRemoteConnection';
-import { useBluetoothRemoteConnection } from '../hooks/remote/useBluetoothRemoteConnection';
+// Import NEW generic remote components instead of device-specific ones
+import { CompactRemote } from '../components/remote/CompactRemote';
+import { RemotePanel } from '../components/remote/RemotePanel';
 
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
@@ -102,32 +96,6 @@ const NavigationEditorContent: React.FC = () => {
   const selectedDeviceData = devices.find(d => d.name === selectedDevice);
   const remoteConfig = selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
 
-  // Connection hooks for different device types
-  const androidMobileHook = useAndroidMobileConnection();
-  const androidTVHook = useAndroidTVConnection();
-  const irRemoteHook = useIRRemoteConnection();
-  const bluetoothRemoteHook = useBluetoothRemoteConnection();
-
-  // Get the appropriate hook based on remote type
-  const getActiveHook = () => {
-    if (!remoteConfig) return null;
-    
-    switch (remoteConfig.type) {
-      case 'android_mobile':
-        return androidMobileHook;
-      case 'android_tv':
-        return androidTVHook;
-      case 'ir_remote':
-        return irRemoteHook;
-      case 'bluetooth_remote':
-        return bluetoothRemoteHook;
-      default:
-        return null;
-    }
-  };
-
-  const activeHook = getActiveHook();
-
   // Fetch devices
   const fetchDevices = async () => {
     console.log('[@component:NavigationEditor] Fetching devices');
@@ -150,38 +118,15 @@ const NavigationEditorContent: React.FC = () => {
 
   // Auto-populate connection form when device is selected
   useEffect(() => {
-    if (selectedDeviceData?.controller_configs?.remote && activeHook) {
-      const remoteConfig = selectedDeviceData.controller_configs.remote;
+    if (selectedDeviceData?.controller_configs?.remote) {
+      const deviceRemoteConfig = selectedDeviceData.controller_configs.remote;
       
-      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, remoteConfig);
+      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, deviceRemoteConfig);
       
-      if (remoteConfig.type === 'android_mobile' && activeHook === androidMobileHook) {
-        const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
-        console.log('[@component:NavigationEditor] Extracted Android Mobile connection config:', connectionConfig);
-        if (connectionConfig && androidMobileHook.setConnectionForm) {
-          androidMobileHook.setConnectionForm(connectionConfig);
-        }
-      } else if (remoteConfig.type === 'android_tv' && activeHook === androidTVHook) {
-        const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
-        console.log('[@component:NavigationEditor] Extracted Android TV connection config:', connectionConfig);
-        if (connectionConfig && androidTVHook.setConnectionForm) {
-          androidTVHook.setConnectionForm(connectionConfig);
-        }
-      } else if (remoteConfig.type === 'ir_remote' && activeHook === irRemoteHook) {
-        const connectionConfig = extractConnectionConfigForIR(remoteConfig);
-        console.log('[@component:NavigationEditor] Extracted IR connection config:', connectionConfig);
-        if (connectionConfig && irRemoteHook.setConnectionForm) {
-          irRemoteHook.setConnectionForm(connectionConfig);
-        }
-      } else if (remoteConfig.type === 'bluetooth_remote' && activeHook === bluetoothRemoteHook) {
-        const connectionConfig = extractConnectionConfigForBluetooth(remoteConfig);
-        console.log('[@component:NavigationEditor] Extracted Bluetooth connection config:', connectionConfig);
-        if (connectionConfig && bluetoothRemoteHook.setConnectionForm) {
-          bluetoothRemoteHook.setConnectionForm(connectionConfig);
-        }
-      }
+      // Just log the device configuration - the new generic components will handle configuration automatically
+      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has remote type: ${deviceRemoteConfig.type}`);
     }
-  }, [selectedDeviceData, activeHook, androidMobileHook, androidTVHook, irRemoteHook, bluetoothRemoteHook]);
+  }, [selectedDeviceData]);
 
   // Handle disconnection when control is released
   useEffect(() => {
@@ -191,17 +136,10 @@ const NavigationEditorContent: React.FC = () => {
     if (!isControlActive) {
       console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
       
-      if (remoteConfig.type === 'android_tv' && androidTVHook.handleReleaseControl) {
-        androidTVHook.handleReleaseControl();
-      } else if (remoteConfig.type === 'android_mobile' && androidMobileHook.handleDisconnect) {
-        androidMobileHook.handleDisconnect();
-      } else if (remoteConfig.type === 'ir_remote' && irRemoteHook.handleDisconnect) {
-        irRemoteHook.handleDisconnect();
-      } else if (remoteConfig.type === 'bluetooth_remote' && bluetoothRemoteHook.handleDisconnect) {
-        bluetoothRemoteHook.handleDisconnect();
-      }
+      // The generic components will handle disconnection automatically
+      console.log(`[@component:NavigationEditor] Disconnection will be handled by the generic remote component`);
     }
-  }, [isControlActive, remoteConfig, androidMobileHook, androidTVHook, irRemoteHook, bluetoothRemoteHook]);
+  }, [isControlActive, remoteConfig]);
 
   const {
     // State
@@ -583,14 +521,16 @@ const NavigationEditorContent: React.FC = () => {
               
               {/* Remote Panel Content - Dynamic based on device type */}
               {remoteConfig.type === 'android_mobile' ? (
-                <AndroidMobileRemotePanel
+                <CompactRemote
+                  remoteType="android-mobile"
                   connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                   autoConnect={isControlActive}
                   showScreenshot={false}
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'android_tv' ? (
-                <CompactAndroidTVRemote
+                <CompactRemote
+                  remoteType="android-tv"
                   connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                   autoConnect={isControlActive}
                   showScreenshot={false}
@@ -603,14 +543,16 @@ const NavigationEditorContent: React.FC = () => {
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'ir_remote' ? (
-                <IRRemotePanel
-                  connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote)}
+                <CompactRemote
+                  remoteType="ir"
+                  connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote) as any}
                   autoConnect={isControlActive}
                   sx={{ flex: 1, height: '100%' }}
                 />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
-                <BluetoothRemotePanel
-                  connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote)}
+                <CompactRemote
+                  remoteType="bluetooth"
+                  connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote) as any}
                   autoConnect={isControlActive}
                   sx={{ flex: 1, height: '100%' }}
                 />

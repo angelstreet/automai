@@ -5,19 +5,15 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-import { useAndroidTVConnection } from '../../hooks/remote/useAndroidTVConnection';
-import { AndroidTVRemoteCore } from './AndroidTVRemoteCore';
+import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
+import { RemoteCore } from './RemoteCore';
+import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
 
-interface CompactAndroidTVRemoteProps {
+interface CompactRemoteProps {
+  /** The type of remote device */
+  remoteType: RemoteType;
   /** Optional pre-configured connection parameters */
-  connectionConfig?: {
-    host_ip: string;
-    host_port?: string;
-    host_username: string;
-    host_password: string;
-    device_ip: string;
-    device_port?: string;
-  };
+  connectionConfig?: BaseConnectionConfig;
   /** Whether to auto-connect on mount if config is provided */
   autoConnect?: boolean;
   /** Show/hide screenshot display */
@@ -28,14 +24,15 @@ interface CompactAndroidTVRemoteProps {
   onDisconnectComplete?: () => void;
 }
 
-export function CompactAndroidTVRemote({
+export function CompactRemote({
+  remoteType,
   connectionConfig,
   autoConnect = false,
   showScreenshot = true,
   sx = {},
   onDisconnectComplete
-}: CompactAndroidTVRemoteProps) {
-  // Use the Android TV connection hook - single source of truth
+}: CompactRemoteProps) {
+  // Use the generic remote connection hook - single source of truth
   const {
     session,
     connectionForm,
@@ -47,7 +44,8 @@ export function CompactAndroidTVRemote({
     handleRemoteCommand,
     fetchDefaultValues,
     remoteConfig,
-  } = useAndroidTVConnection();
+    deviceConfig,
+  } = useRemoteConnection(remoteType);
 
   // Track if we've already initialized to prevent duplicate calls
   const isInitializedRef = useRef(false);
@@ -69,7 +67,7 @@ export function CompactAndroidTVRemote({
       isInitializedRef.current = true;
       
       if (connectionConfig) {
-        console.log('[@component:CompactAndroidTVRemote] Initializing with provided config');
+        console.log(`[@component:CompactRemote] Initializing with provided config for ${remoteType}`);
         setConnectionForm({
           host_ip: connectionConfig.host_ip,
           host_port: connectionConfig.host_port || '22',
@@ -79,19 +77,19 @@ export function CompactAndroidTVRemote({
           device_port: connectionConfig.device_port || '5555',
         });
       } else {
-        console.log('[@component:CompactAndroidTVRemote] No config provided, fetching defaults');
+        console.log(`[@component:CompactRemote] No config provided for ${remoteType}, fetching defaults`);
         fetchDefaultValues();
       }
     }
-  }, [connectionConfig, createConfigHash, setConnectionForm, fetchDefaultValues]);
+  }, [connectionConfig, createConfigHash, setConnectionForm, fetchDefaultValues, remoteType]);
 
   // Separate effect for auto-connect logic
   useEffect(() => {
     if (autoConnect && connectionConfig && !session.connected && !connectionLoading && isInitializedRef.current) {
-      console.log('[@component:CompactAndroidTVRemote] Auto-connecting...');
+      console.log(`[@component:CompactRemote] Auto-connecting to ${remoteType}...`);
       handleTakeControl();
     }
-  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl]);
+  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl, remoteType]);
 
   const handleDisconnect = useCallback(async () => {
     try {
@@ -100,9 +98,9 @@ export function CompactAndroidTVRemote({
         onDisconnectComplete();
       }
     } catch (error) {
-      console.error('[@component:CompactAndroidTVRemote] Error during disconnect:', error);
+      console.error(`[@component:CompactRemote] Error during disconnect for ${remoteType}:`, error);
     }
-  }, [handleReleaseControl, onDisconnectComplete]);
+  }, [handleReleaseControl, onDisconnectComplete, remoteType]);
 
   // For compact view, show loading or remote directly
   if (!session.connected) {
@@ -159,7 +157,7 @@ export function CompactAndroidTVRemote({
         ...sx 
       }}>
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          Android TV Not Connected
+          {deviceConfig?.name || remoteType} Not Connected
         </Typography>
         
         {connectionLoading ? (
@@ -203,9 +201,10 @@ export function CompactAndroidTVRemote({
     );
   }
 
-  // Connected state - Use AndroidTVRemoteCore with compact style
+  // Connected state - Use RemoteCore with compact style
   return (
-    <AndroidTVRemoteCore
+    <RemoteCore
+      remoteType={remoteType}
       isConnected={session.connected}
       remoteConfig={remoteConfig}
       connectionLoading={connectionLoading}
