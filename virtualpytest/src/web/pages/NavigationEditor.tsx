@@ -497,6 +497,8 @@ const NavigationEditorContent: React.FC = () => {
                   handleTakeControl(); // Release control
                   handleToggleRemotePanel(); // Close panel
                 }}
+                connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                autoConnect={true}
               />
             ) : (
               <Box sx={{
