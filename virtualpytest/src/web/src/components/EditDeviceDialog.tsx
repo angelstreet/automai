@@ -420,7 +420,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
             disabled={!formData.name.trim() || !formData.model || isSubmitting}
             startIcon={isSubmitting ? <CircularProgress size={16} /> : <SaveIcon />}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
         )}
       </DialogActions>

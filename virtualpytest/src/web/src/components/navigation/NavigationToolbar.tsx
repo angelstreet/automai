@@ -186,7 +186,7 @@ export const NavigationToolbar: React.FC<NavigationToolbarProps> = ({
         <IconButton 
           onClick={saveToDatabase} 
           size="small" 
-          title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
+          title={hasUnsavedChanges ? "Save Changes to Database" : "Save"}
           disabled={isLoading || !!error}
           color={hasUnsavedChanges ? "primary" : "default"}
         >

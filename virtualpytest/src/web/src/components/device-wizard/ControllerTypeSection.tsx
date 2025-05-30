@@ -48,13 +48,12 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
       controllerType as 'remote' | 'av' | 'network' | 'power'
     );
     
-    // Filter to only available controllers
-    const availableConfigs = configs.filter(config => config.status === 'available');
-    setAvailableConfigs(availableConfigs);
+    // Remove status filtering - show all controllers regardless of status
+    setAvailableConfigs(configs);
 
     // Auto-select if there's a matching implementation or only one option
-    if (controllerImplementation && availableConfigs.length > 0) {
-      const matchingConfig = availableConfigs.find(config => 
+    if (controllerImplementation && configs.length > 0) {
+      const matchingConfig = configs.find(config => 
         config.implementation === controllerImplementation
       );
       if (matchingConfig) {
@@ -71,9 +70,9 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
           onConfigUpdate(matchingConfig.implementation, defaultParams);
         }
       }
-    } else if (availableConfigs.length === 1) {
+    } else if (configs.length === 1) {
       // Auto-select if only one option
-      const config = availableConfigs[0];
+      const config = configs[0];
       setSelectedConfig(config);
       
       if (!currentConfig.implementation) {
@@ -147,16 +146,15 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
 
   if (availableConfigs.length === 0) {
     return (
-      <Paper sx={{ p: 2, border: 1, borderColor: 'error.main' }}>
+      <Paper sx={{ p: 2, border: 1, borderColor: 'warning.main' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           {getControllerIcon()}
           <Typography variant="subtitle1" color="text.secondary">
             {getControllerTypeDisplayName()}
           </Typography>
-          <Chip label="Unavailable" size="small" color="error" />
         </Box>
         <Typography variant="body2" color="text.secondary">
-          No available implementations for this controller type.
+          No implementations found for this controller type.
         </Typography>
       </Paper>
     );
@@ -169,13 +167,6 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
         <Typography variant="subtitle1">
           {getControllerTypeDisplayName()}
         </Typography>
-        {selectedConfig && (
-          <Chip 
-            label={selectedConfig.status} 
-            size="small" 
-            color={selectedConfig.status === 'available' ? 'success' : 'warning'} 
-          />
-        )}
       </Box>
 
       {availableConfigs.length > 1 ? (
