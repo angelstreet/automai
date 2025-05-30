@@ -404,9 +404,7 @@ const DeviceManagement: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Description</strong></TableCell>
                     <TableCell><strong>Model</strong></TableCell>
-                    <TableCell><strong>Created</strong></TableCell>
                     <TableCell align="center"><strong>Remote Controller</strong></TableCell>
                     <TableCell align="center"><strong>AV Controller</strong></TableCell>
                     <TableCell align="center"><strong>Power Controller</strong></TableCell>
@@ -435,20 +433,6 @@ const DeviceManagement: React.FC = () => {
                         {editingId === device.id ? (
                           <TextField
                             size="small"
-                            value={editForm.description}
-                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          device.description || 'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === device.id ? (
-                          <TextField
-                            size="small"
                             value={editForm.model}
                             onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                             fullWidth
@@ -458,17 +442,6 @@ const DeviceManagement: React.FC = () => {
                         ) : (
                           device.model || 'N/A'
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(device.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Typography>
                       </TableCell>
                       <TableCell align="center">
                         {/* Remote Controller Column */}

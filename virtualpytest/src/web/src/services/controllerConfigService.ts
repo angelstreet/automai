@@ -241,6 +241,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
             pattern: '^/dev/video[0-9]+$'
           }
         },
+        
         {
           name: 'stream_path',
           label: 'Stream Output Path',

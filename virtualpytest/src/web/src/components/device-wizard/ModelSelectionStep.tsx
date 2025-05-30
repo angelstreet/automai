@@ -183,9 +183,6 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
         </Box>
       )}
 
-      <FormHelperText sx={{ mt: 2, fontSize: '0.875rem' }}>
-        <strong>Next:</strong> Configure the controllers associated with your selected model.
-      </FormHelperText>
     </Box>
   );
 }; 

@@ -65,9 +65,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         helperText={errors.description || 'Add any additional notes about this device (optional)'}
       />
 
-      <FormHelperText sx={{ mt: 2, fontSize: '0.875rem' }}>
-        <strong>Next:</strong> You'll select a device model which will determine the available controllers and their configuration requirements.
-      </FormHelperText>
     </Box>
   );
 }; 

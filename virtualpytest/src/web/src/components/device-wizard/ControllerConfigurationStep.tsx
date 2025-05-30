@@ -78,15 +78,7 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
   }
 
   return (
-    <Box sx={{ pt: 1 }}>
-      <Typography variant="h6" gutterBottom>
-        Controller Configuration
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configure the controllers for your selected model "{selectedModel.name}". 
-        Each controller requires specific connection parameters.
-      </Typography>
-
+    <Box sx={{ pt: 1 }}>  
       {activeControllers.map(({ type, value }, index) => (
         <React.Fragment key={type}>
           <ControllerTypeSection
@@ -106,9 +98,6 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
         </React.Fragment>
       ))}
 
-      <FormHelperText sx={{ mt: 3, fontSize: '0.875rem' }}>
-        <strong>Next:</strong> Review your configuration and create the device.
-      </FormHelperText>
     </Box>
   );
 }; 
