@@ -229,7 +229,7 @@ def get_android_tv_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_TV_IP', '192.168.1.130'),
             'device_port': os.getenv('DEVICE_PORT', '5555')
         }
         
@@ -325,7 +325,7 @@ def get_android_mobile_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_MOBILE_IP', '192.168.1.29'),
             'device_port': os.getenv('DEVICE_PORT', '5555')
         }
         
