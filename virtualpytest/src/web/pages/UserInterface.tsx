@@ -48,14 +48,14 @@ const UserInterface: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
     name: '', 
-    models: [] as string[],
+    models: [] as string[], 
     min_version: '', 
     max_version: '' 
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [newInterface, setNewInterface] = useState({ 
     name: '', 
-    models: [] as string[],
+    models: [] as string[], 
     min_version: '', 
     max_version: '' 
   });
@@ -275,6 +275,32 @@ const UserInterface: React.FC = () => {
     }
   };
 
+  // Handle edit navigation functionality
+  const handleEditNavigation = (userInterface: UserInterfaceType) => {
+    try {
+      const rootTree = userInterface.root_tree;
+      
+      if (rootTree && rootTree.id && rootTree.name) {
+        console.log('[@component:UserInterface] Opening navigation editor for:', {
+          interfaceId: userInterface.id,
+          interfaceName: userInterface.name,
+          treeId: rootTree.id,
+          treeName: rootTree.name
+        });
+        
+        // Open navigation editor with proper URL encoding
+        const url = `/navigation-editor/${encodeURIComponent(rootTree.name)}/${encodeURIComponent(rootTree.id)}`;
+        window.open(url, '_blank');
+      } else {
+        console.warn('[@component:UserInterface] No root navigation tree found for user interface:', userInterface.id);
+        setError('No root navigation tree found for this user interface. You may need to create one first or reload the data.');
+      }
+    } catch (err) {
+      console.error('[@component:UserInterface] Error opening navigation editor:', err);
+      setError('Failed to open navigation editor. Please try again.');
+    }
+  };
+
   // Loading state component
   const LoadingState = () => (
     <Box 
@@ -369,6 +395,7 @@ const UserInterface: React.FC = () => {
                     <TableCell><strong>Models</strong></TableCell>
                     <TableCell align="center"><strong>Min Version</strong></TableCell>
                     <TableCell align="center"><strong>Max Version</strong></TableCell>
+                    <TableCell align="center"><strong>Navigation</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -481,7 +508,7 @@ const UserInterface: React.FC = () => {
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                           />
                         ) : (
-                          userInterface.min_version
+                          userInterface.min_version || 'N/A'
                         )}
                       </TableCell>
                       <TableCell align="center">
@@ -495,8 +522,25 @@ const UserInterface: React.FC = () => {
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                           />
                         ) : (
-                          userInterface.max_version
+                          userInterface.max_version || 'N/A'
                         )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LaunchIcon fontSize="small" />}
+                          onClick={() => handleEditNavigation(userInterface)}
+                          disabled={!userInterface.root_tree}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.25,
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Edit Navigation
+                        </Button>
                       </TableCell>
                       <TableCell align="center">
                         {editingId === userInterface.id ? (

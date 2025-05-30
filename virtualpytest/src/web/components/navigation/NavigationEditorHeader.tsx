@@ -298,7 +298,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           {/* Section 4: Device Controls */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, minWidth: 0 }}>
             {/* Device Selection Dropdown */}
-            <FormControl size="small" sx={{ minWidth: 80, maxWidth: 80 }}>
+            <FormControl size="small" sx={{ minWidth: 120, maxWidth: 120 }}>
               <InputLabel id="device-select-label">Device</InputLabel>
               <Select
                 labelId="device-select-label"
