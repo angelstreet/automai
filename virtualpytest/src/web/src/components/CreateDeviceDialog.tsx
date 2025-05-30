@@ -179,6 +179,8 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   const handleBack = () => {
     if (activeStep > 0) {
       setActiveStep(activeStep - 1);
+      // Clear validation errors when going back
+      setFormErrors({});
     }
   };
 
@@ -265,7 +267,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
     }
   };
 
-  const canProceed = isStepComplete(activeStep) && Object.keys(formErrors).length === 0;
+  const canProceed = isStepComplete(activeStep);
 
   return (
     <Dialog 
@@ -314,6 +316,20 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
             </Box>
           )}
 
+          {/* Validation Errors Display */}
+          {Object.keys(formErrors).length > 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Please review the following issues:
+              </Typography>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {Object.values(formErrors).map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
           {/* Error Display */}
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
@@ -351,7 +367,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={!canProceed || isSubmitting}
+            disabled={!formData.name.trim() || !formData.model || isSubmitting}
             startIcon={isSubmitting ? <CircularProgress size={16} /> : <CheckIcon />}
           >
             {isSubmitting ? 'Creating...' : 'Create Device'}
