@@ -380,7 +380,6 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
                 handleRemoteCommand={handleRemoteCommand}
                 handleOverlayElementClick={handleOverlayElementClick}
                 onDisconnect={handleReleaseControlWithCleanup}
-                style="modal"
               />
             </Grid>
           </Grid>

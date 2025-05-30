@@ -4,6 +4,7 @@ import {
   Button,
   Typography,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from './AndroidMobileCore';
@@ -299,27 +300,77 @@ export function CompactAndroidMobile({
 
   // Connected state - Use AndroidMobileCore with compact style
   return (
-    <>
-      <AndroidMobileCore
-        session={session}
-        connectionLoading={connectionLoading}
-        connectionError={connectionError}
-        dumpError={dumpError}
-        androidApps={androidApps}
-        androidElements={androidElements}
-        isDumpingUI={isDumpingUI}
-        selectedApp={selectedApp}
-        selectedElement={selectedElement}
-        setSelectedApp={setSelectedApp}
-        setSelectedElement={setSelectedElement}
-        handleGetApps={handleGetApps}
-        handleDumpUIWithLoading={handleDumpUIWithLoading}
-        clearElements={clearElements}
-        handleRemoteCommand={handleRemoteCommand}
-        handleOverlayElementClick={handleOverlayElementClick}
-        onDisconnect={handleDisconnect}
-        style="compact"
-      />
+    <Box sx={{ 
+      ...sx,
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%' 
+    }}>
+      {/* Connection Status */}
+      {!session.connected ? (
+        <Box sx={{ 
+          p: 2, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          gap: 2,
+          flex: 1,
+          justifyContent: 'center'
+        }}>
+          <Typography variant="h6" textAlign="center">
+            {connectionConfig ? 'Auto-connecting...' : 'No Connection'}
+          </Typography>
+          
+          {connectionConfig ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">
+                Connecting to Android Mobile
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary" textAlign="center">
+              No device configuration provided for auto-connect
+            </Typography>
+          )}
+
+          {connectionError && (
+            <Alert severity="error" sx={{ width: '100%' }}>
+              {connectionError}
+            </Alert>
+          )}
+        </Box>
+      ) : (
+        <Box sx={{ 
+          p: 2, 
+          flex: 1, 
+          overflow: 'auto',
+          // Compact-specific styling - maxWidth and centered
+          maxWidth: '250px',
+          margin: '0 auto',
+          width: '100%'
+        }}>
+          <AndroidMobileCore
+            session={session}
+            connectionLoading={connectionLoading}
+            connectionError={connectionError}
+            dumpError={dumpError}
+            androidApps={androidApps}
+            androidElements={androidElements}
+            isDumpingUI={isDumpingUI}
+            selectedApp={selectedApp}
+            selectedElement={selectedElement}
+            setSelectedApp={setSelectedApp}
+            setSelectedElement={setSelectedElement}
+            handleGetApps={handleGetApps}
+            handleDumpUIWithLoading={handleDumpUIWithLoading}
+            clearElements={clearElements}
+            handleRemoteCommand={handleRemoteCommand}
+            handleOverlayElementClick={handleOverlayElementClick}
+            onDisconnect={handleDisconnect}
+          />
+        </Box>
+      )}
 
       {/* AndroidMobileOverlay - positioned outside */}
       {showOverlay && androidElements.length > 0 && (
@@ -333,6 +384,6 @@ export function CompactAndroidMobile({
           onElementClick={handleOverlayElementClick}
         />
       )}
-    </>
+    </Box>
   );
 } 

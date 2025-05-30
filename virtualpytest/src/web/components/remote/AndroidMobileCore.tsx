@@ -30,7 +30,6 @@ interface AndroidMobileCoreProps {
   handleRemoteCommand: (command: string, params?: any) => void;
   handleOverlayElementClick: (element: AndroidElement) => void;
   onDisconnect: () => void;
-  style?: 'modal' | 'compact';
 }
 
 export function AndroidMobileCore({
@@ -50,27 +49,17 @@ export function AndroidMobileCore({
   clearElements,
   handleRemoteCommand,
   handleOverlayElementClick,
-  onDisconnect,
-  style = 'modal'
+  onDisconnect
 }: AndroidMobileCoreProps) {
-  const isCompact = style === 'compact';
-  
-  const containerStyles = isCompact 
-    ? { maxWidth: '250px', margin: '0 auto' }
-    : {};
-
-  const gapSize = 0.5;
-  const marginBottom = isCompact ? 3 : 1;
-
   return (
-    <Box sx={containerStyles}>
+    <Box>
       {/* App Launcher Section */}
-      <Box sx={{ mb: marginBottom }}>
-        <Typography variant="h7" gutterBottom>
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" gutterBottom>
           App Launcher ({androidApps.length} apps)
         </Typography>
         
-        <Box sx={{ mb: isCompact ? 2 : 1, mt: 1 }}>
+        <Box sx={{ mb: 1, mt: 1 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Select an app...</InputLabel>
             <Select
@@ -106,12 +95,12 @@ export function AndroidMobileCore({
       </Box>
 
       {/* UI Elements Section */}
-      <Box sx={{ mb: marginBottom }}>
-        <Typography variant="h7" gutterBottom>
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" gutterBottom>
           UI Elements ({androidElements.length})
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: gapSize, mb: isCompact ? 2 : 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
           <Button
             variant="contained"
             size="small"
@@ -180,13 +169,13 @@ export function AndroidMobileCore({
       </Box>
 
       {/* Device Controls */}
-      <Box sx={{ mb: marginBottom }}>
-        <Typography variant="h7" gutterBottom>
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" gutterBottom>
           Device Controls
         </Typography>
         
         {/* System buttons */}
-        <Box sx={{ display: 'flex', gap: gapSize, mb: isCompact ? 2 : 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
           <Button
             variant="outlined"
             size="small"
@@ -217,7 +206,7 @@ export function AndroidMobileCore({
         </Box>
 
         {/* Volume controls */}
-        <Box sx={{ display: 'flex', gap: gapSize, mb: isCompact ? 2 : 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
           <Button
             variant="outlined"
             size="small"
@@ -248,7 +237,7 @@ export function AndroidMobileCore({
         </Box>
 
         {/* Phone specific buttons */}
-        <Box sx={{ display: 'flex', gap: gapSize, mb: isCompact ? 2 : 0 }}>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Button
             variant="outlined"
             size="small"
@@ -281,7 +270,7 @@ export function AndroidMobileCore({
 
       {/* Error Display Area */}
       {(connectionError || dumpError) && (
-        <Box sx={{ mb: isCompact ? 2 : 1 }}>
+        <Box sx={{ mb: 1 }}>
           <Alert severity="error">
             {connectionError || dumpError}
           </Alert>
@@ -289,7 +278,7 @@ export function AndroidMobileCore({
       )}
 
       {/* Disconnect Button */}
-      <Box sx={{ pt: isCompact ? 2 : 1, borderTop: '1px solid #e0e0e0' }}>
+      <Box sx={{ pt: 1, borderTop: '1px solid #e0e0e0' }}>
         <Button 
           variant="contained" 
           color="error"
