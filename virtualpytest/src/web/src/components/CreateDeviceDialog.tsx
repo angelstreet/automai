@@ -282,13 +282,13 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
         </Typography>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 1 }}>
+      <DialogContent sx={{ pt: 1, mb: 1 }}>
         <Box sx={{ width: '100%' }}>
           {/* Stepper */}
           <Stepper 
             activeStep={activeStep} 
             orientation={isMobile ? 'vertical' : 'horizontal'}
-            sx={{ mb: 3 }}
+            sx={{ mb: 0 }}
           >
             {steps.map((step, index) => (
               <Step key={step.label} completed={isStepComplete(index)}>
@@ -309,7 +309,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
 
           {/* Step Content for non-mobile */}
           {!isMobile && (
-            <Box sx={{ mt: 2, mb: 2, minHeight: 400 }}>
+            <Box sx={{ mt: 2, mb: 2, minHeight: 300 }}>
               {renderStepContent(activeStep)}
             </Box>
           )}
