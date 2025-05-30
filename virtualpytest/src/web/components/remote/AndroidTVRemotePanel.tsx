@@ -378,22 +378,24 @@ export function AndroidTVRemotePanel({
         
         {/* Remote Interface */}
         <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          overflow: 'hidden',
-          alignItems: 'center', // Center vertically
-          flex: 1,
-          height: 'calc(100% - 40px)', // Reserve space for disconnect button
-          paddingBottom: '10px' // Add padding at the bottom to move it up slightly
+          position: 'relative',
+          height: '100%'
         }}>
-          <RemoteInterface
-            remoteConfig={localRemoteConfig}
-            scale={0.35} // Adjust scale to better fit vertically
-            showOverlays={showOverlays}
-            onCommand={handleRemoteCommand}
-            fallbackImageUrl="/android-tv-remote.png"
-            fallbackName="Android TV Remote"
-          />
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)'
+          }}>
+            <RemoteInterface
+              remoteConfig={localRemoteConfig}
+              scale={1}
+              showOverlays={showOverlays}
+              onCommand={handleRemoteCommand}
+              fallbackImageUrl="/android-tv-remote.png"
+              fallbackName="Android TV Remote"
+            />
+          </Box>
         </Box>
       </Box>
 
