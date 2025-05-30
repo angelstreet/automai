@@ -19,13 +19,15 @@ import {
 import { 
   ArrowBack as BackIcon,
   ArrowForward as NextIcon,
-  Check as CheckIcon,
+  Save as SaveIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { Model } from '../services/deviceModelService';
 import { DeviceFormData } from '../types/controllerConfig.types';
 import { ControllerConfigService } from '../services/controllerConfigService';
+import { deviceModelApi } from '../services/deviceModelService';
 
-// Import wizard step components
+// Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './device-wizard/BasicInfoStep';
 import { ModelSelectionStep } from './device-wizard/ModelSelectionStep';
 import { ControllerConfigurationStep } from './device-wizard/ControllerConfigurationStep';
@@ -36,19 +38,22 @@ interface Device {
   name: string;
   description: string;
   model: string;
+  controller_configs?: any;
   created_at: string;
   updated_at: string;
 }
 
-interface CreateDeviceDialogProps {
+interface EditDeviceDialogProps {
   open: boolean;
+  device: Device | null;
   onClose: () => void;
-  onSubmit: (device: Omit<Device, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (deviceId: string, device: Omit<Device, 'id' | 'created_at' | 'updated_at'>) => void;
   error?: string | null;
 }
 
-const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
+const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
   open,
+  device,
   onClose,
   onSubmit,
   error,
@@ -61,6 +66,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [deviceModels, setDeviceModels] = useState<Model[]>([]);
 
   // Form data
   const [formData, setFormData] = useState<DeviceFormData>({
@@ -84,14 +90,52 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       description: 'Set up controller connections',
     },
     {
-      label: 'Review & Create',
+      label: 'Review & Save',
       description: 'Review configuration',
     },
   ];
 
-  // Reset form when dialog opens/closes
+  // Load device models
   useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        console.log('[@component:EditDeviceDialog] Fetching device models');
+        const models = await deviceModelApi.getAllDeviceModels();
+        setDeviceModels(models);
+        console.log(`[@component:EditDeviceDialog] Loaded ${models.length} device models`);
+      } catch (error) {
+        console.error('[@component:EditDeviceDialog] Error fetching device models:', error);
+        setDeviceModels([]);
+      }
+    };
+
     if (open) {
+      fetchModels();
+    }
+  }, [open]);
+
+  // Initialize form when device or dialog state changes
+  useEffect(() => {
+    if (open && device) {
+      console.log('[@component:EditDeviceDialog] Initializing form with device:', device);
+      
+      setActiveStep(0);
+      setFormData({
+        name: device.name || '',
+        description: device.description || '',
+        model: device.model || '',
+        controllerConfigs: device.controller_configs || {}
+      });
+      setFormErrors({});
+      setIsSubmitting(false);
+
+      // Find and set the selected model
+      if (device.model && deviceModels.length > 0) {
+        const model = deviceModels.find(m => m.name === device.model);
+        setSelectedModel(model || null);
+      }
+    } else if (open && !device) {
+      // Reset for new device (shouldn't happen in edit dialog, but safety measure)
       setActiveStep(0);
       setFormData({
         name: '',
@@ -103,7 +147,15 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       setFormErrors({});
       setIsSubmitting(false);
     }
-  }, [open]);
+  }, [open, device, deviceModels]);
+
+  // Update selected model when model changes
+  useEffect(() => {
+    if (formData.model && deviceModels.length > 0) {
+      const model = deviceModels.find(m => m.name === formData.model);
+      setSelectedModel(model || null);
+    }
+  }, [formData.model, deviceModels]);
 
   const handleClose = () => {
     if (!isSubmitting) {
@@ -185,7 +237,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(activeStep)) {
+    if (!device || !validateStep(activeStep)) {
       return;
     }
 
@@ -197,15 +249,16 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
         name: formData.name.trim(),
         description: formData.description.trim(),
         model: formData.model,
-        controllerConfigs: formData.controllerConfigs, // Include controller configurations
+        controller_configs: formData.controllerConfigs, // Note: using controller_configs (API format)
       };
 
-      console.log('[@component:CreateDeviceDialog] Creating device with data:', deviceData);
-      console.log('[@component:CreateDeviceDialog] Controller configs detail:', JSON.stringify(formData.controllerConfigs, null, 2));
-      await onSubmit(deviceData as any);
+      console.log('[@component:EditDeviceDialog] Updating device with data:', deviceData);
+      console.log('[@component:EditDeviceDialog] Controller configs detail:', JSON.stringify(formData.controllerConfigs, null, 2));
+      
+      await onSubmit(device.id, deviceData as any);
       
     } catch (err) {
-      console.error('[@component:CreateDeviceDialog] Error creating device:', err);
+      console.error('[@component:EditDeviceDialog] Error updating device:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -279,8 +332,9 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       fullScreen={isMobile}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Typography variant="h5">Add New Device</Typography>
-      
+        <Typography variant="h5">
+          Edit Device: {device?.name || 'Unknown Device'}
+        </Typography>
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1, mb: 1 }}>
@@ -295,7 +349,6 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
               <Step key={step.label} completed={isStepComplete(index)}>
                 <StepLabel>
                   <Typography variant="subtitle2">{step.label}</Typography>
-              
                 </StepLabel>
                 {isMobile && (
                   <StepContent>
@@ -365,9 +418,9 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
             onClick={handleSubmit}
             variant="contained"
             disabled={!formData.name.trim() || !formData.model || isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={16} /> : <CheckIcon />}
+            startIcon={isSubmitting ? <CircularProgress size={16} /> : <SaveIcon />}
           >
-            {isSubmitting ? 'Creating...' : 'Create Device'}
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         )}
       </DialogActions>
@@ -375,4 +428,4 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   );
 };
 
-export default CreateDeviceDialog; 
+export default EditDeviceDialog; 

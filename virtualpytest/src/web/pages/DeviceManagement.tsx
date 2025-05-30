@@ -6,7 +6,6 @@ import {
   Cancel as CancelIcon,
   DevicesOther as DeviceIcon,
   Search as SearchIcon,
-  Launch as LaunchIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -36,16 +35,17 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import CreateDeviceDialog from '../src/components/CreateDeviceDialog';
+import EditDeviceDialog from '../src/components/EditDeviceDialog';
 import { deviceApi, Device, DeviceCreatePayload } from '../src/services/deviceService';
-import { getDeviceType } from '../src/components/RemoteController';
-import { EditControllerParametersDialog, ControllerConfig } from '../src/components/remote/EditControllerParametersDialog';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
@@ -55,11 +55,6 @@ const DeviceManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Edit Controller Parameters state
-  const [editControllerOpen, setEditControllerOpen] = useState(false);
-  const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
-  const [currentControllerType, setCurrentControllerType] = useState<'remote' | 'av' | 'power' | 'network'>('remote');
 
   useEffect(() => {
     fetchDevices();
@@ -121,7 +116,7 @@ const DeviceManagement: React.FC = () => {
 
       // Update local state
       setDevices([...devices, createdDevice]);
-      setOpenDialog(false);
+      setOpenCreateDialog(false);
       setSuccessMessage('Device created successfully');
       console.log('[@component:DeviceManagement] Successfully created device:', createdDevice.name);
     } catch (err) {
@@ -140,7 +135,8 @@ const DeviceManagement: React.FC = () => {
       setDevices(prev => prev.map(device => 
         device.id === deviceId ? updatedDevice : device
       ));
-      setEditingId(null);
+      setOpenEditDialog(false);
+      setSelectedDeviceForEdit(null);
       setSuccessMessage('Device updated successfully');
       console.log('[@component:DeviceManagement] Successfully updated device:', deviceId);
     } catch (error: any) {
@@ -168,88 +164,33 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseCreateDialog = () => {
+    setOpenCreateDialog(false);
     setError(null);
   };
 
-  // Helper function to handle opening edit controller parameters
-  const handleOpenEditController = async (device: Device, controllerType: 'remote' | 'av' | 'power' | 'network' = 'remote') => {
-    try {
-      console.log(`[@component:DeviceManagement] Loading ${controllerType} controller config for device:`, {
-        device: device,
-        controllerType
-      });
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    setSelectedDeviceForEdit(null);
+    setError(null);
+  };
 
-      // Load the device's current controller configuration
+  // Open edit dialog for a device
+  const handleOpenEditDialog = async (device: Device) => {
+    try {
+      console.log('[@component:DeviceManagement] Loading device for editing:', device.id);
+
+      // Load the device's current configuration
       const deviceWithConfig = await deviceApi.getDevice(device.id);
       
-      console.log(`[@component:DeviceManagement] Loaded device config:`, deviceWithConfig.controller_configs);
+      console.log('[@component:DeviceManagement] Loaded device config:', deviceWithConfig);
 
       setSelectedDeviceForEdit(deviceWithConfig);
-      setCurrentControllerType(controllerType);
-      setEditControllerOpen(true);
+      setOpenEditDialog(true);
       setError(null);
     } catch (err) {
-      console.error('[@component:DeviceManagement] Error loading device controller config:', err);
-      setError('Failed to load device controller configuration');
-    }
-  };
-
-  // Individual handlers for each controller type
-  const handleOpenRemoteController = (device: Device) => {
-    handleOpenEditController(device, 'remote');
-  };
-
-  const handleOpenAVController = (device: Device) => {
-    handleOpenEditController(device, 'av');
-  };
-
-  const handleOpenPowerController = (device: Device) => {
-    handleOpenEditController(device, 'power');
-  };
-
-  const handleOpenNetworkController = (device: Device) => {
-    handleOpenEditController(device, 'network');
-  };
-
-  // Save controller configuration
-  const handleSaveControllerConfig = async (deviceId: string, config: ControllerConfig) => {
-    try {
-      console.log(`[@component:DeviceManagement] Saving ${currentControllerType} controller config for device ${deviceId}:`, config);
-      
-      // Update the device's controller configuration in the database
-      const deviceToUpdate = devices.find(d => d.id === deviceId);
-      if (!deviceToUpdate) {
-        throw new Error('Device not found');
-      }
-
-      const updatedControllerConfigs = {
-        ...deviceToUpdate.controller_configs,
-        [currentControllerType]: config
-      };
-
-      await deviceApi.updateDevice(deviceId, {
-        name: deviceToUpdate.name,
-        description: deviceToUpdate.description,
-        model: deviceToUpdate.model,
-        controllerConfigs: updatedControllerConfigs
-      });
-      
-      // Reload devices to reflect the changes
-      await fetchDevices();
-      
-      console.log(`[@component:DeviceManagement] Successfully saved ${currentControllerType} controller config for device ${deviceId}`);
-      
-      // Close the dialog
-      setEditControllerOpen(false);
-      setSelectedDeviceForEdit(null);
-      setCurrentControllerType('remote');
-      
-    } catch (err) {
-      console.error('[@component:DeviceManagement] Error saving controller config:', err);
-      setError('Failed to save controller configuration');
-      throw err;
+      console.error('[@component:DeviceManagement] Error loading device for editing:', err);
+      setError('Failed to load device configuration');
     }
   };
 
@@ -294,6 +235,32 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
+  // Helper function to get controller count and summary
+  const getControllerSummary = (device: Device) => {
+    if (!device.controller_configs) {
+      return { count: 0, summary: 'No controllers configured' };
+    }
+
+    const configuredControllers = Object.keys(device.controller_configs).filter(
+      key => device.controller_configs[key] && 
+             typeof device.controller_configs[key] === 'object' && 
+             device.controller_configs[key].implementation
+    );
+
+    const count = configuredControllers.length;
+    
+    if (count === 0) {
+      return { count: 0, summary: 'No controllers configured' };
+    }
+
+    // Create a summary of configured controller types
+    const summary = configuredControllers.map(type => 
+      type.charAt(0).toUpperCase() + type.slice(1)
+    ).join(', ');
+
+    return { count, summary };
+  };
+
   const LoadingState = () => (
     <Box 
       sx={{ 
@@ -334,7 +301,7 @@ const DeviceManagement: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
+          onClick={() => setOpenCreateDialog(true)}
         >
           Add Device
         </Button>
@@ -365,7 +332,7 @@ const DeviceManagement: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
+          onClick={() => setOpenCreateDialog(true)}
           size="small"
           disabled={loading}
         >
@@ -408,198 +375,127 @@ const DeviceManagement: React.FC = () => {
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
                     <TableCell><strong>Model</strong></TableCell>
-                    <TableCell align="center"><strong>Remote Controller</strong></TableCell>
-                    <TableCell align="center"><strong>AV Controller</strong></TableCell>
-                    <TableCell align="center"><strong>Power Controller</strong></TableCell>
-                    <TableCell align="center"><strong>Network Controller</strong></TableCell>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell align="center"><strong>Controllers</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredDevices.map((device) => (
-                    <TableRow key={device.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                      <TableCell>
-                        {editingId === device.id ? (
-                          <TextField
-                            size="small"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          device.name
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === device.id ? (
-                          <TextField
-                            size="small"
-                            value={editForm.model}
-                            onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          device.model || 'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Remote Controller Column */}
-                        {device.controller_configs?.remote ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<LaunchIcon fontSize="small" />}
-                            onClick={() => handleOpenRemoteController(device)}
-                            disabled={getDeviceType(device) === 'unknown'}
-                            sx={{ 
-                              minWidth: 'auto',
-                              px: 0.5,
-                              py: 0.25,
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            Remote
-                          </Button>
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* AV Controller Column */}
-                        {device.controller_configs?.av ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<LaunchIcon fontSize="small" />}
-                            onClick={() => handleOpenAVController(device)}
-                            disabled={getDeviceType(device) === 'unknown'}
-                            sx={{ 
-                              minWidth: 'auto',
-                              px: 0.5,
-                              py: 0.25,
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            AV
-                          </Button>
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Power Controller Column */}
-                        {device.controller_configs?.power ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<LaunchIcon fontSize="small" />}
-                            onClick={() => handleOpenPowerController(device)}
-                            disabled={getDeviceType(device) === 'unknown'}
-                            sx={{ 
-                              minWidth: 'auto',
-                              px: 0.5,
-                              py: 0.25,
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            Power
-                          </Button>
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {/* Network Controller Column */}
-                        {device.controller_configs?.network ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<LaunchIcon fontSize="small" />}
-                            onClick={() => handleOpenNetworkController(device)}
-                            disabled={getDeviceType(device) === 'unknown'}
-                            sx={{ 
-                              minWidth: 'auto',
-                              px: 0.5,
-                              py: 0.25,
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            Network
-                          </Button>
-                        ) : (
-                          <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-                            -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {editingId === device.id ? (
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                            <IconButton
+                  {filteredDevices.map((device) => {
+                    const controllerSummary = getControllerSummary(device);
+                    
+                    return (
+                      <TableRow key={device.id} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                        <TableCell>
+                          {editingId === device.id ? (
+                            <TextField
                               size="small"
-                              color="primary"
-                              onClick={handleSaveEdit}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
-                            </IconButton>
-                            <IconButton
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                              fullWidth
+                              variant="outlined"
+                              sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                            />
+                          ) : (
+                            device.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === device.id ? (
+                            <TextField
                               size="small"
-                              color="secondary"
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditForm({ name: '', description: '', model: '' });
-                                setError(null);
-                              }}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
+                              value={editForm.model}
+                              onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                              fullWidth
+                              variant="outlined"
+                              sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                            />
+                          ) : (
+                            device.model || 'N/A'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === device.id ? (
+                            <TextField
+                              size="small"
+                              value={editForm.description}
+                              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                              fullWidth
+                              variant="outlined"
+                              sx={{ '& .MuiInputBase-root': { height: '32px' } }}
+                            />
+                          ) : (
+                            device.description || 'N/A'
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                            <Chip 
+                              label={`${controllerSummary.count} configured`}
+                              size="small" 
+                              color={controllerSummary.count > 0 ? 'success' : 'default'}
+                              variant={controllerSummary.count > 0 ? 'filled' : 'outlined'}
+                            />
+                            {controllerSummary.count > 0 && (
+                              <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                                {controllerSummary.summary}
+                              </Typography>
+                            )}
                           </Box>
-                        ) : (
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => {
-                                setEditForm({
-                                  name: device.name,
-                                  description: device.description,
-                                  model: device.model,
-                                });
-                                setEditingId(device.id);
-                              }}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDelete(device.id)}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell align="center">
+                          {editingId === device.id ? (
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={handleSaveEdit}
+                                sx={{ p: 0.5 }}
+                                disabled={submitting}
+                              >
+                                {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="secondary"
+                                onClick={() => {
+                                  setEditingId(null);
+                                  setEditForm({ name: '', description: '', model: '' });
+                                  setError(null);
+                                }}
+                                sx={{ p: 0.5 }}
+                                disabled={submitting}
+                              >
+                                <CancelIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleOpenEditDialog(device)}
+                                sx={{ p: 0.5 }}
+                                disabled={submitting}
+                                title="Edit Device & Controllers"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDelete(device.id)}
+                                sx={{ p: 0.5 }}
+                                disabled={submitting}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -616,11 +512,22 @@ const DeviceManagement: React.FC = () => {
 
       {/* Create Device Dialog */}
       <CreateDeviceDialog
-        open={openDialog}
-        onClose={handleCloseDialog}
+        open={openCreateDialog}
+        onClose={handleCloseCreateDialog}
         onSubmit={handleAddNew}
         error={error}
       />
+
+      {/* Edit Device Dialog */}
+      {selectedDeviceForEdit && (
+        <EditDeviceDialog
+          open={openEditDialog}
+          device={selectedDeviceForEdit}
+          onClose={handleCloseEditDialog}
+          onSubmit={handleUpdate}
+          error={error}
+        />
+      )}
 
       {/* Success Message Snackbar */}
       <Snackbar
@@ -629,21 +536,6 @@ const DeviceManagement: React.FC = () => {
         onClose={() => setSuccessMessage(null)}
         message={successMessage}
       />
-
-      {/* Edit Controller Parameters Modal */}
-      {selectedDeviceForEdit && (
-        <EditControllerParametersDialog
-          device={selectedDeviceForEdit}
-          open={editControllerOpen}
-          onClose={() => {
-            console.log('[@component:DeviceManagement] Closing edit controller parameters');
-            setEditControllerOpen(false);
-            setSelectedDeviceForEdit(null);
-            setCurrentControllerType('remote');
-          }}
-          onSave={(deviceId, config) => handleSaveControllerConfig(deviceId, config)}
-        />
-      )}
     </Box>
   );
 };
