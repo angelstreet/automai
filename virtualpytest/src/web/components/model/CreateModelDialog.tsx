@@ -321,4 +321,5 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
   );
 };
 
-export default CreateModelDialog; 
+export default CreateModelDialog;
+export { CreateModelDialog }; 
