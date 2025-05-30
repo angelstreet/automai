@@ -56,10 +56,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
                 </MenuItem>
               ))}
             </Select>
-            {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
-            {!fieldError && field.description && (
-              <FormHelperText>{field.description}</FormHelperText>
-            )}
+           
           </FormControl>
         );
 
@@ -76,7 +73,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            helperText={fieldError || field.description}
+            
           />
         );
 
@@ -92,7 +89,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            helperText={fieldError || field.description}
+            
             inputProps={{
               min: field.validation?.min,
               max: field.validation?.max,
@@ -112,7 +109,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            helperText={fieldError || field.description}
+            
           />
         );
 
@@ -129,7 +126,7 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            helperText={fieldError || field.description}
+            
           />
         );
     }
@@ -184,9 +181,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Configure the connection parameters for {configuration.name}
-      </Typography>
 
       {/* SSH/Host Connection Fields */}
       {renderFieldGroup('Connection Settings', fieldGroups.connection)}

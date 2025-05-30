@@ -280,9 +280,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
     >
       <DialogTitle sx={{ pb: 1 }}>
         <Typography variant="h5">Add New Device</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Follow the steps to configure your device and its controllers
-        </Typography>
+      
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1, mb: 1 }}>
@@ -297,9 +295,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
               <Step key={step.label} completed={isStepComplete(index)}>
                 <StepLabel>
                   <Typography variant="subtitle2">{step.label}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {step.description}
-                  </Typography>
+              
                 </StepLabel>
                 {isMobile && (
                   <StepContent>
