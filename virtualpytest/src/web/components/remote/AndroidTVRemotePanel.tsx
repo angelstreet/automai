@@ -45,7 +45,7 @@ export function AndroidTVRemotePanel({
   onDisconnectComplete
 }: AndroidTVRemotePanelProps) {
   // UI state
-  const [showOverlays, setShowOverlays] = useState(true);
+  const [showOverlays, setShowOverlays] = useState(false);
   const [remoteScale, setRemoteScale] = useState(1.2);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
@@ -279,7 +279,7 @@ export function AndroidTVRemotePanel({
   if (!session.connected) {
     return (
       <Box sx={{ 
-        p: compact ? 1 : 2, 
+        p: 2, 
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center', 
@@ -287,45 +287,31 @@ export function AndroidTVRemotePanel({
         height: '100%',
         ...sx 
       }}>
-        <Typography variant={compact ? "body2" : "h6"} color="textSecondary" gutterBottom>
+        <Typography variant="body2" color="textSecondary" gutterBottom>
           Android TV Not Connected
         </Typography>
         
-        {/* Show connection status or device config */}
+        {/* Show connection status or connect button */}
         {connectionLoading ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <CircularProgress size={16} />
             <Typography variant="caption" color="info.main">
-              Connecting to device...
+              Connecting...
             </Typography>
           </Box>
         ) : connectionConfig ? (
-          <Box sx={{ mb: 2, textAlign: 'center' }}>
-            <Typography variant="caption" color="success.main" display="block" sx={{ mb: 1 }}>
-              Device Config: ✓ {connectionConfig.host_ip} → {connectionConfig.device_ip}
-            </Typography>
-            {compact && (
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="caption" color="textSecondary" display="block">
-                  Host: {connectionConfig.host_ip}:{connectionConfig.host_port}
-                </Typography>
-                <Typography variant="caption" color="textSecondary" display="block">
-                  Device: {connectionConfig.device_ip}:{connectionConfig.device_port}
-                </Typography>
-              </Box>
-            )}
-            <Button
-              variant="contained"
-              onClick={handleTakeControl}
-              disabled={connectionLoading}
-              size={compact ? "small" : "medium"}
-            >
-              {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
-            </Button>
-          </Box>
+          <Button
+            variant="contained"
+            onClick={handleTakeControl}
+            disabled={connectionLoading}
+            size="small"
+            sx={{ mb: 2 }}
+          >
+            Connect
+          </Button>
         ) : (
           <Typography variant="caption" color="warning.main" textAlign="center" sx={{ mb: 2 }}>
-            ⚠️ No device configuration available
+            No device configuration
           </Typography>
         )}
         
@@ -340,7 +326,7 @@ export function AndroidTVRemotePanel({
             wordBreak: 'break-word'
           }}>
             <Typography variant="caption" color="error" textAlign="center">
-              Connection Error: {connectionError}
+              {connectionError}
             </Typography>
           </Box>
         )}
@@ -350,133 +336,59 @@ export function AndroidTVRemotePanel({
 
   return (
     <Box sx={{ 
-      p: compact ? 1 : 2, 
+      p: 2, 
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
-      overflow: 'auto',
+      overflow: 'hidden', // Prevent scrolling
       ...sx 
     }}>
-      {/* Screenshot Display (optional) */}
-      {showScreenshot && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant={compact ? "subtitle2" : "h6"} gutterBottom>
-            Screenshot
-          </Typography>
-          {androidScreenshot ? (
-            <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-              <img
-                src={`data:image/png;base64,${androidScreenshot}`}
-                alt="Android TV Screenshot"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: compact ? '150px' : '200px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                }}
-              />
-            </Box>
-          ) : (
-            <Box sx={{ 
-              height: compact ? 120 : 150, 
-              border: '2px dashed #ccc', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              borderRadius: 1,
-              mb: 1
-            }}>
-              <Typography variant="caption" color="textSecondary" textAlign="center">
-                Take screenshot to see TV screen
-              </Typography>
-            </Box>
-          )}
-          
-          {/* Screenshot Error Display */}
-          {screenshotError && (
-            <Box sx={{ mt: 1, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
-              <Typography variant="caption" color="error">{screenshotError}</Typography>
-            </Box>
-          )}
-
-          {/* Screenshot Button */}
+      {/* Remote Control Interface */}
+      <Box sx={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        height: '100%',
+        position: 'relative', // Add relative positioning for absolute child
+        overflow: 'hidden' // Prevent scrolling
+      }}>
+        {/* Show Overlays button - positioned in top right corner */}
+        <Box sx={{ 
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          zIndex: 10, // Ensure it's above the remote
+          m: 1 // Margin to prevent it from being right at the edge
+        }}>
           <Button
-            variant="contained"
+            variant={showOverlays ? "contained" : "outlined"}
             size="small"
-            onClick={handleScreenshotClick}
-            disabled={isScreenshotLoading}
-            fullWidth
-            sx={{ fontSize: compact ? '0.7rem' : '0.9rem', py: 0.5 }}
+            onClick={() => setShowOverlays(!showOverlays)}
+            sx={{ 
+              minWidth: 'auto', 
+              px: 1, 
+              fontSize: '0.7rem',
+              opacity: 0.7, // Slightly transparent
+              '&:hover': { opacity: 1 } // Full opacity on hover
+            }}
           >
-            {isScreenshotLoading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CircularProgress size={12} />
-                <Typography variant="caption">Capturing...</Typography>
-              </Box>
-            ) : (
-              'Screenshot'
-            )}
+            {showOverlays ? 'Hide Overlay' : 'Show Overlay'}
           </Button>
         </Box>
-      )}
-
-      {/* Remote Control Section */}
-      <Box sx={{ mb: 2}}>
-      
-
-        {/* Controls for overlay and scale (only show in non-compact mode or if requested) */}
-        {!compact && (
-          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Show Overlays button */}
-            <Button
-              variant={showOverlays ? "contained" : "outlined"}
-              size="small"
-              onClick={() => setShowOverlays(!showOverlays)}
-              sx={{ minWidth: 'auto', px: 1, fontSize: '0.7rem' }}
-            >
-              {showOverlays ? 'Hide Overlays' : 'Show Overlays'}
-            </Button>
-            
-            {/* Scale controls */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                Scale:
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setRemoteScale(prev => Math.max(localRemoteConfig?.remote_info.min_scale || 0.2, prev - 0.1))}
-                disabled={remoteScale <= (localRemoteConfig?.remote_info.min_scale || 0.2)}
-                sx={{ minWidth: 16, width: 16, height: 16, p: 0, fontSize: '0.6rem' }}
-              >
-                -
-              </Button>
-              <Typography variant="caption" sx={{ minWidth: 24, textAlign: 'center', fontSize: '0.6rem' }}>
-                {Math.round(remoteScale * 100)}%
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setRemoteScale(prev => Math.min(localRemoteConfig?.remote_info.max_scale || 1.0, prev + 0.1))}
-                disabled={remoteScale >= (localRemoteConfig?.remote_info.max_scale || 1.0)}
-                sx={{ minWidth: 16, width: 16, height: 16, p: 0, fontSize: '0.6rem' }}
-              >
-                +
-              </Button>
-            </Box>
-          </Box>
-        )}
-
+        
         {/* Remote Interface */}
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'center', 
           overflow: 'hidden',
-          alignItems: 'flex-start',
+          alignItems: 'center', // Center vertically
           flex: 1,
-          maxHeight: compact ? '360px' : '400px'
+          height: 'calc(100% - 40px)', // Reserve space for disconnect button
+          paddingBottom: '10px' // Add padding at the bottom to move it up slightly
         }}>
           <RemoteInterface
             remoteConfig={localRemoteConfig}
-            scale={remoteScale}
+            scale={0.35} // Adjust scale to better fit vertically
             showOverlays={showOverlays}
             onCommand={handleRemoteCommand}
             fallbackImageUrl="/android-tv-remote.png"
@@ -503,7 +415,7 @@ export function AndroidTVRemotePanel({
         disabled={connectionLoading}
         size="small"
         fullWidth
-        sx={{ mt: 1 }}
+        sx={{ mt: 1, height: '32px' }} // Fixed height
       >
         {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
       </Button>
