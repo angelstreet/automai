@@ -30,12 +30,20 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
     const globalOffset = remoteConfig.remote_info.global_offset || { x: 0, y: 0 };
     const textStyle = remoteConfig.remote_info.text_style || {};
     
-    // Apply scaling and offsets to position and size
-    const scaledPosition = {
-      x: (config.position.x + globalOffset.x) * scale,
-      y: (config.position.y + globalOffset.y) * scale
+    // First apply global offset to button position, then apply scaling
+    // This ensures the global_offset can be used to move all buttons together
+    const positionWithOffset = {
+      x: config.position.x + globalOffset.x,
+      y: config.position.y + globalOffset.y
     };
     
+    // Apply scaling to the offset position
+    const scaledPosition = {
+      x: positionWithOffset.x * scale,
+      y: positionWithOffset.y * scale
+    };
+    
+    // Apply button scale factor and overall scale to the button size
     const scaledSize = {
       width: config.size.width * buttonScaleFactor * scale,
       height: config.size.height * buttonScaleFactor * scale

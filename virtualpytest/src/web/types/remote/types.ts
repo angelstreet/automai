@@ -81,6 +81,12 @@ export interface RemoteInfo {
     x: number;
     y: number;
   };
+  text_style?: {
+    fontSize?: string;
+    fontWeight?: string;
+    color?: string;
+    textShadow?: string;
+  };
 }
 
 export interface ButtonConfig {

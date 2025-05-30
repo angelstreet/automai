@@ -185,7 +185,12 @@ export function AndroidTVRemotePanel({
     );
   }
 
-  // Fixed-size remote container - will be consistent across all usages
+  // Get the scale from the remote config or fall back to 1
+  const remoteScale = remoteConfig?.remote_info.default_scale || 1;
+  
+  // Dynamic width based on remote scale
+  const containerWidth = 130 * remoteScale;
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -227,16 +232,16 @@ export function AndroidTVRemotePanel({
           </Button>
         </Box>
         
-        {/* Fixed-size Remote Interface Container */}
+        {/* Remote Interface Container with dynamic width based on scale */}
         <Box sx={{ 
-          width: '130px',  // Fixed width
+          width: `${containerWidth}px`,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center'
         }}>
           <RemoteInterface
             remoteConfig={remoteConfig || null}
-            scale={1} // Use fixed scale of 1 regardless of config
+            scale={remoteScale} // Use the scale from JSON config
             showOverlays={showOverlays}
             onCommand={handleRemoteCommand}
             fallbackImageUrl="/android-tv-remote.png"
