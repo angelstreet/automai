@@ -46,7 +46,7 @@ export function AndroidTVRemotePanel({
 }: AndroidTVRemotePanelProps) {
   // UI state
   const [showOverlays, setShowOverlays] = useState(false);
-  const [remoteScale, setRemoteScale] = useState(1.2);
+  const [remoteScale, setRemoteScale] = useState(1);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
@@ -116,13 +116,13 @@ export function AndroidTVRemotePanel({
       name: 'Fire TV Remote',
       type: 'android_tv',
       image_url: '/android-tv-remote.png',
-      default_scale: compact ? 0.3 : 0.43,
+      default_scale: 1,
       min_scale: 0.2,
-      max_scale: compact ? 0.6 : 1.0,
-      button_scale_factor: 6,
+      max_scale: 1.0,
+      button_scale_factor: 1,
       global_offset: { x: 0, y: 0 },
       text_style: {
-        fontSize: compact ? '14px' : '24px',
+        fontSize: '14px',
         fontWeight: 'bold',
         color: 'white',
         textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
@@ -132,120 +132,120 @@ export function AndroidTVRemotePanel({
       power: {
         key: 'POWER',
         label: 'PWR',
-        position: { x: 150, y: 150 },
-        size: { width: 14, height: 14 },
+        position: { x: 31, y: 30 },
+        size: { width: 20, height: 20 },
         shape: 'circle',
         comment: 'Power button'
       },
       nav_up: {
         key: 'UP',
         label: '▲',
-        position: { x: 320, y: 440 },
-        size: { width: 18, height: 10 },
+        position: { x: 65 , y: 88 },
+        size: { width: 28, height: 18 },
         shape: 'rectangle',
         comment: 'Navigation up'
       },
       nav_left: {
         key: 'LEFT',
         label: '◄',
-        position: { x: 130, y: 610 },
-        size: { width: 10, height: 18 },
+        position: { x: 28, y: 122 },
+        size: { width: 18, height: 28 },
         shape: 'rectangle',
         comment: 'Navigation left'
       },
       nav_center: {
         key: 'SELECT',
         label: 'OK',
-        position: { x: 320, y: 610 },
-        size: { width: 40, height: 40 },
+        position: { x: 65, y: 122 },
+        size: { width: 60, height: 60 },
         shape: 'circle',
         comment: 'Navigation center/select'
       },
       nav_right: {
         key: 'RIGHT',
         label: '►',
-        position: { x: 500, y: 610 },
-        size: { width: 10, height: 18 },
+        position: { x: 103, y: 122 },
+        size: { width: 18, height: 28 },
         shape: 'rectangle',
         comment: 'Navigation right'
       },
       nav_down: {
         key: 'DOWN',
         label: '▼',
-        position: { x: 320, y: 780 },
-        size: { width: 18, height: 10 },
+        position: { x: 65, y: 160 },
+        size: { width: 28, height: 18 },
         shape: 'rectangle',
         comment: 'Navigation down'
       },
       back: {
         key: 'BACK',
         label: '←',
-        position: { x: 150, y: 940 },
-        size: { width: 20, height: 20 },
+        position: { x: 31, y: 191 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Back button'
       },
       home: {
         key: 'HOME',
         label: '🏠',
-        position: { x: 490, y: 940 },
-        size: { width: 20, height: 20 },
+        position: { x: 65, y: 190 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Home button'
       },
       menu: {
         key: 'MENU',
         label: '☰',
-        position: { x: 320, y: 940 },
-        size: { width: 20, height: 20 },
+        position: { x: 100  , y: 190 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Menu button'
       },
       rewind: {
         key: 'REWIND',
         label: '<<',
-        position: { x: 150, y: 1100 },
-        size: { width: 20, height: 20 },
+        position: { x: 31, y: 225 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Rewind button'
       },
       play_pause: {
         key: 'PLAY_PAUSE',
         label: '⏯',
-        position: { x: 320, y: 1100 },
-        size: { width: 20, height: 20 },
+        position: { x: 65 , y: 225 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Play/pause button'
       },
       fast_forward: {
         key: 'FAST_FORWARD',
         label: '>>',
-        position: { x: 490, y: 1100 },
-        size: { width: 20, height: 20 },
+        position: { x: 100, y: 225 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Fast forward button'
       },
       volume_up: {
         key: 'VOLUME_UP',
         label: 'V+',
-        position: { x: 320, y: 1270 },
-        size: { width: 20, height: 20 },
-        shape: 'circle',
+        position: { x: 66, y: 260 },
+        size: { width: 23, height: 26 },
+        shape: 'rectangle',
         comment: 'Volume up button'
       },
       volume_down: {
         key: 'VOLUME_DOWN',
         label: 'V-',
-        position: { x: 320, y: 1430 },
-        size: { width: 20, height: 20 },
-        shape: 'circle',
+        position: { x: 66, y: 290 },
+        size: { width: 23, height: 26 },
+        shape: 'rectangle',
         comment: 'Volume down button'
       },
       mute: {
         key: 'VOLUME_MUTE',
         label: 'MUTE',
-        position: { x: 320, y: 1600 },
-        size: { width: 20, height: 20 },
+        position: { x: 66, y: 327 },
+        size: { width: 26, height: 26 },
         shape: 'circle',
         comment: 'Mute button'
       }
@@ -254,9 +254,7 @@ export function AndroidTVRemotePanel({
 
   // Initialize scale from config
   useEffect(() => {
-    if (localRemoteConfig) {
-      setRemoteScale(localRemoteConfig.remote_info.default_scale);
-    }
+    setRemoteScale(1); // Set fixed scale of 1
   }, []);
 
   const handleScreenshotClick = async () => {
@@ -390,7 +388,7 @@ export function AndroidTVRemotePanel({
           }}>
             <RemoteInterface
               remoteConfig={localRemoteConfig}
-              scale={1}
+              scale={remoteScale}
               showOverlays={showOverlays}
               onCommand={handleRemoteCommand}
               fallbackImageUrl="/android-tv-remote.png"
