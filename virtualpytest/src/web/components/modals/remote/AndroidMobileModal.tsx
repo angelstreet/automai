@@ -383,7 +383,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="contained"
                     size="small"
                     onClick={handleDumpUIWithLoading}
-                    disabled={isDumpingUI}
+                    disabled={!session.connected || isDumpingUI}
                     sx={{ flex: 1 }}
                   >
                     {isDumpingUI ? (
@@ -412,7 +412,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   <Select
                     value={selectedElement}
                     label="Select element to click..."
-                    disabled={androidElements.length === 0}
+                    disabled={!session.connected || androidElements.length === 0}
                     onChange={(e) => {
                       const elementId = parseInt(e.target.value as string);
                       const element = androidElements.find(el => el.id === elementId);
@@ -458,6 +458,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('BACK')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Back
@@ -466,6 +467,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('HOME')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Home
@@ -474,6 +476,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('MENU')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Menu
@@ -486,6 +489,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('VOLUME_UP')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Vol+
@@ -494,6 +498,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('VOLUME_DOWN')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Vol-
@@ -502,6 +507,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('POWER')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Power
@@ -514,6 +520,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('CAMERA')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Camera
@@ -522,6 +529,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('CALL')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     Call
@@ -530,6 +538,7 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                     variant="outlined"
                     size="small"
                     onClick={() => handleRemoteCommand('ENDCALL')}
+                    disabled={!session.connected}
                     sx={{ flex: 1 }}
                   >
                     End Call
