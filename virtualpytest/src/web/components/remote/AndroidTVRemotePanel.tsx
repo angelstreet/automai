@@ -197,57 +197,49 @@ export function AndroidTVRemotePanel({
       flexDirection: 'column', 
       height: '100%',
       overflow: 'hidden',
+      position: 'relative',
       ...sx 
     }}>
+      {/* Show Overlays button - positioned in top right corner */}
       <Box sx={{ 
-        flex: 1,
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden'
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        zIndex: 10,
+        m: 1
       }}>
-        {/* Show Overlays button - positioned in top right corner */}
-        <Box sx={{ 
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          zIndex: 10,
-          m: 1
-        }}>
-          <Button
-            variant={showOverlays ? "contained" : "outlined"}
-            size="small"
-            onClick={() => setShowOverlays(!showOverlays)}
-            sx={{ 
-              minWidth: 'auto', 
-              px: 1, 
-              fontSize: '0.7rem',
-              opacity: 0.7,
-              '&:hover': { opacity: 1 }
-            }}
-          >
-            {showOverlays ? 'Hide Overlay' : 'Show Overlay'}
-          </Button>
-        </Box>
-        
-        {/* Remote Interface Container with dynamic width based on scale */}
-        <Box sx={{ 
-          width: `${containerWidth}px`,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <RemoteInterface
-            remoteConfig={remoteConfig || null}
-            scale={remoteScale} // Use the scale from JSON config
-            showOverlays={showOverlays}
-            onCommand={handleRemoteCommand}
-            fallbackImageUrl="/android-tv-remote.png"
-            fallbackName="Android TV Remote"
-          />
-        </Box>
+        <Button
+          variant={showOverlays ? "contained" : "outlined"}
+          size="small"
+          onClick={() => setShowOverlays(!showOverlays)}
+          sx={{ 
+            minWidth: 'auto', 
+            px: 1, 
+            fontSize: '0.7rem',
+            opacity: 0.7,
+            '&:hover': { opacity: 1 }
+          }}
+        >
+          {showOverlays ? 'Hide Overlay' : 'Show Overlay'}
+        </Button>
+      </Box>
+      
+      {/* Remote Interface Container - positioned at the top */}
+      <Box sx={{ 
+        position: 'absolute',
+        top: 10,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: `${containerWidth}px`,
+      }}>
+        <RemoteInterface
+          remoteConfig={remoteConfig || null}
+          scale={remoteScale}
+          showOverlays={showOverlays}
+          onCommand={handleRemoteCommand}
+          fallbackImageUrl="/android-tv-remote.png"
+          fallbackName="Android TV Remote"
+        />
       </Box>
 
       {/* Disconnect button */}
@@ -267,7 +259,14 @@ export function AndroidTVRemotePanel({
         disabled={connectionLoading}
         size="small"
         fullWidth
-        sx={{ mt: 0, height: '28px' }}
+        sx={{ 
+          mt: 0, 
+          height: '28px',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0
+        }}
       >
         {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
       </Button>
