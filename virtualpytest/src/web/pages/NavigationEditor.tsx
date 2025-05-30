@@ -153,41 +153,44 @@ const NavigationEditorContent: React.FC = () => {
     if (selectedDeviceData?.controller_configs?.remote && activeHook) {
       const remoteConfig = selectedDeviceData.controller_configs.remote;
       
-      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`);
+      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, remoteConfig);
       
       if (remoteConfig.type === 'android_mobile' || remoteConfig.type === 'android_tv') {
         const connectionConfig = extractConnectionConfigForAndroid(remoteConfig);
-        activeHook.setConnectionForm(connectionConfig);
+        console.log('[@component:NavigationEditor] Extracted Android connection config:', connectionConfig);
+        if (connectionConfig && activeHook.setConnectionForm) {
+          activeHook.setConnectionForm(connectionConfig);
+        }
       } else if (remoteConfig.type === 'ir_remote') {
         const connectionConfig = extractConnectionConfigForIR(remoteConfig);
-        activeHook.setConnectionForm(connectionConfig);
+        console.log('[@component:NavigationEditor] Extracted IR connection config:', connectionConfig);
+        if (connectionConfig && activeHook.setConnectionForm) {
+          activeHook.setConnectionForm(connectionConfig);
+        }
       } else if (remoteConfig.type === 'bluetooth_remote') {
         const connectionConfig = extractConnectionConfigForBluetooth(remoteConfig);
-        activeHook.setConnectionForm(connectionConfig);
+        console.log('[@component:NavigationEditor] Extracted Bluetooth connection config:', connectionConfig);
+        if (connectionConfig && activeHook.setConnectionForm) {
+          activeHook.setConnectionForm(connectionConfig);
+        }
       }
     }
   }, [selectedDeviceData, activeHook]);
 
-  // Auto-connect/disconnect based on control state
+  // Handle disconnection when control is released
   useEffect(() => {
     if (!activeHook || !remoteConfig) return;
 
-    if (isControlActive && selectedDeviceData && !activeHook.session.connected) {
-      console.log(`[@component:NavigationEditor] Auto-connecting to ${remoteConfig.type} device: ${selectedDeviceData.name}`);
-      if (remoteConfig.type === 'android_tv') {
-        activeHook.handleTakeControl?.();
-      } else {
-        activeHook.handleConnect?.();
-      }
-    } else if (!isControlActive && activeHook.session.connected) {
-      console.log(`[@component:NavigationEditor] Auto-disconnecting from ${remoteConfig.type} device`);
+    // Only handle disconnection when control is released
+    if (!isControlActive && activeHook.session.connected) {
+      console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
       if (remoteConfig.type === 'android_tv') {
         activeHook.handleReleaseControl?.();
       } else {
         activeHook.handleDisconnect?.();
       }
     }
-  }, [isControlActive, selectedDeviceData, activeHook, remoteConfig]);
+  }, [isControlActive, activeHook, remoteConfig]);
 
   const {
     // State

@@ -65,6 +65,7 @@ export function AndroidTVRemotePanel({
   // Initialize connection form with provided config
   useEffect(() => {
     if (connectionConfig) {
+      console.log('[@component:AndroidTVRemotePanel] Initializing connection form with config:', connectionConfig);
       setConnectionForm({
         host_ip: connectionConfig.host_ip,
         host_port: connectionConfig.host_port || '22',
@@ -74,6 +75,7 @@ export function AndroidTVRemotePanel({
         device_port: connectionConfig.device_port || '5555',
       });
     } else {
+      console.log('[@component:AndroidTVRemotePanel] No connection config provided, fetching defaults');
       fetchDefaultValues();
     }
   }, [connectionConfig, fetchDefaultValues, setConnectionForm]);
@@ -81,8 +83,27 @@ export function AndroidTVRemotePanel({
   // Auto-connect if config is provided and autoConnect is true
   useEffect(() => {
     if (connectionConfig && autoConnect && !session.connected && !connectionLoading) {
-      console.log('[@component:AndroidTVRemotePanel] Auto-connecting with provided config');
-      handleTakeControl();
+      // Validate that we have all required connection parameters
+      const requiredFields = ['host_ip', 'host_username', 'host_password', 'device_ip'];
+      const missingFields = requiredFields.filter(field => !connectionConfig[field]);
+      
+      if (missingFields.length > 0) {
+        console.error('[@component:AndroidTVRemotePanel] Missing required connection fields:', missingFields);
+        console.error('[@component:AndroidTVRemotePanel] Connection config:', connectionConfig);
+        return;
+      }
+      
+      console.log('[@component:AndroidTVRemotePanel] Auto-connecting with provided config:', {
+        host_ip: connectionConfig.host_ip,
+        device_ip: connectionConfig.device_ip,
+        host_username: connectionConfig.host_username,
+        // Don't log password for security
+      });
+      
+      // Add a small delay to ensure connection form is set
+      setTimeout(() => {
+        handleTakeControl();
+      }, 100);
     }
   }, [connectionConfig, autoConnect, session.connected, connectionLoading, handleTakeControl]);
 
@@ -266,24 +287,65 @@ export function AndroidTVRemotePanel({
         <Typography variant={compact ? "body2" : "h6"} color="textSecondary" gutterBottom>
           Android TV Not Connected
         </Typography>
+        
+        {/* Show connection status */}
+        {connectionLoading && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <CircularProgress size={16} />
+            <Typography variant="caption" color="info.main">
+              Connecting to device...
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Show connection config status */}
         {connectionConfig ? (
-          <Button
-            variant="contained"
-            onClick={handleTakeControl}
-            disabled={connectionLoading}
-            size={compact ? "small" : "medium"}
-          >
-            {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
-          </Button>
+          <Box sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="caption" color="success.main" display="block">
+              Device Config: ✓ {connectionConfig.host_ip} → {connectionConfig.device_ip}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={handleTakeControl}
+              disabled={connectionLoading}
+              size={compact ? "small" : "medium"}
+              sx={{ mt: 1 }}
+            >
+              {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
+            </Button>
+          </Box>
         ) : (
-          <Typography variant="caption" color="textSecondary" textAlign="center">
-            Configure device parameters to enable Android TV remote control
+          <Typography variant="caption" color="warning.main" textAlign="center" sx={{ mb: 2 }}>
+            ⚠️ No device configuration available
           </Typography>
         )}
+        
+        {/* Show connection error if any */}
         {connectionError && (
-          <Typography variant="caption" color="error" sx={{ mt: 1, textAlign: 'center' }}>
-            {connectionError}
-          </Typography>
+          <Box sx={{ 
+            mt: 1, 
+            p: 1, 
+            bgcolor: 'error.light', 
+            borderRadius: 1, 
+            maxWidth: '100%',
+            wordBreak: 'break-word'
+          }}>
+            <Typography variant="caption" color="error" textAlign="center">
+              Connection Error: {connectionError}
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Debug info in compact mode */}
+        {compact && connectionConfig && (
+          <Box sx={{ mt: 1, textAlign: 'center' }}>
+            <Typography variant="caption" color="textSecondary" display="block">
+              Host: {connectionConfig.host_ip}:{connectionConfig.host_port}
+            </Typography>
+            <Typography variant="caption" color="textSecondary" display="block">
+              Device: {connectionConfig.device_ip}:{connectionConfig.device_port}
+            </Typography>
+          </Box>
         )}
       </Box>
     );
@@ -362,10 +424,8 @@ export function AndroidTVRemotePanel({
       )}
 
       {/* Remote Control Section */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant={compact ? "subtitle2" : "h6"} gutterBottom>
-          Remote Control
-        </Typography>
+      <Box sx={{ mb: 2}}>
+      
 
         {/* Controls for overlay and scale (only show in non-compact mode or if requested) */}
         {!compact && (
@@ -415,7 +475,7 @@ export function AndroidTVRemotePanel({
           overflow: 'hidden',
           alignItems: 'flex-start',
           flex: 1,
-          maxHeight: compact ? '300px' : '400px'
+          maxHeight: compact ? '360px' : '400px'
         }}>
           <RemoteInterface
             remoteConfig={localRemoteConfig}

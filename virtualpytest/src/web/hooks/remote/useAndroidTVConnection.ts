@@ -58,9 +58,30 @@ export function useAndroidTVConnection() {
     setConnectionError(null);
 
     try {
+      console.log('[@hook:useAndroidTVConnection] Starting take control process with form:', {
+        host_ip: connectionForm.host_ip,
+        device_ip: connectionForm.device_ip,
+        host_username: connectionForm.host_username,
+        host_port: connectionForm.host_port,
+        device_port: connectionForm.device_port,
+        // Don't log password for security
+      });
+
+      // Validate required fields
+      const requiredFields = ['host_ip', 'host_username', 'host_password', 'device_ip'];
+      const missingFields = requiredFields.filter(field => !connectionForm[field]);
+      
+      if (missingFields.length > 0) {
+        const errorMsg = `Missing required connection fields: ${missingFields.join(', ')}`;
+        console.error('[@hook:useAndroidTVConnection]', errorMsg);
+        setConnectionError(errorMsg);
+        return;
+      }
+
       // Fetch config first
       await fetchAndroidTVConfig();
 
+      console.log('[@hook:useAndroidTVConnection] Sending take-control request to backend...');
       const response = await fetch('http://localhost:5009/api/virtualpytest/android-tv/take-control', {
         method: 'POST',
         headers: {
@@ -70,18 +91,25 @@ export function useAndroidTVConnection() {
       });
 
       const result = await response.json();
+      console.log('[@hook:useAndroidTVConnection] Backend response:', result);
 
       if (result.success) {
+        console.log('[@hook:useAndroidTVConnection] Successfully connected to Android TV');
         setSession({
           connected: true,
           host_ip: connectionForm.host_ip,
           device_ip: connectionForm.device_ip
         });
+        setConnectionError(null);
       } else {
-        setConnectionError(result.error || 'Failed to connect');
+        const errorMsg = result.error || 'Failed to connect to Android TV device';
+        console.error('[@hook:useAndroidTVConnection] Connection failed:', errorMsg);
+        setConnectionError(errorMsg);
       }
     } catch (err: any) {
-      setConnectionError(err.message || 'Connection failed');
+      const errorMsg = err.message || 'Connection failed - network or server error';
+      console.error('[@hook:useAndroidTVConnection] Exception during connection:', err);
+      setConnectionError(errorMsg);
     } finally {
       setConnectionLoading(false);
     }
