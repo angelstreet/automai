@@ -65,6 +65,8 @@ import { NavigationEditorHeader } from '../components/navigation/NavigationEdito
 import { AndroidMobileRemotePanel } from '../components/remote/AndroidMobileRemotePanel';
 import { AndroidTVRemotePanel } from '../components/remote/AndroidTVRemotePanel';
 import { IRRemotePanel } from '../components/remote/IRRemotePanel';
+import { BluetoothRemotePanel } from '../components/remote/BluetoothRemotePanel';
+import { HDMIStreamPanel } from '../components/remote/HDMIStreamPanel';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -82,7 +84,7 @@ const NavigationEditorContent: React.FC = () => {
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
-  const [selectedDeviceType, setSelectedDeviceType] = useState<'android_mobile' | 'android_tv' | 'ir_remote'>('android_mobile');
+  const [selectedDeviceType, setSelectedDeviceType] = useState<'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream'>('android_mobile');
 
   const {
     // State
@@ -475,6 +477,22 @@ const NavigationEditorContent: React.FC = () => {
                 >
                   IR Remote
                 </Button>
+                <Button
+                  size="small"
+                  variant={selectedDeviceType === 'bluetooth_remote' ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedDeviceType('bluetooth_remote')}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  Bluetooth Remote
+                </Button>
+                <Button
+                  size="small"
+                  variant={selectedDeviceType === 'hdmi_stream' ? 'contained' : 'outlined'}
+                  onClick={() => setSelectedDeviceType('hdmi_stream')}
+                  sx={{ fontSize: '0.7rem' }}
+                >
+                  HDMI Stream
+                </Button>
               </Box>
             </Box>
             
@@ -507,8 +525,34 @@ const NavigationEditorContent: React.FC = () => {
                   }
                 }}
               />
-            ) : (
+            ) : selectedDeviceType === 'ir_remote' ? (
               <IRRemotePanel
+                connectionConfig={undefined} // TODO: Get from user interface device config
+                autoConnect={false}
+                compact={true} // Use compact mode for NavigationEditor
+                sx={{ 
+                  flex: 1,
+                  height: '100%',
+                  '& .MuiTypography-h6': {
+                    fontSize: '1rem' // Smaller headings in compact mode
+                  }
+                }}
+              />
+            ) : selectedDeviceType === 'bluetooth_remote' ? (
+              <BluetoothRemotePanel
+                connectionConfig={undefined} // TODO: Get from user interface device config
+                autoConnect={false}
+                compact={true} // Use compact mode for NavigationEditor
+                sx={{ 
+                  flex: 1,
+                  height: '100%',
+                  '& .MuiTypography-h6': {
+                    fontSize: '1rem' // Smaller headings in compact mode
+                  }
+                }}
+              />
+            ) : (
+              <HDMIStreamPanel
                 connectionConfig={undefined} // TODO: Get from user interface device config
                 autoConnect={false}
                 compact={true} // Use compact mode for NavigationEditor

@@ -9,7 +9,7 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
-import { useAndroidMobileConnection } from '../../hooks/useAndroidMobileConnection';
+import { useAndroidMobileConnection } from '../../pages/controller/hooks/useAndroidMobileConnection';
 import { AndroidMobileOverlay } from '../../pages/controller/components/AndroidMobileOverlay';
 
 interface AndroidMobileRemotePanelProps {

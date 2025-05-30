@@ -3,11 +3,13 @@ import { AndroidMobileModal } from '../pages/controller/modals/AndroidMobileModa
 import { AndroidMobileRemotePanel } from './remote/AndroidMobileRemotePanel';
 import { AndroidTVRemotePanel } from './remote/AndroidTVRemotePanel';
 import { IRRemotePanel } from './remote/IRRemotePanel';
+import { BluetoothRemotePanel } from './remote/BluetoothRemotePanel';
+import { HDMIStreamPanel } from './remote/HDMIStreamPanel';
 import { Dialog, DialogTitle, DialogContent, Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
 interface RemoteControllerProps {
-  deviceType: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'unknown';
+  deviceType: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream' | 'unknown';
   device?: {
     id: string;
     name: string;
@@ -47,6 +49,33 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
     };
   };
 
+  const getBluetoothConnectionConfig = () => {
+    if (!device?.controller_configs?.remote) return undefined;
+    
+    const config = device.controller_configs.remote;
+    return {
+      device_address: config.device_address,
+      device_name: config.device_name,
+      pairing_pin: config.pairing_pin,
+    };
+  };
+
+  const getHDMIStreamConnectionConfig = () => {
+    if (!device?.controller_configs?.remote) return undefined;
+    
+    const config = device.controller_configs.remote;
+    return {
+      host_ip: config.host_ip,
+      host_port: config.host_port,
+      host_username: config.host_username,
+      host_password: config.host_password,
+      stream_path: config.stream_path,
+      video_device: config.video_device,
+      resolution: config.resolution,
+      fps: config.fps,
+    };
+  };
+
   // Render appropriate remote controller based on device type
   const renderRemoteController = () => {
     switch (deviceType) {
@@ -81,14 +110,20 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
         
       case 'bluetooth_remote':
         return (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h6" gutterBottom>
-              Bluetooth Remote Controller
-            </Typography>
-            <Typography color="textSecondary">
-              Bluetooth Remote controller coming soon...
-            </Typography>
-          </Box>
+          <BluetoothRemotePanel
+            connectionConfig={getBluetoothConnectionConfig()}
+            autoConnect={false}
+            compact={false}
+          />
+        );
+        
+      case 'hdmi_stream':
+        return (
+          <HDMIStreamPanel
+            connectionConfig={getHDMIStreamConnectionConfig()}
+            autoConnect={false}
+            compact={false}
+          />
         );
         
       case 'unknown':
@@ -165,6 +200,9 @@ export function getDeviceType(device: { name: string; model: string; controller_
     if (remoteType === 'bluetooth_remote') {
       return 'bluetooth_remote';
     }
+    if (remoteType === 'hdmi_stream') {
+      return 'hdmi_stream';
+    }
   }
   
   // Fallback to name/model detection
@@ -188,6 +226,10 @@ export function getDeviceType(device: { name: string; model: string; controller_
   
   if (deviceName.includes('bluetooth') || deviceName.includes('bt')) {
     return 'bluetooth_remote';
+  }
+  
+  if (deviceName.includes('hdmi') || deviceName.includes('hdmi_stream')) {
+    return 'hdmi_stream';
   }
   
   return 'unknown';

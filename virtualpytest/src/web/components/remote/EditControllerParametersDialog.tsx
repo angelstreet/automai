@@ -20,7 +20,7 @@ import {
 import { Close as CloseIcon, Save as SaveIcon } from '@mui/icons-material';
 
 export interface ControllerConfig {
-  type: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote';
+  type: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream';
   // SSH + ADB configs
   host_ip?: string;
   host_port?: string;
@@ -36,6 +36,11 @@ export interface ControllerConfig {
   device_address?: string;
   pairing_pin?: string;
   hid_profile?: string;
+  // HDMI Stream configs
+  stream_path?: string;
+  video_device?: string;
+  resolution?: string;
+  fps?: number;
 }
 
 interface EditControllerParametersDialogProps {
@@ -83,6 +88,11 @@ export function EditControllerParametersDialog({
         device_address: remoteConfig.device_address || '00:00:00:00:00:00',
         pairing_pin: remoteConfig.pairing_pin || '0000',
         hid_profile: remoteConfig.hid_profile || 'keyboard',
+        // HDMI Stream
+        stream_path: remoteConfig.stream_path || '',
+        video_device: remoteConfig.video_device || '',
+        resolution: remoteConfig.resolution || '',
+        fps: remoteConfig.fps || 60,
       });
     } else {
       // Reset to defaults
@@ -100,6 +110,10 @@ export function EditControllerParametersDialog({
         device_address: '00:00:00:00:00:00',
         pairing_pin: '0000',
         hid_profile: 'keyboard',
+        stream_path: '',
+        video_device: '',
+        resolution: '',
+        fps: 60,
       });
     }
     setError(null);
@@ -309,6 +323,57 @@ export function EditControllerParametersDialog({
           </>
         );
 
+      case 'hdmi_stream':
+        return (
+          <>
+            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+              HDMI Stream Settings
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Stream Path"
+                  value={config.stream_path || ''}
+                  onChange={(e) => updateConfig('stream_path', e.target.value)}
+                  size="small"
+                  placeholder="e.g., /path/to/stream"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Video Device"
+                  value={config.video_device || ''}
+                  onChange={(e) => updateConfig('video_device', e.target.value)}
+                  size="small"
+                  placeholder="e.g., /dev/video0"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="Resolution"
+                  value={config.resolution || ''}
+                  onChange={(e) => updateConfig('resolution', e.target.value)}
+                  size="small"
+                  placeholder="e.g., 1920x1080"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="FPS"
+                  value={config.fps?.toString() || ''}
+                  onChange={(e) => updateConfig('fps', e.target.value ? parseInt(e.target.value) : undefined)}
+                  size="small"
+                  placeholder="e.g., 60"
+                />
+              </Grid>
+            </Grid>
+          </>
+        );
+
       default:
         return null;
     }
@@ -353,6 +418,7 @@ export function EditControllerParametersDialog({
               <MenuItem value="android_tv">Android TV</MenuItem>
               <MenuItem value="ir_remote">IR Remote</MenuItem>
               <MenuItem value="bluetooth_remote">Bluetooth Remote</MenuItem>
+              <MenuItem value="hdmi_stream">HDMI Stream</MenuItem>
             </Select>
           </FormControl>
 
