@@ -179,12 +179,6 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   <Typography variant="h6" gutterBottom>
                     SSH + ADB Connection
                   </Typography>
-                  
-                  {connectionError && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                      {connectionError}
-                    </Alert>
-                  )}
 
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
@@ -253,39 +247,59 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                   >
                     {connectionLoading ? <CircularProgress size={20} /> : 'Connect'}
                   </Button>
+
+                  {/* Error Display Area - Bottom Left */}
+                  <Box sx={{ mt: 2, minHeight: '60px' }}>
+                    {(connectionError || dumpError) && (
+                      <Alert severity="error">
+                        {connectionError || dumpError}
+                      </Alert>
+                    )}
+                  </Box>
                 </Box>
               ) : (
-                /* Screenshot Display */
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                  {androidScreenshot ? (
-                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                      <img
-                        ref={screenshotRef}
-                        src={`data:image/png;base64,${androidScreenshot}`}
-                        alt="Android Screenshot"
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '500px',
-                          border: '1px solid #ccc',
-                          borderRadius: '8px',
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <Box sx={{ 
-                      width: '100%', 
-                      height: 400, 
-                      border: '2px dashed #ccc', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      borderRadius: 1
-                    }}>
-                      <Typography color="textSecondary" textAlign="center">
-                        Click "Screenshot & Dump UI" to capture.
-                      </Typography>
-                    </Box>
-                  )}
+                /* Screenshot Display with Error Area */
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                    {androidScreenshot ? (
+                      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          ref={screenshotRef}
+                          src={`data:image/png;base64,${androidScreenshot}`}
+                          alt="Android Screenshot"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '400px',
+                            border: '1px solid #ccc',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 300, 
+                        border: '2px dashed #ccc', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        borderRadius: 1
+                      }}>
+                        <Typography color="textSecondary" textAlign="center">
+                          Click "Screenshot & Dump UI" to capture.
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Error Display Area - Bottom Left */}
+                  <Box sx={{ mt: 2, minHeight: '60px' }}>
+                    {(connectionError || dumpError) && (
+                      <Alert severity="error">
+                        {connectionError || dumpError}
+                      </Alert>
+                    )}
+                  </Box>
                 </Box>
               )}
             </Grid>
@@ -385,12 +399,6 @@ export function AndroidMobileModal({ open, onClose }: AndroidMobileModalProps) {
                       </Box>
                     )}
                   </Box>
-                )}
-
-                {dumpError && (
-                  <Alert severity="error" sx={{ mb: 1 }}>
-                    {dumpError}
-                  </Alert>
                 )}
 
                 {/* Element selection dropdown */}
