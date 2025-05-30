@@ -229,8 +229,8 @@ def get_android_tv_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('ANDROID_TV_IP', ''),
-            'device_port': os.getenv('ANDROID_TV_PORT', '5555')
+            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_port': os.getenv('DEVICE_PORT', '5555')
         }
         
         return jsonify({
@@ -325,8 +325,8 @@ def get_android_mobile_defaults():
             'host_username': os.getenv('HOST_USERNAME', ''),
             'host_password': os.getenv('HOST_PASSWORD', ''),
             'host_port': os.getenv('HOST_PORT', '22'),
-            'device_ip': os.getenv('ANDROID_MOBILE_IP', ''),
-            'device_port': os.getenv('ANDROID_MOBILE_PORT', '5555')
+            'device_ip': os.getenv('DEVICE_IP', ''),
+            'device_port': os.getenv('DEVICE_PORT', '5555')
         }
         
         return jsonify({
@@ -363,8 +363,8 @@ def android_mobile_take_control():
         # Attempt connection
         if controller.connect():
             # Store controller globally for subsequent commands
-            import app
-            app.android_mobile_controller = controller
+            from app import android_mobile_controller
+            android_mobile_controller = controller
             
             return jsonify({
                 'success': True,
@@ -386,11 +386,11 @@ def android_mobile_take_control():
 def android_mobile_release_control():
     """Release control of Android Mobile device."""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if hasattr(app, 'android_mobile_controller') and app.android_mobile_controller:
-            app.android_mobile_controller.disconnect()
-            app.android_mobile_controller = None
+        if 'android_mobile_controller' in globals() and android_mobile_controller:
+            android_mobile_controller.disconnect()
+            android_mobile_controller = None
             
         return jsonify({
             'success': True,
@@ -407,9 +407,9 @@ def android_mobile_release_control():
 def android_mobile_command():
     """Send command to Android Mobile device."""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active Android Mobile connection'
@@ -421,15 +421,48 @@ def android_mobile_command():
         
         success = False
         
-        if command in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'SELECT', 'BACK', 'HOME', 'MENU', 
-                      'VOLUME_UP', 'VOLUME_DOWN', 'VOLUME_MUTE', 'POWER', 'CAMERA', 'CALL', 'ENDCALL']:
-            success = app.android_mobile_controller.press_key(command)
-        elif command == 'INPUT_TEXT':
-            text = params.get('text', '')
-            success = app.android_mobile_controller.input_text(text)
-        elif command == 'LAUNCH_APP':
+        if command == 'press_key':
+            key = params.get('key')
+            if not key:
+                return jsonify({
+                    'success': False,
+                    'error': 'Key parameter required for press_key command'
+                }), 400
+                
+            success = android_mobile_controller.press_key(key)
+            return jsonify({
+                'success': success,
+                'message': f'Key "{key}" {"pressed" if success else "failed"}'
+            })
+            
+        elif command == 'launch_app':
             package = params.get('package', '')
-            success = app.android_mobile_controller.launch_app(package)
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Package parameter required for launch_app command'
+                }), 400
+                
+            success = android_mobile_controller.launch_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"launched" if success else "failed"}'
+            })
+            
+        elif command == 'input_text':
+            text = params.get('text', '')
+            if not text:
+                return jsonify({
+                    'success': False,
+                    'error': 'Text parameter required for input_text command'
+                }), 400
+                
+            success = android_mobile_controller.input_text(text)
+            return jsonify({
+                'success': success,
+                'message': f'Text input {"successful" if success else "failed"}'
+            })
+            
         else:
             return jsonify({
                 'success': False,
@@ -451,19 +484,19 @@ def android_mobile_command():
 def android_mobile_dump_ui():
     """Dump UI elements from Android Mobile device."""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active Android Mobile connection'
             }), 400
             
-        success, elements, error = app.android_mobile_controller.dump_ui_elements()
+        success, elements, error = android_mobile_controller.dump_ui_elements()
         
         if success:
             # Get device resolution
-            resolution = app.android_mobile_controller.get_device_resolution()
+            resolution = android_mobile_controller.get_device_resolution()
             
             # Convert elements to JSON-serializable format
             elements_data = []
@@ -500,44 +533,30 @@ def android_mobile_dump_ui():
 def android_mobile_click_element():
     """Click on a UI element on Android Mobile device."""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active Android Mobile connection'
             }), 400
             
         data = request.get_json()
-        element_data = data.get('element')
+        element_id = data.get('elementId')
         
-        if not element_data:
+        if element_id is None:
             return jsonify({
                 'success': False,
-                'error': 'No element data provided'
+                'error': 'No element ID provided'
             }), 400
             
-        # Import AndroidElement class
-        from controllers.lib.adbUtils import AndroidElement
-        
-        # Create AndroidElement from data
-        element = AndroidElement(
-            element_id=element_data.get('id'),
-            tag=element_data.get('tag', ''),
-            text=element_data.get('text', ''),
-            resource_id=element_data.get('resourceId', ''),
-            content_desc=element_data.get('contentDesc', ''),
-            class_name=element_data.get('className', ''),
-            bounds=element_data.get('bounds', ''),
-            clickable=element_data.get('clickable', False),
-            enabled=element_data.get('enabled', True)
-        )
-        
-        success = app.android_mobile_controller.click_element(element)
+        # For now, just use the element ID to click
+        # The backend controller should handle clicking by element ID
+        success = android_mobile_controller.click_element_by_id(element_id)
         
         return jsonify({
             'success': success,
-            'message': f'Element click {"successful" if success else "failed"}'
+            'message': f'Element {element_id} click {"successful" if success else "failed"}'
         })
         
     except Exception as e:
@@ -550,22 +569,22 @@ def android_mobile_click_element():
 def android_mobile_get_apps():
     """Get installed apps from Android Mobile device."""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active Android Mobile connection'
             }), 400
             
-        apps = app.android_mobile_controller.get_installed_apps()
+        apps = android_mobile_controller.get_installed_apps()
         
         # Convert apps to JSON-serializable format
         apps_data = []
-        for app_item in apps:
+        for app in apps:
             apps_data.append({
-                'packageName': app_item.package_name,
-                'label': app_item.label
+                'packageName': app.package_name,
+                'label': app.label
             })
         
         return jsonify({
@@ -583,16 +602,16 @@ def android_mobile_get_apps():
 def android_mobile_screenshot():
     """Take a screenshot of the Android mobile device"""
     try:
-        import app
+        from app import android_mobile_controller
         
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active Android Mobile connection'
             }), 400
         
         # Take screenshot using the existing controller
-        success, screenshot_data, error = app.android_mobile_controller.take_screenshot()
+        success, screenshot_data, error = android_mobile_controller.take_screenshot()
         
         if success:
             return jsonify({
@@ -609,6 +628,67 @@ def android_mobile_screenshot():
         return jsonify({
             'success': False,
             'error': f'Screenshot error: {str(e)}'
+        }), 500
+
+@remote_bp.route('/api/virtualpytest/android-mobile/screenshot-and-dump-ui', methods=['POST'])
+def android_mobile_screenshot_and_dump_ui():
+    """Take a screenshot and dump UI elements from Android Mobile device in one call."""
+    try:
+        from app import android_mobile_controller
+        
+        if 'android_mobile_controller' not in globals() or not android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active Android Mobile connection'
+            }), 400
+            
+        # Take screenshot first
+        success_screenshot, screenshot_data, screenshot_error = android_mobile_controller.take_screenshot()
+        
+        # Dump UI elements
+        success_ui, elements, ui_error = android_mobile_controller.dump_ui_elements()
+        
+        if success_screenshot and success_ui:
+            # Get device resolution
+            resolution = android_mobile_controller.get_device_resolution()
+            
+            # Convert elements to JSON-serializable format
+            elements_data = []
+            for element in elements:
+                elements_data.append({
+                    'id': element.id,
+                    'tag': element.tag,
+                    'text': element.text,
+                    'resourceId': element.resource_id,
+                    'contentDesc': element.content_desc,
+                    'className': element.class_name,
+                    'bounds': element.bounds
+                })
+            
+            return jsonify({
+                'success': True,
+                'screenshot': screenshot_data,
+                'elements': elements_data,
+                'totalCount': len(elements_data),
+                'deviceResolution': resolution
+            })
+        else:
+            # Return partial success or error
+            errors = []
+            if not success_screenshot:
+                errors.append(f"Screenshot failed: {screenshot_error}")
+            if not success_ui:
+                errors.append(f"UI dump failed: {ui_error}")
+                
+            return jsonify({
+                'success': False,
+                'error': "; ".join(errors)
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot and UI dump error: {str(e)}'
         }), 500
 
 # =====================================================
