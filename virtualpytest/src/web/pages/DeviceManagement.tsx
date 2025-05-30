@@ -241,7 +241,7 @@ const DeviceManagement: React.FC = () => {
   // Helper function to get controller count and summary
   const getControllerSummary = (device: Device) => {
     if (!device.controller_configs) {
-      return { count: 0, summary: 'No controllers configured' };
+      return { count: 0, summary: 'No controllers configured', types: [] };
     }
 
     const configuredControllers = Object.keys(device.controller_configs).filter(
@@ -253,7 +253,7 @@ const DeviceManagement: React.FC = () => {
     const count = configuredControllers.length;
     
     if (count === 0) {
-      return { count: 0, summary: 'No controllers configured' };
+      return { count: 0, summary: 'No controllers configured', types: [] };
     }
 
     // Create a summary of configured controller types
@@ -261,7 +261,19 @@ const DeviceManagement: React.FC = () => {
       type.charAt(0).toUpperCase() + type.slice(1)
     ).join(', ');
 
-    return { count, summary };
+    // Map controller types to display names
+    const typeDisplayNames = configuredControllers.map(type => {
+      switch (type.toLowerCase()) {
+        case 'remote': return 'Remote';
+        case 'av': return 'AV';
+        case 'verification': return 'Verify';
+        case 'power': return 'Power';
+        case 'network': return 'Network';
+        default: return type.charAt(0).toUpperCase() + type.slice(1);
+      }
+    });
+
+    return { count, summary, types: typeDisplayNames };
   };
 
   const LoadingState = () => (
@@ -442,12 +454,26 @@ const DeviceManagement: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell align="center">
-                          <Chip 
-                            label={`${controllerSummary.count}`}
-                            size="small" 
-                            color={controllerSummary.count > 0 ? 'success' : 'default'}
-                            variant={controllerSummary.count > 0 ? 'filled' : 'outlined'}
-                          />
+                          {controllerSummary.types.length > 0 ? (
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+                              {controllerSummary.types.map((type, index) => (
+                                <Chip 
+                                  key={index}
+                                  label={type}
+                                  size="small"
+                                  color="primary"
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Chip 
+                              label="None"
+                              size="small"
+                              color="default"
+                              variant="outlined"
+                            />
+                          )}
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
