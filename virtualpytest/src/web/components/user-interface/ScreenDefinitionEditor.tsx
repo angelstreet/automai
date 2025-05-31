@@ -154,7 +154,7 @@ export function ScreenDefinitionEditor({
       
       try {
         // Add a small delay to make sure SSH connection is ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2500));
         
         const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
         if (!response.ok) {
@@ -282,10 +282,11 @@ export function ScreenDefinitionEditor({
       console.log(`[@component:ScreenDefinitionEditor] Screenshot response (${duration}ms):`, result);
 
       if (result.success && result.screenshot_path) {
-        const timestamp = Date.now();
-        const imageUrl = `/api/screen-definition/images/screenshot/${result.screenshot_path}?t=${timestamp}`;
+        // Extract just the filename from the full path
+        const filename = result.screenshot_path.split('/').pop() || 'android_mobile.jpg';
         
-        setLastScreenshotPath(result.screenshot_path);
+        setLastScreenshotPath(filename);
+        setPreviewMode('screenshot');
         
         // Store resolution information for alignment calculations
         if (result.device_resolution) {
@@ -297,17 +298,14 @@ export function ScreenDefinitionEditor({
           });
         }
         
-        // Pass resolution info to parent
-        if (handleScreenshotTaken) {
-          handleScreenshotTaken(imageUrl);
-        }
+        console.log(`[@component:ScreenDefinitionEditor] Screenshot captured: ${filename}`);
         
-        console.log(`[@component:ScreenDefinitionEditor] Screenshot captured: ${imageUrl}`);
-        
-        // Restart stream if it was active
+        // Note: Stream was stopped for screenshot capture, but we'll leave it stopped
+        // so user can review the screenshot. User can manually restart stream when ready.
         if (result.stream_was_active) {
-          console.log(`[@component:ScreenDefinitionEditor] Restarting stream...`);
-          await restartStream();
+          console.log(`[@component:ScreenDefinitionEditor] Stream was active before screenshot - leaving stopped for review`);
+          // Update frontend state to reflect that stream is now stopped
+          setStreamStatus('stopped');
         }
       } else {
         console.error(`[@component:ScreenDefinitionEditor] Screenshot failed:`, result.error);
@@ -358,7 +356,8 @@ export function ScreenDefinitionEditor({
               
               // Update preview if this is our first frame
               if (frameCount === 1) {
-                setLastScreenshotPath(frameResult.screenshot_path);
+                const filename = frameResult.screenshot_path.split('/').pop() || 'android_mobile.jpg';
+                setLastScreenshotPath(filename);
                 setPreviewMode('screenshot');
               }
             }
@@ -663,15 +662,6 @@ export function ScreenDefinitionEditor({
               onScreenshotTaken={handleScreenshotTaken}
               isCompactView={false}
               streamStatus={streamStatus}
-            />
-            <CapturePreviewEditor
-              mode="screenshot"
-              screenshotPath={lastScreenshotPath}
-              currentFrame={currentFrame}
-              totalFrames={totalFrames}
-              onFrameChange={handleFrameChange}
-              resolutionInfo={resolutionInfo}
-              sx={{ flexGrow: 1, minHeight: 0 }}
             />
           </Box>
         </Box>
