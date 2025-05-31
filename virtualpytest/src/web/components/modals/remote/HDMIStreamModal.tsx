@@ -165,7 +165,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
       host_port: '22',
       host_username: '',
       host_password: '',
-      stream_path: '/path/to/output.m3u8',
+      stream_path: 'https://77.56.53.130:8081/stream/output.m3u8',
       video_device: '/dev/video0',
     });
     setIsConnecting(false);
@@ -199,12 +199,6 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
             {!isConnected ? (
               /* Connection Form */
               <Box>
-                {connectionError && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    {connectionError}
-                  </Alert>
-                )}
-
                 <Typography variant="subtitle2" gutterBottom>
                   SSH Connection Details
                 </Typography>
@@ -313,7 +307,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                     fullWidth
                     startIcon={isConnecting ? <CircularProgress size={20} /> : <PlayArrow />}
                   >
-                    {isConnecting ? 'Connecting...' : 'Connect & Stream'}
+                    {isConnecting ? 'Connecting...' : 'Connect'}
                   </Button>
                   
                   <Button
@@ -335,11 +329,11 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
               <Box sx={{ 
                 position: 'relative', 
                 width: '100%', 
-                height: '500px',
+                height: '400px',
                 border: '1px solid #ccc',
                 borderRadius: 1,
                 overflow: 'hidden',
-                backgroundColor: '#f5f5f5',
+                backgroundColor: 'transparent',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -370,6 +364,12 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
             )}
           </Grid>
         </Grid>
+          {/* Display error message at the bottom of the form */}
+          {connectionError && !isConnected && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {connectionError}
+                  </Alert>
+                )}
       </DialogContent>
     </Dialog>
   );
