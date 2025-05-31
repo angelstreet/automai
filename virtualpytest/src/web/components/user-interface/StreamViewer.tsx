@@ -11,6 +11,7 @@ interface StreamViewerProps {
   lastScreenshotPath?: string | null;
   previewMode?: 'screenshot' | 'video';
   onScreenshotTaken?: (path: string) => void;
+  isCompactView?: boolean;
   sx?: any;
 }
 
@@ -22,6 +23,7 @@ export function StreamViewer({
   lastScreenshotPath,
   previewMode = 'screenshot',
   onScreenshotTaken,
+  isCompactView = false,
   sx = {} 
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -130,9 +132,13 @@ export function StreamViewer({
       if (data.success) {
         setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
         
-        // If stream is restarted and we're showing preview, hide it to show stream
-        if (endpoint === 'restart' && showPreview) {
+        // Toggle preview visibility based on stream status
+        if (endpoint === 'restart') {
+          // When restarting stream, hide the preview to show the stream
           setShowPreview(false);
+        } else if (endpoint === 'stop' && screenshotPath) {
+          // When stopping stream, show the preview if we have a screenshot
+          setShowPreview(true);
         }
       }
     } catch (error) {
@@ -286,52 +292,60 @@ export function StreamViewer({
         </Box>
       )}
 
-      {/* Control buttons */}
-      <Box sx={{
-        position: 'absolute',
-        bottom: 16,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        gap: 2,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        padding: 1,
-        borderRadius: 2
-      }}>
-        <IconButton
-          onClick={handleStreamControl}
-          sx={{ color: 'white' }}
-          disabled={!isConnected}
-        >
-          {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
-        </IconButton>
-        
-        <IconButton
-          onClick={handleTakeScreenshot}
-          sx={{ color: 'white' }}
-          disabled={!isConnected || streamStatus !== 'running'}
-        >
-          <Camera />
-        </IconButton>
-      </Box>
+      {/* Stream control buttons - Only shown in expanded view */}
+      {!isCompactView && (
+        <Box sx={{
+          position: 'absolute',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: 2,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          padding: 1,
+          borderRadius: 2
+        }}>
+          <IconButton
+            onClick={handleStreamControl}
+            sx={{ color: 'white' }}
+            disabled={!isConnected}
+          >
+            {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
+          </IconButton>
+          
+          <IconButton
+            onClick={handleTakeScreenshot}
+            sx={{ color: 'white' }}
+            disabled={!isConnected || streamStatus !== 'running'}
+          >
+            <Camera />
+          </IconButton>
+        </Box>
+      )}
 
-      {/* Preview toggle button */}
-      {screenshotPath && (
-        <IconButton
-          onClick={() => setShowPreview(!showPreview)}
-          sx={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            color: 'white',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            '&:hover': {
-              backgroundColor: 'rgba(0,0,0,0.7)'
-            }
-          }}
-        >
-          {showPreview ? <PlayArrow /> : <Camera />}
-        </IconButton>
+      {/* Status indicator - Only shown in expanded view */}
+      {!isCompactView && (
+        <Box sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          padding: '2px 8px',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          borderRadius: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5
+        }}>
+          <Box sx={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
+          }} />
+          <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem' }}>
+            {streamStatus === 'running' ? 'Live' : 'Stopped'}
+          </Typography>
+        </Box>
       )}
     </Box>
   );

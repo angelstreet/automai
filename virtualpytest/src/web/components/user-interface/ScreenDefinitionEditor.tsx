@@ -308,43 +308,32 @@ export function ScreenDefinitionEditor({
           bgcolor: '#000000',
           border: '2px solid #000000',
         }}>
-          {/* Minimal header with just the essential buttons */}
+          {/* Minimal header with just the screenshot and minimize buttons */}
           <Box sx={{ 
             display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 1,
+            justifyContent: 'space-between',
+            alignItems: 'center',
             p: 1,
             borderBottom: '1px solid #333'
           }}>
-            <Tooltip title="Take Screenshot">
-              <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
-                <PhotoCamera />
-              </IconButton>
-            </Tooltip>
             
-            {!isCapturing ? (
-              <Tooltip title="Start Capture">
-                <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
-                  <VideoCall />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title="Take Screenshot">
+                <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
+                  <PhotoCamera />
                 </IconButton>
               </Tooltip>
-            ) : (
-              <Tooltip title="Stop Capture">
-                <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
-                  <StopCircle />
+              
+              <Tooltip title="Minimize">
+                <IconButton 
+                  size="small" 
+                  onClick={handleToggleExpanded}
+                  sx={{ color: '#ffffff' }}
+                >
+                  <FullscreenExit />
                 </IconButton>
               </Tooltip>
-            )}
-            
-            <Tooltip title="Minimize">
-              <IconButton 
-                size="small" 
-                onClick={handleToggleExpanded}
-                sx={{ color: '#ffffff' }}
-              >
-                <FullscreenExit />
-              </IconButton>
-            </Tooltip>
+            </Box>
           </Box>
 
           {/* Integrated StreamViewer with CapturePreviewEditor */}
@@ -362,66 +351,52 @@ export function ScreenDefinitionEditor({
               lastScreenshotPath={lastScreenshotPath}
               previewMode={previewMode}
               onScreenshotTaken={handleScreenshotTaken}
+              isCompactView={false}
             />
           </Box>
         </Box>
       ) : (
-        // Compact view code
+        // Compact view - completely clean with just the StreamViewer and expand button
         <Box sx={{ 
           width: '150px',
           height: '250px',
           bgcolor: '#000000',
           border: '2px solid #000000',
           borderRadius: 1,
-          display: 'flex',
-          flexDirection: 'column',
+          overflow: 'hidden',
+          position: 'relative',
           boxShadow: 2,
-          transition: 'all 0.3s ease-in-out',
-          ...sx 
         }}>
-          <Box sx={{ 
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden',
-            bgcolor: '#000000',
-            display: 'flex'
-          }}>
-            <StreamViewer 
-              streamUrl={avConfig?.stream_url}
-              isConnected={isConnected}
-              width="100%"
-              height="100%"
-              lastScreenshotPath={lastScreenshotPath}
-              previewMode={previewMode}
-              onScreenshotTaken={handleScreenshotTaken}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0
-              }}
-            />
+          {/* Clean StreamViewer with no controls */}
+          <StreamViewer 
+            streamUrl={avConfig?.stream_url}
+            isConnected={isConnected}
+            width="100%"
+            height="100%"
+            lastScreenshotPath={lastScreenshotPath}
+            previewMode={previewMode}
+            onScreenshotTaken={handleScreenshotTaken}
+            isCompactView={true}
+          />
 
-            <IconButton 
-              size="small" 
-              onClick={handleToggleExpanded}
-              sx={{ 
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                color: '#ffffff',
-                zIndex: 1,
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.9)'
-                }
-              }}
-            >
-              <Fullscreen sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Box>
+          {/* Only the expand button */}
+          <IconButton 
+            size="small" 
+            onClick={handleToggleExpanded}
+            sx={{ 
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              color: '#ffffff',
+              zIndex: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.7)'
+              }
+            }}
+          >
+            <Fullscreen sx={{ fontSize: 16 }} />
+          </IconButton>
         </Box>
       )}
     </Box>
