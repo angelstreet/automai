@@ -482,7 +482,7 @@ export function ScreenDefinitionEditor({
       {isExpanded ? (
         // Expanded view with integrated StreamViewer and CapturePreviewEditor
         <Box sx={{
-          width: '400px',
+          width: '350px',
           height: '520px',
           boxShadow: 2,
           borderRadius: 1,
