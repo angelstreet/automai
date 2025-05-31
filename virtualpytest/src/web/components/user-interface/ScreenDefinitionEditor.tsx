@@ -760,7 +760,7 @@ export function ScreenDefinitionEditor({
                     size="small" 
                     onClick={restartStream} 
                     sx={{ color: '#ffffff' }}
-                    disabled={!isConnected || streamStatus === 'running' || isCapturing}
+                    disabled={!isConnected || isCapturing}
                   >
                     <Refresh />
                   </IconButton>
