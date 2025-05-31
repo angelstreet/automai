@@ -28,6 +28,12 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
   
+  // SSH connection parameters - restored
+  const [hostIp, setHostIp] = useState('');
+  const [hostPort, setHostPort] = useState(22);
+  const [hostUsername, setHostUsername] = useState('');
+  const [hostPassword, setHostPassword] = useState('');
+  
   // Stream connection form state
   const [streamUrl, setStreamUrl] = useState('https://77.56.53.130:444/stream/output.m3u8');
   const [videoDevice, setVideoDevice] = useState('/dev/video0');
@@ -76,7 +82,10 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
       if (result.success && result.defaults) {
         setStreamUrl(result.defaults.stream_path || streamUrl);
         setVideoDevice(result.defaults.video_device || videoDevice);
-        console.log('[@component:HDMIStreamModal] Loaded default stream settings');
+        setHostIp(result.defaults.host_ip || '');
+        setHostPort(result.defaults.host_port || 22);
+        setHostUsername(result.defaults.host_username || '');
+        console.log('[@component:HDMIStreamModal] Loaded default stream and SSH settings');
       }
     } catch (error) {
       console.log('[@component:HDMIStreamModal] Could not load default values:', error);
@@ -101,6 +110,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
     try {
       console.log('[@component:HDMIStreamModal] Connecting to HLS stream:', streamUrl);
       console.log('[@component:HDMIStreamModal] Using video device:', videoDevice);
+      console.log('[@component:HDMIStreamModal] SSH Host:', hostIp, 'Port:', hostPort, 'User:', hostUsername);
       
       // Clean up any existing stream first
       cleanupStream();
@@ -232,6 +242,56 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
               /* Connection Form */
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
+                  SSH Connection Details
+                </Typography>
+                
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={8}>
+                    <TextField
+                      fullWidth
+                      label="Host IP Address"
+                      value={hostIp}
+                      onChange={(e) => setHostIp(e.target.value)}
+                      size="small"
+                      placeholder="192.168.1.100"
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <TextField
+                      fullWidth
+                      label="SSH Port"
+                      type="number"
+                      value={hostPort}
+                      onChange={(e) => setHostPort(parseInt(e.target.value) || 22)}
+                      size="small"
+                      placeholder="22"
+                      inputProps={{ min: 1, max: 65535 }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Username"
+                      value={hostUsername}
+                      onChange={(e) => setHostUsername(e.target.value)}
+                      size="small"
+                      placeholder="username"
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Password"
+                      type="password"
+                      value={hostPassword}
+                      onChange={(e) => setHostPassword(e.target.value)}
+                      size="small"
+                      placeholder="password"
+                    />
+                  </Grid>
+                </Grid>
+                
+                <Typography variant="subtitle2" gutterBottom>
                   Stream Connection Details
                 </Typography>
                 
@@ -310,13 +370,19 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
               /* Stream Controls When Connected */
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  Stream Information
+                  Connection Information
                 </Typography>
                 
                 <Card sx={{ mb: 2 }}>
                   <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>URL:</strong> {streamUrl}
+                      <strong>SSH Host:</strong> {hostIp}:{hostPort}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>SSH User:</strong> {hostUsername}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Stream URL:</strong> {streamUrl}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Video Device:</strong> {videoDevice}
