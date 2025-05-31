@@ -20,6 +20,7 @@ interface VideoCaptureProps {
   currentFrame?: number;
   totalFrames?: number;
   onFrameChange?: (frame: number) => void;
+  onBackToStream?: () => void;
   sx?: any;
 }
 
@@ -30,6 +31,7 @@ export function VideoCapture({
   currentFrame = 0,
   totalFrames = 0,
   onFrameChange,
+  onBackToStream,
   sx = {}
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -137,7 +139,19 @@ export function VideoCapture({
     if (!videoFramesPath || !totalFrames) return '';
     
     const timestamp = new Date().getTime();
-    const framePath = `${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`;
+    
+    // Check if this is a capture frames path (contains 'captures') or video frames path
+    const isCaptureFrames = videoFramesPath.includes('captures');
+    
+    let framePath;
+    if (isCaptureFrames) {
+      // For capture frames: capture_1.jpg, capture_2.jpg, etc. (1-indexed)
+      framePath = `${videoFramesPath}/capture_${currentValue + 1}.jpg`;
+    } else {
+      // For video frames: frame_0001.jpg, frame_0002.jpg, etc. (0-padded)
+      framePath = `${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`;
+    }
+    
     return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(framePath)}&t=${timestamp}`;
   }, [videoFramesPath, currentValue, totalFrames]);
 
@@ -298,6 +312,11 @@ export function VideoCapture({
           {/* Frame counter */}
           <Typography variant="caption" sx={{ color: '#666', display: 'block', textAlign: 'center', mb: 1 }}>
             Frame {currentValue + 1} / {totalFrames}
+            {videoFramesPath.includes('captures') && (
+              <Typography component="span" variant="caption" sx={{ color: '#888', ml: 1 }}>
+                • Captured Frames
+              </Typography>
+            )}
           </Typography>
 
           {/* Scrubber */}
@@ -349,6 +368,20 @@ export function VideoCapture({
             >
               <SkipNext />
             </IconButton>
+            
+            {/* Back to Stream button - only show for capture frames */}
+            {videoFramesPath.includes('captures') && onBackToStream && (
+              <IconButton 
+                size="small" 
+                onClick={onBackToStream}
+                sx={{ color: '#888', ml: 1 }}
+                title="Back to Stream"
+              >
+                <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>
+                  Stream
+                </Typography>
+              </IconButton>
+            )}
           </Box>
         </Box>
       )}

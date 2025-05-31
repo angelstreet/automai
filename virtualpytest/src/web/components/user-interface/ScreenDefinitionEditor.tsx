@@ -304,7 +304,19 @@ export function ScreenDefinitionEditor({
         if (data.success) {
           console.log('[@component:ScreenDefinitionEditor] Capture stopped successfully');
           // Update frame count from API response - this is the final count
-          setSavedFrameCount(data.frames_downloaded || 0);
+          const finalFrameCount = data.frames_downloaded || 0;
+          setSavedFrameCount(finalFrameCount);
+          
+          // Set up for viewing captured frames
+          if (finalFrameCount > 0) {
+            setVideoFramesPath('/tmp/captures'); // Path where capture frames are stored
+            setTotalFrames(finalFrameCount);
+            setCurrentFrame(0); // Start with first frame
+            setViewMode('capture'); // Switch to capture view
+            console.log(`[@component:ScreenDefinitionEditor] Switching to capture view with ${finalFrameCount} frames`);
+          } else {
+            console.log('[@component:ScreenDefinitionEditor] No frames captured, staying in stream view');
+          }
         } else {
           console.error('[@component:ScreenDefinitionEditor] Capture stop failed:', data.error);
           // If API fails, set to 0 as fallback
@@ -323,10 +335,8 @@ export function ScreenDefinitionEditor({
       // Keep saving indicator for a moment to show completion
       setTimeout(() => {
         setIsSaving(false);
-        setSavedFrameCount(0);
+        // Don't reset savedFrameCount here - keep it for display
       }, 2000);
-      
-      console.log('[@component:ScreenDefinitionEditor] Video capture stopped - staying in stream view');
     }
   };
 
@@ -477,6 +487,16 @@ export function ScreenDefinitionEditor({
     setCurrentFrame(frame);
   };
 
+  // Handle returning to stream view from capture view
+  const handleBackToStream = () => {
+    console.log('[@component:ScreenDefinitionEditor] Returning to stream view from capture view');
+    setViewMode('stream');
+    setVideoFramesPath(undefined);
+    setCurrentFrame(0);
+    setTotalFrames(0);
+    setSavedFrameCount(0);
+  };
+
   // Add type safety to the onScreenshotTaken handler
   const handleScreenshotTaken = (path: string) => {
     setLastScreenshotPath(path);
@@ -576,6 +596,7 @@ export function ScreenDefinitionEditor({
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onFrameChange={handleFrameChange}
+            onBackToStream={handleBackToStream}
             {...commonProps}
           />
         );
