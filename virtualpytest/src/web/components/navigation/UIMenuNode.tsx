@@ -324,8 +324,10 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           <div
             style={{
               position: 'relative',
-              maxWidth: '90vw',
-              maxHeight: '80vh',
+              maxWidth: '95vw',
+              maxHeight: '95vh',
+              width: '95vw',
+              height: '95vh',
               display: 'flex',
               flexDirection: 'column',
               margin: 0,
@@ -368,11 +370,9 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
               src={data.screenshot}
               alt={`Screenshot of ${data.label}`}
               style={{
-                width: 'auto',
-                height: 'auto',
-                maxWidth: '100%',
-                maxHeight: 'calc(85vh - 60px)',
-                objectFit: 'contain',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
                 borderRadius: '8px',
                 boxShadow: '0 4px 0px rgba(0, 0, 0, 0.5)',
                 display: 'block',
