@@ -35,212 +35,110 @@ def ensure_dirs():
     except Exception as e:
         current_app.logger.error(f"Error ensuring directories: {str(e)}")
 
-def check_controllers_available():
-    """Helper function to check if controllers are available"""
-    from app import controllers_available
-    if not controllers_available:
-        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
-    return None
-
-@screen_definition_blueprint.route('/connect', methods=['POST'])
-def connect():
-    """Establish connection using existing controller system"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
-    try:
-        from controllers import ControllerFactory
-        
-        data = request.get_json()
-        host_ip = data.get('host_ip')
-        host_username = data.get('host_username')
-        host_password = data.get('host_password')
-        host_port = data.get('host_port', '22')
-        video_device = data.get('video_device', '/dev/video0')
-        device_model = data.get('device_model', 'android_mobile')
-        
-        if not host_ip or not host_username or not host_password:
-            return jsonify({'success': False, 'error': 'Missing required connection parameters'})
-        
-        # Use existing controller system to create remote controller
-        controller = ControllerFactory.create_remote_controller(
-            device_type='real_android_mobile',  # Use existing controller type
-            device_name=device_model,
-            host_ip=host_ip,
-            host_port=int(host_port),
-            host_username=host_username,
-            host_password=host_password,
-            device_ip=host_ip,  # For android mobile, device_ip is usually same as host
-            adb_port=5555,  # Default ADB port
-            video_device=video_device
-        )
-        
-        # Store video_device as attribute for later use (since controller doesn't store it by default)
-        controller.video_device = video_device
-        
-        # Test connection
-        connection_result = controller.connect()
-        
-        if connection_result:
-            # Store controller instance globally for this session
-            session_id = f"screen_def_{int(time.time())}_{host_ip}"
-            
-            # Store in app context for reuse
-            if not hasattr(current_app, 'screen_controllers'):
-                current_app.screen_controllers = {}
-            current_app.screen_controllers[session_id] = controller
-            
-            return jsonify({
-                'success': True,
-                'session_id': session_id,
-                'message': f'Connected to {host_ip} using controller system'
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Failed to connect to device'})
-        
-    except Exception as e:
-        current_app.logger.error(f"Connection error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@screen_definition_blueprint.route('/disconnect', methods=['POST'])
-def disconnect():
-    """Close connection using controller system"""
-    try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if (not session_id or 
-            not hasattr(current_app, 'screen_controllers') or 
-            session_id not in current_app.screen_controllers):
-            return jsonify({'success': False, 'error': 'Invalid session ID'})
-        
-        # Get and disconnect controller
-        controller = current_app.screen_controllers.pop(session_id)
-        controller.disconnect()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Disconnected successfully'
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"Disconnect error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
-
 @screen_definition_blueprint.route('/screenshot', methods=['POST'])
 def take_screenshot():
-    """Take screenshot using FFmpeg from HDMI source via existing remote controller."""
+    """Take screenshot using FFmpeg from HDMI source via existing android_mobile_controller."""
     try:
         from app import android_mobile_controller
         
         data = request.get_json()
         current_app.logger.info(f"[@api:screen-definition] Screenshot request: {data}")
         
-        # Check if we have an active remote controller
+        # Check if we have an active remote controller (same as CompactAndroidMobile)
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
                 'success': False,
-                'error': 'No active remote connection. Please connect via remote control first.'
+                'error': 'No active remote connection. Please connect via android-mobile first.'
             }), 400
         
+        # Extract parameters
         video_device = data.get('video_device', '/dev/video0')
         device_model = data.get('device_model', 'android_mobile')
         
-        current_app.logger.info(f"[@api:screen-definition] Taking HDMI screenshot from {video_device}")
+        current_app.logger.info(f"[@api:screen-definition] Using FFmpeg to capture from {video_device}")
         
-        # Use the existing controller's SSH connection for FFmpeg capture
+        # Get the SSH connection from the global controller (same as CompactAndroidMobile)
         ssh_connection = android_mobile_controller.ssh_connection
         
         if not ssh_connection or not ssh_connection.connected:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller SSH connection is not established'
+                'error': 'Controller SSH connection is not established'
             }), 400
         
-        # FFmpeg command to capture from HDMI/video device
-        remote_temp_path = f"/tmp/hdmi_screenshot_{int(time.time())}.jpg"
+        # FFmpeg command to capture a single frame from HDMI source
+        remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
         ffmpeg_cmd = f"ffmpeg -f v4l2 -i {video_device} -vframes 1 -y {remote_temp_path}"
         
-        current_app.logger.info(f"[@api:screen-definition] Executing FFmpeg: {ffmpeg_cmd}")
+        current_app.logger.info(f"[@api:screen-definition] SSH Command Details:")
+        current_app.logger.info(f"[@api:screen-definition]   Host: {android_mobile_controller.host_ip}")
+        current_app.logger.info(f"[@api:screen-definition]   Video Device: {video_device}")
+        current_app.logger.info(f"[@api:screen-definition]   Output Path: {remote_temp_path}")
+        current_app.logger.info(f"[@api:screen-definition]   Full Command: {ffmpeg_cmd}")
         
-        # Execute FFmpeg command via SSH
-        result = ssh_connection.execute_command(ffmpeg_cmd)
-        if result.return_code != 0:
-            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {result.stderr}")
+        # Execute command - returns tuple (success, stdout, stderr, exit_code)
+        current_app.logger.info(f"[@api:screen-definition] Executing SSH command...")
+        start_time = time.time()
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
+        execution_time = time.time() - start_time
+        
+        current_app.logger.info(f"[@api:screen-definition] SSH command completed in {execution_time:.2f}s")
+        current_app.logger.info(f"[@api:screen-definition]   Success: {success}")
+        current_app.logger.info(f"[@api:screen-definition]   Exit Code: {exit_code}")
+        if stdout.strip():
+            current_app.logger.info(f"[@api:screen-definition]   Stdout: {stdout.strip()}")
+        if stderr.strip():
+            current_app.logger.info(f"[@api:screen-definition]   Stderr: {stderr.strip()}")
+        
+        if not success or exit_code != 0:
+            error_msg = stderr.strip() if stderr else "FFmpeg command failed"
+            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {error_msg}")
             return jsonify({
                 'success': False,
-                'error': f'FFmpeg capture failed: {result.stderr}'
+                'error': f'FFmpeg capture failed: {error_msg}'
             }), 500
         
-        # Transfer screenshot to local server
+        current_app.logger.info(f"[@api:screen-definition] FFmpeg capture successful: {remote_temp_path}")
+        
+        # Download the screenshot to local server
         local_filename = f"{device_model}.jpg"
         local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
         
-        # Ensure local directory exists
-        os.makedirs(os.path.dirname(local_screenshot_path), exist_ok=True)
-        
-        # Download file via SFTP
-        if hasattr(ssh_connection, 'sftp_get'):
-            if ssh_connection.sftp_get(remote_temp_path, local_screenshot_path):
-                current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
-                
-                # Clean up remote file
-                ssh_connection.execute_command(f"rm -f {remote_temp_path}")
-                
-                return jsonify({
-                    'success': True,
-                    'screenshot_path': local_screenshot_path,
-                    'message': f'HDMI screenshot captured from {video_device}'
-                })
-            else:
-                current_app.logger.error(f"[@api:screen-definition] Failed to transfer screenshot")
+        # Use SFTP to download the file (same approach as before)
+        if hasattr(ssh_connection, 'download_file'):
+            ssh_connection.download_file(remote_temp_path, local_screenshot_path)
+        else:
+            # Fallback: use cat command to get file content
+            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_temp_path} | base64")
+            
+            if not success or exit_code != 0:
+                current_app.logger.error(f"[@api:screen-definition] Download failed: {stderr}")
                 return jsonify({
                     'success': False,
-                    'error': 'Failed to transfer screenshot from remote host'
+                    'error': f'Failed to download screenshot: {stderr}'
                 }), 500
-        else:
-            current_app.logger.error(f"[@api:screen-definition] SSH connection does not support SFTP")
-            return jsonify({
-                'success': False,
-                'error': 'SSH connection does not support file transfer'
-            }), 500
             
-    except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Screenshot error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Screenshot failed: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/get-capture-status', methods=['POST'])
-def get_capture_status():
-    """Get status of ongoing capture using controller system"""
-    try:
-        data = request.get_json()
-        session_id = data.get('session_id')
+            import base64
+            with open(local_screenshot_path, 'wb') as f:
+                f.write(base64.b64decode(file_content))
         
-        if (not session_id or 
-            not hasattr(current_app, 'screen_controllers') or 
-            session_id not in current_app.screen_controllers):
-            return jsonify({'success': False, 'error': 'Invalid session ID'})
+        current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
         
-        controller = current_app.screen_controllers[session_id]
-        status = controller.get_status()
+        # Clean up remote file
+        ssh_connection.execute_command(f"rm -f {remote_temp_path}")
         
         return jsonify({
             'success': True,
-            'is_connected': status.get('connected', False),
-            'is_capturing': False,  # Simplified for now
-            'frame_count': 0,
-            'uptime_seconds': 0,
-            'capture_time_seconds': 0,
-            'last_screenshot': None,
+            'screenshot_path': local_screenshot_path,
+            'message': f'Screenshot captured successfully via FFmpeg from {video_device}'
         })
         
     except Exception as e:
-        current_app.logger.error(f"Get status error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        current_app.logger.error(f"[@api:screen-definition] Screenshot route error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot request failed: {str(e)}'
+        }), 500
 
 @screen_definition_blueprint.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
 def serve_screenshot(filename):
