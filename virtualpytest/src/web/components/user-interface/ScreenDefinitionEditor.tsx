@@ -96,6 +96,14 @@ export function ScreenDefinitionEditor({
   
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
+  
+  // Log stream URL for debugging
+  useEffect(() => {
+    if (avConfig) {
+      console.log('[@component:ScreenDefinitionEditor] Stream URL config:', avConfig.stream_url);
+      console.log('[@component:ScreenDefinitionEditor] Host IP:', avConfig.host_ip);
+    }
+  }, [avConfig]);
 
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | undefined>(undefined);
@@ -345,11 +353,23 @@ export function ScreenDefinitionEditor({
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
+          console.log('[@component:ScreenDefinitionEditor] Stream restart API call successful');
           setStreamStatus('running');
           setViewMode('stream');
           setLastScreenshotPath(undefined);
-          console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully');
+          
+          // Log that we're displaying the stream
+          if (avConfig?.stream_url) {
+            console.log(`[@component:ScreenDefinitionEditor] Showing stream URL: ${avConfig.stream_url}`);
+            console.log('[@component:ScreenDefinitionEditor] If stream still not visible, check browser console for video element errors');
+          } else {
+            console.error('[@component:ScreenDefinitionEditor] No stream URL available in config');
+          }
+        } else {
+          console.error('[@component:ScreenDefinitionEditor] Stream restart API returned failure:', data);
         }
+      } else {
+        console.error('[@component:ScreenDefinitionEditor] Stream restart API HTTP error:', response.status, await response.text());
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', error);
@@ -419,11 +439,32 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Render the appropriate view component based on current mode
+  // Compute the real stream URL based on config
+  const getStreamUrl = useCallback(() => {
+    if (avConfig?.stream_url) {
+      // Use the configured stream URL if available
+      return avConfig.stream_url;
+    } else if (avConfig?.host_ip) {
+      // Try HTTPS URL first, but note that it might need to be HTTP depending on the server config
+      return `https://${avConfig.host_ip}:444/stream/output.m3u8`;
+      // Alternative: return `http://${avConfig.host_ip}:444/stream/output.m3u8`;
+    }
+    return undefined;
+  }, [avConfig]);
+  
+  // Use the computed stream URL in the render function
   const renderViewComponent = () => {
     const commonProps = {
       sx: { width: '100%', height: '100%' }
     };
+    
+    // Get the proper stream URL
+    const streamUrl = getStreamUrl();
+    
+    // Log the actual URL being used
+    if (viewMode === 'stream') {
+      console.log(`[@component:ScreenDefinitionEditor] Using stream URL: ${streamUrl}`);
+    }
 
     switch (viewMode) {
       case 'screenshot':
@@ -452,9 +493,8 @@ export function ScreenDefinitionEditor({
       default:
         return (
           <StreamViewer
-            streamUrl={avConfig?.stream_url}
+            streamUrl={streamUrl}
             isStreamActive={streamStatus === 'running'}
-            onRestartStream={restartStream}
             {...commonProps}
           />
         );

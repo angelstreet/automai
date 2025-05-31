@@ -1,72 +1,147 @@
-import React, { useEffect, useRef } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import React, { useRef, useEffect, useState } from 'react';
+import { Box, Typography } from '@mui/material';
 
 interface StreamViewerProps {
   streamUrl?: string;
   isStreamActive?: boolean;
-  onRestartStream?: () => void;
   sx?: any;
 }
 
 export function StreamViewer({
   streamUrl,
   isStreamActive = false,
-  onRestartStream,
   sx = {}
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<any>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamLoaded, setStreamLoaded] = useState(false);
 
-  // Debug stream URL
+  // Clean up stream resources
+  const cleanupStream = () => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = '';
+      videoRef.current.load();
+    }
+    
+    setStreamLoaded(false);
+    setStreamError(null);
+  };
+
+  // Initialize stream when URL is available and active
   useEffect(() => {
-    console.log(`[@component:StreamViewer] Stream URL: ${streamUrl}`);
-    console.log(`[@component:StreamViewer] Stream Active: ${isStreamActive}`);
+    if (streamUrl && isStreamActive && videoRef.current) {
+      console.log('[@component:StreamViewer] Showing stream - initializing...');
+      initializeStream();
+    } else {
+      cleanupStream();
+    }
+
+    return () => {
+      cleanupStream();
+    };
   }, [streamUrl, isStreamActive]);
 
-  // Load video stream when available
-  useEffect(() => {
-    if (videoRef.current && streamUrl && isStreamActive) {
-      const video = videoRef.current;
+  const initializeStream = async () => {
+    if (!streamUrl || !videoRef.current) {
+      setStreamError('Stream URL or video element not available');
+      return;
+    }
+
+    setStreamError(null);
+    setStreamLoaded(false);
+
+    try {
+      console.log('[@component:StreamViewer] Initializing stream:', streamUrl);
       
-      console.log(`[@component:StreamViewer] Loading stream: ${streamUrl}`);
+      // Clean up any existing stream first
+      cleanupStream();
       
-      // Set video source and try to load
-      video.src = streamUrl;
-      video.load();
+      // Dynamically import HLS.js
+      const HLSModule = await import('hls.js');
+      const HLS = HLSModule.default;
       
-      // Add event listeners for debugging
-      const handleLoadStart = () => console.log('[@component:StreamViewer] Video load started');
-      const handleCanPlay = () => console.log('[@component:StreamViewer] Video can play');
-      const handlePlaying = () => console.log('[@component:StreamViewer] Video is playing');
-      const handleError = (e: any) => console.error('[@component:StreamViewer] Video error:', e.target.error);
+      if (!HLS.isSupported()) {
+        console.log('[@component:StreamViewer] HLS.js not supported, trying native playback');
+        // Try native HLS (Safari)
+        if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+          videoRef.current.src = streamUrl;
+          videoRef.current.addEventListener('loadedmetadata', () => {
+            setStreamLoaded(true);
+            videoRef.current?.play().catch((err) => {
+              console.error('[@component:StreamViewer] Autoplay failed:', err);
+            });
+          });
+          
+          videoRef.current.addEventListener('error', () => {
+            setStreamError('Stream error - Unable to play the stream');
+          });
+        } else {
+          throw new Error('HLS is not supported in this browser');
+        }
+        return;
+      }
       
-      video.addEventListener('loadstart', handleLoadStart);
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('playing', handlePlaying);
-      video.addEventListener('error', handleError);
-      
-      // Try to play
-      video.play().catch(error => {
-        console.error('[@component:StreamViewer] Failed to play video:', error);
+      // Create HLS instance with low latency settings
+      const hls = new HLS({
+        enableWorker: true,
+        lowLatencyMode: true,
+        liveSyncDuration: 1,
+        liveMaxLatencyDuration: 5,
+        liveDurationInfinity: true,
+        maxBufferLength: 5,
+        maxMaxBufferLength: 10,
       });
       
-      return () => {
-        video.removeEventListener('loadstart', handleLoadStart);
-        video.removeEventListener('canplay', handleCanPlay);
-        video.removeEventListener('playing', handlePlaying);
-        video.removeEventListener('error', handleError);
-      };
+      hlsRef.current = hls;
+      
+      // Setup event handlers
+      hls.on(HLS.Events.MANIFEST_PARSED, () => {
+        console.log('[@component:StreamViewer] Stream manifest parsed successfully');
+        setStreamLoaded(true);
+        videoRef.current?.play().catch((err) => {
+          console.error('[@component:StreamViewer] Autoplay failed:', err);
+        });
+      });
+      
+      hls.on(HLS.Events.ERROR, (_: any, data: any) => {
+        if (data.fatal) {
+          console.error('[@component:StreamViewer] Fatal HLS error:', data.type, data.details);
+          setStreamError(`Stream error: ${data.details || data.type}`);
+          
+          // Destroy instance on fatal error
+          hls.destroy();
+          hlsRef.current = null;
+        } else {
+          console.warn('[@component:StreamViewer] Non-fatal HLS error:', data.details);
+        }
+      });
+      
+      // Load and attach the stream
+      hls.loadSource(streamUrl);
+      hls.attachMedia(videoRef.current);
+      
+    } catch (error: any) {
+      console.error('[@component:StreamViewer] Stream initialization failed:', error);
+      setStreamError(error.message || 'Failed to initialize stream');
     }
-  }, [streamUrl, isStreamActive]);
+  };
 
   return (
     <Box sx={{ 
+      position: 'relative',
       width: '100%',
       height: '100%',
+      backgroundColor: '#000000',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'transparent',
       overflow: 'hidden',
       ...sx 
     }}>
@@ -80,22 +155,36 @@ export function StreamViewer({
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <video
+          {/* Video element - only visible when stream is loaded */}
+          <video 
             ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              backgroundColor: 'transparent'
+            style={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover',
+              backgroundColor: '#000000',
+              display: streamLoaded ? 'block' : 'none'
             }}
+            playsInline
+            muted
           />
           
-         
+          {/* Loading/Error display */}
+          {!streamLoaded && (
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'transparent'
+            }}>
+              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+                {streamError ? streamError : 'Loading stream...'}
+              </Typography>
+            </Box>
+          )}
         </Box>
       ) : (
         /* Stream not available placeholder */
@@ -117,29 +206,9 @@ export function StreamViewer({
               <Typography variant="h6" sx={{ color: '#666666', textAlign: 'center' }}>
                 Stream Offline
               </Typography>
-              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center', mb: 2 }}>
+              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
                 Start the stream service to view live video
               </Typography>
-              
-              {/* Restart button when stream is offline */}
-              {onRestartStream && (
-                <Button
-                  variant="contained"
-                  onClick={onRestartStream}
-                  startIcon={<Refresh />}
-                  sx={{
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    px: 3,
-                    py: 1,
-                    '&:hover': {
-                      backgroundColor: '#45a049',
-                    },
-                  }}
-                >
-                  Restart Stream
-                </Button>
-              )}
             </>
           ) : (
             <>
