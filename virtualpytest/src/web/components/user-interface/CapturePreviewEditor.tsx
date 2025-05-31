@@ -222,16 +222,15 @@ export function CapturePreviewEditor({
         {/* Show placeholder when no screenshot */}
         {mode === 'screenshot' && !screenshotPath && (
           <Box sx={{
-            width: '160px',
-            height: '120px',
-            border: '1px solid #E0E0E0',
+            width: '250px', // Standard preview width
+            height: '400px', // Standard preview height (4:3 aspect ratio)
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'transparent',
-            p: 0.5
+            p: 0.5,
           }}>
-            <Typography variant="caption" sx={{ color: '#666666' }}>
+            <Typography variant="caption" sx={{ color: '#BBBBBB' }}>
               No Screenshot
             </Typography>
           </Box>
