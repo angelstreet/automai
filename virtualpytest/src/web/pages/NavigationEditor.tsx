@@ -75,6 +75,9 @@ import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefin
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
 import { deviceApi, Device } from '../services/deviceService';
 
+// Import the hook to access SSH session state
+import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
+
 // Node types for React Flow
 const nodeTypes = {
   uiScreen: UINavigationNode,
@@ -86,11 +89,106 @@ const edgeTypes = {
   smoothstep: UINavigationEdge,
 };
 
+// SSH Session State Tracker Component for Android Mobile
+interface SSHSessionTrackerProps {
+  connectionConfig?: any;
+  autoConnect?: boolean;
+  onDisconnectComplete?: () => void;
+  onSessionStateChange?: (session: { connected: boolean; connectionLoading: boolean; connectionError: string | null }) => void;
+  sx?: any;
+}
+
+function CompactAndroidMobileWithSessionTracking({
+  connectionConfig,
+  autoConnect,
+  onDisconnectComplete,
+  onSessionStateChange,
+  sx
+}: SSHSessionTrackerProps) {
+  const { session, connectionLoading, connectionError } = useRemoteConnection('android-mobile');
+  
+  // Update parent component when SSH session state changes
+  useEffect(() => {
+    if (onSessionStateChange) {
+      onSessionStateChange({
+        connected: session.connected,
+        connectionLoading: connectionLoading,
+        connectionError: connectionError,
+      });
+    }
+  }, [session.connected, connectionLoading, connectionError, onSessionStateChange]);
+  
+  return (
+    <CompactAndroidMobile
+      connectionConfig={connectionConfig}
+      autoConnect={autoConnect}
+      onDisconnectComplete={onDisconnectComplete}
+      sx={sx}
+    />
+  );
+}
+
+// SSH Session State Tracker Component for Generic Remote
+interface CompactRemoteWithSessionTrackingProps {
+  remoteType: 'android-tv' | 'ir' | 'bluetooth';
+  connectionConfig?: any;
+  autoConnect?: boolean;
+  showScreenshot?: boolean;
+  onDisconnectComplete?: () => void;
+  onSessionStateChange?: (session: { connected: boolean; connectionLoading: boolean; connectionError: string | null }) => void;
+  sx?: any;
+}
+
+function CompactRemoteWithSessionTracking({
+  remoteType,
+  connectionConfig,
+  autoConnect,
+  showScreenshot = false,
+  onDisconnectComplete,
+  onSessionStateChange,
+  sx
+}: CompactRemoteWithSessionTrackingProps) {
+  const { session, connectionLoading, connectionError } = useRemoteConnection(remoteType);
+  
+  // Update parent component when SSH session state changes
+  useEffect(() => {
+    if (onSessionStateChange) {
+      onSessionStateChange({
+        connected: session.connected,
+        connectionLoading: connectionLoading,
+        connectionError: connectionError,
+      });
+    }
+  }, [session.connected, connectionLoading, connectionError, onSessionStateChange]);
+  
+  return (
+    <CompactRemote
+      remoteType={remoteType}
+      connectionConfig={connectionConfig}
+      autoConnect={autoConnect}
+      showScreenshot={showScreenshot}
+      onDisconnectComplete={onDisconnectComplete}
+      sx={sx}
+    />
+  );
+}
+
 const NavigationEditorContent: React.FC = () => {
   // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
+  
+  // SSH session state for coordination between remote panel and screen definition editor
+  const [sshSession, setSSHSession] = useState<{
+    connected: boolean;
+    connectionLoading: boolean;
+    connectionError: string | null;
+  }>({
+    connected: false,
+    connectionLoading: false,
+    connectionError: null,
+  });
   
   // Device state
   const [devices, setDevices] = useState<Device[]>([]);
@@ -277,6 +375,16 @@ const NavigationEditorContent: React.FC = () => {
       console.log('[@component:NavigationEditor] Switching devices, stopping current control');
       setIsControlActive(false);
     }
+    
+    // Reset SSH session state when changing devices
+    if (selectedDevice !== device) {
+      setSSHSession({
+        connected: false,
+        connectionLoading: false,
+        connectionError: null,
+      });
+    }
+    
     setSelectedDevice(device);
   };
 
@@ -595,6 +703,7 @@ const NavigationEditorContent: React.FC = () => {
                   deviceConfig={selectedDeviceData.controller_configs}
                   deviceModel={selectedDeviceData.model}
                   autoConnect={true}
+                  sshSession={sshSession}
                   onDisconnectComplete={() => {
                     // Called when screen definition editor disconnects
                     console.log('[@component:NavigationEditor] Screen definition editor disconnected');
@@ -672,7 +781,7 @@ const NavigationEditorContent: React.FC = () => {
                 </Box>
                 
                 {/* Remote Panel Content */}
-                <CompactAndroidMobile
+                <CompactAndroidMobileWithSessionTracking
                   connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                   autoConnect={isControlActive}
                   onDisconnectComplete={() => {
@@ -680,6 +789,9 @@ const NavigationEditorContent: React.FC = () => {
                     if (isRemotePanelOpen) {
                       handleToggleRemotePanel();
                     }
+                  }}
+                  onSessionStateChange={(session) => {
+                    setSSHSession(session);
                   }}
                   sx={{ flex: 1, height: '100%' }}
                 />
@@ -718,7 +830,7 @@ const NavigationEditorContent: React.FC = () => {
                 
                 {/* Remote Panel Content - Dynamic based on device type */}
                 {remoteConfig.type === 'android_tv' ? (
-                  <CompactRemote
+                  <CompactRemoteWithSessionTracking
                     remoteType="android-tv"
                     connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
                     autoConnect={isControlActive}
@@ -729,10 +841,13 @@ const NavigationEditorContent: React.FC = () => {
                         handleToggleRemotePanel();
                       }
                     }}
+                    onSessionStateChange={(session) => {
+                      setSSHSession(session);
+                    }}
                     sx={{ flex: 1, height: '100%' }}
                   />
                 ) : remoteConfig.type === 'ir_remote' ? (
-                  <CompactRemote
+                  <CompactRemoteWithSessionTracking
                     remoteType="ir"
                     connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote) as any}
                     autoConnect={isControlActive}
@@ -742,10 +857,13 @@ const NavigationEditorContent: React.FC = () => {
                         handleToggleRemotePanel();
                       }
                     }}
+                    onSessionStateChange={(session) => {
+                      setSSHSession(session);
+                    }}
                     sx={{ flex: 1, height: '100%' }}
                   />
                 ) : remoteConfig.type === 'bluetooth_remote' ? (
-                  <CompactRemote
+                  <CompactRemoteWithSessionTracking
                     remoteType="bluetooth"
                     connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote) as any}
                     autoConnect={isControlActive}
@@ -754,6 +872,9 @@ const NavigationEditorContent: React.FC = () => {
                       if (isRemotePanelOpen) {
                         handleToggleRemotePanel();
                       }
+                    }}
+                    onSessionStateChange={(session) => {
+                      setSSHSession(session);
                     }}
                     sx={{ flex: 1, height: '100%' }}
                   />
