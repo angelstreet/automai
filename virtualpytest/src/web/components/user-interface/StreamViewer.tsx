@@ -1,264 +1,160 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
-import { PlayArrow, Stop, Camera } from '@mui/icons-material';
-import { CapturePreviewEditor } from './CapturePreviewEditor';
+import React, { useEffect, useRef } from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 
 interface StreamViewerProps {
   streamUrl?: string;
-  isConnected: boolean;
-  width?: string | number;
-  height?: string | number;
-  lastScreenshotPath?: string | null;
-  previewMode?: 'screenshot' | 'video';
-  onScreenshotTaken?: (path: string) => void;
-  isCompactView?: boolean;
-  streamStatus?: 'running' | 'stopped' | 'unknown';
-  onStreamStatusChange?: (status: 'running' | 'stopped' | 'unknown') => void;
-  isCapturing?: boolean;
+  isStreamActive?: boolean;
+  onRestartStream?: () => void;
   sx?: any;
 }
 
-export function StreamViewer({ 
-  streamUrl, 
-  isConnected, 
-  width = '100%', 
-  height = '100%',
-  lastScreenshotPath,
-  previewMode = 'screenshot',
-  onScreenshotTaken,
-  isCompactView = false,
-  streamStatus = 'unknown',
-  onStreamStatusChange,
-  isCapturing,
-  sx = {} 
+export function StreamViewer({
+  streamUrl,
+  isStreamActive = false,
+  onRestartStream,
+  sx = {}
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<any>(null);
-  const [streamError, setStreamError] = useState<string | null>(null);
-  const [streamLoaded, setStreamLoaded] = useState(false);
-  const [showPreview, setShowPreview] = useState(!!lastScreenshotPath);
-  const [screenshotPath, setScreenshotPath] = useState<string | null>(lastScreenshotPath || null);
 
-  // Update screenshot path when prop changes
+  // Debug stream URL
   useEffect(() => {
-    if (lastScreenshotPath !== undefined) {
-      setScreenshotPath(lastScreenshotPath);
-      // Only show preview if there's a screenshot path
-      setShowPreview(!!lastScreenshotPath);
-    }
-  }, [lastScreenshotPath]);
+    console.log(`[@component:StreamViewer] Stream URL: ${streamUrl}`);
+    console.log(`[@component:StreamViewer] Stream Active: ${isStreamActive}`);
+  }, [streamUrl, isStreamActive]);
 
-  // Also respond to previewMode changes
+  // Load video stream when available
   useEffect(() => {
-    // If previewMode is 'video' and there's no screenshot (stream restart),
-    // hide the preview to show the stream
-    if (previewMode === 'video' && !lastScreenshotPath && streamStatus === 'running') {
-      setShowPreview(false);
-    }
-  }, [previewMode, lastScreenshotPath, streamStatus]);
-
-  // Clean up stream resources
-  const cleanupStream = () => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.src = '';
-      videoRef.current.load();
-    }
-    
-    setStreamLoaded(false);
-    setStreamError(null);
-  };
-
-  // Initialize stream when connected and URL is available
-  useEffect(() => {
-    if (isConnected && streamUrl && videoRef.current && streamStatus === 'running' && !showPreview) {
-      console.log('[@component:StreamViewer] Showing stream - initializing...');
-      initializeStream();
-    } else {
-      cleanupStream();
-    }
-
-    return () => {
-      cleanupStream();
-    };
-  }, [isConnected, streamUrl, streamStatus, showPreview]);
-
-  const handleTakeScreenshot = async () => {
-    try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_model: 'android_mobile' })
+    if (videoRef.current && streamUrl && isStreamActive) {
+      const video = videoRef.current;
+      
+      console.log(`[@component:StreamViewer] Loading stream: ${streamUrl}`);
+      
+      // Set video source and try to load
+      video.src = streamUrl;
+      video.load();
+      
+      // Add event listeners for debugging
+      const handleLoadStart = () => console.log('[@component:StreamViewer] Video load started');
+      const handleCanPlay = () => console.log('[@component:StreamViewer] Video can play');
+      const handlePlaying = () => console.log('[@component:StreamViewer] Video is playing');
+      const handleError = (e: any) => console.error('[@component:StreamViewer] Video error:', e.target.error);
+      
+      video.addEventListener('loadstart', handleLoadStart);
+      video.addEventListener('canplay', handleCanPlay);
+      video.addEventListener('playing', handlePlaying);
+      video.addEventListener('error', handleError);
+      
+      // Try to play
+      video.play().catch(error => {
+        console.error('[@component:StreamViewer] Failed to play video:', error);
       });
       
-      const data = await response.json();
-      if (data.success) {
-        setScreenshotPath(data.screenshot_path);
-        setShowPreview(true);
-        
-        // Notify parent component
-        if (onScreenshotTaken) {
-          onScreenshotTaken(data.screenshot_path);
-        }
-      } else {
-        console.error('[@component:StreamViewer] Screenshot failed:', data.error);
-      }
-    } catch (error) {
-      console.error('[@component:StreamViewer] Screenshot request failed:', error);
+      return () => {
+        video.removeEventListener('loadstart', handleLoadStart);
+        video.removeEventListener('canplay', handleCanPlay);
+        video.removeEventListener('playing', handlePlaying);
+        video.removeEventListener('error', handleError);
+      };
     }
-  };
-
-  const initializeStream = async () => {
-    if (!streamUrl || !videoRef.current) {
-      setStreamError('Stream URL or video element not available');
-      return;
-    }
-
-    setStreamError(null);
-    setStreamLoaded(false);
-
-    try {
-      console.log('[@component:StreamViewer] Initializing stream:', streamUrl);
-      
-      // Clean up any existing stream first
-      cleanupStream();
-      
-      // Dynamically import HLS.js
-      const HLSModule = await import('hls.js');
-      const HLS = HLSModule.default;
-      
-      if (!HLS.isSupported()) {
-        console.log('[@component:StreamViewer] HLS.js not supported, trying native playback');
-        // Try native HLS (Safari)
-        if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current.src = streamUrl;
-          videoRef.current.addEventListener('loadedmetadata', () => {
-            setStreamLoaded(true);
-            videoRef.current?.play().catch((err) => {
-              console.error('[@component:StreamViewer] Autoplay failed:', err);
-            });
-          });
-          
-          videoRef.current.addEventListener('error', () => {
-            setStreamError('Stream error - Unable to play the stream');
-          });
-        } else {
-          throw new Error('HLS is not supported in this browser');
-        }
-        return;
-      }
-      
-      // Create HLS instance with low latency settings
-      const hls = new HLS({
-        enableWorker: true,
-        lowLatencyMode: true,
-        liveSyncDuration: 1,
-        liveMaxLatencyDuration: 5,
-        liveDurationInfinity: true,
-        maxBufferLength: 5,
-        maxMaxBufferLength: 10,
-      });
-      
-      hlsRef.current = hls;
-      
-      // Setup event handlers
-      hls.on(HLS.Events.MANIFEST_PARSED, () => {
-        console.log('[@component:StreamViewer] Stream manifest parsed successfully');
-        setStreamLoaded(true);
-        videoRef.current?.play().catch((err) => {
-          console.error('[@component:StreamViewer] Autoplay failed:', err);
-        });
-      });
-      
-      hls.on(HLS.Events.ERROR, (_: any, data: any) => {
-        if (data.fatal) {
-          console.error('[@component:StreamViewer] Fatal HLS error:', data.type, data.details);
-          setStreamError(`Stream error: ${data.details || data.type}`);
-          
-          // Destroy instance on fatal error
-          hls.destroy();
-          hlsRef.current = null;
-        } else {
-          console.warn('[@component:StreamViewer] Non-fatal HLS error:', data.details);
-        }
-      });
-      
-      // Load and attach the stream
-      hls.loadSource(streamUrl);
-      hls.attachMedia(videoRef.current);
-      
-    } catch (error: any) {
-      console.error('[@component:StreamViewer] Stream initialization failed:', error);
-      setStreamError(error.message || 'Failed to initialize stream');
-    }
-  };
+  }, [streamUrl, isStreamActive]);
 
   return (
     <Box sx={{ 
-      position: 'relative', 
-      width, 
-      height,
-      backgroundColor: '#000000',
+      width: '100%',
+      height: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: 'transparent',
       overflow: 'hidden',
       ...sx 
     }}>
-      {/* Video element - only visible when stream is loaded and preview is not shown */}
-      <video 
-        ref={videoRef}
-        style={{ 
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'cover',
-          display: streamLoaded && !showPreview ? 'block' : 'none',
-          backgroundColor: '#000000'
-        }}
-        playsInline
-        muted
-      />
-      
-      {/* Screenshot preview - only visible when showPreview is true */}
-      {showPreview && screenshotPath && (
-        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <CapturePreviewEditor
-            mode={previewMode || 'screenshot'}
-            screenshotPath={screenshotPath}
-            isCapturing={isCapturing}
-            sx={{ height: '100%' }}
-          />
-        </Box>
-      )}
-      
-      {/* Placeholder/Error display */}
-      {!streamLoaded && !showPreview && (
-        <Box sx={{ 
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+      {/* Live stream display */}
+      {streamUrl && isStreamActive ? (
+        <Box sx={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#000000'
+          justifyContent: 'center'
         }}>
-          <Typography variant="caption" sx={{ color: '#666', textAlign: 'center' }}>
-            {streamError ? streamError : 
-             isConnected && streamUrl ? 'Loading stream...' : 
-             'No Stream Available'}
-          </Typography>
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              backgroundColor: 'transparent'
+            }}
+          />
+          
+         
+        </Box>
+      ) : (
+        /* Stream not available placeholder */
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          minHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'transparent',
+          border: '1px solid #333333',
+          p: 2,
+          gap: 2
+        }}>
+          {!isStreamActive ? (
+            <>
+              <Typography variant="h6" sx={{ color: '#666666', textAlign: 'center' }}>
+                Stream Offline
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center', mb: 2 }}>
+                Start the stream service to view live video
+              </Typography>
+              
+              {/* Restart button when stream is offline */}
+              {onRestartStream && (
+                <Button
+                  variant="contained"
+                  onClick={onRestartStream}
+                  startIcon={<Refresh />}
+                  sx={{
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    px: 3,
+                    py: 1,
+                    '&:hover': {
+                      backgroundColor: '#45a049',
+                    },
+                  }}
+                >
+                  Restart Stream
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Typography variant="h6" sx={{ color: '#666666', textAlign: 'center' }}>
+                No Stream URL
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+                Stream URL not configured
+              </Typography>
+            </>
+          )}
         </Box>
       )}
     </Box>
   );
-} 
+}
+
+export default StreamViewer; 

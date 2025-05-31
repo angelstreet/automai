@@ -23,7 +23,8 @@ import {
   Refresh,
 } from '@mui/icons-material';
 import { StreamViewer } from './StreamViewer';
-import { CapturePreviewEditor } from './CapturePreviewEditor';
+import { ScreenshotCapture } from './ScreenshotCapture';
+import { VideoCapture } from './VideoCapture';
 
 interface ScreenDefinitionEditorProps {
   /** Device configuration with AV parameters */
@@ -101,7 +102,7 @@ export function ScreenDefinitionEditor({
   const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
-  const [previewMode, setPreviewMode] = useState<'screenshot' | 'video'>('screenshot');
+  const [viewMode, setViewMode] = useState<'stream' | 'screenshot' | 'capture'>('stream');
   
   // Stream status state - without polling
   const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
@@ -158,22 +159,33 @@ export function ScreenDefinitionEditor({
         
         const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
         if (!response.ok) {
-          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, defaulting to stopped');
-          setStreamStatus('stopped');
+          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, attempting restart...');
+          // Try to restart stream if status check fails
+          await restartStream();
           return;
         }
         
         const data = await response.json();
         if (data.success) {
-          setStreamStatus(data.is_active ? 'running' : 'stopped');
+          if (data.is_active) {
+            setStreamStatus('running');
+          } else {
+            setStreamStatus('stopped');
+            // Automatically attempt to restart if stream is stopped
+            console.log('[@component:ScreenDefinitionEditor] Stream is stopped, attempting automatic restart...');
+            setTimeout(() => restartStream(), 1000);
+          }
         } else {
-          // Default to stopped if status check fails
+          // Default to stopped and try restart
           setStreamStatus('stopped');
+          console.log('[@component:ScreenDefinitionEditor] Stream status unknown, attempting restart...');
+          setTimeout(() => restartStream(), 1000);
         }
       } catch (error) {
-        // Just set a default status rather than logging an error
-        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, defaulting to stopped');
+        // Just set a default status and attempt restart
+        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, attempting restart...');
         setStreamStatus('stopped');
+        setTimeout(() => restartStream(), 1000);
       }
     };
 
@@ -191,7 +203,7 @@ export function ScreenDefinitionEditor({
     };
   }, []);
 
-  // Stop video capture
+  // Stop video capture - simplified for new architecture
   const handleStopCapture = async () => {
     if (!isCapturing) return;
     
@@ -200,179 +212,102 @@ export function ScreenDefinitionEditor({
       captureTimerRef.current = null;
     }
     
-    console.log(`[@component:ScreenDefinitionEditor] Capture stopped with ${captureFrames.length} frames`);
     setIsCapturing(false);
+    setCaptureStats(null);
     
-    // Set video frames path (if we have frames)
-    if (captureFrames.length > 0) {
-      setVideoFramesPath(`/tmp/captures/${Date.now()}`);
-      setTotalFrames(captureFrames.length);
-      setCurrentFrame(0);
-      setPreviewMode('video');
-    }
+    console.log('[@component:ScreenDefinitionEditor] Video capture stopped');
   };
 
-  // Disconnect from device using remote routes
+  // Disconnect handler
   const handleDisconnect = async () => {
-    console.log('[@component:ScreenDefinitionEditor] Disconnecting from device via remote routes');
-    
     try {
-      // Stop capture if active
+      setIsConnected(false);
+      setConnectionError(null);
+      setStreamStatus('unknown');
+      
+      // Clean up any active captures
       if (isCapturing) {
         await handleStopCapture();
       }
-
-      // Release control via remote routes (same as CompactAndroidMobile)
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/release-control', {
-        method: 'POST',
-      });
       
-      const result = await response.json();
-      if (result.success) {
-        console.log('[@component:ScreenDefinitionEditor] Control released successfully via remote routes');
+      // Reset states
+      setLastScreenshotPath(undefined);
+      setVideoFramesPath(undefined);
+      setCurrentFrame(0);
+      setTotalFrames(0);
+      setViewMode('stream');
+      
+      if (onDisconnectComplete) {
+        onDisconnectComplete();
       }
+      
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Error during disconnect:', error);
-    }
-    
-    // Reset all state
-    setIsConnected(false);
-    setIsCapturing(false);
-    setCaptureStats(null);
-    setIsExpanded(false);
-    setConnectionError(null);
-    setLastScreenshotPath(undefined);
-    
-    // Notify parent component
-    if (onDisconnectComplete) {
-      onDisconnectComplete();
+      console.error('[@component:ScreenDefinitionEditor] Disconnect error:', error);
     }
   };
 
-  // Take screenshot using FFmpeg HDMI capture via SSH
+  // Take screenshot using the screenshot API
   const handleTakeScreenshot = async () => {
-    if (!isConnected) {
-      console.warn('[@component:ScreenDefinitionEditor] Cannot take screenshot - not connected');
-      return;
-    }
-
-    setIsCapturing(true);
+    if (!isConnected) return;
     
     try {
-      const startTime = Date.now();
-
-      console.log(`[@component:ScreenDefinitionEditor] Taking screenshot for device: ${deviceModel}`);
-
-      // Use the improved screenshot API that detects device orientation
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+      console.log('[@component:ScreenDefinitionEditor] Taking screenshot...');
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot_from_stream', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
           device_model: deviceModel,
-          video_device: deviceConfig?.av?.parameters?.video_device || '/dev/video0',
-        }),
+          video_device: avConfig?.video_device || '/dev/video0'
+        })
       });
-
-      const result: ScreenshotResponse = await response.json();
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      console.log(`[@component:ScreenDefinitionEditor] Screenshot response (${duration}ms):`, result);
-
-      if (result.success && result.screenshot_path) {
-        // Extract just the filename from the full path
-        const filename = result.screenshot_path.split('/').pop() || 'android_mobile.jpg';
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[@component:ScreenDefinitionEditor] Screenshot API error:', errorText);
+        return;
+      }
+      
+      const data: ScreenshotResponse = await response.json();
+      
+      if (data.success) {
+        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', data.screenshot_path);
+        setLastScreenshotPath(data.screenshot_path);
+        setViewMode('screenshot');
         
-        setLastScreenshotPath(filename);
-        setPreviewMode('screenshot');
-        
-        // Store resolution information for alignment calculations
-        if (result.device_resolution) {
-          console.log(`[@component:ScreenDefinitionEditor] Device resolution: ${result.device_resolution.width}x${result.device_resolution.height}`);
-          setResolutionInfo({
-            device: result.device_resolution,
-            capture: result.capture_resolution || null,
-            stream: result.stream_resolution || '640x360',
-          });
-        }
-        
-        console.log(`[@component:ScreenDefinitionEditor] Screenshot captured: ${filename}`);
-        
-        // Note: Stream was stopped for screenshot capture, but we'll leave it stopped
-        // so user can review the screenshot. User can manually restart stream when ready.
-        if (result.stream_was_active) {
-          console.log(`[@component:ScreenDefinitionEditor] Stream was active before screenshot - leaving stopped for review`);
-          // Update frontend state to reflect that stream is now stopped
-          setStreamStatus('stopped');
+        // Update resolution info
+        if (data.device_resolution) {
+          setResolutionInfo(prev => ({
+            ...prev,
+            device: data.device_resolution!,
+            capture: data.capture_resolution || null,
+            stream: data.stream_resolution || null,
+          }));
         }
       } else {
-        console.error(`[@component:ScreenDefinitionEditor] Screenshot failed:`, result.error);
+        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', data.error);
       }
     } catch (error) {
-      console.error(`[@component:ScreenDefinitionEditor] Screenshot error:`, error);
-    } finally {
-      setIsCapturing(false);
+      console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
     }
   };
 
-  // Start video capture (10 fps for 30s max)
+  // Start video capture - simplified for new architecture
   const handleStartCapture = async () => {
-    if (!avConfig || !isConnected || isCapturing) return;
+    if (!isConnected || isCapturing) return;
     
     try {
-      // First stop the stream if it's running
-      await stopStream();
+      console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
       
-      console.log('[@component:ScreenDefinitionEditor] Starting video capture (10 fps)...');
       setIsCapturing(true);
+      setViewMode('capture');
       setCaptureFrames([]);
       
-      // Create a timestamp for this capture session
-      const captureSessionId = Date.now();
+      // Start stats monitoring
+      startStatsMonitoring();
       
-      // Set up a timer to capture at 10 fps (100ms interval)
-      let frameCount = 0;
-      const maxFrames = 300; // 30 seconds at 10 fps
-      
-      captureTimerRef.current = setInterval(async () => {
-        try {
-          const frameResponse = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              device_model: `${deviceModel}_frame_${frameCount.toString().padStart(4, '0')}`,
-            }),
-          });
-          
-          if (frameResponse.ok) {
-            const frameResult = await frameResponse.json();
-            if (frameResult.success) {
-              setCaptureFrames(prev => [...prev, frameResult.screenshot_path]);
-              frameCount++;
-              
-              // Update preview if this is our first frame
-              if (frameCount === 1) {
-                const filename = frameResult.screenshot_path.split('/').pop() || 'android_mobile.jpg';
-                setLastScreenshotPath(filename);
-                setPreviewMode('screenshot');
-              }
-            }
-          }
-          
-          // Stop if we've reached max frames
-          if (frameCount >= maxFrames) {
-            handleStopCapture();
-          }
-        } catch (error) {
-          console.error('[@component:ScreenDefinitionEditor] Frame capture error:', error);
-        }
-      }, 100); // 10 fps = 100ms interval
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Start capture error:', error);
+      console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
       setIsCapturing(false);
     }
   };
@@ -386,21 +321,15 @@ export function ScreenDefinitionEditor({
         method: 'POST'
       });
       
-      if (!response.ok) {
-        console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', await response.text());
-        return false;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStreamStatus('stopped');
+          console.log('[@component:ScreenDefinitionEditor] Stream stopped successfully');
+        }
       }
-      
-      const data = await response.json();
-      if (data.success) {
-        setStreamStatus('stopped');
-        console.log('[@component:ScreenDefinitionEditor] Stream stopped successfully');
-        return true;
-      }
-      return false;
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Stop stream error:', error);
-      return false;
+      console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', error);
     }
   };
 
@@ -413,36 +342,35 @@ export function ScreenDefinitionEditor({
         method: 'POST'
       });
       
-      if (!response.ok) {
-        console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', await response.text());
-        return;
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setStreamStatus('running');
-        // Set preview mode to hide screenshot and show stream
-        setPreviewMode('video');
-        setLastScreenshotPath(undefined);
-        console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully - hiding screenshot and showing live stream');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStreamStatus('running');
+          setViewMode('stream');
+          setLastScreenshotPath(undefined);
+          console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully');
+        }
       }
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Restart stream error:', error);
+      console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', error);
     }
   };
 
-  // Monitor capture statistics - removed polling, using simpler initial stats
+  // Start monitoring capture stats
   const startStatsMonitoring = () => {
-    // Set initial stats without polling
-    setCaptureStats({
-      is_connected: true,
-      is_capturing: false,
-      frame_count: 0,
-      uptime_seconds: 0,
-    });
+    // Simplified stats monitoring for new architecture
+    const interval = setInterval(() => {
+      setCaptureStats(prev => ({
+        is_connected: isConnected,
+        is_capturing: isCapturing,
+        frame_count: prev ? prev.frame_count + 1 : 1,
+        uptime_seconds: prev ? prev.uptime_seconds + 1 : 1,
+      }));
+    }, 1000);
+    
+    captureTimerRef.current = interval;
   };
 
-  // Toggle expanded mode
   const handleToggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
@@ -455,7 +383,7 @@ export function ScreenDefinitionEditor({
   // Add type safety to the onScreenshotTaken handler
   const handleScreenshotTaken = (path: string) => {
     setLastScreenshotPath(path);
-    setPreviewMode('screenshot');
+    setViewMode('screenshot');
   };
 
   // Handle stream control
@@ -478,9 +406,9 @@ export function ScreenDefinitionEditor({
       if (data.success) {
         setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
         
-        // If we're restarting the stream, set preview mode to video and clear screenshot
+        // If we're restarting the stream, set view mode to stream and clear screenshot
         if (endpoint === 'restart') {
-          setPreviewMode('video');
+          setViewMode('stream');
           setLastScreenshotPath(undefined);
         }
         
@@ -488,6 +416,48 @@ export function ScreenDefinitionEditor({
       }
     } catch (error) {
       console.error(`[@component:ScreenDefinitionEditor] Stream control failed:`, error);
+    }
+  };
+
+  // Render the appropriate view component based on current mode
+  const renderViewComponent = () => {
+    const commonProps = {
+      sx: { width: '100%', height: '100%' }
+    };
+
+    switch (viewMode) {
+      case 'screenshot':
+        return (
+          <ScreenshotCapture
+            screenshotPath={lastScreenshotPath}
+            resolutionInfo={resolutionInfo}
+            {...commonProps}
+          />
+        );
+      
+      case 'capture':
+        return (
+          <VideoCapture
+            deviceModel={deviceModel}
+            videoDevice={avConfig?.video_device}
+            videoFramesPath={videoFramesPath}
+            currentFrame={currentFrame}
+            totalFrames={totalFrames}
+            onFrameChange={handleFrameChange}
+            {...commonProps}
+          />
+        );
+      
+      case 'stream':
+      default:
+        return (
+          <StreamViewer
+            streamUrl={avConfig?.stream_url}
+            isStreamActive={streamStatus === 'running'}
+            onRestartStream={restartStream}
+            {...commonProps}
+          />
+        );
     }
   };
 
@@ -538,7 +508,7 @@ export function ScreenDefinitionEditor({
       zIndex: 1000,
     }}>
       {isExpanded ? (
-        // Expanded view with integrated StreamViewer and CapturePreviewEditor
+        // Expanded view - exact same layout as before but using new components
         <Box sx={{
           width: '350px',
           height: '520px',
@@ -548,7 +518,7 @@ export function ScreenDefinitionEditor({
           bgcolor: '#1E1E1E',
           border: '2px solid #1E1E1E',
         }}>
-          {/* Header with controls */}
+          {/* Header with controls - exact same layout */}
           <Box sx={{ 
             display: 'flex',
             justifyContent: 'space-between',
@@ -645,29 +615,33 @@ export function ScreenDefinitionEditor({
             </Box>
           </Box>
 
-          {/* Integrated StreamViewer with CapturePreviewEditor */}
+          {/* Main viewing area using new component architecture */}
           <Box sx={{ 
             flex: 1,
             position: 'relative',
             overflow: 'hidden',
             height: 'calc(100% - 48px)'
           }}>
-            <StreamViewer 
-              streamUrl={avConfig?.stream_url}
-              isConnected={isConnected}
-              width="100%"
-              height="100%"
-              lastScreenshotPath={lastScreenshotPath}
-              previewMode={previewMode}
-              onScreenshotTaken={handleScreenshotTaken}
-              isCompactView={false}
-              streamStatus={streamStatus}
-              isCapturing={isCapturing}
-            />
+            {renderViewComponent()}
+          </Box>
+
+          {/* Bottom filename display - preserved from original */}
+          <Box sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '20px',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            px: 1,
+          }}>
+           
           </Box>
         </Box>
       ) : (
-        // Compact view - completely clean with just the StreamViewer and expand button
+        // Compact view - exact same layout as before
         <Box sx={{ 
           width: '150px',
           height: '250px',
@@ -678,19 +652,8 @@ export function ScreenDefinitionEditor({
           position: 'relative',
           boxShadow: 2,
         }}>
-          {/* Clean StreamViewer with no controls */}
-          <StreamViewer 
-            streamUrl={avConfig?.stream_url}
-            isConnected={isConnected}
-            width="100%"
-            height="100%"
-            lastScreenshotPath={lastScreenshotPath}
-            previewMode={previewMode}
-            onScreenshotTaken={handleScreenshotTaken}
-            isCompactView={true}
-            streamStatus={streamStatus}
-            isCapturing={isCapturing}
-          />
+          {/* View component in compact mode */}
+          {renderViewComponent()}
 
           {/* Only the expand button */}
           <IconButton 
