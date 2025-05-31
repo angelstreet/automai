@@ -685,7 +685,7 @@ export function ScreenDefinitionEditor({
               display: 'flex', 
               justifyContent: 'flex-start'
             }}>
-              {/* Status indicator with recording/saving states */}
+              {/* Simple connection status - no recording/saving states here */}
               <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -693,52 +693,18 @@ export function ScreenDefinitionEditor({
                 backgroundColor: 'rgba(0,0,0,0.5)',
                 borderRadius: 1,
                 padding: '2px 8px',
-                width: isSaving ? '120px' : isCapturing ? '120px' : '70px',
-                justifyContent: 'center',
-                transition: 'width 0.3s ease'
+                width: '70px',
+                justifyContent: 'center'
               }}>
-                {isSaving ? (
-                  // Saving indicator with green blinking dot
-                  <>
-                    <Box sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: '#4caf50',
-                      animation: 'blink 1s infinite'
-                    }} />
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem', textAlign: 'center' }}>
-                      Saving {savedFrameCount}
-                    </Typography>
-                  </>
-                ) : isCapturing ? (
-                  // Recording indicator with red blinking dot and frame count
-                  <>
-                    <Box sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: '#f44336',
-                      animation: 'blink 1s infinite'
-                    }} />
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem', textAlign: 'center', width: '70px' }}>
-                      Recording {savedFrameCount}
-                    </Typography>
-                  </>
-                ) : (
-                  // Normal stream status
-                  <>
-                    <Box sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
-                    }} />
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
-                      {streamStatus === 'running' ? 'Live' : 'Stopped'}
-                    </Typography>
-                  </>
-                )}
+                <Box sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
+                }} />
+                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
+                  {streamStatus === 'running' ? 'Live' : 'Stopped'}
+                </Typography>
               </Box>
             </Box>
             
