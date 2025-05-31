@@ -672,21 +672,6 @@ export function ScreenDefinitionEditor({
           }}>
             {renderViewComponent()}
           </Box>
-
-          {/* Bottom filename display - preserved from original */}
-          <Box sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '20px',
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            px: 1,
-          }}>
-           
-          </Box>
         </Box>
       ) : (
         // Compact view - exact same layout as before
