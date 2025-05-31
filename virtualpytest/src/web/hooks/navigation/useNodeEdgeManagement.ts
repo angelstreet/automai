@@ -51,6 +51,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       label: newNode.data.label,
       type: newNode.data.type,
       description: newNode.data.description || '',
+      screenshot: newNode.data.screenshot,
+      menu_type: newNode.data.menu_type,
     });
     state.setIsNodeDialogOpen(true);
     state.setIsNewNode(true);
@@ -73,6 +75,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       label: state.nodeForm.label,
       type: state.nodeForm.type,
       description: state.nodeForm.description,
+      screenshot: state.nodeForm.screenshot,
       depth: state.nodeForm.depth || 0,
       menu_type: state.nodeForm.menu_type || (state.nodeForm.type === 'menu' ? 'main' : undefined),
     };

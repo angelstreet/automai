@@ -50,6 +50,7 @@ export interface NodeForm {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
   description: string;
+  screenshot?: string;  // Add screenshot field to preserve during editing
   
   // New form fields for TV menus
   depth?: number;

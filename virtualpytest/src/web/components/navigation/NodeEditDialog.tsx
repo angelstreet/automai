@@ -11,12 +11,14 @@ import {
   MenuItem,
   Button,
   Box,
+  Typography,
 } from '@mui/material';
 
 interface NodeForm {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
   description: string;
+  screenshot?: string;
   depth?: number;
   parent?: string[];
 }
@@ -98,6 +100,40 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             rows={3}
             fullWidth
           />
+          
+          {/* Screenshot Display Section */}
+          {nodeForm.screenshot && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Current Screenshot:
+              </Typography>
+              <Box sx={{ 
+                border: '1px solid #e0e0e0', 
+                borderRadius: '4px', 
+                p: 1,
+                backgroundColor: '#f5f5f5',
+                textAlign: 'center'
+              }}>
+                <img 
+                  src={nodeForm.screenshot} 
+                  alt="Node Screenshot" 
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '200px', 
+                    objectFit: 'contain',
+                    borderRadius: '4px'
+                  }}
+                  onError={(e) => {
+                    console.error('[@component:NodeEditDialog] Failed to load screenshot:', nodeForm.screenshot);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                  Screenshot taken during navigation
+                </Typography>
+              </Box>
+            </Box>
+          )}
           
           {/* Parent and Depth Info (Read-only) */}
           <Box sx={{ display: 'flex', gap: 2 }}>
