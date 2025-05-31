@@ -373,7 +373,10 @@ export function ScreenDefinitionEditor({
       const data = await response.json();
       if (data.success) {
         setStreamStatus('running');
-        console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully');
+        // Set preview mode to hide screenshot and show stream
+        setPreviewMode('video');
+        setLastScreenshotPath(null);
+        console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully - hiding screenshot and showing live stream');
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Restart stream error:', error);
@@ -426,6 +429,13 @@ export function ScreenDefinitionEditor({
       const data = await response.json();
       if (data.success) {
         setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
+        
+        // If we're restarting the stream, set preview mode to video and clear screenshot
+        if (endpoint === 'restart') {
+          setPreviewMode('video');
+          setLastScreenshotPath(null);
+        }
+        
         console.log(`[@component:ScreenDefinitionEditor] Stream ${endpoint === 'stop' ? 'stopped' : 'restarted'} successfully`);
       }
     } catch (error) {

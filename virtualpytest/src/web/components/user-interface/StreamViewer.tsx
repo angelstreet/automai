@@ -41,11 +41,19 @@ export function StreamViewer({
   useEffect(() => {
     if (lastScreenshotPath !== undefined) {
       setScreenshotPath(lastScreenshotPath);
-      if (lastScreenshotPath) {
-        setShowPreview(true);
-      }
+      // Only show preview if there's a screenshot path
+      setShowPreview(!!lastScreenshotPath);
     }
   }, [lastScreenshotPath]);
+
+  // Also respond to previewMode changes
+  useEffect(() => {
+    // If previewMode is 'video' and there's no screenshot (stream restart),
+    // hide the preview to show the stream
+    if (previewMode === 'video' && !lastScreenshotPath && streamStatus === 'running') {
+      setShowPreview(false);
+    }
+  }, [previewMode, lastScreenshotPath, streamStatus]);
 
   // Clean up stream resources
   const cleanupStream = () => {
@@ -67,6 +75,7 @@ export function StreamViewer({
   // Initialize stream when connected and URL is available
   useEffect(() => {
     if (isConnected && streamUrl && videoRef.current && streamStatus === 'running' && !showPreview) {
+      console.log('[@component:StreamViewer] Showing stream - initializing...');
       initializeStream();
     } else {
       cleanupStream();
