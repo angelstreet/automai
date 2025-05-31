@@ -20,6 +20,7 @@ import {
   Videocam,
   PlayArrow,
   Stop,
+  Refresh,
 } from '@mui/icons-material';
 import { StreamViewer } from './StreamViewer';
 import { CapturePreviewEditor } from './CapturePreviewEditor';
@@ -95,9 +96,13 @@ export function ScreenDefinitionEditor({
   const [totalFrames, setTotalFrames] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<'screenshot' | 'video'>('screenshot');
   
-  // Stream status state
-  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
-
+  // Stream status state - without polling
+  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
+  
+  // Video capture state
+  const [captureFrames, setCaptureFrames] = useState<string[]>([]);
+  const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Check for existing remote connection ONCE (no loops)
   useEffect(() => {
     const checkRemoteConnection = async () => {
@@ -125,22 +130,15 @@ export function ScreenDefinitionEditor({
     checkRemoteConnection();
   }, []);
 
-  // Add stream status monitoring
+  // Initial check for stream status - only once, no polling
   useEffect(() => {
-    if (isConnected && avConfig?.stream_url) {
-      console.log('[@component:ScreenDefinitionEditor] Attempting to load stream from:', avConfig.stream_url);
-    }
-  }, [isConnected, avConfig?.stream_url]);
-
-  // Check stream status periodically
-  useEffect(() => {
-    const checkStatus = async () => {
+    const checkInitialStatus = async () => {
       if (!isConnected) return;
       
       try {
         const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
         if (!response.ok) {
-          console.error('[@component:ScreenDefinitionEditor] Stream status check failed');
+          console.error('[@component:ScreenDefinitionEditor] Initial stream status check failed');
           return;
         }
         
@@ -149,16 +147,23 @@ export function ScreenDefinitionEditor({
           setStreamStatus(data.is_active ? 'running' : 'stopped');
         }
       } catch (error) {
-        console.error('[@component:ScreenDefinitionEditor] Failed to check stream status:', error);
+        console.error('[@component:ScreenDefinitionEditor] Failed to check initial stream status:', error);
       }
     };
 
     if (isConnected) {
-      checkStatus();
-      const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
-      return () => clearInterval(interval);
+      checkInitialStatus();
     }
   }, [isConnected]);
+  
+  // Clean up capture timer on unmount
+  useEffect(() => {
+    return () => {
+      if (captureTimerRef.current) {
+        clearInterval(captureTimerRef.current);
+      }
+    };
+  }, []);
 
   // Disconnect from device using remote routes
   const handleDisconnect = async () => {
@@ -196,15 +201,18 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Take screenshot using FFmpeg HDMI capture via SSH (simplified, no polling)
+  // Take screenshot using FFmpeg HDMI capture via SSH
   const handleTakeScreenshot = async () => {
     if (!avConfig || !isConnected) return;
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Taking HDMI screenshot via FFmpeg from HLS stream');
+      // First stop the stream if it's running
+      await stopStream();
       
-      // Use new stream-based route to avoid device conflict
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot_from_stream', {
+      console.log('[@component:ScreenDefinitionEditor] Taking high-res screenshot...');
+      
+      // Use direct screenshot endpoint
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,17 +224,15 @@ export function ScreenDefinitionEditor({
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`FFmpeg capture failed: ${errorText}`);
+        throw new Error(`Screenshot failed: ${errorText}`);
       }
       
       const result = await response.json();
       if (result.success) {
-        console.log(`[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot saved: ${result.screenshot_path}`);
+        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved: ${result.screenshot_path}`);
         
-        // Use the file path from FFmpeg capture
-        if (result.screenshot_path && result.screenshot_path !== lastScreenshotPath) {
-          setLastScreenshotPath(result.screenshot_path);
-        }
+        // Use the file path from capture
+        setLastScreenshotPath(result.screenshot_path);
         
         // Switch to screenshot preview mode
         setPreviewMode('screenshot');
@@ -236,25 +242,142 @@ export function ScreenDefinitionEditor({
           setIsExpanded(true);
         }
       } else {
-        console.error('[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot failed:', result.error);
+        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
       }
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot error:', error);
+      console.error('[@component:ScreenDefinitionEditor] Screenshot error:', error);
     }
   };
 
-  // Start video capture (simplified - remote system focused on screenshots)
+  // Start video capture (10 fps for 30s max)
   const handleStartCapture = async () => {
-    console.log('[@component:ScreenDefinitionEditor] Video capture not implemented for remote system');
-    // The remote system doesn't have video capture, only screenshots
-    // Keep this as a placeholder for future implementation
+    if (!avConfig || !isConnected || isCapturing) return;
+    
+    try {
+      // First stop the stream if it's running
+      await stopStream();
+      
+      console.log('[@component:ScreenDefinitionEditor] Starting video capture (10 fps)...');
+      setIsCapturing(true);
+      setCaptureFrames([]);
+      
+      // Create a timestamp for this capture session
+      const captureSessionId = Date.now();
+      
+      // Set up a timer to capture at 10 fps (100ms interval)
+      let frameCount = 0;
+      const maxFrames = 300; // 30 seconds at 10 fps
+      
+      captureTimerRef.current = setInterval(async () => {
+        try {
+          const frameResponse = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              device_model: `${deviceModel}_frame_${frameCount.toString().padStart(4, '0')}`,
+            }),
+          });
+          
+          if (frameResponse.ok) {
+            const frameResult = await frameResponse.json();
+            if (frameResult.success) {
+              setCaptureFrames(prev => [...prev, frameResult.screenshot_path]);
+              frameCount++;
+              
+              // Update preview if this is our first frame
+              if (frameCount === 1) {
+                setLastScreenshotPath(frameResult.screenshot_path);
+                setPreviewMode('screenshot');
+              }
+            }
+          }
+          
+          // Stop if we've reached max frames
+          if (frameCount >= maxFrames) {
+            handleStopCapture();
+          }
+        } catch (error) {
+          console.error('[@component:ScreenDefinitionEditor] Frame capture error:', error);
+        }
+      }, 100); // 10 fps = 100ms interval
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Start capture error:', error);
+      setIsCapturing(false);
+    }
   };
 
-  // Stop video capture (simplified - remote system focused on screenshots)  
+  // Stop video capture
   const handleStopCapture = async () => {
-    console.log('[@component:ScreenDefinitionEditor] Video capture not implemented for remote system');
-    // The remote system doesn't have video capture, only screenshots
-    // Keep this as a placeholder for future implementation
+    if (!isCapturing) return;
+    
+    if (captureTimerRef.current) {
+      clearInterval(captureTimerRef.current);
+      captureTimerRef.current = null;
+    }
+    
+    console.log(`[@component:ScreenDefinitionEditor] Capture stopped with ${captureFrames.length} frames`);
+    setIsCapturing(false);
+    
+    // Set video frames path (if we have frames)
+    if (captureFrames.length > 0) {
+      setVideoFramesPath(`/tmp/captures/${Date.now()}`);
+      setTotalFrames(captureFrames.length);
+      setCurrentFrame(0);
+      setPreviewMode('video');
+    }
+  };
+
+  // Stop stream
+  const stopStream = async () => {
+    try {
+      console.log('[@component:ScreenDefinitionEditor] Stopping stream...');
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/stop', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', await response.text());
+        return false;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setStreamStatus('stopped');
+        console.log('[@component:ScreenDefinitionEditor] Stream stopped successfully');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Stop stream error:', error);
+      return false;
+    }
+  };
+
+  // Restart stream
+  const restartStream = async () => {
+    try {
+      console.log('[@component:ScreenDefinitionEditor] Restarting stream...');
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/restart', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', await response.text());
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setStreamStatus('running');
+        console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully');
+      }
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Restart stream error:', error);
+    }
   };
 
   // Monitor capture statistics - removed polling, using simpler initial stats
@@ -359,7 +482,7 @@ export function ScreenDefinitionEditor({
       {isExpanded ? (
         // Expanded view with integrated StreamViewer and CapturePreviewEditor
         <Box sx={{
-          width: '550px',
+          width: '400px',
           height: '520px',
           boxShadow: 2,
           borderRadius: 1,
@@ -367,7 +490,7 @@ export function ScreenDefinitionEditor({
           bgcolor: '#000000',
           border: '2px solid #000000',
         }}>
-          {/* Minimal header with screenshot, stream control, and minimize buttons */}
+          {/* Header with controls */}
           <Box sx={{ 
             display: 'flex',
             justifyContent: 'space-between',
@@ -375,30 +498,77 @@ export function ScreenDefinitionEditor({
             p: 1,
             borderBottom: '1px solid #333'
           }}>
-              
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* Left-aligned items with status indicator first */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {/* Status indicator */}
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                borderRadius: 1,
+                padding: '2px 8px',
+                marginRight: 1
+              }}>
+                <Box sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
+                }} />
+                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem' }}>
+                  {streamStatus === 'running' ? 'Live' : 'Stopped'}
+                </Typography>
+              </Box>
+
               <Tooltip title="Take Screenshot">
                 <IconButton 
                   size="small" 
                   onClick={handleTakeScreenshot} 
                   sx={{ color: '#ffffff' }}
-                  disabled={!isConnected || streamStatus !== 'running'}
+                  disabled={!isConnected || isCapturing}
                 >
                   <PhotoCamera />
                 </IconButton>
               </Tooltip>
               
-              <Tooltip title={streamStatus === 'running' ? "Stop Stream" : "Start Stream"}>
+              {isCapturing ? (
+                <Tooltip title="Stop Capture">
+                  <IconButton 
+                    size="small" 
+                    onClick={handleStopCapture} 
+                    sx={{ color: '#ffffff' }}
+                  >
+                    <StopCircle />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Tooltip title="Start Capture (10fps)">
+                  <IconButton 
+                    size="small" 
+                    onClick={handleStartCapture} 
+                    sx={{ color: '#ffffff' }}
+                    disabled={!isConnected || streamStatus !== 'stopped'}
+                  >
+                    <VideoCall />
+                  </IconButton>
+                </Tooltip>
+              )}
+              
+              <Tooltip title="Restart Stream">
                 <IconButton 
                   size="small" 
-                  onClick={handleStreamControl} 
+                  onClick={restartStream} 
                   sx={{ color: '#ffffff' }}
-                  disabled={!isConnected}
+                  disabled={!isConnected || streamStatus === 'running' || isCapturing}
                 >
-                  {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
+                  <Refresh />
                 </IconButton>
               </Tooltip>
-              
+            </Box>
+            
+            {/* Right-aligned minimize button */}
+            <Box>
               <Tooltip title="Minimize">
                 <IconButton 
                   size="small" 
@@ -427,6 +597,7 @@ export function ScreenDefinitionEditor({
               previewMode={previewMode}
               onScreenshotTaken={handleScreenshotTaken}
               isCompactView={false}
+              streamStatus={streamStatus}
             />
           </Box>
         </Box>
@@ -452,6 +623,7 @@ export function ScreenDefinitionEditor({
             previewMode={previewMode}
             onScreenshotTaken={handleScreenshotTaken}
             isCompactView={true}
+            streamStatus={streamStatus}
           />
 
           {/* Only the expand button */}

@@ -12,6 +12,8 @@ interface StreamViewerProps {
   previewMode?: 'screenshot' | 'video';
   onScreenshotTaken?: (path: string) => void;
   isCompactView?: boolean;
+  streamStatus?: 'running' | 'stopped' | 'unknown';
+  onStreamStatusChange?: (status: 'running' | 'stopped' | 'unknown') => void;
   sx?: any;
 }
 
@@ -24,15 +26,16 @@ export function StreamViewer({
   previewMode = 'screenshot',
   onScreenshotTaken,
   isCompactView = false,
+  streamStatus = 'unknown',
+  onStreamStatusChange,
   sx = {} 
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamLoaded, setStreamLoaded] = useState(false);
-  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
-  const [screenshotPath, setScreenshotPath] = useState<string | null>(lastScreenshotPath || null);
   const [showPreview, setShowPreview] = useState(!!lastScreenshotPath);
+  const [screenshotPath, setScreenshotPath] = useState<string | null>(lastScreenshotPath || null);
 
   // Update screenshot path when prop changes
   useEffect(() => {
@@ -60,28 +63,6 @@ export function StreamViewer({
     setStreamLoaded(false);
     setStreamError(null);
   };
-
-  // Check stream status periodically
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
-        const data = await response.json();
-        
-        if (data.success) {
-          setStreamStatus(data.is_active ? 'running' : 'stopped');
-        }
-      } catch (error) {
-        console.error('[@component:StreamViewer] Failed to check stream status:', error);
-      }
-    };
-
-    if (isConnected) {
-      checkStatus();
-      const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
-      return () => clearInterval(interval);
-    }
-  }, [isConnected]);
 
   // Initialize stream when connected and URL is available
   useEffect(() => {
@@ -118,31 +99,6 @@ export function StreamViewer({
       }
     } catch (error) {
       console.error('[@component:StreamViewer] Screenshot request failed:', error);
-    }
-  };
-
-  const handleStreamControl = async () => {
-    try {
-      const endpoint = streamStatus === 'running' ? 'stop' : 'restart';
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/screen-definition/stream/${endpoint}`, {
-        method: 'POST'
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
-        
-        // Toggle preview visibility based on stream status
-        if (endpoint === 'restart') {
-          // When restarting stream, hide the preview to show the stream
-          setShowPreview(false);
-        } else if (endpoint === 'stop' && screenshotPath) {
-          // When stopping stream, show the preview if we have a screenshot
-          setShowPreview(true);
-        }
-      }
-    } catch (error) {
-      console.error(`[@component:StreamViewer] Stream ${streamStatus === 'running' ? 'stop' : 'restart'} failed:`, error);
     }
   };
 
@@ -288,31 +244,6 @@ export function StreamViewer({
             {streamError ? streamError : 
              isConnected && streamUrl ? 'Loading stream...' : 
              'No Stream Available'}
-          </Typography>
-        </Box>
-      )}
-
-      {/* Status indicator - Only shown in expanded view */}
-      {!isCompactView && (
-        <Box sx={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          padding: '2px 8px',
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          borderRadius: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.5
-        }}>
-          <Box sx={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
-          }} />
-          <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem' }}>
-            {streamStatus === 'running' ? 'Live' : 'Stopped'}
           </Typography>
         </Box>
       )}
