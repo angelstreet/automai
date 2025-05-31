@@ -119,7 +119,7 @@ export function CompactAndroidMobile({
       console.log('[@component:CompactAndroidMobile] Auto-dumping UI elements after action');
       setIsAutoDumpScheduled(false);
       handleDumpUIWithLoading();
-    }, 1500);
+    }, 1000);
   };
 
   // Cleanup timer on unmount
