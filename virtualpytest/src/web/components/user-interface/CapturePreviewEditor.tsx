@@ -19,6 +19,7 @@ interface CapturePreviewEditorProps {
   currentFrame?: number;
   totalFrames?: number;
   onFrameChange?: (frame: number) => void;
+  screenshotStyle?: React.CSSProperties;
   sx?: any;
 }
 
@@ -50,6 +51,7 @@ export function CapturePreviewEditor({
   currentFrame = 0,
   totalFrames = 0,
   onFrameChange,
+  screenshotStyle,
   sx = {}
 }: CapturePreviewEditorProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -175,12 +177,12 @@ export function CapturePreviewEditor({
 
   return (
     <Box sx={{ 
-      bgcolor: '#000000',
-      border: '2px solid #000000',
-      borderRadius: 0, // No border radius when in grid
+      bgcolor: '#1E1E1E',
+      border: '2px solid #1E1E1E',
+      borderRadius: 0,
       display: 'flex',
       flexDirection: 'column',
-      height: '100%', // Fill available height
+      height: '100%',
       ...sx 
     }}>
       {/* Preview Area */}
@@ -189,10 +191,10 @@ export function CapturePreviewEditor({
         position: 'relative',
         overflow: 'auto',
         display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: 'transparent',
-        p: 0.5, // Minimal padding
+        p: 0.5,
       }}>
         {mode === 'screenshot' && screenshotPath && (
           <>
@@ -200,9 +202,13 @@ export function CapturePreviewEditor({
               src={imageUrl}
               alt="Screenshot"
               style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
                 width: 'auto',
                 height: 'auto',
-                backgroundColor: 'transparent'
+                objectFit: 'contain',
+                backgroundColor: 'transparent',
+                ...(screenshotStyle || {})
               }}
               onError={(e) => {
                 const imgSrc = (e.target as HTMLImageElement).src;
@@ -286,7 +292,7 @@ export function CapturePreviewEditor({
         <Box sx={{ 
           p: 2,
           borderTop: '1px solid #333',
-          backgroundColor: '#000000'
+          backgroundColor: '#1E1E1E'
         }}>
           {/* Frame counter */}
           <Typography variant="caption" sx={{ color: '#666', display: 'block', textAlign: 'center', mb: 1 }}>
