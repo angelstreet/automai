@@ -18,6 +18,8 @@ import {
   FullscreenExit,
   Settings,
   Videocam,
+  PlayArrow,
+  Stop,
 } from '@mui/icons-material';
 import { StreamViewer } from './StreamViewer';
 import { CapturePreviewEditor } from './CapturePreviewEditor';
@@ -93,6 +95,9 @@ export function ScreenDefinitionEditor({
   const [totalFrames, setTotalFrames] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<'screenshot' | 'video'>('screenshot');
   
+  // Stream status state
+  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
+
   // Check for existing remote connection ONCE (no loops)
   useEffect(() => {
     const checkRemoteConnection = async () => {
@@ -126,6 +131,34 @@ export function ScreenDefinitionEditor({
       console.log('[@component:ScreenDefinitionEditor] Attempting to load stream from:', avConfig.stream_url);
     }
   }, [isConnected, avConfig?.stream_url]);
+
+  // Check stream status periodically
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (!isConnected) return;
+      
+      try {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
+        if (!response.ok) {
+          console.error('[@component:ScreenDefinitionEditor] Stream status check failed');
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          setStreamStatus(data.is_active ? 'running' : 'stopped');
+        }
+      } catch (error) {
+        console.error('[@component:ScreenDefinitionEditor] Failed to check stream status:', error);
+      }
+    };
+
+    if (isConnected) {
+      checkStatus();
+      const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isConnected]);
 
   // Disconnect from device using remote routes
   const handleDisconnect = async () => {
@@ -251,6 +284,32 @@ export function ScreenDefinitionEditor({
     setPreviewMode('screenshot');
   };
 
+  // Handle stream control
+  const handleStreamControl = async () => {
+    try {
+      const endpoint = streamStatus === 'running' ? 'stop' : 'restart';
+      
+      console.log(`[@component:ScreenDefinitionEditor] ${endpoint === 'stop' ? 'Stopping' : 'Starting'} stream...`);
+      
+      const response = await fetch(`http://localhost:5009/api/virtualpytest/screen-definition/stream/${endpoint}`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        console.error(`[@component:ScreenDefinitionEditor] Stream control failed:`, await response.text());
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
+        console.log(`[@component:ScreenDefinitionEditor] Stream ${endpoint === 'stop' ? 'stopped' : 'restarted'} successfully`);
+      }
+    } catch (error) {
+      console.error(`[@component:ScreenDefinitionEditor] Stream control failed:`, error);
+    }
+  };
+
   // If not connected, show connection status
   if (!isConnected) {
     return (
@@ -308,7 +367,7 @@ export function ScreenDefinitionEditor({
           bgcolor: '#000000',
           border: '2px solid #000000',
         }}>
-          {/* Minimal header with just the screenshot and minimize buttons */}
+          {/* Minimal header with screenshot, stream control, and minimize buttons */}
           <Box sx={{ 
             display: 'flex',
             justifyContent: 'space-between',
@@ -316,11 +375,27 @@ export function ScreenDefinitionEditor({
             p: 1,
             borderBottom: '1px solid #333'
           }}>
-            
+              
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Tooltip title="Take Screenshot">
-                <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
+                <IconButton 
+                  size="small" 
+                  onClick={handleTakeScreenshot} 
+                  sx={{ color: '#ffffff' }}
+                  disabled={!isConnected || streamStatus !== 'running'}
+                >
                   <PhotoCamera />
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title={streamStatus === 'running' ? "Stop Stream" : "Start Stream"}>
+                <IconButton 
+                  size="small" 
+                  onClick={handleStreamControl} 
+                  sx={{ color: '#ffffff' }}
+                  disabled={!isConnected}
+                >
+                  {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
                 </IconButton>
               </Tooltip>
               

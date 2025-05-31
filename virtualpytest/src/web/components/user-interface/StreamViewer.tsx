@@ -292,37 +292,6 @@ export function StreamViewer({
         </Box>
       )}
 
-      {/* Stream control buttons - Only shown in expanded view */}
-      {!isCompactView && (
-        <Box sx={{
-          position: 'absolute',
-          bottom: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: 2,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          padding: 1,
-          borderRadius: 2
-        }}>
-          <IconButton
-            onClick={handleStreamControl}
-            sx={{ color: 'white' }}
-            disabled={!isConnected}
-          >
-            {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
-          </IconButton>
-          
-          <IconButton
-            onClick={handleTakeScreenshot}
-            sx={{ color: 'white' }}
-            disabled={!isConnected || streamStatus !== 'running'}
-          >
-            <Camera />
-          </IconButton>
-        </Box>
-      )}
-
       {/* Status indicator - Only shown in expanded view */}
       {!isCompactView && (
         <Box sx={{
