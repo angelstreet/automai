@@ -153,18 +153,27 @@ export function ScreenDefinitionEditor({
       if (!isConnected) return;
       
       try {
+        // Add a small delay to make sure SSH connection is ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
         if (!response.ok) {
-          console.error('[@component:ScreenDefinitionEditor] Initial stream status check failed');
+          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, defaulting to stopped');
+          setStreamStatus('stopped');
           return;
         }
         
         const data = await response.json();
         if (data.success) {
           setStreamStatus(data.is_active ? 'running' : 'stopped');
+        } else {
+          // Default to stopped if status check fails
+          setStreamStatus('stopped');
         }
       } catch (error) {
-        console.error('[@component:ScreenDefinitionEditor] Failed to check initial stream status:', error);
+        // Just set a default status rather than logging an error
+        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, defaulting to stopped');
+        setStreamStatus('stopped');
       }
     };
 
