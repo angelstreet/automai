@@ -511,7 +511,6 @@ export function ScreenDefinitionEditor({
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onFrameChange={handleFrameChange}
-            isCapturing={isCapturing}
             {...commonProps}
           />
         );
@@ -548,17 +547,22 @@ export function ScreenDefinitionEditor({
           bgcolor: '#1E1E1E',
           border: '2px solid #1E1E1E',
         }}>
-          {/* Header with controls - exact same layout */}
+          {/* Header with controls - fixed width sections to prevent flickering */}
           <Box sx={{ 
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             p: 1,
-            borderBottom: '1px solid #333'
+            borderBottom: '1px solid #333',
+            height: '48px'
           }}>
-            {/* Left-aligned items with status indicator first */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {/* Status indicator */}
+            {/* Left section - status indicator */}
+            <Box sx={{ 
+              width: '80px', 
+              display: 'flex', 
+              justifyContent: 'flex-start'
+            }}>
+              {/* Status indicator with fixed width */}
               <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -566,7 +570,8 @@ export function ScreenDefinitionEditor({
                 backgroundColor: 'rgba(0,0,0,0.5)',
                 borderRadius: 1,
                 padding: '2px 8px',
-                marginRight: 1
+                width: '70px',
+                justifyContent: 'center'
               }}>
                 <Box sx={{
                   width: 8,
@@ -574,11 +579,20 @@ export function ScreenDefinitionEditor({
                   borderRadius: '50%',
                   backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
                 }} />
-                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem' }}>
+                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
                   {streamStatus === 'running' ? 'Live' : 'Stopped'}
                 </Typography>
               </Box>
-
+            </Box>
+            
+            {/* Center section - action buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1
+            }}>
               <Tooltip title="Take Screenshot">
                 <span>
                   <IconButton 
@@ -603,7 +617,7 @@ export function ScreenDefinitionEditor({
                   </IconButton>
                 </Tooltip>
               ) : (
-                <Tooltip title="Start Capture (10fps)">
+                <Tooltip title="Start Capture">
                   <span>
                     <IconButton 
                       size="small" 
@@ -631,8 +645,12 @@ export function ScreenDefinitionEditor({
               </Tooltip>
             </Box>
             
-            {/* Right-aligned minimize button */}
-            <Box>
+            {/* Right section - minimize button */}
+            <Box sx={{ 
+              width: '40px', 
+              display: 'flex', 
+              justifyContent: 'flex-end'
+            }}>
               <Tooltip title="Minimize">
                 <IconButton 
                   size="small" 
