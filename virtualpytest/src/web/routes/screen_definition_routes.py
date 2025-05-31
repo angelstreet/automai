@@ -367,7 +367,7 @@ def stop_capture():
             ssh_connection.execute_command(f"kill -9 {capture_pid} 2>/dev/null || true")
         else:
             # Fallback: kill all ffmpeg processes
-            ssh_connection.execute_command("pkill -f 'ffmpeg.*v4l2' || true")
+            ssh_connection.execute_command("pkill -f 'ffmpeg.*' || true")
         
         frames_downloaded = 0
         local_capture_dir = os.path.join(TMP_DIR, 'captures')

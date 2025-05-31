@@ -117,7 +117,6 @@ export function ScreenDefinitionEditor({
   
   // Video capture state
   const [captureFrames, setCaptureFrames] = useState<string[]>([]);
-  const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const [resolutionInfo, setResolutionInfo] = useState<{
     device: { width: number; height: number } | null;
@@ -202,15 +201,6 @@ export function ScreenDefinitionEditor({
     }
   }, [isConnected]);
   
-  // Clean up capture timer on unmount
-  useEffect(() => {
-    return () => {
-      if (captureTimerRef.current) {
-        clearInterval(captureTimerRef.current);
-      }
-    };
-  }, []);
-
   // Start video capture - simplified for new architecture
   const handleStartCapture = async () => {
     if (!isConnected || isCapturing) return;
@@ -226,8 +216,7 @@ export function ScreenDefinitionEditor({
       // The VideoCapture component will auto-start capture when mounted
       console.log('[@component:ScreenDefinitionEditor] Switched to VideoCapture component which will auto-start');
       
-      // Start stats monitoring
-      startStatsMonitoring();
+      // No polling - just wait for user to click stop
       
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
@@ -238,11 +227,6 @@ export function ScreenDefinitionEditor({
   // Stop video capture - simplified for new architecture
   const handleStopCapture = async () => {
     if (!isCapturing) return;
-    
-    if (captureTimerRef.current) {
-      clearInterval(captureTimerRef.current);
-      captureTimerRef.current = null;
-    }
     
     // VideoCapture component handles the actual stop action through its own Stop button
     // We'll just set our local state to reflect the stopped state
@@ -397,21 +381,6 @@ export function ScreenDefinitionEditor({
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', error);
     }
-  };
-
-  // Start monitoring capture stats
-  const startStatsMonitoring = () => {
-    // Simplified stats monitoring for new architecture
-    const interval = setInterval(() => {
-      setCaptureStats(prev => ({
-        is_connected: isConnected,
-        is_capturing: isCapturing,
-        frame_count: prev ? prev.frame_count + 1 : 1,
-        uptime_seconds: prev ? prev.uptime_seconds + 1 : 1,
-      }));
-    }, 1000);
-    
-    captureTimerRef.current = interval;
   };
 
   const handleToggleExpanded = () => {
