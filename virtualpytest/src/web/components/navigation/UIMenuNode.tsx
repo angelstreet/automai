@@ -333,6 +333,37 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close button - moved to top right */}
+            <button
+              onClick={closeModal}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                color: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'background-color 0.2s',
+                zIndex: 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>×</span>
+            </button>
+            
             <img
               src={data.screenshot}
               alt={`Screenshot of ${data.label}`}
@@ -352,56 +383,6 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
               onDoubleClick={closeModal}
               title="Double-click to close"
             />
-            
-            <div
-              style={{
-                marginTop: '0px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0px',
-                height: '40px',
-                margin: '0px 0 0 0',
-                padding: 0,
-              }}
-            >
-              <div
-                style={{
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  flex: 1,
-                }}
-              >
-                {data.label} - MENU
-              </div>
-              
-              <button
-                onClick={closeModal}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '4px 8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  color: '#333',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'background-color 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-                }}
-              >
-                <span style={{ fontSize: '14px' }}>×</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
