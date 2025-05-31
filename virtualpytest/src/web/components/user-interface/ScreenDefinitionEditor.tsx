@@ -368,7 +368,7 @@ export function ScreenDefinitionEditor({
       position: 'fixed',
       bottom: 16,
       left: 16,
-      width: isExpanded ? '400px' : '150px',
+      width: isExpanded ? '250px' : '150px',
       height: isExpanded ? '500px' : '250px',
       bgcolor: '#000000',
       border: '2px solid #000000',
@@ -381,112 +381,68 @@ export function ScreenDefinitionEditor({
       ...sx 
     }}>
       {isExpanded ? (
-        <>
-          {/* Header with controls */}
+        <Box sx={{ 
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#000000'
+        }}>
+          {/* Minimal header with just the essential buttons */}
           <Box sx={{ 
-            p: 1, 
-            borderBottom: '2px solid #000000',
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            minHeight: '40px',
-            bgcolor: '#000000',
-            color: '#ffffff'
+            justifyContent: 'flex-end',
+            gap: 1,
+            p: 1,
+            borderBottom: '1px solid #333'
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="caption" fontWeight="medium" sx={{ color: '#ffffff' }}>
-                Screen Definition
-              </Typography>
-              <Chip 
-                label="Connected" 
-                color="success" 
-                size="small"
-                sx={{ height: '16px', fontSize: '0.6rem' }}
-              />
-            </Box>
+            <Tooltip title="Take Screenshot">
+              <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
+                <PhotoCamera />
+              </IconButton>
+            </Tooltip>
             
-            <IconButton 
-              size="small" 
-              onClick={handleToggleExpanded}
-              sx={{ 
-                p: 0.5,
-                color: '#ffffff',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-            >
-              <FullscreenExit />
-            </IconButton>
-          </Box>
-
-          {/* Content area */}
-          <Box sx={{ flex: 1, p: 1, overflow: 'hidden', bgcolor: '#000000' }}>
-            {/* Stats */}
-            {captureStats && (
-              <Card sx={{ mb: 1, bgcolor: '#000000', color: '#ffffff', border: '1px solid #333' }}>
-                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                  <Typography variant="caption" display="block" sx={{ color: '#ffffff' }}>
-                    Device: {avConfig?.video_device}
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ color: '#ffffff' }}>
-                    Captures: {captureStats.capture_count}
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ color: '#ffffff' }}>
-                    Uptime: {Math.floor(captureStats.uptime_seconds / 60)}m {captureStats.uptime_seconds % 60}s
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Preview area */}
-            <Box sx={{ 
-              height: '120px',
-              border: '1px solid #333',
-              borderRadius: 1,
-              backgroundColor: '#000000',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 1,
-              overflow: 'hidden'
-            }}>
-              <StreamViewer 
-                streamUrl={avConfig?.stream_url}
-                isConnected={isConnected}
-                width="100%"
-                height="100%"
-              />
-            </Box>
-
-            {/* Control buttons */}
-            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'space-between' }}>
-              <Tooltip title="Take Screenshot">
-                <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
-                  <PhotoCamera />
+            {!isCapturing ? (
+              <Tooltip title="Start Capture">
+                <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
+                  <VideoCall />
                 </IconButton>
               </Tooltip>
-              
-              {!isCapturing ? (
-                <Tooltip title="Start Capture">
-                  <IconButton size="small" onClick={handleStartCapture} color="primary">
-                    <VideoCall />
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <Tooltip title="Stop Capture">
-                  <IconButton size="small" onClick={handleStopCapture} color="secondary">
-                    <StopCircle />
-                  </IconButton>
-                </Tooltip>
-              )}
-              
-              
-            </Box>
+            ) : (
+              <Tooltip title="Stop Capture">
+                <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
+                  <StopCircle />
+                </IconButton>
+              </Tooltip>
+            )}
+            
+            <Tooltip title="Minimize">
+              <IconButton 
+                size="small" 
+                onClick={handleToggleExpanded}
+                sx={{ color: '#ffffff' }}
+              >
+                <FullscreenExit />
+              </IconButton>
+            </Tooltip>
           </Box>
-        </>
+
+          {/* Stream taking all remaining space */}
+          <Box sx={{ 
+            flex: 1,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <StreamViewer 
+              streamUrl={avConfig?.stream_url}
+              isConnected={isConnected}
+              width="100%"
+              height="100%"
+            />
+          </Box>
+        </Box>
       ) : (
-        // Simplified compact view - only stream preview and resize icon
+        // Compact view code stays the same
         <Box sx={{ 
           position: 'relative',
           width: '100%',
@@ -495,7 +451,6 @@ export function ScreenDefinitionEditor({
           bgcolor: '#000000',
           display: 'flex'
         }}>
-          {/* Stream preview area - taking full space */}
           <StreamViewer 
             streamUrl={avConfig?.stream_url}
             isConnected={isConnected}
@@ -510,7 +465,6 @@ export function ScreenDefinitionEditor({
             }}
           />
 
-          {/* Resize icon in top-right corner */}
           <IconButton 
             size="small" 
             onClick={handleToggleExpanded}
