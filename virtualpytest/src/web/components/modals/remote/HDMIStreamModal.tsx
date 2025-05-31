@@ -329,7 +329,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
               <Box sx={{ 
                 position: 'relative', 
                 width: '100%', 
-                height: '400px',
+                height: '420px',
                 border: '1px solid #ccc',
                 borderRadius: 1,
                 overflow: 'hidden',
@@ -359,7 +359,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                 }}
                 autoConnect={true} // Auto-connect since connection already established
                 compact={false} // Full modal mode
-                sx={{ height: '500px' }}
+                sx={{ height: '420px' }}
               />
             )}
           </Grid>
