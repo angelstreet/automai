@@ -480,12 +480,24 @@ export function ScreenDefinitionEditor({
       console.log(`[@component:ScreenDefinitionEditor] Using stream URL: ${streamUrl}`);
     }
 
+    // When capturing a screenshot, show the ScreenshotCapture with isCapturing=true
+    if (isCapturing && viewMode !== 'capture') {
+      return (
+        <ScreenshotCapture
+          isCapturing={true}
+          {...commonProps}
+        />
+      );
+    }
+
+    // Otherwise, show the appropriate component based on viewMode
     switch (viewMode) {
       case 'screenshot':
         return (
           <ScreenshotCapture
             screenshotPath={lastScreenshotPath}
             resolutionInfo={resolutionInfo}
+            isCapturing={false}
             {...commonProps}
           />
         );
@@ -499,6 +511,7 @@ export function ScreenDefinitionEditor({
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onFrameChange={handleFrameChange}
+            isCapturing={isCapturing}
             {...commonProps}
           />
         );
