@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 interface ScreenshotCaptureProps {
   screenshotPath?: string;
   isCapturing?: boolean;
+  isSaving?: boolean;
   resolutionInfo?: {
     device: { width: number; height: number } | null;
     capture: string | null;
@@ -15,6 +16,7 @@ interface ScreenshotCaptureProps {
 export function ScreenshotCapture({
   screenshotPath,
   isCapturing,
+  isSaving,
   resolutionInfo,
   sx = {}
 }: ScreenshotCaptureProps) {
@@ -124,8 +126,8 @@ export function ScreenshotCapture({
         />
       )}
 
-      {/* Loading state when capturing */}
-      {isCapturing && (
+      {/* Loading state when capturing or saving */}
+      {(isCapturing || isSaving) && (
         <Box sx={{
           position: 'absolute',
           top: 0,
@@ -154,7 +156,7 @@ export function ScreenshotCapture({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: isSaving ? '#4caf50' : '#ffffff',
                   animation: 'pulse 1.4s ease-in-out infinite both',
                   animationDelay: `${index * 0.16}s`,
                   '@keyframes pulse': {
@@ -172,7 +174,7 @@ export function ScreenshotCapture({
             ))}
           </Box>
           <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
-            Capturing Screenshot...
+            {isSaving ? 'Saving frames...' : 'Capturing frames...Press stop to stop capturing'}
           </Typography>
         </Box>
       )}

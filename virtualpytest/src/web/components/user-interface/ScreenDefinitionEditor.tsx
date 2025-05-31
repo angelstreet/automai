@@ -122,6 +122,33 @@ export function ScreenDefinitionEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [savedFrameCount, setSavedFrameCount] = useState(0);
   
+  // Poll for frame count during capture - lightweight polling just for frame count
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCapturing && !isSaving) {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/status');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.current_frame !== undefined) {
+              setSavedFrameCount(data.current_frame);
+            }
+          }
+        } catch (error) {
+          // Silently ignore polling errors during capture
+        }
+      }, 1000); // Check every second
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isCapturing, isSaving]);
+  
   const [resolutionInfo, setResolutionInfo] = useState<{
     device: { width: number; height: number } | null;
     capture: string | null;
@@ -212,7 +239,8 @@ export function ScreenDefinitionEditor({
     try {
       console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
       
-      // Set capturing state
+      // Reset frame count and set capturing state
+      setSavedFrameCount(0);
       setIsCapturing(true);
       
       // Call the capture start API directly
@@ -257,9 +285,9 @@ export function ScreenDefinitionEditor({
     try {
       console.log('[@component:ScreenDefinitionEditor] Stopping video capture...');
       
-      // Show saving indicator
+      // Show saving indicator - keep current frame count until we get actual count
       setIsSaving(true);
-      setSavedFrameCount(0);
+      // Don't reset frame count to 0 here - keep showing current count during saving
       
       // Call the capture stop API directly
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', {
@@ -275,14 +303,18 @@ export function ScreenDefinitionEditor({
         const data = await response.json();
         if (data.success) {
           console.log('[@component:ScreenDefinitionEditor] Capture stopped successfully');
-          // Update frame count from API response
+          // Update frame count from API response - this is the final count
           setSavedFrameCount(data.frames_downloaded || 0);
         } else {
           console.error('[@component:ScreenDefinitionEditor] Capture stop failed:', data.error);
+          // If API fails, set to 0 as fallback
+          setSavedFrameCount(0);
         }
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', error);
+      // If there's an error, set to 0 as fallback
+      setSavedFrameCount(0);
     } finally {
       // Always update local state
       setIsCapturing(false);
@@ -522,6 +554,7 @@ export function ScreenDefinitionEditor({
       return (
         <ScreenshotCapture
           isCapturing={true}
+          isSaving={isSaving}
           {...commonProps}
         />
       );
@@ -535,6 +568,7 @@ export function ScreenDefinitionEditor({
             screenshotPath={lastScreenshotPath}
             resolutionInfo={resolutionInfo}
             isCapturing={false}
+            isSaving={isSaving}
             {...commonProps}
           />
         );
@@ -611,7 +645,7 @@ export function ScreenDefinitionEditor({
                 backgroundColor: 'rgba(0,0,0,0.5)',
                 borderRadius: 1,
                 padding: '2px 8px',
-                width: isSaving ? '120px' : '70px',
+                width: isSaving ? '120px' : isCapturing ? '120px' : '70px',
                 justifyContent: 'center',
                 transition: 'width 0.3s ease'
               }}>
@@ -630,7 +664,7 @@ export function ScreenDefinitionEditor({
                     </Typography>
                   </>
                 ) : isCapturing ? (
-                  // Recording indicator with red blinking dot
+                  // Recording indicator with red blinking dot and frame count
                   <>
                     <Box sx={{
                       width: 8,
@@ -639,8 +673,8 @@ export function ScreenDefinitionEditor({
                       backgroundColor: '#f44336',
                       animation: 'blink 1s infinite'
                     }} />
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
-                      REC
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem', textAlign: 'center', width: '70px' }}>
+                      Recording {savedFrameCount}
                     </Typography>
                   </>
                 ) : (
@@ -785,7 +819,7 @@ export function ScreenDefinitionEditor({
                 animation: 'blink 1s infinite'
               }} />
               <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem' }}>
-                {isSaving ? `Saving ${savedFrameCount}` : 'REC'}
+                {isSaving ? `Saving ${savedFrameCount}` : `Recording ${savedFrameCount}`}
               </Typography>
             </Box>
           )}
