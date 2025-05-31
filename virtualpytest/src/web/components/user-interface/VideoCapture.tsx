@@ -286,43 +286,11 @@ export function VideoCapture({
           p: 1,
           backgroundColor: 'transparent'
         }}>
-          {/* Frame counter */}
-          <Typography variant="caption" sx={{ color: '#ffffff', display: 'block', textAlign: 'center', mb: 1, fontSize: '0.8rem' }}>
-            Frame {currentValue + 1} / {totalFrames}
-            {videoFramesPath.includes('captures')}
-          </Typography>
-
-          {/* Scrubber */}
-          <Slider
-            value={currentValue}
-            min={0}
-            max={Math.max(0, totalFrames - 1)}
-            onChange={handleSliderChange}
-            sx={{ 
-              color: '#ffffff',
-              mb: 1,
-              '& .MuiSlider-thumb': {
-                width: 16,
-                height: 16,
-                backgroundColor: '#fff',
-                '&:hover': {
-                  boxShadow: '0px 0px 0px 8px rgba(255, 255, 255, 0.16)',
-                },
-              },
-              '& .MuiSlider-track': {
-                backgroundColor: '#fff',
-              },
-              '& .MuiSlider-rail': {
-                backgroundColor: 'rgba(255,255,255,0.3)',
-              }
-            }}
-          />
-
-          {/* Play button centered */}
+          {/* Play button - bottom left */}
           <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center',
-            mt: 1
+            position: 'absolute',
+            bottom: 8,
+            left: 8,
           }}>
             <IconButton 
               size="medium" 
@@ -337,6 +305,54 @@ export function VideoCapture({
             >
               {isPlaying ? <Pause /> : <PlayArrow />}
             </IconButton>
+          </Box>
+
+          {/* Frame counter - bottom right */}
+          <Box sx={{ 
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+          }}>
+            <Typography variant="caption" sx={{ 
+              color: '#ffffff', 
+              fontSize: '0.8rem',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+            }}>
+              {currentValue + 1} / {totalFrames}
+              {videoFramesPath.includes('captures')}
+            </Typography>
+          </Box>
+
+          {/* Scrubber - centered horizontally, at bottom */}
+          <Box sx={{
+            position: 'absolute',
+            bottom: 12,
+            left: '80px',
+            right: '80px',
+          }}>
+            <Slider
+              value={currentValue}
+              min={0}
+              max={Math.max(0, totalFrames - 1)}
+              onChange={handleSliderChange}
+              sx={{ 
+                color: '#ffffff',
+                '& .MuiSlider-thumb': {
+                  width: 16,
+                  height: 16,
+                  backgroundColor: '#fff',
+                  '&:hover': {
+                    boxShadow: '0px 0px 0px 8px rgba(255, 255, 255, 0.16)',
+                  },
+                },
+                '& .MuiSlider-track': {
+                  backgroundColor: '#fff',
+                },
+                '& .MuiSlider-rail': {
+                  backgroundColor: 'rgba(255,255,255,0.3)',
+                }
+              }}
+            />
           </Box>
         </Box>
       )}
