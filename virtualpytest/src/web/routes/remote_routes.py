@@ -412,7 +412,7 @@ def android_mobile_command():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
             
         data = request.get_json()
@@ -532,7 +532,7 @@ def android_mobile_dump_ui():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
             
         success, elements, error = app.android_mobile_controller.dump_ui_elements()
@@ -581,7 +581,7 @@ def android_mobile_click_element():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
             
         data = request.get_json()
@@ -629,7 +629,7 @@ def android_mobile_get_apps():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
             
         apps = app.android_mobile_controller.get_installed_apps()
@@ -662,7 +662,7 @@ def android_mobile_screenshot():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
         
         # Take screenshot using the existing controller
@@ -694,7 +694,7 @@ def android_mobile_screenshot_and_dump_ui():
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active Android Mobile connection'
+                'error': 'No acticve connection'
             }), 400
             
         # Take screenshot first

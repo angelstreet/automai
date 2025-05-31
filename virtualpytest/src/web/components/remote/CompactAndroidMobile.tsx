@@ -383,15 +383,13 @@ export function CompactAndroidMobile({
       {showOverlay && androidElements.length > 0 && (
         <div style={{ 
           position: 'fixed',
-          left: '20px',
-          top: 'calc(100vh - 536px)',
-          width: '258px',  // Match the actual video width seen in screenshot
-          height: '470px', // Match the actual video height seen in screenshot
-          zIndex: 9999,
+          left: '110px',
+          top: '160px',
+          zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
-          overflow: 'hidden', // Contain child elements
-          transform: 'scale(0.75)', // Scale down to better match video
-          transformOrigin: 'top left' // Scale from top-left corner
+          transform: 'scale(0.2)', // Scale down to better match video
+          
+          background: 'rgba(0,0,0,0.01)' // Add a barely visible background to help with layer creation
         }}>
           <AndroidMobileOverlay
             elements={androidElements}

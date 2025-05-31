@@ -252,10 +252,13 @@ def start_capture():
         ffmpeg_cmd = (
             f"/usr/bin/ffmpeg "
             f"-f v4l2 -video_size {capture_resolution} -r 12 -i {video_device} "
-            f"-c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an -f hls "
-            f"-hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
+            f"-filter_complex \"split=2[stream][capture]; "
+            f"[stream]scale=640:360[streamout]; "
+            f"[capture]fps=5[captureout]\" "
+            f"-map \"[streamout]\" -c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an "
+            f"-f hls -hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
             f"/var/www/html/stream/output.m3u8 "
-            f"-vf \"fps=5\" -q:v 2 -start_number 1 "
+            f"-map \"[captureout]\" -c:v mjpeg -q:v 2 -start_number 1 "
             f"-f image2 -y {remote_capture_dir}/capture_%d.jpg"
         )
         

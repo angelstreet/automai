@@ -164,7 +164,7 @@ export function AndroidMobileOverlay({
         if (!bounds) return null;
 
         const scaledX = bounds.x * scaleX + offsetX;
-        const scaledY = bounds.y * scaleY + offsetY + MODAL_HEADER_HEIGHT_OFFSET;
+        const scaledY = bounds.y * scaleY + offsetY;
 
         // Debug first few elements
         if (index < 3) {
