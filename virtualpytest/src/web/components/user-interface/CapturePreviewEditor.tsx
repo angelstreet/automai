@@ -209,8 +209,11 @@ export function CapturePreviewEditor({
               src={imageUrl}
               alt="Screenshot"
               style={{
+                maxWidth: 'auto',
+                maxHeight: '100%',
                 width: 'auto',
                 height: 'auto',
+                objectFit: 'contain',
                 backgroundColor: 'transparent'
               }}
               onError={(e) => {
@@ -224,8 +227,11 @@ export function CapturePreviewEditor({
                 const img = e.target as HTMLImageElement;
                 img.style.backgroundColor = 'transparent';
                 img.style.border = '1px solid #E0E0E0';
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
                 img.style.width = 'auto';
                 img.style.height = 'auto';
+                img.style.objectFit = 'contain';
                 img.style.padding = '4px';
               }}
             />
@@ -310,6 +316,8 @@ export function CapturePreviewEditor({
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',
+                width: 'auto',
+                height: 'auto',
                 objectFit: 'contain'
               }}
               onError={(e) => {
