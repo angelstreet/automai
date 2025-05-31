@@ -22,6 +22,27 @@ interface CapturePreviewEditorProps {
   sx?: any;
 }
 
+// Reusable placeholder component
+function CapturePreviewPlaceholder({ text }: { text: string }) {
+  return (
+    <Box sx={{
+      width: '100%',
+      height: '100%',
+      minHeight: '400px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+      border: '1px solid #333333',
+      p: 0.5,
+    }}>
+      <Typography variant="caption" sx={{ color: '#666666' }}>
+        {text}
+      </Typography>
+    </Box>
+  );
+}
+
 export function CapturePreviewEditor({
   mode,
   screenshotPath,
@@ -166,10 +187,10 @@ export function CapturePreviewEditor({
       <Box sx={{ 
         flex: 1,
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'auto',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
         backgroundColor: 'transparent',
         p: 0.5, // Minimal padding
       }}>
@@ -179,9 +200,8 @@ export function CapturePreviewEditor({
               src={imageUrl}
               alt="Screenshot"
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain',
+                width: 'auto',
+                height: 'auto',
                 backgroundColor: 'transparent'
               }}
               onError={(e) => {
@@ -195,8 +215,8 @@ export function CapturePreviewEditor({
                 const img = e.target as HTMLImageElement;
                 img.style.backgroundColor = 'transparent';
                 img.style.border = '1px solid #E0E0E0';
-                img.style.minWidth = '160px';
-                img.style.minHeight = '120px';
+                img.style.width = 'auto';
+                img.style.height = 'auto';
                 img.style.padding = '4px';
               }}
             />
@@ -221,19 +241,7 @@ export function CapturePreviewEditor({
         )}
         {/* Show placeholder when no screenshot */}
         {mode === 'screenshot' && !screenshotPath && (
-          <Box sx={{
-            width: '250px', // Standard preview width
-            height: '400px', // Standard preview height (4:3 aspect ratio)
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent',
-            p: 0.5,
-          }}>
-            <Typography variant="caption" sx={{ color: '#BBBBBB' }}>
-              No Screenshot
-            </Typography>
-          </Box>
+          <CapturePreviewPlaceholder text="No Screenshot Available" />
         )}
         {mode === 'video' && videoFramesPath && (
           <>
@@ -266,6 +274,10 @@ export function CapturePreviewEditor({
               Frame {currentValue + 1}
             </Typography>
           </>
+        )}
+        {/* Show placeholder when no video frames */}
+        {mode === 'video' && (!videoFramesPath || !videoFrameUrl) && (
+          <CapturePreviewPlaceholder text="No Video Available" />
         )}
       </Box>
 
