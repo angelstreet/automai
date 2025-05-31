@@ -44,85 +44,75 @@ def take_screenshot():
         data = request.get_json()
         current_app.logger.info(f"[@api:screen-definition] Screenshot request: {data}")
         
-        # Check if we have an active remote controller
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
                 'success': False,
-                'error': 'No active remote connection. Please connect via android-mobile first.'
+                'error': 'No active remote connection'
             }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
         
         # Extract parameters
         video_device = data.get('video_device', '/dev/video0')
         device_model = data.get('device_model', 'android_mobile')
         
-        current_app.logger.info(f"[@api:screen-definition] Using FFmpeg to capture from {video_device}")
+        # Check if stream is already stopped
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
+        stream_was_active = "Active: active (running)" in stdout
         
-        ssh_connection = android_mobile_controller.ssh_connection
+        if stream_was_active:
+            # Stop the stream if it's running
+            current_app.logger.info("[@api:screen-definition] Stopping stream for capture...")
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
+            
+            if not success or exit_code != 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to stop stream service: {stderr}'
+                }), 500
         
-        if not ssh_connection or not ssh_connection.connected:
-            return jsonify({
-                'success': False,
-                'error': 'Controller SSH connection is not established'
-            }), 400
-
-        # 1. Stop the stream service
-        current_app.logger.info("[@api:screen-definition] Stopping stream service...")
-        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
+        # Take high-res screenshot with FFmpeg
+        remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
+        ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size 1920x1080 -i {video_device} -frames:v 1 -y {remote_temp_path}"
+        
+        current_app.logger.info(f"[@api:screen-definition] Taking high-res screenshot...")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
         
         if not success or exit_code != 0:
-            current_app.logger.error(f"[@api:screen-definition] Failed to stop stream: {stderr}")
+            error_msg = stderr.strip() if stderr else "FFmpeg command failed"
+            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {error_msg}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to stop stream service: {stderr}'
+                'error': f'FFmpeg capture failed: {error_msg}'
             }), 500
-
-        try:
-            # 2. Take high-res screenshot with FFmpeg
-            remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
-            ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size 1920x1080 -i {video_device} -frames:v 1 -y {remote_temp_path}"
-            
-            current_app.logger.info(f"[@api:screen-definition] Taking high-res screenshot...")
-            current_app.logger.info(f"[@api:screen-definition] Command: {ffmpeg_cmd}")
-            
-            success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
-            
-            if not success or exit_code != 0:
-                raise Exception(f"FFmpeg capture failed: {stderr}")
-
-            # Download the screenshot
-            local_filename = f"{device_model}.jpg"
-            local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
-            
-            if hasattr(ssh_connection, 'download_file'):
-                ssh_connection.download_file(remote_temp_path, local_screenshot_path)
-            else:
-                success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_temp_path} | base64")
-                
-                if not success or exit_code != 0:
-                    raise Exception(f"Failed to download screenshot: {stderr}")
-                
-                import base64
-                with open(local_screenshot_path, 'wb') as f:
-                    f.write(base64.b64decode(file_content))
-
-            # Clean up remote file
-            ssh_connection.execute_command(f"rm -f {remote_temp_path}")
-
-            current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
-
-        finally:
-            # 3. Always restart stream service, even if screenshot failed
-            current_app.logger.info("[@api:screen-definition] Restarting stream service...")
-            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl restart stream")
+        
+        # Download the screenshot
+        local_filename = f"{device_model}.jpg"
+        local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
+        
+        if hasattr(ssh_connection, 'download_file'):
+            ssh_connection.download_file(remote_temp_path, local_screenshot_path)
+        else:
+            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_temp_path} | base64")
             
             if not success or exit_code != 0:
-                current_app.logger.error(f"[@api:screen-definition] Failed to restart stream: {stderr}")
-                # Don't return error here - we still want to return the screenshot if it succeeded
-
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to download screenshot: {stderr}'
+                }), 500
+            
+            import base64
+            with open(local_screenshot_path, 'wb') as f:
+                f.write(base64.b64decode(file_content))
+        
+        # Clean up remote file
+        ssh_connection.execute_command(f"rm -f {remote_temp_path}")
+        
         return jsonify({
             'success': True,
             'screenshot_path': local_screenshot_path,
-            'message': f'High-res screenshot captured successfully from {video_device}'
+            'stream_was_active': stream_was_active,
+            'message': 'High-res screenshot captured successfully'
         })
         
     except Exception as e:
@@ -332,4 +322,120 @@ def serve_image_by_path():
         
     except Exception as e:
         current_app.logger.error(f"Error serving image: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@screen_definition_blueprint.route('/stream/status', methods=['GET'])
+def get_stream_status():
+    """Get the current status of the stream service."""
+    try:
+        from app import android_mobile_controller
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Execute systemctl status command
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
+        
+        # Parse the status output
+        is_active = False
+        status_text = "Unknown"
+        
+        if success:
+            if "Active: active (running)" in stdout:
+                is_active = True
+                status_text = "Running"
+            elif "Active: inactive" in stdout:
+                status_text = "Stopped"
+            elif "Active: failed" in stdout:
+                status_text = "Failed"
+        
+        return jsonify({
+            'success': True,
+            'is_active': is_active,
+            'status': status_text,
+            'details': stdout if stdout else stderr
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Stream status check failed: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to check stream status: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/stream/stop', methods=['POST'])
+def stop_stream():
+    """Stop the stream service."""
+    try:
+        from app import android_mobile_controller
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        current_app.logger.info("[@api:screen-definition] Stopping stream service...")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
+        
+        if not success or exit_code != 0:
+            current_app.logger.error(f"[@api:screen-definition] Failed to stop stream: {stderr}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to stop stream service: {stderr}'
+            }), 500
+            
+        return jsonify({
+            'success': True,
+            'message': 'Stream service stopped successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Failed to stop stream: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to stop stream: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/stream/restart', methods=['POST'])
+def restart_stream():
+    """Restart the stream service."""
+    try:
+        from app import android_mobile_controller
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        current_app.logger.info("[@api:screen-definition] Restarting stream service...")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl restart stream")
+        
+        if not success or exit_code != 0:
+            current_app.logger.error(f"[@api:screen-definition] Failed to restart stream: {stderr}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to restart stream service: {stderr}'
+            }), 500
+            
+        return jsonify({
+            'success': True,
+            'message': 'Stream service restarted successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Failed to restart stream: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to restart stream: {str(e)}'
+        }), 500 

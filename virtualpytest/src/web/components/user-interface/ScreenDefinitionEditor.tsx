@@ -59,6 +59,14 @@ interface CaptureStats {
   last_screenshot?: string;
 }
 
+// Update interface for strongly typed screenshot handler
+interface ScreenshotResponse {
+  success: boolean;
+  screenshot_path: string;
+  message: string;
+  error?: string;
+}
+
 export function ScreenDefinitionEditor({
   deviceConfig,
   deviceModel,
@@ -237,6 +245,12 @@ export function ScreenDefinitionEditor({
     setCurrentFrame(frame);
   };
 
+  // Add type safety to the onScreenshotTaken handler
+  const handleScreenshotTaken = (path: string) => {
+    setLastScreenshotPath(path);
+    setPreviewMode('screenshot');
+  };
+
   // If not connected, show connection status
   if (!isConnected) {
     return (
@@ -284,93 +298,72 @@ export function ScreenDefinitionEditor({
       zIndex: 1000,
     }}>
       {isExpanded ? (
-        // Expanded view with grid layout
+        // Expanded view with integrated StreamViewer and CapturePreviewEditor
         <Box sx={{
-          display: 'grid',
-          gridTemplateColumns: '250px 300px',
-          gridGap: 0,
-          height: '500px',
+          width: '550px',
+          height: '520px',
           boxShadow: 2,
           borderRadius: 1,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          bgcolor: '#000000',
+          border: '2px solid #000000',
         }}>
-          {/* Main editor component */}
+          {/* Minimal header with just the essential buttons */}
           <Box sx={{ 
-            bgcolor: '#000000',
-            border: '2px solid #000000',
-            borderRight: 'none',
             display: 'flex',
-            flexDirection: 'column'
+            justifyContent: 'flex-end',
+            gap: 1,
+            p: 1,
+            borderBottom: '1px solid #333'
           }}>
-            {/* Minimal header with just the essential buttons */}
-            <Box sx={{ 
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 1,
-              p: 1,
-              borderBottom: '1px solid #333'
-            }}>
-              <Tooltip title="Take Screenshot">
-                <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
-                  <PhotoCamera />
+            <Tooltip title="Take Screenshot">
+              <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
+                <PhotoCamera />
+              </IconButton>
+            </Tooltip>
+            
+            {!isCapturing ? (
+              <Tooltip title="Start Capture">
+                <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
+                  <VideoCall />
                 </IconButton>
               </Tooltip>
-              
-              {!isCapturing ? (
-                <Tooltip title="Start Capture">
-                  <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
-                    <VideoCall />
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <Tooltip title="Stop Capture">
-                  <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
-                    <StopCircle />
-                  </IconButton>
-                </Tooltip>
-              )}
-              
-              <Tooltip title="Minimize">
-                <IconButton 
-                  size="small" 
-                  onClick={handleToggleExpanded}
-                  sx={{ color: '#ffffff' }}
-                >
-                  <FullscreenExit />
+            ) : (
+              <Tooltip title="Stop Capture">
+                <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
+                  <StopCircle />
                 </IconButton>
               </Tooltip>
-            </Box>
-
-            {/* Stream taking all remaining space */}
-            <Box sx={{ 
-              flex: 1,
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <StreamViewer 
-                streamUrl={avConfig?.stream_url}
-                isConnected={isConnected}
-                width="100%"
-                height="100%"
-              />
-            </Box>
+            )}
+            
+            <Tooltip title="Minimize">
+              <IconButton 
+                size="small" 
+                onClick={handleToggleExpanded}
+                sx={{ color: '#ffffff' }}
+              >
+                <FullscreenExit />
+              </IconButton>
+            </Tooltip>
           </Box>
 
-          {/* Preview editor without margin */}
-          <CapturePreviewEditor
-            mode={previewMode}
-            screenshotPath={lastScreenshotPath || undefined}
-            videoFramesPath={videoFramesPath}
-            currentFrame={currentFrame}
-            totalFrames={totalFrames}
-            onFrameChange={handleFrameChange}
-            sx={{
-              borderTopRightRadius: 1,
-              borderBottomRightRadius: 1,
-              borderLeft: 'none',
-              ml: 0
-            }}
-          />
+          {/* Integrated StreamViewer with CapturePreviewEditor */}
+          <Box sx={{ 
+            flex: 1,
+            position: 'relative',
+            overflow: 'hidden',
+            height: 'calc(100% - 48px)'
+          }}>
+            <StreamViewer 
+              streamUrl={avConfig?.stream_url}
+              isConnected={isConnected}
+              width="100%"
+              height="100%"
+              lastScreenshotPath={lastScreenshotPath}
+              previewMode={previewMode}
+              onScreenshotTaken={handleScreenshotTaken}
+            />
+          </Box>
         </Box>
       ) : (
         // Compact view code
@@ -399,6 +392,9 @@ export function ScreenDefinitionEditor({
               isConnected={isConnected}
               width="100%"
               height="100%"
+              lastScreenshotPath={lastScreenshotPath}
+              previewMode={previewMode}
+              onScreenshotTaken={handleScreenshotTaken}
               sx={{
                 position: 'absolute',
                 top: 0,

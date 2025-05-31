@@ -1,11 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
+import { PlayArrow, Stop, Camera } from '@mui/icons-material';
+import { CapturePreviewEditor } from './CapturePreviewEditor';
 
 interface StreamViewerProps {
   streamUrl?: string;
   isConnected: boolean;
   width?: string | number;
   height?: string | number;
+  lastScreenshotPath?: string | null;
+  previewMode?: 'screenshot' | 'video';
+  onScreenshotTaken?: (path: string) => void;
   sx?: any;
 }
 
@@ -14,12 +19,28 @@ export function StreamViewer({
   isConnected, 
   width = '100%', 
   height = '100%',
+  lastScreenshotPath,
+  previewMode = 'screenshot',
+  onScreenshotTaken,
   sx = {} 
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamLoaded, setStreamLoaded] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('unknown');
+  const [screenshotPath, setScreenshotPath] = useState<string | null>(lastScreenshotPath || null);
+  const [showPreview, setShowPreview] = useState(!!lastScreenshotPath);
+
+  // Update screenshot path when prop changes
+  useEffect(() => {
+    if (lastScreenshotPath !== undefined) {
+      setScreenshotPath(lastScreenshotPath);
+      if (lastScreenshotPath) {
+        setShowPreview(true);
+      }
+    }
+  }, [lastScreenshotPath]);
 
   // Clean up stream resources
   const cleanupStream = () => {
@@ -38,9 +59,31 @@ export function StreamViewer({
     setStreamError(null);
   };
 
+  // Check stream status periodically
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
+        const data = await response.json();
+        
+        if (data.success) {
+          setStreamStatus(data.is_active ? 'running' : 'stopped');
+        }
+      } catch (error) {
+        console.error('[@component:StreamViewer] Failed to check stream status:', error);
+      }
+    };
+
+    if (isConnected) {
+      checkStatus();
+      const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isConnected]);
+
   // Initialize stream when connected and URL is available
   useEffect(() => {
-    if (isConnected && streamUrl && videoRef.current) {
+    if (isConnected && streamUrl && videoRef.current && streamStatus === 'running' && !showPreview) {
       initializeStream();
     } else {
       cleanupStream();
@@ -49,7 +92,53 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [isConnected, streamUrl]);
+  }, [isConnected, streamUrl, streamStatus, showPreview]);
+
+  const handleTakeScreenshot = async () => {
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_model: 'android_mobile' })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setScreenshotPath(data.screenshot_path);
+        setShowPreview(true);
+        
+        // Notify parent component
+        if (onScreenshotTaken) {
+          onScreenshotTaken(data.screenshot_path);
+        }
+      } else {
+        console.error('[@component:StreamViewer] Screenshot failed:', data.error);
+      }
+    } catch (error) {
+      console.error('[@component:StreamViewer] Screenshot request failed:', error);
+    }
+  };
+
+  const handleStreamControl = async () => {
+    try {
+      const endpoint = streamStatus === 'running' ? 'stop' : 'restart';
+      const response = await fetch(`http://localhost:5009/api/virtualpytest/screen-definition/stream/${endpoint}`, {
+        method: 'POST'
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
+        
+        // If stream is restarted and we're showing preview, hide it to show stream
+        if (endpoint === 'restart' && showPreview) {
+          setShowPreview(false);
+        }
+      }
+    } catch (error) {
+      console.error(`[@component:StreamViewer] Stream ${streamStatus === 'running' ? 'stop' : 'restart'} failed:`, error);
+    }
+  };
 
   const initializeStream = async () => {
     if (!streamUrl || !videoRef.current) {
@@ -148,7 +237,7 @@ export function StreamViewer({
       overflow: 'hidden',
       ...sx 
     }}>
-      {/* Video element - always rendered but only visible when stream is loaded */}
+      {/* Video element - only visible when stream is loaded and preview is not shown */}
       <video 
         ref={videoRef}
         style={{ 
@@ -158,15 +247,26 @@ export function StreamViewer({
           width: '100%', 
           height: '100%', 
           objectFit: 'cover',
-          display: streamLoaded ? 'block' : 'none',
+          display: streamLoaded && !showPreview ? 'block' : 'none',
           backgroundColor: '#000000'
         }}
         playsInline
         muted
       />
       
+      {/* Screenshot preview - only visible when showPreview is true */}
+      {showPreview && screenshotPath && (
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <CapturePreviewEditor
+            mode={previewMode || 'screenshot'}
+            screenshotPath={screenshotPath}
+            sx={{ height: '100%' }}
+          />
+        </Box>
+      )}
+      
       {/* Placeholder/Error display */}
-      {!streamLoaded && (
+      {!streamLoaded && !showPreview && (
         <Box sx={{ 
           position: 'absolute',
           top: 0,
@@ -184,6 +284,54 @@ export function StreamViewer({
              'No Stream Available'}
           </Typography>
         </Box>
+      )}
+
+      {/* Control buttons */}
+      <Box sx={{
+        position: 'absolute',
+        bottom: 16,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        gap: 2,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: 1,
+        borderRadius: 2
+      }}>
+        <IconButton
+          onClick={handleStreamControl}
+          sx={{ color: 'white' }}
+          disabled={!isConnected}
+        >
+          {streamStatus === 'running' ? <Stop /> : <PlayArrow />}
+        </IconButton>
+        
+        <IconButton
+          onClick={handleTakeScreenshot}
+          sx={{ color: 'white' }}
+          disabled={!isConnected || streamStatus !== 'running'}
+        >
+          <Camera />
+        </IconButton>
+      </Box>
+
+      {/* Preview toggle button */}
+      {screenshotPath && (
+        <IconButton
+          onClick={() => setShowPreview(!showPreview)}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            color: 'white',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.7)'
+            }
+          }}
+        >
+          {showPreview ? <PlayArrow /> : <Camera />}
+        </IconButton>
       )}
     </Box>
   );
