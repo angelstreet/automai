@@ -384,10 +384,11 @@ export function CompactAndroidMobile({
         <div style={{ 
           position: 'fixed',
           left: '110px',
-          top: '160px',
+          top: '183px',
           zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
-          transform: 'scale(0.2)', // Scale down to better match video
+          transformOrigin: 'top left',
+          transform: 'scale(0.15, 0.2)', // Separate scaleX and scaleY values
           
           background: 'rgba(0,0,0,0.01)' // Add a barely visible background to help with layer creation
         }}>
