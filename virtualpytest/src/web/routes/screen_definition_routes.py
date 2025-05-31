@@ -241,7 +241,7 @@ def start_capture():
         
         # Clean any existing FFmpeg processes first
         current_app.logger.info("[@api:screen-definition] Cleaning existing FFmpeg processes...")
-        ssh_connection.execute_command("pkill -f 'ffmpeg.*v4l2' || true")
+        ssh_connection.execute_command("pkill -f 'ffmpeg.*' || true")
         time.sleep(1)  # Give time for processes to die
         
         # Clean existing capture files to start fresh
@@ -423,11 +423,11 @@ def stop_capture():
         capture_duration = 0  # We'll calculate this differently later
         
         # Restart stream if it was active before capture
-        if stream_was_active_before_capture:
-            current_app.logger.info("[@api:screen-definition] Restarting stream service...")
-            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl start stream")
-            if not success or exit_code != 0:
-                current_app.logger.warning(f"[@api:screen-definition] Failed to restart stream: {stderr}")
+       
+        current_app.logger.info("[@api:screen-definition] Restarting stream service...")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl start stream")
+        if not success or exit_code != 0:
+            current_app.logger.warning(f"[@api:screen-definition] Failed to restart stream: {stderr}")
         
         # Reset global variables
         capture_process = None

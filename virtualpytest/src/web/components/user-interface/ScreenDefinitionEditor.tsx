@@ -118,6 +118,10 @@ export function ScreenDefinitionEditor({
   // Video capture state
   const [captureFrames, setCaptureFrames] = useState<string[]>([]);
   
+  // Saving state
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedFrameCount, setSavedFrameCount] = useState(0);
+  
   const [resolutionInfo, setResolutionInfo] = useState<{
     device: { width: number; height: number } | null;
     capture: string | null;
@@ -208,15 +212,37 @@ export function ScreenDefinitionEditor({
     try {
       console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
       
-      // Set capturing state and view mode first, so the VideoCapture component will be displayed immediately
+      // Set capturing state
       setIsCapturing(true);
-      setViewMode('capture');
-      setCaptureFrames([]);
       
-      // The VideoCapture component will auto-start capture when mounted
-      console.log('[@component:ScreenDefinitionEditor] Switched to VideoCapture component which will auto-start');
+      // Call the capture start API directly
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          device_model: deviceModel,
+          video_device: avConfig?.video_device || '/dev/video0'
+        })
+      });
       
-      // No polling - just wait for user to click stop
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[@component:ScreenDefinitionEditor] Capture start API error:', errorText);
+        setIsCapturing(false);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('[@component:ScreenDefinitionEditor] Capture started successfully');
+        // Stay in stream view - don't switch to capture view to avoid polling
+        // setViewMode('capture'); // Commented out to avoid VideoCapture component polling
+        console.log('[@component:ScreenDefinitionEditor] Capture running in background, no polling - wait for user to click stop');
+      } else {
+        console.error('[@component:ScreenDefinitionEditor] Capture start failed:', data.error);
+        setIsCapturing(false);
+      }
       
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
@@ -228,15 +254,48 @@ export function ScreenDefinitionEditor({
   const handleStopCapture = async () => {
     if (!isCapturing) return;
     
-    // VideoCapture component handles the actual stop action through its own Stop button
-    // We'll just set our local state to reflect the stopped state
-    setIsCapturing(false);
-    setCaptureStats(null);
-    
-    // Return to stream view after stopping
-    setViewMode('stream');
-    
-    console.log('[@component:ScreenDefinitionEditor] Video capture stopped');
+    try {
+      console.log('[@component:ScreenDefinitionEditor] Stopping video capture...');
+      
+      // Show saving indicator
+      setIsSaving(true);
+      setSavedFrameCount(0);
+      
+      // Call the capture stop API directly
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[@component:ScreenDefinitionEditor] Capture stop API error:', errorText);
+      } else {
+        const data = await response.json();
+        if (data.success) {
+          console.log('[@component:ScreenDefinitionEditor] Capture stopped successfully');
+          // Update frame count from API response
+          setSavedFrameCount(data.frames_downloaded || 0);
+        } else {
+          console.error('[@component:ScreenDefinitionEditor] Capture stop failed:', data.error);
+        }
+      }
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', error);
+    } finally {
+      // Always update local state
+      setIsCapturing(false);
+      setCaptureStats(null);
+      
+      // Keep saving indicator for a moment to show completion
+      setTimeout(() => {
+        setIsSaving(false);
+        setSavedFrameCount(0);
+      }, 2000);
+      
+      console.log('[@component:ScreenDefinitionEditor] Video capture stopped - staying in stream view');
+    }
   };
 
   // Disconnect handler
@@ -513,6 +572,10 @@ export function ScreenDefinitionEditor({
       left: 16,
       display: 'flex',
       zIndex: 1000,
+      '& @keyframes blink': {
+        '0%, 50%': { opacity: 1 },
+        '51%, 100%': { opacity: 0.3 }
+      }
     }}>
       {isExpanded ? (
         // Expanded view - exact same layout as before but using new components
@@ -540,7 +603,7 @@ export function ScreenDefinitionEditor({
               display: 'flex', 
               justifyContent: 'flex-start'
             }}>
-              {/* Status indicator with fixed width */}
+              {/* Status indicator with recording/saving states */}
               <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -548,18 +611,52 @@ export function ScreenDefinitionEditor({
                 backgroundColor: 'rgba(0,0,0,0.5)',
                 borderRadius: 1,
                 padding: '2px 8px',
-                width: '70px',
-                justifyContent: 'center'
+                width: isSaving ? '120px' : '70px',
+                justifyContent: 'center',
+                transition: 'width 0.3s ease'
               }}>
-                <Box sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
-                }} />
-                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
-                  {streamStatus === 'running' ? 'Live' : 'Stopped'}
-                </Typography>
+                {isSaving ? (
+                  // Saving indicator with green blinking dot
+                  <>
+                    <Box sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: '#4caf50',
+                      animation: 'blink 1s infinite'
+                    }} />
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem', textAlign: 'center' }}>
+                      Saving {savedFrameCount}
+                    </Typography>
+                  </>
+                ) : isCapturing ? (
+                  // Recording indicator with red blinking dot
+                  <>
+                    <Box sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: '#f44336',
+                      animation: 'blink 1s infinite'
+                    }} />
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
+                      REC
+                    </Typography>
+                  </>
+                ) : (
+                  // Normal stream status
+                  <>
+                    <Box sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
+                    }} />
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
+                      {streamStatus === 'running' ? 'Live' : 'Stopped'}
+                    </Typography>
+                  </>
+                )}
               </Box>
             </Box>
             
@@ -665,6 +762,33 @@ export function ScreenDefinitionEditor({
         }}>
           {/* View component in compact mode */}
           {renderViewComponent()}
+
+          {/* Recording/Saving indicator for compact view */}
+          {(isCapturing || isSaving) && (
+            <Box sx={{
+              position: 'absolute',
+              top: 4,
+              left: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              borderRadius: 1,
+              padding: '2px 6px',
+              zIndex: 1
+            }}>
+              <Box sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: isSaving ? '#4caf50' : '#f44336',
+                animation: 'blink 1s infinite'
+              }} />
+              <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem' }}>
+                {isSaving ? `Saving ${savedFrameCount}` : 'REC'}
+              </Typography>
+            </Box>
+          )}
 
           {/* Only the expand button */}
           <IconButton 
