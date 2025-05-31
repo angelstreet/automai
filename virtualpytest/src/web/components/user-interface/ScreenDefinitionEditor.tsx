@@ -155,25 +155,20 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Handle screenshot capture via FFmpeg from HDMI source (not ADB like remote system)
+  // Take screenshot using FFmpeg HDMI capture via SSH (simplified, no polling)
   const handleTakeScreenshot = async () => {
     if (!avConfig || !isConnected) return;
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Taking HDMI screenshot via FFmpeg');
+      console.log('[@component:ScreenDefinitionEditor] Taking HDMI screenshot via FFmpeg from HLS stream');
       
-      // Use custom route for FFmpeg HDMI capture (NOT the ADB route)
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+      // Use new stream-based route to avoid device conflict
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot_from_stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Pass the connection details and video device info for FFmpeg
-          host_ip: avConfig.host_ip,
-          host_username: avConfig.host_username,
-          host_password: avConfig.host_password,
-          video_device: avConfig.video_device,
           device_model: deviceModel,
         }),
       });

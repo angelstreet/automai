@@ -22,16 +22,16 @@ def ensure_dirs():
     try:
         # Create directories with proper permissions
         os.makedirs('/tmp/screenshots', exist_ok=True)
-        os.makedirs('/tmp/capture_1-600', exist_ok=True)
+        os.makedirs('/tmp/capture', exist_ok=True)
         
         # Debug directory creation
-        current_app.logger.info(f"Ensured directories exist: /tmp/screenshots, /tmp/capture_1-600")
+        current_app.logger.info(f"Ensured directories exist: /tmp/screenshots, /tmp/capture")
         
         # Check if directories are writable
         if not os.access('/tmp/screenshots', os.W_OK):
             current_app.logger.error("Directory /tmp/screenshots is not writable")
-        if not os.access('/tmp/capture_1-600', os.W_OK):
-            current_app.logger.error("Directory /tmp/capture_1-600 is not writable")
+        if not os.access('/tmp/capture', os.W_OK):
+            current_app.logger.error("Directory /tmp/capture is not writable")
     except Exception as e:
         current_app.logger.error(f"Error ensuring directories: {str(e)}")
 
@@ -135,6 +135,117 @@ def take_screenshot():
         
     except Exception as e:
         current_app.logger.error(f"[@api:screen-definition] Screenshot route error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot request failed: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/screenshot_from_stream', methods=['POST'])
+def take_screenshot_from_stream():
+    """Take screenshot using FFmpeg from HLS stream to avoid device conflict."""
+    try:
+        from app import android_mobile_controller
+        
+        data = request.get_json()
+        current_app.logger.info(f"[@api:screen-definition] Stream screenshot request: {data}")
+        
+        # Check if we have an active remote controller (same as CompactAndroidMobile)
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection. Please connect via android-mobile first.'
+            }), 400
+        
+        # Extract parameters
+        device_model = data.get('device_model', 'android_mobile')
+        
+        # Get the SSH connection from the global controller (same as CompactAndroidMobile)
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        if not ssh_connection or not ssh_connection.connected:
+            return jsonify({
+                'success': False,
+                'error': 'Controller SSH connection is not established'
+            }), 400
+        
+        # Get the stream URL for HLS capture - use same pattern as android-mobile system
+        # Default to localhost if host_ip is not available
+        host_ip = getattr(android_mobile_controller, 'host_ip', 'localhost')
+        stream_url = f"https://{host_ip}:444/stream/output.m3u8"
+        
+        current_app.logger.info(f"[@api:screen-definition] Using HLS stream capture method (Option 2)")
+        current_app.logger.info(f"[@api:screen-definition] Stream URL: {stream_url}")
+        
+        # FFmpeg command to capture a single frame from HLS stream instead of device
+        # Keep same filename pattern as original (no timestamp to respect existing logic)
+        local_filename = f"{device_model}.jpg"
+        remote_temp_path = f"/tmp/{local_filename}"
+        ffmpeg_cmd = f"ffmpeg -i {stream_url} -vframes 1 -y {remote_temp_path}"
+        
+        current_app.logger.info(f"[@api:screen-definition] SSH Command Details:")
+        current_app.logger.info(f"[@api:screen-definition]   Host: {host_ip}")
+        current_app.logger.info(f"[@api:screen-definition]   HLS Stream: {stream_url}")
+        current_app.logger.info(f"[@api:screen-definition]   Output Path: {remote_temp_path}")
+        current_app.logger.info(f"[@api:screen-definition]   Full Command: {ffmpeg_cmd}")
+        
+        # Execute command - returns tuple (success, stdout, stderr, exit_code)
+        current_app.logger.info(f"[@api:screen-definition] Executing SSH command...")
+        start_time = time.time()
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
+        execution_time = time.time() - start_time
+        
+        current_app.logger.info(f"[@api:screen-definition] SSH command completed in {execution_time:.2f}s")
+        current_app.logger.info(f"[@api:screen-definition]   Success: {success}")
+        current_app.logger.info(f"[@api:screen-definition]   Exit Code: {exit_code}")
+        if stdout.strip():
+            current_app.logger.info(f"[@api:screen-definition]   Stdout: {stdout.strip()}")
+        if stderr.strip():
+            current_app.logger.info(f"[@api:screen-definition]   Stderr: {stderr.strip()}")
+        
+        if not success or exit_code != 0:
+            error_msg = stderr.strip() if stderr else "FFmpeg command failed"
+            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'FFmpeg capture failed: {error_msg}'
+            }), 500
+        
+        current_app.logger.info(f"[@api:screen-definition] FFmpeg capture successful: {remote_temp_path}")
+        
+        # Download the screenshot to local server
+        local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
+        
+        # Use SFTP to download the file (same approach as before)
+        if hasattr(ssh_connection, 'download_file'):
+            ssh_connection.download_file(remote_temp_path, local_screenshot_path)
+        else:
+            # Fallback: use cat command to get file content
+            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_temp_path} | base64")
+            
+            if not success or exit_code != 0:
+                current_app.logger.error(f"[@api:screen-definition] Download failed: {stderr}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to download screenshot: {stderr}'
+                }), 500
+            
+            import base64
+            with open(local_screenshot_path, 'wb') as f:
+                f.write(base64.b64decode(file_content))
+        
+        current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
+        
+        # Clean up remote file
+        ssh_connection.execute_command(f"rm -f {remote_temp_path}")
+        
+        return jsonify({
+            'success': True,
+            'screenshot_path': local_screenshot_path,
+            'message': f'Screenshot captured successfully via HLS stream from {stream_url}'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Stream screenshot route error: {e}")
         return jsonify({
             'success': False,
             'error': f'Screenshot request failed: {str(e)}'
