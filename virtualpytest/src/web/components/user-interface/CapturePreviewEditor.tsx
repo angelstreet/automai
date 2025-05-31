@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Slider,
@@ -79,28 +79,54 @@ export function CapturePreviewEditor({
     onFrameChange?.(newFrame);
   };
 
-  // Add a utility function to convert file paths to browser-accessible URLs
-  const getImageUrl = (path: string | undefined): string => {
-    if (!path) return '';
+  // Memoize the image URL to prevent multiple re-calculations
+  const imageUrl = useMemo(() => {
+    if (!screenshotPath) return '';
     
-    // Debug the path
-    console.log(`[@component:CapturePreviewEditor] Processing image path: ${path}`);
+    console.log(`[@component:CapturePreviewEditor] Processing image path: ${screenshotPath}`);
     
     // Generate a cache-busting timestamp
     const timestamp = new Date().getTime();
     
-    // If it's already a URL, return it with cache-busting parameter
-    if (path.startsWith('http')) return `${path}?t=${timestamp}`;
-    
-    // For paths like /tmp/screenshots/filename.jpg, convert to API endpoint URL
-    if (path.includes('/tmp/screenshots/')) {
-      const filename = path.split('/').pop();
+    // For server paths like /tmp/screenshots/filename.jpg
+    if (screenshotPath.includes('/tmp/screenshots/')) {
+      // Extract just the filename without path or query string
+      const filename = screenshotPath.split('/').pop()?.split('?')[0];
+      console.log(`[@component:CapturePreviewEditor] Extracted filename: ${filename}`);
+      
+      if (!filename) {
+        console.error(`[@component:CapturePreviewEditor] Failed to extract filename from path: ${screenshotPath}`);
+        return '';
+      }
+      
+      // Create a clean URL with a timestamp
       return `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
     }
     
-    // Default case - pass to a general API endpoint that can serve files by path
-    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(path)}&t=${timestamp}`;
-  };
+    // If it's already a full URL (but without timestamp)
+    if (screenshotPath.startsWith('http') && !screenshotPath.includes('?t=')) {
+      return `${screenshotPath}?t=${timestamp}`;
+    }
+    
+    // If it's already a full URL with timestamp, return as is
+    if (screenshotPath.startsWith('http') && screenshotPath.includes('?t=')) {
+      return screenshotPath;
+    }
+    
+    // Default case - convert to API endpoint URL
+    // First clean the path of any query parameters
+    const cleanPath = screenshotPath.split('?')[0];
+    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+  }, [screenshotPath]); // Only recalculate when screenshotPath changes
+
+  // Memoize video frame URL
+  const videoFrameUrl = useMemo(() => {
+    if (!videoFramesPath) return '';
+    
+    const timestamp = new Date().getTime();
+    const framePath = `${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`;
+    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(framePath)}&t=${timestamp}`;
+  }, [videoFramesPath, currentValue]);
 
   return (
     <Box sx={{ 
@@ -125,7 +151,7 @@ export function CapturePreviewEditor({
         {mode === 'screenshot' && screenshotPath && (
           <>
             <img 
-              src={getImageUrl(screenshotPath)}
+              src={imageUrl}
               alt="Screenshot"
               style={{
                 maxWidth: '100%',
@@ -133,8 +159,14 @@ export function CapturePreviewEditor({
                 objectFit: 'contain'
               }}
               onError={(e) => {
-                console.error(`[@component:CapturePreviewEditor] Failed to load image: ${(e.target as HTMLImageElement).src}`);
-                (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='; // 1x1 transparent image
+                const imgSrc = (e.target as HTMLImageElement).src;
+                console.error(`[@component:CapturePreviewEditor] Failed to load image: ${imgSrc}`);
+                
+                // Set a transparent fallback image
+                (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+                
+                // Add red border to indicate error
+                (e.target as HTMLImageElement).style.border = '1px solid red';
               }}
             />
             <Typography 
@@ -150,14 +182,16 @@ export function CapturePreviewEditor({
                 borderRadius: 1
               }}
             >
-              {screenshotPath.split('/').pop()?.split('?')[0]}
+              {typeof screenshotPath === 'string' ? 
+                screenshotPath.split('/').pop()?.split('?')[0] || 'Screenshot' : 
+                'Screenshot'}
             </Typography>
           </>
         )}
         {mode === 'video' && videoFramesPath && (
           <>
             <img 
-              src={getImageUrl(`${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`)}
+              src={videoFrameUrl}
               alt={`Frame ${currentValue}`}
               style={{
                 maxWidth: '100%',

@@ -76,6 +76,12 @@ export function ScreenDefinitionEditor({
   const [captureStats, setCaptureStats] = useState<CaptureStats | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   
+  // Auto-connect retry management
+  const [autoConnectAttempts, setAutoConnectAttempts] = useState(0);
+  const [lastAutoConnectAttempt, setLastAutoConnectAttempt] = useState(0);
+  const maxAutoConnectAttempts = 3;
+  const autoConnectCooldown = 10000; // 10 seconds
+  
   // SSH session ref (dedicated session, separate from remote)
   const sshSessionRef = useRef<any>(null);
 
@@ -84,7 +90,6 @@ export function ScreenDefinitionEditor({
 
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | null>(null);
-  const [screenshotTimestamp, setScreenshotTimestamp] = useState<number>(0); // Add timestamp for cache busting
   const [videoFramesPath, setVideoFramesPath] = useState<string>('/tmp/capture_1-600');
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [totalFrames, setTotalFrames] = useState<number>(0);
@@ -103,11 +108,20 @@ export function ScreenDefinitionEditor({
 
   // Auto-connect when config is available and autoConnect is true
   useEffect(() => {
-    if (avConfig && autoConnect && !isConnected && !isConnecting) {
-      console.log('[@component:ScreenDefinitionEditor] Auto-connecting to device for screen capture');
+    const now = Date.now();
+    const canRetry = autoConnectAttempts < maxAutoConnectAttempts;
+    const cooldownExpired = now - lastAutoConnectAttempt > autoConnectCooldown;
+    
+    if (avConfig && autoConnect && !isConnected && !isConnecting && canRetry && cooldownExpired) {
+      console.log(`[@component:ScreenDefinitionEditor] Auto-connecting to device for screen capture (attempt ${autoConnectAttempts + 1}/${maxAutoConnectAttempts})`);
+      setAutoConnectAttempts(prev => prev + 1);
+      setLastAutoConnectAttempt(now);
       handleConnect();
+    } else if (avConfig && autoConnect && !isConnected && !canRetry) {
+      console.log('[@component:ScreenDefinitionEditor] Max auto-connect attempts reached, stopping auto-connect');
+      setConnectionError(`Failed to connect after ${maxAutoConnectAttempts} attempts. Please try manual connection.`);
     }
-  }, [avConfig, autoConnect, isConnected, isConnecting]);
+  }, [avConfig, autoConnect, isConnected, isConnecting, autoConnectAttempts, lastAutoConnectAttempt]);
 
   // Add stream status monitoring
   useEffect(() => {
@@ -273,18 +287,19 @@ export function ScreenDefinitionEditor({
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+      }
+      
       const result = await response.json();
       if (result.success) {
-        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved:`, {
-          path: result.screenshot_path,
-          latest: result.latest_path
-        });
+        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved: ${result.screenshot_path}`);
         
-        // Store the screenshot path
-        setLastScreenshotPath(result.screenshot_path);
-        
-        // Update timestamp to force component to re-render with new image
-        setScreenshotTimestamp(Date.now());
+        // Only update if the path actually changed
+        if (result.screenshot_path !== lastScreenshotPath) {
+          setLastScreenshotPath(result.screenshot_path);
+        }
         
         // Switch to screenshot preview mode
         setPreviewMode('screenshot');
@@ -293,9 +308,6 @@ export function ScreenDefinitionEditor({
         if (!isExpanded) {
           setIsExpanded(true);
         }
-        
-        // Update capture status after taking screenshot
-        await updateCaptureStatus();
       } else {
         console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
       }
@@ -530,7 +542,7 @@ export function ScreenDefinitionEditor({
           {/* Preview editor without margin */}
           <CapturePreviewEditor
             mode={previewMode}
-            screenshotPath={`/tmp/screenshots/${deviceModel}.jpg?t=${screenshotTimestamp}`}
+            screenshotPath={lastScreenshotPath || undefined}
             videoFramesPath={videoFramesPath}
             currentFrame={currentFrame}
             totalFrames={totalFrames}
