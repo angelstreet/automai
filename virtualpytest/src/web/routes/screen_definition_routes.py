@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 import paramiko
 import subprocess
 import os
@@ -113,7 +113,7 @@ def take_screenshot():
         # Ensure directory exists
         ensure_dirs()
         
-        # Generate screenshot filename
+        # Generate fixed screenshot filename based on device model only (no timestamp)
         device_model = session_info['device_model']
         screenshot_filename = f"{device_model}.jpg"
         screenshot_path = f"/tmp/screenshots/{screenshot_filename}"
@@ -313,4 +313,76 @@ def get_status():
         return jsonify({
             'success': False,
             'error': f'Status check failed: {str(e)}'
-        }), 500 
+        }), 500
+
+@screen_definition_blueprint.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
+def serve_screenshot(filename):
+    """Serve a screenshot image by filename"""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        response = current_app.response_class()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
+        
+    try:
+        # Ensure the path is safe
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({'success': False, 'error': 'Invalid filename'}), 400
+        
+        # Path to the screenshots directory
+        screenshot_path = os.path.join('/tmp/screenshots', filename)
+        
+        if not os.path.exists(screenshot_path):
+            current_app.logger.error(f"Screenshot not found: {screenshot_path}")
+            return jsonify({'success': False, 'error': 'Screenshot not found'}), 404
+        
+        # Serve the file with CORS headers
+        response = send_file(screenshot_path, mimetype='image/jpeg')
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        current_app.logger.error(f"Error serving screenshot: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@screen_definition_blueprint.route('/images', methods=['GET', 'OPTIONS'])
+def serve_image_by_path():
+    """Serve an image from a specified path"""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        response = current_app.response_class()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
+        
+    try:
+        image_path = request.args.get('path')
+        
+        if not image_path:
+            return jsonify({'success': False, 'error': 'No path specified'}), 400
+        
+        # Basic security check - only allow files from /tmp
+        if not image_path.startswith('/tmp/'):
+            current_app.logger.error(f"Invalid image path: {image_path}")
+            return jsonify({'success': False, 'error': 'Invalid image path'}), 403
+        
+        if not os.path.exists(image_path):
+            current_app.logger.error(f"Image not found: {image_path}")
+            return jsonify({'success': False, 'error': 'Image not found'}), 404
+        
+        # Determine mimetype based on extension
+        mimetype = 'image/jpeg'  # Default
+        if image_path.lower().endswith('.png'):
+            mimetype = 'image/png'
+        
+        # Serve the file with CORS headers
+        response = send_file(image_path, mimetype=mimetype)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        current_app.logger.error(f"Error serving image: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500 

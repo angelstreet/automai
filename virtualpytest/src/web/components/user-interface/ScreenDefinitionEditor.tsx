@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -84,6 +84,7 @@ export function ScreenDefinitionEditor({
 
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | null>(null);
+  const [screenshotTimestamp, setScreenshotTimestamp] = useState<number>(0); // Add timestamp for cache busting
   const [videoFramesPath, setVideoFramesPath] = useState<string>('/tmp/capture_1-600');
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [totalFrames, setTotalFrames] = useState<number>(0);
@@ -274,9 +275,24 @@ export function ScreenDefinitionEditor({
 
       const result = await response.json();
       if (result.success) {
-        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved: ${result.screenshot_path}`);
+        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved:`, {
+          path: result.screenshot_path,
+          latest: result.latest_path
+        });
+        
+        // Store the screenshot path
         setLastScreenshotPath(result.screenshot_path);
+        
+        // Update timestamp to force component to re-render with new image
+        setScreenshotTimestamp(Date.now());
+        
+        // Switch to screenshot preview mode
         setPreviewMode('screenshot');
+        
+        // Expand the preview if not already expanded
+        if (!isExpanded) {
+          setIsExpanded(true);
+        }
         
         // Update capture status after taking screenshot
         await updateCaptureStatus();
@@ -438,26 +454,24 @@ export function ScreenDefinitionEditor({
       display: 'flex',
       zIndex: 1000,
     }}>
-      {/* Main editor component */}
-      <Box sx={{ 
-        width: isExpanded ? '250px' : '150px',
-        height: isExpanded ? '500px' : '250px',
-        bgcolor: '#000000',
-        border: '2px solid #000000',
-        borderRadius: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: 2,
-        transition: 'all 0.3s ease-in-out',
-        ...sx 
-      }}>
-        {isExpanded ? (
+      {isExpanded ? (
+        // Expanded view with grid layout
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: '250px 300px',
+          gridGap: 0,
+          height: '500px',
+          boxShadow: 2,
+          borderRadius: 1,
+          overflow: 'hidden'
+        }}>
+          {/* Main editor component */}
           <Box sx={{ 
-            width: '100%',
-            height: '100%',
+            bgcolor: '#000000',
+            border: '2px solid #000000',
+            borderRight: 'none',
             display: 'flex',
-            flexDirection: 'column',
-            bgcolor: '#000000'
+            flexDirection: 'column'
           }}>
             {/* Minimal header with just the essential buttons */}
             <Box sx={{ 
@@ -512,8 +526,37 @@ export function ScreenDefinitionEditor({
               />
             </Box>
           </Box>
-        ) : (
-          // Compact view code stays the same
+
+          {/* Preview editor without margin */}
+          <CapturePreviewEditor
+            mode={previewMode}
+            screenshotPath={`/tmp/screenshots/${deviceModel}.jpg?t=${screenshotTimestamp}`}
+            videoFramesPath={videoFramesPath}
+            currentFrame={currentFrame}
+            totalFrames={totalFrames}
+            onFrameChange={handleFrameChange}
+            sx={{
+              borderTopRightRadius: 1,
+              borderBottomRightRadius: 1,
+              borderLeft: 'none',
+              ml: 0
+            }}
+          />
+        </Box>
+      ) : (
+        // Compact view code
+        <Box sx={{ 
+          width: '150px',
+          height: '250px',
+          bgcolor: '#000000',
+          border: '2px solid #000000',
+          borderRadius: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: 2,
+          transition: 'all 0.3s ease-in-out',
+          ...sx 
+        }}>
           <Box sx={{ 
             position: 'relative',
             width: '100%',
@@ -554,19 +597,7 @@ export function ScreenDefinitionEditor({
               <Fullscreen sx={{ fontSize: 16 }} />
             </IconButton>
           </Box>
-        )}
-      </Box>
-
-      {/* Preview editor that shows up when expanded */}
-      {isExpanded && (
-        <CapturePreviewEditor
-          mode={previewMode}
-          screenshotPath={lastScreenshotPath || '/tmp/screenshots/latest.jpg'}
-          videoFramesPath={videoFramesPath}
-          currentFrame={currentFrame}
-          totalFrames={totalFrames}
-          onFrameChange={handleFrameChange}
-        />
+        </Box>
       )}
     </Box>
   );

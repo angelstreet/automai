@@ -79,16 +79,37 @@ export function CapturePreviewEditor({
     onFrameChange?.(newFrame);
   };
 
+  // Add a utility function to convert file paths to browser-accessible URLs
+  const getImageUrl = (path: string | undefined): string => {
+    if (!path) return '';
+    
+    // Debug the path
+    console.log(`[@component:CapturePreviewEditor] Processing image path: ${path}`);
+    
+    // Generate a cache-busting timestamp
+    const timestamp = new Date().getTime();
+    
+    // If it's already a URL, return it with cache-busting parameter
+    if (path.startsWith('http')) return `${path}?t=${timestamp}`;
+    
+    // For paths like /tmp/screenshots/filename.jpg, convert to API endpoint URL
+    if (path.includes('/tmp/screenshots/')) {
+      const filename = path.split('/').pop();
+      return `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+    }
+    
+    // Default case - pass to a general API endpoint that can serve files by path
+    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(path)}&t=${timestamp}`;
+  };
+
   return (
     <Box sx={{ 
-      width: '300px',
-      height: '500px',
       bgcolor: '#000000',
       border: '2px solid #000000',
-      borderRadius: 1,
+      borderRadius: 0, // No border radius when in grid
       display: 'flex',
       flexDirection: 'column',
-      ml: 2,
+      height: '100%', // Fill available height
       ...sx 
     }}>
       {/* Preview Area */}
@@ -102,26 +123,68 @@ export function CapturePreviewEditor({
         backgroundColor: '#000000'
       }}>
         {mode === 'screenshot' && screenshotPath && (
-          <img 
-            src={screenshotPath} 
-            alt="Screenshot"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            }}
-          />
+          <>
+            <img 
+              src={getImageUrl(screenshotPath)}
+              alt="Screenshot"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                console.error(`[@component:CapturePreviewEditor] Failed to load image: ${(e.target as HTMLImageElement).src}`);
+                (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='; // 1x1 transparent image
+              }}
+            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                position: 'absolute', 
+                bottom: 5, 
+                left: 5, 
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '0.7rem',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                px: 1,
+                borderRadius: 1
+              }}
+            >
+              {screenshotPath.split('/').pop()?.split('?')[0]}
+            </Typography>
+          </>
         )}
         {mode === 'video' && videoFramesPath && (
-          <img 
-            src={`${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`}
-            alt={`Frame ${currentValue}`}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            }}
-          />
+          <>
+            <img 
+              src={getImageUrl(`${videoFramesPath}/frame_${currentValue.toString().padStart(4, '0')}.jpg`)}
+              alt={`Frame ${currentValue}`}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                console.error(`[@component:CapturePreviewEditor] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
+                (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+              }}
+            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                position: 'absolute', 
+                bottom: 5, 
+                left: 5, 
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '0.7rem',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                px: 1,
+                borderRadius: 1
+              }}
+            >
+              Frame {currentValue + 1}
+            </Typography>
+          </>
         )}
       </Box>
 
