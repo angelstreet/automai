@@ -148,6 +148,10 @@ export function VideoCapture({
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: 'transparent',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none',
       ...sx 
     }}>
       {/* Minimal recording indicator header - only shown during capture */}
@@ -209,6 +213,7 @@ export function VideoCapture({
               objectFit: 'contain',
               backgroundColor: 'transparent'
             }}
+            draggable={false}
             onError={(e) => {
               console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
               // Keep the current image instead of showing an error placeholder
@@ -230,6 +235,7 @@ export function VideoCapture({
                 objectFit: 'contain',
                 backgroundColor: 'transparent'
               }}
+              draggable={false}
               onError={(e) => {
                 console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
                 (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

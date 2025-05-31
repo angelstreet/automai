@@ -122,6 +122,9 @@ export function ScreenDefinitionEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [savedFrameCount, setSavedFrameCount] = useState(0);
   
+  // Screenshot loading state
+  const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
+  
   // Poll for frame count during capture - lightweight polling just for frame count
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -373,6 +376,9 @@ export function ScreenDefinitionEditor({
     if (!isConnected) return;
     
     try {
+      // Set loading state
+      setIsScreenshotLoading(true);
+      
       // First stop the stream
       console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
       await stopStream();
@@ -419,6 +425,9 @@ export function ScreenDefinitionEditor({
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
+    } finally {
+      // Always clear loading state
+      setIsScreenshotLoading(false);
     }
   };
 
@@ -597,9 +606,31 @@ export function ScreenDefinitionEditor({
             {/* Stream viewer - always visible */}
             <StreamViewer
               streamUrl={streamUrl}
-              isStreamActive={streamStatus === 'running'}
+              isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
               {...commonProps}
             />
+            
+            {/* Screenshot loading overlay */}
+            {isScreenshotLoading && (
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                zIndex: 20
+              }}>
+                <CircularProgress size={40} sx={{ color: '#ffffff', mb: 2 }} />
+                <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                  Taking screenshot...
+                </Typography>
+              </Box>
+            )}
             
             {/* Recording/Saving overlay - single overlay that shows either recording or saving */}
             {(isCapturing || isSaving) && (
@@ -654,6 +685,10 @@ export function ScreenDefinitionEditor({
       left: 16,
       display: 'flex',
       zIndex: 1000,
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none',
       '& @keyframes blink': {
         '0%, 50%': { opacity: 1 },
         '51%, 100%': { opacity: 0.3 }
@@ -722,7 +757,7 @@ export function ScreenDefinitionEditor({
                     size="small" 
                     onClick={handleTakeScreenshot} 
                     sx={{ color: '#ffffff' }}
-                    disabled={!isConnected || isCapturing}
+                    disabled={!isConnected || isCapturing || isScreenshotLoading}
                   >
                     <PhotoCamera />
                   </IconButton>

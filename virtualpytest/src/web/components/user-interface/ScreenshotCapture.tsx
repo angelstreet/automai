@@ -90,6 +90,10 @@ export function ScreenshotCapture({
       justifyContent: 'center',
       backgroundColor: 'transparent',
       overflow: 'hidden',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none',
       ...sx 
     }}>
       {/* Screenshot display - only shown when not capturing */}
@@ -105,6 +109,7 @@ export function ScreenshotCapture({
             objectFit: 'contain',
             backgroundColor: 'transparent'
           }}
+          draggable={false}
           onError={(e) => {
             const imgSrc = (e.target as HTMLImageElement).src;
             console.error(`[@component:ScreenshotCapture] Failed to load image: ${imgSrc}`);

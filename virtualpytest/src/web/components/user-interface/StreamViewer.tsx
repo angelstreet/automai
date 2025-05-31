@@ -150,6 +150,10 @@ export function StreamViewer({
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none',
       ...sx 
     }}>
       {/* Video element - visible when stream is loaded */}
@@ -163,10 +167,14 @@ export function StreamViewer({
           height: '100%', 
           objectFit: 'cover',
           backgroundColor: '#000000',
-          display: streamLoaded ? 'block' : 'none'
+          display: streamLoaded ? 'block' : 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          pointerEvents: 'none'
         }}
         playsInline
         muted
+        draggable={false}
       />
       
       {/* Loading/Error display */}
