@@ -162,6 +162,13 @@ export function CompactAndroidMobile({
     }
   };
 
+  // Create a function to only hide the overlay without clearing elements
+  const handleClearOverlay = () => {
+    console.log('[@component:CompactAndroidMobile] Clearing overlay only, preserving element selection');
+    setShowOverlay(false);
+    // Note: We're NOT calling clearElements() here so the dropdown selection is preserved
+  };
+
   // Handle disconnect
   const handleDisconnect = async () => {
     try {
@@ -364,7 +371,7 @@ export function CompactAndroidMobile({
             setSelectedElement={setSelectedElement}
             handleGetApps={handleGetApps}
             handleDumpUIWithLoading={handleDumpUIWithLoading}
-            clearElements={clearElements}
+            clearElements={handleClearOverlay}
             handleRemoteCommand={handleRemoteCommand}
             handleOverlayElementClick={handleOverlayElementClick}
             onDisconnect={handleDisconnect}

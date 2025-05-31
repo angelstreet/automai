@@ -20,6 +20,7 @@ import {
   Videocam,
 } from '@mui/icons-material';
 import { StreamViewer } from './StreamViewer';
+import { CapturePreviewEditor } from './CapturePreviewEditor';
 
 interface ScreenDefinitionEditorProps {
   /** Device configuration with AV parameters */
@@ -52,8 +53,10 @@ interface ScreenDefinitionEditorProps {
 interface CaptureStats {
   is_connected: boolean;
   is_capturing: boolean;
-  capture_count: number;
+  frame_count: number;
   uptime_seconds: number;
+  capture_time_seconds?: number;
+  last_screenshot?: string;
 }
 
 export function ScreenDefinitionEditor({
@@ -79,6 +82,13 @@ export function ScreenDefinitionEditor({
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
 
+  // Additional state for capture management
+  const [lastScreenshotPath, setLastScreenshotPath] = useState<string | null>(null);
+  const [videoFramesPath, setVideoFramesPath] = useState<string>('/tmp/capture_1-600');
+  const [currentFrame, setCurrentFrame] = useState<number>(0);
+  const [totalFrames, setTotalFrames] = useState<number>(0);
+  const [previewMode, setPreviewMode] = useState<'screenshot' | 'video'>('screenshot');
+  
   // Add debugging logs
   useEffect(() => {
     if (avConfig) {
@@ -104,6 +114,48 @@ export function ScreenDefinitionEditor({
       console.log('[@component:ScreenDefinitionEditor] Attempting to load stream from:', avConfig.stream_url);
     }
   }, [isConnected, avConfig?.stream_url]);
+
+  // Manual status update function - no polling
+  const updateCaptureStatus = async () => {
+    if (sshSessionRef.current?.sessionId) {
+      try {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/get-capture-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            session_id: sshSessionRef.current.sessionId,
+          }),
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          setCaptureStats(result);
+          
+          // Update total frames when capturing
+          if (result.frame_count !== totalFrames) {
+            setTotalFrames(result.frame_count);
+          }
+          
+          // Update last screenshot path if available
+          if (result.last_screenshot && result.last_screenshot !== lastScreenshotPath) {
+            setLastScreenshotPath(result.last_screenshot);
+          }
+          
+          // Set capture mode based on what's active
+          if (result.is_capturing && previewMode !== 'video') {
+            setPreviewMode('video');
+          }
+        }
+        return result;
+      } catch (error) {
+        console.error('[@component:ScreenDefinitionEditor] Stats update error:', error);
+        return null;
+      }
+    }
+    return null;
+  };
 
   // Connect to device via dedicated SSH session
   const handleConnect = async () => {
@@ -145,9 +197,8 @@ export function ScreenDefinitionEditor({
         setIsConnected(true);
         console.log('[@component:ScreenDefinitionEditor] SSH connection established for screen capture');
         
-        // Start stats monitoring
-        startStatsMonitoring();
-        
+        // Get initial status after connection
+        await updateCaptureStatus();
       } else {
         setConnectionError(result.error || 'Failed to establish connection');
       }
@@ -204,7 +255,7 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Take screenshot
+  // Handle screenshot capture
   const handleTakeScreenshot = async () => {
     if (!sshSessionRef.current?.sessionId) return;
     
@@ -224,7 +275,11 @@ export function ScreenDefinitionEditor({
       const result = await response.json();
       if (result.success) {
         console.log(`[@component:ScreenDefinitionEditor] Screenshot saved: ${result.screenshot_path}`);
-        // TODO: Update UI to show screenshot was taken
+        setLastScreenshotPath(result.screenshot_path);
+        setPreviewMode('screenshot');
+        
+        // Update capture status after taking screenshot
+        await updateCaptureStatus();
       } else {
         console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
       }
@@ -233,7 +288,7 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Start video capture (10fps, rolling 50s = 500 frames max)
+  // Start video capture 
   const handleStartCapture = async () => {
     if (!sshSessionRef.current?.sessionId) return;
     
@@ -253,7 +308,13 @@ export function ScreenDefinitionEditor({
       const result = await response.json();
       if (result.success) {
         setIsCapturing(true);
+        setTotalFrames(result.frame_count);
+        setCurrentFrame(0);
+        setPreviewMode('video');
         console.log('[@component:ScreenDefinitionEditor] Video capture started');
+        
+        // Update capture status after starting capture
+        await updateCaptureStatus();
       } else {
         console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', result.error);
       }
@@ -282,7 +343,11 @@ export function ScreenDefinitionEditor({
       const result = await response.json();
       if (result.success) {
         setIsCapturing(false);
+        setTotalFrames(result.frame_count);
         console.log('[@component:ScreenDefinitionEditor] Video capture stopped');
+        
+        // Update capture status after stopping capture
+        await updateCaptureStatus();
       } else {
         console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', result.error);
       }
@@ -291,28 +356,30 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Monitor capture statistics
+  // Monitor capture statistics - removed polling, using simpler initial stats
   const startStatsMonitoring = () => {
-    const updateStats = () => {
-      if (sshSessionRef.current?.connected) {
-        // Simulate stats for now - will be replaced with real data from server
-        setCaptureStats(prev => ({
-          is_connected: true,
-          is_capturing: isCapturing,
-          capture_count: (prev?.capture_count || 0) + (isCapturing ? 10 : 0),
-          uptime_seconds: (prev?.uptime_seconds || 0) + 1,
-        }));
-        
-        setTimeout(updateStats, 1000);
-      }
-    };
-    
-    setTimeout(updateStats, 1000);
+    // Set initial stats without polling
+    setCaptureStats({
+      is_connected: true,
+      is_capturing: false,
+      frame_count: 0,
+      uptime_seconds: 0,
+    });
   };
 
   // Toggle expanded mode
   const handleToggleExpanded = () => {
     setIsExpanded(!isExpanded);
+    
+    // Update status when expanding
+    if (!isExpanded) {
+      updateCaptureStatus();
+    }
+  };
+
+  // Handle frame change in preview
+  const handleFrameChange = (frame: number) => {
+    setCurrentFrame(frame);
   };
 
   // If not connected, show connection status
@@ -368,121 +435,138 @@ export function ScreenDefinitionEditor({
       position: 'fixed',
       bottom: 16,
       left: 16,
-      width: isExpanded ? '250px' : '150px',
-      height: isExpanded ? '500px' : '250px',
-      bgcolor: '#000000',
-      border: '2px solid #000000',
-      borderRadius: 1,
       display: 'flex',
-      flexDirection: 'column',
-      boxShadow: 2,
       zIndex: 1000,
-      transition: 'all 0.3s ease-in-out',
-      ...sx 
     }}>
-      {isExpanded ? (
-        <Box sx={{ 
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#000000'
-        }}>
-          {/* Minimal header with just the essential buttons */}
+      {/* Main editor component */}
+      <Box sx={{ 
+        width: isExpanded ? '250px' : '150px',
+        height: isExpanded ? '500px' : '250px',
+        bgcolor: '#000000',
+        border: '2px solid #000000',
+        borderRadius: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: 2,
+        transition: 'all 0.3s ease-in-out',
+        ...sx 
+      }}>
+        {isExpanded ? (
           <Box sx={{ 
+            width: '100%',
+            height: '100%',
             display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 1,
-            p: 1,
-            borderBottom: '1px solid #333'
+            flexDirection: 'column',
+            bgcolor: '#000000'
           }}>
-            <Tooltip title="Take Screenshot">
-              <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
-                <PhotoCamera />
-              </IconButton>
-            </Tooltip>
-            
-            {!isCapturing ? (
-              <Tooltip title="Start Capture">
-                <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
-                  <VideoCall />
+            {/* Minimal header with just the essential buttons */}
+            <Box sx={{ 
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 1,
+              p: 1,
+              borderBottom: '1px solid #333'
+            }}>
+              <Tooltip title="Take Screenshot">
+                <IconButton size="small" onClick={handleTakeScreenshot} sx={{ color: '#ffffff' }}>
+                  <PhotoCamera />
                 </IconButton>
               </Tooltip>
-            ) : (
-              <Tooltip title="Stop Capture">
-                <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
-                  <StopCircle />
+              
+              {!isCapturing ? (
+                <Tooltip title="Start Capture">
+                  <IconButton size="small" onClick={handleStartCapture} sx={{ color: '#ffffff' }}>
+                    <VideoCall />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Tooltip title="Stop Capture">
+                  <IconButton size="small" onClick={handleStopCapture} sx={{ color: '#ffffff' }}>
+                    <StopCircle />
+                  </IconButton>
+                </Tooltip>
+              )}
+              
+              <Tooltip title="Minimize">
+                <IconButton 
+                  size="small" 
+                  onClick={handleToggleExpanded}
+                  sx={{ color: '#ffffff' }}
+                >
+                  <FullscreenExit />
                 </IconButton>
               </Tooltip>
-            )}
-            
-            <Tooltip title="Minimize">
-              <IconButton 
-                size="small" 
-                onClick={handleToggleExpanded}
-                sx={{ color: '#ffffff' }}
-              >
-                <FullscreenExit />
-              </IconButton>
-            </Tooltip>
-          </Box>
+            </Box>
 
-          {/* Stream taking all remaining space */}
+            {/* Stream taking all remaining space */}
+            <Box sx={{ 
+              flex: 1,
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <StreamViewer 
+                streamUrl={avConfig?.stream_url}
+                isConnected={isConnected}
+                width="100%"
+                height="100%"
+              />
+            </Box>
+          </Box>
+        ) : (
+          // Compact view code stays the same
           <Box sx={{ 
-            flex: 1,
             position: 'relative',
-            overflow: 'hidden'
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            bgcolor: '#000000',
+            display: 'flex'
           }}>
             <StreamViewer 
               streamUrl={avConfig?.stream_url}
               isConnected={isConnected}
               width="100%"
               height="100%"
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0
+              }}
             />
-          </Box>
-        </Box>
-      ) : (
-        // Compact view code stays the same
-        <Box sx={{ 
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden',
-          bgcolor: '#000000',
-          display: 'flex'
-        }}>
-          <StreamViewer 
-            streamUrl={avConfig?.stream_url}
-            isConnected={isConnected}
-            width="100%"
-            height="100%"
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0
-            }}
-          />
 
-          <IconButton 
-            size="small" 
-            onClick={handleToggleExpanded}
-            sx={{ 
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              color: '#ffffff',
-              zIndex: 1,
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.9)'
-              }
-            }}
-          >
-            <Fullscreen sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
+            <IconButton 
+              size="small" 
+              onClick={handleToggleExpanded}
+              sx={{ 
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: '#ffffff',
+                zIndex: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                }
+              }}
+            >
+              <Fullscreen sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Box>
+        )}
+      </Box>
+
+      {/* Preview editor that shows up when expanded */}
+      {isExpanded && (
+        <CapturePreviewEditor
+          mode={previewMode}
+          screenshotPath={lastScreenshotPath || '/tmp/screenshots/latest.jpg'}
+          videoFramesPath={videoFramesPath}
+          currentFrame={currentFrame}
+          totalFrames={totalFrames}
+          onFrameChange={handleFrameChange}
+        />
       )}
     </Box>
   );

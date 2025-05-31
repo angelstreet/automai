@@ -147,12 +147,37 @@ export function AndroidMobileCore({
         </Box>
 
         {/* Element selection dropdown */}
-        <FormControl fullWidth size="small">
-          <InputLabel>Select element to click...</InputLabel>
+        <FormControl 
+          fullWidth 
+          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              fontSize: '0.75rem',
+            },
+            '& .MuiInputLabel-root': {
+              fontSize: '0.75rem',
+              transform: 'translate(14px, 9px) scale(1)',
+              '&.MuiInputLabel-shrink': {
+                transform: 'translate(14px, -6px) scale(0.75)',
+              }
+            },
+            maxWidth: '100%',
+            mb: 1
+          }}
+        >
+          <InputLabel>Select element...</InputLabel>
           <Select
             value={selectedElement}
-            label="Select element to click..."
+            label="Select element..."
             disabled={!session.connected || androidElements.length === 0}
+            sx={{
+              '& .MuiSelect-select': {
+                py: 0.75,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }
+            }}
             onChange={(e) => {
               const elementId = parseInt(e.target.value as string);
               const element = androidElements.find(el => el.id === elementId);
@@ -161,23 +186,50 @@ export function AndroidMobileCore({
                 handleOverlayElementClick(element);
               }
             }}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: 200,
+                  width: 'auto',
+                  maxWidth: '100%'
+                }
+              }
+            }}
           >
             {androidElements.map((element) => {
               const getElementDisplayName = (el: AndroidElement) => {
+                let displayName = '';
                 if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-                  return `${el.contentDesc} (${el.className})`;
+                  displayName = `${el.contentDesc} (${el.className.split('.').pop()})`;
+                } else if (el.text && el.text !== '<no text>') {
+                  displayName = `"${el.text}" (${el.className.split('.').pop()})`;
+                } else if (el.resourceId && el.resourceId !== '<no resource-id>') {
+                  displayName = `${el.resourceId.split('/').pop()} (${el.className.split('.').pop()})`;
+                } else {
+                  displayName = `${el.className.split('.').pop()} #${el.id}`;
                 }
-                if (el.text && el.text !== '<no text>') {
-                  return `"${el.text}" (${el.className})`;
+                
+                // Limit display name length
+                if (displayName.length > 30) {
+                  return displayName.substring(0, 27) + '...';
                 }
-                if (el.resourceId && el.resourceId !== '<no resource-id>') {
-                  return `${el.resourceId} (${el.className})`;
-                }
-                return `${el.className} #${el.id}`;
+                return displayName;
               };
 
               return (
-                <MenuItem key={element.id} value={element.id}>
+                <MenuItem 
+                  key={element.id} 
+                  value={element.id}
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1,
+                    minHeight: 'auto',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
                   {getElementDisplayName(element)}
                 </MenuItem>
               );
