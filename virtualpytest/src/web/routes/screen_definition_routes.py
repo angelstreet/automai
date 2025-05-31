@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 import os
 import time
 import shutil
+import subprocess
+import signal
 from pathlib import Path
 
 # Create blueprint with consistent name - remove URL prefix as it's set in register_routes
@@ -16,14 +18,11 @@ os.makedirs(os.path.join(TMP_DIR, 'screenshots'), exist_ok=True)
 os.makedirs(os.path.join(TMP_DIR, 'captures'), exist_ok=True)
 os.makedirs(RESOURCES_DIR, exist_ok=True)
 
-# Global variable to track capture process
+# Global variables to track capture state
 capture_process = None
-capture_start_time = None
-
-# Add this at the top of the file with the other imports
-class CaptureApi:
-    """API object for sharing state between endpoints"""
-    captureInfo = None
+capture_pid = None
+remote_capture_dir = None
+stream_was_active_before_capture = False
 
 # Initialize dirs on startup
 def ensure_dirs():
@@ -168,128 +167,436 @@ def take_screenshot():
             'error': f'Screenshot request failed: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/screenshot_from_stream', methods=['POST'])
-def take_screenshot_from_stream():
-    """Take screenshot using FFmpeg from HLS stream to avoid device conflict."""
+@screen_definition_blueprint.route('/capture/start', methods=['POST'])
+def start_capture():
+    """Start video capture using FFmpeg from HDMI source with rolling buffer."""
+    global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
+    
     try:
         from app import android_mobile_controller
         
         data = request.get_json()
-        current_app.logger.info(f"[@api:screen-definition] Stream screenshot request: {data}")
+        current_app.logger.info(f"[@api:screen-definition] Capture start request: {data}")
         
-        # Check if we have an active remote controller (same as CompactAndroidMobile)
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
                 'success': False,
-                'error': 'No active remote connection. Please connect via android-mobile first.'
+                'error': 'No active remote connection'
             }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Check if capture is already running
+        if capture_process and capture_pid:
+            current_app.logger.info("[@api:screen-definition] Capture already running")
+            return jsonify({
+                'success': True,
+                'capture_pid': capture_pid,
+                'remote_capture_dir': remote_capture_dir,
+                'message': 'Capture already active'
+            })
         
         # Extract parameters
+        video_device = data.get('video_device', '/dev/video0')
         device_model = data.get('device_model', 'android_mobile')
+        max_duration = data.get('max_duration', 60)  # 60 second rolling buffer
+        fps = data.get('fps', 5)  # 5 fps
         
-        # Get device resolution from ADB for alignment calculations
+        # Get device resolution and orientation from ADB
         device_resolution = None
+        capture_resolution = "1920x1080"  # Default fallback
+        
         if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
             try:
                 android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
                 if android_device_id:
                     device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
                     current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
+                    
+                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+                        device_width = device_resolution['width']
+                        device_height = device_resolution['height']
+                        capture_resolution = f"{device_width}x{device_height}"
+                        current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
             except Exception as e:
                 current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
         
-        # Get the SSH connection from the global controller (same as CompactAndroidMobile)
-        ssh_connection = android_mobile_controller.ssh_connection
+        # Check if stream is running and stop it
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
+        stream_was_active_before_capture = "Active: active (running)" in stdout
         
-        if not ssh_connection or not ssh_connection.connected:
-            return jsonify({
-                'success': False,
-                'error': 'Controller SSH connection is not established'
-            }), 400
-        
-        # Get the stream URL for HLS capture - use same pattern as android-mobile system
-        # Default to localhost if host_ip is not available
-        host_ip = getattr(android_mobile_controller, 'host_ip', 'localhost')
-        stream_url = f"https://{host_ip}:444/stream/output.m3u8"
-        
-        current_app.logger.info(f"[@api:screen-definition] Using HLS stream capture method (Option 2)")
-        current_app.logger.info(f"[@api:screen-definition] Stream URL: {stream_url}")
-        
-        # FFmpeg command to capture a single frame from HLS stream instead of device
-        # Keep same filename pattern as original (no timestamp to respect existing logic)
-        local_filename = f"{device_model}.jpg"
-        remote_temp_path = f"/tmp/{local_filename}"
-        ffmpeg_cmd = f"ffmpeg -i {stream_url} -vframes 1 -y {remote_temp_path}"
-        
-        current_app.logger.info(f"[@api:screen-definition] SSH Command Details:")
-        current_app.logger.info(f"[@api:screen-definition]   Host: {host_ip}")
-        current_app.logger.info(f"[@api:screen-definition]   HLS Stream: {stream_url}")
-        current_app.logger.info(f"[@api:screen-definition]   Output Path: {remote_temp_path}")
-        current_app.logger.info(f"[@api:screen-definition]   Full Command: {ffmpeg_cmd}")
-        
-        # Execute command - returns tuple (success, stdout, stderr, exit_code)
-        current_app.logger.info(f"[@api:screen-definition] Executing SSH command...")
-        start_time = time.time()
-        success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
-        execution_time = time.time() - start_time
-        
-        current_app.logger.info(f"[@api:screen-definition] SSH command completed in {execution_time:.2f}s")
-        current_app.logger.info(f"[@api:screen-definition]   Success: {success}")
-        current_app.logger.info(f"[@api:screen-definition]   Exit Code: {exit_code}")
-        if stdout.strip():
-            current_app.logger.info(f"[@api:screen-definition]   Stdout: {stdout.strip()}")
-        if stderr.strip():
-            current_app.logger.info(f"[@api:screen-definition]   Stderr: {stderr.strip()}")
-        
-        if not success or exit_code != 0:
-            error_msg = stderr.strip() if stderr else "FFmpeg command failed"
-            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {error_msg}")
-            return jsonify({
-                'success': False,
-                'error': f'FFmpeg capture failed: {error_msg}'
-            }), 500
-        
-        current_app.logger.info(f"[@api:screen-definition] FFmpeg capture successful: {remote_temp_path}")
-        
-        # Download the screenshot to local server
-        local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
-        
-        # Use SFTP to download the file (same approach as before)
-        if hasattr(ssh_connection, 'download_file'):
-            ssh_connection.download_file(remote_temp_path, local_screenshot_path)
-        else:
-            # Fallback: use cat command to get file content
-            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_temp_path} | base64")
+        if stream_was_active_before_capture:
+            current_app.logger.info("[@api:screen-definition] Stopping stream for capture...")
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
             
             if not success or exit_code != 0:
-                current_app.logger.error(f"[@api:screen-definition] Download failed: {stderr}")
                 return jsonify({
                     'success': False,
-                    'error': f'Failed to download screenshot: {stderr}'
+                    'error': f'Failed to stop stream service: {stderr}'
                 }), 500
+        
+        # Create remote captures directory for rolling buffer
+        remote_capture_dir = "/tmp/captures"
+        ssh_connection.execute_command(f"mkdir -p {remote_capture_dir}")
+        
+        # Clean any existing FFmpeg processes first
+        current_app.logger.info("[@api:screen-definition] Cleaning existing FFmpeg processes...")
+        ssh_connection.execute_command("pkill -f 'ffmpeg.*v4l2' || true")
+        time.sleep(1)  # Give time for processes to die
+        
+        # Clean existing capture files to start fresh
+        ssh_connection.execute_command(f"rm -f {remote_capture_dir}/capture_*.jpg")
+        
+        # Combined FFmpeg command: Stream HLS + Rolling buffer capture
+        # This replaces both the stream service and provides rolling buffer capture
+        ffmpeg_cmd = (
+            f"/usr/bin/ffmpeg "
+            f"-f v4l2 -s 640x360 -r 12 -i {video_device} "
+            f"-c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an -f hls "
+            f"-hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
+            f"/var/www/html/stream/output.m3u8 "
+            f"-vf \"fps=5,scale={capture_resolution}\" -q:v 2 -start_number 1 "
+            f"-f image2 -y {remote_capture_dir}/capture_%d.jpg"
+        )
+        
+        current_app.logger.info(f"[@api:screen-definition] Starting capture with command: {ffmpeg_cmd}")
+        
+        # Start FFmpeg capture process on remote host
+        # Don't suppress errors - capture them for debugging
+        start_cmd = f"nohup {ffmpeg_cmd} > {remote_capture_dir}/ffmpeg.log 2>&1 & echo $!"
+        
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(start_cmd)
+        
+        if not success or exit_code != 0:
+            error_msg = stderr.strip() if stderr else "Failed to start capture"
+            current_app.logger.error(f"[@api:screen-definition] Capture start failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to start capture: {error_msg}'
+            }), 500
+        
+        # Get the process ID
+        capture_pid = stdout.strip()
+        if not capture_pid:
+            current_app.logger.error("[@api:screen-definition] No PID returned from FFmpeg start")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to get capture process ID'
+            }), 500
+        
+        current_app.logger.info(f"[@api:screen-definition] Capture started with PID: {capture_pid}")
+        
+        # Wait a moment and verify the process is actually running and creating files
+        time.sleep(2)
+        
+        # Check if process is still running
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ps -p {capture_pid} > /dev/null 2>&1 && echo 'running' || echo 'stopped'")
+        if not success or 'stopped' in stdout:
+            # Get FFmpeg logs for debugging
+            success, log_output, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_capture_dir}/ffmpeg.log")
+            log_content = log_output if success else "Could not read FFmpeg logs"
             
-            import base64
-            with open(local_screenshot_path, 'wb') as f:
-                f.write(base64.b64decode(file_content))
+            current_app.logger.error(f"[@api:screen-definition] FFmpeg process died immediately. Logs: {log_content}")
+            return jsonify({
+                'success': False,
+                'error': f'FFmpeg process failed to start. Check video device access. Logs: {log_content}'
+            }), 500
         
-        current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
+        # Check if files are being created
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls -la {remote_capture_dir}/")
+        if success:
+            current_app.logger.info(f"[@api:screen-definition] Remote capture directory contents: {stdout}")
         
-        # Clean up remote file
-        ssh_connection.execute_command(f"rm -f {remote_temp_path}")
+        # Set up local capture directory (no "latest" folder)
+        local_capture_dir = os.path.join(TMP_DIR, 'captures')
+        os.makedirs(local_capture_dir, exist_ok=True)
         
         return jsonify({
             'success': True,
-            'screenshot_path': local_filename,
+            'capture_pid': capture_pid,
+            'remote_capture_dir': remote_capture_dir,
             'device_resolution': device_resolution,
-            'stream_resolution': '640x360',  # Hardcoded stream resolution
-            'message': f'Screenshot captured successfully via HLS stream from {stream_url}'
+            'capture_resolution': capture_resolution,
+            'stream_was_active': stream_was_active_before_capture,
+            'max_duration': max_duration,
+            'fps': fps,
+            'message': f'Combined streaming + rolling buffer capture started (5fps, 60 seconds max)'
         })
         
     except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Stream screenshot route error: {e}")
+        current_app.logger.error(f"[@api:screen-definition] Capture start error: {e}")
         return jsonify({
             'success': False,
-            'error': f'Screenshot request failed: {str(e)}'
+            'error': f'Capture start failed: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/stop', methods=['POST'])
+def stop_capture():
+    """Stop video capture and download captured frames."""
+    global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
+    
+    try:
+        from app import android_mobile_controller
+        
+        data = request.get_json() or {}
+        current_app.logger.info(f"[@api:screen-definition] Capture stop request: {data}")
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Check if capture is running
+        if not capture_pid:
+            current_app.logger.info("[@api:screen-definition] No active capture to stop")
+            return jsonify({
+                'success': True,
+                'message': 'No active capture session'
+            })
+        
+        # Stop the FFmpeg process
+        current_app.logger.info(f"[@api:screen-definition] Stopping capture PID: {capture_pid}")
+        
+        # Kill the capture process gracefully first, then force kill
+        if capture_pid.isdigit():
+            ssh_connection.execute_command(f"kill {capture_pid}")
+            time.sleep(2)  # Wait for graceful shutdown
+            ssh_connection.execute_command(f"kill -9 {capture_pid} 2>/dev/null || true")
+        else:
+            # Fallback: kill all ffmpeg processes
+            ssh_connection.execute_command("pkill -f 'ffmpeg.*v4l2' || true")
+        
+        frames_downloaded = 0
+        local_capture_dir = os.path.join(TMP_DIR, 'captures')
+        
+        # Download ALL rolling buffer frames from /tmp/captures/
+        if remote_capture_dir:
+            try:
+                # List all capture files in remote directory
+                success, file_list, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/capture_*.jpg 2>/dev/null || echo 'no files'")
+                
+                if success and 'no files' not in file_list.strip():
+                    capture_files = [f.strip() for f in file_list.strip().split('\n') if f.strip().endswith('.jpg')]
+                    current_app.logger.info(f"[@api:screen-definition] Found {len(capture_files)} capture files to download")
+                    
+                    # Download each capture file
+                    for remote_file in capture_files:
+                        try:
+                            filename = os.path.basename(remote_file)
+                            local_file_path = os.path.join(local_capture_dir, filename)
+                            
+                            # Download using base64 encoding
+                            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_file} | base64")
+                            
+                            if success and file_content.strip():
+                                import base64
+                                with open(local_file_path, 'wb') as f:
+                                    f.write(base64.b64decode(file_content.strip()))
+                                
+                                # Verify file was written and has content
+                                if os.path.exists(local_file_path) and os.path.getsize(local_file_path) > 0:
+                                    frames_downloaded += 1
+                                    current_app.logger.debug(f"[@api:screen-definition] Downloaded {filename} ({os.path.getsize(local_file_path)} bytes)")
+                                else:
+                                    current_app.logger.warning(f"[@api:screen-definition] Failed to download {filename}")
+                            else:
+                                current_app.logger.warning(f"[@api:screen-definition] Failed to read {remote_file}")
+                                
+                        except Exception as e:
+                            current_app.logger.error(f"[@api:screen-definition] Error downloading {remote_file}: {e}")
+                    
+                    current_app.logger.info(f"[@api:screen-definition] Successfully downloaded {frames_downloaded} frames")
+                else:
+                    current_app.logger.info(f"[@api:screen-definition] No capture files found in {remote_capture_dir}")
+                
+                # Clean up remote capture files only (keep directory)
+                ssh_connection.execute_command(f"rm -f {remote_capture_dir}/capture_*.jpg")
+                current_app.logger.info(f"[@api:screen-definition] Cleaned up remote capture files")
+                
+            except Exception as e:
+                current_app.logger.error(f"[@api:screen-definition] Error downloading frames: {e}")
+        
+        # Calculate capture duration (estimate)
+        capture_duration = 0  # We'll calculate this differently later
+        
+        # Restart stream if it was active before capture
+        if stream_was_active_before_capture:
+            current_app.logger.info("[@api:screen-definition] Restarting stream service...")
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl start stream")
+            if not success or exit_code != 0:
+                current_app.logger.warning(f"[@api:screen-definition] Failed to restart stream: {stderr}")
+        
+        # Reset global variables
+        capture_process = None
+        capture_pid = None
+        remote_capture_dir = None
+        stream_was_active_before_capture = False
+        
+        return jsonify({
+            'success': True,
+            'frames_captured': frames_downloaded,
+            'frames_downloaded': frames_downloaded,
+            'local_capture_dir': local_capture_dir,
+            'capture_duration': capture_duration,
+            'message': f'Capture stopped successfully. Downloaded {frames_downloaded} frames'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Capture stop error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Capture stop failed: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/status', methods=['GET'])
+def get_capture_status():
+    """Get the current status of video capture."""
+    global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
+    
+    try:
+        from app import android_mobile_controller
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        is_capturing = False
+        current_frame = 0
+        
+        # Check if capture process is still running
+        if capture_pid and capture_pid.isdigit():
+            success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ps -p {capture_pid} > /dev/null 2>&1 && echo 'running' || echo 'stopped'")
+            is_capturing = success and 'running' in stdout
+            
+            # Get current frame count if capturing
+            if is_capturing:
+                success, frame_count, stderr, exit_code = ssh_connection.execute_command(f"ls /tmp/captures/capture_*.jpg 2>/dev/null | wc -l || echo 0")
+                if success and frame_count.strip().isdigit():
+                    current_frame = int(frame_count.strip())
+        elif capture_pid:
+            # For non-numeric PIDs, check for ffmpeg processes
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("pgrep -f 'ffmpeg.*v4l2' > /dev/null 2>&1 && echo 'running' || echo 'stopped'")
+            is_capturing = success and 'running' in stdout
+        
+        return jsonify({
+            'success': True,
+            'is_capturing': is_capturing,
+            'duration': current_frame / 5.0 if current_frame > 0 else 0,  # Estimate duration based on 5fps
+            'max_duration': 60,  # Default rolling buffer duration
+            'fps': 5,  # Default fps
+            'current_frame': current_frame,
+            'capture_pid': capture_pid,
+            'stream_was_active': stream_was_active_before_capture
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Capture status error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get capture status: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/latest-frame', methods=['GET'])
+def get_latest_frame():
+    """Get the path to the latest captured frame."""
+    global remote_capture_dir
+    
+    try:
+        from app import android_mobile_controller
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Check if capture is currently active by checking if FFmpeg process is running
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("pgrep -f 'ffmpeg.*v4l2' > /dev/null 2>&1 && echo 'running' || echo 'stopped'")
+        if not success or 'stopped' in stdout:
+            return jsonify({
+                'success': False,
+                'error': 'No active capture session'
+            }), 400
+        
+        # Get the most recent frame from rolling buffer
+        # Find the highest numbered capture file
+        success, file_list, stderr, exit_code = ssh_connection.execute_command(f"ls /tmp/captures/capture_*.jpg 2>/dev/null | sort -V | tail -1 || echo 'no files'")
+        
+        if not success or 'no files' in file_list.strip():
+            return jsonify({
+                'success': False,
+                'error': 'No capture frames available'
+            }), 404
+        
+        remote_latest_path = file_list.strip()
+        filename = os.path.basename(remote_latest_path)
+        local_latest_path = os.path.join(TMP_DIR, 'captures', filename)
+        
+        # Check if remote file exists first
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"test -f {remote_latest_path} && echo 'exists' || echo 'not found'")
+        
+        if not success or 'not found' in stdout:
+            current_app.logger.warning(f"[@api:screen-definition] Latest frame not found at {remote_latest_path}")
+            return jsonify({
+                'success': False,
+                'error': 'Latest frame not available on remote server'
+            }), 404
+        
+        # Download the latest frame
+        try:
+            if hasattr(ssh_connection, 'download_file'):
+                ssh_connection.download_file(remote_latest_path, local_latest_path)
+            else:
+                # Fallback: use cat command
+                success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_latest_path} | base64")
+                if success and file_content.strip():
+                    import base64
+                    with open(local_latest_path, 'wb') as f:
+                        f.write(base64.b64decode(file_content.strip()))
+                else:
+                    current_app.logger.error(f"[@api:screen-definition] Failed to download latest frame: {stderr}")
+                    return jsonify({
+                        'success': False,
+                        'error': 'Failed to download latest frame from remote server'
+                    }), 500
+            
+            # Verify file was downloaded and has content
+            if not os.path.exists(local_latest_path) or os.path.getsize(local_latest_path) == 0:
+                current_app.logger.error(f"[@api:screen-definition] Downloaded file is empty or doesn't exist: {local_latest_path}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Downloaded frame is empty'
+                }), 500
+            
+            current_app.logger.debug(f"[@api:screen-definition] Successfully downloaded latest frame: {local_latest_path} ({os.path.getsize(local_latest_path)} bytes)")
+            
+            return jsonify({
+                'success': True,
+                'frame_path': local_latest_path,
+                'frame_number': 0  # Could be enhanced to track actual frame numbers
+            })
+            
+        except Exception as e:
+            current_app.logger.error(f"[@api:screen-definition] Failed to get latest frame: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to get latest frame: {str(e)}'
+            }), 500
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Latest frame error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get latest frame: {str(e)}'
         }), 500
 
 @screen_definition_blueprint.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
@@ -360,23 +667,55 @@ def serve_image_by_path():
         if not image_path:
             return jsonify({'success': False, 'error': 'No path specified'}), 400
         
-        # Basic security check - only allow files from /tmp
-        if not image_path.startswith('/tmp/'):
+        # Security check - allow both /tmp/ paths (remote) and local TMP_DIR paths
+        local_tmp_path = os.path.abspath(TMP_DIR)
+        abs_image_path = os.path.abspath(image_path)
+        
+        # Allow if path starts with /tmp/ (remote) or is within our local TMP_DIR
+        if not (image_path.startswith('/tmp/') or abs_image_path.startswith(local_tmp_path)):
             current_app.logger.error(f"Invalid image path: {image_path}")
             return jsonify({'success': False, 'error': 'Invalid image path'}), 403
         
-        if not os.path.exists(image_path):
-            current_app.logger.error(f"Image not found: {image_path}")
+        # If it's a local absolute path, use it directly
+        # If it's a /tmp/ path, it might be a local file in our TMP_DIR
+        if abs_image_path.startswith(local_tmp_path):
+            # It's already a local path within our TMP_DIR
+            final_path = image_path
+        elif image_path.startswith('/tmp/'):
+            # It's a /tmp/ path, but check if it exists locally first
+            potential_local_path = os.path.join(TMP_DIR, os.path.relpath(image_path, '/tmp'))
+            if os.path.exists(potential_local_path):
+                final_path = potential_local_path
+            else:
+                # File doesn't exist locally
+                current_app.logger.error(f"Image not found locally: {potential_local_path}")
+                return jsonify({'success': False, 'error': 'Image not found'}), 404
+        else:
+            final_path = image_path
+        
+        if not os.path.exists(final_path):
+            current_app.logger.error(f"Image not found: {final_path}")
             return jsonify({'success': False, 'error': 'Image not found'}), 404
+        
+        # Check file size
+        file_size = os.path.getsize(final_path)
+        if file_size == 0:
+            current_app.logger.error(f"Image file is empty: {final_path}")
+            return jsonify({'success': False, 'error': 'Image file is empty'}), 500
+        
+        current_app.logger.debug(f"Serving image: {final_path} ({file_size} bytes)")
         
         # Determine mimetype based on extension
         mimetype = 'image/jpeg'  # Default
-        if image_path.lower().endswith('.png'):
+        if final_path.lower().endswith('.png'):
             mimetype = 'image/png'
         
         # Serve the file with CORS headers
-        response = send_file(image_path, mimetype=mimetype)
+        response = send_file(final_path, mimetype=mimetype)
         response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
+        response.headers.add('Pragma', 'no-cache')
+        response.headers.add('Expires', '0')
         return response
         
     except Exception as e:
@@ -497,478 +836,4 @@ def restart_stream():
         return jsonify({
             'success': False,
             'error': f'Failed to restart stream: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/capture/start', methods=['POST'])
-def start_capture():
-    """Start continuous capture at 10fps with rolling 30s buffer (max 300 frames)."""
-    try:
-        from app import android_mobile_controller
-        import subprocess
-        import signal
-        
-        global capture_process, capture_start_time
-        
-        data = request.get_json()
-        current_app.logger.info(f"[@api:screen-definition] Start capture request: {data}")
-        
-        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
-            return jsonify({
-                'success': False,
-                'error': 'SSH session not available'
-            }), 400
-            
-        ssh_connection = android_mobile_controller.ssh_connection
-        
-        # Extract parameters
-        video_device = data.get('video_device', '/dev/video0')
-        device_model = data.get('device_model', 'android_mobile')
-        
-        # Clean local captures folder to remove old sessions
-        local_captures_dir = os.path.join(TMP_DIR, 'captures')
-        current_app.logger.info(f"[@api:screen-definition] Cleaning local captures folder: {local_captures_dir}")
-        
-        try:
-            if os.path.exists(local_captures_dir):
-                # Remove all existing capture directories
-                for item in os.listdir(local_captures_dir):
-                    item_path = os.path.join(local_captures_dir, item)
-                    if os.path.isdir(item_path) and item.startswith(device_model):
-                        shutil.rmtree(item_path)
-                        current_app.logger.info(f"[@api:screen-definition] Removed old capture directory: {item}")
-                current_app.logger.info(f"[@api:screen-definition] Local captures folder cleaned successfully")
-            else:
-                # Create the captures directory if it doesn't exist
-                os.makedirs(local_captures_dir, exist_ok=True)
-                current_app.logger.info(f"[@api:screen-definition] Created captures directory: {local_captures_dir}")
-                
-            # Create the latest directory if it doesn't exist
-            latest_dir = os.path.join(TMP_DIR, 'captures', 'latest')
-            os.makedirs(latest_dir, exist_ok=True)
-            current_app.logger.info(f"[@api:screen-definition] Created latest directory: {latest_dir}")
-        except Exception as e:
-            current_app.logger.warning(f"[@api:screen-definition] Failed to clean local captures folder: {e}")
-        
-        # Stop any existing capture process
-        if capture_process and capture_process.poll() is None:
-            current_app.logger.info("[@api:screen-definition] Stopping existing capture process...")
-            capture_process.terminate()
-            capture_process.wait()
-        
-        # Get device resolution for capture (same logic as screenshot)
-        device_resolution = None
-        capture_resolution = "1920x1080"  # Default fallback
-        
-        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
-            try:
-                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
-                if android_device_id:
-                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
-                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
-                    
-                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-                        device_width = device_resolution['width']
-                        device_height = device_resolution['height']
-                        capture_resolution = f"{device_width}x{device_height}"
-                        current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
-            except Exception as e:
-                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
-        
-        # Check if stream is already stopped - EXACT COPY FROM SCREENSHOT ROUTE
-        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
-        stream_was_active = "Active: active (running)" in stdout
-        
-        if stream_was_active:
-            # Stop the stream if it's running
-            current_app.logger.info("[@api:screen-definition] Stopping stream for capture...")
-            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
-            
-            if not success or exit_code != 0:
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to stop stream service: {stderr}'
-                }), 500
-        
-        # Create capture directory on remote host
-        remote_capture_dir = f"/tmp/capture_{int(time.time())}"
-        ssh_connection.execute_command(f"mkdir -p {remote_capture_dir}")
-        
-        # Also create fixed latest frame directory
-        ssh_connection.execute_command("mkdir -p /tmp/capture_latest")
-        
-        # Clean any existing frame files in the directory (important for rolling buffer)
-        current_app.logger.info(f"[@api:screen-definition] Cleaning capture directory: {remote_capture_dir}")
-        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"rm -f {remote_capture_dir}/frame_*.jpg")
-        
-        if not success:
-            current_app.logger.warning(f"[@api:screen-definition] Failed to clean capture directory: {stderr}")
-        else:
-            current_app.logger.info(f"[@api:screen-definition] Capture directory cleaned successfully")
-        
-        # FFmpeg command for rolling buffer capture at 10fps (300 frames max = 30s)
-        # Modified to save the latest frame to a fixed location for easy access
-        ffmpeg_cmd = (f"ffmpeg -f v4l2 -video_size {capture_resolution} -i {video_device} "
-                     f"-vf fps=10 -q:v 2 "
-                     f"-f image2 -y {remote_capture_dir}/frame_%d.jpg "
-                     f"-f image2 -update 1 -y /tmp/capture_latest/capture_latest.jpg")
-        
-        current_app.logger.info(f"[@api:screen-definition] Starting rolling capture with command: {ffmpeg_cmd}")
-        current_app.logger.info(f"[@api:screen-definition] Rolling buffer: 300 frames max (30s at 10fps)")
-        current_app.logger.info(f"[@api:screen-definition] Latest frame will be updated at: /tmp/capture_latest/capture_latest.jpg")
-        
-        # Start FFmpeg capture process on remote host in background
-        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"nohup {ffmpeg_cmd} > /dev/null 2>&1 & echo $!")
-        
-        if not success or exit_code != 0:
-            error_msg = stderr.strip() if stderr else "Failed to start capture"
-            current_app.logger.error(f"[@api:screen-definition] Capture start failed: {error_msg}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to start capture: {error_msg}'
-            }), 500
-        
-        # Store the process ID for later termination
-        capture_pid = stdout.strip()
-        capture_start_time = time.time()
-        
-        # Store capture info in CaptureApi class for other endpoints to access
-        CaptureApi.captureInfo = {
-            'capture_pid': capture_pid,
-            'remote_capture_dir': remote_capture_dir,
-            'device_model': device_model,
-            'start_time': capture_start_time,
-            'current_frame': 0
-        }
-        
-        # Create the constant file for the latest frame
-        latest_path = os.path.join(TMP_DIR, 'captures', 'latest', 'capture_latest.jpg')
-        # Create an empty file if it doesn't exist
-        if not os.path.exists(latest_path):
-            with open(latest_path, 'wb') as f:
-                f.write(b'')
-            
-        current_app.logger.info(f"[@api:screen-definition] Capture started with PID: {capture_pid}")
-        
-        return jsonify({
-            'success': True,
-            'capture_pid': capture_pid,
-            'remote_capture_dir': remote_capture_dir,
-            'device_resolution': device_resolution,
-            'capture_resolution': capture_resolution,
-            'stream_was_active': stream_was_active,
-            'message': f'Capture started at 10fps with resolution {capture_resolution}'
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Start capture error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Start capture failed: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/capture/stop', methods=['POST'])
-def stop_capture():
-    """Stop capture and pull frames to local capture folder."""
-    try:
-        from app import android_mobile_controller
-        
-        global capture_process, capture_start_time
-        
-        data = request.get_json()
-        current_app.logger.info(f"[@api:screen-definition] Stop capture request: {data}")
-        
-        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
-            return jsonify({
-                'success': False,
-                'error': 'SSH session not available'
-            }), 400
-            
-        ssh_connection = android_mobile_controller.ssh_connection
-        
-        # Get capture info from request
-        capture_pid = data.get('capture_pid')
-        remote_capture_dir = data.get('remote_capture_dir')
-        device_model = data.get('device_model', 'android_mobile')
-        
-        if not capture_pid or not remote_capture_dir:
-            return jsonify({
-                'success': False,
-                'error': 'Missing capture_pid or remote_capture_dir'
-            }), 400
-        
-        # Stop the FFmpeg capture process
-        current_app.logger.info(f"[@api:screen-definition] Stopping capture process PID: {capture_pid}")
-        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"kill -TERM {capture_pid}")
-        
-        # Wait a moment for graceful shutdown
-        time.sleep(2)
-        
-        # Force kill if still running
-        ssh_connection.execute_command(f"kill -KILL {capture_pid} 2>/dev/null")
-        
-        # Count captured frames - check which frame files actually exist
-        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/frame_*.jpg 2>/dev/null | wc -l")
-        frame_count = int(stdout.strip()) if success and stdout.strip().isdigit() else 0
-        
-        current_app.logger.info(f"[@api:screen-definition] Found {frame_count} captured frames in rolling buffer")
-        
-        # Create local capture directory with timestamp
-        capture_timestamp = int(time.time())
-        local_capture_dir = os.path.join(TMP_DIR, 'captures', f'{device_model}_{capture_timestamp}')
-        os.makedirs(local_capture_dir, exist_ok=True)
-        
-        # Pull all existing frames to local directory
-        downloaded_count = 0
-        if frame_count > 0:
-            current_app.logger.info(f"[@api:screen-definition] Downloading {frame_count} frames to {local_capture_dir}")
-            
-            # Get list of actual frame files (they might not be sequential due to rolling buffer)
-            success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/frame_*.jpg 2>/dev/null | sort -V")
-            
-            if success and stdout.strip():
-                frame_files = stdout.strip().split('\n')
-                
-                for i, remote_frame_path in enumerate(frame_files):
-                    if remote_frame_path.strip():
-                        # Extract frame number from filename for local naming
-                        frame_filename = os.path.basename(remote_frame_path.strip())
-                        # Rename to sequential numbering locally: frame_0001.jpg, frame_0002.jpg, etc.
-                        local_frame_filename = f"frame_{i+1:04d}.jpg"
-                        local_frame_path = os.path.join(local_capture_dir, local_frame_filename)
-                        
-                        # Download using base64 encoding (fallback method)
-                        success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_frame_path.strip()} | base64")
-                        
-                        if success and file_content.strip():
-                            try:
-                                import base64
-                                with open(local_frame_path, 'wb') as f:
-                                    f.write(base64.b64decode(file_content.strip()))
-                                downloaded_count += 1
-                                current_app.logger.debug(f"[@api:screen-definition] Downloaded {frame_filename} -> {local_frame_filename}")
-                            except Exception as e:
-                                current_app.logger.warning(f"[@api:screen-definition] Failed to decode frame {frame_filename}: {e}")
-                        else:
-                            current_app.logger.warning(f"[@api:screen-definition] Failed to download frame {frame_filename}")
-                
-                current_app.logger.info(f"[@api:screen-definition] Downloaded {downloaded_count}/{frame_count} frames")
-            else:
-                current_app.logger.warning(f"[@api:screen-definition] Could not list frame files in {remote_capture_dir}")
-        
-        # Clean up remote capture directory
-        ssh_connection.execute_command(f"rm -rf {remote_capture_dir}")
-        
-        # Calculate capture duration
-        capture_duration = time.time() - capture_start_time if capture_start_time else 0
-        
-        # Reset capture time and clear CaptureApi state
-        capture_start_time = None
-        CaptureApi.captureInfo = None
-        
-        return jsonify({
-            'success': True,
-            'frames_captured': frame_count,
-            'frames_downloaded': downloaded_count,
-            'local_capture_dir': local_capture_dir,
-            'capture_duration': round(capture_duration, 2),
-            'message': f'Capture stopped. Downloaded {downloaded_count} frames to {local_capture_dir}'
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Stop capture error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Stop capture failed: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/capture/status', methods=['GET'])
-def get_capture_status():
-    """Get current capture status."""
-    try:
-        from app import android_mobile_controller
-        
-        global capture_start_time
-        
-        # Check if we have capture info stored in CaptureApi
-        is_capturing = CaptureApi.captureInfo is not None
-        
-        # Calculate duration based on stored start time
-        if is_capturing and 'start_time' in CaptureApi.captureInfo:
-            duration = time.time() - CaptureApi.captureInfo['start_time']
-        else:
-            duration = 0
-            
-        # Add SSH connection status for client troubleshooting
-        ssh_available = (hasattr(android_mobile_controller, 'ssh_connection') 
-                         and android_mobile_controller.ssh_connection is not None)
-        
-        return jsonify({
-            'success': True,
-            'is_capturing': is_capturing,
-            'duration': round(duration, 2) if is_capturing else 0,
-            'max_duration': 30.0,  # 30 second rolling buffer
-            'fps': 10,
-            'ssh_available': ssh_available,
-            'current_frame': CaptureApi.captureInfo.get('current_frame', 0) if is_capturing else 0
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Capture status error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Capture status failed: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/capture/latest-frame', methods=['GET'])
-def get_latest_frame():
-    """Get the latest captured frame from the active capture session."""
-    try:
-        from app import android_mobile_controller
-        
-        global capture_start_time
-        
-        # Fixed local path for latest frame
-        latest_frame_path = os.path.join(TMP_DIR, 'captures', 'latest', 'capture_latest.jpg')
-        
-        # Check if we have an active capture session
-        if not CaptureApi.captureInfo:
-            # If we don't have an active session but have a previous frame, return it
-            if os.path.exists(latest_frame_path) and os.path.getsize(latest_frame_path) > 0:
-                return jsonify({
-                    'success': True,
-                    'frame_path': latest_frame_path,
-                    'frame_number': 0,
-                    'timestamp': time.time(),
-                    'from_cache': True
-                })
-            return jsonify({
-                'success': False,
-                'error': 'No active capture session found'
-            }), 400
-            
-        # Check if we have an active SSH connection
-        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
-            # If we have a previous frame, return it
-            if os.path.exists(latest_frame_path) and os.path.getsize(latest_frame_path) > 0:
-                return jsonify({
-                    'success': True,
-                    'frame_path': latest_frame_path,
-                    'frame_number': CaptureApi.captureInfo.get('current_frame', 0),
-                    'timestamp': time.time(),
-                    'from_cache': True
-                })
-            
-            return jsonify({
-                'success': False,
-                'error': 'SSH session not available'
-            }), 400
-            
-        ssh_connection = android_mobile_controller.ssh_connection
-        
-        # Download the latest frame file directly from the fixed location
-        remote_latest_path = "/tmp/capture_latest/capture_latest.jpg"
-        
-        # Download using base64 encoding
-        success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_latest_path} | base64")
-        
-        if success and file_content.strip():
-            try:
-                import base64
-                with open(latest_frame_path, 'wb') as f:
-                    f.write(base64.b64decode(file_content.strip()))
-                
-                # Update the current frame counter
-                current_frame = CaptureApi.captureInfo.get('current_frame', 0) + 1
-                CaptureApi.captureInfo['current_frame'] = current_frame
-                
-                current_app.logger.debug(f"[@api:screen-definition] Downloaded latest frame to {latest_frame_path}")
-            except Exception as e:
-                current_app.logger.warning(f"[@api:screen-definition] Failed to save latest frame: {e}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to save latest frame: {str(e)}'
-                }), 500
-        else:
-            # If we have a previous frame, return it
-            if os.path.exists(latest_frame_path) and os.path.getsize(latest_frame_path) > 0:
-                return jsonify({
-                    'success': True,
-                    'frame_path': latest_frame_path,
-                    'frame_number': CaptureApi.captureInfo.get('current_frame', 0),
-                    'timestamp': time.time(),
-                    'from_cache': True
-                })
-            
-            return jsonify({
-                'success': False,
-                'error': 'Failed to download latest frame'
-            }), 500
-        
-        # Add cache-busting query param
-        frame_url_param = f"?t={int(time.time())}"
-        
-        return jsonify({
-            'success': True,
-            'frame_path': latest_frame_path,
-            'frame_url': latest_frame_path + frame_url_param,
-            'frame_number': CaptureApi.captureInfo.get('current_frame', 0),
-            'timestamp': time.time()
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Get latest frame error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to get latest frame: {str(e)}'
-        }), 500
-
-@screen_definition_blueprint.route('/images/capture/<filename>', methods=['GET', 'OPTIONS'])
-def serve_capture_frame(filename):
-    """Serve a capture frame image by filename"""
-    # Handle OPTIONS request for CORS
-    if request.method == 'OPTIONS':
-        response = current_app.response_class()
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        return response
-        
-    try:
-        # Log the request
-        current_app.logger.info(f"Capture frame request for: {filename}")
-        
-        # Ensure the path is safe
-        if '..' in filename or filename.startswith('/'):
-            current_app.logger.error(f"Invalid filename requested: {filename}")
-            return jsonify({'success': False, 'error': 'Invalid filename'}), 400
-        
-        # Extract the base filename without query parameters
-        base_filename = filename.split('?')[0]
-        
-        # Use the same TMP_DIR path as the save operation for capture frames
-        capture_frame_path = os.path.join(TMP_DIR, 'captures', 'latest', base_filename)
-        
-        # Check if the file exists
-        if not os.path.exists(capture_frame_path):
-            current_app.logger.error(f"Capture frame not found: {capture_frame_path}")
-            return jsonify({'success': False, 'error': 'Capture frame not found'}), 404
-        
-        # Check file size - ensure it's not empty
-        file_size = os.path.getsize(capture_frame_path)
-        if file_size == 0:
-            current_app.logger.error(f"Capture frame file is empty: {capture_frame_path}")
-            return jsonify({'success': False, 'error': 'Capture frame file is empty'}), 500
-        
-        current_app.logger.info(f"Serving capture frame: {capture_frame_path} ({file_size} bytes)")
-        
-        # Serve the file with CORS headers and cache control
-        response = send_file(capture_frame_path, mimetype='image/jpeg')
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
-        response.headers.add('Pragma', 'no-cache')
-        response.headers.add('Expires', '0')
-        return response
-        
-    except Exception as e:
-        current_app.logger.error(f"Error serving capture frame: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        }), 500 

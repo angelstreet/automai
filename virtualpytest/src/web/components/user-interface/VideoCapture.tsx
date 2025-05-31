@@ -128,8 +128,8 @@ export function VideoCapture({
 
   // Generate URL for the current captured frame with cache-busting
   const currentCapturedFrameUrl = useMemo(() => {
-    // Use fixed path with timestamp for cache busting
-    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=/Users/cpeengineering/automai/automai/virtualpytest/src/tmp/captures/latest/capture_latest.jpg&t=${lastFetchTime}`;
+    // Use the correct path structure - no "latest" folder, use local TMP_DIR path
+    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=/tmp/captures/capture_latest.jpg&t=${lastFetchTime}`;
   }, [lastFetchTime]);
 
   // Memoize video frame URL for playback mode

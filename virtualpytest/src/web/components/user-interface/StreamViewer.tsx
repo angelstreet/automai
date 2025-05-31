@@ -17,6 +17,7 @@ export function StreamViewer({
   const hlsRef = useRef<any>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamLoaded, setStreamLoaded] = useState(false);
+  const [currentStreamUrl, setCurrentStreamUrl] = useState<string | null>(null);
 
   // Clean up stream resources
   const cleanupStream = () => {
@@ -38,14 +39,17 @@ export function StreamViewer({
   // Initialize stream when URL is available and active
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
-      console.log('[@component:StreamViewer] Showing stream - initializing...');
-      initializeStream();
-    } else {
+      // Only initialize if URL changed or no stream is loaded
+      if (currentStreamUrl !== streamUrl || !hlsRef.current) {
+        console.log('[@component:StreamViewer] Stream URL changed or no stream loaded, initializing:', streamUrl);
+        initializeStream();
+      }
+    } else if (!isStreamActive) {
       cleanupStream();
     }
 
     return () => {
-      cleanupStream();
+      // Only cleanup on unmount, not on every effect run
     };
   }, [streamUrl, isStreamActive]);
 
@@ -61,8 +65,10 @@ export function StreamViewer({
     try {
       console.log('[@component:StreamViewer] Initializing stream:', streamUrl);
       
-      // Clean up any existing stream first
-      cleanupStream();
+      // Only cleanup if URL changed
+      if (currentStreamUrl !== streamUrl) {
+        cleanupStream();
+      }
       
       // Dynamically import HLS.js
       const HLSModule = await import('hls.js');

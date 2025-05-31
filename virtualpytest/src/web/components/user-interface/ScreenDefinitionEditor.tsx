@@ -298,7 +298,7 @@ export function ScreenDefinitionEditor({
       // Now take the screenshot
       console.log('[@component:ScreenDefinitionEditor] Taking screenshot...');
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot_from_stream', {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
