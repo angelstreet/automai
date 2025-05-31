@@ -5,16 +5,19 @@ import {
   IconButton,
   Typography,
   CircularProgress,
+  Button,
 } from '@mui/material';
 import {
   PlayArrow,
   Pause,
   SkipNext,
   SkipPrevious,
+  RadioButtonChecked,
+  Stop,
 } from '@mui/icons-material';
 
 interface CapturePreviewEditorProps {
-  mode: 'screenshot' | 'video';
+  mode: 'screenshot' | 'video' | 'capture';
   screenshotPath?: string;
   videoFramesPath?: string;
   currentFrame?: number;
@@ -26,6 +29,14 @@ interface CapturePreviewEditorProps {
     stream: string | null;
   };
   isCapturing?: boolean;
+  onStartCapture?: () => void;
+  onStopCapture?: () => void;
+  captureStatus?: {
+    is_capturing: boolean;
+    duration: number;
+    max_duration: number;
+    fps: number;
+  };
   sx?: any;
 }
 
@@ -50,6 +61,40 @@ function CapturePreviewPlaceholder({ text }: { text: string }) {
   );
 }
 
+// Blinking red button component
+function BlinkingStopButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return (
+    <Button
+      variant="contained"
+      onClick={onClick}
+      disabled={disabled}
+      startIcon={<Stop />}
+      sx={{
+        backgroundColor: '#ff4444',
+        color: 'white',
+        animation: 'blink 1s infinite',
+        '&:hover': {
+          backgroundColor: '#cc3333',
+        },
+        '&:disabled': {
+          backgroundColor: '#666666',
+          animation: 'none',
+        },
+        '@keyframes blink': {
+          '0%, 50%': {
+            opacity: 1,
+          },
+          '51%, 100%': {
+            opacity: 0.5,
+          },
+        },
+      }}
+    >
+      STOP CAPTURE
+    </Button>
+  );
+}
+
 export function CapturePreviewEditor({
   mode,
   screenshotPath,
@@ -59,6 +104,9 @@ export function CapturePreviewEditor({
   onFrameChange,
   resolutionInfo,
   isCapturing,
+  onStartCapture,
+  onStopCapture,
+  captureStatus,
   sx = {}
 }: CapturePreviewEditorProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -182,6 +230,13 @@ export function CapturePreviewEditor({
     return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(framePath)}&t=${timestamp}`;
   }, [videoFramesPath, currentValue]);
 
+  // Format duration for display
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <Box sx={{ 
       bgcolor: '#000000',
@@ -254,6 +309,121 @@ export function CapturePreviewEditor({
             </Typography>
           </>
         )}
+
+        {/* Capture Mode */}
+        {mode === 'capture' && (
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            minHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent',
+            border: '1px solid #333333',
+            p: 2,
+            gap: 3
+          }}>
+            {/* Capture Status Display */}
+            {captureStatus?.is_capturing ? (
+              <>
+                {/* Recording indicator */}
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2
+                }}>
+                  <Box sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: '#ff4444',
+                    animation: 'pulse 1s infinite',
+                    '@keyframes pulse': {
+                      '0%': { opacity: 1 },
+                      '50%': { opacity: 0.3 },
+                      '100%': { opacity: 1 },
+                    }
+                  }} />
+                  <Typography variant="h6" sx={{ color: '#ff4444', fontWeight: 'bold' }}>
+                    RECORDING
+                  </Typography>
+                </Box>
+
+                {/* Duration and progress */}
+                <Typography variant="body1" sx={{ color: '#ffffff', textAlign: 'center' }}>
+                  Duration: {formatDuration(captureStatus.duration)} / {formatDuration(captureStatus.max_duration)}
+                </Typography>
+                
+                <Typography variant="caption" sx={{ color: '#cccccc', textAlign: 'center' }}>
+                  Capturing at {captureStatus.fps} FPS • Rolling 30s buffer
+                </Typography>
+
+                {/* Progress bar */}
+                <Box sx={{ width: '80%', mb: 2 }}>
+                  <Box sx={{
+                    width: '100%',
+                    height: 8,
+                    backgroundColor: '#333333',
+                    borderRadius: 4,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      width: `${Math.min(100, (captureStatus.duration / captureStatus.max_duration) * 100)}%`,
+                      height: '100%',
+                      backgroundColor: '#ff4444',
+                      transition: 'width 0.5s ease-in-out'
+                    }} />
+                  </Box>
+                </Box>
+
+                {/* Stop button */}
+                <BlinkingStopButton 
+                  onClick={() => onStopCapture?.()} 
+                  disabled={!onStopCapture}
+                />
+              </>
+            ) : (
+              <>
+                {/* Not recording state */}
+                <RadioButtonChecked sx={{ fontSize: 60, color: '#666666', mb: 2 }} />
+                
+                <Typography variant="h6" sx={{ color: '#cccccc', textAlign: 'center', mb: 1 }}>
+                  Ready to Capture
+                </Typography>
+                
+                <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center', mb: 3 }}>
+                  10 FPS • 30 second rolling buffer • Max 300 frames
+                </Typography>
+
+                {/* Start button */}
+                <Button
+                  variant="contained"
+                  onClick={() => onStartCapture?.()}
+                  disabled={!onStartCapture}
+                  startIcon={<RadioButtonChecked />}
+                  sx={{
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    px: 4,
+                    py: 1.5,
+                    '&:hover': {
+                      backgroundColor: '#45a049',
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#666666',
+                    },
+                  }}
+                >
+                  START CAPTURE
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
+
         {/* Show loading when capturing */}
         {mode === 'screenshot' && isCapturing && (
           <Box sx={{

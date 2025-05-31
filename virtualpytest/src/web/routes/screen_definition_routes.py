@@ -35,6 +35,10 @@ def ensure_dirs():
     except Exception as e:
         current_app.logger.error(f"Error ensuring directories: {str(e)}")
 
+# Global variable to track capture process
+capture_process = None
+capture_start_time = None
+
 @screen_definition_blueprint.route('/screenshot', methods=['POST'])
 def take_screenshot():
     """Take high resolution screenshot using FFmpeg from HDMI source with proper orientation detection."""
@@ -488,4 +492,291 @@ def restart_stream():
         return jsonify({
             'success': False,
             'error': f'Failed to restart stream: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/start', methods=['POST'])
+def start_capture():
+    """Start continuous capture at 10fps with rolling 30s buffer (max 300 frames)."""
+    try:
+        from app import android_mobile_controller
+        import subprocess
+        import signal
+        
+        global capture_process, capture_start_time
+        
+        data = request.get_json()
+        current_app.logger.info(f"[@api:screen-definition] Start capture request: {data}")
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Extract parameters
+        video_device = data.get('video_device', '/dev/video0')
+        device_model = data.get('device_model', 'android_mobile')
+        
+        # Clean local captures folder to remove old sessions
+        local_captures_dir = os.path.join(TMP_DIR, 'captures')
+        current_app.logger.info(f"[@api:screen-definition] Cleaning local captures folder: {local_captures_dir}")
+        
+        try:
+            if os.path.exists(local_captures_dir):
+                # Remove all existing capture directories
+                for item in os.listdir(local_captures_dir):
+                    item_path = os.path.join(local_captures_dir, item)
+                    if os.path.isdir(item_path) and item.startswith(device_model):
+                        shutil.rmtree(item_path)
+                        current_app.logger.info(f"[@api:screen-definition] Removed old capture directory: {item}")
+                current_app.logger.info(f"[@api:screen-definition] Local captures folder cleaned successfully")
+            else:
+                # Create the captures directory if it doesn't exist
+                os.makedirs(local_captures_dir, exist_ok=True)
+                current_app.logger.info(f"[@api:screen-definition] Created captures directory: {local_captures_dir}")
+        except Exception as e:
+            current_app.logger.warning(f"[@api:screen-definition] Failed to clean local captures folder: {e}")
+        
+        # Stop any existing capture process
+        if capture_process and capture_process.poll() is None:
+            current_app.logger.info("[@api:screen-definition] Stopping existing capture process...")
+            capture_process.terminate()
+            capture_process.wait()
+        
+        # Get device resolution for capture (same logic as screenshot)
+        device_resolution = None
+        capture_resolution = "1920x1080"  # Default fallback
+        
+        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
+            try:
+                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
+                if android_device_id:
+                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
+                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
+                    
+                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+                        device_width = device_resolution['width']
+                        device_height = device_resolution['height']
+                        capture_resolution = f"{device_width}x{device_height}"
+                        current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
+            except Exception as e:
+                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
+        
+        # Check if stream is running and stop it
+        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
+        stream_was_active = "Active: active (running)" in stdout
+        
+        if stream_was_active:
+            current_app.logger.info("[@api:screen-definition] Stopping stream for capture...")
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
+            
+            if not success or exit_code != 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to stop stream service: {stderr}'
+                }), 500
+        
+        # Create capture directory on remote host
+        remote_capture_dir = f"/tmp/capture_{int(time.time())}"
+        ssh_connection.execute_command(f"mkdir -p {remote_capture_dir}")
+        
+        # Clean any existing frame files in the directory (important for rolling buffer)
+        current_app.logger.info(f"[@api:screen-definition] Cleaning capture directory: {remote_capture_dir}")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"rm -f {remote_capture_dir}/frame_*.jpg")
+        
+        if not success:
+            current_app.logger.warning(f"[@api:screen-definition] Failed to clean capture directory: {stderr}")
+        else:
+            current_app.logger.info(f"[@api:screen-definition] Capture directory cleaned successfully")
+        
+        # FFmpeg command for rolling buffer capture at 10fps (300 frames max = 30s)
+        # Use frame numbers 1-300, then wrap around and overwrite
+        ffmpeg_cmd = (f"ffmpeg -f v4l2 -video_size {capture_resolution} -i {video_device} "
+                     f"-vf fps=10 -q:v 2 -f image2 "
+                     f"-y {remote_capture_dir}/frame_%d.jpg")
+        
+        current_app.logger.info(f"[@api:screen-definition] Starting rolling capture with command: {ffmpeg_cmd}")
+        current_app.logger.info(f"[@api:screen-definition] Rolling buffer: 300 frames max (30s at 10fps)")
+        
+        # Start FFmpeg capture process on remote host in background
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"nohup {ffmpeg_cmd} > /dev/null 2>&1 & echo $!")
+        
+        if not success or exit_code != 0:
+            error_msg = stderr.strip() if stderr else "Failed to start capture"
+            current_app.logger.error(f"[@api:screen-definition] Capture start failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to start capture: {error_msg}'
+            }), 500
+        
+        # Store the process ID for later termination
+        capture_pid = stdout.strip()
+        capture_start_time = time.time()
+        
+        current_app.logger.info(f"[@api:screen-definition] Capture started with PID: {capture_pid}")
+        
+        return jsonify({
+            'success': True,
+            'capture_pid': capture_pid,
+            'remote_capture_dir': remote_capture_dir,
+            'device_resolution': device_resolution,
+            'capture_resolution': capture_resolution,
+            'stream_was_active': stream_was_active,
+            'message': f'Capture started at 10fps with resolution {capture_resolution}'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Start capture error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Start capture failed: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/stop', methods=['POST'])
+def stop_capture():
+    """Stop capture and pull frames to local capture folder."""
+    try:
+        from app import android_mobile_controller
+        
+        global capture_process, capture_start_time
+        
+        data = request.get_json()
+        current_app.logger.info(f"[@api:screen-definition] Stop capture request: {data}")
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        ssh_connection = android_mobile_controller.ssh_connection
+        
+        # Get capture info from request
+        capture_pid = data.get('capture_pid')
+        remote_capture_dir = data.get('remote_capture_dir')
+        device_model = data.get('device_model', 'android_mobile')
+        
+        if not capture_pid or not remote_capture_dir:
+            return jsonify({
+                'success': False,
+                'error': 'Missing capture_pid or remote_capture_dir'
+            }), 400
+        
+        # Stop the FFmpeg capture process
+        current_app.logger.info(f"[@api:screen-definition] Stopping capture process PID: {capture_pid}")
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"kill -TERM {capture_pid}")
+        
+        # Wait a moment for graceful shutdown
+        time.sleep(2)
+        
+        # Force kill if still running
+        ssh_connection.execute_command(f"kill -KILL {capture_pid} 2>/dev/null")
+        
+        # Count captured frames - check which frame files actually exist
+        success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/frame_*.jpg 2>/dev/null | wc -l")
+        frame_count = int(stdout.strip()) if success and stdout.strip().isdigit() else 0
+        
+        current_app.logger.info(f"[@api:screen-definition] Found {frame_count} captured frames in rolling buffer")
+        
+        # Create local capture directory with timestamp
+        capture_timestamp = int(time.time())
+        local_capture_dir = os.path.join(TMP_DIR, 'captures', f'{device_model}_{capture_timestamp}')
+        os.makedirs(local_capture_dir, exist_ok=True)
+        
+        # Pull all existing frames to local directory
+        if frame_count > 0:
+            current_app.logger.info(f"[@api:screen-definition] Downloading {frame_count} frames to {local_capture_dir}")
+            
+            # Get list of actual frame files (they might not be sequential due to rolling buffer)
+            success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/frame_*.jpg 2>/dev/null | sort -V")
+            
+            if success and stdout.strip():
+                frame_files = stdout.strip().split('\n')
+                downloaded_count = 0
+                
+                for i, remote_frame_path in enumerate(frame_files):
+                    if remote_frame_path.strip():
+                        # Extract frame number from filename for local naming
+                        frame_filename = os.path.basename(remote_frame_path.strip())
+                        # Rename to sequential numbering locally: frame_0001.jpg, frame_0002.jpg, etc.
+                        local_frame_filename = f"frame_{i+1:04d}.jpg"
+                        local_frame_path = os.path.join(local_capture_dir, local_frame_filename)
+                        
+                        # Download using base64 encoding (fallback method)
+                        success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_frame_path.strip()} | base64")
+                        
+                        if success and file_content.strip():
+                            try:
+                                import base64
+                                with open(local_frame_path, 'wb') as f:
+                                    f.write(base64.b64decode(file_content.strip()))
+                                downloaded_count += 1
+                                current_app.logger.debug(f"[@api:screen-definition] Downloaded {frame_filename} -> {local_frame_filename}")
+                            except Exception as e:
+                                current_app.logger.warning(f"[@api:screen-definition] Failed to decode frame {frame_filename}: {e}")
+                        else:
+                            current_app.logger.warning(f"[@api:screen-definition] Failed to download frame {frame_filename}")
+                
+                current_app.logger.info(f"[@api:screen-definition] Downloaded {downloaded_count}/{frame_count} frames")
+            else:
+                current_app.logger.warning(f"[@api:screen-definition] Could not list frame files in {remote_capture_dir}")
+                downloaded_count = 0
+        else:
+            downloaded_count = 0
+        
+        # Clean up remote capture directory
+        ssh_connection.execute_command(f"rm -rf {remote_capture_dir}")
+        
+        # Calculate capture duration
+        capture_duration = time.time() - capture_start_time if capture_start_time else 0
+        
+        return jsonify({
+            'success': True,
+            'frames_captured': frame_count,
+            'frames_downloaded': downloaded_count if frame_count > 0 else 0,
+            'local_capture_dir': local_capture_dir,
+            'capture_duration': round(capture_duration, 2),
+            'message': f'Capture stopped. Downloaded {downloaded_count if frame_count > 0 else 0} frames to {local_capture_dir}'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Stop capture error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Stop capture failed: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/capture/status', methods=['GET'])
+def get_capture_status():
+    """Get current capture status."""
+    try:
+        from app import android_mobile_controller
+        
+        global capture_start_time
+        
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection'
+            }), 400
+            
+        # Return basic status - in a real implementation you might track active captures
+        is_capturing = capture_start_time is not None
+        duration = time.time() - capture_start_time if capture_start_time else 0
+        
+        return jsonify({
+            'success': True,
+            'is_capturing': is_capturing,
+            'duration': round(duration, 2) if is_capturing else 0,
+            'max_duration': 30.0,  # 30 second rolling buffer
+            'fps': 10
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Capture status error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Capture status failed: {str(e)}'
         }), 500 

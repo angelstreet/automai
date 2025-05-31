@@ -1,0 +1,178 @@
+// Capture API utility functions
+const API_BASE_URL = 'http://localhost:5009/api/virtualpytest/screen-definition';
+
+export interface CaptureStartResponse {
+  success: boolean;
+  error?: string;
+  capture_pid?: string;
+  remote_capture_dir?: string;
+  device_resolution?: any;
+  capture_resolution?: string;
+  stream_was_active?: boolean;
+  message?: string;
+}
+
+export interface CaptureStopResponse {
+  success: boolean;
+  error?: string;
+  frames_captured?: number;
+  frames_downloaded?: number;
+  local_capture_dir?: string;
+  capture_duration?: number;
+  message?: string;
+}
+
+export interface CaptureStatusResponse {
+  success: boolean;
+  error?: string;
+  is_capturing?: boolean;
+  duration?: number;
+  max_duration?: number;
+  fps?: number;
+}
+
+export class CaptureApi {
+  private static captureInfo: {
+    capture_pid?: string;
+    remote_capture_dir?: string;
+    device_model?: string;
+  } | null = null;
+
+  /**
+   * Start capturing frames at 10fps with rolling 30s buffer
+   */
+  static async startCapture(
+    videoDevice: string = '/dev/video0',
+    deviceModel: string = 'android_mobile'
+  ): Promise<CaptureStartResponse> {
+    try {
+      console.log(`[@util:CaptureApi] Starting capture for device: ${deviceModel}`);
+      
+      const response = await fetch(`${API_BASE_URL}/capture/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_device: videoDevice,
+          device_model: deviceModel,
+        }),
+      });
+
+      const result: CaptureStartResponse = await response.json();
+      
+      if (result.success && result.capture_pid && result.remote_capture_dir) {
+        // Store capture info for stop operation
+        this.captureInfo = {
+          capture_pid: result.capture_pid,
+          remote_capture_dir: result.remote_capture_dir,
+          device_model: deviceModel,
+        };
+        console.log(`[@util:CaptureApi] Capture started successfully with PID: ${result.capture_pid}`);
+      } else {
+        console.error(`[@util:CaptureApi] Capture start failed: ${result.error}`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`[@util:CaptureApi] Start capture error: ${error}`);
+      return {
+        success: false,
+        error: `Failed to start capture: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Stop capturing and download frames to local folder
+   */
+  static async stopCapture(): Promise<CaptureStopResponse> {
+    try {
+      if (!this.captureInfo) {
+        return {
+          success: false,
+          error: 'No active capture session found',
+        };
+      }
+
+      console.log(`[@util:CaptureApi] Stopping capture PID: ${this.captureInfo.capture_pid}`);
+      
+      const response = await fetch(`${API_BASE_URL}/capture/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          capture_pid: this.captureInfo.capture_pid,
+          remote_capture_dir: this.captureInfo.remote_capture_dir,
+          device_model: this.captureInfo.device_model,
+        }),
+      });
+
+      const result: CaptureStopResponse = await response.json();
+      
+      if (result.success) {
+        console.log(`[@util:CaptureApi] Capture stopped successfully. Downloaded ${result.frames_downloaded} frames`);
+        // Clear capture info after successful stop
+        this.captureInfo = null;
+      } else {
+        console.error(`[@util:CaptureApi] Capture stop failed: ${result.error}`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`[@util:CaptureApi] Stop capture error: ${error}`);
+      return {
+        success: false,
+        error: `Failed to stop capture: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Get current capture status
+   */
+  static async getCaptureStatus(): Promise<CaptureStatusResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/capture/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result: CaptureStatusResponse = await response.json();
+      
+      return result;
+    } catch (error) {
+      console.error(`[@util:CaptureApi] Get capture status error: ${error}`);
+      return {
+        success: false,
+        error: `Failed to get capture status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Check if there's an active capture session
+   */
+  static hasActiveCaptureSession(): boolean {
+    return this.captureInfo !== null;
+  }
+
+  /**
+   * Get current capture info
+   */
+  static getCaptureInfo() {
+    return this.captureInfo;
+  }
+
+  /**
+   * Clear capture info (for cleanup)
+   */
+  static clearCaptureInfo() {
+    this.captureInfo = null;
+  }
+}
+
+export default CaptureApi; 
