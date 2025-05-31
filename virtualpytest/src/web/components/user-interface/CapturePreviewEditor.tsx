@@ -170,7 +170,8 @@ export function CapturePreviewEditor({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#000000'
+        backgroundColor: 'transparent',
+        p: 0.5, // Minimal padding
       }}>
         {mode === 'screenshot' && screenshotPath && (
           <>
@@ -180,7 +181,8 @@ export function CapturePreviewEditor({
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',
-                objectFit: 'contain'
+                objectFit: 'contain',
+                backgroundColor: 'transparent'
               }}
               onError={(e) => {
                 const imgSrc = (e.target as HTMLImageElement).src;
@@ -189,8 +191,13 @@ export function CapturePreviewEditor({
                 // Set a transparent fallback image
                 (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
                 
-                // Add red border to indicate error
-                (e.target as HTMLImageElement).style.border = '1px solid red';
+                // Add placeholder styling
+                const img = e.target as HTMLImageElement;
+                img.style.backgroundColor = 'transparent';
+                img.style.border = '1px solid #E0E0E0';
+                img.style.minWidth = '160px';
+                img.style.minHeight = '120px';
+                img.style.padding = '4px';
               }}
             />
             <Typography 
@@ -199,9 +206,9 @@ export function CapturePreviewEditor({
                 position: 'absolute', 
                 bottom: 5, 
                 left: 5, 
-                color: 'rgba(255,255,255,0.7)',
+                color: '#666666',
                 fontSize: '0.7rem',
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'rgba(255,255,255,0.8)',
                 px: 1,
                 borderRadius: 1
               }}
@@ -211,6 +218,23 @@ export function CapturePreviewEditor({
                 'Screenshot'}
             </Typography>
           </>
+        )}
+        {/* Show placeholder when no screenshot */}
+        {mode === 'screenshot' && !screenshotPath && (
+          <Box sx={{
+            width: '160px',
+            height: '120px',
+            border: '1px solid #E0E0E0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent',
+            p: 0.5
+          }}>
+            <Typography variant="caption" sx={{ color: '#666666' }}>
+              No Screenshot
+            </Typography>
+          </Box>
         )}
         {mode === 'video' && videoFramesPath && (
           <>
