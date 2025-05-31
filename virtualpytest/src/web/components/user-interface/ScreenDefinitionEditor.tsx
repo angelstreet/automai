@@ -66,8 +66,7 @@ export function ScreenDefinitionEditor({
   onDisconnectComplete,
   sx = {}
 }: ScreenDefinitionEditorProps) {
-  // Connection state
-  const [isConnecting, setIsConnecting] = useState(false);
+  // Connection state - simplified
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
@@ -76,15 +75,6 @@ export function ScreenDefinitionEditor({
   const [captureStats, setCaptureStats] = useState<CaptureStats | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   
-  // Auto-connect retry management
-  const [autoConnectAttempts, setAutoConnectAttempts] = useState(0);
-  const [lastAutoConnectAttempt, setLastAutoConnectAttempt] = useState(0);
-  const maxAutoConnectAttempts = 3;
-  const autoConnectCooldown = 10000; // 10 seconds
-  
-  // SSH session ref (dedicated session, separate from remote)
-  const sshSessionRef = useRef<any>(null);
-
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
 
@@ -95,33 +85,32 @@ export function ScreenDefinitionEditor({
   const [totalFrames, setTotalFrames] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<'screenshot' | 'video'>('screenshot');
   
-  // Add debugging logs
+  // Check for existing remote connection ONCE (no loops)
   useEffect(() => {
-    if (avConfig) {
-      console.log('[@component:ScreenDefinitionEditor] AV Config:', {
-        stream_url: avConfig.stream_url,
-        video_device: avConfig.video_device,
-        host_ip: avConfig.host_ip
-      });
-    }
-  }, [avConfig]);
+    const checkRemoteConnection = async () => {
+      try {
+        // Simple check if android_mobile_controller exists
+        const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/config', {
+          method: 'GET',
+        });
+        
+        if (response.ok) {
+          console.log('[@component:ScreenDefinitionEditor] Remote system is available');
+          setIsConnected(true);
+          setConnectionError(null);
+        } else {
+          setIsConnected(false);
+          setConnectionError('Remote control system not available');
+        }
+      } catch (error) {
+        setIsConnected(false);
+        setConnectionError('Remote control system not available');
+      }
+    };
 
-  // Auto-connect when config is available and autoConnect is true
-  useEffect(() => {
-    const now = Date.now();
-    const canRetry = autoConnectAttempts < maxAutoConnectAttempts;
-    const cooldownExpired = now - lastAutoConnectAttempt > autoConnectCooldown;
-    
-    if (avConfig && autoConnect && !isConnected && !isConnecting && canRetry && cooldownExpired) {
-      console.log(`[@component:ScreenDefinitionEditor] Auto-connecting to device for screen capture (attempt ${autoConnectAttempts + 1}/${maxAutoConnectAttempts})`);
-      setAutoConnectAttempts(prev => prev + 1);
-      setLastAutoConnectAttempt(now);
-      handleConnect();
-    } else if (avConfig && autoConnect && !isConnected && !canRetry) {
-      console.log('[@component:ScreenDefinitionEditor] Max auto-connect attempts reached, stopping auto-connect');
-      setConnectionError(`Failed to connect after ${maxAutoConnectAttempts} attempts. Please try manual connection.`);
-    }
-  }, [avConfig, autoConnect, isConnected, isConnecting, autoConnectAttempts, lastAutoConnectAttempt]);
+    // Check once on mount, no loops
+    checkRemoteConnection();
+  }, []);
 
   // Add stream status monitoring
   useEffect(() => {
@@ -130,105 +119,9 @@ export function ScreenDefinitionEditor({
     }
   }, [isConnected, avConfig?.stream_url]);
 
-  // Manual status update function - no polling
-  const updateCaptureStatus = async () => {
-    if (sshSessionRef.current?.sessionId) {
-      try {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/get-capture-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            session_id: sshSessionRef.current.sessionId,
-          }),
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          setCaptureStats(result);
-          
-          // Update total frames when capturing
-          if (result.frame_count !== totalFrames) {
-            setTotalFrames(result.frame_count);
-          }
-          
-          // Update last screenshot path if available
-          if (result.last_screenshot && result.last_screenshot !== lastScreenshotPath) {
-            setLastScreenshotPath(result.last_screenshot);
-          }
-          
-          // Set capture mode based on what's active
-          if (result.is_capturing && previewMode !== 'video') {
-            setPreviewMode('video');
-          }
-        }
-        return result;
-      } catch (error) {
-        console.error('[@component:ScreenDefinitionEditor] Stats update error:', error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  // Connect to device via dedicated SSH session
-  const handleConnect = async () => {
-    if (!avConfig) {
-      setConnectionError('No AV configuration available');
-      return;
-    }
-    
-    setIsConnecting(true);
-    setConnectionError(null);
-    
-    try {
-      console.log(`[@component:ScreenDefinitionEditor] Connecting to ${avConfig.host_ip} for screen capture`);
-      
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_ip: avConfig.host_ip,
-          host_username: avConfig.host_username,
-          host_password: avConfig.host_password,
-          host_port: avConfig.host_port,
-          video_device: avConfig.video_device,
-          device_model: deviceModel,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        sshSessionRef.current = {
-          connected: true,
-          sessionId: result.session_id,
-          config: avConfig,
-        };
-        
-        setIsConnected(true);
-        console.log('[@component:ScreenDefinitionEditor] SSH connection established for screen capture');
-        
-        // Get initial status after connection
-        await updateCaptureStatus();
-      } else {
-        setConnectionError(result.error || 'Failed to establish connection');
-      }
-      
-    } catch (error: any) {
-      console.error('[@component:ScreenDefinitionEditor] Connection failed:', error);
-      setConnectionError(error.message || 'Failed to establish connection');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-  
-  // Disconnect from device
+  // Disconnect from device using remote routes
   const handleDisconnect = async () => {
-    console.log('[@component:ScreenDefinitionEditor] Disconnecting from device');
+    console.log('[@component:ScreenDefinitionEditor] Disconnecting from device via remote routes');
     
     try {
       // Stop capture if active
@@ -236,33 +129,25 @@ export function ScreenDefinitionEditor({
         await handleStopCapture();
       }
 
-      // Close SSH session
-      if (sshSessionRef.current?.sessionId) {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/disconnect', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            session_id: sshSessionRef.current.sessionId,
-          }),
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          console.log('[@component:ScreenDefinitionEditor] SSH session closed successfully');
-        }
+      // Release control via remote routes (same as CompactAndroidMobile)
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/release-control', {
+        method: 'POST',
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log('[@component:ScreenDefinitionEditor] Control released successfully via remote routes');
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Error during disconnect:', error);
     }
     
-    // Reset state
-    sshSessionRef.current = null;
+    // Reset all state
     setIsConnected(false);
     setIsCapturing(false);
     setCaptureStats(null);
     setIsExpanded(false);
+    setConnectionError(null);
     
     // Notify parent component
     if (onDisconnectComplete) {
@@ -270,34 +155,40 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Handle screenshot capture
+  // Handle screenshot capture via FFmpeg from HDMI source (not ADB like remote system)
   const handleTakeScreenshot = async () => {
-    if (!sshSessionRef.current?.sessionId) return;
+    if (!avConfig || !isConnected) return;
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot');
+      console.log('[@component:ScreenDefinitionEditor] Taking HDMI screenshot via FFmpeg');
       
+      // Use custom route for FFmpeg HDMI capture (NOT the ADB route)
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sshSessionRef.current.sessionId,
+          // Pass the connection details and video device info for FFmpeg
+          host_ip: avConfig.host_ip,
+          host_username: avConfig.host_username,
+          host_password: avConfig.host_password,
+          video_device: avConfig.video_device,
+          device_model: deviceModel,
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+        throw new Error(`FFmpeg capture failed: ${errorText}`);
       }
       
       const result = await response.json();
       if (result.success) {
-        console.log(`[@component:ScreenDefinitionEditor] Screenshot saved: ${result.screenshot_path}`);
+        console.log(`[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot saved: ${result.screenshot_path}`);
         
-        // Only update if the path actually changed
-        if (result.screenshot_path !== lastScreenshotPath) {
+        // Use the file path from FFmpeg capture
+        if (result.screenshot_path && result.screenshot_path !== lastScreenshotPath) {
           setLastScreenshotPath(result.screenshot_path);
         }
         
@@ -309,79 +200,25 @@ export function ScreenDefinitionEditor({
           setIsExpanded(true);
         }
       } else {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
+        console.error('[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot failed:', result.error);
       }
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Screenshot error:', error);
+      console.error('[@component:ScreenDefinitionEditor] FFmpeg HDMI screenshot error:', error);
     }
   };
 
-  // Start video capture 
+  // Start video capture (simplified - remote system focused on screenshots)
   const handleStartCapture = async () => {
-    if (!sshSessionRef.current?.sessionId) return;
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Starting video capture');
-      
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/start-capture', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sshSessionRef.current.sessionId,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setIsCapturing(true);
-        setTotalFrames(result.frame_count);
-        setCurrentFrame(0);
-        setPreviewMode('video');
-        console.log('[@component:ScreenDefinitionEditor] Video capture started');
-        
-        // Update capture status after starting capture
-        await updateCaptureStatus();
-      } else {
-        console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', result.error);
-      }
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Start capture error:', error);
-    }
+    console.log('[@component:ScreenDefinitionEditor] Video capture not implemented for remote system');
+    // The remote system doesn't have video capture, only screenshots
+    // Keep this as a placeholder for future implementation
   };
 
-  // Stop video capture
+  // Stop video capture (simplified - remote system focused on screenshots)  
   const handleStopCapture = async () => {
-    if (!sshSessionRef.current?.sessionId) return;
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Stopping video capture');
-      
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stop-capture', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sshSessionRef.current.sessionId,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setIsCapturing(false);
-        setTotalFrames(result.frame_count);
-        console.log('[@component:ScreenDefinitionEditor] Video capture stopped');
-        
-        // Update capture status after stopping capture
-        await updateCaptureStatus();
-      } else {
-        console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', result.error);
-      }
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Stop capture error:', error);
-    }
+    console.log('[@component:ScreenDefinitionEditor] Video capture not implemented for remote system');
+    // The remote system doesn't have video capture, only screenshots
+    // Keep this as a placeholder for future implementation
   };
 
   // Monitor capture statistics - removed polling, using simpler initial stats
@@ -398,11 +235,6 @@ export function ScreenDefinitionEditor({
   // Toggle expanded mode
   const handleToggleExpanded = () => {
     setIsExpanded(!isExpanded);
-    
-    // Update status when expanding
-    if (!isExpanded) {
-      updateCaptureStatus();
-    }
   };
 
   // Handle frame change in preview
@@ -417,11 +249,11 @@ export function ScreenDefinitionEditor({
         position: 'fixed',
         bottom: 16,
         left: 16,
-        width: '200px',
-        height: '150px',
+        width: '240px',
+        height: connectionError ? 'auto' : '150px',
         bgcolor: 'background.paper',
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: connectionError ? 'error.main' : 'divider',
         borderRadius: 1,
         p: 1,
         display: 'flex',
@@ -436,22 +268,12 @@ export function ScreenDefinitionEditor({
           Screen Definition
         </Typography>
         {avConfig ? (
-          <Button
-            variant="contained"
-            onClick={handleConnect}
-            disabled={isConnecting}
-            size="small"
-          >
-            {isConnecting ? <CircularProgress size={16} /> : 'Connect'}
-          </Button>
+          <Typography variant="caption" color="textSecondary" textAlign="center">
+            {connectionError}
+          </Typography>
         ) : (
           <Typography variant="caption" color="textSecondary" textAlign="center">
             No AV config
-          </Typography>
-        )}
-        {connectionError && (
-          <Typography variant="caption" color="error" sx={{ mt: 1, textAlign: 'center' }}>
-            {connectionError}
           </Typography>
         )}
       </Box>

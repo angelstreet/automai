@@ -130,89 +130,88 @@ def disconnect():
 
 @screen_definition_blueprint.route('/screenshot', methods=['POST'])
 def take_screenshot():
-    """Take a screenshot using the existing controller's SSH connection"""
+    """Take screenshot using FFmpeg from HDMI source via existing remote controller."""
     try:
+        from app import android_mobile_controller
+        
         data = request.get_json()
-        session_id = data.get('session_id')
+        current_app.logger.info(f"[@api:screen-definition] Screenshot request: {data}")
         
-        if (not session_id or 
-            not hasattr(current_app, 'screen_controllers') or 
-            session_id not in current_app.screen_controllers):
-            return jsonify({'success': False, 'error': 'Invalid session ID'})
+        # Check if we have an active remote controller
+        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'No active remote connection. Please connect via remote control first.'
+            }), 400
         
-        controller = current_app.screen_controllers[session_id]
+        video_device = data.get('video_device', '/dev/video0')
+        device_model = data.get('device_model', 'android_mobile')
         
-        # Ensure directory exists
-        ensure_dirs()
+        current_app.logger.info(f"[@api:screen-definition] Taking HDMI screenshot from {video_device}")
         
-        # Generate screenshot filename
-        device_model = controller.device_name
-        screenshot_filename = f"{device_model}.jpg"
-        screenshot_path = f"/tmp/screenshots/{screenshot_filename}"
+        # Use the existing controller's SSH connection for FFmpeg capture
+        ssh_connection = android_mobile_controller.ssh_connection
         
-        current_app.logger.info(f"Taking screenshot from {controller.host_ip}:{controller.video_device}")
+        if not ssh_connection or not ssh_connection.connected:
+            return jsonify({
+                'success': False,
+                'error': 'Remote controller SSH connection is not established'
+            }), 400
         
-        # Use the controller's existing SSH connection to capture screenshot
-        try:
-            # Get the SSH connection from the controller
-            ssh_connection = controller.ssh_connection
-            
-            if not ssh_connection or not ssh_connection.connected:
-                raise Exception("Controller SSH connection is not established")
-            
-            # FFmpeg command to capture a single frame
-            remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
-            video_device = controller.video_device  # Use the stored video_device
-            ffmpeg_cmd = f"ffmpeg -f v4l2 -i {video_device} -vframes 1 -y {remote_temp_path}"
-            
-            current_app.logger.info(f"Executing FFmpeg command: {ffmpeg_cmd}")
-            
-            # Execute FFmpeg command on remote host using controller's SSH connection
-            success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
-            
-            if not success or exit_code != 0:
-                current_app.logger.error(f"FFmpeg failed: {stderr}")
-                raise Exception(f"FFmpeg failed with exit code {exit_code}: {stderr}")
-            
-            # Copy the file from remote to local using paramiko SFTP
-            if hasattr(ssh_connection, 'client') and ssh_connection.client:
-                sftp = ssh_connection.client.open_sftp()
-                sftp.get(remote_temp_path, screenshot_path)
-                sftp.close()
+        # FFmpeg command to capture from HDMI/video device
+        remote_temp_path = f"/tmp/hdmi_screenshot_{int(time.time())}.jpg"
+        ffmpeg_cmd = f"ffmpeg -f v4l2 -i {video_device} -vframes 1 -y {remote_temp_path}"
+        
+        current_app.logger.info(f"[@api:screen-definition] Executing FFmpeg: {ffmpeg_cmd}")
+        
+        # Execute FFmpeg command via SSH
+        result = ssh_connection.execute_command(ffmpeg_cmd)
+        if result.return_code != 0:
+            current_app.logger.error(f"[@api:screen-definition] FFmpeg failed: {result.stderr}")
+            return jsonify({
+                'success': False,
+                'error': f'FFmpeg capture failed: {result.stderr}'
+            }), 500
+        
+        # Transfer screenshot to local server
+        local_filename = f"{device_model}.jpg"
+        local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
+        
+        # Ensure local directory exists
+        os.makedirs(os.path.dirname(local_screenshot_path), exist_ok=True)
+        
+        # Download file via SFTP
+        if hasattr(ssh_connection, 'sftp_get'):
+            if ssh_connection.sftp_get(remote_temp_path, local_screenshot_path):
+                current_app.logger.info(f"[@api:screen-definition] Screenshot saved to: {local_screenshot_path}")
+                
+                # Clean up remote file
+                ssh_connection.execute_command(f"rm -f {remote_temp_path}")
+                
+                return jsonify({
+                    'success': True,
+                    'screenshot_path': local_screenshot_path,
+                    'message': f'HDMI screenshot captured from {video_device}'
+                })
             else:
-                # If paramiko not available, we can't transfer files
-                raise Exception("SSH client not available for file transfer")
+                current_app.logger.error(f"[@api:screen-definition] Failed to transfer screenshot")
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to transfer screenshot from remote host'
+                }), 500
+        else:
+            current_app.logger.error(f"[@api:screen-definition] SSH connection does not support SFTP")
+            return jsonify({
+                'success': False,
+                'error': 'SSH connection does not support file transfer'
+            }), 500
             
-            # Clean up remote temp file
-            ssh_connection.execute_command(f"rm -f {remote_temp_path}")
-            
-            # Verify the file was created and has content
-            if not os.path.exists(screenshot_path) or os.path.getsize(screenshot_path) == 0:
-                raise Exception("Screenshot file was not created or is empty")
-            
-            current_app.logger.info(f"Screenshot captured successfully: {screenshot_path} ({os.path.getsize(screenshot_path)} bytes)")
-            
-        except Exception as ssh_error:
-            current_app.logger.error(f"SSH/FFmpeg error: {str(ssh_error)}")
-            
-            # Fallback: create a simple test image
-            current_app.logger.info("Creating fallback test image")
-            with open(screenshot_path, 'wb') as f:
-                # Simple 1x1 pixel JPEG
-                f.write(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c \x24.\' "\x2c#\x1c\x1c(7)\x2c01444\x1f\'9=82<.342\xff\xdb\x00C\x01\t\t\t\x0c\x0b\x0c\x18\r\r\x182!\x1c!222222222222222222222222222222222222222222\xff\xc0\x00\x11\x08\x00\x01\x00\x01\x03\x01"\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x15\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xc4\x00\x14\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xc4\x00\x14\x11\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00?\x00\xb2\xc0\x07\xff\xd9')
-        
-        # Set proper permissions
-        os.chmod(screenshot_path, 0o644)
-        
-        return jsonify({
-            'success': True,
-            'screenshot_path': screenshot_path,
-            'message': 'Screenshot captured successfully'
-        })
-        
     except Exception as e:
-        current_app.logger.error(f"Screenshot error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        current_app.logger.error(f"[@api:screen-definition] Screenshot error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Screenshot failed: {str(e)}'
+        }), 500
 
 @screen_definition_blueprint.route('/get-capture-status', methods=['POST'])
 def get_capture_status():

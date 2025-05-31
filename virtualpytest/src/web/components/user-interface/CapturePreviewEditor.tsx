@@ -85,21 +85,27 @@ export function CapturePreviewEditor({
     
     console.log(`[@component:CapturePreviewEditor] Processing image path: ${screenshotPath}`);
     
-    // Generate a cache-busting timestamp
+    // Handle data URLs (base64 from remote system) - return as is
+    if (screenshotPath.startsWith('data:')) {
+      console.log('[@component:CapturePreviewEditor] Using data URL from remote system');
+      return screenshotPath;
+    }
+    
+    // Generate a cache-busting timestamp for file-based screenshots
     const timestamp = new Date().getTime();
     
-    // For server paths like /tmp/screenshots/filename.jpg
+    // For FFmpeg screenshots stored locally in /tmp/screenshots/
     if (screenshotPath.includes('/tmp/screenshots/')) {
       // Extract just the filename without path or query string
       const filename = screenshotPath.split('/').pop()?.split('?')[0];
-      console.log(`[@component:CapturePreviewEditor] Extracted filename: ${filename}`);
+      console.log(`[@component:CapturePreviewEditor] Using FFmpeg screenshot: ${filename}`);
       
       if (!filename) {
         console.error(`[@component:CapturePreviewEditor] Failed to extract filename from path: ${screenshotPath}`);
         return '';
       }
       
-      // Create a clean URL with a timestamp
+      // Create URL pointing to our screenshot serve endpoint
       return `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
     }
     
