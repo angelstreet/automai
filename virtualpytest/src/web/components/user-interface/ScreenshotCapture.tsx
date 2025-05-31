@@ -92,55 +92,36 @@ export function ScreenshotCapture({
     }}>
       {/* Screenshot display */}
       {screenshotPath && imageUrl && (
-        <>
-          <img 
-            src={imageUrl}
-            alt="Screenshot"
-            style={{
-              maxWidth: 'auto',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              backgroundColor: 'transparent'
-            }}
-            onError={(e) => {
-              const imgSrc = (e.target as HTMLImageElement).src;
-              console.error(`[@component:ScreenshotCapture] Failed to load image: ${imgSrc}`);
-              
-              // Set a transparent fallback image
-              (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
-              
-              // Add placeholder styling
-              const img = e.target as HTMLImageElement;
-              img.style.backgroundColor = 'transparent';
-              img.style.border = '1px solid #E0E0E0';
-              img.style.maxWidth = '100%';
-              img.style.maxHeight = '100%';
-              img.style.width = 'auto';
-              img.style.height = 'auto';
-              img.style.objectFit = 'contain';
-              img.style.padding = '4px';
-            }}
-          />
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              position: 'absolute', 
-              bottom: 5, 
-              left: 5, 
-              color: '#666666',
-              fontSize: '0.7rem',
-              backgroundColor: 'rgba(255,255,255,0.8)',
-              px: 1,
-              borderRadius: 1
-            }}
-          >
-            {typeof screenshotPath === 'string' ? 
-              screenshotPath.split('/').pop()?.split('?')[0] || 'Screenshot' : 
-              'Screenshot'}
-          </Typography>
-        </>
+        <img 
+          src={imageUrl}
+          alt="Screenshot"
+          style={{
+            maxWidth: 'auto',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            backgroundColor: 'transparent'
+          }}
+          onError={(e) => {
+            const imgSrc = (e.target as HTMLImageElement).src;
+            console.error(`[@component:ScreenshotCapture] Failed to load image: ${imgSrc}`);
+            
+            // Set a transparent fallback image
+            (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+            
+            // Add placeholder styling
+            const img = e.target as HTMLImageElement;
+            img.style.backgroundColor = 'transparent';
+            img.style.border = '1px solid #E0E0E0';
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '100%';
+            img.style.width = 'auto';
+            img.style.height = 'auto';
+            img.style.objectFit = 'contain';
+            img.style.padding = '4px';
+          }}
+        />
       )}
 
       {/* Loading state when capturing */}
