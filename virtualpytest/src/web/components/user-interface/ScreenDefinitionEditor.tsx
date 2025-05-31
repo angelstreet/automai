@@ -368,8 +368,8 @@ export function ScreenDefinitionEditor({
       position: 'fixed',
       bottom: 16,
       left: 16,
-      width: isExpanded ? '400px' : '200px',
-      height: isExpanded ? '300px' : '150px',
+      width: isExpanded ? '400px' : '150px',
+      height: isExpanded ? '500px' : '250px',
       bgcolor: '#000000',
       border: '2px solid #000000',
       borderRadius: 1,
@@ -481,24 +481,7 @@ export function ScreenDefinitionEditor({
                 </Tooltip>
               )}
               
-              <Button 
-                variant="outlined" 
-                size="small" 
-                onClick={handleDisconnect}
-                sx={{ 
-                  fontSize: '0.7rem', 
-                  minWidth: 'auto', 
-                  px: 1,
-                  color: '#ffffff',
-                  borderColor: '#333',
-                  '&:hover': {
-                    borderColor: '#666',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-              >
-                Disconnect
-              </Button>
+              
             </Box>
           </Box>
         </>
@@ -509,25 +492,23 @@ export function ScreenDefinitionEditor({
           width: '100%',
           height: '100%',
           overflow: 'hidden',
-          bgcolor: '#000000'
+          bgcolor: '#000000',
+          display: 'flex'
         }}>
-          {/* Stream preview area */}
-          <Box sx={{ 
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#000000',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden'
-          }}>
-            <StreamViewer 
-              streamUrl={avConfig?.stream_url}
-              isConnected={isConnected}
-              width="100%"
-              height="100%"
-            />
-          </Box>
+          {/* Stream preview area - taking full space */}
+          <StreamViewer 
+            streamUrl={avConfig?.stream_url}
+            isConnected={isConnected}
+            width="100%"
+            height="100%"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+          />
 
           {/* Resize icon in top-right corner */}
           <IconButton 
@@ -539,6 +520,7 @@ export function ScreenDefinitionEditor({
               right: 4,
               backgroundColor: 'rgba(0, 0, 0, 0.7)',
               color: '#ffffff',
+              zIndex: 1,
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.9)'
               }
