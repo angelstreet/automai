@@ -765,7 +765,10 @@ export function ScreenDefinitionEditor({
                   <IconButton 
                     size="small" 
                     onClick={handleTakeScreenshot} 
-                    sx={{ color: '#ffffff' }}
+                    sx={{ 
+                      color: viewMode === 'screenshot' ? '#ff4444' : '#ffffff',
+                      borderBottom: viewMode === 'screenshot' ? '2px solid #ff4444' : 'none'
+                    }}
                     disabled={!isConnected || isCapturing || isScreenshotLoading}
                   >
                     <PhotoCamera />
@@ -779,8 +782,11 @@ export function ScreenDefinitionEditor({
                     <IconButton 
                       size="small" 
                       onClick={handleStopCapture} 
-                      sx={{ color: '#ffffff' }}
-                      disabled={isStoppingCapture}
+                      sx={{ 
+                        color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
+                        borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                      }}
+                     
                     >
                       <StopCircle />
                     </IconButton>
@@ -792,7 +798,10 @@ export function ScreenDefinitionEditor({
                     <IconButton 
                       size="small" 
                       onClick={handleStartCapture} 
-                      sx={{ color: '#ffffff' }}
+                      sx={{ 
+                        color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
+                        borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                      }}
                       disabled={!isConnected}
                     >
                       <VideoCall />
@@ -859,6 +868,22 @@ export function ScreenDefinitionEditor({
         }}>
           {/* View component in compact mode */}
           {renderViewComponent()}
+
+          {/* Mode indicator dot */}
+          <Box sx={{ 
+            position: 'absolute',
+            top: 4,
+            left: 4,
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            backgroundColor: 
+              viewMode === 'screenshot' || viewMode === 'capture' ? '#ff4444' : 'transparent',
+            opacity: 
+              viewMode === 'screenshot' || viewMode === 'capture' ? 1 : 0,
+            boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+            zIndex: 2
+          }} />
 
           {/* Only the expand button - recording/saving indicators are now overlays within the stream */}
           <IconButton 
