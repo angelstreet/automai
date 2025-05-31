@@ -349,81 +349,61 @@ def stop_capture():
             
         ssh_connection = android_mobile_controller.ssh_connection
         
-        # Check if capture is running
-        if not capture_pid:
-            current_app.logger.info("[@api:screen-definition] No active capture to stop")
-            return jsonify({
-                'success': True,
-                'message': 'No active capture session'
-            })
-        
-        # Stop the FFmpeg process
-        current_app.logger.info(f"[@api:screen-definition] Stopping capture PID: {capture_pid}")
-        
-        # Kill the capture process gracefully first, then force kill
-        if capture_pid.isdigit():
-            ssh_connection.execute_command(f"kill {capture_pid}")
-            time.sleep(2)  # Wait for graceful shutdown
-            ssh_connection.execute_command(f"kill -9 {capture_pid} 2>/dev/null || true")
-        else:
-            # Fallback: kill all ffmpeg processes
-            ssh_connection.execute_command("pkill -f 'ffmpeg.*' || true")
+        # Simply kill all ffmpeg processes
+        current_app.logger.info("[@api:screen-definition] Stopping all FFmpeg processes...")
+        ssh_connection.execute_command("pkill -f 'ffmpeg.*' || true")
+        time.sleep(1)  # Give time for processes to stop
         
         frames_downloaded = 0
         local_capture_dir = os.path.join(TMP_DIR, 'captures')
         
-        # Download ALL rolling buffer frames from /tmp/captures/
-        if remote_capture_dir:
-            try:
-                # List all capture files in remote directory
-                success, file_list, stderr, exit_code = ssh_connection.execute_command(f"ls {remote_capture_dir}/capture_*.jpg 2>/dev/null || echo 'no files'")
+        # Download all captured frames from /tmp/captures/
+        try:
+            # List all capture files in remote directory
+            success, file_list, stderr, exit_code = ssh_connection.execute_command("ls /tmp/captures/capture_*.jpg 2>/dev/null || echo 'no files'")
+            
+            if success and 'no files' not in file_list.strip():
+                capture_files = [f.strip() for f in file_list.strip().split('\n') if f.strip().endswith('.jpg')]
+                current_app.logger.info(f"[@api:screen-definition] Found {len(capture_files)} capture files to download")
                 
-                if success and 'no files' not in file_list.strip():
-                    capture_files = [f.strip() for f in file_list.strip().split('\n') if f.strip().endswith('.jpg')]
-                    current_app.logger.info(f"[@api:screen-definition] Found {len(capture_files)} capture files to download")
-                    
-                    # Download each capture file
-                    for remote_file in capture_files:
-                        try:
-                            filename = os.path.basename(remote_file)
-                            local_file_path = os.path.join(local_capture_dir, filename)
+                # Download each capture file
+                for remote_file in capture_files:
+                    try:
+                        filename = os.path.basename(remote_file)
+                        local_file_path = os.path.join(local_capture_dir, filename)
+                        
+                        # Download using base64 encoding
+                        success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_file} | base64")
+                        
+                        if success and file_content.strip():
+                            import base64
+                            with open(local_file_path, 'wb') as f:
+                                f.write(base64.b64decode(file_content.strip()))
                             
-                            # Download using base64 encoding
-                            success, file_content, stderr, exit_code = ssh_connection.execute_command(f"cat {remote_file} | base64")
-                            
-                            if success and file_content.strip():
-                                import base64
-                                with open(local_file_path, 'wb') as f:
-                                    f.write(base64.b64decode(file_content.strip()))
-                                
-                                # Verify file was written and has content
-                                if os.path.exists(local_file_path) and os.path.getsize(local_file_path) > 0:
-                                    frames_downloaded += 1
-                                    current_app.logger.debug(f"[@api:screen-definition] Downloaded {filename} ({os.path.getsize(local_file_path)} bytes)")
-                                else:
-                                    current_app.logger.warning(f"[@api:screen-definition] Failed to download {filename}")
+                            # Verify file was written and has content
+                            if os.path.exists(local_file_path) and os.path.getsize(local_file_path) > 0:
+                                frames_downloaded += 1
+                                current_app.logger.debug(f"[@api:screen-definition] Downloaded {filename} ({os.path.getsize(local_file_path)} bytes)")
                             else:
-                                current_app.logger.warning(f"[@api:screen-definition] Failed to read {remote_file}")
-                                
-                        except Exception as e:
-                            current_app.logger.error(f"[@api:screen-definition] Error downloading {remote_file}: {e}")
-                    
-                    current_app.logger.info(f"[@api:screen-definition] Successfully downloaded {frames_downloaded} frames")
-                else:
-                    current_app.logger.info(f"[@api:screen-definition] No capture files found in {remote_capture_dir}")
+                                current_app.logger.warning(f"[@api:screen-definition] Failed to download {filename}")
+                        else:
+                            current_app.logger.warning(f"[@api:screen-definition] Failed to read {remote_file}")
+                            
+                    except Exception as e:
+                        current_app.logger.error(f"[@api:screen-definition] Error downloading {remote_file}: {e}")
                 
-                # Clean up remote capture files only (keep directory)
-                ssh_connection.execute_command(f"rm -f {remote_capture_dir}/capture_*.jpg")
-                current_app.logger.info(f"[@api:screen-definition] Cleaned up remote capture files")
-                
-            except Exception as e:
-                current_app.logger.error(f"[@api:screen-definition] Error downloading frames: {e}")
+                current_app.logger.info(f"[@api:screen-definition] Successfully downloaded {frames_downloaded} frames")
+            else:
+                current_app.logger.info("[@api:screen-definition] No capture files found in /tmp/captures")
+            
+            # Clean up remote capture files
+            ssh_connection.execute_command("rm -f /tmp/captures/capture_*.jpg")
+            current_app.logger.info("[@api:screen-definition] Cleaned up remote capture files")
+            
+        except Exception as e:
+            current_app.logger.error(f"[@api:screen-definition] Error downloading frames: {e}")
         
-        # Calculate capture duration (estimate)
-        capture_duration = 0  # We'll calculate this differently later
-        
-        # Restart stream if it was active before capture
-       
+        # Restart stream service
         current_app.logger.info("[@api:screen-definition] Restarting stream service...")
         success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl start stream")
         if not success or exit_code != 0:
@@ -440,7 +420,6 @@ def stop_capture():
             'frames_captured': frames_downloaded,
             'frames_downloaded': frames_downloaded,
             'local_capture_dir': local_capture_dir,
-            'capture_duration': capture_duration,
             'message': f'Capture stopped successfully. Downloaded {frames_downloaded} frames'
         })
         
