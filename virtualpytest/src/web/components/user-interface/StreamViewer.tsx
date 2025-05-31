@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
+import Hls from 'hls.js';
 
 interface StreamViewerProps {
   streamUrl?: string;
@@ -145,49 +146,39 @@ export function StreamViewer({
       overflow: 'hidden',
       ...sx 
     }}>
-      {/* Live stream display */}
-      {streamUrl && isStreamActive ? (
-        <Box sx={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
+      {/* Video element - visible when stream is loaded */}
+      <video 
+        ref={videoRef}
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover',
+          backgroundColor: '#000000',
+          display: streamLoaded ? 'block' : 'none'
+        }}
+        playsInline
+        muted
+      />
+      
+      {/* Loading/Error display */}
+      {!streamLoaded && streamUrl && isStreamActive && (
+        <Box sx={{ 
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          backgroundColor: 'transparent'
         }}>
-          {/* Video element - only visible when stream is loaded */}
-          <video 
-            ref={videoRef}
-            style={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%', 
-              height: '100%', 
-              objectFit: 'cover',
-              backgroundColor: '#000000',
-              display: streamLoaded ? 'block' : 'none'
-            }}
-            playsInline
-            muted
-          />
-          
-          {/* Loading/Error display */}
-          {!streamLoaded && (
-            <Box sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'transparent'
-            }}>
-              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
-                {streamError ? streamError : 'Loading stream...'}
-              </Typography>
-            </Box>
-          )}
+          <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+            {streamError ? streamError : 'Loading stream...'}
+          </Typography>
         </Box>
-      ) : (
-        /* Stream not available placeholder */
+      )}
+      
+      {/* Stream not available placeholder */}
+      {(!streamUrl || !isStreamActive) && (
         <Box sx={{
           width: '100%',
           height: '100%',

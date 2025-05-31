@@ -90,8 +90,8 @@ export function ScreenshotCapture({
       overflow: 'hidden',
       ...sx 
     }}>
-      {/* Screenshot display */}
-      {screenshotPath && imageUrl && (
+      {/* Screenshot display - only shown when not capturing */}
+      {screenshotPath && imageUrl && !isCapturing && (
         <img 
           src={imageUrl}
           alt="Screenshot"
@@ -127,17 +127,19 @@ export function ScreenshotCapture({
       {/* Loading state when capturing */}
       {isCapturing && (
         <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           width: '100%',
           height: '100%',
-          minHeight: '400px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'transparent',
-          border: '1px solid #333333',
-          p: 0.5,
-          gap: 2
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          zIndex: 10
         }}>
           {/* Simple carousel-style loading */}
           <Box sx={{
@@ -152,7 +154,7 @@ export function ScreenshotCapture({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  backgroundColor: '#666666',
+                  backgroundColor: '#ffffff',
                   animation: 'pulse 1.4s ease-in-out infinite both',
                   animationDelay: `${index * 0.16}s`,
                   '@keyframes pulse': {
@@ -169,7 +171,7 @@ export function ScreenshotCapture({
               />
             ))}
           </Box>
-          <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+          <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
             Capturing Screenshot...
           </Typography>
         </Box>

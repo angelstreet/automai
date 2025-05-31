@@ -258,7 +258,15 @@ export function ScreenDefinitionEditor({
   const handleTakeScreenshot = async () => {
     if (!isConnected) return;
     
+    // Set capturing state to show loading indicator
+    setIsCapturing(true);
+    
     try {
+      // First stop the stream
+      console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
+      await stopStream();
+      
+      // Now take the screenshot
       console.log('[@component:ScreenDefinitionEditor] Taking screenshot...');
       
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot_from_stream', {
@@ -292,11 +300,17 @@ export function ScreenDefinitionEditor({
             stream: data.stream_resolution || null,
           }));
         }
+        
+        // Ensure stream status is set to stopped to enable the restart button
+        setStreamStatus('stopped');
       } else {
         console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', data.error);
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
+    } finally {
+      // Always clear the capturing state when done
+      setIsCapturing(false);
     }
   };
 
@@ -501,43 +515,6 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // If not connected, show connection status
-  if (!isConnected) {
-    return (
-      <Box sx={{ 
-        position: 'fixed',
-        bottom: 16,
-        left: 16,
-        width: '240px',
-        height: connectionError ? 'auto' : '150px',
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: connectionError ? 'error.main' : 'divider',
-        borderRadius: 1,
-        p: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: 2,
-        zIndex: 1000,
-        ...sx 
-      }}>
-        <Typography variant="caption" color="textSecondary" textAlign="center" gutterBottom>
-          Screen Definition
-        </Typography>
-        {avConfig ? (
-          <Typography variant="caption" color="textSecondary" textAlign="center">
-            {connectionError}
-          </Typography>
-        ) : (
-          <Typography variant="caption" color="textSecondary" textAlign="center">
-            No AV config
-          </Typography>
-        )}
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ 
