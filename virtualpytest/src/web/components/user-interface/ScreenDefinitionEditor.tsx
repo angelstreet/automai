@@ -623,7 +623,7 @@ export function ScreenDefinitionEditor({
                       size="small" 
                       onClick={handleStartCapture} 
                       sx={{ color: '#ffffff' }}
-                      disabled={!isConnected || streamStatus !== 'stopped'}
+                      disabled={!isConnected}
                     >
                       <VideoCall />
                     </IconButton>
