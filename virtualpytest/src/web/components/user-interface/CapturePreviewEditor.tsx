@@ -196,10 +196,10 @@ export function CapturePreviewEditor({
       <Box sx={{ 
         flex: 1,
         position: 'relative',
-        overflow: 'auto',
+        overflow: 'hidden',
         display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: 'transparent',
         p: 0.5, // Minimal padding
       }}>
