@@ -487,8 +487,8 @@ export function ScreenDefinitionEditor({
           boxShadow: 2,
           borderRadius: 1,
           overflow: 'hidden',
-          bgcolor: '#000000',
-          border: '2px solid #000000',
+          bgcolor: '#1E1E1E',
+          border: '2px solid #1E1E1E',
         }}>
           {/* Header with controls */}
           <Box sx={{ 
@@ -606,8 +606,8 @@ export function ScreenDefinitionEditor({
         <Box sx={{ 
           width: '150px',
           height: '250px',
-          bgcolor: '#000000',
-          border: '2px solid #000000',
+          bgcolor: '#1E1E1E',
+          border: '2px solid #1E1E1E',
           borderRadius: 1,
           overflow: 'hidden',
           position: 'relative',
