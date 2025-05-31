@@ -31,6 +31,13 @@ export interface CaptureStatusResponse {
   fps?: number;
 }
 
+export interface LatestFrameResponse {
+  success: boolean;
+  error?: string;
+  frame_path?: string;
+  frame_number?: number;
+}
+
 export class CaptureApi {
   private static captureInfo: {
     capture_pid?: string;
@@ -149,6 +156,43 @@ export class CaptureApi {
       return {
         success: false,
         error: `Failed to get capture status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Get the latest captured frame
+   */
+  static async getLatestFrame(): Promise<LatestFrameResponse> {
+    try {
+      if (!this.captureInfo) {
+        return {
+          success: false,
+          error: 'No active capture session found',
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/capture/latest-frame`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP error: ${response.status}`,
+        };
+      }
+
+      const result: LatestFrameResponse = await response.json();
+      return result;
+    } catch (error) {
+      console.error(`[@util:CaptureApi] Get latest frame error: ${error}`);
+      return {
+        success: false,
+        error: `Failed to get latest frame: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }

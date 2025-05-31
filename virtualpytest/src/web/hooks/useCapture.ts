@@ -8,12 +8,21 @@ interface CaptureState {
   fps: number;
   error: string | null;
   isLoading: boolean;
+  currentFrame: number;
 }
 
 interface CaptureResult {
   framesDownloaded: number;
   localCaptureDir: string;
   captureDuration: number;
+}
+
+interface CaptureStatusResponse {
+  is_capturing: boolean;
+  duration: number;
+  max_duration: number;
+  fps: number;
+  current_frame?: number;
 }
 
 export function useCapture(deviceModel: string = 'android_mobile', videoDevice: string = '/dev/video0') {
@@ -24,11 +33,13 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
     fps: 10,
     error: null,
     isLoading: false,
+    currentFrame: 0,
   });
 
   const [lastCaptureResult, setLastCaptureResult] = useState<CaptureResult | null>(null);
+  const [latestFramePath, setLatestFramePath] = useState<string | null>(null);
 
-  // Poll capture status when capturing
+  // Poll capture status when capturing - lightweight polling to just check if still active
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -43,12 +54,13 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
               maxDuration: status.max_duration || 30,
               fps: status.fps || 10,
               isCapturing: status.is_capturing,
+              currentFrame: status.current_frame || 0,
             }));
           }
         } catch (error) {
           console.error('[@hook:useCapture] Failed to get capture status:', error);
         }
-      }, 1000); // Update every second
+      }, 1000); // Update every second - just for status, not for frames
     }
 
     return () => {
@@ -56,6 +68,23 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
         clearInterval(interval);
       }
     };
+  }, [captureState.isCapturing]);
+
+  // This function gets the latest frame and updates the state
+  const getLatestFrame = useCallback(async () => {
+    if (!captureState.isCapturing) return null;
+
+    try {
+      const result = await CaptureApi.getLatestFrame();
+      if (result.success && result.frame_path) {
+        setLatestFramePath(result.frame_path);
+        return result.frame_path;
+      }
+      return null;
+    } catch (error) {
+      console.error('[@hook:useCapture] Failed to get latest frame:', error);
+      return null;
+    }
   }, [captureState.isCapturing]);
 
   const startCapture = useCallback(async (): Promise<CaptureStartResponse> => {
@@ -73,6 +102,9 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
           isLoading: false,
         }));
         console.log(`[@hook:useCapture] Capture started successfully`);
+        
+        // Start checking for frames immediately
+        getLatestFrame();
       } else {
         setCaptureState(prev => ({
           ...prev,
@@ -96,7 +128,7 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
         error: errorMessage,
       };
     }
-  }, [deviceModel, videoDevice]);
+  }, [deviceModel, videoDevice, getLatestFrame]);
 
   const stopCapture = useCallback(async (): Promise<CaptureStopResponse> => {
     setCaptureState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -121,6 +153,9 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
             captureDuration: result.capture_duration,
           });
         }
+        
+        // Clear latest frame path
+        setLatestFramePath(null);
         
         console.log(`[@hook:useCapture] Capture stopped successfully. Downloaded ${result.frames_downloaded} frames`);
       } else {
@@ -168,7 +203,11 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
             duration: status.duration || 0,
             maxDuration: status.max_duration || 30,
             fps: status.fps || 10,
+            currentFrame: status.current_frame || 0,
           }));
+          
+          // Get latest frame if already capturing
+          getLatestFrame();
         }
       } catch (error) {
         console.error('[@hook:useCapture] Failed to check initial status:', error);
@@ -176,18 +215,20 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
     };
 
     checkInitialStatus();
-  }, []);
+  }, [getLatestFrame]);
 
   return {
     // State
     captureState,
     lastCaptureResult,
+    latestFramePath,
     
     // Actions
     startCapture,
     stopCapture,
     clearError,
     clearLastResult,
+    getLatestFrame,
     
     // Computed values
     isCapturing: captureState.isCapturing,
@@ -198,6 +239,7 @@ export function useCapture(deviceModel: string = 'android_mobile', videoDevice: 
       duration: captureState.duration,
       max_duration: captureState.maxDuration,
       fps: captureState.fps,
+      current_frame: captureState.currentFrame,
     },
   };
 }

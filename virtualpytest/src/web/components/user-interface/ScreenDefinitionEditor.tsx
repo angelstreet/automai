@@ -211,6 +211,30 @@ export function ScreenDefinitionEditor({
     };
   }, []);
 
+  // Start video capture - simplified for new architecture
+  const handleStartCapture = async () => {
+    if (!isConnected || isCapturing) return;
+    
+    try {
+      console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
+      
+      // Set capturing state and view mode first, so the VideoCapture component will be displayed immediately
+      setIsCapturing(true);
+      setViewMode('capture');
+      setCaptureFrames([]);
+      
+      // The VideoCapture component will auto-start capture when mounted
+      console.log('[@component:ScreenDefinitionEditor] Switched to VideoCapture component which will auto-start');
+      
+      // Start stats monitoring
+      startStatsMonitoring();
+      
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
+      setIsCapturing(false);
+    }
+  };
+
   // Stop video capture - simplified for new architecture
   const handleStopCapture = async () => {
     if (!isCapturing) return;
@@ -220,8 +244,13 @@ export function ScreenDefinitionEditor({
       captureTimerRef.current = null;
     }
     
+    // VideoCapture component handles the actual stop action through its own Stop button
+    // We'll just set our local state to reflect the stopped state
     setIsCapturing(false);
     setCaptureStats(null);
+    
+    // Return to stream view after stopping
+    setViewMode('stream');
     
     console.log('[@component:ScreenDefinitionEditor] Video capture stopped');
   };
@@ -310,26 +339,6 @@ export function ScreenDefinitionEditor({
       console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
     } finally {
       // Always clear the capturing state when done
-      setIsCapturing(false);
-    }
-  };
-
-  // Start video capture - simplified for new architecture
-  const handleStartCapture = async () => {
-    if (!isConnected || isCapturing) return;
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
-      
-      setIsCapturing(true);
-      setViewMode('capture');
-      setCaptureFrames([]);
-      
-      // Start stats monitoring
-      startStatsMonitoring();
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
       setIsCapturing(false);
     }
   };
