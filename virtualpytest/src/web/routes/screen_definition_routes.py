@@ -251,11 +251,11 @@ def start_capture():
         # This replaces both the stream service and provides rolling buffer capture
         ffmpeg_cmd = (
             f"/usr/bin/ffmpeg "
-            f"-f v4l2 -s 640x360 -r 12 -i {video_device} "
+            f"-f v4l2 -video_size {capture_resolution} -r 12 -i {video_device} "
             f"-c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an -f hls "
             f"-hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
             f"/var/www/html/stream/output.m3u8 "
-            f"-vf \"fps=5,scale={capture_resolution}\" -q:v 2 -start_number 1 "
+            f"-vf \"fps=5\" -q:v 2 -start_number 1 "
             f"-f image2 -y {remote_capture_dir}/capture_%d.jpg"
         )
         
