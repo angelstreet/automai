@@ -280,7 +280,45 @@ const NavigationEditorContent: React.FC = () => {
     setSelectedDevice(device);
   };
 
-  const handleTakeControl = () => {
+  const handleTakeControl = async () => {
+    const wasControlActive = isControlActive;
+    
+    // If we're releasing control, check if stream needs to be restarted BEFORE disconnecting
+    if (wasControlActive && selectedDeviceData && hasAVCapabilities) {
+      console.log('[@component:NavigationEditor] Releasing control, checking stream status before disconnect...');
+      
+      try {
+        // Check current stream status while SSH connection is still active
+        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && !data.is_active) {
+            console.log('[@component:NavigationEditor] Stream was stopped, will restart after disconnect...');
+            
+            // Restart the stream before disconnecting
+            const restartResponse = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/restart', {
+              method: 'POST'
+            });
+            
+            if (restartResponse.ok) {
+              const restartData = await restartResponse.json();
+              if (restartData.success) {
+                console.log('[@component:NavigationEditor] Stream restarted successfully before releasing control');
+              }
+            }
+          } else if (data.success && data.is_active) {
+            console.log('[@component:NavigationEditor] Stream is already running, no restart needed');
+          }
+        } else {
+          console.log('[@component:NavigationEditor] Stream status check failed, SSH connection may not be available');
+        }
+      } catch (error) {
+        console.log('[@component:NavigationEditor] Could not check/restart stream before disconnect:', error);
+        // Don't throw error, just log it
+      }
+    }
+    
+    // Now set control to false, which will trigger disconnect
     setIsControlActive(!isControlActive);
   };
 

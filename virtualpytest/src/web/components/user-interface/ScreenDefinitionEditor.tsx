@@ -662,6 +662,7 @@ export function ScreenDefinitionEditor({
               onScreenshotTaken={handleScreenshotTaken}
               isCompactView={false}
               streamStatus={streamStatus}
+              isCapturing={isCapturing}
             />
           </Box>
         </Box>
@@ -688,6 +689,7 @@ export function ScreenDefinitionEditor({
             onScreenshotTaken={handleScreenshotTaken}
             isCompactView={true}
             streamStatus={streamStatus}
+            isCapturing={isCapturing}
           />
 
           {/* Only the expand button */}

@@ -14,6 +14,7 @@ interface StreamViewerProps {
   isCompactView?: boolean;
   streamStatus?: 'running' | 'stopped' | 'unknown';
   onStreamStatusChange?: (status: 'running' | 'stopped' | 'unknown') => void;
+  isCapturing?: boolean;
   sx?: any;
 }
 
@@ -28,6 +29,7 @@ export function StreamViewer({
   isCompactView = false,
   streamStatus = 'unknown',
   onStreamStatusChange,
+  isCapturing,
   sx = {} 
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -231,6 +233,7 @@ export function StreamViewer({
           <CapturePreviewEditor
             mode={previewMode || 'screenshot'}
             screenshotPath={screenshotPath}
+            isCapturing={isCapturing}
             sx={{ height: '100%' }}
           />
         </Box>

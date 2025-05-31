@@ -4,6 +4,7 @@ import {
   Slider,
   IconButton,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -24,6 +25,7 @@ interface CapturePreviewEditorProps {
     capture: string | null;
     stream: string | null;
   };
+  isCapturing?: boolean;
   sx?: any;
 }
 
@@ -56,6 +58,7 @@ export function CapturePreviewEditor({
   totalFrames = 0,
   onFrameChange,
   resolutionInfo,
+  isCapturing,
   sx = {}
 }: CapturePreviewEditorProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -245,8 +248,29 @@ export function CapturePreviewEditor({
             </Typography>
           </>
         )}
-        {/* Show placeholder when no screenshot */}
-        {mode === 'screenshot' && !screenshotPath && (
+        {/* Show loading when capturing */}
+        {mode === 'screenshot' && isCapturing && (
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            minHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent',
+            border: '1px solid #333333',
+            p: 0.5,
+            gap: 2
+          }}>
+            <CircularProgress size={40} sx={{ color: '#666666' }} />
+            <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+              Capturing Screenshot...
+            </Typography>
+          </Box>
+        )}
+        {/* Show placeholder when no screenshot and not capturing */}
+        {mode === 'screenshot' && !screenshotPath && !isCapturing && (
           <CapturePreviewPlaceholder text="No Screenshot Available" />
         )}
         {mode === 'video' && videoFramesPath && (
