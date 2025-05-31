@@ -26,3 +26,4 @@ traces/
 
 # Git API temporary directories
 temp/
+virtualpytest/src/tmp/screenshots/android_mobile.jpg

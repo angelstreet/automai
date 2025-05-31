@@ -240,7 +240,7 @@ def take_screenshot_from_stream():
         
         return jsonify({
             'success': True,
-            'screenshot_path': local_screenshot_path,
+            'screenshot_path': local_filename,
             'message': f'Screenshot captured successfully via HLS stream from {stream_url}'
         })
         
@@ -274,8 +274,8 @@ def serve_screenshot(filename):
         # Extract the base filename without query parameters
         base_filename = filename.split('?')[0]
         
-        # Path to the screenshots directory
-        screenshot_path = os.path.join('/tmp/screenshots', base_filename)
+        # Use the same TMP_DIR path as the save operation
+        screenshot_path = os.path.join(TMP_DIR, 'screenshots', base_filename)
         
         # Check if the file exists
         if not os.path.exists(screenshot_path):

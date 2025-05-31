@@ -94,7 +94,7 @@ export function CapturePreviewEditor({
     // Generate a cache-busting timestamp for file-based screenshots
     const timestamp = new Date().getTime();
     
-    // For FFmpeg screenshots stored locally in /tmp/screenshots/
+    // For FFmpeg screenshots stored locally in /tmp/screenshots/ (full path)
     if (screenshotPath.includes('/tmp/screenshots/')) {
       // Extract just the filename without path or query string
       const filename = screenshotPath.split('/').pop()?.split('?')[0];
@@ -106,23 +106,41 @@ export function CapturePreviewEditor({
       }
       
       // Create URL pointing to our screenshot serve endpoint
-      return `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      console.log(`[@component:CapturePreviewEditor] Generated image URL: ${finalUrl}`);
+      return finalUrl;
+    }
+    
+    // For just a filename (like android_mobile.jpg) - assume it's in /tmp/screenshots/
+    if (!screenshotPath.includes('/') && screenshotPath.endsWith('.jpg')) {
+      const filename = screenshotPath.split('?')[0]; // Remove any query params
+      console.log(`[@component:CapturePreviewEditor] Using filename screenshot: ${filename}`);
+      
+      // Create URL pointing to our screenshot serve endpoint
+      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      console.log(`[@component:CapturePreviewEditor] Generated image URL from filename: ${finalUrl}`);
+      return finalUrl;
     }
     
     // If it's already a full URL (but without timestamp)
     if (screenshotPath.startsWith('http') && !screenshotPath.includes('?t=')) {
-      return `${screenshotPath}?t=${timestamp}`;
+      const finalUrl = `${screenshotPath}?t=${timestamp}`;
+      console.log(`[@component:CapturePreviewEditor] Added timestamp to URL: ${finalUrl}`);
+      return finalUrl;
     }
     
     // If it's already a full URL with timestamp, return as is
     if (screenshotPath.startsWith('http') && screenshotPath.includes('?t=')) {
+      console.log(`[@component:CapturePreviewEditor] Using existing URL with timestamp: ${screenshotPath}`);
       return screenshotPath;
     }
     
     // Default case - convert to API endpoint URL
     // First clean the path of any query parameters
     const cleanPath = screenshotPath.split('?')[0];
-    return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+    const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+    console.log(`[@component:CapturePreviewEditor] Generated default URL: ${finalUrl}`);
+    return finalUrl;
   }, [screenshotPath]); // Only recalculate when screenshotPath changes
 
   // Memoize video frame URL
