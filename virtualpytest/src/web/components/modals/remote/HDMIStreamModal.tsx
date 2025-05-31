@@ -258,7 +258,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                       onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, stream_path: e.target.value }))}
                       size="small"
                       placeholder="/path/to/output.m3u8"
-                      helperText="Path to the .m3u8 file on the remote server"
+                      
                     />
                   </Grid>
                   <Grid item xs={12}>
@@ -269,7 +269,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                       onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, video_device: e.target.value }))}
                       size="small"
                       placeholder="/dev/video0"
-                      helperText="Path to the video capture device"
+                     
                     />
                   </Grid>
                 </Grid>
