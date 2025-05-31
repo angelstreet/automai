@@ -68,6 +68,9 @@ import { CompactRemote } from '../components/remote/CompactRemote';
 import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile';
 import { RemotePanel } from '../components/remote/RemotePanel';
 
+// Import ScreenDefinitionEditor
+import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefinitionEditor';
+
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
 import { deviceApi, Device } from '../services/deviceService';
@@ -96,6 +99,9 @@ const NavigationEditorContent: React.FC = () => {
   // Get the selected device data
   const selectedDeviceData = devices.find(d => d.name === selectedDevice);
   const remoteConfig = selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
+  
+  // Check if device has AV (screen definition) capabilities
+  const hasAVCapabilities = selectedDeviceData?.controller_configs?.av?.parameters != null;
 
   // Fetch devices
   const fetchDevices = async () => {
@@ -127,7 +133,12 @@ const NavigationEditorContent: React.FC = () => {
       // Just log the device configuration - the new generic components will handle configuration automatically
       console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has remote type: ${deviceRemoteConfig.type}`);
     }
-  }, [selectedDeviceData]);
+    
+    // Also log AV capabilities
+    if (hasAVCapabilities) {
+      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData?.name} has AV capabilities for screen definition`);
+    }
+  }, [selectedDeviceData, hasAVCapabilities]);
 
   // Handle disconnection when control is released
   useEffect(() => {
@@ -452,6 +463,19 @@ const NavigationEditorContent: React.FC = () => {
                   />
                 </ReactFlow>
               </div>
+
+              {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
+              {selectedDeviceData && hasAVCapabilities && isControlActive && (
+                <ScreenDefinitionEditor
+                  deviceConfig={selectedDeviceData.controller_configs}
+                  deviceModel={selectedDeviceData.model}
+                  autoConnect={true}
+                  onDisconnectComplete={() => {
+                    // Called when screen definition editor disconnects
+                    console.log('[@component:NavigationEditor] Screen definition editor disconnected');
+                  }}
+                />
+              )}
 
               {/* Selection Info Panel */}
               {(selectedNode || selectedEdge) ? (

@@ -92,4 +92,27 @@ export const extractConnectionConfigForBluetooth = (remoteConfig: any) => {
   
   console.log('[@util:deviceRemoteMapping] Extracted Bluetooth connection config:', config);
   return config;
+};
+
+export const extractConnectionConfigForAV = (avConfig: any) => {
+  if (!avConfig) return undefined;
+  
+  // Handle both flat structure (legacy) and nested structure (current)
+  const params = avConfig.parameters || avConfig;
+  
+  const config = {
+    fps: params.fps || 30,
+    host_ip: params.host_ip,
+    host_port: params.host_port || '22',
+    resolution: params.resolution || '1920x1080',
+    stream_url: params.stream_url,
+    stream_path: params.stream_path,
+    video_device: params.video_device || '/dev/video0',
+    host_password: params.host_password,
+    host_username: params.host_username,
+    connection_timeout: params.connection_timeout || 15,
+  };
+  
+  console.log('[@util:deviceRemoteMapping] Extracted AV connection config:', config);
+  return config;
 }; 
