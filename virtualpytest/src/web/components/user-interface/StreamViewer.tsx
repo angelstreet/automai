@@ -6,18 +6,28 @@ interface StreamViewerProps {
   streamUrl?: string;
   isStreamActive?: boolean;
   sx?: any;
+  /** Ref to the video element for overlay positioning */
+  videoElementRef?: React.RefObject<HTMLVideoElement>;
 }
 
 export function StreamViewer({
   streamUrl,
   isStreamActive = false,
-  sx = {}
+  sx = {},
+  videoElementRef
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamLoaded, setStreamLoaded] = useState(false);
   const [currentStreamUrl, setCurrentStreamUrl] = useState<string | null>(null);
+
+  // Expose video ref to parent if provided
+  useEffect(() => {
+    if (videoElementRef && videoRef.current) {
+      (videoElementRef as any).current = videoRef.current;
+    }
+  }, [videoElementRef]);
 
   // Clean up stream resources
   const cleanupStream = () => {

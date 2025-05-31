@@ -27,7 +27,7 @@ export function CompactAndroidMobile({
   connectionConfig,
   autoConnect = false,
   sx = {},
-  onDisconnectComplete
+  onDisconnectComplete,
 }: CompactAndroidMobileProps) {
   // UI state
   const [isDumpingUI, setIsDumpingUI] = useState(false);
@@ -41,7 +41,7 @@ export function CompactAndroidMobile({
   const [isAutoDumpScheduled, setIsAutoDumpScheduled] = useState(false);
   const autoDumpTimerRef = useRef<NodeJS.Timeout | null>(null);
   const screenshotRef = useRef<HTMLImageElement>(null);
-
+  
   // Track if we've already initialized to prevent duplicate calls
   const isInitializedRef = useRef(false);
 
@@ -381,15 +381,28 @@ export function CompactAndroidMobile({
 
       {/* AndroidMobileOverlay - positioned outside */}
       {showOverlay && androidElements.length > 0 && (
-        <AndroidMobileOverlay
-          elements={androidElements}
-          screenshotElement={screenshotRef.current}
-          deviceWidth={deviceResolution.width}
-          deviceHeight={deviceResolution.height}
-          isVisible={showOverlay}
-          selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
-          onElementClick={handleOverlayElementClick}
-        />
+        <div style={{ 
+          position: 'fixed',
+          left: '20px',
+          top: 'calc(100vh - 536px)',
+          width: '258px',  // Match the actual video width seen in screenshot
+          height: '470px', // Match the actual video height seen in screenshot
+          zIndex: 9999,
+          pointerEvents: 'all',
+          overflow: 'hidden', // Contain child elements
+          transform: 'scale(0.75)', // Scale down to better match video
+          transformOrigin: 'top left' // Scale from top-left corner
+        }}>
+          <AndroidMobileOverlay
+            elements={androidElements}
+            screenshotElement={screenshotRef.current}
+            deviceWidth={deviceResolution.width}
+            deviceHeight={deviceResolution.height}
+            isVisible={showOverlay}
+            selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
+            onElementClick={handleOverlayElementClick}
+          />
+        </div>
       )}
     </Box>
   );
