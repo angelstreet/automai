@@ -14,7 +14,6 @@ interface StreamViewerProps {
   isCompactView?: boolean;
   streamStatus?: 'running' | 'stopped' | 'unknown';
   onStreamStatusChange?: (status: 'running' | 'stopped' | 'unknown') => void;
-  screenshotStyle?: React.CSSProperties;
   sx?: any;
 }
 
@@ -29,7 +28,6 @@ export function StreamViewer({
   isCompactView = false,
   streamStatus = 'unknown',
   onStreamStatusChange,
-  screenshotStyle,
   sx = {} 
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,26 +41,11 @@ export function StreamViewer({
   useEffect(() => {
     if (lastScreenshotPath !== undefined) {
       setScreenshotPath(lastScreenshotPath);
-      setShowPreview(!!lastScreenshotPath);
+      if (lastScreenshotPath) {
+        setShowPreview(true);
+      }
     }
   }, [lastScreenshotPath]);
-
-  // Update preview mode when it changes
-  useEffect(() => {
-    // If preview mode is video and there's no screenshot, make sure we're not showing preview
-    if (previewMode === 'video' && !lastScreenshotPath) {
-      setShowPreview(false);
-    }
-  }, [previewMode, lastScreenshotPath]);
-
-  // Update when stream status changes
-  useEffect(() => {
-    // When stream is restarted, hide any preview and show stream instead
-    if (streamStatus === 'running' && showPreview && !lastScreenshotPath) {
-      console.log('[@component:StreamViewer] Stream is running, hiding preview');
-      setShowPreview(false);
-    }
-  }, [streamStatus, showPreview, lastScreenshotPath]);
 
   // Clean up stream resources
   const cleanupStream = () => {
@@ -209,7 +192,7 @@ export function StreamViewer({
       position: 'relative', 
       width, 
       height,
-      backgroundColor: '#1E1E1E', // Match dark grey background
+      backgroundColor: '#000000',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -225,9 +208,9 @@ export function StreamViewer({
           left: 0,
           width: '100%', 
           height: '100%', 
-          objectFit: 'contain', // Use contain instead of cover to maintain aspect ratio
+          objectFit: 'cover',
           display: streamLoaded && !showPreview ? 'block' : 'none',
-          backgroundColor: '#1E1E1E'
+          backgroundColor: '#000000'
         }}
         playsInline
         muted
@@ -240,7 +223,6 @@ export function StreamViewer({
             mode={previewMode || 'screenshot'}
             screenshotPath={screenshotPath}
             sx={{ height: '100%' }}
-            screenshotStyle={screenshotStyle}
           />
         </Box>
       )}
@@ -256,7 +238,7 @@ export function StreamViewer({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#1E1E1E'
+          backgroundColor: '#000000'
         }}>
           <Typography variant="caption" sx={{ color: '#666', textAlign: 'center' }}>
             {streamError ? streamError : 

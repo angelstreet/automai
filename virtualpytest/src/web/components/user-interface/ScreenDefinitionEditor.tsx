@@ -207,9 +207,7 @@ export function ScreenDefinitionEditor({
     
     try {
       // First stop the stream if it's running
-      if (streamStatus === 'running') {
-        await stopStream();
-      }
+      await stopStream();
       
       console.log('[@component:ScreenDefinitionEditor] Taking high-res screenshot...');
       
@@ -375,9 +373,6 @@ export function ScreenDefinitionEditor({
       const data = await response.json();
       if (data.success) {
         setStreamStatus('running');
-        // Hide screenshot and show stream when restarting
-        setPreviewMode('video');
-        setLastScreenshotPath(null);
         console.log('[@component:ScreenDefinitionEditor] Stream restarted successfully');
       }
     } catch (error) {
@@ -412,17 +407,6 @@ export function ScreenDefinitionEditor({
     setPreviewMode('screenshot');
   };
 
-  // Ensure screenshots are properly scaled to container
-  const screenshotStyle = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain' as const, // Ensure aspect ratio is maintained
-    objectPosition: 'center',
-    backgroundColor: '#1E1E1E',
-    display: 'block', // Ensure the image is displayed as block
-    margin: '0 auto' // Center the image horizontally
-  };
-
   // Handle stream control
   const handleStreamControl = async () => {
     try {
@@ -442,13 +426,6 @@ export function ScreenDefinitionEditor({
       const data = await response.json();
       if (data.success) {
         setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
-        
-        // If restarting the stream, hide screenshot and show stream
-        if (endpoint === 'restart') {
-          setPreviewMode('video');
-          setLastScreenshotPath(null);
-        }
-        
         console.log(`[@component:ScreenDefinitionEditor] Stream ${endpoint === 'stop' ? 'stopped' : 'restarted'} successfully`);
       }
     } catch (error) {
@@ -621,7 +598,6 @@ export function ScreenDefinitionEditor({
               onScreenshotTaken={handleScreenshotTaken}
               isCompactView={false}
               streamStatus={streamStatus}
-              screenshotStyle={screenshotStyle}
             />
           </Box>
         </Box>
@@ -648,7 +624,6 @@ export function ScreenDefinitionEditor({
             onScreenshotTaken={handleScreenshotTaken}
             isCompactView={true}
             streamStatus={streamStatus}
-            screenshotStyle={screenshotStyle}
           />
 
           {/* Only the expand button */}
