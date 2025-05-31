@@ -19,6 +19,11 @@ interface CapturePreviewEditorProps {
   currentFrame?: number;
   totalFrames?: number;
   onFrameChange?: (frame: number) => void;
+  resolutionInfo?: {
+    device: { width: number; height: number } | null;
+    capture: string | null;
+    stream: string | null;
+  };
   sx?: any;
 }
 
@@ -50,6 +55,7 @@ export function CapturePreviewEditor({
   currentFrame = 0,
   totalFrames = 0,
   onFrameChange,
+  resolutionInfo,
   sx = {}
 }: CapturePreviewEditorProps) {
   const [isPlaying, setIsPlaying] = useState(false);

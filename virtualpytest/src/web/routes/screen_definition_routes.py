@@ -37,7 +37,7 @@ def ensure_dirs():
 
 @screen_definition_blueprint.route('/screenshot', methods=['POST'])
 def take_screenshot():
-    """Take high resolution screenshot using FFmpeg from HDMI source."""
+    """Take high resolution screenshot using FFmpeg from HDMI source with proper orientation detection."""
     try:
         from app import android_mobile_controller
         
@@ -56,6 +56,40 @@ def take_screenshot():
         video_device = data.get('video_device', '/dev/video0')
         device_model = data.get('device_model', 'android_mobile')
         
+        # Step 1: Get device resolution and orientation from ADB
+        device_resolution = None
+        capture_resolution = "1920x1080"  # Default fallback
+        
+        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
+            try:
+                # Get device resolution using ADB
+                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
+                if android_device_id:
+                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
+                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
+                    
+                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+                        device_width = device_resolution['width']
+                        device_height = device_resolution['height']
+                        
+                        # Determine orientation and set capture resolution accordingly
+                        if device_height > device_width:
+                            # Portrait mode - capture in portrait
+                            capture_resolution = f"{device_width}x{device_height}"
+                            current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using capture resolution: {capture_resolution}")
+                        else:
+                            # Landscape mode - capture in landscape  
+                            capture_resolution = f"{device_width}x{device_height}"
+                            current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using capture resolution: {capture_resolution}")
+                    else:
+                        current_app.logger.warning(f"[@api:screen-definition] Invalid device resolution data: {device_resolution}")
+                else:
+                    current_app.logger.warning(f"[@api:screen-definition] No android_device_id available")
+            except Exception as e:
+                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
+        else:
+            current_app.logger.warning(f"[@api:screen-definition] No ADB utils available, using default resolution")
+        
         # Check if stream is already stopped
         success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
         stream_was_active = "Active: active (running)" in stdout
@@ -71,11 +105,12 @@ def take_screenshot():
                     'error': f'Failed to stop stream service: {stderr}'
                 }), 500
         
-        # Take high-res screenshot with FFmpeg
+        # Take high-res screenshot with FFmpeg using detected resolution
         remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
-        ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size 1920x1080 -i {video_device} -frames:v 1 -y {remote_temp_path}"
+        ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size {capture_resolution} -i {video_device} -frames:v 1 -y {remote_temp_path}"
         
-        current_app.logger.info(f"[@api:screen-definition] Taking high-res screenshot...")
+        current_app.logger.info(f"[@api:screen-definition] Taking screenshot with resolution {capture_resolution}...")
+        current_app.logger.info(f"[@api:screen-definition] FFmpeg command: {ffmpeg_cmd}")
         success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
         
         if not success or exit_code != 0:
@@ -112,7 +147,9 @@ def take_screenshot():
             'success': True,
             'screenshot_path': local_screenshot_path,
             'stream_was_active': stream_was_active,
-            'message': 'High-res screenshot captured successfully'
+            'device_resolution': device_resolution,
+            'capture_resolution': capture_resolution,
+            'message': f'Screenshot captured successfully with resolution {capture_resolution}'
         })
         
     except Exception as e:
@@ -140,6 +177,17 @@ def take_screenshot_from_stream():
         
         # Extract parameters
         device_model = data.get('device_model', 'android_mobile')
+        
+        # Get device resolution from ADB for alignment calculations
+        device_resolution = None
+        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
+            try:
+                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
+                if android_device_id:
+                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
+                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
+            except Exception as e:
+                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
         
         # Get the SSH connection from the global controller (same as CompactAndroidMobile)
         ssh_connection = android_mobile_controller.ssh_connection
@@ -223,6 +271,8 @@ def take_screenshot_from_stream():
         return jsonify({
             'success': True,
             'screenshot_path': local_filename,
+            'device_resolution': device_resolution,
+            'stream_resolution': '640x360',  # Hardcoded stream resolution
             'message': f'Screenshot captured successfully via HLS stream from {stream_url}'
         })
         
