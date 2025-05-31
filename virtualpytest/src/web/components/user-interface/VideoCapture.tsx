@@ -8,8 +8,6 @@ import {
 import {
   PlayArrow,
   Pause,
-  SkipNext,
-  SkipPrevious,
 } from '@mui/icons-material';
 import { useCapture } from '../../hooks/useCapture';
 
@@ -116,18 +114,6 @@ export function VideoCapture({
     setIsPlaying(!isPlaying);
   };
 
-  const handlePrevFrame = () => {
-    const newFrame = Math.max(0, currentValue - 1);
-    setCurrentValue(newFrame);
-    onFrameChange?.(newFrame);
-  };
-
-  const handleNextFrame = () => {
-    const newFrame = Math.min(totalFrames - 1, currentValue + 1);
-    setCurrentValue(newFrame);
-    onFrameChange?.(newFrame);
-  };
-
   // Generate URL for the current captured frame with cache-busting
   const currentCapturedFrameUrl = useMemo(() => {
     // Use the correct path structure - no "latest" folder, use local TMP_DIR path
@@ -161,7 +147,7 @@ export function VideoCapture({
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#000000',
+      backgroundColor: 'transparent',
       ...sx 
     }}>
       {/* Minimal recording indicator header - only shown during capture */}
@@ -216,11 +202,12 @@ export function VideoCapture({
             src={currentCapturedFrameUrl}
             alt="Live Capture"
             style={{
-              maxWidth: '100%',
+              maxWidth: 'auto',
               maxHeight: '100%',
               width: 'auto',
               height: 'auto',
-              objectFit: 'contain'
+              objectFit: 'contain',
+              backgroundColor: 'transparent'
             }}
             onError={(e) => {
               console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
@@ -236,32 +223,18 @@ export function VideoCapture({
               src={videoFrameUrl}
               alt={`Frame ${currentValue}`}
               style={{
-                maxWidth: '100%',
+                maxWidth: 'auto',
                 maxHeight: '100%',
                 width: 'auto',
                 height: 'auto',
-                objectFit: 'contain'
+                objectFit: 'contain',
+                backgroundColor: 'transparent'
               }}
               onError={(e) => {
                 console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
                 (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
               }}
             />
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                position: 'absolute', 
-                bottom: 5, 
-                left: 5, 
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: '0.7rem',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                px: 1,
-                borderRadius: 1
-              }}
-            >
-              Frame {currentValue + 1}
-            </Typography>
           </>
         )}
 
@@ -302,21 +275,21 @@ export function VideoCapture({
         )}
       </Box>
 
-      {/* Controls for video playback - only show in playback mode */}
+      {/* Simplified controls for video playback - only show in playback mode */}
       {videoFramesPath && totalFrames > 0 && (
         <Box sx={{ 
-          p: 2,
-          borderTop: '1px solid #333',
-          backgroundColor: '#000000'
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+          p: 1,
+          backgroundColor: 'transparent'
         }}>
           {/* Frame counter */}
-          <Typography variant="caption" sx={{ color: '#666', display: 'block', textAlign: 'center', mb: 1 }}>
+          <Typography variant="caption" sx={{ color: '#ffffff', display: 'block', textAlign: 'center', mb: 1, fontSize: '0.8rem' }}>
             Frame {currentValue + 1} / {totalFrames}
-            {videoFramesPath.includes('captures') && (
-              <Typography component="span" variant="caption" sx={{ color: '#888', ml: 1 }}>
-                • Captured Frames
-              </Typography>
-            )}
+            {videoFramesPath.includes('captures')}
           </Typography>
 
           {/* Scrubber */}
@@ -326,62 +299,44 @@ export function VideoCapture({
             max={Math.max(0, totalFrames - 1)}
             onChange={handleSliderChange}
             sx={{ 
-              color: '#666',
+              color: '#ffffff',
+              mb: 1,
               '& .MuiSlider-thumb': {
-                width: 14,
-                height: 14,
+                width: 16,
+                height: 16,
+                backgroundColor: '#fff',
+                '&:hover': {
+                  boxShadow: '0px 0px 0px 8px rgba(255, 255, 255, 0.16)',
+                },
+              },
+              '& .MuiSlider-track': {
                 backgroundColor: '#fff',
               },
               '& .MuiSlider-rail': {
-                backgroundColor: '#333',
+                backgroundColor: 'rgba(255,255,255,0.3)',
               }
             }}
           />
 
-          {/* Playback controls */}
+          {/* Play button centered */}
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center',
-            gap: 1,
             mt: 1
           }}>
             <IconButton 
-              size="small" 
-              onClick={handlePrevFrame}
-              sx={{ color: '#666' }}
-            >
-              <SkipPrevious />
-            </IconButton>
-            
-            <IconButton 
-              size="small" 
+              size="medium" 
               onClick={handlePlayPause}
-              sx={{ color: '#666' }}
+              sx={{ 
+                color: '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                }
+              }}
             >
               {isPlaying ? <Pause /> : <PlayArrow />}
             </IconButton>
-            
-            <IconButton 
-              size="small" 
-              onClick={handleNextFrame}
-              sx={{ color: '#666' }}
-            >
-              <SkipNext />
-            </IconButton>
-            
-            {/* Back to Stream button - only show for capture frames */}
-            {videoFramesPath.includes('captures') && onBackToStream && (
-              <IconButton 
-                size="small" 
-                onClick={onBackToStream}
-                sx={{ color: '#888', ml: 1 }}
-                title="Back to Stream"
-              >
-                <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>
-                  Stream
-                </Typography>
-              </IconButton>
-            )}
           </Box>
         </Box>
       )}

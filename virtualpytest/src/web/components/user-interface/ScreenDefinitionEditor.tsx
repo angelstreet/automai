@@ -563,18 +563,7 @@ export function ScreenDefinitionEditor({
       console.log(`[@component:ScreenDefinitionEditor] Using stream URL: ${streamUrl}`);
     }
 
-    // When capturing a screenshot, show the ScreenshotCapture with isCapturing=true
-    if (isCapturing && viewMode !== 'capture') {
-      return (
-        <ScreenshotCapture
-          isCapturing={true}
-          isSaving={isSaving}
-          {...commonProps}
-        />
-      );
-    }
-
-    // Otherwise, show the appropriate component based on viewMode
+    // Show the appropriate component based on viewMode (no special handling for isCapturing)
     switch (viewMode) {
       case 'screenshot':
         return (
@@ -604,11 +593,55 @@ export function ScreenDefinitionEditor({
       case 'stream':
       default:
         return (
-          <StreamViewer
-            streamUrl={streamUrl}
-            isStreamActive={streamStatus === 'running'}
-            {...commonProps}
-          />
+          <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+            {/* Stream viewer - always visible */}
+            <StreamViewer
+              streamUrl={streamUrl}
+              isStreamActive={streamStatus === 'running'}
+              {...commonProps}
+            />
+            
+            {/* Recording/Saving overlay - single overlay that shows either recording or saving */}
+            {(isCapturing || isSaving) && (
+              <Box sx={{
+                position: 'absolute',
+                top: 8,
+                left: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                backgroundColor: isSaving ? 'transparent' : 'rgba(0,0,0,0.7)',
+                borderRadius: isSaving ? 0 : 1,
+                padding: isSaving ? '2px 4px' : '4px 8px',
+                zIndex: 10
+              }}>
+                {/* Blinking dot - red for recording, green for saving */}
+                <Box sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: isSaving ? '#4caf50' : '#f44336',
+                  animation: isSaving ? 'saveBlink 0.8s infinite' : 'recordBlink 1s infinite',
+                  '@keyframes recordBlink': {
+                    '0%, 50%': { opacity: 1 },
+                    '51%, 100%': { opacity: 0.3 }
+                  },
+                  '@keyframes saveBlink': {
+                    '0%, 50%': { opacity: 1 },
+                    '51%, 100%': { opacity: 0.5 }
+                  }
+                }} />
+                <Typography variant="caption" sx={{ 
+                  color: isSaving ? '#4caf50' : 'white', 
+                  fontSize: '0.7rem', 
+                  fontWeight: 'bold',
+                  textShadow: isSaving ? '1px 1px 2px rgba(0,0,0,0.7)' : 'none'
+                }}>
+                  {isSaving ? `Saving ${savedFrameCount}` : `REC ${savedFrameCount}`}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         );
     }
   };
@@ -812,34 +845,7 @@ export function ScreenDefinitionEditor({
           {/* View component in compact mode */}
           {renderViewComponent()}
 
-          {/* Recording/Saving indicator for compact view */}
-          {(isCapturing || isSaving) && (
-            <Box sx={{
-              position: 'absolute',
-              top: 4,
-              left: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              borderRadius: 1,
-              padding: '2px 6px',
-              zIndex: 1
-            }}>
-              <Box sx={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                backgroundColor: isSaving ? '#4caf50' : '#f44336',
-                animation: 'blink 1s infinite'
-              }} />
-              <Typography variant="caption" sx={{ color: 'white', fontSize: '0.6rem' }}>
-                {isSaving ? `Saving ${savedFrameCount}` : `Recording ${savedFrameCount}`}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Only the expand button */}
+          {/* Only the expand button - recording/saving indicators are now overlays within the stream */}
           <IconButton 
             size="small" 
             onClick={handleToggleExpanded}
