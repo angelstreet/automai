@@ -325,7 +325,6 @@ export function VideoCapture({
               textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
             }}>
               {currentValue + 1} / {totalFrames}
-              {videoFramesPath.includes('captures')}
             </Typography>
           </Box>
 

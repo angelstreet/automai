@@ -775,14 +775,16 @@ export function ScreenDefinitionEditor({
               
               {isCapturing ? (
                 <Tooltip title="Stop Capture">
-                  <IconButton 
-                    size="small" 
-                    onClick={handleStopCapture} 
-                    sx={{ color: '#ffffff' }}
-                    disabled={isStoppingCapture}
-                  >
-                    <StopCircle />
-                  </IconButton>
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={handleStopCapture} 
+                      sx={{ color: '#ffffff' }}
+                      disabled={isStoppingCapture}
+                    >
+                      <StopCircle />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               ) : (
                 <Tooltip title="Start Capture">
@@ -820,13 +822,15 @@ export function ScreenDefinitionEditor({
               justifyContent: 'flex-end'
             }}>
               <Tooltip title="Minimize">
-                <IconButton 
-                  size="small" 
-                  onClick={handleToggleExpanded}
-                  sx={{ color: '#ffffff' }}
-                >
-                  <FullscreenExit />
-                </IconButton>
+                <span>
+                  <IconButton 
+                    size="small" 
+                    onClick={handleToggleExpanded}
+                    sx={{ color: '#ffffff' }}
+                  >
+                    <FullscreenExit />
+                  </IconButton>
+                </span>
               </Tooltip>
             </Box>
           </Box>
