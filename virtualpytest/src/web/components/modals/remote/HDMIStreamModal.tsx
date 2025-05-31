@@ -23,69 +23,75 @@ interface HDMIStreamModalProps {
   onClose: () => void;
 }
 
-interface SSHConnectionForm {
-  host_ip: string;
-  host_port: string;
-  host_username: string;
-  host_password: string;
-  stream_path: string;
-  video_device: string;
-}
-
 export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   // Stream configuration state
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
   
-  // SSH connection form state
-  const [sshConnectionForm, setSSHConnectionForm] = useState<SSHConnectionForm>({
-    host_ip: '',
-    host_port: '22',
-    host_username: '',
-    host_password: '',
-    stream_path: '/path/to/output.m3u8',
-    video_device: '/dev/video0',
-  });
+  // Stream connection form state
+  const [streamUrl, setStreamUrl] = useState('https://77.56.53.130:444/stream/output.m3u8');
+  const [videoDevice, setVideoDevice] = useState('/dev/video0');
   
   // Connection and streaming state
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  
+  // Video player refs
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<any>(null);
 
   // Load default values when modal opens
   useEffect(() => {
     if (open) {
       fetchDefaultValues();
     }
+    
+    // Cleanup when modal closes
+    return () => {
+      cleanupStream();
+    };
   }, [open]);
 
-  // Fetch default SSH connection values from environment variables
+  // Clean up stream resources
+  const cleanupStream = () => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = '';
+      videoRef.current.load();
+    }
+  };
+
+  // Fetch default stream URL from environment variables if available
   const fetchDefaultValues = async () => {
     try {
       const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/defaults');
       const result = await response.json();
       
       if (result.success && result.defaults) {
-        setSSHConnectionForm(prev => ({
-          ...prev,
-          host_ip: result.defaults.host_ip || prev.host_ip,
-          host_username: result.defaults.host_username || prev.host_username,
-          host_password: result.defaults.host_password || prev.host_password,
-          host_port: result.defaults.host_port || prev.host_port,
-          stream_path: result.defaults.stream_path || prev.stream_path,
-          video_device: result.defaults.video_device || prev.video_device,
-        }));
-        console.log('[@component:HDMIStreamModal] Loaded default SSH connection values');
+        setStreamUrl(result.defaults.stream_path || streamUrl);
+        setVideoDevice(result.defaults.video_device || videoDevice);
+        console.log('[@component:HDMIStreamModal] Loaded default stream settings');
       }
     } catch (error) {
       console.log('[@component:HDMIStreamModal] Could not load default values:', error);
     }
   };
 
-  // SSH connection
+  // Connect to HLS stream
   const handleConnect = async () => {
-    if (!sshConnectionForm.host_ip || !sshConnectionForm.host_username || !sshConnectionForm.host_password || !sshConnectionForm.stream_path || !sshConnectionForm.video_device) {
-      setConnectionError('Please fill in all SSH connection fields');
+    if (!streamUrl || !videoDevice) {
+      setConnectionError('Please enter both a valid stream URL and video device');
+      return;
+    }
+    
+    if (!videoRef.current) {
+      setConnectionError('Video player not initialized');
       return;
     }
     
@@ -93,86 +99,112 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
     setConnectionError(null);
     
     try {
-      console.log('[@component:HDMIStreamModal] Connecting via SSH to:', sshConnectionForm.host_ip);
+      console.log('[@component:HDMIStreamModal] Connecting to HLS stream:', streamUrl);
+      console.log('[@component:HDMIStreamModal] Using video device:', videoDevice);
       
-      // Use the API to establish SSH connection and configure video capture
-      const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/take-control', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_ip: sshConnectionForm.host_ip,
-          host_username: sshConnectionForm.host_username,
-          host_password: sshConnectionForm.host_password,
-          host_port: sshConnectionForm.host_port,
-          stream_path: sshConnectionForm.stream_path,
-          video_device: sshConnectionForm.video_device,
-          resolution: resolution,
-          fps: fps,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setIsConnected(true);
-        console.log('[@component:HDMIStreamModal] SSH connection established successfully');
-      } else {
-        setConnectionError(result.error || 'Failed to establish SSH connection');
+      // Clean up any existing stream first
+      cleanupStream();
+      
+      // Make sure we have the video element
+      if (!videoRef.current) {
+        throw new Error('Video element not found');
       }
       
+      // Dynamically import HLS.js
+      const HLSModule = await import('hls.js');
+      const HLS = HLSModule.default;
+      
+      if (!HLS.isSupported()) {
+        console.log('[@component:HDMIStreamModal] HLS.js is not supported, trying native playback');
+        // Try native HLS (Safari)
+        if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+          videoRef.current.src = streamUrl;
+          videoRef.current.addEventListener('loadedmetadata', () => {
+            setIsConnecting(false);
+            setIsConnected(true);
+            videoRef.current?.play().catch((err) => {
+              console.error('[@component:HDMIStreamModal] Autoplay failed:', err);
+              setConnectionError('Autoplay failed - please click play');
+            });
+          });
+          
+          videoRef.current.addEventListener('error', () => {
+            setIsConnecting(false);
+            setIsConnected(false);
+            setConnectionError('Stream error - Unable to play the stream');
+          });
+        } else {
+          throw new Error('HLS is not supported in this browser');
+        }
+        return;
+      }
+      
+      // Create HLS instance with low latency settings
+      const hls = new HLS({
+        enableWorker: true,
+        lowLatencyMode: true,
+        liveSyncDuration: 1,
+        liveMaxLatencyDuration: 5,
+        liveDurationInfinity: true,
+        maxBufferLength: 5,
+        maxMaxBufferLength: 10,
+      });
+      
+      hlsRef.current = hls;
+      
+      // Setup event handlers
+      hls.on(HLS.Events.MANIFEST_PARSED, () => {
+        setIsConnecting(false);
+        setIsConnected(true);
+        videoRef.current?.play().catch((err) => {
+          console.error('[@component:HDMIStreamModal] Autoplay failed:', err);
+          setConnectionError('Autoplay failed - please click play');
+        });
+      });
+      
+      hls.on(HLS.Events.ERROR, (_: any, data: any) => {
+        if (data.fatal) {
+          console.error('[@component:HDMIStreamModal] Fatal HLS error:', data.type, data.details);
+          setIsConnecting(false);
+          setIsConnected(false);
+          setConnectionError(`Stream error: ${data.details || data.type}`);
+          
+          // Destroy instance on fatal error
+          hls.destroy();
+          hlsRef.current = null;
+        } else {
+          console.warn('[@component:HDMIStreamModal] Non-fatal HLS error:', data.details);
+        }
+      });
+      
+      // Load and attach the stream
+      hls.loadSource(streamUrl);
+      hls.attachMedia(videoRef.current);
+      
     } catch (error: any) {
-      console.error('[@component:HDMIStreamModal] SSH connection failed:', error);
-      setConnectionError(error.message || 'Failed to establish SSH connection');
-    } finally {
+      console.error('[@component:HDMIStreamModal] Stream connection failed:', error);
       setIsConnecting(false);
+      setIsConnected(false);
+      setConnectionError(error.message || 'Failed to connect to stream');
     }
   };
   
+  // Handle stream disconnect
+  const handleDisconnect = () => {
+    console.log('[@component:HDMIStreamModal] Disconnecting from stream');
+    cleanupStream();
+    setIsConnected(false);
+  };
+  
   // Handle modal close
-  const handleCloseModal = async () => {
-    console.log('[@component:HDMIStreamModal] Closing modal and cleaning up session');
+  const handleCloseModal = () => {
+    console.log('[@component:HDMIStreamModal] Closing modal and cleaning up');
     
-    // Stop streaming and disconnect if connected
+    // Clean up streaming
     if (isConnected) {
-      console.log('[@component:HDMIStreamModal] Disconnecting active session before closing');
-      
-      try {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/release-control', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          console.log('[@component:HDMIStreamModal] SSH connection released successfully');
-        } else {
-          console.error('[@component:HDMIStreamModal] Failed to release SSH connection:', result.error);
-        }
-      } catch (error) {
-        console.error('[@component:HDMIStreamModal] Error releasing SSH connection:', error);
-      }
+      handleDisconnect();
     }
     
-    // Additional cleanup - reset all states
-    setResolution('1920x1080');
-    setFps(30);
-    setSSHConnectionForm({
-      host_ip: '',
-      host_port: '22',
-      host_username: '',
-      host_password: '',
-      stream_path: 'https://77.56.53.130:8081/stream/output.m3u8',
-      video_device: '/dev/video0',
-    });
-    setIsConnecting(false);
-    setIsConnected(false);
-    setConnectionError(null);
-    
-    console.log('[@component:HDMIStreamModal] Session cleanup completed');
     onClose();
   };
 
@@ -200,70 +232,28 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
               /* Connection Form */
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  SSH Connection Details
+                  Stream Connection Details
                 </Typography>
                 
                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Host IP"
-                      value={sshConnectionForm.host_ip}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
-                      size="small"
-                      placeholder="192.168.1.100"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="SSH Port"
-                      value={sshConnectionForm.host_port}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, host_port: e.target.value }))}
-                      size="small"
-                      placeholder="22"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Username"
-                      value={sshConnectionForm.host_username}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, host_username: e.target.value }))}
-                      size="small"
-                      placeholder="user"
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      fullWidth
-                      label="Password"
-                      type="password"
-                      value={sshConnectionForm.host_password}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, host_password: e.target.value }))}
-                      size="small"
-                    />
-                  </Grid>
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Stream File Path"
-                      value={sshConnectionForm.stream_path}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, stream_path: e.target.value }))}
+                      label="Stream URL"
+                      value={streamUrl}
+                      onChange={(e) => setStreamUrl(e.target.value)}
                       size="small"
-                      placeholder="/path/to/output.m3u8"
-                      
+                      placeholder="https://example.com/stream/output.m3u8"
                     />
                   </Grid>
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Video Device"
-                      value={sshConnectionForm.video_device}
-                      onChange={(e) => setSSHConnectionForm(prev => ({ ...prev, video_device: e.target.value }))}
+                      value={videoDevice}
+                      onChange={(e) => setVideoDevice(e.target.value)}
                       size="small"
                       placeholder="/dev/video0"
-                     
                     />
                   </Grid>
                 </Grid>
@@ -300,10 +290,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                   <Button
                     variant="contained"
                     onClick={handleConnect}
-                    disabled={
-                      isConnecting || 
-                      (!sshConnectionForm.host_ip || !sshConnectionForm.host_username || !sshConnectionForm.host_password || !sshConnectionForm.stream_path || !sshConnectionForm.video_device)
-                    }
+                    disabled={isConnecting || !streamUrl || !videoDevice}
                     fullWidth
                     startIcon={isConnecting ? <CircularProgress size={20} /> : <PlayArrow />}
                   >
@@ -319,57 +306,103 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
                   </Button>
                 </Box>
               </Box>
-            ) : null}
-          </Grid>
-
-          {/* Right Column: Stream Panel */}
-          <Grid item xs={8}>
-            {!isConnected ? (
-              /* Placeholder when not connected */
-              <Box sx={{ 
-                position: 'relative', 
-                width: '100%', 
-                height: '420px',
-                border: '1px solid #ccc',
-                borderRadius: 1,
-                overflow: 'hidden',
-                backgroundColor: 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                  <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                  <Typography variant="h6">HDMI Stream Configuration</Typography>
-                  <Typography>Configure SSH connection and video device for stream capture</Typography>
-                </Box>
-              </Box>
             ) : (
-              /* Connected - Show Stream Panel */
-              <HDMIStreamPanel
-                connectionConfig={{
-                  host_ip: sshConnectionForm.host_ip,
-                  host_port: sshConnectionForm.host_port,
-                  host_username: sshConnectionForm.host_username,
-                  host_password: sshConnectionForm.host_password,
-                  stream_path: sshConnectionForm.stream_path,
-                  video_device: sshConnectionForm.video_device,
-                  resolution: resolution,
-                  fps: fps,
-                }}
-                autoConnect={true} // Auto-connect since connection already established
-                compact={false} // Full modal mode
-                sx={{ height: '420px' }}
-              />
+              /* Stream Controls When Connected */
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Stream Information
+                </Typography>
+                
+                <Card sx={{ mb: 2 }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>URL:</strong> {streamUrl}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Video Device:</strong> {videoDevice}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Quality:</strong> {resolution}@{fps}fps
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Status:</strong> <Chip label="Connected" color="success" size="small" />
+                    </Typography>
+                  </CardContent>
+                </Card>
+                
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDisconnect}
+                  fullWidth
+                >
+                  Disconnect
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  onClick={handleCloseModal}
+                  fullWidth
+                  sx={{ mt: 1 }}
+                >
+                  Close
+                </Button>
+              </Box>
             )}
           </Grid>
+
+          {/* Right Column: Video Player */}
+          <Grid item xs={8}>
+            <Box sx={{ 
+              position: 'relative', 
+              width: '100%', 
+              height: '420px',
+              border: '1px solid #ccc',
+              borderRadius: 1,
+              overflow: 'hidden',
+              backgroundColor: isConnected ? '#000' : 'transparent',
+            }}>
+              {/* Video element - always rendered but only visible when connected */}
+              <video 
+                ref={videoRef}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain',
+                  display: isConnected ? 'block' : 'none'
+                }}
+                controls
+                playsInline
+              />
+              
+              {/* Placeholder - only visible when not connected */}
+              {!isConnected && (
+                <Box sx={{ 
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                    <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+                    <Typography variant="h6">HDMI Stream</Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Grid>
         </Grid>
-          {/* Display error message at the bottom of the form */}
-          {connectionError && !isConnected && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {connectionError}
-                  </Alert>
-                )}
+        
+        {/* Display error message at the bottom of the form */}
+        {connectionError && !isConnected && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {connectionError}
+          </Alert>
+        )}
       </DialogContent>
     </Dialog>
   );
