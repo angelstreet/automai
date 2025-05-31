@@ -366,10 +366,38 @@ const NavigationEditorContent: React.FC = () => {
         
         if (data.success) {
           console.log(`[@component:NavigationEditor] Screenshot saved to: ${data.screenshot_path}`);
+          
+          // Update the selected node's screenshot property with the image URL
+          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(data.screenshot_path)}`;
+          
+          // Find and update the node
+          const updatedNodes = nodes.map(node => {
+            if (node.id === selectedNode.id) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  screenshot: screenshotUrl
+                }
+              };
+            }
+            return node;
+          });
+          
+          // Update the nodes state using the hook's onNodesChange
+          const nodeChanges = [{
+            id: selectedNode.id,
+            type: 'replace' as const,
+            item: updatedNodes.find(n => n.id === selectedNode.id)!
+          }];
+          onNodesChange(nodeChanges);
+          
+          console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
+          
           // You can add additional logic here like:
           // - Show a success notification
+          // - Save the tree to database to persist the screenshot
           // - Display the screenshot path to the user
-          // - Open the screenshot in a modal
         } else {
           console.error('[@component:NavigationEditor] Screenshot failed:', data.error);
         }

@@ -66,33 +66,35 @@ def take_screenshot():
         parent_name = data.get('parent_name', None)
         node_name = data.get('node_name', None)
         
-        # Step 1: Get device resolution and orientation from ADB
+        # Step 1: Get device resolution and orientation from ADB for informational purposes only
         device_resolution = None
-        capture_resolution = "1920x1080"  # Default fallback
+        capture_resolution = "1920x1080"  # Fixed resolution - always use 1920x1080 for capture
         
         if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
             try:
-                # Get device resolution using ADB
+                # Get device resolution using ADB (for informational purposes only)
                 android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
                 if android_device_id:
                     device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
                     current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
                     
-                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-                        device_width = device_resolution['width']
-                        device_height = device_resolution['height']
-                        
-                        # Determine orientation and set capture resolution accordingly
-                        if device_height > device_width:
-                            # Portrait mode - capture in portrait
-                            capture_resolution = f"{device_width}x{device_height}"
-                            current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using capture resolution: {capture_resolution}")
-                        else:
-                            # Landscape mode - capture in landscape  
-                            capture_resolution = f"{device_width}x{device_height}"
-                            current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using capture resolution: {capture_resolution}")
-                    else:
-                        current_app.logger.warning(f"[@api:screen-definition] Invalid device resolution data: {device_resolution}")
+                    # NOTE: We always use 1920x1080 for capture regardless of device resolution
+                    # to ensure consistent screenshot quality and sizing
+                    current_app.logger.info(f"[@api:screen-definition] Using fixed capture resolution: {capture_resolution} (device resolution: {device_resolution})")
+                    
+                    # REMOVED: The logic that was overriding capture_resolution with device resolution
+                    # if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+                    #     device_width = device_resolution['width']
+                    #     device_height = device_resolution['height']
+                    #     # Determine orientation and set capture resolution accordingly
+                    #     if device_height > device_width:
+                    #         # Portrait mode - capture in portrait
+                    #         capture_resolution = f"{device_width}x{device_height}"
+                    #         current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using capture resolution: {capture_resolution}")
+                    #     else:
+                    #         # Landscape mode - capture in landscape  
+                    #         capture_resolution = f"{device_width}x{device_height}"
+                    #         current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using capture resolution: {capture_resolution}")
                 else:
                     current_app.logger.warning(f"[@api:screen-definition] No android_device_id available")
             except Exception as e:
@@ -230,9 +232,9 @@ def start_capture():
         max_duration = data.get('max_duration', 60)  # 60 second rolling buffer
         fps = data.get('fps', 5)  # 5 fps
         
-        # Get device resolution and orientation from ADB
+        # Get device resolution for informational purposes only
         device_resolution = None
-        capture_resolution = "1920x1080"  # Default fallback
+        capture_resolution = "1920x1080"  # Fixed resolution - always use 1920x1080 for capture
         
         if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
             try:
@@ -241,11 +243,16 @@ def start_capture():
                     device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
                     current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
                     
-                    if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-                        device_width = device_resolution['width']
-                        device_height = device_resolution['height']
-                        capture_resolution = f"{device_width}x{device_height}"
-                        current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
+                    # NOTE: We always use 1920x1080 for capture regardless of device resolution
+                    # to ensure consistent capture quality and sizing
+                    current_app.logger.info(f"[@api:screen-definition] Using fixed capture resolution: {capture_resolution} (device resolution: {device_resolution})")
+                    
+                    # REMOVED: The logic that was overriding capture_resolution with device resolution
+                    # if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+                    #     device_width = device_resolution['width']
+                    #     device_height = device_resolution['height']
+                    #     capture_resolution = f"{device_width}x{device_height}"
+                    #     current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
             except Exception as e:
                 current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
         
