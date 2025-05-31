@@ -97,6 +97,9 @@ export function ScreenDefinitionEditor({
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
   
+  // Add state to track stop button click
+  const [isStoppingCapture, setIsStoppingCapture] = useState(false);
+  
   // Log stream URL for debugging
   useEffect(() => {
     if (avConfig) {
@@ -283,10 +286,13 @@ export function ScreenDefinitionEditor({
 
   // Stop video capture - simplified for new architecture
   const handleStopCapture = async () => {
-    if (!isCapturing) return;
+    if (!isCapturing || isStoppingCapture) return;
     
     try {
       console.log('[@component:ScreenDefinitionEditor] Stopping video capture...');
+      
+      // Disable the stop button to prevent multiple clicks
+      setIsStoppingCapture(true);
       
       // Show saving indicator - keep current frame count until we get actual count
       setIsSaving(true);
@@ -334,6 +340,9 @@ export function ScreenDefinitionEditor({
       // Always update local state
       setIsCapturing(false);
       setCaptureStats(null);
+      
+      // Reset the stopping state
+      setIsStoppingCapture(false);
       
       // Keep saving indicator for a moment to show completion
       setTimeout(() => {
@@ -770,6 +779,7 @@ export function ScreenDefinitionEditor({
                     size="small" 
                     onClick={handleStopCapture} 
                     sx={{ color: '#ffffff' }}
+                    disabled={isStoppingCapture}
                   >
                     <StopCircle />
                   </IconButton>
