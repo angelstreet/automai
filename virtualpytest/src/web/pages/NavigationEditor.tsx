@@ -322,6 +322,65 @@ const NavigationEditorContent: React.FC = () => {
     setIsControlActive(!isControlActive);
   };
 
+  // Handle taking screenshot
+  const handleTakeScreenshot = async () => {
+    if (!selectedDevice || !isControlActive || !selectedNode) {
+      console.log('[@component:NavigationEditor] Cannot take screenshot: no device selected, not in control, or no node selected');
+      return;
+    }
+
+    try {
+      // Get node name from selected node
+      const nodeName = selectedNode.data.label || 'unknown';
+      
+      // Get parent name from selected node
+      let parentName = 'root';
+      if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
+        // Find the parent node by ID
+        const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1]; // Get the immediate parent
+        const parentNode = nodes.find(node => node.id === parentId);
+        if (parentNode) {
+          parentName = parentNode.data.label || 'unknown';
+        }
+      }
+
+      console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
+      
+      // Call screenshot API with parent and node name parameters
+      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_model: selectedDeviceData?.model || 'android_mobile',
+          video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+          parent_name: parentName,
+          node_name: nodeName,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[@component:NavigationEditor] Screenshot taken successfully:', data);
+        
+        if (data.success) {
+          console.log(`[@component:NavigationEditor] Screenshot saved to: ${data.screenshot_path}`);
+          // You can add additional logic here like:
+          // - Show a success notification
+          // - Display the screenshot path to the user
+          // - Open the screenshot in a modal
+        } else {
+          console.error('[@component:NavigationEditor] Screenshot failed:', data.error);
+        }
+      } else {
+        console.error('[@component:NavigationEditor] Screenshot failed:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error taking screenshot:', error);
+    }
+  };
+
   // Filter devices based on user interface models
   const getFilteredDevices = () => {
     if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
@@ -529,6 +588,9 @@ const NavigationEditorContent: React.FC = () => {
                       setNodeForm={setNodeForm}
                       setIsNodeDialogOpen={setIsNodeDialogOpen}
                       onReset={resetNode}
+                      isControlActive={isControlActive}
+                      selectedDevice={selectedDevice}
+                      onTakeScreenshot={handleTakeScreenshot}
                     />
                   )}
                   

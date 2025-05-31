@@ -63,6 +63,8 @@ def take_screenshot():
         # Extract parameters
         video_device = data.get('video_device', '/dev/video0')
         device_model = data.get('device_model', 'android_mobile')
+        parent_name = data.get('parent_name', None)
+        node_name = data.get('node_name', None)
         
         # Step 1: Get device resolution and orientation from ADB
         device_resolution = None
@@ -129,10 +131,15 @@ def take_screenshot():
                 'error': f'FFmpeg capture failed: {error_msg}'
             }), 500
         
-        # Download the screenshot
+        # Always save to the original tmp/screenshots location first
         local_filename = f"{device_model}.jpg"
         local_screenshot_path = os.path.join(TMP_DIR, 'screenshots', local_filename)
+        current_app.logger.info(f"[@api:screen-definition] Saving screenshot to original path: {local_screenshot_path}")
         
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(local_screenshot_path), exist_ok=True)
+        
+        # Download the screenshot to the original location
         if hasattr(ssh_connection, 'download_file'):
             ssh_connection.download_file(remote_temp_path, local_screenshot_path)
         else:
@@ -148,16 +155,37 @@ def take_screenshot():
             with open(local_screenshot_path, 'wb') as f:
                 f.write(base64.b64decode(file_content))
         
+        # Create additional copy in resources directory if parent and node names are provided
+        additional_screenshot_path = None
+        if parent_name and node_name:
+            # Save additional copy in resources directory structure: resources/{model}/{parent_name}/{node_name}.jpg
+            screenshot_dir = os.path.join(RESOURCES_DIR, device_model, parent_name)
+            os.makedirs(screenshot_dir, exist_ok=True)
+            additional_filename = f"{node_name}.jpg"
+            additional_screenshot_path = os.path.join(screenshot_dir, additional_filename)
+            
+            # Copy the file from the tmp location to the resources location
+            try:
+                shutil.copy2(local_screenshot_path, additional_screenshot_path)
+                current_app.logger.info(f"[@api:screen-definition] Created additional copy at: {additional_screenshot_path}")
+            except Exception as e:
+                current_app.logger.error(f"[@api:screen-definition] Failed to create additional copy: {e}")
+                # Don't fail the entire operation if the copy fails
+        
         # Clean up remote file
         ssh_connection.execute_command(f"rm -f {remote_temp_path}")
         
         return jsonify({
             'success': True,
             'screenshot_path': local_screenshot_path,
+            'additional_screenshot_path': additional_screenshot_path,
             'stream_was_active': stream_was_active,
             'device_resolution': device_resolution,
             'capture_resolution': capture_resolution,
-            'message': f'Screenshot captured successfully with resolution {capture_resolution}'
+            'parent_name': parent_name,
+            'node_name': node_name,
+            'message': f'Screenshot captured successfully with resolution {capture_resolution}. Saved to {local_screenshot_path}' + 
+                      (f' with additional copy at {additional_screenshot_path}' if additional_screenshot_path else '')
         })
         
     except Exception as e:

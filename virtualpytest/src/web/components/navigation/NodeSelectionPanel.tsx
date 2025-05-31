@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import {
   Close as CloseIcon,
+  Camera as CameraIcon,
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 
@@ -21,6 +22,10 @@ interface NodeSelectionPanelProps {
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
   onReset?: (id: string) => void;
+  // Device control props
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  onTakeScreenshot?: () => void;
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
@@ -33,6 +38,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   setNodeForm,
   setIsNodeDialogOpen,
   onReset,
+  isControlActive = false,
+  selectedDevice = null,
+  onTakeScreenshot,
 }) => {
   const handleEdit = () => {
     setNodeForm({
@@ -56,6 +64,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     
     return parentNames.join(' > ');
   };
+
+  // Check if screenshot button should be displayed
+  const showScreenshotButton = isControlActive && selectedDevice && onTakeScreenshot;
 
   return (
     <Paper
@@ -124,6 +135,20 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               onClick={() => onReset(selectedNode.id)}
             >
               Reset Node
+            </Button>
+          )}
+
+          {/* Screenshot button - only shown when device is under control */}
+          {showScreenshotButton && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              sx={{ fontSize: '0.75rem', px: 1 }}
+              onClick={onTakeScreenshot}
+              startIcon={<CameraIcon fontSize="small" />}
+            >
+              Screenshot
             </Button>
           )}
         </Box>
