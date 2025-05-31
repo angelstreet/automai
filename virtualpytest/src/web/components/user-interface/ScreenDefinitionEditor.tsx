@@ -362,9 +362,6 @@ export function ScreenDefinitionEditor({
   const handleTakeScreenshot = async () => {
     if (!isConnected) return;
     
-    // Set capturing state to show loading indicator
-    setIsCapturing(true);
-    
     try {
       // First stop the stream
       console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
@@ -412,9 +409,6 @@ export function ScreenDefinitionEditor({
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
-    } finally {
-      // Always clear the capturing state when done
-      setIsCapturing(false);
     }
   };
 
