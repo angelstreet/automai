@@ -263,7 +263,36 @@ export function CapturePreviewEditor({
             p: 0.5,
             gap: 2
           }}>
-            <CircularProgress size={40} sx={{ color: '#666666' }} />
+            {/* Simple carousel-style loading */}
+            <Box sx={{
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center'
+            }}>
+              {[0, 1, 2].map((index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: '#666666',
+                    animation: 'pulse 1.4s ease-in-out infinite both',
+                    animationDelay: `${index * 0.16}s`,
+                    '@keyframes pulse': {
+                      '0%, 80%, 100%': {
+                        transform: 'scale(0)',
+                        opacity: 0.5,
+                      },
+                      '40%': {
+                        transform: 'scale(1)',
+                        opacity: 1,
+                      },
+                    },
+                  }}
+                />
+              ))}
+            </Box>
             <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
               Capturing Screenshot...
             </Typography>
