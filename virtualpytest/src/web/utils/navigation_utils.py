@@ -12,6 +12,11 @@ from typing import Dict, List, Optional, Tuple
 import sys
 import os
 
+# Add paths for absolute imports instead of relative imports
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_cache_path = os.path.join(web_dir, 'cache')
+sys.path.insert(0, web_cache_path)
+
 # Add src directory to path to import supabase_utils
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
 web_dir = os.path.dirname(current_dir)                    # /src/web  
@@ -349,19 +354,37 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
             print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree not found: {tree_id}")
             return [], []
         
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree info retrieved: {tree_info}")
+        
         # Extract tree data from metadata field
         tree_data = tree_info.get('metadata', {})
+        
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree metadata: {tree_data}")
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Metadata type: {type(tree_data)}")
         
         # Handle both old format (metadata) and new format (tree_data)
         if isinstance(tree_data, dict):
             nodes = tree_data.get('nodes', [])
             edges = tree_data.get('edges', [])
+            
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Raw nodes from metadata: {nodes}")
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Raw edges from metadata: {edges}")
+            
         else:
             print(f"[@utils:navigation:get_navigation_nodes_and_edges] Invalid tree_data format: {type(tree_data)}")
             nodes = []
             edges = []
         
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges in tree metadata")
+        
+        # Additional debugging for edges
+        if edges:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] EDGE DETAILS FROM METADATA:")
+            for i, edge in enumerate(edges):
+                print(f"  Edge {i}: {edge}")
+        else:
+            print(f"[@utils:navigation:get_navigation_nodes_and_edges] NO EDGES FOUND IN METADATA")
+        
         return nodes, edges
         
     except Exception as e:
@@ -406,7 +429,7 @@ def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
             
             # INVALIDATE CACHE after successful save
             try:
-                from ..cache.navigation_cache import invalidate_cache
+                from navigation_cache import invalidate_cache
                 invalidate_cache(tree_id, team_id)
                 print(f"[@utils:navigation:save_navigation_nodes_and_edges] Cache invalidated for tree: {tree_id}")
             except ImportError:

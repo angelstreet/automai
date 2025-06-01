@@ -55,6 +55,10 @@ class NavigationService:
                 
                 result = execute_navigation_with_verification(tree_id, target_node_id, team_id, current_node_id)
                 
+                # Map error_message to error field for consistent API response
+                if 'error_message' in result and result['error_message'] is not None:
+                    result['error'] = result['error_message']
+                
                 # Add navigation metadata
                 result.update({
                     'tree_id': tree_id,

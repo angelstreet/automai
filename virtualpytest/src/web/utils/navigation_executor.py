@@ -5,6 +5,13 @@ Executes navigation steps and tracks current position
 
 from typing import List, Dict, Optional
 import time
+import sys
+import os
+
+# Add paths for absolute imports instead of relative imports
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_utils_path = os.path.join(web_dir, 'utils')
+sys.path.insert(0, web_utils_path)
 
 def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
     """
@@ -22,7 +29,7 @@ def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, 
     print(f"[@navigation:executor:execute_navigation_to_node] Starting navigation to {target_node_id} in tree {tree_id}")
     
     # Get navigation steps
-    from .navigation_pathfinding import get_navigation_steps
+    from navigation_pathfinding import get_navigation_steps
     
     steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
     
@@ -172,7 +179,7 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
     
     try:
         # Get navigation steps
-        from .navigation_pathfinding import get_navigation_steps
+        from navigation_pathfinding import get_navigation_steps
         
         steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
         
@@ -253,7 +260,7 @@ def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, curr
     """
     print(f"[@navigation:executor:get_navigation_preview] Getting navigation preview to {target_node_id}")
     
-    from .navigation_pathfinding import get_navigation_steps, find_entry_point
+    from navigation_pathfinding import get_navigation_steps, find_entry_point
     
     # Determine starting point
     start_node = current_node_id or find_entry_point(tree_id, team_id)

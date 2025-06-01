@@ -140,7 +140,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
       if (response.success) {
         setExecutionResult(
-          `Navigation completed successfully! Executed ${response.steps_executed}/${response.total_steps} steps in ${response.execution_time.toFixed(2)}s`
+          `Executed ${response.steps_executed}/${response.total_steps} steps in ${response.execution_time.toFixed(2)}s`
         );
         console.log(`[@component:NodeGotoPanel] Navigation execution completed successfully`);
       } else {
@@ -316,16 +316,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             </Typography>
             {executionResult}
           </Alert>
-        )}
-
-        {/* Execution Progress */}
-        {isExecuting && (
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-              Executing navigation...
-            </Typography>
-            <LinearProgress />
-          </Box>
         )}
       </Box>
     </Paper>

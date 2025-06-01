@@ -6,6 +6,15 @@ Manages in-memory cache of NetworkX graphs for performance
 import networkx as nx
 from datetime import datetime, timedelta
 from typing import Dict, Optional
+import sys
+import os
+
+# Add paths for absolute imports instead of relative imports
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_utils_path = os.path.join(web_dir, 'utils')
+web_cache_path = os.path.join(web_dir, 'cache')
+sys.path.insert(0, web_utils_path)
+sys.path.insert(0, web_cache_path)
 
 # Global cache storage
 _navigation_graphs_cache: Dict[str, nx.DiGraph] = {}
@@ -30,8 +39,8 @@ def get_cached_graph(tree_id: str, team_id: str, force_rebuild: bool = False) ->
         print(f"[@navigation:cache:get_cached_graph] Building NetworkX graph for tree: {tree_id}")
         
         # Import here to avoid circular imports
-        from ..utils.navigation_utils import get_navigation_nodes_and_edges
-        from .navigation_graph import create_networkx_graph
+        from navigation_utils import get_navigation_nodes_and_edges
+        from navigation_graph import create_networkx_graph
         
         # Get fresh data from database
         nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)

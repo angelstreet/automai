@@ -5,6 +5,13 @@ Uses NetworkX for shortest path calculations
 
 import networkx as nx
 from typing import List, Dict, Optional
+import sys
+import os
+
+# Add paths for absolute imports instead of relative imports
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_cache_path = os.path.join(web_dir, 'cache')
+sys.path.insert(0, web_cache_path)
 
 def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_node_id: str = None) -> Optional[List[Dict]]:
     """
@@ -22,26 +29,60 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     print(f"[@navigation:pathfinding:find_shortest_path] Finding path to node {target_node_id} in tree {tree_id}")
     
     # Get cached NetworkX graph
-    from ..cache.navigation_cache import get_cached_graph
-    from ..cache.navigation_graph import get_entry_points, get_node_info, get_edge_action
+    from navigation_cache import get_cached_graph
+    from navigation_graph import get_entry_points, get_node_info, get_edge_action
     
-    G = get_cached_graph(tree_id, team_id)
+    G = get_cached_graph(tree_id, team_id, force_rebuild=True)  # Force rebuild for debugging
     if not G:
         print(f"[@navigation:pathfinding:find_shortest_path] Failed to get graph for tree {tree_id}")
         return None
     
+    # DEBUGGING: Print detailed graph information
+    print(f"[@navigation:pathfinding:find_shortest_path] GRAPH DEBUG INFO:")
+    print(f"  - Total nodes: {len(G.nodes)}")
+    print(f"  - Total edges: {len(G.edges)}")
+    print(f"  - Node list: {list(G.nodes)}")
+    print(f"  - Edge list: {[(u, v) for u, v in G.edges]}")
+    
+    # Print node details
+    print(f"[@navigation:pathfinding:find_shortest_path] NODE DETAILS:")
+    for node_id, node_data in G.nodes(data=True):
+        print(f"  - Node {node_id}: '{node_data.get('label', 'No label')}' (type: {node_data.get('node_type', 'unknown')})")
+    
+    # Print edge details  
+    print(f"[@navigation:pathfinding:find_shortest_path] EDGE DETAILS:")
+    for from_node, to_node, edge_data in G.edges(data=True):
+        print(f"  - Edge {from_node} -> {to_node}: action='{edge_data.get('go_action', 'No action')}'")
+    
     # Determine starting node
     if not start_node_id:
         entry_points = get_entry_points(G)
+        print(f"[@navigation:pathfinding:find_shortest_path] Entry points found: {entry_points}")
+        
         if not entry_points:
-            print(f"[@navigation:pathfinding:find_shortest_path] No entry points found in tree {tree_id}")
-            return None
-        start_node_id = entry_points[0]
+            print(f"[@navigation:pathfinding:find_shortest_path] No entry points found, using first node")
+            nodes = list(G.nodes())
+            if not nodes:
+                print(f"[@navigation:pathfinding:find_shortest_path] No nodes in graph")
+                return None
+            start_node_id = nodes[0]
+        else:
+            start_node_id = entry_points[0]
         print(f"[@navigation:pathfinding:find_shortest_path] Using entry point as start: {start_node_id}")
+    
+    print(f"[@navigation:pathfinding:find_shortest_path] Final start node: {start_node_id}")
+    print(f"[@navigation:pathfinding:find_shortest_path] Target node: {target_node_id}")
+    
+    # Check if start node exists
+    if start_node_id not in G.nodes:
+        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Start node {start_node_id} not found in graph")
+        print(f"[@navigation:pathfinding:find_shortest_path] Available nodes: {list(G.nodes)}")
+        return None
     
     # Check if target node exists
     if target_node_id not in G.nodes:
-        print(f"[@navigation:pathfinding:find_shortest_path] Target node {target_node_id} not found in graph")
+        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {target_node_id} not found in graph")
+        print(f"[@navigation:pathfinding:find_shortest_path] Available nodes: {list(G.nodes)}")
         return None
     
     # Check if we're already at the target
@@ -84,6 +125,50 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         
     except nx.NetworkXNoPath:
         print(f"[@navigation:pathfinding:find_shortest_path] No path found from {start_node_id} to {target_node_id}")
+        
+        # Additional debugging for no path case
+        print(f"[@navigation:pathfinding:find_shortest_path] DEBUGGING NO PATH:")
+        
+        # Check if graph is connected (considering it as undirected for connectivity)
+        undirected_G = G.to_undirected()
+        is_connected = nx.is_connected(undirected_G)
+        print(f"[@navigation:pathfinding:find_shortest_path] Graph is connected (undirected): {is_connected}")
+        
+        if not is_connected:
+            components = list(nx.connected_components(undirected_G))
+            print(f"[@navigation:pathfinding:find_shortest_path] Connected components: {len(components)}")
+            for i, component in enumerate(components):
+                print(f"  Component {i}: {component}")
+            
+            # Check which component each node is in
+            start_component = None
+            target_component = None
+            for i, component in enumerate(components):
+                if start_node_id in component:
+                    start_component = i
+                if target_node_id in component:
+                    target_component = i
+            
+            print(f"[@navigation:pathfinding:find_shortest_path] Start node {start_node_id} in component {start_component}")
+            print(f"[@navigation:pathfinding:find_shortest_path] Target node {target_node_id} in component {target_component}")
+            
+            if start_component != target_component:
+                print(f"[@navigation:pathfinding:find_shortest_path] Nodes are in different components - no path possible")
+        
+        # Check reachability from start node
+        try:
+            reachable_from_start = set(nx.descendants(G, start_node_id))
+            reachable_from_start.add(start_node_id)
+            print(f"[@navigation:pathfinding:find_shortest_path] Nodes reachable from {start_node_id}: {reachable_from_start}")
+            
+            if target_node_id not in reachable_from_start:
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} is NOT reachable from start {start_node_id}")
+            else:
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} IS reachable from start {start_node_id} - this shouldn't happen!")
+                
+        except Exception as reach_error:
+            print(f"[@navigation:pathfinding:find_shortest_path] Error checking reachability: {reach_error}")
+        
         return None
     except Exception as e:
         print(f"[@navigation:pathfinding:find_shortest_path] Error finding path: {e}")
@@ -111,8 +196,8 @@ def get_navigation_steps(tree_id: str, target_node_id: str, team_id: str, curren
         return []
     
     # Enhance steps with additional information
-    from ..cache.navigation_cache import get_cached_graph
-    from ..cache.navigation_graph import get_node_info
+    from navigation_cache import get_cached_graph
+    from navigation_graph import get_node_info
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -167,8 +252,8 @@ def find_entry_point(tree_id: str, team_id: str) -> Optional[str]:
     Returns:
         Entry point node ID or None if not found
     """
-    from ..cache.navigation_cache import get_cached_graph
-    from ..cache.navigation_graph import get_entry_points
+    from navigation_cache import get_cached_graph
+    from navigation_graph import get_entry_points
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -198,8 +283,8 @@ def find_all_paths(tree_id: str, target_node_id: str, team_id: str, start_node_i
     """
     print(f"[@navigation:pathfinding:find_all_paths] Finding up to {max_paths} paths to {target_node_id}")
     
-    from ..cache.navigation_cache import get_cached_graph
-    from ..cache.navigation_graph import get_entry_points, get_node_info, get_edge_action
+    from navigation_cache import get_cached_graph
+    from navigation_graph import get_entry_points, get_node_info, get_edge_action
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -263,8 +348,8 @@ def get_reachable_nodes(tree_id: str, team_id: str, from_node_id: str = None) ->
     Returns:
         List of reachable node IDs
     """
-    from ..cache.navigation_cache import get_cached_graph
-    from ..cache.navigation_graph import get_entry_points
+    from navigation_cache import get_cached_graph
+    from navigation_graph import get_entry_points
     
     G = get_cached_graph(tree_id, team_id)
     if not G:

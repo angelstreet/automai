@@ -48,42 +48,58 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
     
     # Add edges with actions as attributes
     for edge in edges:
-        source_id = edge.get('source_id')
-        target_id = edge.get('target_id')
+        # DEBUG: Show what fields are available in each edge
+        print(f"[@navigation:graph:create_networkx_graph] Processing edge: {edge}")
+        
+        # Handle both ReactFlow format (source/target) and database format (source_id/target_id)
+        source_id = edge.get('source') or edge.get('source_id')
+        target_id = edge.get('target') or edge.get('target_id')
+        
+        print(f"[@navigation:graph:create_networkx_graph] Edge connection: {source_id} -> {target_id}")
         
         if not source_id or not target_id:
-            print(f"[@navigation:graph:create_networkx_graph] Warning: Edge without source/target found, skipping")
+            print(f"[@navigation:graph:create_networkx_graph] Warning: Edge without source/target found, skipping. Available keys: {list(edge.keys())}")
             continue
             
         # Check if nodes exist
         if source_id not in G.nodes or target_id not in G.nodes:
             print(f"[@navigation:graph:create_networkx_graph] Warning: Edge references non-existent nodes {source_id} -> {target_id}, skipping")
+            print(f"[@navigation:graph:create_networkx_graph] Available nodes: {list(G.nodes)}")
             continue
+        
+        # Get action from edge data
+        edge_data = edge.get('data', {})
+        action = edge_data.get('action', {})
+        go_action = action.get('command') or action.get('id') or edge_data.get('go_action')
         
         # Add edge with navigation actions and metadata
         G.add_edge(source_id, target_id, **{
-            'go_action': edge.get('go_action'),
-            'comeback_action': edge.get('comeback_action'),
-            'edge_type': edge.get('edge_type', 'navigation'),
-            'description': edge.get('description', ''),
-            'is_bidirectional': edge.get('is_bidirectional', False),
-            'conditions': edge.get('conditions', {}),
-            'metadata': edge.get('metadata', {}),
+            'go_action': go_action,
+            'comeback_action': edge_data.get('comeback_action'),
+            'edge_type': edge_data.get('edge_type', 'navigation'),
+            'description': edge_data.get('description', ''),
+            'is_bidirectional': edge_data.get('is_bidirectional', False),
+            'conditions': edge_data.get('conditions', {}),
+            'metadata': edge_data.get('metadata', {}),
             'weight': 1  # Default weight for pathfinding
         })
         
+        print(f"[@navigation:graph:create_networkx_graph] Added edge {source_id} -> {target_id} with action: {go_action}")
+        
         # Add reverse edge if bidirectional
-        if edge.get('is_bidirectional', False):
+        if edge_data.get('is_bidirectional', False):
+            comeback_action = edge_data.get('comeback_action') or go_action
             G.add_edge(target_id, source_id, **{
-                'go_action': edge.get('comeback_action'),
-                'comeback_action': edge.get('go_action'),
-                'edge_type': edge.get('edge_type', 'navigation'),
-                'description': f"Reverse: {edge.get('description', '')}",
+                'go_action': comeback_action,
+                'comeback_action': go_action,
+                'edge_type': edge_data.get('edge_type', 'navigation'),
+                'description': f"Reverse: {edge_data.get('description', '')}",
                 'is_bidirectional': True,
-                'conditions': edge.get('conditions', {}),
-                'metadata': edge.get('metadata', {}),
+                'conditions': edge_data.get('conditions', {}),
+                'metadata': edge_data.get('metadata', {}),
                 'weight': 1
             })
+            print(f"[@navigation:graph:create_networkx_graph] Added reverse edge {target_id} -> {source_id} with action: {comeback_action}")
     
     print(f"[@navigation:graph:create_networkx_graph] Successfully created graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
     return G
