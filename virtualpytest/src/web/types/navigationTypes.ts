@@ -1,5 +1,22 @@
 import { Node, Edge } from 'reactflow';
 
+// Verification interface for node verifications
+export interface NodeVerification {
+  id: string;
+  label: string;
+  command: 'waitForImageToAppear' | 'waitForImageToDisappear' | 'waitForTextToAppear' | 'waitForTextToDisappear';
+  controller_type: 'image' | 'text';
+  params: {
+    image_path?: string;
+    text?: string;
+    timeout?: number;
+    threshold?: number;
+    case_sensitive?: boolean;
+    area?: [number, number, number, number]; // [x, y, width, height]
+  };
+  description?: string;
+}
+
 // Define types locally since we're not using the service
 export interface UINavigationNode extends Node {
   data: {
@@ -19,6 +36,9 @@ export interface UINavigationNode extends Node {
     has_children?: boolean; // Whether this node has child nodes
     child_count?: number; // Number of direct children
     menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
+    
+    // NEW: Verification support
+    verifications?: NodeVerification[]; // Array of verifications for this node
   };
 }
 

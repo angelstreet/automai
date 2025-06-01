@@ -1,0 +1,129 @@
+{
+  "example_node_with_verifications": {
+    "id": "node-home",
+    "data": {
+      "label": "home",
+      "type": "menu",
+      "depth": 0,
+      "parent": [],
+      "description": "Main home screen",
+      "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=home_screen.png",
+      "verifications": [
+        {
+          "id": "verify_home_title",
+          "label": "Verify Home Title Appears",
+          "command": "waitForTextToAppear",
+          "controller_type": "text",
+          "params": {
+            "text": "Home",
+            "timeout": 10.0,
+            "case_sensitive": false,
+            "area": null
+          },
+          "description": "Ensure the 'Home' title text is visible on screen"
+        },
+        {
+          "id": "verify_menu_button",
+          "label": "Verify Menu Button Appears",
+          "command": "waitForImageToAppear", 
+          "controller_type": "image",
+          "params": {
+            "image_path": "buttons/menu_button.png",
+            "timeout": 5.0,
+            "threshold": 0.8,
+            "area": null
+          },
+          "description": "Check that the main menu button is present and visible"
+        },
+        {
+          "id": "verify_loading_gone",
+          "label": "Verify Loading Screen Gone",
+          "command": "waitForImageToDisappear",
+          "controller_type": "image", 
+          "params": {
+            "image_path": "ui_elements/loading_spinner.png",
+            "timeout": 15.0,
+            "threshold": 0.9,
+            "area": null
+          },
+          "description": "Ensure loading spinner has disappeared"
+        }
+      ]
+    },
+    "type": "uiScreen",
+    "position": { "x": 250, "y": 100 }
+  },
+
+  "integration_flow": {
+    "description": "How verification integrates with existing navigation flow",
+    "steps": [
+      "1. User navigates to a node using existing Go To functionality",
+      "2. Node contains verifications array in metadata", 
+      "3. Verification button appears in NodeSelectionPanel when:",
+      "   - Node has verifications defined",
+      "   - Verification controllers are available",
+      "   - Verification is active",
+      "4. User clicks 'Verify (3)' button",
+      "5. Confirmation dialog shows verification details",
+      "6. API call to /api/virtualpytest/verification/execute-batch",
+      "7. Results displayed with success/failure status"
+    ]
+  },
+
+  "api_call_example": {
+    "url": "/api/virtualpytest/verification/execute-batch",
+    "method": "POST",
+    "payload": {
+      "verifications": [
+        {
+          "id": "verify_home_title",
+          "command": "waitForTextToAppear",
+          "controller_type": "text",
+          "params": {
+            "text": "Home",
+            "timeout": 10.0,
+            "case_sensitive": false,
+            "area": null
+          }
+        }
+      ],
+      "node_id": "node-home",
+      "tree_id": "main-navigation-tree"
+    },
+    "response": {
+      "success": true,
+      "message": "Batch verification passed (3/3 passed)",
+      "node_id": "node-home", 
+      "tree_id": "main-navigation-tree",
+      "total_verifications": 3,
+      "passed_count": 3,
+      "failed_count": 0,
+      "results": [
+        {
+          "verification_id": "verify_home_title",
+          "success": true,
+          "message": "Verification verify_home_title passed",
+          "error": null
+        }
+      ]
+    }
+  },
+
+  "parent_component_integration": {
+    "description": "How parent components need to be updated",
+    "required_props": {
+      "onVerification": "(nodeId: string, verifications: any[]) => void",
+      "isVerificationActive": "boolean",
+      "verificationControllerStatus": {
+        "image_controller_available": "boolean",
+        "text_controller_available": "boolean"  
+      }
+    },
+    "initialization_flow": [
+      "1. Initialize verification controllers via /api/virtualpytest/verification/take-control",
+      "2. Get controller status via /api/virtualpytest/verification/status", 
+      "3. Pass status to NodeSelectionPanel",
+      "4. Handle verification execution and results"
+    ]
+  }
+} 

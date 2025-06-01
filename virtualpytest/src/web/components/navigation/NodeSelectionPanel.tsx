@@ -9,11 +9,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Camera as CameraIcon,
   Route as RouteIcon,
+  Verified as VerifiedIcon,
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 import { NodeGotoPanel } from './NodeGotoPanel';
@@ -35,6 +40,13 @@ interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
+  // Verification props
+  onVerification?: (nodeId: string, verifications: any[]) => void;
+  isVerificationActive?: boolean;
+  verificationControllerStatus?: {
+    image_controller_available: boolean;
+    text_controller_available: boolean;
+  };
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
@@ -52,13 +64,22 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   onTakeScreenshot,
   treeId = '',
   currentNodeId,
+  onVerification,
+  isVerificationActive = false,
+  verificationControllerStatus,
 }) => {
+  // Don't render the panel for entry nodes
+  if ((selectedNode.data.type as string) === 'entry') {
+    return null;
+  }
+
   // Add state to control showing/hiding the NodeGotoPanel
   const [showGotoPanel, setShowGotoPanel] = useState(false);
   
   // Add states for confirmation dialogs
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
+  const [showVerificationConfirm, setShowVerificationConfirm] = useState(false);
 
   const handleEdit = () => {
     setNodeForm({
@@ -88,6 +109,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     setShowScreenshotConfirm(false);
   };
 
+  const handleVerificationConfirm = () => {
+    if (onVerification && selectedNode.data.verifications) {
+      onVerification(selectedNode.id, selectedNode.data.verifications);
+    }
+    setShowVerificationConfirm(false);
+  };
+
   const getParentNames = (parentIds: string[]): string => {
     if (!parentIds || parentIds.length === 0) return 'None';
     if (!nodes || !Array.isArray(nodes)) return 'None';
@@ -107,6 +135,16 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   // Only show for non-root nodes when device is under control
   const isRootNode = !selectedNode.data.parent || selectedNode.data.parent.length === 0;
   const showGoToButton = isControlActive && selectedDevice && treeId && !isRootNode;
+
+  // Check if verification button should be displayed
+  const hasNodeVerifications = selectedNode.data.verifications && 
+                             selectedNode.data.verifications.length > 0;
+  const hasAvailableControllers = verificationControllerStatus?.image_controller_available || 
+                                verificationControllerStatus?.text_controller_available;
+  const showVerificationButton = isVerificationActive && 
+                               hasAvailableControllers && 
+                               hasNodeVerifications &&
+                               onVerification;
 
   // Check if node can be deleted (protect entry points and home nodes)
   const isProtectedNode = selectedNode.data.is_root || 
@@ -150,6 +188,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             <Typography variant="caption" display="block">
               <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
             </Typography>
+            {/* Show verification count if available */}
+            {hasNodeVerifications && (
+              <Typography variant="caption" display="block">
+                <strong>Verifications:</strong> {selectedNode.data.verifications?.length || 0}
+              </Typography>
+            )}
           </Box>
           
           <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -217,6 +261,20 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 Go To
               </Button>
             )}
+
+            {/* Verification button - only shown when verification controllers are available and node has verifications */}
+            {showVerificationButton && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={() => setShowVerificationConfirm(true)}
+                startIcon={<VerifiedIcon fontSize="small" />}
+              >
+                Verify ({selectedNode.data.verifications?.length || 0})
+              </Button>
+            )}
           </Box>
         </Box>
       </Paper>
@@ -261,6 +319,78 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           <Button onClick={() => setShowScreenshotConfirm(false)}>Cancel</Button>
           <Button onClick={handleScreenshotConfirm} color="primary" variant="contained">
             Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Verification Confirmation Dialog */}
+      <Dialog open={showVerificationConfirm} onClose={() => setShowVerificationConfirm(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Execute Verification</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Execute {selectedNode.data.verifications?.length || 0} verification(s) for this node?
+          </Typography>
+          
+          {/* Show verification list summary */}
+          {selectedNode.data.verifications && selectedNode.data.verifications.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Verifications to execute:
+              </Typography>
+              <List dense>
+                {selectedNode.data.verifications.map((verification: any, index: number) => (
+                  <ListItem key={index} sx={{ py: 0.5 }}>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2">
+                            {verification.label || verification.id}
+                          </Typography>
+                          <Chip 
+                            label={verification.controller_type || 'unknown'} 
+                            size="small" 
+                            variant="outlined"
+                            color={verification.controller_type === 'image' ? 'primary' : 'secondary'}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {verification.command} - {verification.description || 'No description'}
+                        </Typography>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+
+          {/* Show controller status */}
+          <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="caption" display="block" color="text.secondary">
+              Controller Status:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+              <Chip 
+                label="Image" 
+                size="small" 
+                color={verificationControllerStatus?.image_controller_available ? 'success' : 'default'}
+                variant={verificationControllerStatus?.image_controller_available ? 'filled' : 'outlined'}
+              />
+              <Chip 
+                label="Text" 
+                size="small" 
+                color={verificationControllerStatus?.text_controller_available ? 'success' : 'default'}
+                variant={verificationControllerStatus?.text_controller_available ? 'filled' : 'outlined'}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowVerificationConfirm(false)}>Cancel</Button>
+          <Button onClick={handleVerificationConfirm} color="secondary" variant="contained">
+            Execute Verifications
           </Button>
         </DialogActions>
       </Dialog>
