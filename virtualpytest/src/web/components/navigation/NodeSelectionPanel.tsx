@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,8 +9,10 @@ import {
 import {
   Close as CloseIcon,
   Camera as CameraIcon,
+  Route as RouteIcon,
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
+import { NodeGotoPanel } from './NodeGotoPanel';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -26,6 +28,9 @@ interface NodeSelectionPanelProps {
   isControlActive?: boolean;
   selectedDevice?: string | null;
   onTakeScreenshot?: () => void;
+  // Navigation props
+  treeId?: string;
+  currentNodeId?: string;
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
@@ -41,7 +46,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   isControlActive = false,
   selectedDevice = null,
   onTakeScreenshot,
+  treeId = '',
+  currentNodeId,
 }) => {
+  // Add state to control showing/hiding the NodeGotoPanel
+  const [showGotoPanel, setShowGotoPanel] = useState(false);
+
   const handleEdit = () => {
     setNodeForm({
       label: selectedNode.data.label,
@@ -69,92 +79,124 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
   // Check if screenshot button should be displayed
   const showScreenshotButton = isControlActive && selectedDevice && onTakeScreenshot;
+  
+  // Check if Go To button should be displayed
+  // Only show for non-root nodes when device is under control
+  const isRootNode = !selectedNode.data.parent || selectedNode.data.parent.length === 0;
+  const showGoToButton = isControlActive && selectedDevice && treeId && !isRootNode;
 
   return (
-    <Paper
-      sx={{
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        width: 200,
-        p: 1.5,
-        zIndex: 1000,
-      }}
-    >
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-            {selectedNode.data.label}
-          </Typography>
-          <IconButton
-            size="small"
-            onClick={onClose}
-            sx={{ p: 0.25 }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-        
-        {/* Parent and Depth Info */}
-        <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
-          <Typography variant="caption" display="block">
-            <strong>Depth:</strong> {selectedNode.data.depth || 0}
-          </Typography>
-          <Typography variant="caption" display="block">
-            <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
-          </Typography>
-        </Box>
-        
-        <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {/* Edit and Delete buttons */}
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Button
+    <>
+      <Paper
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          width: 200,
+          p: 1.5,
+          zIndex: 1000,
+        }}
+      >
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+              {selectedNode.data.label}
+            </Typography>
+            <IconButton
               size="small"
-              variant="outlined"
-              sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-              onClick={handleEdit}
+              onClick={onClose}
+              sx={{ p: 0.25 }}
             >
-              Edit
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-              onClick={onDelete}
-            >
-              Delete
-            </Button>
+              <CloseIcon fontSize="small" />
+            </IconButton>
           </Box>
           
-          {/* Reset button */}
-          {onReset && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              sx={{ fontSize: '0.75rem', px: 1 }}
-              onClick={() => onReset(selectedNode.id)}
-            >
-              Reset Node
-            </Button>
-          )}
+          {/* Parent and Depth Info */}
+          <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+            <Typography variant="caption" display="block">
+              <strong>Depth:</strong> {selectedNode.data.depth || 0}
+            </Typography>
+            <Typography variant="caption" display="block">
+              <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
+            </Typography>
+          </Box>
+          
+          <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {/* Edit and Delete buttons */}
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                onClick={handleEdit}
+              >
+                Edit
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                onClick={onDelete}
+              >
+                Delete
+              </Button>
+            </Box>
+            
+            {/* Reset button */}
+            {onReset && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={() => onReset(selectedNode.id)}
+              >
+                Reset Node
+              </Button>
+            )}
 
-          {/* Screenshot button - only shown when device is under control */}
-          {showScreenshotButton && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              sx={{ fontSize: '0.75rem', px: 1 }}
-              onClick={onTakeScreenshot}
-              startIcon={<CameraIcon fontSize="small" />}
-            >
-              Screenshot
-            </Button>
-          )}
+            {/* Screenshot button - only shown when device is under control */}
+            {showScreenshotButton && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={onTakeScreenshot}
+                startIcon={<CameraIcon fontSize="small" />}
+              >
+                Screenshot
+              </Button>
+            )}
+
+            {/* Go To button - only shown for non-root nodes when device is under control */}
+            {showGoToButton && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={() => setShowGotoPanel(true)}
+                startIcon={<RouteIcon fontSize="small" />}
+              >
+                Go To
+              </Button>
+            )}
+          </Box>
         </Box>
-      </Box>
-    </Paper>
+      </Paper>
+
+      {/* Render the NodeGotoPanel when showGotoPanel is true */}
+      {showGotoPanel && treeId && (
+        <NodeGotoPanel
+          selectedNode={selectedNode}
+          nodes={nodes}
+          treeId={treeId}
+          onClose={() => setShowGotoPanel(false)}
+          currentNodeId={currentNodeId}
+        />
+      )}
+    </>
   );
 }; 

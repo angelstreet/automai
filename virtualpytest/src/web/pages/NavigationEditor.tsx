@@ -753,6 +753,8 @@ const NavigationEditorContent: React.FC = () => {
                       isControlActive={isControlActive}
                       selectedDevice={selectedDevice}
                       onTakeScreenshot={handleTakeScreenshot}
+                      treeId={currentTreeId || ''}
+                      currentNodeId={focusNodeId}
                     />
                   )}
                   
