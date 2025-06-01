@@ -38,8 +38,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
 
-  // Check if run button should be enabled
-  const canRunAction = isControlActive && selectedDevice && selectedEdge.data?.action && !isRunning;
+  // Check if run button should be enabled (for multiple actions)
+  const canRunActions = isControlActive && selectedDevice && 
+    selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && !isRunning;
 
   // Clear run results when edge selection changes
   useEffect(() => {
@@ -47,30 +48,32 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   }, [selectedEdge.id]);
 
   const handleEdit = () => {
-    // Handle both old string format and new object format for actions
-    let actionValue: EdgeForm['action'] = undefined;
+    // Convert old format to new format if needed
+    let actions = selectedEdge.data?.actions || [];
+    let finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
     
-    if (selectedEdge.data?.action) {
-      if (typeof selectedEdge.data.action === 'string') {
-        // Old format - convert to undefined so user can select from dropdown
-        actionValue = undefined;
-      } else {
-        // New format - use as is
-        actionValue = selectedEdge.data.action;
-      }
+    // Handle backward compatibility with old single action format
+    if (!actions.length && selectedEdge.data?.action && typeof selectedEdge.data.action === 'object') {
+      actions = [{
+        ...selectedEdge.data.action,
+        waitTime: 2000, // Default wait time for converted actions
+      }];
     }
 
     setEdgeForm({
-      action: actionValue,
+      actions: actions,
+      finalWaitTime: finalWaitTime,
       description: selectedEdge.data?.description || '',
     });
     setIsEdgeDialogOpen(true);
   };
 
-  // Execute the edge action for testing
-  const handleRunAction = async () => {
-    if (!selectedEdge.data?.action || typeof selectedEdge.data.action === 'string') {
-      console.log('[@component:EdgeSelectionPanel] No valid action to run');
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Execute all edge actions sequentially
+  const handleRunActions = async () => {
+    if (!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) {
+      console.log('[@component:EdgeSelectionPanel] No actions to run');
       return;
     }
     
@@ -78,53 +81,83 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     setRunResult(null);
     
     try {
-      const action = selectedEdge.data.action;
-      
-      // Prepare the action data
-      const actionToExecute = {
-        id: action.id,
-        label: action.label,
-        command: action.command,
-        params: { ...action.params }
-      };
-      
-      // Convert underscore to hyphen for API endpoint (android_mobile -> android-mobile)
       const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: actionToExecute
-        }),
-      });
+      let results: string[] = [];
       
-      const result = await response.json();
-      
-      if (result.success) {
-        setRunResult(`✅ ${result.message}`);
-        console.log(`[@component:EdgeSelectionPanel] Action executed successfully: ${result.message}`);
-      } else {
-        // Only show error if it's not a connection issue
-        if (!result.error?.includes('No active connection') && !result.error?.includes('not connected')) {
-          const errorMessage = result.error || 'Action completed but result unclear';
-          if (!result.error) {
-            // Show as warning when result is unclear
-            setRunResult(`⚠️ ${errorMessage}`);
-          } else {
-            // Show as error for actual errors
-            setRunResult(`❌ ${errorMessage}`);
+      for (let i = 0; i < selectedEdge.data.actions.length; i++) {
+        const action = selectedEdge.data.actions[i];
+        
+        if (!action.id) {
+          results.push(`❌ Action ${i + 1}: No action selected`);
+          continue;
+        }
+        
+        console.log(`[@component:EdgeSelectionPanel] Executing action ${i + 1}/${selectedEdge.data.actions.length}: ${action.label}`);
+        
+        const actionToExecute = {
+          ...action,
+          params: { ...action.params }
+        };
+        
+        // Update params with input values for actions that require them
+        if (action.requiresInput && action.inputValue) {
+          if (action.command === 'launch_app') {
+            actionToExecute.params.package = action.inputValue;
+          } else if (action.command === 'input_text') {
+            actionToExecute.params.text = action.inputValue;
+          } else if (action.command === 'click_element') {
+            actionToExecute.params.element_id = action.inputValue;
+          } else if (action.command === 'coordinate_tap') {
+            const coords = action.inputValue.split(',').map(coord => parseInt(coord.trim()));
+            if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+              actionToExecute.params.x = coords[0];
+              actionToExecute.params.y = coords[1];
+            }
           }
         }
-        console.error(`[@component:EdgeSelectionPanel] Action execution failed: ${result.error}`);
+        
+        try {
+          const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: actionToExecute
+            }),
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
+          } else {
+            results.push(`❌ Action ${i + 1}: ${result.error || 'Failed'}`);
+          }
+        } catch (err: any) {
+          results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
+        }
+        
+        // Wait after action
+        if (action.waitTime > 0) {
+          console.log(`[@component:EdgeSelectionPanel] Waiting ${action.waitTime}ms after action ${i + 1}`);
+          await delay(action.waitTime);
+        }
       }
+      
+      // Final wait
+      if (selectedEdge.data.finalWaitTime && selectedEdge.data.finalWaitTime > 0) {
+        console.log(`[@component:EdgeSelectionPanel] Final wait: ${selectedEdge.data.finalWaitTime}ms`);
+        await delay(selectedEdge.data.finalWaitTime);
+        results.push(`⏱️ Final wait: ${selectedEdge.data.finalWaitTime}ms completed`);
+      }
+      
+      setRunResult(results.join('\n'));
+      console.log(`[@component:EdgeSelectionPanel] All actions completed`);
+      
     } catch (err: any) {
-      console.error('[@component:EdgeSelectionPanel] Error executing action:', err);
-      // Don't show connection-related errors in the UI
-      if (!err.message?.includes('Failed to fetch') && !err.message?.includes('connection')) {
-        setRunResult(`❌ ${err.message}`);
-      }
+      console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
+      setRunResult(`❌ ${err.message}`);
     } finally {
       setIsRunning(false);
     }
@@ -136,7 +169,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         position: 'absolute',
         top: 16,
         right: 16,
-        width: 200,
+        width: 220,
         p: 1.5,
         zIndex: 1000,
       }}
@@ -167,11 +200,17 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Typography>
         )}
         
-        {selectedEdge.data?.action && (
+        {/* Show actions count */}
+        {selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && (
           <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Action: {typeof selectedEdge.data.action === 'string' 
-              ? selectedEdge.data.action 
-              : selectedEdge.data.action.label}
+            Actions: {selectedEdge.data.actions.length}
+          </Typography>
+        )}
+
+        {/* Show final wait time if set */}
+        {selectedEdge.data?.finalWaitTime && selectedEdge.data.finalWaitTime > 0 && (
+          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+            Final Wait: {selectedEdge.data.finalWaitTime}ms
           </Typography>
         )}
 
@@ -197,44 +236,41 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             </Button>
           </Box>
 
-          {/* Run button - only shown when action exists */}
-          {selectedEdge.data?.action && typeof selectedEdge.data.action !== 'string' && (
+          {/* Run button - only shown when actions exist */}
+          {selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && (
             <Button
               size="small"
               variant="contained"
-              color="primary"
-              sx={{ 
-                fontSize: '0.75rem', 
-                px: 1,
-                opacity: !canRunAction ? 0.5 : 1,
-              }}
-              onClick={handleRunAction}
-              disabled={!canRunAction}
+              sx={{ fontSize: '0.75rem', px: 1 }}
+              onClick={handleRunActions}
+              disabled={!canRunActions}
               title={
                 !isControlActive || !selectedDevice 
                   ? 'Device control required to test actions' 
                   : ''
               }
             >
-              {isRunning ? 'Running...' : 'Run'}
+              {isRunning ? 'Running...' : `Run All (${selectedEdge.data.actions.length})`}
             </Button>
           )}
+
+          {/* Run result display */}
+          {runResult && (
+            <Box sx={{ 
+              mt: 0.5,
+              p: 0.5,
+              bgcolor: runResult.includes('❌') ? 'error.light' : 
+                       runResult.includes('⚠️') ? 'warning.light' : 'success.light',
+              borderRadius: 0.5,
+              maxHeight: 100,
+              overflow: 'auto'
+            }}>
+              <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+                {runResult}
+              </Typography>
+            </Box>
+          )}
         </Box>
-         {/* Run Result Display */}
-         {runResult && (
-          <Box sx={{ 
-            p: 1, 
-            bgcolor: runResult.startsWith('✅') ? 'success.light' : 
-                     runResult.startsWith('⚠️') ? 'warning.light' : 'error.light', 
-            borderRadius: 1,
-            mb: 1
-          }}>
-            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
-              {runResult}
-            </Typography>
-          </Box>
-        )}
-        
       </Box>
     </Paper>
   );

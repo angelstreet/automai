@@ -22,9 +22,28 @@ export interface UINavigationNode extends Node {
   };
 }
 
+// Updated action interface for multiple actions with wait times
+export interface EdgeAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  requiresInput?: boolean;
+  inputValue?: string;
+  waitTime: number;
+}
+
 // Use ReactFlow's Edge type directly with our custom data
 export type UINavigationEdge = Edge<{
-  action?: string | {    // Support both old string format and new object format
+  actions?: EdgeAction[]; // New: array of actions
+  finalWaitTime?: number; // New: wait time after all actions
+  description?: string;
+  from?: string;        // Source node label
+  to?: string;          // Target node label
+  edgeType?: 'horizontal' | 'vertical';  // For edge coloring: horizontal=siblings, vertical=parent-child
+  
+  // Keep old action for compatibility during transition
+  action?: string | {
     id: string;
     label: string;
     command: string;
@@ -33,10 +52,6 @@ export type UINavigationEdge = Edge<{
     requiresInput?: boolean;
     inputValue?: string;
   };
-  description?: string;
-  from?: string;        // Source node label
-  to?: string;          // Target node label
-  edgeType?: 'horizontal' | 'vertical';  // For edge coloring: horizontal=siblings, vertical=parent-child
 }>;
 
 export interface NavigationTreeData {
@@ -66,16 +81,10 @@ export interface NodeForm {
   menu_type?: 'main' | 'submenu' | 'leaf';
 }
 
+// Updated EdgeForm interface for multiple actions
 export interface EdgeForm {
-  action?: {
-    id: string;
-    label: string;
-    command: string;
-    params: any;
-    description?: string;
-    requiresInput?: boolean;
-    inputValue?: string;
-  };
+  actions: EdgeAction[];
+  finalWaitTime: number;
   description: string;
 }
 

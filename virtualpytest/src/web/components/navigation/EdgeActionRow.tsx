@@ -1,0 +1,140 @@
+import React from 'react';
+import {
+  Box,
+  FormControl,
+  Select,
+  MenuItem,
+  TextField,
+  IconButton,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+
+interface EdgeAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  requiresInput?: boolean;
+  inputValue?: string;
+  waitTime: number;
+}
+
+interface ControllerAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  description: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+}
+
+interface EdgeActionRowProps {
+  action: EdgeAction;
+  availableActions: ControllerAction[];
+  onUpdate: (updates: Partial<EdgeAction>) => void;
+  onRemove: () => void;
+  showInput: boolean;
+}
+
+export const EdgeActionRow: React.FC<EdgeActionRowProps> = ({
+  action,
+  availableActions,
+  onUpdate,
+  onRemove,
+  showInput,
+}) => {
+  const handleActionChange = (actionId: string) => {
+    if (actionId === '') {
+      onUpdate({ id: '', label: '', command: '', params: {}, inputValue: '' });
+      return;
+    }
+    
+    const selectedAction = availableActions.find(a => a.id === actionId);
+    if (selectedAction) {
+      onUpdate({
+        id: selectedAction.id,
+        label: selectedAction.label,
+        command: selectedAction.command,
+        params: selectedAction.params,
+        requiresInput: selectedAction.requiresInput,
+        inputValue: '',
+      });
+    }
+  };
+
+  const handleInputValueChange = (value: string) => {
+    const updatedParams = { ...action.params };
+    
+    if (action.command === 'launch_app') {
+      updatedParams.package = value;
+    } else if (action.command === 'input_text') {
+      updatedParams.text = value;
+    } else if (action.command === 'click_element') {
+      updatedParams.element_id = value;
+    } else if (action.command === 'coordinate_tap') {
+      const coords = value.split(',').map(coord => parseInt(coord.trim()));
+      if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+        updatedParams.x = coords[0];
+        updatedParams.y = coords[1];
+      }
+    }
+    
+    onUpdate({
+      inputValue: value,
+      params: updatedParams,
+    });
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+          <Select
+            value={action.id || ''}
+            onChange={(e) => handleActionChange(e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="">Select Action</MenuItem>
+            {availableActions.map((availableAction) => (
+              <MenuItem key={availableAction.id} value={availableAction.id}>
+                {availableAction.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        <TextField
+          size="small"
+          type="number"
+          value={action.waitTime}
+          onChange={(e) => onUpdate({ waitTime: parseInt(e.target.value) || 0 })}
+          sx={{ width: 80 }}
+          inputProps={{ min: 0, step: 100 }}
+        />
+        
+        <IconButton size="small" onClick={onRemove} color="error">
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+      
+      {showInput && action.requiresInput && action.id && (
+        <Box sx={{ ml: 1, mb: 1 }}>
+          <TextField
+            size="small"
+            value={action.inputValue || ''}
+            onChange={(e) => handleInputValueChange(e.target.value)}
+            placeholder={
+              action.command === 'launch_app' ? 'com.example.app' :
+              action.command === 'input_text' ? 'Enter text' :
+              action.command === 'click_element' ? 'Element ID' :
+              action.command === 'coordinate_tap' ? 'x,y' : 'Input value'
+            }
+            fullWidth
+          />
+        </Box>
+      )}
+    </Box>
+  );
+}; 

@@ -55,7 +55,8 @@ export const useNavigationState = () => {
     description: ''
   });
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({
-    action: '',
+    actions: [],
+    finalWaitTime: 2000,
     description: ''
   });
   const [isLoading, setIsLoading] = useState(false);
