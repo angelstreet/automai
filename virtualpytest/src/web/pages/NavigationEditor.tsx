@@ -1056,6 +1056,7 @@ const NavigationEditorContent: React.FC = () => {
         verificationControllerTypes={['text', 'image']}
         isVerificationActive={isVerificationActive}
         selectedDevice={selectedDevice}
+        isControlActive={isControlActive}
       />
 
       {/* Edge Edit Dialog */}

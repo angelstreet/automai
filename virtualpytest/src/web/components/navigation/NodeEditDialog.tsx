@@ -74,6 +74,8 @@ interface NodeEditDialogProps {
   verificationControllerTypes?: string[];
   isVerificationActive?: boolean;
   selectedDevice?: string | null;
+  // Add isControlActive like EdgeEditDialog
+  isControlActive?: boolean;
 }
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -87,6 +89,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   verificationControllerTypes = [],
   isVerificationActive = false,
   selectedDevice = null,
+  isControlActive = false,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
@@ -94,17 +97,18 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [isRunningVerifications, setIsRunningVerifications] = useState(false);
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
 
-  const canRunVerifications = isVerificationActive && selectedDevice && 
+  // Use same logic as EdgeEditDialog
+  const canRunVerifications = isControlActive && selectedDevice && 
     nodeForm.verifications && nodeForm.verifications.length > 0 && !isRunningVerifications;
 
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
     if (!parentIds || parentIds.length === 0) return 'None';
-    if (!nodes || !Array.isArray(nodes)) return 'None'; // Safety check for undefined nodes
+    if (!nodes || !Array.isArray(nodes)) return 'None';
     
     const parentNames = parentIds.map(id => {
       const parentNode = nodes.find(node => node.id === id);
-      return parentNode ? parentNode.data.label : id; // Fallback to ID if node not found
+      return parentNode ? parentNode.data.label : id;
     });
     
     return parentNames.join(' > ');
@@ -241,56 +245,36 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Edit Node</DialogTitle>
       <DialogContent>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Basic Node Properties */}
-          <TextField
-            label="Node Name"
-            value={nodeForm.label}
-            onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
-            fullWidth
-            required
-            error={!nodeForm.label.trim()}
-            helperText={!nodeForm.label.trim() ? "Node name is required" : ""}
-          />
-          
-          <FormControl fullWidth>
-            <InputLabel>Type</InputLabel>
-            <Select
-              value={nodeForm.type}
-              label="Type"
-              onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
-            >
-              <MenuItem value="screen">Screen</MenuItem>
-              <MenuItem value="dialog">Dialog</MenuItem>
-              <MenuItem value="popup">Popup</MenuItem>
-              <MenuItem value="overlay">Overlay</MenuItem>
-              <MenuItem value="menu">Menu</MenuItem>
-              <MenuItem value="entry">Entry Point</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <TextField
-            label="Description"
-            value={nodeForm.description}
-            onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
-            multiline
-            rows={2}
-            fullWidth
-          />
-          
-          {/* Screenshot URL Field - only show for non-entry nodes */}
-          {nodeForm.type !== 'entry' && (
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {/* Node Name and Type in columns */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
-              label="Screenshot URL"
-              value={nodeForm.screenshot || ''}
-              onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
+              label="Node Name"
+              value={nodeForm.label}
+              onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
               fullWidth
-              placeholder="Enter screenshot URL or path"
-              helperText="URL or file path to the screenshot image"
+              required
+              error={!nodeForm.label.trim()}
+              size="small"
             />
-          )}
-          
-          {/* Parent and Depth Info (Read-only) */}
+            <FormControl fullWidth size="small">
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={nodeForm.type}
+                label="Type"
+                onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
+              >
+                <MenuItem value="screen">Screen</MenuItem>
+                <MenuItem value="dialog">Dialog</MenuItem>
+                <MenuItem value="popup">Popup</MenuItem>
+                <MenuItem value="overlay">Overlay</MenuItem>
+                <MenuItem value="menu">Menu</MenuItem>
+                <MenuItem value="entry">Entry Point</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Depth and Parent below in columns */}
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
               label="Depth"
@@ -309,31 +293,47 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               size="small"
             />
           </Box>
+          
+          {/* Single line description */}
+          <TextField
+            label="Description"
+            value={nodeForm.description}
+            onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+            fullWidth
+            size="small"
+          />
+          
+          {/* Screenshot URL Field - only show for non-entry nodes */}
+          {nodeForm.type !== 'entry' && (
+            <TextField
+              label="Screenshot URL"
+              value={nodeForm.screenshot || ''}
+              onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
+              fullWidth
+              size="small"
+            />
+          )}
 
           {/* Verification Section */}
           {nodeForm.type !== 'entry' && (
             <>
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 1 }} />
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography variant="h6">
                   Node Verifications
                 </Typography>
-                {isVerificationActive && selectedDevice && (
+                {isControlActive && selectedDevice && (
                   <Typography variant="body2" color="success.main">
                     Controllers Active
                   </Typography>
                 )}
-                {(!isVerificationActive || !selectedDevice) && (
+                {(!isControlActive || !selectedDevice) && (
                   <Typography variant="body2" color="warning.main">
                     Take device control to test verifications
                   </Typography>
                 )}
               </Box>
-              
-              <Typography variant="body2" color="text.secondary">
-                Add verifications to validate this screen state when navigating to this node
-              </Typography>
               
               <NodeVerificationsList
                 verifications={nodeForm.verifications || []}
@@ -363,7 +363,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           
           {/* Entry node note */}
           {nodeForm.type === 'entry' && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
               Entry points are automatically positioned. Edit the connecting edge to change entry method and details.
             </Typography>
           )}
@@ -386,7 +386,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             onClick={handleRunVerifications} 
             variant="outlined"
             disabled={!canRunVerifications}
-            sx={{ opacity: !canRunVerifications ? 0.5 : 1 }}
           >
             {isRunningVerifications ? 'Testing...' : 'Test Verifications'}
           </Button>
