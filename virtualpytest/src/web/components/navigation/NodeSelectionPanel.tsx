@@ -85,6 +85,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const isRootNode = !selectedNode.data.parent || selectedNode.data.parent.length === 0;
   const showGoToButton = isControlActive && selectedDevice && treeId && !isRootNode;
 
+  // Check if node can be deleted (protect entry points and home nodes)
+  const isProtectedNode = selectedNode.data.is_root || 
+                         selectedNode.data.type === 'entry' ||
+                         selectedNode.id === 'entry-node' ||
+                         selectedNode.data.label?.toLowerCase() === 'home' ||
+                         selectedNode.id?.toLowerCase().includes('entry') ||
+                         selectedNode.id?.toLowerCase().includes('home');
+
   return (
     <>
       <Paper
@@ -132,15 +140,18 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               >
                 Edit
               </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color="error"
-                sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-                onClick={onDelete}
-              >
-                Delete
-              </Button>
+              {/* Only show delete button if not a protected node */}
+              {!isProtectedNode && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                  onClick={onDelete}
+                >
+                  Delete
+                </Button>
+              )}
             </Box>
             
             {/* Reset button */}

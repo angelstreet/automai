@@ -47,6 +47,16 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     setRunResult(null);
   }, [selectedEdge.id]);
 
+  // Check if edge can be deleted (protect edges from entry points and home nodes)
+  const isProtectedEdge = selectedEdge.data?.from === 'entry' || 
+                         selectedEdge.data?.from === 'home' ||
+                         selectedEdge.data?.from?.toLowerCase() === 'entry point' ||
+                         selectedEdge.data?.from?.toLowerCase().includes('entry') ||
+                         selectedEdge.data?.from?.toLowerCase().includes('home') ||
+                         selectedEdge.source === 'entry-node' ||
+                         selectedEdge.source?.toLowerCase().includes('entry') ||
+                         selectedEdge.source?.toLowerCase().includes('home');
+
   const handleEdit = () => {
     // Convert old format to new format if needed
     let actions = selectedEdge.data?.actions || [];
@@ -169,7 +179,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         position: 'absolute',
         top: 16,
         right: 16,
-        width: 220,
+        width: 280,
         p: 1.5,
         zIndex: 1000,
       }}
@@ -200,17 +210,26 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Typography>
         )}
         
-        {/* Show actions count */}
+        {/* Show compact actions list */}
         {selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Actions: {selectedEdge.data.actions.length}
-          </Typography>
+          <Box sx={{ mb: 1 }}>
+            {selectedEdge.data.actions.map((action, index) => (
+              <Typography key={index} variant="body2" sx={{ fontSize: '0.75rem', mb: 0.3 }}>
+                {index + 1}. {action.label || 'No action selected'}
+                {action.requiresInput && action.inputValue && (
+                  <span style={{ color: '#666', marginLeft: '4px' }}>
+                    → {action.inputValue}
+                  </span>
+                )}
+              </Typography>
+            ))}
+          </Box>
         )}
 
-        {/* Show final wait time if set */}
-        {selectedEdge.data?.finalWaitTime && selectedEdge.data.finalWaitTime > 0 && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Final Wait: {selectedEdge.data.finalWaitTime}ms
+        {/* Show if no actions configured */}
+        {(!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.75rem', fontStyle: 'italic' }}>
+            No actions configured
           </Typography>
         )}
 
@@ -225,15 +244,18 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             >
               Edit
             </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-              onClick={onDelete}
-            >
-              Delete
-            </Button>
+            {/* Only show delete button if not a protected edge (from entry/home points) */}
+            {!isProtectedEdge && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                onClick={onDelete}
+              >
+                Delete
+              </Button>
+            )}
           </Box>
 
           {/* Run button - only shown when actions exist */}
@@ -250,7 +272,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
                   : ''
               }
             >
-              {isRunning ? 'Running...' : `Run All (${selectedEdge.data.actions.length})`}
+              {isRunning ? 'Running...' : 'Run'}
             </Button>
           )}
 
