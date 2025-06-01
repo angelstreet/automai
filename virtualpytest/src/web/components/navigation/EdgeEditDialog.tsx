@@ -16,8 +16,10 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
+  IconButton,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ClearIcon from '@mui/icons-material/Clear';
 import { UINavigationEdge } from '../../types/navigationTypes';
 
 interface EdgeForm {     
@@ -56,6 +58,9 @@ interface EdgeEditDialogProps {
   onClose: () => void;
   controllerTypes?: string[]; // e.g., ["android_mobile"]
   selectedEdge?: UINavigationEdge | null; // Handle both undefined and null
+  // Device control props
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -66,12 +71,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   onClose,
   controllerTypes = [],
   selectedEdge,
+  isControlActive = false,
+  selectedDevice = null,
 }) => {
   const [actions, setActions] = useState<ControllerActions>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
+
+  // Check if run button should be enabled
+  const canRunAction = isControlActive && selectedDevice && edgeForm.action && !isRunning;
 
   // Fetch available actions for the controller
   useEffect(() => {
@@ -124,6 +134,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   const handleActionChange = (actionId: string) => {
+    if (actionId === 'none' || actionId === '') {
+      // Clear the action
+      setEdgeForm(prev => ({
+        ...prev,
+        action: undefined
+      }));
+      return;
+    }
+    
     const allActions = getAllActions();
     const selectedAction = allActions.find(action => action.id === actionId);
     
@@ -152,6 +171,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         updatedParams.package = value;
       } else if (edgeForm.action.command === 'input_text') {
         updatedParams.text = value;
+      } else if (edgeForm.action.command === 'click_element') {
+        updatedParams.element_id = value;
+      } else if (edgeForm.action.command === 'coordinate_tap') {
+        // Parse coordinates from "x,y" format
+        const coords = value.split(',').map(coord => parseInt(coord.trim()));
+        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+          updatedParams.x = coords[0];
+          updatedParams.y = coords[1];
+        }
       }
       
       setEdgeForm(prev => ({
@@ -166,7 +194,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   const isFormValid = () => {
-    if (!edgeForm.action) return false;
+    // Allow saving without an action (action is optional)
+    if (!edgeForm.action) return true;
     
     // If action requires input, check if input is provided
     if (edgeForm.action.requiresInput && !edgeForm.action.inputValue?.trim()) {
@@ -174,6 +203,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     }
     
     return true;
+  };
+
+  // Clear the selected action
+  const handleClearAction = () => {
+    setEdgeForm(prev => ({
+      ...prev,
+      action: undefined
+    }));
+    setRunResult(null); // Clear any previous run results
   };
 
   // Execute the selected action for testing
@@ -196,6 +234,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           actionToExecute.params.package = edgeForm.action.inputValue;
         } else if (edgeForm.action.command === 'input_text') {
           actionToExecute.params.text = edgeForm.action.inputValue;
+        } else if (edgeForm.action.command === 'click_element') {
+          actionToExecute.params.element_id = edgeForm.action.inputValue;
+        } else if (edgeForm.action.command === 'coordinate_tap') {
+          // Parse coordinates from "x,y" format
+          const coords = edgeForm.action.inputValue.split(',').map(coord => parseInt(coord.trim()));
+          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            actionToExecute.params.x = coords[0];
+            actionToExecute.params.y = coords[1];
+          }
         }
       }
       
@@ -241,6 +288,10 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             No controller types available
           </Typography>
         )}
+        {/* Device Control Status */}
+        <Typography variant="caption" display="block" color={isControlActive && selectedDevice ? "success.main" : "warning.main"}>
+          Device Control: {isControlActive && selectedDevice ? `Active (${selectedDevice})` : 'Inactive - Take control to RUN actions'}
+        </Typography>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -284,6 +335,18 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               value={edgeForm.action?.id || ''}
               onChange={(e) => handleActionChange(e.target.value)}
               label="Select Action"
+              endAdornment={
+                edgeForm.action && (
+                  <IconButton
+                    size="small"
+                    onClick={handleClearAction}
+                    sx={{ mr: 1 }}
+                    title="Clear selection"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                )
+              }
               MenuProps={{
                 PaperProps: {
                   style: {
@@ -292,6 +355,18 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                 },
               }}
             >
+              {/* None option to clear selection */}
+              <MenuItem value="">
+                <Box>
+                  <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                    None (No Action)
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Remove any action from this edge
+                  </Typography>
+                </Box>
+              </MenuItem>
+              
               {loading ? (
                 <MenuItem disabled>Loading actions...</MenuItem>
               ) : error ? (
@@ -332,16 +407,22 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           {edgeForm.action?.requiresInput && (
             <TextField
               label={edgeForm.action.command === 'launch_app' ? 'Package Name' : 
-                     edgeForm.action.command === 'input_text' ? 'Text to Input' : 'Input Value'}
+                     edgeForm.action.command === 'input_text' ? 'Text to Input' :
+                     edgeForm.action.command === 'click_element' ? 'Element ID' :
+                     edgeForm.action.command === 'coordinate_tap' ? 'Coordinates' : 'Input Value'}
               value={edgeForm.action.inputValue || ''}
               onChange={(e) => handleInputValueChange(e.target.value)}
               placeholder={edgeForm.action.command === 'launch_app' ? 'com.example.app' :
-                          edgeForm.action.command === 'input_text' ? 'Enter text to send' : ''}
+                          edgeForm.action.command === 'input_text' ? 'Enter text to send' :
+                          edgeForm.action.command === 'click_element' ? 'Enter element ID or selector' :
+                          edgeForm.action.command === 'coordinate_tap' ? 'x,y (e.g., 100,200)' : ''}
               fullWidth
               size="small"
               helperText={`This value will be sent as the ${
                 edgeForm.action.command === 'launch_app' ? 'package name' :
-                edgeForm.action.command === 'input_text' ? 'text input' : 'parameter'
+                edgeForm.action.command === 'input_text' ? 'text input' :
+                edgeForm.action.command === 'click_element' ? 'element ID' :
+                edgeForm.action.command === 'coordinate_tap' ? 'screen coordinates' : 'parameter'
               }`}
             />
           )}
@@ -373,7 +454,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         <Button 
           onClick={handleRunAction} 
           variant="contained"
-          disabled={!edgeForm.action || isRunning}
+          disabled={!canRunAction}
+          title={
+            !isControlActive || !selectedDevice 
+              ? 'Device control required to test actions' 
+              : !edgeForm.action 
+                ? 'Select an action to test' 
+                : ''
+          }
+          sx={{
+            opacity: !canRunAction ? 0.5 : 1,
+          }}
         >
           {isRunning ? 'Running...' : 'Run'}
         </Button>

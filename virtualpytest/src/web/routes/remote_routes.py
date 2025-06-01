@@ -842,6 +842,28 @@ def get_android_mobile_actions():
                     'inputLabel': 'Text',
                     'inputPlaceholder': 'Enter text to send'
                 }
+            ],
+            'interaction': [
+                {
+                    'id': 'click_element',
+                    'label': 'Click Element',
+                    'command': 'click_element',
+                    'params': {'element_id': ''},
+                    'description': 'Click on a UI element by element ID',
+                    'requiresInput': True,
+                    'inputLabel': 'Element ID',
+                    'inputPlaceholder': 'Enter element ID or selector'
+                },
+                {
+                    'id': 'coordinate_tap',
+                    'label': 'Tap Coordinates',
+                    'command': 'coordinate_tap',
+                    'params': {'x': 0, 'y': 0},
+                    'description': 'Tap at specific screen coordinates',
+                    'requiresInput': True,
+                    'inputLabel': 'Coordinates',
+                    'inputPlaceholder': 'x,y (e.g., 100,200)'
+                }
             ]
         }
         

@@ -905,6 +905,8 @@ const NavigationEditorContent: React.FC = () => {
         onClose={() => setIsEdgeDialogOpen(false)}
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
+        isControlActive={isControlActive}
+        selectedDevice={selectedDevice}
       />
 
       {/* Discard Changes Confirmation Dialog */}
