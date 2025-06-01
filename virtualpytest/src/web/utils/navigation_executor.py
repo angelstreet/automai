@@ -140,6 +140,14 @@ def parse_action_string(action_str: str) -> dict:
             'requiresInput': False,
             'waitTime': 2000
         },
+        'close_app': {
+            'id': 'close_app',
+            'label': 'Close App',
+            'command': 'close_app',
+            'params': {'package': 'com.example.app'},  # Default package
+            'requiresInput': False,
+            'waitTime': 1000
+        },
         'click_element': {
             'id': 'click_element', 
             'label': 'Click Element',
@@ -196,6 +204,8 @@ def parse_action_string(action_str: str) -> dict:
             
             # Update parameters based on action type
             if action_type == 'launch_app':
+                action_obj['params']['package'] = param
+            elif action_type == 'close_app':
                 action_obj['params']['package'] = param
             elif action_type == 'click_element':
                 action_obj['params']['element_id'] = param
@@ -459,6 +469,8 @@ def execute_action_object(action_obj: dict) -> bool:
             
             if command == 'launch_app':
                 action_to_execute['params']['package'] = input_value
+            elif command == 'close_app':
+                action_to_execute['params']['package'] = input_value
             elif command == 'input_text':
                 action_to_execute['params']['text'] = input_value
             elif command == 'click_element':
@@ -544,6 +556,23 @@ def is_acceptable_failure(action_obj: dict, error_message: str) -> bool:
                 print(f"[@navigation:executor:is_acceptable_failure] Launch app failure is acceptable: {acceptable_error}")
                 return True
     
+    # Close app failures that are acceptable
+    elif command == 'close_app':
+        acceptable_close_errors = [
+            'app not running',
+            'app already closed',
+            'app already stopped',
+            'application not found',
+            'package not running',
+            'app not in foreground',
+            'no active connection'  # Device might be disconnected but app could already be closed
+        ]
+        
+        for acceptable_error in acceptable_close_errors:
+            if acceptable_error in error_lower:
+                print(f"[@navigation:executor:is_acceptable_failure] Close app failure is acceptable: {acceptable_error}")
+                return True
+    
     # Click element failures that might be acceptable
     elif command == 'click_element':
         acceptable_click_errors = [
@@ -592,6 +621,12 @@ def is_acceptable_api_failure(action_obj: dict, status_code: int, error_text: st
     if command == 'launch_app':
         if 'no active connection' in error_lower or 'connection refused' in error_lower:
             print(f"[@navigation:executor:is_acceptable_api_failure] Launch app API failure acceptable - device might be disconnected but app could be running")
+            return True
+    
+    # For close_app, if there's no active connection, the app might already be closed
+    elif command == 'close_app':
+        if 'no active connection' in error_lower or 'connection refused' in error_lower:
+            print(f"[@navigation:executor:is_acceptable_api_failure] Close app API failure acceptable - device might be disconnected but app could already be closed")
             return True
     
     # For any action, if device is not connected but we're in a demo/testing scenario

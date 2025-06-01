@@ -49,14 +49,6 @@ class VideoVerificationController(VerificationControllerInterface):
         self.temp_video_path = Path("/tmp/video_verification")
         self.temp_video_path.mkdir(exist_ok=True)
         
-        # OpenCV settings
-        self.cv2_available = True
-        try:
-            import cv2
-        except ImportError:
-            self.cv2_available = False
-            print(f"VideoVerify[{self.device_name}]: WARNING - OpenCV not available, limited functionality")
-        
     def connect(self) -> bool:
         """Connect to the video verification system."""
         try:
@@ -199,7 +191,7 @@ class VideoVerificationController(VerificationControllerInterface):
         try:
             print(f"VideoVerify[{self.device_name}]: Analyzing image content - Type: {analysis_type}")
             
-            if self.cv2_available and analysis_type in ["basic", "color", "brightness"]:
+            if analysis_type in ["basic", "color", "brightness"]:
                 # Use OpenCV for detailed analysis
                 return self._analyze_with_opencv(image_path, analysis_type)
             else:
@@ -358,19 +350,7 @@ class VideoVerificationController(VerificationControllerInterface):
 
     def _compare_images_for_motion(self, image1_path: str, image2_path: str, threshold: float) -> bool:
         """Compare two images to detect motion."""
-        if not self.cv2_available:
-            # Simplified comparison using file sizes (very basic)
-            try:
-                size1 = os.path.getsize(image1_path)
-                size2 = os.path.getsize(image2_path)
-                size_diff = abs(size1 - size2) / max(size1, size2) * 100
-                return size_diff > threshold
-            except:
-                return False
-        
         try:
-            import cv2
-            
             # Load images
             img1 = cv2.imread(image1_path, cv2.IMREAD_GRAYSCALE)
             img2 = cv2.imread(image2_path, cv2.IMREAD_GRAYSCALE)
@@ -444,92 +424,12 @@ class VideoVerificationController(VerificationControllerInterface):
     
     def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
         """
-        Verify that a specific image appears on screen using template matching.
-        
-        Args:
-            image_name: Path to the template image to look for
-            timeout: Maximum time to wait in seconds
-            confidence: Confidence threshold (0.0 to 1.0)
+        Image verification moved to dedicated ImageVerificationController.
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
-            return False
-            
-        if not os.path.exists(image_name):
-            print(f"VideoVerify[{self.device_name}]: ERROR - Template image not found: {image_name}")
-            return False
-            
-        print(f"VideoVerify[{self.device_name}]: Looking for image '{image_name}' (timeout: {timeout}s, confidence: {confidence})")
-        
-        start_time = time.time()
-        check_interval = 1.0
-        
-        while time.time() - start_time < timeout:
-            # Capture current screen
-            screenshot = self.capture_screenshot()
-            if not screenshot:
-                time.sleep(check_interval)
-                continue
-            
-            # Perform template matching
-            match_confidence = self._template_match(screenshot, image_name)
-            
-            if match_confidence >= confidence:
-                elapsed = time.time() - start_time
-                print(f"VideoVerify[{self.device_name}]: Image '{image_name}' found after {elapsed:.1f}s (confidence: {match_confidence:.2f})")
-                
-                self._log_verification("image_appears", image_name, True, {
-                    "confidence": confidence,
-                    "actual_confidence": match_confidence,
-                    "timeout": timeout,
-                    "elapsed": elapsed
-                })
-                
-                return True
-            
-            time.sleep(check_interval)
-        
-        print(f"VideoVerify[{self.device_name}]: Image '{image_name}' not found within {timeout}s")
-        
-        self._log_verification("image_appears", image_name, False, {
-            "confidence": confidence,
-            "timeout": timeout
-        })
-        
+        print(f"VideoVerify[{self.device_name}]: Image verification not supported by video controller")
+        print(f"VideoVerify[{self.device_name}]: Use ImageVerificationController for image template matching")
+        print(f"VideoVerify[{self.device_name}]: Example: image_verifier.waitForImageToAppear('{image_name}', {timeout}, {confidence})")
         return False
-
-    def _template_match(self, screenshot_path: str, template_path: str) -> float:
-        """Perform template matching between screenshot and template."""
-        if not self.cv2_available:
-            # Basic file comparison (very limited)
-            try:
-                size1 = os.path.getsize(screenshot_path)
-                size2 = os.path.getsize(template_path)
-                # Return a random confidence for simulation
-                import random
-                return random.uniform(0.3, 0.9)
-            except:
-                return 0.0
-        
-        try:
-            import cv2
-            
-            # Load images
-            screenshot = cv2.imread(screenshot_path, cv2.IMREAD_GRAYSCALE)
-            template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
-            
-            if screenshot is None or template is None:
-                return 0.0
-            
-            # Perform template matching
-            result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, _ = cv2.minMaxLoc(result)
-            
-            return float(max_val)
-            
-        except Exception as e:
-            print(f"VideoVerify[{self.device_name}]: Template matching error: {e}")
-            return 0.0
 
     def verify_text_appears(self, text: str, timeout: float = 10.0, case_sensitive: bool = False) -> bool:
         """Text verification requires OCR - refer to TextVerificationController."""
@@ -550,31 +450,13 @@ class VideoVerificationController(VerificationControllerInterface):
         
     def verify_video_playing(self, motion_threshold: float = 5.0, duration: float = 3.0) -> bool:
         """
-        Verify that video is playing (motion detected).
+        Legacy method - calls waitForVideoToAppear for backward compatibility.
         
         Args:
             motion_threshold: Minimum motion percentage to consider as "playing"
             duration: Duration to check for motion in seconds
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
-            return False
-            
-        print(f"VideoVerify[{self.device_name}]: Verifying video playback (motion threshold: {motion_threshold}%, duration: {duration}s)")
-        
-        motion_detected = self.detect_motion(duration, motion_threshold)
-        
-        if motion_detected:
-            print(f"VideoVerify[{self.device_name}]: Video motion detected")
-        else:
-            print(f"VideoVerify[{self.device_name}]: No video motion detected above {motion_threshold}% threshold")
-            
-        self._log_verification("video_playing", f"motion_threshold_{motion_threshold}", motion_detected, {
-            "motion_threshold": motion_threshold,
-            "duration": duration
-        })
-        
-        return motion_detected
+        return self.waitForVideoToAppear(motion_threshold, duration, timeout=10.0)
         
     def verify_color_present(self, color: str, tolerance: float = 10.0) -> bool:
         """
@@ -736,13 +618,110 @@ class VideoVerificationController(VerificationControllerInterface):
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
             'video_device': self.video_device,
             'analysis_resolution': self.analysis_resolution,
-            'opencv_available': self.cv2_available,
             'capabilities': [
-                'image_verification', 'motion_detection', 'video_playback_verification',
-                'color_verification', 'screen_state_verification', 'template_matching',
+                'motion_detection', 'video_playback_verification',
+                'color_verification', 'screen_state_verification',
                 'video_change_detection', 'performance_metrics'
             ]
         }
+
+    def waitForVideoToAppear(self, motion_threshold: float = 5.0, duration: float = 3.0, timeout: float = 10.0) -> bool:
+        """
+        Wait for video content to appear (motion detected).
+        
+        Args:
+            motion_threshold: Minimum motion percentage to consider as "playing"
+            duration: Duration to check for motion in seconds
+            timeout: Maximum time to wait for video to appear
+            
+        Returns:
+            True if video appears, False if timeout
+        """
+        if not self.is_connected:
+            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
+            return False
+            
+        print(f"VideoVerify[{self.device_name}]: Waiting for video to appear (motion threshold: {motion_threshold}%, duration: {duration}s, timeout: {timeout}s)")
+        
+        start_time = time.time()
+        check_interval = 1.0
+        
+        while time.time() - start_time < timeout:
+            motion_detected = self.detect_motion(duration, motion_threshold)
+            
+            if motion_detected:
+                elapsed = time.time() - start_time
+                print(f"VideoVerify[{self.device_name}]: Video appeared after {elapsed:.1f}s")
+                
+                self._log_verification("video_appears", f"motion_threshold_{motion_threshold}", True, {
+                    "motion_threshold": motion_threshold,
+                    "duration": duration,
+                    "timeout": timeout,
+                    "elapsed": elapsed
+                })
+                
+                return True
+            
+            time.sleep(check_interval)
+        
+        print(f"VideoVerify[{self.device_name}]: Video did not appear within {timeout}s")
+        
+        self._log_verification("video_appears", f"motion_threshold_{motion_threshold}", False, {
+            "motion_threshold": motion_threshold,
+            "duration": duration,
+            "timeout": timeout
+        })
+        
+        return False
+
+    def waitForVideoToDisappear(self, motion_threshold: float = 5.0, duration: float = 3.0, timeout: float = 10.0) -> bool:
+        """
+        Wait for video content to disappear (no motion detected).
+        
+        Args:
+            motion_threshold: Minimum motion percentage to consider as "playing"
+            duration: Duration to check for lack of motion in seconds
+            timeout: Maximum time to wait for video to disappear
+            
+        Returns:
+            True if video disappears, False if timeout
+        """
+        if not self.is_connected:
+            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
+            return False
+            
+        print(f"VideoVerify[{self.device_name}]: Waiting for video to disappear (motion threshold: {motion_threshold}%, duration: {duration}s, timeout: {timeout}s)")
+        
+        start_time = time.time()
+        check_interval = 1.0
+        
+        while time.time() - start_time < timeout:
+            motion_detected = self.detect_motion(duration, motion_threshold)
+            
+            if not motion_detected:
+                elapsed = time.time() - start_time
+                print(f"VideoVerify[{self.device_name}]: Video disappeared after {elapsed:.1f}s")
+                
+                self._log_verification("video_disappears", f"motion_threshold_{motion_threshold}", True, {
+                    "motion_threshold": motion_threshold,
+                    "duration": duration,
+                    "timeout": timeout,
+                    "elapsed": elapsed
+                })
+                
+                return True
+            
+            time.sleep(check_interval)
+        
+        print(f"VideoVerify[{self.device_name}]: Video still present after {timeout}s")
+        
+        self._log_verification("video_disappears", f"motion_threshold_{motion_threshold}", False, {
+            "motion_threshold": motion_threshold,
+            "duration": duration,
+            "timeout": timeout
+        })
+        
+        return False
 
 
 # Backward compatibility alias

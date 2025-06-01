@@ -238,6 +238,8 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 success = self.input_text(params.get('text', ''))
             elif action == 'launch_app':
                 success = self.launch_app(params.get('package', ''))
+            elif action == 'close_app':
+                success = self.close_app(params.get('package', ''))
             elif action == 'click_element':
                 element_id = params.get('element_id')
                 if element_id and self.last_ui_elements:
@@ -295,6 +297,36 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
+            return False
+            
+    def close_app(self, package_name: str) -> bool:
+        """
+        Close/stop an app by package name.
+        
+        Args:
+            package_name: Android package name (e.g., "com.android.settings")
+        """
+        if not self.is_connected or not self.adb_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Closing app: {package_name}")
+            
+            # Use ADB force-stop command to close the app
+            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
+                f"adb -s {self.android_device_id} shell am force-stop {package_name}"
+            )
+            
+            if success and exit_code == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully closed {package_name}")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to close {package_name}: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: App close error: {e}")
             return False
             
     def get_installed_apps(self) -> List[AndroidApp]:
@@ -499,7 +531,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             'last_dump_time': self.last_dump_time,
             'supported_keys': list(ADBUtils.ADB_KEYS.keys()) if self.adb_utils else [],
             'capabilities': [
-                'navigation', 'text_input', 'app_launch', 'ui_dumping',
+                'navigation', 'text_input', 'app_launch', 'app_close', 'ui_dumping',
                 'element_clicking', 'element_finding', 'element_verification',
                 'media_control', 'volume_control', 'power_control'
             ]

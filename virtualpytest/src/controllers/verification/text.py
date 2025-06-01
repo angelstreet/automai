@@ -1,7 +1,7 @@
 """
 Text Verification Controller Implementation
 
-This controller provides simple text verification functionality using OCR.
+This controller provides OCR-based text verification functionality.
 It can wait for text to appear or disappear in specific areas of the screen.
 """
 
@@ -21,87 +21,33 @@ class TextVerificationController(VerificationControllerInterface):
         Initialize the Text Verification controller.
         
         Args:
-            av_controller: Reference to AV controller (HDMIStreamController, etc.) - REQUIRED
+            av_controller: Reference to AV controller for screenshot capture
             **kwargs: Optional parameters:
-                - ocr_engine: OCR engine to use ('tesseract' or 'placeholder')
+                - ocr_language: Language for OCR (default: 'eng')
+                - ocr_config: Tesseract configuration string
         """
         if not av_controller:
-            raise ValueError("av_controller is required - must provide HDMIStreamController or similar")
+            raise ValueError("av_controller is required for screenshot capture")
             
         device_name = f"TextVerify-{av_controller.device_name}"
         super().__init__(device_name)
         
-        # AV controller reference (REQUIRED)
+        # AV controller reference for screenshot capture only
         self.av_controller = av_controller
-        self.ocr_engine = kwargs.get('ocr_engine', 'tesseract')
+        self.ocr_language = kwargs.get('ocr_language', 'eng')
+        self.ocr_config = kwargs.get('ocr_config', '--psm 6')
         
         # Temporary files for analysis
-        self.temp_text_path = Path("/tmp/text_verification")
-        self.temp_text_path.mkdir(exist_ok=True)
-        
-        # OCR availability
-        self.ocr_available = self._check_ocr_availability()
-        
-    def _check_ocr_availability(self) -> bool:
-        """Check if OCR tools are available."""
-        if self.ocr_engine == 'tesseract':
-            try:
-                result = subprocess.run(['tesseract', '--version'], 
-                                      capture_output=True, text=True, timeout=5)
-                return result.returncode == 0
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                print(f"TextVerify[{self.device_name}]: WARNING - Tesseract OCR not found")
-                return False
-        return False
-        
-    def connect(self) -> bool:
-        """Connect to the text verification system."""
-        try:
-            print(f"TextVerify[{self.device_name}]: Connecting to text verification system")
-            
-            # Check if AV controller is connected
-            if not hasattr(self.av_controller, 'is_connected') or not self.av_controller.is_connected:
-                print(f"TextVerify[{self.device_name}]: ERROR - AV controller not connected")
-                print(f"TextVerify[{self.device_name}]: Please connect {self.av_controller.device_name} first")
-                return False
-            else:
-                print(f"TextVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
-            
-            # Check if AV controller has screenshot capability
-            if not hasattr(self.av_controller, 'take_screenshot'):
-                print(f"TextVerify[{self.device_name}]: ERROR - AV controller has no screenshot capability")
-                return False
-            
-            if not self.ocr_available:
-                print(f"TextVerify[{self.device_name}]: WARNING - OCR not available, using placeholder mode")
-            
-            self.is_connected = True
-            self.verification_session_id = f"text_verify_{int(time.time())}"
-            print(f"TextVerify[{self.device_name}]: Connected - Session: {self.verification_session_id}")
-            return True
-            
-        except Exception as e:
-            print(f"TextVerify[{self.device_name}]: Connection failed: {e}")
-            return False
+        self.temp_image_path = Path("/tmp/text_verification")
+        self.temp_image_path.mkdir(exist_ok=True)
 
-    def disconnect(self) -> bool:
-        """Disconnect from the text verification system."""
-        print(f"TextVerify[{self.device_name}]: Disconnecting")
-        self.is_connected = False
-        self.verification_session_id = None
-        
-        # Clean up temporary files
-        try:
-            for temp_file in self.temp_text_path.glob("*"):
-                if temp_file.is_file():
-                    temp_file.unlink()
-        except Exception as e:
-            print(f"TextVerify[{self.device_name}]: Warning - cleanup failed: {e}")
-            
-        print(f"TextVerify[{self.device_name}]: Disconnected")
-        return True
+        # Controller is always ready
+        self.is_connected = True
+        self.verification_session_id = f"text_verify_{int(time.time())}"
+        print(f"TextVerify[{self.device_name}]: Ready - Using AV controller: {self.av_controller.device_name}")
+        print(f"TextVerify[{self.device_name}]: OCR language: {self.ocr_language}")
 
-    def capture_screenshot_for_ocr(self, area: Tuple[int, int, int, int] = None) -> str:
+    def _capture_screenshot_for_ocr(self, area: Tuple[int, int, int, int] = None) -> str:
         """
         Capture a screenshot for OCR analysis using the AV controller.
         
@@ -111,34 +57,46 @@ class TextVerificationController(VerificationControllerInterface):
         Returns:
             Path to the screenshot file
         """
-        if not self.is_connected:
-            print(f"TextVerify[{self.device_name}]: ERROR - Not connected")
-            return None
-            
         timestamp = int(time.time())
-        screenshot_name = f"ocr_screenshot_{timestamp}.png"
+        screenshot_name = f"text_screenshot_{timestamp}.png"
         
-        # Use AV controller to take screenshot
-        print(f"TextVerify[{self.device_name}]: Requesting screenshot from {self.av_controller.device_name}")
-        screenshot_path = self.av_controller.take_screenshot(screenshot_name)
-        
-        if not screenshot_path:
-            print(f"TextVerify[{self.device_name}]: Failed to get screenshot from AV controller")
+        try:
+            # Use AV controller to take screenshot
+            print(f"TextVerify[{self.device_name}]: Capturing screenshot via {self.av_controller.device_name}")
+            
+            # Try different screenshot methods that might be available
+            screenshot_path = None
+            if hasattr(self.av_controller, 'take_screenshot'):
+                screenshot_path = self.av_controller.take_screenshot(screenshot_name)
+            elif hasattr(self.av_controller, 'screenshot'):
+                screenshot_path = self.av_controller.screenshot(screenshot_name)
+            elif hasattr(self.av_controller, 'capture_frame'):
+                screenshot_path = self.av_controller.capture_frame(screenshot_name)
+            else:
+                print(f"TextVerify[{self.device_name}]: ERROR - No screenshot method available on AV controller")
+                return None
+            
+            if not screenshot_path:
+                print(f"TextVerify[{self.device_name}]: Failed to capture screenshot")
+                return None
+                
+            if area:
+                # Crop the image if area is specified
+                cropped_path = self._crop_image(screenshot_path, area)
+                return cropped_path or screenshot_path
+                
+            return screenshot_path
+            
+        except Exception as e:
+            print(f"TextVerify[{self.device_name}]: Screenshot capture error: {e}")
             return None
-            
-        if area:
-            # Crop the image if area is specified
-            cropped_path = self._crop_image(screenshot_path, area)
-            return cropped_path or screenshot_path
-            
-        return screenshot_path
 
     def _crop_image(self, image_path: str, area: Tuple[int, int, int, int]) -> str:
         """Crop image to specified area using FFmpeg."""
         try:
             x, y, width, height = area
             timestamp = int(time.time())
-            cropped_path = self.temp_text_path / f"cropped_{timestamp}.png"
+            cropped_path = self.temp_image_path / f"cropped_{timestamp}.png"
             
             cmd = [
                 '/usr/bin/ffmpeg',
@@ -161,66 +119,58 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"TextVerify[{self.device_name}]: Image cropping error: {e}")
             return None
 
-    def extract_text_from_image(self, image_path: str) -> str:
+    def _extract_text_from_image(self, image_path: str) -> str:
         """
-        Extract text from image using OCR.
+        Extract text from image using Tesseract OCR.
         
         Args:
             image_path: Path to the image file
             
         Returns:
-            Extracted text as string
+            Extracted text string
         """
-        if not self.is_connected:
-            print(f"TextVerify[{self.device_name}]: ERROR - Not connected")
-            return ""
-            
-        if not os.path.exists(image_path):
-            print(f"TextVerify[{self.device_name}]: ERROR - Image file not found: {image_path}")
-            return ""
-        
         try:
-            if self.ocr_available and self.ocr_engine == 'tesseract':
-                # Use Tesseract OCR
-                cmd = [
-                    'tesseract',
-                    image_path,
-                    'stdout',
-                    '-l', 'eng',  # English language
-                    '--psm', '6'  # Uniform block of text
-                ]
-                
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-                
-                if result.returncode == 0:
-                    extracted_text = result.stdout.strip()
-                    print(f"TextVerify[{self.device_name}]: Extracted text: '{extracted_text[:100]}{'...' if len(extracted_text) > 100 else ''}'")
-                    return extracted_text
-                else:
-                    print(f"TextVerify[{self.device_name}]: OCR failed: {result.stderr}")
-                    return ""
+            cmd = [
+                'tesseract',
+                image_path,
+                'stdout',
+                '-l', self.ocr_language,
+                self.ocr_config
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                extracted_text = result.stdout.strip()
+                print(f"TextVerify[{self.device_name}]: Extracted text: '{extracted_text}'")
+                return extracted_text
             else:
-                # Placeholder mode - simulate text extraction
-                print(f"TextVerify[{self.device_name}]: OCR placeholder mode - simulating text extraction")
-                # Return some sample text for testing
-                sample_texts = [
-                    "Welcome to the application",
-                    "Loading...",
-                    "Error: Connection failed",
-                    "Ready",
-                    "Please wait",
-                    ""  # Sometimes no text
-                ]
-                import random
-                simulated_text = random.choice(sample_texts)
-                print(f"TextVerify[{self.device_name}]: Simulated text: '{simulated_text}'")
-                return simulated_text
+                print(f"TextVerify[{self.device_name}]: OCR failed: {result.stderr}")
+                return ""
                 
         except Exception as e:
             print(f"TextVerify[{self.device_name}]: Text extraction error: {e}")
             return ""
 
-    def verify_text_appears(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
+    def _text_matches(self, extracted_text: str, target_text: str, case_sensitive: bool = False) -> bool:
+        """
+        Check if target text is found in extracted text.
+        
+        Args:
+            extracted_text: Text extracted from image
+            target_text: Text to search for
+            case_sensitive: Whether to match case exactly
+            
+        Returns:
+            True if text matches, False otherwise
+        """
+        if not case_sensitive:
+            extracted_text = extracted_text.lower()
+            target_text = target_text.lower()
+        
+        return target_text in extracted_text
+
+    def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
                            area: Tuple[int, int, int, int] = None) -> bool:
         """
         Wait for specific text to appear on screen.
@@ -234,58 +184,35 @@ class TextVerificationController(VerificationControllerInterface):
         Returns:
             True if text appears, False if timeout
         """
-        if not self.is_connected:
-            print(f"TextVerify[{self.device_name}]: ERROR - Not connected")
-            return False
-            
-        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to appear (timeout: {timeout}s)")
+        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to appear (timeout: {timeout}s, case_sensitive: {case_sensitive})")
         if area:
             print(f"TextVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
         
         start_time = time.time()
-        check_interval = 1.0  # Check every second
-        
-        target_text = text if case_sensitive else text.lower()
+        check_interval = 2.0  # Check every 2 seconds (OCR is slower)
         
         while time.time() - start_time < timeout:
             # Capture screenshot
-            screenshot = self.capture_screenshot_for_ocr(area)
+            screenshot = self._capture_screenshot_for_ocr(area)
             if not screenshot:
                 time.sleep(check_interval)
                 continue
             
-            # Extract text from screenshot
-            extracted_text = self.extract_text_from_image(screenshot)
-            search_text = extracted_text if case_sensitive else extracted_text.lower()
+            # Extract text using OCR
+            extracted_text = self._extract_text_from_image(screenshot)
             
             # Check if target text is found
-            if target_text in search_text:
+            if self._text_matches(extracted_text, text, case_sensitive):
                 elapsed = time.time() - start_time
                 print(f"TextVerify[{self.device_name}]: Text '{text}' found after {elapsed:.1f}s")
-                
-                self._log_verification("text_appears", text, True, {
-                    "timeout": timeout,
-                    "elapsed": elapsed,
-                    "case_sensitive": case_sensitive,
-                    "area": area,
-                    "extracted_text": extracted_text[:200]  # Log first 200 chars
-                })
-                
                 return True
             
             time.sleep(check_interval)
         
         print(f"TextVerify[{self.device_name}]: Text '{text}' not found within {timeout}s")
-        
-        self._log_verification("text_appears", text, False, {
-            "timeout": timeout,
-            "case_sensitive": case_sensitive,
-            "area": area
-        })
-        
         return False
 
-    def verify_text_disappears(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
+    def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
                               area: Tuple[int, int, int, int] = None) -> bool:
         """
         Wait for specific text to disappear from screen.
@@ -299,55 +226,32 @@ class TextVerificationController(VerificationControllerInterface):
         Returns:
             True if text disappears, False if timeout
         """
-        if not self.is_connected:
-            print(f"TextVerify[{self.device_name}]: ERROR - Not connected")
-            return False
-            
-        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to disappear (timeout: {timeout}s)")
+        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to disappear (timeout: {timeout}s, case_sensitive: {case_sensitive})")
         if area:
             print(f"TextVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
         
         start_time = time.time()
-        check_interval = 1.0  # Check every second
-        
-        target_text = text if case_sensitive else text.lower()
+        check_interval = 2.0  # Check every 2 seconds (OCR is slower)
         
         while time.time() - start_time < timeout:
             # Capture screenshot
-            screenshot = self.capture_screenshot_for_ocr(area)
+            screenshot = self._capture_screenshot_for_ocr(area)
             if not screenshot:
                 time.sleep(check_interval)
                 continue
             
-            # Extract text from screenshot
-            extracted_text = self.extract_text_from_image(screenshot)
-            search_text = extracted_text if case_sensitive else extracted_text.lower()
+            # Extract text using OCR
+            extracted_text = self._extract_text_from_image(screenshot)
             
             # Check if target text is NOT found (disappeared)
-            if target_text not in search_text:
+            if not self._text_matches(extracted_text, text, case_sensitive):
                 elapsed = time.time() - start_time
                 print(f"TextVerify[{self.device_name}]: Text '{text}' disappeared after {elapsed:.1f}s")
-                
-                self._log_verification("text_disappears", text, True, {
-                    "timeout": timeout,
-                    "elapsed": elapsed,
-                    "case_sensitive": case_sensitive,
-                    "area": area,
-                    "extracted_text": extracted_text[:200]  # Log first 200 chars
-                })
-                
                 return True
             
             time.sleep(check_interval)
         
         print(f"TextVerify[{self.device_name}]: Text '{text}' still present after {timeout}s")
-        
-        self._log_verification("text_disappears", text, False, {
-            "timeout": timeout,
-            "case_sensitive": case_sensitive,
-            "area": area
-        })
-        
         return False
 
     # Implementation of required abstract methods from VerificationControllerInterface
@@ -389,7 +293,7 @@ class TextVerificationController(VerificationControllerInterface):
             expected_state: Expected state text to look for
             timeout: Maximum time to wait for state
         """
-        return self.verify_text_appears(expected_state, timeout)
+        return self.waitForTextToAppear(expected_state, timeout)
         
     def verify_performance_metric(self, metric_name: str, expected_value: float, tolerance: float = 10.0) -> bool:
         """Performance metrics not applicable for text controller."""
@@ -401,16 +305,16 @@ class TextVerificationController(VerificationControllerInterface):
         if verification_type == "text_appears":
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.verify_text_appears(target, timeout, case_sensitive, area)
+            return self.waitForTextToAppear(target, timeout, case_sensitive, area)
         elif verification_type == "text_disappears":
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.verify_text_disappears(target, timeout, case_sensitive, area)
+            return self.waitForTextToDisappear(target, timeout, case_sensitive, area)
         elif verification_type == "text":
             # Default to text appears
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.verify_text_appears(target, timeout, case_sensitive, area)
+            return self.waitForTextToAppear(target, timeout, case_sensitive, area)
         else:
             print(f"TextVerify[{self.device_name}]: Unknown text verification type: {verification_type}")
             return False
@@ -424,8 +328,8 @@ class TextVerificationController(VerificationControllerInterface):
             'session_id': self.verification_session_id,
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
-            'ocr_engine': self.ocr_engine,
-            'ocr_available': self.ocr_available,
+            'ocr_language': self.ocr_language,
+            'ocr_config': self.ocr_config,
             'capabilities': [
                 'text_appears_verification', 'text_disappears_verification',
                 'area_based_ocr', 'case_sensitive_matching'
