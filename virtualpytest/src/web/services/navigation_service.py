@@ -5,6 +5,15 @@ Orchestrates pathfinding, caching, and execution
 
 from typing import List, Dict, Optional
 import time
+import sys
+import os
+
+# Add paths for absolute imports instead of relative imports
+web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+web_utils_path = os.path.join(web_dir, 'utils')
+web_cache_path = os.path.join(web_dir, 'cache')
+sys.path.insert(0, web_utils_path)
+sys.path.insert(0, web_cache_path)
 
 class NavigationService:
     """
@@ -42,7 +51,7 @@ class NavigationService:
             
             if execute:
                 # Execute navigation with verification
-                from ..utils.navigation_executor import execute_navigation_with_verification
+                from navigation_executor import execute_navigation_with_verification
                 
                 result = execute_navigation_with_verification(tree_id, target_node_id, team_id, current_node_id)
                 
@@ -56,7 +65,7 @@ class NavigationService:
                 return result
             else:
                 # Return navigation preview
-                from ..utils.navigation_executor import get_navigation_preview
+                from navigation_executor import get_navigation_preview
                 
                 preview = get_navigation_preview(tree_id, target_node_id, team_id, current_node_id)
                 preview.update({
@@ -92,7 +101,7 @@ class NavigationService:
         print(f"[@navigation:service:get_navigation_preview] Getting preview for {target_node_id}")
         
         try:
-            from ..utils.navigation_pathfinding import get_navigation_steps
+            from navigation_pathfinding import get_navigation_steps
             
             steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
             return steps
@@ -211,8 +220,8 @@ class NavigationService:
         print(f"[@navigation:service:get_navigation_graph_stats] Getting stats for tree {tree_id}")
         
         try:
-            from ..cache.navigation_cache import get_cached_graph
-            from ..cache.navigation_graph import validate_graph, get_entry_points, get_exit_points
+            from navigation_cache import get_cached_graph
+            from navigation_graph import validate_graph, get_entry_points, get_exit_points
             
             G = get_cached_graph(tree_id, team_id)
             if not G:
@@ -268,7 +277,7 @@ class NavigationService:
         print(f"[@navigation:service:find_alternative_paths] Finding {max_paths} alternative paths to {target_node_id}")
         
         try:
-            from ..utils.navigation_pathfinding import find_all_paths
+            from navigation_pathfinding import find_all_paths
             
             paths = find_all_paths(tree_id, target_node_id, team_id, current_node_id, max_paths)
             return paths
@@ -290,7 +299,7 @@ class NavigationService:
             List of reachable node IDs
         """
         try:
-            from ..utils.navigation_pathfinding import get_reachable_nodes
+            from navigation_pathfinding import get_reachable_nodes
             
             reachable = get_reachable_nodes(tree_id, team_id, current_node_id)
             return reachable
@@ -311,7 +320,7 @@ class NavigationService:
             Dictionary with cache clearing results
         """
         try:
-            from ..cache.navigation_cache import invalidate_cache, clear_all_cache
+            from navigation_cache import invalidate_cache, clear_all_cache
             
             if tree_id:
                 invalidate_cache(tree_id, team_id)

@@ -144,10 +144,37 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         );
         console.log(`[@component:NodeGotoPanel] Navigation execution completed successfully`);
       } else {
-        setError(response.error || 'Navigation execution failed');
+        // Provide more specific error messages for common issues
+        let errorMessage = response.error || 'Navigation execution failed';
+        
+        // Check for specific Python import errors
+        if (errorMessage.includes('attempted relative import with no known parent package')) {
+          errorMessage = 'Backend service configuration issue. The navigation service needs to be restarted to resolve import dependencies.';
+        } else if (errorMessage.includes('ImportError') || errorMessage.includes('ModuleNotFoundError')) {
+          errorMessage = 'Backend service missing required dependencies. Please check the navigation service configuration.';
+        } else if (errorMessage.includes('Take control mode is not active')) {
+          errorMessage = 'Device control is not active. Please ensure the device is connected and take control is enabled.';
+        } else if (errorMessage.includes('No navigation path found')) {
+          errorMessage = 'No valid path found to the target node. The node may be unreachable from the current position.';
+        }
+        
+        setError(errorMessage);
+        console.error(`[@component:NodeGotoPanel] Navigation execution failed: ${errorMessage}`);
       }
     } catch (err) {
-      setError(`Navigation execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      let errorMessage = `Navigation execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      
+      // Handle network/connection errors
+      if (err instanceof Error) {
+        if (err.message.includes('fetch')) {
+          errorMessage = 'Unable to connect to navigation service. Please check if the backend is running.';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Navigation request timed out. The operation may take longer than expected.';
+        }
+      }
+      
+      setError(errorMessage);
+      console.error(`[@component:NodeGotoPanel] Navigation execution error:`, err);
     } finally {
       setIsExecuting(false);
     }
@@ -260,17 +287,33 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           >
             {isExecuting ? 'Executing...' : 'Run'}
           </Button>
+          
+          {/* Execution Progress */}
+          {isExecuting && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, textAlign: 'center' }}>
+                Executing navigation...
+              </Typography>
+              <LinearProgress />
+            </Box>
+          )}
         </Box>
-         {/* Error Display */}
+         {/* Error Display - Show prominently at the top if there's an error */}
         {error && (
-          <Alert severity="error" sx={{ mb: 1, fontSize: '0.875rem' }}>
+          <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+              Navigation Failed
+            </Typography>
             {error}
           </Alert>
         )}
 
         {/* Success Display */}
         {executionResult && (
-          <Alert severity="success" sx={{ mb: 1, fontSize: '0.875rem' }}>
+          <Alert severity="success" sx={{ mb: 2, fontSize: '0.875rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+              Navigation Complete
+            </Typography>
             {executionResult}
           </Alert>
         )}
