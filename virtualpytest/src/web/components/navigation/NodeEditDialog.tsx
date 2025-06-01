@@ -120,10 +120,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && verificationControllerTypes.length > 0) {
+    if (isOpen && verificationControllerTypes.length > 0 && Object.keys(verificationActions).length === 0) {
       fetchVerificationActions();
     }
-  }, [isOpen, verificationControllerTypes]);
+  }, [isOpen, verificationControllerTypes, verificationActions]);
 
   const fetchVerificationActions = async () => {
     setLoadingVerifications(true);

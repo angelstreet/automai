@@ -211,8 +211,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   value={verification.inputValue || ''}
                   onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
                   fullWidth
-                  required
-                  error={!verification.inputValue?.trim()}
                 />
               </Box>
             )}
