@@ -19,6 +19,7 @@ from .testcase_routes import testcase_bp
 from .userinterface_routes import userinterface_bp
 from .devicemodel_routes import devicemodel_bp
 from .screen_definition_routes import screen_definition_blueprint
+from .pathfinding_routes import pathfinding_bp
 
 def register_routes(app: Flask):
     """Register all application routes"""
@@ -32,6 +33,7 @@ def register_routes(app: Flask):
     app.register_blueprint(audiovideo_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(navigation_bp)
+    app.register_blueprint(pathfinding_bp)
     app.register_blueprint(campaign_bp)
     app.register_blueprint(testcase_bp)
     app.register_blueprint(userinterface_bp)

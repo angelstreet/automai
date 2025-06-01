@@ -13,4 +13,7 @@ psutil>=5.8.0
 regex>=2021.0.0
 
 # Type hints support
-typing-extensions>=4.0.0 
+typing-extensions>=4.0.0
+
+# Navigation pathfinding support
+networkx>=3.2.1 

@@ -403,6 +403,17 @@ def save_navigation_nodes_and_edges(tree_id, nodes, edges, team_id=None):
         
         if updated_tree:
             print(f"[@utils:navigation:save_navigation_nodes_and_edges] Successfully saved {len(nodes)} nodes and {len(edges)} edges to tree metadata")
+            
+            # INVALIDATE CACHE after successful save
+            try:
+                from ..cache.navigation_cache import invalidate_cache
+                invalidate_cache(tree_id, team_id)
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] Cache invalidated for tree: {tree_id}")
+            except ImportError:
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] Cache module not available, skipping cache invalidation")
+            except Exception as cache_error:
+                print(f"[@utils:navigation:save_navigation_nodes_and_edges] Warning: Failed to invalidate cache: {cache_error}")
+            
             return True
         else:
             print(f"[@utils:navigation:save_navigation_nodes_and_edges] ERROR: Failed to update tree metadata")
