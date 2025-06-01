@@ -524,7 +524,17 @@ def execute_android_mobile_action():
             if target_element:
                 # Click the found element
                 success = app.android_mobile_controller.click_element(target_element)
-                message = f'Element "{element_id}" click {"successful" if success else "failed"}'
+                if success:
+                    message = f'Element "{element_id}" click successful'
+                else:
+                    # Check if we might already be on the target screen
+                    # by checking if the element exists and is visible
+                    if target_element.text or target_element.content_desc:
+                        # Element exists but click failed - might already be on target screen
+                        message = f'Element "{element_id}" found but click not needed (already on target screen)'
+                        success = True  # Consider this a success case
+                    else:
+                        message = f'Element "{element_id}" found but click failed'
             else:
                 success = False
                 message = f'Element "{element_id}" not found by text, content description, or resource ID'

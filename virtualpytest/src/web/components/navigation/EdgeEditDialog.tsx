@@ -273,7 +273,14 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       } else {
         // Only show error if it's not a connection issue
         if (!result.error?.includes('No active connection') && !result.error?.includes('not connected')) {
-          setRunResult(`❌ ${result.error || 'Action failed'}`);
+          const errorMessage = result.error || 'Action completed but result unclear';
+          if (!result.error) {
+            // Show as warning when result is unclear
+            setRunResult(`⚠️ ${errorMessage}`);
+          } else {
+            // Show as error for actual errors
+            setRunResult(`❌ ${errorMessage}`);
+          }
         }
         console.error(`[@component:EdgeEditDialog] Action execution failed: ${result.error}`);
       }
@@ -432,7 +439,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           {runResult && (
             <Box sx={{ 
               p: 2, 
-              bgcolor: runResult.startsWith('✅') ? 'success.light' : 'error.light', 
+              bgcolor: runResult.startsWith('✅') ? 'success.light' : 
+                       runResult.startsWith('⚠️') ? 'warning.light' : 'error.light', 
               borderRadius: 1,
               mt: 2
             }}>
