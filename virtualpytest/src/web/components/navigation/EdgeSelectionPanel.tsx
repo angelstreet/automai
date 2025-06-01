@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -40,6 +40,11 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
 
   // Check if run button should be enabled
   const canRunAction = isControlActive && selectedDevice && selectedEdge.data?.action && !isRunning;
+
+  // Clear run results when edge selection changes
+  useEffect(() => {
+    setRunResult(null);
+  }, [selectedEdge.id]);
 
   const handleEdit = () => {
     // Handle both old string format and new object format for actions
@@ -101,12 +106,18 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         setRunResult(`✅ ${result.message}`);
         console.log(`[@component:EdgeSelectionPanel] Action executed successfully: ${result.message}`);
       } else {
-        setRunResult(`❌ ${result.error || 'Action failed'}`);
+        // Only show error if it's not a connection issue
+        if (!result.error?.includes('No active connection') && !result.error?.includes('not connected')) {
+          setRunResult(`❌ ${result.error || 'Action failed'}`);
+        }
         console.error(`[@component:EdgeSelectionPanel] Action execution failed: ${result.error}`);
       }
     } catch (err: any) {
       console.error('[@component:EdgeSelectionPanel] Error executing action:', err);
-      setRunResult(`❌ ${err.message}`);
+      // Don't show connection-related errors in the UI
+      if (!err.message?.includes('Failed to fetch') && !err.message?.includes('connection')) {
+        setRunResult(`❌ ${err.message}`);
+      }
     } finally {
       setIsRunning(false);
     }

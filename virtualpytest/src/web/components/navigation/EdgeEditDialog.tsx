@@ -83,6 +83,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   // Check if run button should be enabled
   const canRunAction = isControlActive && selectedDevice && edgeForm.action && !isRunning;
 
+  // Clear run results when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setRunResult(null);
+    }
+  }, [isOpen]);
+
   // Fetch available actions for the controller
   useEffect(() => {
     console.log(`[@component:EdgeEditDialog] Dialog opened: ${isOpen}, controllerTypes:`, controllerTypes);
@@ -279,19 +286,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         Edit Navigation Action
-        {controllerTypes.length > 0 ? (
-          <Typography variant="caption" display="block" color="textSecondary">
-            Controller: {controllerTypes[0]}
-          </Typography>
-        ) : (
-          <Typography variant="caption" display="block" color="error">
-            No controller types available
-          </Typography>
-        )}
-        {/* Device Control Status */}
-        <Typography variant="caption" display="block" color={isControlActive && selectedDevice ? "success.main" : "warning.main"}>
-          Device Control: {isControlActive && selectedDevice ? `Active (${selectedDevice})` : 'Inactive - Take control to RUN actions'}
-        </Typography>
+       
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
