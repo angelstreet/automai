@@ -764,6 +764,9 @@ const NavigationEditorContent: React.FC = () => {
                       onDelete={deleteSelected}
                       setEdgeForm={setEdgeForm}
                       setIsEdgeDialogOpen={setIsEdgeDialogOpen}
+                      isControlActive={isControlActive}
+                      selectedDevice={selectedDevice}
+                      controllerTypes={userInterface?.models || []}
                     />
                   )}
                 </>

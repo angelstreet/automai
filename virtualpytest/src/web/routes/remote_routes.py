@@ -488,6 +488,53 @@ def execute_android_mobile_action():
             success = app.android_mobile_controller.input_text(text)
             message = f'Text input {"successful" if success else "failed"}'
             
+        elif command == 'click_element':
+            element_id = params.get('element_id', '')
+            if not element_id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Element ID parameter required for click_element command'
+                }), 400
+            
+            # Find the element by ID from the last UI dump
+            target_element = None
+            if hasattr(app.android_mobile_controller, 'last_ui_elements'):
+                for element in app.android_mobile_controller.last_ui_elements:
+                    if element.id == element_id:
+                        target_element = element
+                        break
+            
+            if target_element is None:
+                return jsonify({
+                    'success': False,
+                    'error': f'Element with ID "{element_id}" not found in last UI dump. Try refreshing UI elements first.'
+                }), 400
+            
+            success = app.android_mobile_controller.click_element(target_element)
+            message = f'Element "{element_id}" click {"successful" if success else "failed"}'
+            
+        elif command == 'coordinate_tap':
+            x = params.get('x')
+            y = params.get('y')
+            if x is None or y is None:
+                return jsonify({
+                    'success': False,
+                    'error': 'X and Y coordinates required for coordinate_tap command'
+                }), 400
+            
+            try:
+                x = int(x)
+                y = int(y)
+            except (ValueError, TypeError):
+                return jsonify({
+                    'success': False,
+                    'error': 'X and Y coordinates must be valid integers'
+                }), 400
+            
+            # Use the coordinate tap method from the controller
+            success = app.android_mobile_controller.tap_coordinates(x, y)
+            message = f'Coordinate tap at ({x}, {y}) {"successful" if success else "failed"}'
+            
         else:
             return jsonify({
                 'success': False,

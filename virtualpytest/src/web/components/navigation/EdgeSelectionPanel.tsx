@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -18,6 +18,10 @@ interface EdgeSelectionPanelProps {
   onDelete: () => void;
   setEdgeForm: React.Dispatch<React.SetStateAction<EdgeForm>>;
   setIsEdgeDialogOpen: (open: boolean) => void;
+  // Device control props
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  controllerTypes?: string[]; // e.g., ["android_mobile"]
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
@@ -27,7 +31,16 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   onDelete,
   setEdgeForm,
   setIsEdgeDialogOpen,
+  isControlActive = false,
+  selectedDevice = null,
+  controllerTypes = [],
 }) => {
+  const [isRunning, setIsRunning] = useState(false);
+  const [runResult, setRunResult] = useState<string | null>(null);
+
+  // Check if run button should be enabled
+  const canRunAction = isControlActive && selectedDevice && selectedEdge.data?.action && !isRunning;
+
   const handleEdit = () => {
     // Handle both old string format and new object format for actions
     let actionValue: EdgeForm['action'] = undefined;
@@ -47,6 +60,56 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       description: selectedEdge.data?.description || '',
     });
     setIsEdgeDialogOpen(true);
+  };
+
+  // Execute the edge action for testing
+  const handleRunAction = async () => {
+    if (!selectedEdge.data?.action || typeof selectedEdge.data.action === 'string') {
+      console.log('[@component:EdgeSelectionPanel] No valid action to run');
+      return;
+    }
+    
+    setIsRunning(true);
+    setRunResult(null);
+    
+    try {
+      const action = selectedEdge.data.action;
+      
+      // Prepare the action data
+      const actionToExecute = {
+        id: action.id,
+        label: action.label,
+        command: action.command,
+        params: { ...action.params }
+      };
+      
+      // Convert underscore to hyphen for API endpoint (android_mobile -> android-mobile)
+      const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
+      const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: actionToExecute
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setRunResult(`✅ ${result.message}`);
+        console.log(`[@component:EdgeSelectionPanel] Action executed successfully: ${result.message}`);
+      } else {
+        setRunResult(`❌ ${result.error || 'Action failed'}`);
+        console.error(`[@component:EdgeSelectionPanel] Action execution failed: ${result.error}`);
+      }
+    } catch (err: any) {
+      console.error('[@component:EdgeSelectionPanel] Error executing action:', err);
+      setRunResult(`❌ Failed to execute action: ${err.message}`);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   return (
@@ -93,25 +156,74 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
               : selectedEdge.data.action.label}
           </Typography>
         )}
+
+      
+
+        {/* Run Result Display */}
+        {runResult && (
+          <Box sx={{ 
+            p: 1, 
+            bgcolor: runResult.startsWith('✅') ? 'success.light' : 'error.light', 
+            borderRadius: 1,
+            mb: 1
+          }}>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+              {runResult}
+            </Typography>
+          </Box>
+        )}
         
-        <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.75rem', px: 1 }}
-            onClick={handleEdit}
-          >
-            Edit
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            sx={{ fontSize: '0.75rem', px: 1 }}
-            onClick={onDelete}
-          >
-            Delete
-          </Button>
+        <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {/* Edit and Delete buttons */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+              onClick={handleEdit}
+            >
+              Edit
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+              onClick={onDelete}
+            >
+              Delete
+            </Button>
+          </Box>
+
+          {/* Run button - only shown when action exists */}
+          {selectedEdge.data?.action && typeof selectedEdge.data.action !== 'string' && (
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              sx={{ 
+                fontSize: '0.75rem', 
+                px: 1,
+                opacity: !canRunAction ? 0.5 : 1,
+              }}
+              onClick={handleRunAction}
+              disabled={!canRunAction}
+              title={
+                !isControlActive || !selectedDevice 
+                  ? 'Device control required to test actions' 
+                  : ''
+              }
+            >
+              {isRunning ? 'Running...' : 'Run'}
+            </Button>
+          )}
+
+          {/* Help text for disabled Run button */}
+          {selectedEdge.data?.action && (!isControlActive || !selectedDevice) && (
+            <Typography variant="caption" color="warning.main" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
+              Take control to test
+            </Typography>
+          )}
         </Box>
       </Box>
     </Paper>
