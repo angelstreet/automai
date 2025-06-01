@@ -145,7 +145,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         // Use the new transition/action counts from API (type assertion for new fields)
         const execResponse = response as any;
         if (execResponse.transitions_executed && execResponse.total_transitions) {
-          successMessage = `Navigation completed! Executed ${execResponse.transitions_executed}/${execResponse.total_transitions} transitions (${execResponse.actions_executed || 0} actions) in ${execResponse.execution_time?.toFixed(2) || 0}s`;
+          successMessage = `Executed ${execResponse.transitions_executed}/${execResponse.total_transitions} in ${execResponse.execution_time?.toFixed(2) || 0}s`;
         } else if (execResponse.final_message) {
           successMessage = execResponse.final_message;
         }

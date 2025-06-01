@@ -413,7 +413,7 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         
         if result['success']:
             print(f"[@navigation:executor:execute_navigation_with_verification] 🎉 Successfully navigated to {target_node_id} in {result['execution_time']:.2f}s")
-            result['final_message'] = f"Navigation completed successfully! Reached '{transitions[-1].get('to_node_label', target_node_id)}' in {result['transitions_executed']} transitions ({result['actions_executed']} actions)."
+            result['final_message'] = f"Success ! Reached '{transitions[-1].get('to_node_label', target_node_id)}'"
         else:
             print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Navigation failed: {result['error_message']}")
         
