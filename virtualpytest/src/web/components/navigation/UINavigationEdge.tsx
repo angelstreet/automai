@@ -29,10 +29,20 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
   console.log(`[@component:UINavigationEdge] Edge ${id} sourcePosition:`, sourcePosition);
   console.log(`[@component:UINavigationEdge] Edge ${id} targetPosition:`, targetPosition);
 
-  // Determine edge color based on source handle position
-  let edgeColor = '#666666'; // Default gray
+  // Check if this is an entry edge (source starts with __ENTRY__ or similar pattern)
+  const isEntryEdge = source?.includes('ENTRY') || source?.includes('entry');
   
-  if (targetPosition === 'bottom' || targetPosition === 'top') {
+  // Determine edge color based on edge type and position
+  let edgeColor = '#666666'; // Default gray
+  let strokeWidth = 2;
+  let strokeDasharray = '';
+  
+  if (isEntryEdge) {
+    edgeColor = '#d32f2f'; // Red for entry point connections
+    strokeWidth = 3;
+    strokeDasharray = '8,4'; // Dashed pattern for entry edges
+    console.log(`[@component:UINavigationEdge] Edge ${id} set to RED DASHED (entry point connection)`);
+  } else if (targetPosition === 'bottom' || targetPosition === 'top') {
     edgeColor = '#f44336'; // Red for vertical connections (parent-child from bottom to top)
     console.log(`[@component:UINavigationEdge] Edge ${id} set to RED (vertical - bottom to top connection)`);
   } else if (sourcePosition === 'left' || sourcePosition === 'right' || targetPosition === 'left' || targetPosition === 'right') {
@@ -51,7 +61,8 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         {`
           .custom-edge-${id} {
             stroke: ${edgeColor} !important;
-            stroke-width: 2px !important;
+            stroke-width: ${strokeWidth}px !important;
+            stroke-dasharray: ${strokeDasharray} !important;
           }
         `}
       </style>
@@ -85,6 +96,23 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         d={edgePath}
         markerEnd={`url(#arrowhead-${id})`}
       />
+      
+      {/* Entry edge label */}
+      {isEntryEdge && data?.action && (
+        <text
+          x={labelX}
+          y={labelY - 10}
+          textAnchor="middle"
+          fontSize="11"
+          fill={edgeColor}
+          fontWeight="bold"
+          style={{
+            filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.8))',
+          }}
+        >
+          {typeof data.action === 'string' ? data.action : data.action.label}
+        </text>
+      )}
       
       {/* Invisible wider stroke for easier selection */}
       <path

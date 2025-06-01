@@ -10,6 +10,57 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 
   // Check if this node is a root node (no parent)
   const isRootNode = !data.parent || data.parent.length === 0;
+  // Check if this is an entry point node
+  const isEntryNode = data.type === 'entry';
+  
+  // Entry node styling - small circular point
+  if (isEntryNode) {
+    return (
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
+          border: '3px solid #fff',
+          boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.6)' : '0 2px 8px rgba(211, 47, 47, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          position: 'relative',
+          cursor: 'pointer',
+        }}
+        title="Entry Point - Click to edit entry method"
+      >
+        ⚡
+        
+        {/* Single source handle for outgoing connections */}
+        <Handle 
+          type="source" 
+          position={Position.Right} 
+          id="entry-source"
+          isConnectable={false}
+          isConnectableStart={false}
+          isConnectableEnd={false}
+          style={{ 
+            background: '#fff',
+            width: '12px', 
+            height: '12px',
+            border: '2px solid #d32f2f',
+            borderRadius: '50%',
+            right: -6,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            opacity: 0.5,
+            cursor: 'not-allowed',
+          }} 
+        />
+      </div>
+    );
+  }
   
   // Root node styling - more prominent than normal nodes
   const rootNodeStyle = {

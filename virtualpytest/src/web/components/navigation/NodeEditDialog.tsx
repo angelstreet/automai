@@ -16,7 +16,7 @@ import {
 
 interface NodeForm {
   label: string;
-  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
+  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   description: string;
   screenshot?: string;
   depth?: number;
@@ -89,6 +89,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               <MenuItem value="popup">Popup</MenuItem>
               <MenuItem value="overlay">Overlay</MenuItem>
               <MenuItem value="menu">Menu</MenuItem>
+              <MenuItem value="entry">Entry Point</MenuItem>
             </Select>
           </FormControl>
           
@@ -101,15 +102,17 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             fullWidth
           />
           
-          {/* Screenshot URL Field - editable text field */}
-          <TextField
-            label="Screenshot URL"
-            value={nodeForm.screenshot || ''}
-            onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
-            fullWidth
-            placeholder="Enter screenshot URL or path"
-            helperText="URL or file path to the screenshot image"
-          />
+          {/* Screenshot URL Field - only show for non-entry nodes */}
+          {nodeForm.type !== 'entry' && (
+            <TextField
+              label="Screenshot URL"
+              value={nodeForm.screenshot || ''}
+              onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
+              fullWidth
+              placeholder="Enter screenshot URL or path"
+              helperText="URL or file path to the screenshot image"
+            />
+          )}
           
           {/* Parent and Depth Info (Read-only) */}
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -134,6 +137,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               size="small"
             />
           </Box>
+          
+          {/* Entry node note */}
+          {nodeForm.type === 'entry' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+              Entry points are automatically positioned. Edit the connecting edge to change entry method and details.
+            </Typography>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

@@ -4,7 +4,7 @@ import { Node, Edge } from 'reactflow';
 export interface UINavigationNode extends Node {
   data: {
     label: string;
-    type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
+    type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
     screenshot?: string;
     description?: string;
     is_root?: boolean; // True only for the first entry node
@@ -56,7 +56,7 @@ export interface NavigationTreeData {
 
 export interface NodeForm {
   label: string;
-  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu';
+  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   description: string;
   screenshot?: string;  // Add screenshot field to preserve during editing
   
