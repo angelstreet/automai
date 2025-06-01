@@ -45,6 +45,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   const [isCheckingTakeControl, setIsCheckingTakeControl] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [executionResult, setExecutionResult] = useState<string | null>(null);
+  const [executionMessage, setExecutionMessage] = useState<string | null>(null);
 
   // Helper function to get parent names from parent IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -139,27 +140,26 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       );
 
       if (response.success) {
-        setExecutionResult(
-          `Executed ${response.steps_executed}/${response.total_steps} steps in ${response.execution_time.toFixed(2)}s`
-        );
-        console.log(`[@component:NodeGotoPanel] Navigation execution completed successfully`);
-      } else {
-        // Provide more specific error messages for common issues
-        let errorMessage = response.error || 'Navigation execution failed';
+        let successMessage = 'Navigation completed successfully!';
         
-        // Check for specific Python import errors
-        if (errorMessage.includes('attempted relative import with no known parent package')) {
-          errorMessage = 'Backend service configuration issue. The navigation service needs to be restarted to resolve import dependencies.';
-        } else if (errorMessage.includes('ImportError') || errorMessage.includes('ModuleNotFoundError')) {
-          errorMessage = 'Backend service missing required dependencies. Please check the navigation service configuration.';
-        } else if (errorMessage.includes('Take control mode is not active')) {
-          errorMessage = 'Device control is not active. Please ensure the device is connected and take control is enabled.';
-        } else if (errorMessage.includes('No navigation path found')) {
-          errorMessage = 'No valid path found to the target node. The node may be unreachable from the current position.';
+        // Use the new transition/action counts from API (type assertion for new fields)
+        const execResponse = response as any;
+        if (execResponse.transitions_executed && execResponse.total_transitions) {
+          successMessage = `Navigation completed! Executed ${execResponse.transitions_executed}/${execResponse.total_transitions} transitions (${execResponse.actions_executed || 0} actions) in ${execResponse.execution_time?.toFixed(2) || 0}s`;
+        } else if (execResponse.final_message) {
+          successMessage = execResponse.final_message;
         }
+
+        setExecutionMessage(successMessage);
+        setIsExecuting(false);
         
-        setError(errorMessage);
-        console.error(`[@component:NodeGotoPanel] Navigation execution failed: ${errorMessage}`);
+        // Refresh the step list to show any updates
+        await loadNavigationPreview();
+      } else {
+        const execResponse = response as any;
+        const errorMessage = execResponse.error || execResponse.error_message || 'Navigation failed';
+        setExecutionMessage(`Navigation failed: ${errorMessage}`);
+        setIsExecuting(false);
       }
     } catch (err) {
       let errorMessage = `Navigation execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
@@ -175,8 +175,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       
       setError(errorMessage);
       console.error(`[@component:NodeGotoPanel] Navigation execution error:`, err);
-    } finally {
-      setIsExecuting(false);
     }
   };
 
@@ -235,39 +233,88 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         {/* Navigation Path - More compact */}
         <Box sx={{ mb: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-            Navigation Path:
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {getFullPath()}
+            Path: {getFullPath()}
           </Typography>
         </Box>
 
         {/* Navigation Steps */}
         <Box sx={{ mb: 1 }}>
-        
-  
-         
           {!isLoadingPreview && navigationSteps.length > 0 && (
-            <Box sx={{ maxHeight: 120 }}>
-              {navigationSteps.map((step, index) => (
-                <Box 
-                  key={index}
-                  sx={{ 
-                    py: 0.5,
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  <Typography variant="body2">
-                   {step.step_number}. {step.action} - {step.from_node_label} → {step.to_node_label}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
+            <>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                Navigation Steps:
+              </Typography>
+              <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                {navigationSteps.map((transition, index) => {
+                  const transitionData = transition as any; // Type assertion for new transition format
+                  return (
+                  <Box 
+                    key={index}
+                    sx={{ 
+                      mb: 1,
+                      p: 1,
+                      bgcolor: 'grey.50',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'grey.200'
+                    }}
+                  >
+                    {/* Transition header: "1. ENTRY → home" */}
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}>
+                      {transitionData.transition_number || index + 1}. {transitionData.from_node_label || 'Start'} → {transitionData.to_node_label || 'Target'}
+                    </Typography>
+                    
+                    {/* Actions for this transition */}
+                    {transitionData.actions && transitionData.actions.length > 0 ? (
+                      <Box sx={{ ml: 1.5 }}>
+                        {transitionData.actions.map((action: any, actionIndex: number) => (
+                          <Typography 
+                            key={actionIndex}
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.8rem',
+                              color: 'text.secondary',
+                              mb: 0.25,
+                              '&:before': {
+                                content: '"- "',
+                                fontWeight: 'bold'
+                              }
+                            }}
+                          >
+                            {action.label || action.command || 'Unknown Action'}
+                            {action.inputValue && ` - ${action.inputValue}`}
+                          </Typography>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontSize: '0.8rem',
+                          color: 'text.secondary',
+                          ml: 1.5,
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        No actions defined
+                      </Typography>
+                    )}
+                  </Box>
+                  );
+                })}
+              </Box>
+            </>
           )}
-
-          {!isLoadingPreview && navigationSteps.length === 0 && !error && (
+          
+          {!isLoadingPreview && navigationSteps.length === 0 && (
             <Typography variant="body2" color="text.secondary">
-              
+              No navigation path available
+            </Typography>
+          )}
+          
+          {isLoadingPreview && (
+            <Typography variant="body2" color="text.secondary">
+              Loading navigation steps...
             </Typography>
           )}
         </Box>
@@ -307,12 +354,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         )}
 
         {/* Success Display */}
-        {executionResult && (
+        {executionMessage && (
           <Alert severity="success" sx={{ mb: 2, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-              Navigation Complete
+              {executionMessage}
             </Typography>
-            {executionResult}
           </Alert>
         )}
       </Box>
