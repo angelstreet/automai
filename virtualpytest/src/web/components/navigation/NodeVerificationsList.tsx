@@ -110,6 +110,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         requiresInput: selectedAction.requiresInput,
         inputLabel: selectedAction.inputLabel,
         inputPlaceholder: selectedAction.inputPlaceholder,
+        inputValue: ''
       });
     }
   };
