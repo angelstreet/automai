@@ -258,7 +258,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                   }}
                 >
                   <Typography variant="body2">
-                    Step {step.step_number}: {step.action} - {step.from_node_label} → {step.to_node_label}
+                   {step.step_number}. {step.action} - {step.from_node_label} → {step.to_node_label}
                   </Typography>
                 </Box>
               ))}
@@ -271,8 +271,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             </Typography>
           )}
         </Box>
-
-       
 
         {/* Action Button */}
         <Box>
