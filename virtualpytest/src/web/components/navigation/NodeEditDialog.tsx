@@ -242,12 +242,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={isOpen} onClose={onClose} width="300" fullWidth>
       <DialogTitle>Edit Node</DialogTitle>
       <DialogContent>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Node Name and Type in columns */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               label="Node Name"
               value={nodeForm.label}
@@ -275,7 +275,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           </Box>
 
           {/* Depth and Parent below in columns */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               label="Depth"
               value={nodeForm.depth || 0}
@@ -314,27 +314,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Verification Section */}
+          {/* Verification Section - styled like EdgeEditDialog actions */}
           {nodeForm.type !== 'entry' && (
             <>
-              <Divider sx={{ my: 1 }} />
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="h6">
-                  Node Verifications
-                </Typography>
-                {isControlActive && selectedDevice && (
-                  <Typography variant="body2" color="success.main">
-                    Controllers Active
-                  </Typography>
-                )}
-                {(!isControlActive || !selectedDevice) && (
-                  <Typography variant="body2" color="warning.main">
-                    Take device control to test verifications
-                  </Typography>
-                )}
-              </Box>
-              
               <NodeVerificationsList
                 verifications={nodeForm.verifications || []}
                 availableActions={verificationActions}
@@ -376,18 +358,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             onClick={onResetNode}
             variant="outlined"
             color="warning"
-            sx={{ mr: 'auto' }}
           >
             Reset Node
-          </Button>
-        )}
-        {canRunVerifications && (
-          <Button 
-            onClick={handleRunVerifications} 
-            variant="outlined"
-            disabled={!canRunVerifications}
-          >
-            {isRunningVerifications ? 'Testing...' : 'Test Verifications'}
           </Button>
         )}
         <Button 
@@ -396,6 +368,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           disabled={!isFormValid()}
         >
           Save
+        </Button>
+        <Button 
+          onClick={handleRunVerifications} 
+          variant="contained"
+          disabled={!canRunVerifications}
+          sx={{ opacity: !canRunVerifications ? 0.5 : 1 }}
+        >
+          {isRunningVerifications ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>

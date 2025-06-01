@@ -271,7 +271,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           disabled={!canRunActions}
           sx={{ opacity: !canRunActions ? 0.5 : 1 }}
         >
-          {isRunning ? 'Running...' : 'Run All'}
+          {isRunning ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>
