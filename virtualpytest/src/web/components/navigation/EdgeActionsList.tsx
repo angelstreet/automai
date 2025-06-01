@@ -6,7 +6,7 @@ import {
   TextField,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { EdgeActionRow } from './EdgeActionRow';
+import { EdgeActionItem } from './EdgeActionItem';
 
 interface EdgeAction {
   id: string;
@@ -124,7 +124,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
       ) : (
         <Box sx={{ mb: 1 }}>
           {actions.map((action, index) => (
-            <EdgeActionRow
+            <EdgeActionItem
               key={index}
               action={action}
               availableActions={allAvailableActions}

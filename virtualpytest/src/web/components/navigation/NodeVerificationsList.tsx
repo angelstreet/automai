@@ -2,8 +2,6 @@ import React from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   FormControl,
   InputLabel,
   Select,
@@ -54,7 +52,7 @@ interface NodeVerificationsListProps {
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   verifications,
-  availableActions,
+  availableActions = {}, // Default to empty object
   onVerificationsChange,
   loading = false,
   error = null,
@@ -135,46 +133,45 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="subtitle1">
-          Verifications ({verifications.length})
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+          Verifications
         </Typography>
         <Button
           size="small"
           variant="outlined"
           startIcon={<AddIcon />}
           onClick={addVerification}
+          sx={{ minWidth: 'auto' }}
         >
-          Add Verification
+          Add
         </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {verifications.map((verification, index) => (
-          <Card key={index} variant="outlined">
-            <CardContent sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* Header with remove button */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle2">
-                    Verification {index + 1}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => removeVerification(index)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-
-                {/* Verification selection */}
-                <FormControl fullWidth size="small">
-                  <InputLabel>Verification Type</InputLabel>
+      {verifications.length === 0 ? (
+        <Box sx={{ 
+          py: 3, 
+          px: 2, 
+          border: '1px dashed', 
+          borderColor: 'divider', 
+          borderRadius: 1,
+          textAlign: 'center',
+          mb: 2
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            No verifications added. Click "Add" to create your first verification.
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ mb: 1 }}>
+          {verifications.map((verification, index) => (
+            <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
                   <Select
                     value={verification.id}
-                    label="Verification Type"
                     onChange={(e) => handleVerificationSelect(index, e.target.value)}
+                    displayEmpty
                   >
                     <MenuItem value="">
                       <em>Select verification...</em>
@@ -191,46 +188,44 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     ])}
                   </Select>
                 </FormControl>
-
-                {/* Show verification details if selected */}
-                {verification.id && (
-                  <>
-                    {/* Input field for verifications that require input */}
-                    {verification.requiresInput && (
-                      <TextField
-                        label={verification.inputLabel || 'Input Value'}
-                        placeholder={verification.inputPlaceholder || 'Enter value...'}
-                        value={verification.inputValue || ''}
-                        onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                        fullWidth
-                        size="small"
-                        required
-                        error={!verification.inputValue?.trim()}
-                      />
-                    )}
-
-                    {/* Timeout setting */}
-                    <TextField
-                      label="Timeout (seconds)"
-                      type="number"
-                      value={verification.params?.timeout || 10}
-                      onChange={(e) => updateVerification(index, { 
-                        params: { 
-                          ...verification.params, 
-                          timeout: parseFloat(e.target.value) || 10 
-                        }
-                      })}
-                      size="small"
-                      sx={{ width: 150 }}
-                      inputProps={{ min: 1, max: 60, step: 0.5 }}
-                    />
-                  </>
-                )}
+                
+                <TextField
+                  size="small"
+                  type="number"
+                  value={verification.params?.timeout || 10}
+                  onChange={(e) => updateVerification(index, { 
+                    params: { 
+                      ...verification.params, 
+                      timeout: parseFloat(e.target.value) || 10 
+                    }
+                  })}
+                  sx={{ width: 80 }}
+                  inputProps={{ min: 1, max: 60, step: 0.5 }}
+                />
+                
+                <IconButton size="small" onClick={() => removeVerification(index)} color="error">
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Box>
-            </CardContent>
-          </Card>
-        ))}
-      </Box>
+              
+              {verification.requiresInput && verification.id && (
+                <Box sx={{ ml: 1 }}>
+                  <TextField
+                    size="small"
+                    label={verification.inputLabel || 'Input Value'}
+                    placeholder={verification.inputPlaceholder || 'Enter value...'}
+                    value={verification.inputValue || ''}
+                    onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
+                    fullWidth
+                    required
+                    error={!verification.inputValue?.trim()}
+                  />
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 }; 

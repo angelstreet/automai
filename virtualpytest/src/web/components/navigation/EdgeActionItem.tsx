@@ -30,7 +30,7 @@ interface ControllerAction {
   inputPlaceholder?: string;
 }
 
-interface EdgeActionRowProps {
+interface EdgeActionItemProps {
   action: EdgeAction;
   availableActions: ControllerAction[];
   onUpdate: (updates: Partial<EdgeAction>) => void;
@@ -38,7 +38,7 @@ interface EdgeActionRowProps {
   showInput: boolean;
 }
 
-export const EdgeActionRow: React.FC<EdgeActionRowProps> = ({
+export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
   action,
   availableActions,
   onUpdate,

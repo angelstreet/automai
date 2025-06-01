@@ -12,7 +12,6 @@ import {
   Button,
   Box,
   Typography,
-  Divider,
 } from '@mui/material';
 import { NodeVerificationsList } from './NodeVerificationsList';
 
@@ -143,7 +142,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       console.log(`[@component:NodeEditDialog] Verification API response:`, result);
       
       if (result.success) {
-        setVerificationActions(result.actions);
+        setVerificationActions(result.verifications);
         console.log(`[@component:NodeEditDialog] Loaded verification actions`);
       } else {
         console.error(`[@component:NodeEditDialog] Verification API returned error:`, result.error);
@@ -242,7 +241,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} width="300" fullWidth>
+    <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Node</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
