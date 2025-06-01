@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -24,7 +24,7 @@ import {
   Tv as TvIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './TreeFilterControls';
-import { deviceApi, Device } from '../../services/deviceService';
+import { Device } from '../../services/deviceService';
 
 interface NavigationEditorHeaderProps {
   // Navigation state
@@ -53,6 +53,10 @@ interface NavigationEditorHeaderProps {
   
   // User interface props
   userInterface: any;
+  
+  // Device props - passed from parent to avoid duplication
+  devices?: Device[];
+  devicesLoading?: boolean;
   
   // Action handlers
   onNavigateToParent: () => void;
@@ -94,6 +98,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   selectedDevice,
   isControlActive,
   userInterface,
+  devices = [],
+  devicesLoading = false,
   onNavigateToParent,
   onNavigateToTreeLevel,
   onNavigateToParentView,
@@ -110,49 +116,26 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onDeviceSelect,
   onTakeControl,
 }) => {
-  // Device state management
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
-
-  // Fetch devices on component mount
-  useEffect(() => {
-    fetchDevices();
-  }, []);
-
-  const fetchDevices = async () => {
-    console.log('[@component:NavigationEditorHeader] Fetching devices');
-    try {
-      setDevicesLoading(true);
-      const fetchedDevices = await deviceApi.getAllDevices();
-      setDevices(fetchedDevices);
-      console.log(`[@component:NavigationEditorHeader] Successfully loaded ${fetchedDevices.length} devices`);
-    } catch (error: any) {
-      console.error('[@component:NavigationEditorHeader] Error fetching devices:', error);
-      // Set empty array on error to prevent dropdown issues
-      setDevices([]);
-    } finally {
-      setDevicesLoading(false);
-    }
-  };
-
-  // Filter devices based on current tree's user interface models
-  const getFilteredDevices = () => {
+  // Memoize filtered devices to prevent recreation on every render
+  const filteredDevices = useMemo(() => {
     if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
       console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
       return devices;
     }
 
     const interfaceModels = userInterface.models;
-    const filteredDevices = devices.filter(device => 
+    const filtered = devices.filter(device => 
       interfaceModels.includes(device.model)
     );
 
-    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filteredDevices.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
-    return filteredDevices;
-  };
+    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filtered.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
+    return filtered;
+  }, [devices, userInterface]);
 
   // Extract device names for the dropdown
-  const availableDevices = getFilteredDevices().map(device => device.name);
+  const availableDevices = useMemo(() => {
+    return filteredDevices.map(device => device.name);
+  }, [filteredDevices]);
 
   return (
     <AppBar position="static" color="default" elevation={1}>

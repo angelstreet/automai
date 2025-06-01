@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls, 
@@ -194,15 +194,37 @@ const NavigationEditorContent: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
 
-  // Get the selected device data
-  const selectedDeviceData = devices.find(d => d.name === selectedDevice);
-  const remoteConfig = selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
+  // Memoize computed values to prevent re-renders
+  const selectedDeviceData = useMemo(() => {
+    return devices.find(d => d.name === selectedDevice) || null;
+  }, [devices, selectedDevice]);
+
+  const remoteConfig = useMemo(() => {
+    return selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
+  }, [selectedDeviceData]);
   
-  // Check if device has AV (screen definition) capabilities
-  const hasAVCapabilities = selectedDeviceData?.controller_configs?.av?.parameters != null;
+  const hasAVCapabilities = useMemo(() => {
+    return selectedDeviceData?.controller_configs?.av?.parameters != null;
+  }, [selectedDeviceData]);
+
+  // Memoize connection configs to prevent object recreation
+  const androidConnectionConfig = useMemo(() => {
+    if (!selectedDeviceData?.controller_configs?.remote) return null;
+    return extractConnectionConfigForAndroid(selectedDeviceData.controller_configs.remote);
+  }, [selectedDeviceData?.controller_configs?.remote]);
+
+  const irConnectionConfig = useMemo(() => {
+    if (!selectedDeviceData?.controller_configs?.remote) return null;
+    return extractConnectionConfigForIR(selectedDeviceData.controller_configs.remote);
+  }, [selectedDeviceData?.controller_configs?.remote]);
+
+  const bluetoothConnectionConfig = useMemo(() => {
+    if (!selectedDeviceData?.controller_configs?.remote) return null;
+    return extractConnectionConfigForBluetooth(selectedDeviceData.controller_configs.remote);
+  }, [selectedDeviceData?.controller_configs?.remote]);
 
   // Fetch devices
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     console.log('[@component:NavigationEditor] Fetching devices');
     try {
       setDevicesLoading(true);
@@ -215,41 +237,33 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setDevicesLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDevices();
-  }, []);
+  }, [fetchDevices]);
 
-  // Auto-populate connection form when device is selected
+  // Auto-populate connection form when device is selected - stabilized dependencies
   useEffect(() => {
-    if (selectedDeviceData?.controller_configs?.remote) {
-      const deviceRemoteConfig = selectedDeviceData.controller_configs.remote;
-      
-      console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, deviceRemoteConfig);
-      
-      // Just log the device configuration - the new generic components will handle configuration automatically
-      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has remote type: ${deviceRemoteConfig.type}`);
-    }
+    if (!selectedDeviceData?.controller_configs?.remote) return;
+
+    const deviceRemoteConfig = selectedDeviceData.controller_configs.remote;
     
-    // Also log AV capabilities
+    console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, deviceRemoteConfig);
+    console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has remote type: ${deviceRemoteConfig.type}`);
+    
     if (hasAVCapabilities) {
-      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData?.name} has AV capabilities for screen definition`);
+      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has AV capabilities for screen definition`);
     }
-  }, [selectedDeviceData, hasAVCapabilities]);
+  }, [selectedDeviceData?.name, selectedDeviceData?.controller_configs?.remote, hasAVCapabilities]);
 
-  // Handle disconnection when control is released
+  // Handle disconnection when control is released - stabilized dependencies
   useEffect(() => {
-    if (!remoteConfig) return;
+    if (!remoteConfig || isControlActive) return;
 
-    // Only handle disconnection when control is released
-    if (!isControlActive) {
-      console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
-      
-      // The generic components will handle disconnection automatically
-      console.log(`[@component:NavigationEditor] Disconnection will be handled by the generic remote component`);
-    }
-  }, [isControlActive, remoteConfig]);
+    console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
+    console.log(`[@component:NavigationEditor] Disconnection will be handled by the generic remote component`);
+  }, [isControlActive, remoteConfig?.type]);
 
   const {
     // State
@@ -336,6 +350,8 @@ const NavigationEditorContent: React.FC = () => {
     resetNode,
     
     // Additional setters we need
+    setNodes,
+    setSelectedNode,
     setReactFlowInstance,
     
     // Configuration
@@ -365,11 +381,11 @@ const NavigationEditorContent: React.FC = () => {
   }, [currentTreeId, isLoadingInterface]);
 
   // Handle remote control actions
-  const handleToggleRemotePanel = () => {
-    setIsRemotePanelOpen(!isRemotePanelOpen);
-  };
+  const handleToggleRemotePanel = useCallback(() => {
+    setIsRemotePanelOpen(prev => !prev);
+  }, []);
 
-  const handleDeviceSelect = (device: string | null) => {
+  const handleDeviceSelect = useCallback((device: string | null) => {
     // If changing device while connected, disconnect first
     if (selectedDevice && selectedDevice !== device && isControlActive) {
       console.log('[@component:NavigationEditor] Switching devices, stopping current control');
@@ -386,9 +402,9 @@ const NavigationEditorContent: React.FC = () => {
     }
     
     setSelectedDevice(device);
-  };
+  }, [selectedDevice, isControlActive]);
 
-  const handleTakeControl = async () => {
+  const handleTakeControl = useCallback(async () => {
     const wasControlActive = isControlActive;
     
     // If we're releasing control, check if stream needs to be restarted BEFORE disconnecting
@@ -428,7 +444,24 @@ const NavigationEditorContent: React.FC = () => {
     
     // Now set control to false, which will trigger disconnect
     setIsControlActive(!isControlActive);
-  };
+  }, [isControlActive, selectedDeviceData, hasAVCapabilities]);
+
+  // Memoize session state change handler to prevent recreating on every render
+  const handleSessionStateChange = useCallback((session: {
+    connected: boolean;
+    connectionLoading: boolean;
+    connectionError: string | null;
+  }) => {
+    setSSHSession(session);
+  }, []);
+
+  // Memoize disconnect complete handler
+  const handleDisconnectComplete = useCallback(() => {
+    handleTakeControl();
+    if (isRemotePanelOpen) {
+      handleToggleRemotePanel();
+    }
+  }, [handleTakeControl, isRemotePanelOpen, handleToggleRemotePanel]);
 
   // Handle taking screenshot
   const handleTakeScreenshot = async () => {
@@ -475,30 +508,28 @@ const NavigationEditorContent: React.FC = () => {
         if (data.success) {
           console.log(`[@component:NavigationEditor] Screenshot saved to: ${data.screenshot_path}`);
           
-          // Update the selected node's screenshot property with the image URL
-          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(data.screenshot_path)}`;
+          // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
+          const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
+          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`;
           
-          // Find and update the node
-          const updatedNodes = nodes.map(node => {
-            if (node.id === selectedNode.id) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  screenshot: screenshotUrl
-                }
-              };
+          // Create updated node with screenshot
+          const updatedNode = {
+            ...selectedNode,
+            data: {
+              ...selectedNode.data,
+              screenshot: screenshotUrl
             }
-            return node;
-          });
+          };
           
-          // Update the nodes state using the hook's onNodesChange
-          const nodeChanges = [{
-            id: selectedNode.id,
-            type: 'replace' as const,
-            item: updatedNodes.find(n => n.id === selectedNode.id)!
-          }];
-          onNodesChange(nodeChanges);
+          // Update nodes array directly
+          setNodes(currentNodes => 
+            currentNodes.map(node => 
+              node.id === selectedNode.id ? updatedNode : node
+            )
+          );
+          
+          // Update selected node so the panel reflects the change
+          setSelectedNode(updatedNode);
           
           console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
           
@@ -515,22 +546,6 @@ const NavigationEditorContent: React.FC = () => {
     } catch (error) {
       console.error('[@component:NavigationEditor] Error taking screenshot:', error);
     }
-  };
-
-  // Filter devices based on user interface models
-  const getFilteredDevices = () => {
-    if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
-      console.log('[@component:NavigationEditor] No user interface models found, showing all devices');
-      return devices;
-    }
-
-    const interfaceModels = userInterface.models;
-    const filteredDevices = devices.filter(device => 
-      interfaceModels.includes(device.model)
-    );
-
-    console.log(`[@component:NavigationEditor] Filtered devices: ${filteredDevices.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
-    return filteredDevices;
   };
 
   return (
@@ -561,6 +576,8 @@ const NavigationEditorContent: React.FC = () => {
         selectedDevice={selectedDevice}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
+        devices={devices}
+        devicesLoading={devicesLoading}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
@@ -703,7 +720,6 @@ const NavigationEditorContent: React.FC = () => {
                   deviceConfig={selectedDeviceData.controller_configs}
                   deviceModel={selectedDeviceData.model}
                   autoConnect={true}
-                  sshSession={sshSession}
                   onDisconnectComplete={() => {
                     // Called when screen definition editor disconnects
                     console.log('[@component:NavigationEditor] Screen definition editor disconnected');
@@ -755,7 +771,7 @@ const NavigationEditorContent: React.FC = () => {
               <Box sx={{
                 position: 'fixed',
                 right: 0,
-                top: '130px', // Adjust based on your header height
+                top: '130px',
                 width: '320px',
                 height: 'calc(100vh - 130px)',
                 bgcolor: 'background.paper',
@@ -766,7 +782,6 @@ const NavigationEditorContent: React.FC = () => {
                 flexDirection: 'column',
                 boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
               }}>
-                {/* Remote Panel Header */}
                 <Box sx={{ 
                   p: 1, 
                   borderBottom: '1px solid', 
@@ -780,19 +795,11 @@ const NavigationEditorContent: React.FC = () => {
                   </Typography>
                 </Box>
                 
-                {/* Remote Panel Content */}
                 <CompactAndroidMobileWithSessionTracking
-                  connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                  connectionConfig={androidConnectionConfig}
                   autoConnect={isControlActive}
-                  onDisconnectComplete={() => {
-                    handleTakeControl();
-                    if (isRemotePanelOpen) {
-                      handleToggleRemotePanel();
-                    }
-                  }}
-                  onSessionStateChange={(session) => {
-                    setSSHSession(session);
-                  }}
+                  onDisconnectComplete={handleDisconnectComplete}
+                  onSessionStateChange={handleSessionStateChange}
                   sx={{ flex: 1, height: '100%' }}
                 />
               </Box>
@@ -800,7 +807,7 @@ const NavigationEditorContent: React.FC = () => {
               <Box sx={{
                 position: 'fixed',
                 right: 0,
-                top: '130px', // Adjust based on your header height
+                top: '130px',
                 width: '320px',
                 height: 'calc(100vh - 130px)',
                 bgcolor: 'background.paper',
@@ -811,7 +818,6 @@ const NavigationEditorContent: React.FC = () => {
                 flexDirection: 'column',
                 boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
               }}>
-                {/* Remote Panel Header */}
                 <Box sx={{ 
                   p: 0, 
                   borderBottom: '1px solid', 
@@ -832,50 +838,29 @@ const NavigationEditorContent: React.FC = () => {
                 {remoteConfig.type === 'android_tv' ? (
                   <CompactRemoteWithSessionTracking
                     remoteType="android-tv"
-                    connectionConfig={extractConnectionConfigForAndroid(selectedDeviceData?.controller_configs?.remote)}
+                    connectionConfig={androidConnectionConfig}
                     autoConnect={isControlActive}
                     showScreenshot={false}
-                    onDisconnectComplete={() => {
-                      handleTakeControl();
-                      if (isRemotePanelOpen) {
-                        handleToggleRemotePanel();
-                      }
-                    }}
-                    onSessionStateChange={(session) => {
-                      setSSHSession(session);
-                    }}
+                    onDisconnectComplete={handleDisconnectComplete}
+                    onSessionStateChange={handleSessionStateChange}
                     sx={{ flex: 1, height: '100%' }}
                   />
                 ) : remoteConfig.type === 'ir_remote' ? (
                   <CompactRemoteWithSessionTracking
                     remoteType="ir"
-                    connectionConfig={extractConnectionConfigForIR(selectedDeviceData?.controller_configs?.remote) as any}
+                    connectionConfig={irConnectionConfig}
                     autoConnect={isControlActive}
-                    onDisconnectComplete={() => {
-                      handleTakeControl();
-                      if (isRemotePanelOpen) {
-                        handleToggleRemotePanel();
-                      }
-                    }}
-                    onSessionStateChange={(session) => {
-                      setSSHSession(session);
-                    }}
+                    onDisconnectComplete={handleDisconnectComplete}
+                    onSessionStateChange={handleSessionStateChange}
                     sx={{ flex: 1, height: '100%' }}
                   />
                 ) : remoteConfig.type === 'bluetooth_remote' ? (
                   <CompactRemoteWithSessionTracking
                     remoteType="bluetooth"
-                    connectionConfig={extractConnectionConfigForBluetooth(selectedDeviceData?.controller_configs?.remote) as any}
+                    connectionConfig={bluetoothConnectionConfig}
                     autoConnect={isControlActive}
-                    onDisconnectComplete={() => {
-                      handleTakeControl();
-                      if (isRemotePanelOpen) {
-                        handleToggleRemotePanel();
-                      }
-                    }}
-                    onSessionStateChange={(session) => {
-                      setSSHSession(session);
-                    }}
+                    onDisconnectComplete={handleDisconnectComplete}
+                    onSessionStateChange={handleSessionStateChange}
                     sx={{ flex: 1, height: '100%' }}
                   />
                 ) : (
