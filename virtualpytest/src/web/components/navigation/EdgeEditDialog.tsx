@@ -243,7 +243,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         )}
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           
           {/* Action Selection */}
           <FormControl fullWidth disabled={loading}>
@@ -279,29 +279,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             </Select>
           </FormControl>
 
-          {/* Selected Action Details */}
-          {edgeForm.action && (
-            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Selected Action: {edgeForm.action.label}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                {edgeForm.action.description}
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Chip size="small" label={`Command: ${edgeForm.action.command}`} />
-                {Object.keys(edgeForm.action.params).length > 0 && (
-                  <Chip 
-                    size="small" 
-                    label={`Params: ${JSON.stringify(edgeForm.action.params)}`} 
-                    variant="outlined"
-                  />
-                )}
-              </Box>
-            </Box>
-          )}
-
           {/* Additional Input for Actions that Require It */}
           {edgeForm.action?.requiresInput && (
             <TextField
@@ -312,6 +289,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               placeholder={edgeForm.action.command === 'launch_app' ? 'com.example.app' :
                           edgeForm.action.command === 'input_text' ? 'Enter text to send' : ''}
               fullWidth
+              size="small"
               helperText={`This value will be sent as the ${
                 edgeForm.action.command === 'launch_app' ? 'package name' :
                 edgeForm.action.command === 'input_text' ? 'text input' : 'parameter'
@@ -320,7 +298,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           )}
 
           {/* From/To Information */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               label="From"
               value={selectedEdge?.data?.from || ''}
@@ -349,7 +327,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             value={edgeForm.description}
             onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
             fullWidth
-            helperText="Optional description for this navigation edge"
+            size="small"
+           
           />
 
           {/* Available Actions Preview */}
