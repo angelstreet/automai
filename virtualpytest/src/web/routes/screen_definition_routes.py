@@ -13,6 +13,10 @@ screen_definition_blueprint = Blueprint('screen_definition', __name__)
 TMP_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'tmp')
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'resources')
 
+# Fixed video configuration
+FIXED_VIDEO_SIZE = "1920x1080"
+FIXED_SCALE_SIZE = "640:360"
+
 # Ensure directories exist
 os.makedirs(os.path.join(TMP_DIR, 'screenshots'), exist_ok=True)
 os.makedirs(os.path.join(TMP_DIR, 'captures'), exist_ok=True)
@@ -45,7 +49,7 @@ def ensure_dirs():
 
 @screen_definition_blueprint.route('/screenshot', methods=['POST'])
 def take_screenshot():
-    """Take high resolution screenshot using FFmpeg from HDMI source with proper orientation detection."""
+    """Take high resolution screenshot using FFmpeg from HDMI source with fixed 1920x1080 resolution."""
     try:
         from app import android_mobile_controller
         
@@ -66,30 +70,6 @@ def take_screenshot():
         parent_name = data.get('parent_name', None)
         node_name = data.get('node_name', None)
         
-        # Step 1: Get device resolution and orientation from ADB for informational purposes only
-        device_resolution = None
-        capture_resolution = "1920x1080"  # Fixed resolution - always use 1920x1080 for capture
-        
-        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
-            try:
-                # Get device resolution using ADB (for informational purposes only)
-                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
-                if android_device_id:
-                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
-                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
-                    
-                    # NOTE: We always use 1920x1080 for capture regardless of device resolution
-                    # to ensure consistent screenshot quality and sizing
-                    current_app.logger.info(f"[@api:screen-definition] Using fixed capture resolution: {capture_resolution} (device resolution: {device_resolution})")
-                    
-                    
-                else:
-                    current_app.logger.warning(f"[@api:screen-definition] No android_device_id available")
-            except Exception as e:
-                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
-        else:
-            current_app.logger.warning(f"[@api:screen-definition] No ADB utils available, using default resolution")
-        
         # Check if stream is already stopped
         success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
         stream_was_active = "Active: active (running)" in stdout
@@ -105,11 +85,11 @@ def take_screenshot():
                     'error': f'Failed to stop stream service: {stderr}'
                 }), 500
         
-        # Take high-res screenshot with FFmpeg using detected resolution
+        # Take high-res screenshot with FFmpeg using fixed resolution
         remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
-        ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size {capture_resolution} -i {video_device} -frames:v 1 -y {remote_temp_path}"
+        ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size {FIXED_VIDEO_SIZE} -i {video_device} -frames:v 1 -y {remote_temp_path}"
         
-        current_app.logger.info(f"[@api:screen-definition] Taking screenshot with resolution {capture_resolution}...")
+        current_app.logger.info(f"[@api:screen-definition] Taking screenshot with fixed resolution {FIXED_VIDEO_SIZE}...")
         current_app.logger.info(f"[@api:screen-definition] FFmpeg command: {ffmpeg_cmd}")
         success, stdout, stderr, exit_code = ssh_connection.execute_command(ffmpeg_cmd)
         
@@ -170,11 +150,10 @@ def take_screenshot():
             'screenshot_path': local_screenshot_path,
             'additional_screenshot_path': additional_screenshot_path,
             'stream_was_active': stream_was_active,
-            'device_resolution': device_resolution,
-            'capture_resolution': capture_resolution,
+            'capture_resolution': FIXED_VIDEO_SIZE,
             'parent_name': parent_name,
             'node_name': node_name,
-            'message': f'Screenshot captured successfully with resolution {capture_resolution}. Saved to {local_screenshot_path}' + 
+            'message': f'Screenshot captured successfully with resolution {FIXED_VIDEO_SIZE}. Saved to {local_screenshot_path}' + 
                       (f' with additional copy at {additional_screenshot_path}' if additional_screenshot_path else '')
         })
         
@@ -187,7 +166,7 @@ def take_screenshot():
 
 @screen_definition_blueprint.route('/capture/start', methods=['POST'])
 def start_capture():
-    """Start video capture using FFmpeg from HDMI source with rolling buffer."""
+    """Start video capture using FFmpeg from HDMI source with fixed resolution and rolling buffer."""
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
     
     try:
@@ -220,30 +199,6 @@ def start_capture():
         max_duration = data.get('max_duration', 60)  # 60 second rolling buffer
         fps = data.get('fps', 5)  # 5 fps
         
-        # Get device resolution for informational purposes only
-        device_resolution = None
-        capture_resolution = "1920x1080"  # Fixed resolution - always use 1920x1080 for capture
-        
-        if hasattr(android_mobile_controller, 'adb_utils') and android_mobile_controller.adb_utils:
-            try:
-                android_device_id = getattr(android_mobile_controller, 'android_device_id', None)
-                if android_device_id:
-                    device_resolution = android_mobile_controller.adb_utils.get_device_resolution(android_device_id)
-                    current_app.logger.info(f"[@api:screen-definition] Device resolution from ADB: {device_resolution}")
-                    
-                    # NOTE: We always use 1920x1080 for capture regardless of device resolution
-                    # to ensure consistent capture quality and sizing
-                    current_app.logger.info(f"[@api:screen-definition] Using fixed capture resolution: {capture_resolution} (device resolution: {device_resolution})")
-                    
-                    # REMOVED: The logic that was overriding capture_resolution with device resolution
-                    # if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-                    #     device_width = device_resolution['width']
-                    #     device_height = device_resolution['height']
-                    #     capture_resolution = f"{device_width}x{device_height}"
-                    #     current_app.logger.info(f"[@api:screen-definition] Using capture resolution: {capture_resolution}")
-            except Exception as e:
-                current_app.logger.warning(f"[@api:screen-definition] Could not get device resolution: {e}")
-        
         # Check if stream is running and stop it
         success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
         stream_was_active_before_capture = "Active: active (running)" in stdout
@@ -270,40 +225,24 @@ def start_capture():
         # Clean existing capture files to start fresh
         ssh_connection.execute_command(f"rm -f {remote_capture_dir}/capture_*.jpg")
         
-        # Determine scale dimensions based on device orientation
-        scale_dimensions = "640:360"  # Default for landscape
-        if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-            device_width = device_resolution['width']
-            device_height = device_resolution['height']
-            # Check orientation
-            if device_height > device_width:
-                # Portrait mode
-                scale_dimensions = "360:640"
-                current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using scale dimensions: {scale_dimensions}")
-            else:
-                # Landscape mode
-                scale_dimensions = "640:360"
-                current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using scale dimensions: {scale_dimensions}")
-        
-        # Combined FFmpeg command: Stream HLS + Rolling buffer capture
-        # This replaces both the stream service and provides rolling buffer capture
+        # Combined FFmpeg command: Stream HLS + Rolling buffer capture with fixed resolution
         ffmpeg_cmd = (
-            f"/usr/bin/ffmpeg "
-            f"-f v4l2 -video_size {capture_resolution} -r 12 -i {video_device} "
+            f"/usr/bin/ffmpeg -report "
+            f"-f v4l2 -input_format mjpeg -framerate 20 -video_size {FIXED_VIDEO_SIZE} -i {video_device} "
             f"-filter_complex \"split=2[stream][capture]; "
-            f"[stream]scale={scale_dimensions}[streamout]; "
+            f"[stream]scale={FIXED_SCALE_SIZE},format=yuv420p[streamout]; "
             f"[capture]fps=5[captureout]\" "
-            f"-map \"[streamout]\" -c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an "
-            f"-f hls -hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
+            f"-map \"[streamout]\" -c:v libx264 -preset ultrafast -tune zerolatency -b:v 400k -g 5 -flags low_delay -an "
+            f"-f hls -hls_time 1 -hls_list_size 2 -hls_flags delete_segments -hls_segment_type mpegts "
             f"/var/www/html/stream/output.m3u8 "
             f"-map \"[captureout]\" -c:v mjpeg -q:v 2 -start_number 1 "
             f"-f image2 -y {remote_capture_dir}/capture_%d.jpg"
         )
         
-        current_app.logger.info(f"[@api:screen-definition] Starting capture with command: {ffmpeg_cmd}")
+        current_app.logger.info(f"[@api:screen-definition] Starting capture with fixed resolution {FIXED_VIDEO_SIZE} and scale {FIXED_SCALE_SIZE}")
+        current_app.logger.info(f"[@api:screen-definition] FFmpeg command: {ffmpeg_cmd}")
         
         # Start FFmpeg capture process on remote host
-        # Don't suppress errors - capture them for debugging
         start_cmd = f"nohup {ffmpeg_cmd} > {remote_capture_dir}/ffmpeg.log 2>&1 & echo $!"
         
         success, stdout, stderr, exit_code = ssh_connection.execute_command(start_cmd)
@@ -348,7 +287,7 @@ def start_capture():
         if success:
             current_app.logger.info(f"[@api:screen-definition] Remote capture directory contents: {stdout}")
         
-        # Set up local capture directory (no "latest" folder)
+        # Set up local capture directory
         local_capture_dir = os.path.join(TMP_DIR, 'captures')
         os.makedirs(local_capture_dir, exist_ok=True)
         
@@ -356,13 +295,12 @@ def start_capture():
             'success': True,
             'capture_pid': capture_pid,
             'remote_capture_dir': remote_capture_dir,
-            'device_resolution': device_resolution,
-            'capture_resolution': capture_resolution,
-            'scale_dimensions': scale_dimensions,
+            'capture_resolution': FIXED_VIDEO_SIZE,
+            'scale_dimensions': FIXED_SCALE_SIZE,
             'stream_was_active': stream_was_active_before_capture,
             'max_duration': max_duration,
             'fps': fps,
-            'message': f'Combined streaming + rolling buffer capture started (5fps, 60 seconds max, scaling to {scale_dimensions})'
+            'message': f'Combined streaming + rolling buffer capture started with fixed resolution {FIXED_VIDEO_SIZE} (5fps, 60 seconds max, scaling to {FIXED_SCALE_SIZE})'
         })
         
     except Exception as e:
