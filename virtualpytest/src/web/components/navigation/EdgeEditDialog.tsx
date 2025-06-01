@@ -244,59 +244,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          
-          {/* Action Selection */}
-          <FormControl fullWidth disabled={loading}>
-            <InputLabel>Select Action</InputLabel>
-            <Select
-              value={edgeForm.action?.id || ''}
-              onChange={(e) => handleActionChange(e.target.value)}
-              label="Select Action"
-            >
-              {loading ? (
-                <MenuItem disabled>Loading actions...</MenuItem>
-              ) : error ? (
-                <MenuItem disabled>Error: {error}</MenuItem>
-              ) : Object.keys(actions).length === 0 ? (
-                <MenuItem disabled>No actions available</MenuItem>
-              ) : (
-                Object.entries(actions).map(([category, categoryActions]) => [
-                  <MenuItem key={`${category}-header`} disabled sx={{ fontWeight: 'bold' }}>
-                    {category.toUpperCase()}
-                  </MenuItem>,
-                  ...categoryActions.map((action) => (
-                    <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
-                      <Box>
-                        <Typography variant="body2">{action.label}</Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          {action.description}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))
-                ])
-              )}
-            </Select>
-          </FormControl>
-
-          {/* Additional Input for Actions that Require It */}
-          {edgeForm.action?.requiresInput && (
-            <TextField
-              label={edgeForm.action.command === 'launch_app' ? 'Package Name' : 
-                     edgeForm.action.command === 'input_text' ? 'Text to Input' : 'Input Value'}
-              value={edgeForm.action.inputValue || ''}
-              onChange={(e) => handleInputValueChange(e.target.value)}
-              placeholder={edgeForm.action.command === 'launch_app' ? 'com.example.app' :
-                          edgeForm.action.command === 'input_text' ? 'Enter text to send' : ''}
-              fullWidth
-              size="small"
-              helperText={`This value will be sent as the ${
-                edgeForm.action.command === 'launch_app' ? 'package name' :
-                edgeForm.action.command === 'input_text' ? 'text input' : 'parameter'
-              }`}
-            />
-          )}
-
           {/* From/To Information */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
@@ -328,36 +275,75 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
             fullWidth
             size="small"
-           
+            
           />
+          {/* Action Selection */}
+          <FormControl fullWidth disabled={loading}>
+            <InputLabel>Select Action</InputLabel>
+            <Select
+              value={edgeForm.action?.id || ''}
+              onChange={(e) => handleActionChange(e.target.value)}
+              label="Select Action"
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,
+                  },
+                },
+              }}
+            >
+              {loading ? (
+                <MenuItem disabled>Loading actions...</MenuItem>
+              ) : error ? (
+                <MenuItem disabled>Error: {error}</MenuItem>
+              ) : Object.keys(actions).length === 0 ? (
+                <MenuItem disabled>No actions available</MenuItem>
+              ) : (
+                Object.entries(actions).map(([category, categoryActions]) => [
+                  <MenuItem key={`${category}-header`} disabled sx={{ 
+                    fontWeight: 'bold',
+                    color: 'primary.main',
+                    backgroundColor: 'action.hover',
+                    '&.Mui-disabled': {
+                      opacity: 1,
+                      color: 'primary.main'
+                    }
+                  }}>
+                    {category.toUpperCase()}
+                  </MenuItem>,
+                  ...categoryActions.map((action) => (
+                    <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {action.label}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))
+                ])
+              )}
+            </Select>
+          </FormControl>
 
-          {/* Available Actions Preview */}
-          {Object.keys(actions).length > 0 && (
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle2">
-                  All Available Actions ({getAllActions().length})
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
-                  {Object.entries(actions).map(([category, categoryActions]) => (
-                    <Box key={category} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" color="primary" gutterBottom>
-                        {category.toUpperCase()}
-                      </Typography>
-                      {categoryActions.map((action) => (
-                        <Box key={action.id} sx={{ ml: 2, mb: 1 }}>
-                          <Typography variant="body2">
-                            {action.label} - {action.description}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  ))}
-                </Box>
-              </AccordionDetails>
-            </Accordion>
+          {/* Additional Input for Actions that Require It */}
+          {edgeForm.action?.requiresInput && (
+            <TextField
+              label={edgeForm.action.command === 'launch_app' ? 'Package Name' : 
+                     edgeForm.action.command === 'input_text' ? 'Text to Input' : 'Input Value'}
+              value={edgeForm.action.inputValue || ''}
+              onChange={(e) => handleInputValueChange(e.target.value)}
+              placeholder={edgeForm.action.command === 'launch_app' ? 'com.example.app' :
+                          edgeForm.action.command === 'input_text' ? 'Enter text to send' : ''}
+              fullWidth
+              size="small"
+              helperText={`This value will be sent as the ${
+                edgeForm.action.command === 'launch_app' ? 'package name' :
+                edgeForm.action.command === 'input_text' ? 'text input' : 'parameter'
+              }`}
+            />
           )}
 
           {/* Run Result Display */}
