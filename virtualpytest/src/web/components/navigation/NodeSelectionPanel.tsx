@@ -5,6 +5,10 @@ import {
   Button,
   IconButton,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -51,6 +55,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 }) => {
   // Add state to control showing/hiding the NodeGotoPanel
   const [showGotoPanel, setShowGotoPanel] = useState(false);
+  
+  // Add states for confirmation dialogs
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
 
   const handleEdit = () => {
     setNodeForm({
@@ -63,6 +71,21 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       menu_type: selectedNode.data.menu_type,
     });
     setIsNodeDialogOpen(true);
+  };
+
+  // Confirmation handlers
+  const handleResetConfirm = () => {
+    if (onReset) {
+      onReset(selectedNode.id);
+    }
+    setShowResetConfirm(false);
+  };
+
+  const handleScreenshotConfirm = () => {
+    if (onTakeScreenshot) {
+      onTakeScreenshot();
+    }
+    setShowScreenshotConfirm(false);
   };
 
   const getParentNames = (parentIds: string[]): string => {
@@ -161,7 +184,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 variant="outlined"
                 color="warning"
                 sx={{ fontSize: '0.75rem', px: 1 }}
-                onClick={() => onReset(selectedNode.id)}
+                onClick={() => setShowResetConfirm(true)}
               >
                 Reset Node
               </Button>
@@ -174,7 +197,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 variant="outlined"
                 color="primary"
                 sx={{ fontSize: '0.75rem', px: 1 }}
-                onClick={onTakeScreenshot}
+                onClick={() => setShowScreenshotConfirm(true)}
                 startIcon={<CameraIcon fontSize="small" />}
               >
                 Screenshot
@@ -208,6 +231,38 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           currentNodeId={currentNodeId}
         />
       )}
+
+      {/* Reset Node Confirmation Dialog */}
+      <Dialog open={showResetConfirm} onClose={() => setShowResetConfirm(false)}>
+        <DialogTitle>Reset Node</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset this node? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+          <Button onClick={handleResetConfirm} color="warning" variant="contained">
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Screenshot Confirmation Dialog */}
+      <Dialog open={showScreenshotConfirm} onClose={() => setShowScreenshotConfirm(false)}>
+        <DialogTitle>Take Screenshot</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to take a screenshot? This will capture the current device screen.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowScreenshotConfirm(false)}>Cancel</Button>
+          <Button onClick={handleScreenshotConfirm} color="primary" variant="contained">
+            Take Screenshot
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }; 
