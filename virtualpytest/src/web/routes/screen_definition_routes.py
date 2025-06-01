@@ -82,19 +82,7 @@ def take_screenshot():
                     # to ensure consistent screenshot quality and sizing
                     current_app.logger.info(f"[@api:screen-definition] Using fixed capture resolution: {capture_resolution} (device resolution: {device_resolution})")
                     
-                    # REMOVED: The logic that was overriding capture_resolution with device resolution
-                    # if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
-                    #     device_width = device_resolution['width']
-                    #     device_height = device_resolution['height']
-                    #     # Determine orientation and set capture resolution accordingly
-                    #     if device_height > device_width:
-                    #         # Portrait mode - capture in portrait
-                    #         capture_resolution = f"{device_width}x{device_height}"
-                    #         current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using capture resolution: {capture_resolution}")
-                    #     else:
-                    #         # Landscape mode - capture in landscape  
-                    #         capture_resolution = f"{device_width}x{device_height}"
-                    #         current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using capture resolution: {capture_resolution}")
+                    
                 else:
                     current_app.logger.warning(f"[@api:screen-definition] No android_device_id available")
             except Exception as e:

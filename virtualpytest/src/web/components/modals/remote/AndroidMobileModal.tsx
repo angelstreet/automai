@@ -123,7 +123,7 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
       console.log('[@component:AndroidMobileModal] Auto-dumping UI elements after action');
       setIsAutoDumpScheduled(false);
       handleDumpUIWithLoading();
-    }, 1500);
+    }, 2000);
   };
 
   // Cleanup timer on unmount
