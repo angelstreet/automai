@@ -159,7 +159,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         position: 'absolute',
         top: 16,
         right: 16,
-        width: 400,
+        width: 300,
         p: 2,
         zIndex: 1000,
       }}
@@ -217,19 +217,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
         {/* Navigation Steps */}
         <Box sx={{ mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-            Navigation Steps:
-          </Typography>
-          
-          {isLoadingPreview && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
-              <CircularProgress size={16} />
-              <Typography variant="body2" color="text.secondary">
-                Loading navigation path...
-              </Typography>
-            </Box>
-          )}
-
+        
+  
+         
           {!isLoadingPreview && navigationSteps.length > 0 && (
             <Box sx={{ maxHeight: 120 }}>
               {navigationSteps.map((step, index) => (
@@ -286,7 +276,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             color="primary"
             startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
             onClick={executeNavigation}
-            disabled={!isTakeControlActive || isExecuting || isLoadingPreview || navigationSteps.length === 0}
+            disabled={!isTakeControlActive || isExecuting}
             fullWidth
             sx={{ fontSize: '0.875rem' }}
           >
