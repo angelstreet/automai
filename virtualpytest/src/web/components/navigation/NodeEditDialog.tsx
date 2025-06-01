@@ -120,13 +120,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    console.log(`[@component:NodeEditDialog] Dialog opened: ${isOpen}, verificationControllerTypes:`, verificationControllerTypes);
     if (isOpen && verificationControllerTypes.length > 0) {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions`);
       fetchVerificationActions();
-    } else if (isOpen && verificationControllerTypes.length === 0) {
-      console.log('[@component:NodeEditDialog] No verification controller types provided');
-      setVerificationError('No verification controllers available');
     }
   }, [isOpen, verificationControllerTypes]);
 
@@ -189,19 +184,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           ...verification,
           params: { ...verification.params }
         };
-        
-        // Set the text parameter for text verifications
-        if (verification.requiresInput && verification.inputValue) {
-          if (verification.command === 'waitForImageToAppear' || verification.command === 'waitForImageToDisappear') {
-            if (verification.controller_type === 'text') {
-              // For text verification, the image_path parameter is actually the text to search for
-              verificationToExecute.params.image_path = verification.inputValue;
-            } else if (verification.controller_type === 'image') {
-              // For image verification, use the input as the image path
-              verificationToExecute.params.image_path = verification.inputValue;
-            }
-          }
-        }
         
         try {
           const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {

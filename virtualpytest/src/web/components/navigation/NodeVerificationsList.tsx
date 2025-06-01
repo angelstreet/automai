@@ -148,84 +148,68 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         </Button>
       </Box>
 
-      {verifications.length === 0 ? (
-        <Box sx={{ 
-          py: 3, 
-          px: 2, 
-          border: '1px dashed', 
-          borderColor: 'divider', 
-          borderRadius: 1,
-          textAlign: 'center',
-          mb: 2
-        }}>
-          <Typography variant="body2" color="text.secondary">
-            No verifications added. Click "Add" to create your first verification.
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ mb: 1 }}>
-          {verifications.map((verification, index) => (
-            <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
-                  <Select
-                    value={verification.id}
-                    onChange={(e) => handleVerificationSelect(index, e.target.value)}
-                    displayEmpty
-                  >
-                    <MenuItem value="">
-                      <em>Select verification...</em>
-                    </MenuItem>
-                    {Object.entries(availableActions).map(([category, actions]) => [
-                      <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold' }}>
-                        {category.replace(/_/g, ' ').toUpperCase()}
-                      </MenuItem>,
-                      ...actions.map(action => (
-                        <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
-                          {action.label}
-                        </MenuItem>
-                      ))
-                    ])}
-                  </Select>
-                </FormControl>
-                
+      <Box sx={{ mb: 1 }}>
+        {verifications.map((verification, index) => (
+          <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+              <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+                <Select
+                  value={verification.id}
+                  onChange={(e) => handleVerificationSelect(index, e.target.value)}
+                  displayEmpty
+                >
+                  <MenuItem value="">
+                    <em>Select verification...</em>
+                  </MenuItem>
+                  {Object.entries(availableActions).map(([category, actions]) => [
+                    <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold' }}>
+                      {category.replace(/_/g, ' ').toUpperCase()}
+                    </MenuItem>,
+                    ...actions.map(action => (
+                      <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
+                        {action.label}
+                      </MenuItem>
+                    ))
+                  ])}
+                </Select>
+              </FormControl>
+              
+              <TextField
+                size="small"
+                type="number"
+                value={verification.params?.timeout || 10}
+                onChange={(e) => updateVerification(index, { 
+                  params: { 
+                    ...verification.params, 
+                    timeout: parseFloat(e.target.value) || 10 
+                  }
+                })}
+                sx={{ width: 80 }}
+                inputProps={{ min: 1, max: 60, step: 0.5 }}
+              />
+              
+              <IconButton size="small" onClick={() => removeVerification(index)} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            
+            {verification.requiresInput && verification.id && (
+              <Box sx={{ ml: 1 }}>
                 <TextField
                   size="small"
-                  type="number"
-                  value={verification.params?.timeout || 10}
-                  onChange={(e) => updateVerification(index, { 
-                    params: { 
-                      ...verification.params, 
-                      timeout: parseFloat(e.target.value) || 10 
-                    }
-                  })}
-                  sx={{ width: 80 }}
-                  inputProps={{ min: 1, max: 60, step: 0.5 }}
+                  label={verification.inputLabel || 'Input Value'}
+                  placeholder={verification.inputPlaceholder || 'Enter value...'}
+                  value={verification.inputValue || ''}
+                  onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
+                  fullWidth
+                  required
+                  error={!verification.inputValue?.trim()}
                 />
-                
-                <IconButton size="small" onClick={() => removeVerification(index)} color="error">
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
               </Box>
-              
-              {verification.requiresInput && verification.id && (
-                <Box sx={{ ml: 1 }}>
-                  <TextField
-                    size="small"
-                    label={verification.inputLabel || 'Input Value'}
-                    placeholder={verification.inputPlaceholder || 'Enter value...'}
-                    value={verification.inputValue || ''}
-                    onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                    fullWidth
-                    required
-                    error={!verification.inputValue?.trim()}
-                  />
-                </Box>
-              )}
-            </Box>
-          ))}
-        </Box>
-      )}
+            )}
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 }; 
