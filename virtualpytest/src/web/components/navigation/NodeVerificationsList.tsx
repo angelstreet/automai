@@ -157,10 +157,19 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   value={verification.id}
                   onChange={(e) => handleVerificationSelect(index, e.target.value)}
                   displayEmpty
+                  renderValue={(selected) => {
+                    if (!selected) {
+                      return <em>Select verification...</em>;
+                    }
+                    // Find the selected verification to display its label
+                    let selectedLabel = '';
+                    Object.values(availableActions).forEach(actions => {
+                      const action = actions.find(a => a.id === selected);
+                      if (action) selectedLabel = action.label;
+                    });
+                    return selectedLabel;
+                  }}
                 >
-                  <MenuItem value="">
-                    <em>Select verification...</em>
-                  </MenuItem>
                   {Object.entries(availableActions).map(([category, actions]) => [
                     <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold' }}>
                       {category.replace(/_/g, ' ').toUpperCase()}
