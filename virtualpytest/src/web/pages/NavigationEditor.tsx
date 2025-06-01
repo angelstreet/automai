@@ -305,6 +305,11 @@ const NavigationEditorContent: React.FC = () => {
     setEdgeForm,
     setIsDiscardDialogOpen,
     
+    // Additional setters we need
+    setNodes,
+    setSelectedNode,
+    setReactFlowInstance,
+    
     // Event handlers
     onNodesChange,
     onEdgesChange,
@@ -334,9 +339,6 @@ const NavigationEditorContent: React.FC = () => {
     fitView,
     deleteSelected,
     resetNode,
-    
-    // Additional setters we need
-    setReactFlowInstance,
     
     // Configuration
     defaultEdgeOptions,
@@ -475,30 +477,28 @@ const NavigationEditorContent: React.FC = () => {
         if (data.success) {
           console.log(`[@component:NavigationEditor] Screenshot saved to: ${data.screenshot_path}`);
           
-          // Update the selected node's screenshot property with the image URL
-          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(data.screenshot_path)}`;
+          // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
+          const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
+          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`;
           
-          // Find and update the node
-          const updatedNodes = nodes.map(node => {
-            if (node.id === selectedNode.id) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  screenshot: screenshotUrl
-                }
-              };
+          // Update both the nodes state and selectedNode state
+          const updatedNode = {
+            ...selectedNode,
+            data: {
+              ...selectedNode.data,
+              screenshot: screenshotUrl
             }
-            return node;
-          });
+          };
           
-          // Update the nodes state using the hook's onNodesChange
-          const nodeChanges = [{
-            id: selectedNode.id,
-            type: 'replace' as const,
-            item: updatedNodes.find(n => n.id === selectedNode.id)!
-          }];
-          onNodesChange(nodeChanges);
+          // Update the nodes using the proper React Flow pattern
+          setNodes((currentNodes) => 
+            currentNodes.map(node => 
+              node.id === selectedNode.id ? updatedNode : node
+            )
+          );
+          
+          // Also update the selectedNode state so the NodeSelectionPanel shows the updated data
+          setSelectedNode(updatedNode);
           
           console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
           
@@ -703,7 +703,6 @@ const NavigationEditorContent: React.FC = () => {
                   deviceConfig={selectedDeviceData.controller_configs}
                   deviceModel={selectedDeviceData.model}
                   autoConnect={true}
-                  sshSession={sshSession}
                   onDisconnectComplete={() => {
                     // Called when screen definition editor disconnects
                     console.log('[@component:NavigationEditor] Screen definition editor disconnected');

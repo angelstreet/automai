@@ -626,12 +626,15 @@ def serve_image_by_path():
         if not image_path:
             return jsonify({'success': False, 'error': 'No path specified'}), 400
         
-        # Security check - allow both /tmp/ paths (remote) and local TMP_DIR paths
+        # Security check - allow both /tmp/ paths (remote) and local TMP_DIR/RESOURCES_DIR paths
         local_tmp_path = os.path.abspath(TMP_DIR)
+        local_resources_path = os.path.abspath(RESOURCES_DIR)
         abs_image_path = os.path.abspath(image_path)
         
-        # Allow if path starts with /tmp/ (remote) or is within our local TMP_DIR
-        if not (image_path.startswith('/tmp/') or abs_image_path.startswith(local_tmp_path)):
+        # Allow if path starts with /tmp/ (remote) or is within our local TMP_DIR or RESOURCES_DIR
+        if not (image_path.startswith('/tmp/') or 
+                abs_image_path.startswith(local_tmp_path) or 
+                abs_image_path.startswith(local_resources_path)):
             current_app.logger.error(f"Invalid image path: {image_path}")
             return jsonify({'success': False, 'error': 'Invalid image path'}), 403
         
