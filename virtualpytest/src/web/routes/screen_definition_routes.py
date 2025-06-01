@@ -282,13 +282,28 @@ def start_capture():
         # Clean existing capture files to start fresh
         ssh_connection.execute_command(f"rm -f {remote_capture_dir}/capture_*.jpg")
         
+        # Determine scale dimensions based on device orientation
+        scale_dimensions = "640:360"  # Default for landscape
+        if device_resolution and 'width' in device_resolution and 'height' in device_resolution:
+            device_width = device_resolution['width']
+            device_height = device_resolution['height']
+            # Check orientation
+            if device_height > device_width:
+                # Portrait mode
+                scale_dimensions = "360:640"
+                current_app.logger.info(f"[@api:screen-definition] Device in PORTRAIT mode, using scale dimensions: {scale_dimensions}")
+            else:
+                # Landscape mode
+                scale_dimensions = "640:360"
+                current_app.logger.info(f"[@api:screen-definition] Device in LANDSCAPE mode, using scale dimensions: {scale_dimensions}")
+        
         # Combined FFmpeg command: Stream HLS + Rolling buffer capture
         # This replaces both the stream service and provides rolling buffer capture
         ffmpeg_cmd = (
             f"/usr/bin/ffmpeg "
             f"-f v4l2 -video_size {capture_resolution} -r 12 -i {video_device} "
             f"-filter_complex \"split=2[stream][capture]; "
-            f"[stream]scale=640:360[streamout]; "
+            f"[stream]scale={scale_dimensions}[streamout]; "
             f"[capture]fps=5[captureout]\" "
             f"-map \"[streamout]\" -c:v libx264 -preset ultrafast -b:v 400k -tune zerolatency -g 24 -an "
             f"-f hls -hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts "
@@ -355,10 +370,11 @@ def start_capture():
             'remote_capture_dir': remote_capture_dir,
             'device_resolution': device_resolution,
             'capture_resolution': capture_resolution,
+            'scale_dimensions': scale_dimensions,
             'stream_was_active': stream_was_active_before_capture,
             'max_duration': max_duration,
             'fps': fps,
-            'message': f'Combined streaming + rolling buffer capture started (5fps, 60 seconds max)'
+            'message': f'Combined streaming + rolling buffer capture started (5fps, 60 seconds max, scaling to {scale_dimensions})'
         })
         
     except Exception as e:
