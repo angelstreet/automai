@@ -168,22 +168,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Typography>
         )}
 
-      
-
-        {/* Run Result Display */}
-        {runResult && (
-          <Box sx={{ 
-            p: 1, 
-            bgcolor: runResult.startsWith('✅') ? 'success.light' : 'error.light', 
-            borderRadius: 1,
-            mb: 1
-          }}>
-            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
-              {runResult}
-            </Typography>
-          </Box>
-        )}
-        
         <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           {/* Edit and Delete buttons */}
           <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -229,6 +213,20 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             </Button>
           )}
         </Box>
+         {/* Run Result Display */}
+         {runResult && (
+          <Box sx={{ 
+            p: 1, 
+            bgcolor: runResult.startsWith('✅') ? 'success.light' : 'error.light', 
+            borderRadius: 1,
+            mb: 1
+          }}>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+              {runResult}
+            </Typography>
+          </Box>
+        )}
+        
       </Box>
     </Paper>
   );

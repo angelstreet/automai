@@ -271,12 +271,18 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         setRunResult(`✅ ${result.message}`);
         console.log(`[@component:EdgeEditDialog] Action executed successfully: ${result.message}`);
       } else {
-        setRunResult(`❌ ${result.error || 'Action failed'}`);
+        // Only show error if it's not a connection issue
+        if (!result.error?.includes('No active connection') && !result.error?.includes('not connected')) {
+          setRunResult(`❌ ${result.error || 'Action failed'}`);
+        }
         console.error(`[@component:EdgeEditDialog] Action execution failed: ${result.error}`);
       }
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing action:', err);
-      setRunResult(`❌ Failed to execute action: ${err.message}`);
+      // Don't show connection-related errors in the UI
+      if (!err.message?.includes('Failed to fetch') && !err.message?.includes('connection')) {
+        setRunResult(`❌ ${err.message}`);
+      }
     } finally {
       setIsRunning(false);
     }

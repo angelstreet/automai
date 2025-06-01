@@ -496,22 +496,38 @@ def execute_android_mobile_action():
                     'error': 'Element ID parameter required for click_element command'
                 }), 400
             
-            # Find the element by ID from the last UI dump
+            # Try to click element directly by text, content description, or resource ID
+            # First try to find element from last UI dump if available
             target_element = None
-            if hasattr(app.android_mobile_controller, 'last_ui_elements'):
+            if hasattr(app.android_mobile_controller, 'last_ui_elements') and app.android_mobile_controller.last_ui_elements:
                 for element in app.android_mobile_controller.last_ui_elements:
                     if element.id == element_id:
                         target_element = element
                         break
             
-            if target_element is None:
-                return jsonify({
-                    'success': False,
-                    'error': f'Element with ID "{element_id}" not found in last UI dump. Try refreshing UI elements first.'
-                }), 400
+            # If not found in last dump, try to find by text/content/resource ID
+            if not target_element:
+                # Do a fresh UI dump first
+                print(f"[@route:execute_android_mobile_action] Element not found in cache, doing fresh UI dump")
+                dump_success, elements, dump_error = app.android_mobile_controller.dump_ui_elements()
+                
+                if dump_success:
+                    # Try to find element by various methods
+                    target_element = app.android_mobile_controller.find_element_by_text(element_id)
+                    if not target_element:
+                        target_element = app.android_mobile_controller.find_element_by_content_desc(element_id)
+                    if not target_element:
+                        target_element = app.android_mobile_controller.find_element_by_resource_id(element_id)
+                else:
+                    print(f"[@route:execute_android_mobile_action] UI dump failed: {dump_error}")
             
-            success = app.android_mobile_controller.click_element(target_element)
-            message = f'Element "{element_id}" click {"successful" if success else "failed"}'
+            if target_element:
+                # Click the found element
+                success = app.android_mobile_controller.click_element(target_element)
+                message = f'Element "{element_id}" click {"successful" if success else "failed"}'
+            else:
+                success = False
+                message = f'Element "{element_id}" not found by text, content description, or resource ID'
             
         elif command == 'coordinate_tap':
             x = params.get('x')
