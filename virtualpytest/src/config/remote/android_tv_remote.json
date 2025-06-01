@@ -22,7 +22,7 @@
     "power": {
       "key": "POWER",
       "label": "PWR",
-      "position": { "x": 25, "y": 68 },
+      "position": { "x": 41 , "y": 60 },
       "size": { "width": 18, "height": 18 },
       "shape": "circle",
       "comment": "Power button"
@@ -30,7 +30,7 @@
     "voice": {
       "key": "VOICE_ASSIST",
       "label": "MIC",
-      "position": { "x": 50, "y": 88 },
+      "position": { "x": 68, "y": 82 },
       "size": { "width": 20, "height": 20 },
       "shape": "circle",
       "comment": "Voice/microphone button"
@@ -38,47 +38,47 @@
     "nav_up": {
       "key": "DPAD_UP",
       "label": "▲",
-      "position": { "x": 70, "y": 108 },
-      "size": { "width": 25, "height": 15 },
+      "position": { "x": 68, "y": 107 },
+      "size": { "width": 25, "height": 12 },
       "shape": "rectangle",
       "comment": "Navigation up"
     },
     "nav_left": {
       "key": "DPAD_LEFT",
       "label": "◄",
-      "position": { "x": 45, "y": 128 },
-      "size": { "width": 15, "height": 25 },
+      "position": { "x": 38, "y": 136 },
+      "size": { "width": 12, "height": 25 },
       "shape": "rectangle",
       "comment": "Navigation left"
     },
     "nav_center": {
       "key": "DPAD_CENTER",
       "label": "OK",
-      "position": { "x": 70, "y": 133 },
-      "size": { "width": 50, "height": 50 },
+      "position": { "x": 68, "y": 136 },
+      "size": { "width": 46, "height": 46 },
       "shape": "circle",
       "comment": "Navigation center/select"
     },
     "nav_right": {
       "key": "DPAD_RIGHT",
       "label": "►",
-      "position": { "x": 95, "y": 128 },
-      "size": { "width": 15, "height": 25 },
+      "position": { "x": 99, "y": 135 },
+      "size": { "width": 12, "height": 25 },
       "shape": "rectangle",
       "comment": "Navigation right"
     },
     "nav_down": {
       "key": "DPAD_DOWN",
       "label": "▼",
-      "position": { "x": 70, "y": 158 },
-      "size": { "width": 25, "height": 15 },
+      "position": { "x": 68, "y": 166 },
+      "size": { "width": 25, "height": 12 },
       "shape": "rectangle",
       "comment": "Navigation down"
     },
     "back": {
       "key": "BACK",
       "label": "←",
-      "position": { "x": 35, "y": 188 },
+      "position": { "x": 40, "y": 191 },
       "size": { "width": 18, "height": 18 },
       "shape": "circle",
       "comment": "Back button"
@@ -86,63 +86,63 @@
     "home": {
       "key": "HOME",
       "label": "🏠",
-      "position": { "x": 70, "y": 188 },
-      "size": { "width": 18, "height": 18 },
+      "position": { "x": 68, "y": 191 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Home button"
     },
     "menu": {
       "key": "MENU",
       "label": "☰",
-      "position": { "x": 105, "y": 188 },
-      "size": { "width": 18, "height": 18 },
+      "position": { "x": 96, "y": 191 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Menu button"
     },
     "rewind": {
       "key": "MEDIA_REWIND",
       "label": "<<",
-      "position": { "x": 35, "y": 228 },
-      "size": { "width": 18, "height": 18 },
+      "position": { "x": 40, "y": 219 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Rewind button"
     },
     "play_pause": {
       "key": "MEDIA_PLAY_PAUSE",
       "label": "⏯",
-      "position": { "x": 70, "y": 228 },
-      "size": { "width": 18, "height": 18 },
+      "position": { "x": 68, "y": 219 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Play/pause button"
     },
     "fast_forward": {
       "key": "MEDIA_FAST_FORWARD",
       "label": ">>",
-      "position": { "x": 105, "y": 228 },
-      "size": { "width": 18, "height": 18 },
+      "position": { "x": 96, "y": 219 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Fast forward button"
     },
     "volume_up": {
       "key": "VOLUME_UP",
       "label": "V+",
-      "position": { "x": 70, "y": 268 },
-      "size": { "width": 22, "height": 22 },
+      "position": { "x": 68, "y": 248 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Volume up button"
     },
     "volume_down": {
       "key": "VOLUME_DOWN",
       "label": "V-",
-      "position": { "x": 70, "y": 300 },
-      "size": { "width": 22, "height": 22 },
+      "position": { "x": 68, "y": 275 },
+      "size": { "width": 21, "height": 21 },
       "shape": "circle",
       "comment": "Volume down button"
     },
     "mute": {
       "key": "VOLUME_MUTE",
       "label": "MUTE",
-      "position": { "x": 70, "y": 334 },
+      "position": { "x": 68, "y": 302 },
       "size": { "width": 22, "height": 22 },
       "shape": "circle",
       "comment": "Mute button"

@@ -30,15 +30,19 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             continue
             
         # Add node with all its attributes
+        # Handle both database format (direct fields) and ReactFlow format (data.field)
+        node_data = node.get('data', {})
+        label = node.get('label') or node_data.get('label', '')
+        
         G.add_node(node_id, **{
-            'label': node.get('label', ''),
-            'node_type': node.get('node_type', 'screen'),
-            'description': node.get('description', ''),
-            'is_entry_point': node.get('is_entry_point', False),
+            'label': label,
+            'node_type': node.get('node_type') or node_data.get('type', 'screen'),
+            'description': node.get('description') or node_data.get('description', ''),
+            'is_entry_point': node.get('is_entry_point') or node_data.get('is_root', False),
             'is_exit_point': node.get('is_exit_point', False),
             'has_children': node.get('has_children', False),
             'child_tree_id': node.get('child_tree_id'),
-            'screenshot_url': node.get('screenshot_url'),
+            'screenshot_url': node.get('screenshot_url') or node_data.get('screenshot'),
             'position_x': node.get('position_x', 0),
             'position_y': node.get('position_y', 0),
             'width': node.get('width', 200),
