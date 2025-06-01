@@ -95,8 +95,8 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         path = nx.shortest_path(G, start_node_id, target_node_id)
         print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes: {path}")
         
-        # Convert path to navigation steps
-        navigation_steps = []
+        # Convert path to navigation transitions (grouped by from → to)
+        navigation_transitions = []
         for i in range(len(path) - 1):
             from_node = path[i]
             to_node = path[i + 1]
@@ -105,23 +105,44 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             from_node_info = get_node_info(G, from_node)
             to_node_info = get_node_info(G, to_node)
             
-            # Get navigation action
-            action = get_edge_action(G, from_node, to_node)
+            # Get edge data with actions
+            edge_data = G.edges[from_node, to_node] if G.has_edge(from_node, to_node) else {}
+            actions_list = edge_data.get('actions', [])
             
-            step = {
-                'step_number': i + 1,
+            # If no actions in the new format, try to get from legacy format
+            if not actions_list:
+                primary_action = edge_data.get('go_action')
+                if primary_action:
+                    actions_list = [{
+                        'id': primary_action,
+                        'label': primary_action.replace('_', ' ').title(),
+                        'command': primary_action,
+                        'params': {},
+                        'requiresInput': False,
+                        'inputValue': '',
+                        'waitTime': 1000
+                    }]
+            
+            transition = {
+                'transition_number': i + 1,
                 'from_node_id': from_node,
                 'to_node_id': to_node,
                 'from_node_label': from_node_info.get('label', '') if from_node_info else '',
                 'to_node_label': to_node_info.get('label', '') if to_node_info else '',
-                'action': action,
+                'actions': actions_list,
+                'total_actions': len(actions_list),
+                'finalWaitTime': edge_data.get('finalWaitTime', 2000),
                 'description': f"Navigate from '{from_node_info.get('label', from_node)}' to '{to_node_info.get('label', to_node)}'"
             }
             
-            navigation_steps.append(step)
+            navigation_transitions.append(transition)
         
-        print(f"[@navigation:pathfinding:find_shortest_path] Generated {len(navigation_steps)} navigation steps")
-        return navigation_steps
+        print(f"[@navigation:pathfinding:find_shortest_path] Generated {len(navigation_transitions)} navigation transitions")
+        for i, transition in enumerate(navigation_transitions):
+            actions_summary = [f"{a.get('command', 'unknown')}" for a in transition['actions']]
+            print(f"  Transition {i+1}: {transition['from_node_label']} → {transition['to_node_label']} ({len(transition['actions'])} actions: {actions_summary})")
+        
+        return navigation_transitions
         
     except nx.NetworkXNoPath:
         print(f"[@navigation:pathfinding:find_shortest_path] No path found from {start_node_id} to {target_node_id}")
@@ -174,9 +195,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] Error finding path: {e}")
         return None
 
-def get_navigation_steps(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> List[Dict]:
+def get_navigation_transitions(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> List[Dict]:
     """
-    Get step-by-step navigation instructions with detailed information
+    Get step-by-step navigation instructions with actions grouped by transitions
     
     Args:
         tree_id: Navigation tree ID
@@ -185,61 +206,92 @@ def get_navigation_steps(tree_id: str, target_node_id: str, team_id: str, curren
         current_node_id: Current position (if None, uses entry point)
         
     Returns:
-        List of detailed navigation steps
+        List of navigation transitions with multiple actions per transition
     """
-    print(f"[@navigation:pathfinding:get_navigation_steps] Getting detailed steps to {target_node_id}")
+    print(f"[@navigation:pathfinding:get_navigation_transitions] Getting transitions to {target_node_id}")
     
-    # Find the path
-    steps = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
+    # Find the path (now returns transitions)
+    transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
     
-    if not steps:
+    if not transitions:
         return []
     
-    # Enhance steps with additional information
+    # Enhance transitions with additional information
     from navigation_cache import get_cached_graph
     from navigation_graph import get_node_info
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
-        return steps
+        return transitions
     
-    enhanced_steps = []
-    for step in steps:
+    enhanced_transitions = []
+    for transition in transitions:
         # Get detailed node information
-        from_node_info = get_node_info(G, step['from_node_id'])
-        to_node_info = get_node_info(G, step['to_node_id'])
+        from_node_info = get_node_info(G, transition['from_node_id'])
+        to_node_info = get_node_info(G, transition['to_node_id'])
         
         # Get edge information
-        edge_data = G.edges[step['from_node_id'], step['to_node_id']] if G.has_edge(step['from_node_id'], step['to_node_id']) else {}
+        edge_data = G.edges[transition['from_node_id'], transition['to_node_id']] if G.has_edge(transition['from_node_id'], transition['to_node_id']) else {}
         
-        enhanced_step = {
-            **step,
+        enhanced_transition = {
+            **transition,
             'from_node': {
-                'id': step['from_node_id'],
+                'id': transition['from_node_id'],
                 'label': from_node_info.get('label', '') if from_node_info else '',
                 'type': from_node_info.get('node_type', '') if from_node_info else '',
                 'description': from_node_info.get('description', '') if from_node_info else '',
                 'screenshot_url': from_node_info.get('screenshot_url') if from_node_info else None
             },
             'to_node': {
-                'id': step['to_node_id'],
+                'id': transition['to_node_id'],
                 'label': to_node_info.get('label', '') if to_node_info else '',
                 'type': to_node_info.get('node_type', '') if to_node_info else '',
                 'description': to_node_info.get('description', '') if to_node_info else '',
                 'screenshot_url': to_node_info.get('screenshot_url') if to_node_info else None
             },
             'edge': {
-                'action': edge_data.get('go_action'),
-                'type': edge_data.get('edge_type', ''),
+                'actions': edge_data.get('actions', []),
+                'total_actions': len(edge_data.get('actions', [])),
+                'edge_type': edge_data.get('edge_type', ''),
                 'description': edge_data.get('description', ''),
                 'conditions': edge_data.get('conditions', {}),
-                'is_bidirectional': edge_data.get('is_bidirectional', False)
+                'is_bidirectional': edge_data.get('is_bidirectional', False),
+                'finalWaitTime': edge_data.get('finalWaitTime', 2000)
             }
         }
         
-        enhanced_steps.append(enhanced_step)
+        enhanced_transitions.append(enhanced_transition)
     
-    return enhanced_steps
+    return enhanced_transitions
+
+# Keep the old function name for backward compatibility, but mark as deprecated
+def get_navigation_steps(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> List[Dict]:
+    """
+    DEPRECATED: Use get_navigation_transitions instead.
+    This function now returns transitions but converts them to individual steps for backward compatibility.
+    """
+    transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
+    
+    # Convert transitions back to individual steps for backward compatibility
+    steps = []
+    step_counter = 1
+    
+    for transition in transitions:
+        for action in transition.get('actions', []):
+            step = {
+                'step_number': step_counter,
+                'from_node_id': transition['from_node_id'],
+                'to_node_id': transition['to_node_id'],
+                'from_node_label': transition.get('from_node_label', ''),
+                'to_node_label': transition.get('to_node_label', ''),
+                'action': action.get('command', ''),
+                'action_info': action,
+                'description': f"Execute {action.get('label', action.get('command', 'Unknown Action'))} to navigate from '{transition.get('from_node_label', '')}' to '{transition.get('to_node_label', '')}'"
+            }
+            steps.append(step)
+            step_counter += 1
+    
+    return steps
 
 def find_entry_point(tree_id: str, team_id: str) -> Optional[str]:
     """

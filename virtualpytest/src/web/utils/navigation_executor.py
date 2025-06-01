@@ -268,6 +268,7 @@ def verify_node_reached(tree_id: str, expected_node_id: str, team_id: str) -> bo
 def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict:
     """
     Execute navigation with step-by-step verification and detailed progress tracking
+    Shows transitions (from → to) with multiple actions per transition
     
     Args:
         tree_id: Navigation tree ID
@@ -276,122 +277,231 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         current_node_id: Current position (if None, starts from entry point)
         
     Returns:
-        Dictionary with execution results and detailed step progress
+        Dictionary with execution results and detailed transition progress
     """
     print(f"[@navigation:executor:execute_navigation_with_verification] Starting verified navigation to {target_node_id}")
     
     result = {
         'success': False,
         'target_node_id': target_node_id,
-        'steps_executed': 0,
-        'total_steps': 0,
+        'transitions_executed': 0,
+        'total_transitions': 0,
+        'actions_executed': 0,
+        'total_actions': 0,
         'execution_time': 0,
         'error_message': None,
-        'steps_details': [],
-        'current_step': None,  # Track currently executing step
+        'transitions_details': [],
+        'current_transition': None,  # Track currently executing transition
         'progress_info': []    # Detailed progress tracking
     }
     
     start_time = time.time()
     
     try:
-        # Get navigation steps with enhanced information
-        from navigation_pathfinding import get_navigation_steps
+        # Get navigation transitions with enhanced information
+        from navigation_pathfinding import get_navigation_transitions
         
-        steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
+        transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
         
-        if not steps:
+        if not transitions:
             result['error_message'] = "No navigation path found"
             return result
         
-        result['total_steps'] = len(steps)
+        result['total_transitions'] = len(transitions)
+        result['total_actions'] = sum(len(t.get('actions', [])) for t in transitions)
         
-        print(f"[@navigation:executor:execute_navigation_with_verification] Executing {len(steps)} navigation steps:")
-        for i, step in enumerate(steps):
-            print(f"  Step {i+1}: {step.get('from_node_label', step.get('from_node_id'))} → {step.get('to_node_label', step.get('to_node_id'))} via '{step.get('action')}'")
+        print(f"[@navigation:executor:execute_navigation_with_verification] Executing {len(transitions)} navigation transitions with {result['total_actions']} total actions:")
+        for i, transition in enumerate(transitions):
+            actions_summary = [f"{a.get('label', a.get('command', 'unknown'))}" for a in transition.get('actions', [])]
+            print(f"  Transition {i+1}: {transition.get('from_node_label')} → {transition.get('to_node_label')} ({len(transition.get('actions', []))} actions: {actions_summary})")
         
-        # Execute each step with detailed progress tracking
-        for i, step in enumerate(steps):
-            step_start_time = time.time()
-            current_step_info = {
-                'step_number': step['step_number'],
-                'from_node_id': step['from_node_id'],
-                'to_node_id': step['to_node_id'],
-                'from_node_label': step.get('from_node_label', ''),
-                'to_node_label': step.get('to_node_label', ''),
-                'action': step['action'],
+        # Execute each transition with detailed progress tracking
+        for i, transition in enumerate(transitions):
+            transition_start_time = time.time()
+            
+            current_transition_info = {
+                'transition_number': transition['transition_number'],
+                'from_node_id': transition['from_node_id'],
+                'to_node_id': transition['to_node_id'],
+                'from_node_label': transition.get('from_node_label', ''),
+                'to_node_label': transition.get('to_node_label', ''),
+                'actions': transition.get('actions', []),
+                'total_actions': len(transition.get('actions', [])),
+                'actions_executed': 0,
                 'status': 'executing'
             }
             
-            result['current_step'] = current_step_info
+            result['current_transition'] = current_transition_info
             
-            print(f"[@navigation:executor:execute_navigation_with_verification] Executing Step {i+1}/{len(steps)}: {current_step_info['from_node_label']} → {current_step_info['to_node_label']}")
-            print(f"[@navigation:executor:execute_navigation_with_verification] Action: {current_step_info['action']}")
+            print(f"[@navigation:executor:execute_navigation_with_verification] Executing Transition {i+1}/{len(transitions)}: {current_transition_info['from_node_label']} → {current_transition_info['to_node_label']}")
+            print(f"[@navigation:executor:execute_navigation_with_verification] Actions to execute: {len(current_transition_info['actions'])}")
             
-            # Execute the step
-            step_success = execute_navigation_step(
-                step['action'], 
-                step['from_node_id'], 
-                step['to_node_id']
-            )
+            # Execute all actions in this transition
+            transition_success = True
+            for j, action in enumerate(current_transition_info['actions']):
+                action_start_time = time.time()
+                
+                print(f"[@navigation:executor:execute_navigation_with_verification]   Action {j+1}/{len(current_transition_info['actions'])}: {action.get('label', action.get('command', 'Unknown'))}")
+                
+                # Execute the action using the real action execution
+                action_success = execute_action_object(action)
+                
+                action_execution_time = time.time() - action_start_time
+                
+                if action_success:
+                    current_transition_info['actions_executed'] += 1
+                    result['actions_executed'] += 1
+                    print(f"[@navigation:executor:execute_navigation_with_verification]   ✓ Action {j+1} completed successfully in {action_execution_time:.2f}s")
+                    
+                    # Wait after action if specified
+                    if action.get('waitTime', 0) > 0:
+                        wait_time_seconds = action.get('waitTime', 0) / 1000.0
+                        print(f"[@navigation:executor:execute_navigation_with_verification]   Waiting {wait_time_seconds}s after action")
+                        time.sleep(wait_time_seconds)
+                else:
+                    print(f"[@navigation:executor:execute_navigation_with_verification]   ✗ Action {j+1} failed after {action_execution_time:.2f}s")
+                    transition_success = False
+                    break
             
-            # Verify we reached the target node
-            if step_success:
-                step_success = verify_node_reached(tree_id, step['to_node_id'], team_id)
+            # Final wait for transition if specified
+            if transition_success and transition.get('finalWaitTime', 0) > 0:
+                final_wait_seconds = transition.get('finalWaitTime', 0) / 1000.0
+                print(f"[@navigation:executor:execute_navigation_with_verification] Final wait for transition: {final_wait_seconds}s")
+                time.sleep(final_wait_seconds)
             
-            step_execution_time = time.time() - step_start_time
-            current_step_info['execution_time'] = step_execution_time
-            current_step_info['status'] = 'completed' if step_success else 'failed'
+            # Verify we reached the target node of this transition
+            if transition_success:
+                transition_success = verify_node_reached(tree_id, transition['to_node_id'], team_id)
             
-            step_detail = {
-                'step_number': step['step_number'],
-                'action': step['action'],
-                'from_node': step['from_node_id'],
-                'to_node': step['to_node_id'],
-                'from_node_label': step.get('from_node_label', ''),
-                'to_node_label': step.get('to_node_label', ''),
-                'success': step_success,
-                'execution_time': step_execution_time,
-                'description': step['description']
+            transition_execution_time = time.time() - transition_start_time
+            current_transition_info['execution_time'] = transition_execution_time
+            current_transition_info['status'] = 'completed' if transition_success else 'failed'
+            
+            transition_detail = {
+                'transition_number': transition['transition_number'],
+                'from_node_id': transition['from_node_id'],
+                'to_node_id': transition['to_node_id'],
+                'from_node_label': transition.get('from_node_label', ''),
+                'to_node_label': transition.get('to_node_label', ''),
+                'actions': transition.get('actions', []),
+                'actions_executed': current_transition_info['actions_executed'],
+                'total_actions': current_transition_info['total_actions'],
+                'success': transition_success,
+                'execution_time': transition_execution_time,
+                'description': transition['description']
             }
             
-            result['steps_details'].append(step_detail)
-            result['progress_info'].append(current_step_info.copy())
+            result['transitions_details'].append(transition_detail)
+            result['progress_info'].append(current_transition_info.copy())
             
-            if step_success:
-                result['steps_executed'] += 1
-                print(f"[@navigation:executor:execute_navigation_with_verification] ✓ Step {i+1}/{len(steps)} completed successfully")
-                print(f"[@navigation:executor:execute_navigation_with_verification] Successfully navigated from '{current_step_info['from_node_label']}' to '{current_step_info['to_node_label']}'")
+            if transition_success:
+                result['transitions_executed'] += 1
+                print(f"[@navigation:executor:execute_navigation_with_verification] ✓ Transition {i+1}/{len(transitions)} completed successfully")
+                print(f"[@navigation:executor:execute_navigation_with_verification] Successfully navigated from '{current_transition_info['from_node_label']}' to '{current_transition_info['to_node_label']}'")
             else:
-                result['error_message'] = f"Failed at step {i+1}: Navigate from '{current_step_info['from_node_label']}' to '{current_step_info['to_node_label']}' using '{current_step_info['action']}'"
+                result['error_message'] = f"Failed at transition {i+1}: Navigate from '{current_transition_info['from_node_label']}' to '{current_transition_info['to_node_label']}' - {current_transition_info['actions_executed']}/{current_transition_info['total_actions']} actions completed"
                 print(f"[@navigation:executor:execute_navigation_with_verification] ✗ {result['error_message']}")
                 break
             
-            # Small delay between steps
+            # Small delay between transitions
             time.sleep(0.5)
         
-        # Check if all steps completed successfully
-        result['success'] = result['steps_executed'] == result['total_steps']
+        # Check if all transitions completed successfully
+        result['success'] = result['transitions_executed'] == result['total_transitions']
         result['execution_time'] = time.time() - start_time
-        result['current_step'] = None  # Clear current step when done
+        result['current_transition'] = None  # Clear current transition when done
         
         if result['success']:
             print(f"[@navigation:executor:execute_navigation_with_verification] 🎉 Successfully navigated to {target_node_id} in {result['execution_time']:.2f}s")
-            result['final_message'] = f"Navigation completed successfully! Reached '{step.get('to_node_label', target_node_id)}' in {result['steps_executed']} steps."
+            result['final_message'] = f"Navigation completed successfully! Reached '{transitions[-1].get('to_node_label', target_node_id)}' in {result['transitions_executed']} transitions ({result['actions_executed']} actions)."
         else:
             print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Navigation failed: {result['error_message']}")
         
     except Exception as e:
         result['error_message'] = f"Execution error: {str(e)}"
         result['execution_time'] = time.time() - start_time
-        result['current_step'] = None
+        result['current_transition'] = None
         print(f"[@navigation:executor:execute_navigation_with_verification] Exception: {e}")
     
     return result
 
+def execute_action_object(action_obj: dict) -> bool:
+    """
+    Execute a single action object (same format as EdgeSelectionPanel)
+    
+    Args:
+        action_obj: Action object with id, command, params, etc.
+        
+    Returns:
+        True if action executed successfully, False otherwise
+    """
+    if not action_obj or not action_obj.get('command'):
+        print(f"[@navigation:executor:execute_action_object] ERROR: Invalid action object: {action_obj}")
+        return False
+    
+    try:
+        print(f"[@navigation:executor:execute_action_object] Executing action: {action_obj}")
+        
+        # Prepare action for API call (same format as EdgeSelectionPanel)
+        action_to_execute = {
+            'id': action_obj.get('id'),
+            'label': action_obj.get('label'),
+            'command': action_obj.get('command'),
+            'params': action_obj.get('params', {}).copy(),
+            'requiresInput': action_obj.get('requiresInput', False),
+            'waitTime': action_obj.get('waitTime', 1000)
+        }
+        
+        # Update params with input values for actions that require them
+        if action_obj.get('requiresInput') and action_obj.get('inputValue'):
+            input_value = action_obj.get('inputValue')
+            command = action_obj.get('command')
+            
+            if command == 'launch_app':
+                action_to_execute['params']['package'] = input_value
+            elif command == 'input_text':
+                action_to_execute['params']['text'] = input_value
+            elif command == 'click_element':
+                action_to_execute['params']['element_id'] = input_value
+            elif command == 'coordinate_tap':
+                coords = input_value.split(',')
+                if len(coords) >= 2:
+                    try:
+                        action_to_execute['params']['x'] = int(coords[0].strip())
+                        action_to_execute['params']['y'] = int(coords[1].strip())
+                    except ValueError:
+                        print(f"[@navigation:executor:execute_action_object] WARNING: Invalid coordinates: {input_value}")
+        
+        # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
+        import requests
+        
+        api_controller_type = 'android-mobile'  # Default controller type
+        api_url = f"http://localhost:5009/api/virtualpytest/{api_controller_type}/execute-action"
+        
+        response = requests.post(api_url, 
+                               headers={'Content-Type': 'application/json'},
+                               json={'action': action_to_execute},
+                               timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('success'):
+                print(f"[@navigation:executor:execute_action_object] Action executed successfully: {result.get('message', 'Success')}")
+                return True
+            else:
+                print(f"[@navigation:executor:execute_action_object] Action failed: {result.get('error', 'Unknown error')}")
+                return False
+        else:
+            print(f"[@navigation:executor:execute_action_object] API call failed with status {response.status_code}: {response.text}")
+            return False
+        
+    except Exception as e:
+        print(f"[@navigation:executor:execute_action_object] Error executing action: {e}")
+        return False
+
 def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict:
     """
-    Get a preview of navigation steps without executing them
+    Get a preview of navigation transitions without executing them
     
     Args:
         tree_id: Navigation tree ID
@@ -400,27 +510,31 @@ def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, curr
         current_node_id: Current position (if None, uses entry point)
         
     Returns:
-        Dictionary with navigation preview information
+        Dictionary with navigation preview information showing transitions
     """
     print(f"[@navigation:executor:get_navigation_preview] Getting navigation preview to {target_node_id}")
     
-    from navigation_pathfinding import get_navigation_steps, find_entry_point
+    from navigation_pathfinding import get_navigation_transitions, find_entry_point
     
     # Determine starting point
     start_node = current_node_id or find_entry_point(tree_id, team_id)
     
-    # Get navigation steps
-    steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
+    # Get navigation transitions
+    transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
+    
+    total_actions = sum(len(t.get('actions', [])) for t in transitions) if transitions else 0
+    estimated_time = total_actions * 1.5  # Estimate 1.5 seconds per action
     
     preview = {
         'tree_id': tree_id,
         'target_node_id': target_node_id,
         'start_node_id': start_node,
-        'total_steps': len(steps) if steps else 0,
-        'estimated_time': len(steps) * 1.0 if steps else 0,  # Estimate 1 second per step
-        'path_found': bool(steps),
-        'steps': steps or [],
-        'summary': f"Navigate from {start_node} to {target_node_id} in {len(steps) if steps else 0} steps" if steps else "No path found"
+        'total_transitions': len(transitions) if transitions else 0,
+        'total_actions': total_actions,
+        'estimated_time': estimated_time,
+        'path_found': bool(transitions),
+        'transitions': transitions or [],
+        'summary': f"Navigate from {start_node} to {target_node_id} in {len(transitions) if transitions else 0} transitions ({total_actions} actions)" if transitions else "No path found"
     }
     
     return preview 

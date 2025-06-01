@@ -91,7 +91,7 @@ class NavigationService:
     
     def get_navigation_preview(self, tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> List[Dict]:
         """
-        Get preview of navigation steps without executing
+        Get preview of navigation transitions without executing
         
         Args:
             tree_id: Navigation tree ID
@@ -100,15 +100,15 @@ class NavigationService:
             current_node_id: Current position (if None, uses entry point)
             
         Returns:
-            List of navigation steps with detailed information
+            List of navigation transitions with detailed information
         """
         print(f"[@navigation:service:get_navigation_preview] Getting preview for {target_node_id}")
         
         try:
-            from navigation_pathfinding import get_navigation_steps
+            from navigation_pathfinding import get_navigation_transitions
             
-            steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
-            return steps
+            transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
+            return transitions
             
         except Exception as e:
             print(f"[@navigation:service:get_navigation_preview] Error: {e}")

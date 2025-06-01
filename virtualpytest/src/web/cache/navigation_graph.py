@@ -71,31 +71,82 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             print(f"[@navigation:graph:create_networkx_graph] Available nodes: {list(G.nodes)}")
             continue
         
-        # Get action from edge data
+        # Get actions from edge data - handle both multiple actions and single action formats
         edge_data = edge.get('data', {})
-        action = edge_data.get('action', {})
-        go_action = action.get('command') or action.get('id') or edge_data.get('go_action')
+        
+        # Handle multiple actions format (new format)
+        actions_list = []
+        if edge_data.get('actions') and isinstance(edge_data['actions'], list) and len(edge_data['actions']) > 0:
+            # New format: multiple actions
+            for action in edge_data['actions']:
+                if action and action.get('id'):  # Only include actions that have an ID
+                    action_info = {
+                        'id': action.get('id'),
+                        'label': action.get('label', action.get('id', 'Unknown Action')),
+                        'command': action.get('command', action.get('id')),
+                        'params': action.get('params', {}),
+                        'requiresInput': action.get('requiresInput', False),
+                        'inputValue': action.get('inputValue', ''),
+                        'waitTime': action.get('waitTime', 1000)
+                    }
+                    actions_list.append(action_info)
+        
+        # Handle legacy single action format (backward compatibility)
+        elif edge_data.get('action'):
+            legacy_action = edge_data['action']
+            if isinstance(legacy_action, dict) and legacy_action.get('id'):
+                action_info = {
+                    'id': legacy_action.get('id'),
+                    'label': legacy_action.get('label', legacy_action.get('id', 'Unknown Action')),
+                    'command': legacy_action.get('command', legacy_action.get('id')),
+                    'params': legacy_action.get('params', {}),
+                    'requiresInput': legacy_action.get('requiresInput', False),
+                    'inputValue': legacy_action.get('inputValue', ''),
+                    'waitTime': legacy_action.get('waitTime', 1000)
+                }
+                actions_list.append(action_info)
+        
+        # Fallback: try to get action directly from go_action field
+        if not actions_list:
+            go_action = edge_data.get('go_action')
+            if go_action:
+                action_info = {
+                    'id': go_action,
+                    'label': go_action.replace('_', ' ').title(),
+                    'command': go_action,
+                    'params': {},
+                    'requiresInput': False,
+                    'inputValue': '',
+                    'waitTime': 1000
+                }
+                actions_list.append(action_info)
+        
+        # Get the primary action for pathfinding (first action or fallback)
+        primary_action = actions_list[0]['command'] if actions_list else None
         
         # Add edge with navigation actions and metadata
         G.add_edge(source_id, target_id, **{
-            'go_action': go_action,
+            'go_action': primary_action,  # Primary action for pathfinding
+            'actions': actions_list,      # Full list of actions to execute
             'comeback_action': edge_data.get('comeback_action'),
             'edge_type': edge_data.get('edge_type', 'navigation'),
             'description': edge_data.get('description', ''),
             'is_bidirectional': edge_data.get('is_bidirectional', False),
             'conditions': edge_data.get('conditions', {}),
             'metadata': edge_data.get('metadata', {}),
+            'finalWaitTime': edge_data.get('finalWaitTime', 2000),
             'weight': 1  # Default weight for pathfinding
         })
         
-        print(f"[@navigation:graph:create_networkx_graph] Added edge {source_id} -> {target_id} with action: {go_action}")
+        action_summary = f"{len(actions_list)} actions: {[a['command'] for a in actions_list]}" if actions_list else "no actions"
+        print(f"[@navigation:graph:create_networkx_graph] Added edge {source_id} -> {target_id} with {action_summary}")
         
         # Add reverse edge if bidirectional
         if edge_data.get('is_bidirectional', False):
-            comeback_action = edge_data.get('comeback_action') or go_action
+            comeback_action = edge_data.get('comeback_action') or primary_action
             G.add_edge(target_id, source_id, **{
                 'go_action': comeback_action,
-                'comeback_action': go_action,
+                'comeback_action': primary_action,
                 'edge_type': edge_data.get('edge_type', 'navigation'),
                 'description': f"Reverse: {edge_data.get('description', '')}",
                 'is_bidirectional': True,
