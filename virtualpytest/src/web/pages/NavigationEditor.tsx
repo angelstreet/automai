@@ -353,6 +353,8 @@ const NavigationEditorContent: React.FC = () => {
     setNodes,
     setSelectedNode,
     setReactFlowInstance,
+    setAllNodes,
+    setHasUnsavedChanges,
     
     // Configuration
     defaultEdgeOptions,
@@ -521,17 +523,24 @@ const NavigationEditorContent: React.FC = () => {
             }
           };
           
-          // Update nodes array directly
-          setNodes(currentNodes => 
-            currentNodes.map(node => 
+          // Create a function to update nodes consistently
+          const updateNodeFunction = (nodes: any[]) => 
+            nodes.map(node => 
               node.id === selectedNode.id ? updatedNode : node
-            )
-          );
+            );
+          
+          // Update both filtered nodes and allNodes arrays
+          setNodes(updateNodeFunction);
+          setAllNodes(updateNodeFunction);
           
           // Update selected node so the panel reflects the change
           setSelectedNode(updatedNode);
           
+          // Mark tree as having unsaved changes
+          setHasUnsavedChanges(true);
+          
           console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
+          console.log(`[@component:NavigationEditor] Marked tree as having unsaved changes`);
           
           // You can add additional logic here like:
           // - Show a success notification

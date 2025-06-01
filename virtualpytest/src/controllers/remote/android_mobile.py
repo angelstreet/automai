@@ -23,48 +23,21 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
     @staticmethod
     def get_remote_config() -> Dict[str, Any]:
         """Get the remote configuration including layout, buttons, and image."""
-        try:
-            # Try to load configuration from JSON file first
-            config_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                'config', 'remote', 'android_mobile_remote.json'
-            )
-            
-            if os.path.exists(config_path):
-                print(f"Loading Android Mobile remote config from: {config_path}")
-                with open(config_path, 'r') as config_file:
-                    return json.load(config_file)
-            else:
-                print(f"Config file not found at: {config_path}, using default config")
-        except Exception as e:
-            print(f"Error loading config from file: {e}, using default config")
+        # Load configuration from JSON file
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            'config', 'remote', 'android_mobile_remote.json'
+        )
         
-        # Fallback to default configuration if file not found or error occurred
-        return {
-            'remote_info': {
-                'name': 'Android Mobile Remote',
-                'type': 'android_mobile',
-                'image_url': '/android-mobile-remote.png',
-                'default_scale': 1.0,
-                'min_scale': 0.5,
-                'max_scale': 2.0,
-                'button_scale_factor': 1.0,
-                'global_offset': {
-                    'x': 0,
-                    'y': 0
-                }
-            },
-            'button_layout': {
-                'back': {
-                    'key': 'BACK',
-                    'position': { 'x': 40, 'y': 220 },
-                    'size': { 'width': 30, 'height': 20 },
-                    'shape': 'rectangle',
-                    'comment': 'Back button'
-                },
-                # Rest of the button layout omitted for brevity
-            }
-        }
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Android Mobile remote config file not found at: {config_path}")
+            
+        try:
+            print(f"Loading Android Mobile remote config from: {config_path}")
+            with open(config_path, 'r') as config_file:
+                return json.load(config_file)
+        except Exception as e:
+            raise RuntimeError(f"Error loading Android Mobile remote config from file: {e}")
     
     def __init__(self, device_name: str = "Android Mobile", device_type: str = "android_mobile", **kwargs):
         """

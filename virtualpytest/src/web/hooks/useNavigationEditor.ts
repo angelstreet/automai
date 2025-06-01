@@ -765,6 +765,8 @@ export const useNavigationEditor = () => {
     // Setters
     setNodes: navigationState.setNodes,
     setEdges: navigationState.setEdges,
+    setAllNodes: navigationState.setAllNodes,
+    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
     setTreeName: navigationState.setCurrentTreeName,
     setIsLoadingInterface: navigationState.setIsLoadingInterface,
     setSelectedNode: navigationState.setSelectedNode,

@@ -29,153 +29,21 @@ class AndroidTVRemoteController(RemoteControllerInterface):
     @staticmethod
     def get_remote_config() -> Dict[str, Any]:
         """Get the remote configuration including layout, buttons, and image."""
-        try:
-            # Try to load configuration from JSON file first
-            config_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                'config', 'remote', 'android_tv_remote.json'
-            )
-            
-            if os.path.exists(config_path):
-                print(f"Loading Android TV remote config from: {config_path}")
-                with open(config_path, 'r') as config_file:
-                    return json.load(config_file)
-            else:
-                print(f"Config file not found at: {config_path}, using default config")
-        except Exception as e:
-            print(f"Error loading config from file: {e}, using default config")
+        # Load configuration from JSON file
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            'config', 'remote', 'android_tv_remote.json'
+        )
         
-        # Fallback to default configuration if file not found or error occurred
-        return {
-            'remote_info': {
-                'name': 'Fire TV Remote',
-                'type': 'android_tv',
-                'image_url': '/android-tv-remote.png',
-                'default_scale': 1,
-                'min_scale': 0.1,
-                'max_scale': 0.8,
-                # General scaling and offset parameters
-                'button_scale_factor': 1,  # General scaling factor for all button sizes
-                'global_offset': {
-                    'x': 0,  # Global X offset for all buttons
-                    'y': 10   # Global Y offset for all buttons
-                }
-            },
-            'button_layout': {
-                'power': {
-                    'key': 'POWER',
-                    'position': { 'x': 70, 'y': 28 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Power button'
-                },
-                'voice': {
-                    'key': 'VOICE_ASSIST',
-                    'position': { 'x': 70, 'y': 58 },
-                    'size': { 'width': 20, 'height': 20 },
-                    'shape': 'circle',
-                    'comment': 'Voice/microphone button'
-                },
-                'nav_up': {
-                    'key': 'DPAD_UP',
-                    'position': { 'x': 70, 'y': 108 },
-                    'size': { 'width': 25, 'height': 15 },
-                    'shape': 'rectangle',
-                    'comment': 'Navigation up'
-                },
-                'nav_left': {
-                    'key': 'DPAD_LEFT',
-                    'position': { 'x': 45, 'y': 128 },
-                    'size': { 'width': 15, 'height': 25 },
-                    'shape': 'rectangle',
-                    'comment': 'Navigation left'
-                },
-                'nav_center': {
-                    'key': 'DPAD_CENTER',
-                    'position': { 'x': 70, 'y': 133 },
-                    'size': { 'width': 20, 'height': 20 },
-                    'shape': 'circle',
-                    'comment': 'Navigation center/select'
-                },
-                'nav_right': {
-                    'key': 'DPAD_RIGHT',
-                    'position': { 'x': 95, 'y': 128 },
-                    'size': { 'width': 15, 'height': 25 },
-                    'shape': 'rectangle',
-                    'comment': 'Navigation right'
-                },
-                'nav_down': {
-                    'key': 'DPAD_DOWN',
-                    'position': { 'x': 70, 'y': 158 },
-                    'size': { 'width': 25, 'height': 15 },
-                    'shape': 'rectangle',
-                    'comment': 'Navigation down'
-                },
-                'back': {
-                    'key': 'BACK',
-                    'position': { 'x': 35, 'y': 188 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Back button'
-                },
-                'home': {
-                    'key': 'HOME',
-                    'position': { 'x': 70, 'y': 188 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Home button'
-                },
-                'menu': {
-                    'key': 'MENU',
-                    'position': { 'x': 105, 'y': 188 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Menu button'
-                },
-                'rewind': {
-                    'key': 'MEDIA_REWIND',
-                    'position': { 'x': 35, 'y': 228 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Rewind button'
-                },
-                'play_pause': {
-                    'key': 'MEDIA_PLAY_PAUSE',
-                    'position': { 'x': 70, 'y': 228 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Play/pause button'
-                },
-                'fast_forward': {
-                    'key': 'MEDIA_FAST_FORWARD',
-                    'position': { 'x': 105, 'y': 228 },
-                    'size': { 'width': 18, 'height': 18 },
-                    'shape': 'circle',
-                    'comment': 'Fast forward button'
-                },
-                'volume_up': {
-                    'key': 'VOLUME_UP',
-                    'position': { 'x': 70, 'y': 268 },
-                    'size': { 'width': 22, 'height': 22 },
-                    'shape': 'circle',
-                    'comment': 'Volume up button'
-                },
-                'volume_down': {
-                    'key': 'VOLUME_DOWN',
-                    'position': { 'x': 70, 'y': 300 },
-                    'size': { 'width': 22, 'height': 22 },
-                    'shape': 'circle',
-                    'comment': 'Volume down button'
-                },
-                'mute': {
-                    'key': 'VOLUME_MUTE',
-                    'position': { 'x': 70, 'y': 334 },
-                    'size': { 'width': 22, 'height': 22 },
-                    'shape': 'circle',
-                    'comment': 'Mute button'
-                }
-            }
-        }
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Android TV remote config file not found at: {config_path}")
+            
+        try:
+            print(f"Loading Android TV remote config from: {config_path}")
+            with open(config_path, 'r') as config_file:
+                return json.load(config_file)
+        except Exception as e:
+            raise RuntimeError(f"Error loading Android TV remote config from file: {e}")
     
     def __init__(self, device_name: str = "Android TV", device_type: str = "android_tv", **kwargs):
         """
