@@ -38,9 +38,10 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
 
-  // Check if run button should be enabled (for multiple actions)
-  const canRunActions = isControlActive && selectedDevice && 
-    selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && !isRunning;
+  // Check if run button should be enabled (for multiple actions or legacy single action)
+  const hasActions = (selectedEdge.data?.actions && selectedEdge.data.actions.length > 0) ||
+                    selectedEdge.data?.action;
+  const canRunActions = isControlActive && selectedDevice && hasActions && !isRunning;
 
   // Clear run results when edge selection changes
   useEffect(() => {
@@ -82,11 +83,27 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
 
   // Execute all edge actions sequentially
   const handleRunActions = async () => {
-    if (!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) {
-      console.log('[@component:EdgeSelectionPanel] No actions to run');
+    // Handle new format (multiple actions)
+    if (selectedEdge.data?.actions && selectedEdge.data.actions.length > 0) {
+      await executeActions(selectedEdge.data.actions, selectedEdge.data.finalWaitTime);
       return;
     }
     
+    // Handle legacy format (single action)
+    if (selectedEdge.data?.action) {
+      const legacyAction = {
+        ...selectedEdge.data.action,
+        waitTime: 2000, // Default wait time for legacy actions
+      };
+      await executeActions([legacyAction], 2000); // Default final wait time
+      return;
+    }
+    
+    console.log('[@component:EdgeSelectionPanel] No actions to run');
+  };
+
+  // Helper function to execute actions
+  const executeActions = async (actions: any[], finalWaitTime = 2000) => {
     setIsRunning(true);
     setRunResult(null);
     
@@ -94,15 +111,15 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
       let results: string[] = [];
       
-      for (let i = 0; i < selectedEdge.data.actions.length; i++) {
-        const action = selectedEdge.data.actions[i];
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i];
         
         if (!action.id) {
           results.push(`❌ Action ${i + 1}: No action selected`);
           continue;
         }
         
-        console.log(`[@component:EdgeSelectionPanel] Executing action ${i + 1}/${selectedEdge.data.actions.length}: ${action.label}`);
+        console.log(`[@component:EdgeSelectionPanel] Executing action ${i + 1}/${actions.length}: ${action.label}`);
         
         const actionToExecute = {
           ...action,
@@ -156,10 +173,10 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       }
       
       // Final wait
-      if (selectedEdge.data.finalWaitTime && selectedEdge.data.finalWaitTime > 0) {
-        console.log(`[@component:EdgeSelectionPanel] Final wait: ${selectedEdge.data.finalWaitTime}ms`);
-        await delay(selectedEdge.data.finalWaitTime);
-        results.push(`⏱️ Final wait: ${selectedEdge.data.finalWaitTime}ms completed`);
+      if (finalWaitTime && finalWaitTime > 0) {
+        console.log(`[@component:EdgeSelectionPanel] Final wait: ${finalWaitTime}ms`);
+        await delay(finalWaitTime);
+        results.push(`⏱️ Final wait: ${finalWaitTime}ms completed`);
       }
       
       setRunResult(results.join('\n'));
@@ -226,8 +243,22 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Box>
         )}
 
+        {/* Show legacy single action (backward compatibility) */}
+        {(!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) && selectedEdge.data?.action && (
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.3 }}>
+              1. {selectedEdge.data.action.label || 'Legacy action'}
+              {selectedEdge.data.action.requiresInput && selectedEdge.data.action.inputValue && (
+                <span style={{ color: '#666', marginLeft: '4px' }}>
+                  → {selectedEdge.data.action.inputValue}
+                </span>
+              )}
+            </Typography>
+          </Box>
+        )}
+
         {/* Show if no actions configured */}
-        {(!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) && (
+        {(!selectedEdge.data?.actions || selectedEdge.data.actions.length === 0) && !selectedEdge.data?.action && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.75rem', fontStyle: 'italic' }}>
             No actions configured
           </Typography>
@@ -259,7 +290,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Box>
 
           {/* Run button - only shown when actions exist */}
-          {selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && (
+          {hasActions && (
             <Button
               size="small"
               variant="contained"

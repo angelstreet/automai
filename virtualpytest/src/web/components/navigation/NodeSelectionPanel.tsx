@@ -237,13 +237,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         <DialogTitle>Reset Node</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to reset this node? This action cannot be undone.
+            Are you sure you want to reset this node ?
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowResetConfirm(false)}>Cancel</Button>
           <Button onClick={handleResetConfirm} color="warning" variant="contained">
-            Reset
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>
@@ -253,13 +253,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         <DialogTitle>Take Screenshot</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to take a screenshot? This will capture the current device screen.
+            Are you sure you want to take a screenshot ?<br />
+            This will overwrite the current screenshot.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowScreenshotConfirm(false)}>Cancel</Button>
           <Button onClick={handleScreenshotConfirm} color="primary" variant="contained">
-            Take Screenshot
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>
