@@ -39,8 +39,26 @@ class ImageVerificationController(VerificationControllerInterface):
         self.is_connected = True
         print(f"ImageVerify[{self.device_name}]: Ready - Using AV controller: {self.av_controller.device_name}")
 
+    def connect(self) -> bool:
+        """Connect to the image verification controller."""
+        self.is_connected = True
+        return True
+
+    def disconnect(self) -> bool:
+        """Disconnect from the image verification controller."""
+        self.is_connected = False
+        return True
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get the current status of the image verification controller."""
+        return {
+            "connected": self.is_connected,
+            "av_controller": self.av_controller.device_name if self.av_controller else None,
+            "controller_type": "image"
+        }
+
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, 
-                            area: Tuple[int, int, int, int] = None) -> bool:
+                            area: tuple = None) -> bool:
         """
         Wait for specific image to appear on screen.
         
@@ -62,7 +80,7 @@ class ImageVerificationController(VerificationControllerInterface):
         return False
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8,
-                               area: Tuple[int, int, int, int] = None) -> bool:
+                               area: tuple = None) -> bool:
         """
         Wait for specific image to disappear from screen.
         

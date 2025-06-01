@@ -210,48 +210,13 @@ class VerificationControllerInterface(BaseController):
         self.verification_results = []
     
     @abstractmethod
-    def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
-        """Verify that a specific image appears on screen. Must be implemented by subclasses."""
+    def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
+        """Wait for specific image to appear on screen. Must be implemented by subclasses."""
         pass
     
     @abstractmethod
-    def verify_text_appears(self, text: str, timeout: float = 10.0, case_sensitive: bool = False) -> bool:
-        """Verify that specific text appears on screen. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_element_exists(self, element_id: str, element_type: str = "any") -> bool:
-        """Verify that a UI element exists. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_audio_playing(self, min_level: float = 10.0, duration: float = 2.0) -> bool:
-        """Verify that audio is playing. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_video_playing(self, motion_threshold: float = 5.0, duration: float = 3.0) -> bool:
-        """Verify that video is playing (motion detected). Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_color_present(self, color: str, tolerance: float = 10.0) -> bool:
-        """Verify that a specific color is present on screen. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
-        """Verify that the screen is in an expected state. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def verify_performance_metric(self, metric_name: str, expected_value: float, tolerance: float = 10.0) -> bool:
-        """Verify a performance metric. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
-        """Generic wait and verify method. Must be implemented by subclasses."""
+    def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
+        """Wait for specific image to disappear from screen. Must be implemented by subclasses."""
         pass
     
     # Common verification logging methods

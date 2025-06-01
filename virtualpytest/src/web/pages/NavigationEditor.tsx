@@ -189,6 +189,16 @@ const NavigationEditorContent: React.FC = () => {
     connectionLoading: false,
     connectionError: null,
   });
+
+  // Verification state
+  const [isVerificationActive, setIsVerificationActive] = useState(false);
+  const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
+    image_controller_available: boolean;
+    text_controller_available: boolean;
+  }>({
+    image_controller_available: false,
+    text_controller_available: false,
+  });
   
   // Device state
   const [devices, setDevices] = useState<Device[]>([]);
@@ -557,6 +567,147 @@ const NavigationEditorContent: React.FC = () => {
     }
   };
 
+  // Initialize verification controllers when device control is activated
+  const initializeVerificationControllers = useCallback(async () => {
+    if (!selectedDevice || !isControlActive) {
+      console.log('[@component:NavigationEditor] Cannot initialize verification controllers: no device selected or not in control');
+      setIsVerificationActive(false);
+      setVerificationControllerStatus({
+        image_controller_available: false,
+        text_controller_available: false,
+      });
+      return;
+    }
+
+    try {
+      console.log(`[@component:NavigationEditor] Initializing verification controllers for device: ${selectedDevice}`);
+      
+      // Take control of verification controllers
+      const takeControlResponse = await fetch('http://localhost:5009/api/virtualpytest/verification/take-control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_model: selectedDeviceData?.model || 'android_mobile',
+          video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+        }),
+      });
+
+      if (takeControlResponse.ok) {
+        const controlData = await takeControlResponse.json();
+        console.log('[@component:NavigationEditor] Verification controllers initialized:', controlData);
+        
+        // Get controller status
+        const statusResponse = await fetch('http://localhost:5009/api/virtualpytest/verification/status');
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log('[@component:NavigationEditor] Verification controller status:', statusData);
+          
+          setVerificationControllerStatus({
+            image_controller_available: statusData.image_controller_available || false,
+            text_controller_available: statusData.text_controller_available || false,
+          });
+          setIsVerificationActive(true);
+        } else {
+          console.error('[@component:NavigationEditor] Failed to get verification controller status');
+          setIsVerificationActive(false);
+        }
+      } else {
+        console.error('[@component:NavigationEditor] Failed to initialize verification controllers:', takeControlResponse.status);
+        setIsVerificationActive(false);
+        setVerificationControllerStatus({
+          image_controller_available: false,
+          text_controller_available: false,
+        });
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error initializing verification controllers:', error);
+      setIsVerificationActive(false);
+      setVerificationControllerStatus({
+        image_controller_available: false,
+        text_controller_available: false,
+      });
+    }
+  }, [selectedDevice, isControlActive, selectedDeviceData]);
+
+  // Release verification controllers when device control is deactivated
+  const releaseVerificationControllers = useCallback(async () => {
+    if (!isVerificationActive) {
+      return;
+    }
+
+    try {
+      console.log('[@component:NavigationEditor] Releasing verification controllers');
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/verification/release-control', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        console.log('[@component:NavigationEditor] Verification controllers released successfully');
+      } else {
+        console.error('[@component:NavigationEditor] Failed to release verification controllers:', response.status);
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error releasing verification controllers:', error);
+    } finally {
+      setIsVerificationActive(false);
+      setVerificationControllerStatus({
+        image_controller_available: false,
+        text_controller_available: false,
+      });
+    }
+  }, [isVerificationActive]);
+
+  // Handle verification execution
+  const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
+    if (!isVerificationActive || !verifications || verifications.length === 0) {
+      console.log('[@component:NavigationEditor] Cannot execute verifications: controllers not active or no verifications');
+      return;
+    }
+
+    try {
+      console.log(`[@component:NavigationEditor] Executing ${verifications.length} verifications for node: ${nodeId}`);
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/verification/execute-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verifications: verifications,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[@component:NavigationEditor] Verification results:', data);
+        
+        // You can add logic here to handle verification results
+        // For example, show success/failure notifications, update UI, etc.
+        if (data.results) {
+          const passed = data.results.filter((r: any) => r.success).length;
+          const total = data.results.length;
+          console.log(`[@component:NavigationEditor] Verification completed: ${passed}/${total} passed`);
+        }
+      } else {
+        console.error('[@component:NavigationEditor] Verification failed:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Error executing verifications:', error);
+    }
+  }, [isVerificationActive]);
+
+  // Effect to initialize/release verification controllers when control state changes
+  useEffect(() => {
+    if (isControlActive && selectedDevice) {
+      initializeVerificationControllers();
+    } else {
+      releaseVerificationControllers();
+    }
+  }, [isControlActive, selectedDevice, initializeVerificationControllers, releaseVerificationControllers]);
+
   return (
     <Box sx={{ 
       width: '100%',
@@ -755,6 +906,9 @@ const NavigationEditorContent: React.FC = () => {
                       onTakeScreenshot={handleTakeScreenshot}
                       treeId={currentTreeId || ''}
                       currentNodeId={focusNodeId}
+                      onVerification={handleVerification}
+                      isVerificationActive={isVerificationActive}
+                      verificationControllerStatus={verificationControllerStatus}
                     />
                   )}
                   
@@ -899,6 +1053,9 @@ const NavigationEditorContent: React.FC = () => {
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}
         onResetNode={resetNode}
+        verificationControllerTypes={['text', 'image']}
+        isVerificationActive={isVerificationActive}
+        selectedDevice={selectedDevice}
       />
 
       {/* Edge Edit Dialog */}
