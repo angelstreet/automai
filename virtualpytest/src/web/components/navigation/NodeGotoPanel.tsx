@@ -184,7 +184,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         position: 'absolute',
         top: 16,
         right: 16,
-        width: 300,
+        width: 360,
         p: 2,
         zIndex: 1000,
       }}
@@ -244,7 +244,23 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
                 Navigation Steps:
               </Typography>
-              <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+              <Box sx={{ maxHeight: 180, overflowY: 'auto', 
+                scrollbarWidth: 'thin',
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(0,0,0,0.1)',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '3px',
+                  '&:hover': {
+                    background: 'rgba(0,0,0,0.5)',
+                  }
+                }
+              }}>
                 {navigationSteps.map((transition, index) => {
                   const transitionData = transition as any; // Type assertion for new transition format
                   return (
