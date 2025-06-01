@@ -284,22 +284,113 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     
     // Remove ALL edges connected to this node (both incoming and outgoing)
     const removeEdgesFunction = (eds: UINavigationEdge[]) => {
-      const beforeCount = eds.length;
-      const newEdges = eds.filter((edge) => edge.target !== targetNodeId && edge.source !== targetNodeId);
-      const removedCount = beforeCount - newEdges.length;
-      console.log(`[@hook:useNodeEdgeManagement] Removed ${removedCount} total edges (incoming and outgoing) for node ${targetNodeId}`);
-      return newEdges;
+      // First, collect all the edges we're going to remove for analysis
+      const edgesToRemove = eds.filter(edge => edge.source === targetNodeId || edge.target === targetNodeId);
+      
+      // Track affected target nodes that might become orphaned
+      const affectedTargetNodes = new Set<string>();
+      edgesToRemove.forEach(edge => {
+        if (edge.target !== targetNodeId) {
+          affectedTargetNodes.add(edge.target);
+        }
+      });
+      
+      // Filter out the edges connected to the target node
+      const newEdges = eds.filter(edge => edge.source !== targetNodeId && edge.target !== targetNodeId);
+      
+      return { newEdges, affectedTargetNodes };
     };
     
-    // Apply to filtered arrays first
-    console.log(`[@hook:useNodeEdgeManagement] Updating filtered nodes and edges for reset`);
-    state.setNodes(updateNodeFunction);
-    state.setEdges(removeEdgesFunction);
+    // Check for orphaned nodes and update them
+    const updateOrphanedNodes = (nds: UINavigationNode[], affectedNodes: Set<string>, edges: UINavigationEdge[]) => {
+      return nds.map(node => {
+        // Only process affected nodes
+        if (affectedNodes.has(node.id)) {
+          // Check if this node still has any incoming edges
+          const hasIncomingEdges = edges.some(edge => edge.target === node.id);
+          
+          if (!hasIncomingEdges) {
+            console.log(`[@hook:useNodeEdgeManagement] Resetting orphaned node: ${node.data.label}`);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                parent: [],
+                depth: 0
+              }
+            };
+          }
+        }
+        return node;
+      });
+    };
     
-    // Apply to complete arrays (allNodes and allEdges) - these should always exist
-    console.log(`[@hook:useNodeEdgeManagement] Updating allNodes and allEdges for reset`);
-    state.setAllNodes(updateNodeFunction);
-    state.setAllEdges(removeEdgesFunction);
+    // Process edges for the filtered arrays
+    const { newEdges, affectedTargetNodes } = removeEdgesFunction(state.edges);
+    console.log(`[@hook:useNodeEdgeManagement] Removed edges for node ${targetNodeId}, found ${affectedTargetNodes.size} potentially affected nodes`);
+    
+    // First update the target node itself
+    let updatedNodes = updateNodeFunction(state.nodes);
+    
+    // Then handle any orphaned nodes
+    if (affectedTargetNodes.size > 0) {
+      updatedNodes = updateOrphanedNodes(updatedNodes, affectedTargetNodes, newEdges);
+    }
+    
+    // Apply changes to filtered arrays
+    state.setNodes(() => updatedNodes);
+    state.setEdges(() => newEdges);
+    
+    // Apply to complete arrays (allNodes and allEdges) using the setter functions
+    state.setAllNodes(allNodes => {
+      // We need to process the edges separately to identify affected nodes
+      const allAffectedTargetNodes = new Set<string>();
+      
+      // Get edges related to this node from state.edges as a reference
+      state.edges.forEach(edge => {
+        if (edge.source === targetNodeId || edge.target === targetNodeId) {
+          if (edge.target !== targetNodeId) {
+            allAffectedTargetNodes.add(edge.target);
+          }
+        }
+      });
+      
+      // Update the target node itself
+      let updatedAllNodes = updateNodeFunction(allNodes);
+      
+      // Then handle orphaned nodes, checking state.edges for incoming edges
+      if (allAffectedTargetNodes.size > 0) {
+        updatedAllNodes = updatedAllNodes.map(node => {
+          // Only process affected nodes
+          if (allAffectedTargetNodes.has(node.id)) {
+            // Check if this node still has any incoming edges after removing target node edges
+            const hasIncomingEdges = state.edges.some(edge => 
+              edge.target === node.id && edge.source !== targetNodeId
+            );
+            
+            if (!hasIncomingEdges) {
+              console.log(`[@hook:useNodeEdgeManagement] Resetting orphaned node in allNodes: ${node.data.label}`);
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  parent: [],
+                  depth: 0
+                }
+              };
+            }
+          }
+          return node;
+        });
+      }
+      
+      return updatedAllNodes;
+    });
+    
+    state.setAllEdges(allEdges => {
+      // Just filter out edges connected to the target node
+      return allEdges.filter(edge => edge.source !== targetNodeId && edge.target !== targetNodeId);
+    });
     
     // IMPORTANT: Also update the form state if this is the currently selected node
     if (state.selectedNode && state.selectedNode.id === targetNodeId) {
