@@ -253,7 +253,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     sx={{ 
                       mb: 1,
                       p: 1,
-                      bgcolor: 'grey.50',
                       borderRadius: 1,
                       border: '1px solid',
                       borderColor: 'grey.200'
