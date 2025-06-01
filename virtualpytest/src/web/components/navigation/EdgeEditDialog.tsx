@@ -199,7 +199,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={isOpen} onClose={onClose} width="300" fullWidth>
       <DialogTitle>
         Edit Navigation Actions
       </DialogTitle>

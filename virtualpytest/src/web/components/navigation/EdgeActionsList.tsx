@@ -92,7 +92,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
           Actions
         </Typography>
@@ -122,7 +122,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
           </Typography>
         </Box>
       ) : (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
           {actions.map((action, index) => (
             <EdgeActionRow
               key={index}
