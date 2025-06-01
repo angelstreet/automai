@@ -59,46 +59,11 @@ class ImageVerificationController(VerificationControllerInterface):
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, 
                             area: tuple = None) -> bool:
-        """
-        Wait for specific image to appear on screen.
-        
-        Args:
-            image_path: Path to the template image to look for (can be relative to resources directory)
-            timeout: Maximum time to wait in seconds
-            threshold: Threshold threshold (0.0 to 1.0)
-            area: Optional area to search (x, y, width, height)
-            
-        Returns:
-            True if image appears, False if timeout
-        """
-        print(f"ImageVerify[{self.device_name}]: Waiting for image '{image_path}' to appear (timeout: {timeout}s, threshold: {threshold})")
-        if area:
-            print(f"ImageVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
-        
-        # TODO: Implement image template matching logic
-        print(f"ImageVerify[{self.device_name}]: Image verification not yet implemented")
-        return False
+       
+       return False
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8,
                                area: tuple = None) -> bool:
-        """
-        Wait for specific image to disappear from screen.
-        
-        Args:
-            image_path: Path to the template image that should disappear (can be relative to resources directory)
-            timeout: Maximum time to wait in seconds
-            threshold: Threshold threshold (0.0 to 1.0)
-            area: Optional area to search (x, y, width, height)
-            
-        Returns:
-            True if image disappears, False if timeout
-        """
-        print(f"ImageVerify[{self.device_name}]: Waiting for image '{image_path}' to disappear (timeout: {timeout}s, threshold: {threshold})")
-        if area:
-            print(f"ImageVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
-        
-        # TODO: Implement image template matching logic
-        print(f"ImageVerify[{self.device_name}]: Image verification not yet implemented")
         return False
 
 # Backward compatibility alias

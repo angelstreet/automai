@@ -187,6 +187,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               <TextField
                 size="small"
                 type="number"
+                label="Timeout"
                 value={verification.params?.timeout || 10}
                 onChange={(e) => updateVerification(index, { 
                   params: { 
@@ -197,6 +198,23 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 sx={{ width: 80 }}
                 inputProps={{ min: 1, max: 60, step: 0.5 }}
               />
+              
+              {verification.controller_type === 'image' && (
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Threshold"
+                  value={verification.params?.threshold || 0.8}
+                  onChange={(e) => updateVerification(index, { 
+                    params: { 
+                      ...verification.params, 
+                      threshold: parseFloat(e.target.value) || 0.8 
+                    }
+                  })}
+                  sx={{ width: 100 }}
+                  inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
+                />
+              )}
               
               <IconButton size="small" onClick={() => removeVerification(index)} color="error">
                 <DeleteIcon fontSize="small" />
