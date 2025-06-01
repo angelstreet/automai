@@ -250,7 +250,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
           {!isLoadingPreview && navigationSteps.length === 0 && !error && (
             <Typography variant="body2" color="text.secondary">
-              No navigation steps required (already at target or target is root)
+              
             </Typography>
           )}
         </Box>
