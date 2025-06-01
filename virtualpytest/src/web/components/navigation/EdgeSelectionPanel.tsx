@@ -106,7 +106,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       }
     } catch (err: any) {
       console.error('[@component:EdgeSelectionPanel] Error executing action:', err);
-      setRunResult(`❌ Failed to execute action: ${err.message}`);
+      setRunResult(`❌ ${err.message}`);
     } finally {
       setIsRunning(false);
     }
@@ -216,13 +216,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             >
               {isRunning ? 'Running...' : 'Run'}
             </Button>
-          )}
-
-          {/* Help text for disabled Run button */}
-          {selectedEdge.data?.action && (!isControlActive || !selectedDevice) && (
-            <Typography variant="caption" color="warning.main" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
-              Take control to test
-            </Typography>
           )}
         </Box>
       </Box>
