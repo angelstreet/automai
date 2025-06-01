@@ -152,6 +152,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       <Box sx={{ mb: 1 }}>
         {verifications.map((verification, index) => (
           <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            {/* Line 1: Verification dropdown */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
               <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
                 <Select
@@ -184,6 +185,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 </Select>
               </FormControl>
               
+              <IconButton size="small" onClick={() => removeVerification(index)} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            
+            {/* Line 2: Timeout, threshold, and area controls */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
               <TextField
                 size="small"
                 type="number"
@@ -215,9 +223,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
                 />
               )}
-              <br />
+              
               {verification.controller_type === 'image' && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <>
                   <TextField
                     size="small"
                     type="number"
@@ -286,16 +294,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     sx={{ width: 80 }}
                     inputProps={{ min: 1 }}
                   />
-                </Box>
+                </>
               )}
-              
-              <IconButton size="small" onClick={() => removeVerification(index)} color="error">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
             </Box>
             
+            {/* Line 3: Image path input */}
             {verification.requiresInput && verification.id && (
-              <Box sx={{ ml: 1 }}>
+              <Box>
                 <TextField
                   size="small"
                   label={verification.inputLabel || 'Input Value'}
