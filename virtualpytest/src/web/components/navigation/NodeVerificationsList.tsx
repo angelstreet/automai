@@ -215,6 +215,79 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
                 />
               )}
+              <br />
+              {verification.controller_type === 'image' && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="X"
+                    value={verification.params?.area?.x || verification.params?.area?.split(',')[0] || 0}
+                    onChange={(e) => updateVerification(index, { 
+                      params: { 
+                        ...verification.params, 
+                        area: { 
+                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          x: parseInt(e.target.value) || 0 
+                        }
+                      }
+                    })}
+                    sx={{ width: 70 }}
+                    inputProps={{ min: 0 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Y"
+                    value={verification.params?.area?.y || verification.params?.area?.split(',')[1] || 0}
+                    onChange={(e) => updateVerification(index, { 
+                      params: { 
+                        ...verification.params, 
+                        area: { 
+                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          y: parseInt(e.target.value) || 0 
+                        }
+                      }
+                    })}
+                    sx={{ width: 70 }}
+                    inputProps={{ min: 0 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Width"
+                    value={verification.params?.area?.width || verification.params?.area?.split(',')[2] || 100}
+                    onChange={(e) => updateVerification(index, { 
+                      params: { 
+                        ...verification.params, 
+                        area: { 
+                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          width: parseInt(e.target.value) || 100 
+                        }
+                      }
+                    })}
+                    sx={{ width: 80 }}
+                    inputProps={{ min: 1 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Height"
+                    value={verification.params?.area?.height || verification.params?.area?.split(',')[3] || 100}
+                    onChange={(e) => updateVerification(index, { 
+                      params: { 
+                        ...verification.params, 
+                        area: { 
+                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          height: parseInt(e.target.value) || 100 
+                        }
+                      }
+                    })}
+                    sx={{ width: 80 }}
+                    inputProps={{ min: 1 }}
+                  />
+                </Box>
+              )}
               
               <IconButton size="small" onClick={() => removeVerification(index)} color="error">
                 <DeleteIcon fontSize="small" />
