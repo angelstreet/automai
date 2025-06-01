@@ -245,7 +245,23 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           )}
         </Box>
 
-        {/* Error Display */}
+       
+
+        {/* Action Button */}
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+            onClick={executeNavigation}
+            disabled={!isTakeControlActive || isExecuting}
+            fullWidth
+            sx={{ fontSize: '0.875rem' }}
+          >
+            {isExecuting ? 'Executing...' : 'Run'}
+          </Button>
+        </Box>
+         {/* Error Display */}
         {error && (
           <Alert severity="error" sx={{ mb: 1, fontSize: '0.875rem' }}>
             {error}
@@ -268,21 +284,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             <LinearProgress />
           </Box>
         )}
-
-        {/* Action Button */}
-        <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-            onClick={executeNavigation}
-            disabled={!isTakeControlActive || isExecuting}
-            fullWidth
-            sx={{ fontSize: '0.875rem' }}
-          >
-            {isExecuting ? 'Executing...' : 'Run'}
-          </Button>
-        </Box>
       </Box>
     </Paper>
   );
