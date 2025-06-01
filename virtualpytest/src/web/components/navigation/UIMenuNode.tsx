@@ -8,12 +8,26 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
-  // Check if this node is an orphan (no parent)
-  const isOrphan = !data.parent || data.parent.length === 0;
+  // Check if this node is a root node (no parent)
+  const isRootNode = !data.parent || data.parent.length === 0;
   
-  // Determine border color based on orphan status
-  const borderColor = isOrphan ? '#f44336' : '#ffc107'; // Red for orphans, yellow for connected
-  const borderWidth = isOrphan ? '2px' : '1px';
+  // Root node styling - visually distinct from normal menu nodes
+  const rootNodeStyle = {
+    background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+    border: '2px solid #d32f2f',
+    boxShadow: selected 
+      ? '0 4px 12px rgba(211, 47, 47, 0.4)' 
+      : '0 2px 8px rgba(211, 47, 47, 0.3)'
+  };
+  
+  // Standard menu node styling
+  const menuNodeStyle = {
+    background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
+    border: '1px solid #ffc107',
+    boxShadow: selected 
+      ? '0 4px 12px rgba(255, 193, 7, 0.4)' 
+      : '0 2px 4px rgba(255, 193, 7, 0.2)'
+  };
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
@@ -29,8 +43,8 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
   return (
     <div
       style={{
-        background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
-        border: `${borderWidth} solid ${borderColor}`,
+        background: isRootNode ? rootNodeStyle.background : menuNodeStyle.background,
+        border: isRootNode ? rootNodeStyle.border : menuNodeStyle.border,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -38,15 +52,33 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: selected 
-          ? '0 4px 12px rgba(255, 193, 7, 0.4)' 
-          : '0 2px 4px rgba(255, 193, 7, 0.2)',
+        boxShadow: isRootNode ? rootNodeStyle.boxShadow : menuNodeStyle.boxShadow,
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
+      {/* Root Node Indicator */}
+      {isRootNode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            backgroundColor: '#d32f2f',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 10,
+          }}
+        >
+          ROOT
+        </div>
+      )}
+      
       {/* Left Handles */}
       <Handle 
         type="target" 
@@ -240,7 +272,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
       <div
         style={{
           padding: '4px',
-          borderBottom: '1px solid #ffc107',
+          borderBottom: isRootNode ? '1px solid #ef5350' : '1px solid #ffc107',
           minHeight: '10px',
           display: 'flex',
           flexDirection: 'column',
@@ -254,7 +286,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: '#e65100',
+            color: isRootNode ? '#d32f2f' : '#e65100',
             marginBottom: '0px',
             fontSize: '18px',
           }}
@@ -265,7 +297,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
           style={{
             textAlign: 'center',
             fontSize: '10px',
-            color: '#ff8f00',
+            color: isRootNode ? '#ef5350' : '#ff8f00',
             textTransform: 'uppercase',
             fontWeight: 'bold',
           }}

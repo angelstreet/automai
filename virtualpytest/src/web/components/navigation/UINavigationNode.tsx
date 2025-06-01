@@ -8,13 +8,17 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
-  // Check if this node is an orphan (no parent)
-  const isOrphan = !data.parent || data.parent.length === 0;
+  // Check if this node is a root node (no parent)
+  const isRootNode = !data.parent || data.parent.length === 0;
   
-  // Determine border color based on orphan status
-  const borderColor = isOrphan ? '#f44336' : '#ddd'; // Red for orphans, gray for connected
-  const borderWidth = isOrphan ? '2px' : '1px';
-
+  // Root node styling - more prominent than normal nodes
+  const rootNodeStyle = {
+    background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+    border: '2px solid #d32f2f',
+    boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)'
+  };
+  
+  // Normal node styling - based on node type
   const getNodeColor = (type: string) => {
     switch (type) {
       case 'screen': return '#e3f2fd';
@@ -51,8 +55,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   return (
     <div
       style={{
-        background: getNodeColor(data.type),
-        border: `${borderWidth} solid ${borderColor}`,
+        background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
+        border: isRootNode ? rootNodeStyle.border : `1px solid ${getNodeBorderColor(data.type)}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -60,13 +64,33 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
+        boxShadow: isRootNode ? rootNodeStyle.boxShadow : (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
+      {/* Root Node Indicator */}
+      {isRootNode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            backgroundColor: '#d32f2f',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 10,
+          }}
+        >
+          ROOT
+        </div>
+      )}
+      
       {/* Left Handles */}
       {/* Top-left: TARGET for receiving connections from right-side nodes */}
       <Handle 
@@ -240,7 +264,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <div
         style={{
           padding: '4px',
-          borderBottom: '1px solid #eee',
+          borderBottom: isRootNode ? '1px solid #ef5350' : '1px solid #eee',
           minHeight: '10px',
           display: 'flex',
           flexDirection: 'column',
@@ -255,7 +279,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: 'black',
+            color: isRootNode ? '#d32f2f' : 'black',
             marginBottom: '0px',
             fontSize: '18px',
           }}
@@ -266,7 +290,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             textAlign: 'center',
             fontSize: '10px',
-            color: '#666',
+            color: isRootNode ? '#ef5350' : '#666',
             textTransform: 'uppercase',
           }}
         >
