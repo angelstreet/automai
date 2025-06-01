@@ -403,24 +403,43 @@ def android_mobile_release_control():
             'error': f'Release error: {str(e)}'
         }), 500
 
-@remote_bp.route('/api/virtualpytest/android-mobile/command', methods=['POST'])
-def android_mobile_command():
-    """Send command to Android Mobile device."""
+@remote_bp.route('/api/virtualpytest/android-mobile/execute-action', methods=['POST'])
+def execute_android_mobile_action():
+    """Execute a specific action by action ID for Android Mobile controller."""
     try:
         import app
         
         if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
             return jsonify({
                 'success': False,
-                'error': 'No acticve connection'
+                'error': 'No active connection'
             }), 400
             
         data = request.get_json()
-        command = data.get('command')
-        params = data.get('params', {})
+        action_data = data.get('action')
+        
+        if not action_data:
+            return jsonify({
+                'success': False,
+                'error': 'Action data is required'
+            }), 400
+        
+        action_id = action_data.get('id')
+        command = action_data.get('command')
+        params = action_data.get('params', {})
+        
+        if not action_id or not command:
+            return jsonify({
+                'success': False,
+                'error': 'Action ID and command are required'
+            }), 400
+        
+        print(f"[@route:execute_android_mobile_action] Executing action {action_id}: {command} with params: {params}")
         
         success = False
+        message = ""
         
+        # Execute based on the command type
         if command == 'press_key':
             key = params.get('key')
             if not key:
@@ -428,12 +447,26 @@ def android_mobile_command():
                     'success': False,
                     'error': 'Key parameter required for press_key command'
                 }), 400
-                
             success = app.android_mobile_controller.press_key(key)
-            return jsonify({
-                'success': success,
-                'message': f'Key "{key}" {"pressed" if success else "failed"}'
-            })
+            message = f'Key "{key}" {"pressed" if success else "failed"}'
+            
+        elif command in ['BACK', 'HOME', 'MENU', 'POWER', 'VOLUME_UP', 'VOLUME_DOWN']:
+            # Direct Android key commands
+            keycode_map = {
+                'BACK': 'KEYCODE_BACK',
+                'HOME': 'KEYCODE_HOME',
+                'MENU': 'KEYCODE_MENU',
+                'POWER': 'KEYCODE_POWER',
+                'VOLUME_UP': 'KEYCODE_VOLUME_UP',
+                'VOLUME_DOWN': 'KEYCODE_VOLUME_DOWN'
+            }
+            keycode = keycode_map.get(command)
+            if keycode:
+                success = app.android_mobile_controller.press_key(keycode)
+            else:
+                # Try sending the command directly
+                success = app.android_mobile_controller.press_key(command)
+            message = f'Key "{command}" {"pressed" if success else "failed"}'
             
         elif command == 'launch_app':
             package = params.get('package', '')
@@ -442,12 +475,8 @@ def android_mobile_command():
                     'success': False,
                     'error': 'Package parameter required for launch_app command'
                 }), 400
-                
             success = app.android_mobile_controller.launch_app(package)
-            return jsonify({
-                'success': success,
-                'message': f'App "{package}" {"launched" if success else "failed"}'
-            })
+            message = f'App "{package}" {"launched" if success else "failed"}'
             
         elif command == 'input_text':
             text = params.get('text', '')
@@ -456,71 +485,26 @@ def android_mobile_command():
                     'success': False,
                     'error': 'Text parameter required for input_text command'
                 }), 400
-                
             success = app.android_mobile_controller.input_text(text)
-            return jsonify({
-                'success': success,
-                'message': f'Text input {"successful" if success else "failed"}'
-            })
-            
-        # Handle direct Android key commands
-        elif command in ['BACK', 'HOME', 'MENU', 'VOLUME_UP', 'VOLUME_DOWN', 'POWER', 'CAMERA', 'CALL', 'ENDCALL']:
-            # Map command to Android keycode
-            keycode_map = {
-                'BACK': 'KEYCODE_BACK',
-                'HOME': 'KEYCODE_HOME', 
-                'MENU': 'KEYCODE_MENU',
-                'VOLUME_UP': 'KEYCODE_VOLUME_UP',
-                'VOLUME_DOWN': 'KEYCODE_VOLUME_DOWN',
-                'POWER': 'KEYCODE_POWER',
-                'CAMERA': 'KEYCODE_CAMERA',
-                'CALL': 'KEYCODE_CALL',
-                'ENDCALL': 'KEYCODE_ENDCALL'
-            }
-            
-            keycode = keycode_map.get(command)
-            if keycode:
-                success = app.android_mobile_controller.press_key(keycode)
-                return jsonify({
-                    'success': success,
-                    'message': f'Key "{command}" {"pressed" if success else "failed"}'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': f'Unknown keycode for command: {command}'
-                }), 400
-                
-        # Handle app launch command (when sent as command directly)
-        elif command == 'LAUNCH_APP':
-            package = params.get('package', '')
-            if not package:
-                return jsonify({
-                    'success': False,
-                    'error': 'Package parameter required for LAUNCH_APP command'
-                }), 400
-                
-            success = app.android_mobile_controller.launch_app(package)
-            return jsonify({
-                'success': success,
-                'message': f'App "{package}" {"launched" if success else "failed"}'
-            })
+            message = f'Text input {"successful" if success else "failed"}'
             
         else:
             return jsonify({
                 'success': False,
                 'error': f'Unknown command: {command}'
             }), 400
-            
+        
         return jsonify({
             'success': success,
-            'message': f'Command {command} {"executed" if success else "failed"}'
+            'message': message,
+            'action_id': action_id,
+            'command': command
         })
         
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Command error: {str(e)}'
+            'error': f'Action execution error: {str(e)}'
         }), 500
 
 @remote_bp.route('/api/virtualpytest/android-mobile/dump-ui', methods=['POST'])
@@ -744,6 +728,253 @@ def android_mobile_screenshot_and_dump_ui():
         return jsonify({
             'success': False,
             'error': f'Screenshot and UI dump error: {str(e)}'
+        }), 500
+
+@remote_bp.route('/api/virtualpytest/android-mobile/actions', methods=['GET'])
+def get_android_mobile_actions():
+    """Get available actions for Android Mobile controller."""
+    try:
+        # Define available actions for android mobile
+        actions = {
+            'navigation': [
+                {
+                    'id': 'press_key_up',
+                    'label': 'Navigate Up',
+                    'command': 'press_key',
+                    'params': {'key': 'KEYCODE_DPAD_UP'},
+                    'description': 'Move cursor/selection up'
+                },
+                {
+                    'id': 'press_key_down', 
+                    'label': 'Navigate Down',
+                    'command': 'press_key',
+                    'params': {'key': 'KEYCODE_DPAD_DOWN'},
+                    'description': 'Move cursor/selection down'
+                },
+                {
+                    'id': 'press_key_left',
+                    'label': 'Navigate Left', 
+                    'command': 'press_key',
+                    'params': {'key': 'KEYCODE_DPAD_LEFT'},
+                    'description': 'Move cursor/selection left'
+                },
+                {
+                    'id': 'press_key_right',
+                    'label': 'Navigate Right',
+                    'command': 'press_key', 
+                    'params': {'key': 'KEYCODE_DPAD_RIGHT'},
+                    'description': 'Move cursor/selection right'
+                },
+                {
+                    'id': 'press_key_center',
+                    'label': 'Select/Enter',
+                    'command': 'press_key',
+                    'params': {'key': 'KEYCODE_DPAD_CENTER'}, 
+                    'description': 'Select current item or press enter'
+                }
+            ],
+            'system': [
+                {
+                    'id': 'back',
+                    'label': 'Back',
+                    'command': 'BACK',
+                    'params': {},
+                    'description': 'Go back to previous screen'
+                },
+                {
+                    'id': 'home',
+                    'label': 'Home',
+                    'command': 'HOME', 
+                    'params': {},
+                    'description': 'Go to home screen'
+                },
+                {
+                    'id': 'menu',
+                    'label': 'Menu',
+                    'command': 'MENU',
+                    'params': {},
+                    'description': 'Open menu'
+                },
+                {
+                    'id': 'power',
+                    'label': 'Power',
+                    'command': 'POWER',
+                    'params': {},
+                    'description': 'Power button press'
+                }
+            ],
+            'volume': [
+                {
+                    'id': 'volume_up',
+                    'label': 'Volume Up',
+                    'command': 'VOLUME_UP',
+                    'params': {},
+                    'description': 'Increase volume'
+                },
+                {
+                    'id': 'volume_down', 
+                    'label': 'Volume Down',
+                    'command': 'VOLUME_DOWN',
+                    'params': {},
+                    'description': 'Decrease volume'
+                }
+            ],
+            'apps': [
+                {
+                    'id': 'launch_app',
+                    'label': 'Launch App',
+                    'command': 'launch_app',
+                    'params': {'package': ''},
+                    'description': 'Launch a specific app by package name',
+                    'requiresInput': True,
+                    'inputLabel': 'Package Name',
+                    'inputPlaceholder': 'com.example.app'
+                }
+            ],
+            'input': [
+                {
+                    'id': 'input_text',
+                    'label': 'Input Text', 
+                    'command': 'input_text',
+                    'params': {'text': ''},
+                    'description': 'Send text input to the device',
+                    'requiresInput': True,
+                    'inputLabel': 'Text',
+                    'inputPlaceholder': 'Enter text to send'
+                }
+            ]
+        }
+        
+        return jsonify({
+            'success': True,
+            'controller_type': 'android_mobile',
+            'actions': actions
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error getting actions: {str(e)}'
+        }), 500
+
+@remote_bp.route('/api/virtualpytest/android-mobile/command', methods=['POST'])
+def android_mobile_command():
+    """Send command to Android Mobile device."""
+    try:
+        import app
+        
+        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active connection'
+            }), 400
+            
+        data = request.get_json()
+        command = data.get('command')
+        params = data.get('params', {})
+        
+        success = False
+        
+        if command == 'press_key':
+            key = params.get('key')
+            if not key:
+                return jsonify({
+                    'success': False,
+                    'error': 'Key parameter required for press_key command'
+                }), 400
+                
+            success = app.android_mobile_controller.press_key(key)
+            return jsonify({
+                'success': success,
+                'message': f'Key "{key}" {"pressed" if success else "failed"}'
+            })
+            
+        elif command == 'launch_app':
+            package = params.get('package', '')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Package parameter required for launch_app command'
+                }), 400
+                
+            success = app.android_mobile_controller.launch_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"launched" if success else "failed"}'
+            })
+            
+        elif command == 'input_text':
+            text = params.get('text', '')
+            if not text:
+                return jsonify({
+                    'success': False,
+                    'error': 'Text parameter required for input_text command'
+                }), 400
+                
+            success = app.android_mobile_controller.input_text(text)
+            return jsonify({
+                'success': success,
+                'message': f'Text input {"successful" if success else "failed"}'
+            })
+            
+        # Handle direct Android key commands
+        elif command in ['BACK', 'HOME', 'MENU', 'VOLUME_UP', 'VOLUME_DOWN', 'POWER', 'CAMERA', 'CALL', 'ENDCALL']:
+            # Map command to Android keycode
+            keycode_map = {
+                'BACK': 'KEYCODE_BACK',
+                'HOME': 'KEYCODE_HOME', 
+                'MENU': 'KEYCODE_MENU',
+                'VOLUME_UP': 'KEYCODE_VOLUME_UP',
+                'VOLUME_DOWN': 'KEYCODE_VOLUME_DOWN',
+                'POWER': 'KEYCODE_POWER',
+                'CAMERA': 'KEYCODE_CAMERA',
+                'CALL': 'KEYCODE_CALL',
+                'ENDCALL': 'KEYCODE_ENDCALL'
+            }
+            
+            keycode = keycode_map.get(command)
+            if keycode:
+                success = app.android_mobile_controller.press_key(keycode)
+                return jsonify({
+                    'success': success,
+                    'message': f'Key "{command}" {"pressed" if success else "failed"}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Unknown keycode for command: {command}'
+                }), 400
+                
+        # Handle app launch command (when sent as command directly)
+        elif command == 'LAUNCH_APP':
+            package = params.get('package', '')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Package parameter required for LAUNCH_APP command'
+                }), 400
+                
+            success = app.android_mobile_controller.launch_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"launched" if success else "failed"}'
+            })
+            
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown command: {command}'
+            }), 400
+            
+        return jsonify({
+            'success': success,
+            'message': f'Command {command} {"executed" if success else "failed"}'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Command error: {str(e)}'
         }), 500
 
 # =====================================================

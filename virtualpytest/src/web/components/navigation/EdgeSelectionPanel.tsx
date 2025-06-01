@@ -29,10 +29,21 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   setIsEdgeDialogOpen,
 }) => {
   const handleEdit = () => {
+    // Handle both old string format and new object format for actions
+    let actionValue: EdgeForm['action'] = undefined;
+    
+    if (selectedEdge.data?.action) {
+      if (typeof selectedEdge.data.action === 'string') {
+        // Old format - convert to undefined so user can select from dropdown
+        actionValue = undefined;
+      } else {
+        // New format - use as is
+        actionValue = selectedEdge.data.action;
+      }
+    }
+
     setEdgeForm({
-      action: selectedEdge.data?.action || '',
-      go: selectedEdge.data?.go || '',
-      comeback: selectedEdge.data?.comeback || '',
+      action: actionValue,
       description: selectedEdge.data?.description || '',
     });
     setIsEdgeDialogOpen(true);
@@ -77,22 +88,11 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         
         {selectedEdge.data?.action && (
           <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Action: {selectedEdge.data.action}
+            Action: {typeof selectedEdge.data.action === 'string' 
+              ? selectedEdge.data.action 
+              : selectedEdge.data.action.label}
           </Typography>
         )}
-        
-        {selectedEdge.data?.go && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Go Action: {selectedEdge.data.go}
-          </Typography>
-        )}
-        
-        {selectedEdge.data?.comeback && (
-          <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-            Return Action: {selectedEdge.data.comeback}
-          </Typography>
-        )}
-        
         
         <Box sx={{ mt: 1.5, display: 'flex', gap: 0.5 }}>
           <Button

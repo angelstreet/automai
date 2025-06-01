@@ -903,6 +903,8 @@ const NavigationEditorContent: React.FC = () => {
         setEdgeForm={setEdgeForm}
         onSubmit={handleEdgeFormSubmit}
         onClose={() => setIsEdgeDialogOpen(false)}
+        controllerTypes={userInterface?.models || []}
+        selectedEdge={selectedEdge}
       />
 
       {/* Discard Changes Confirmation Dialog */}
