@@ -670,6 +670,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       } else {
         console.error('[@component:VerificationEditor] Text auto-detection failed:', result.error);
         
+        // Set failed message in text input to show user what happened
+        setReferenceText('failed to find text');
+        
         // Still show preview image if available (even on failure)
         if (result.preview_url) {
           const timestamp = new Date().getTime();

@@ -899,6 +899,7 @@ def auto_detect_text():
         model = data.get('model')
         area = data.get('area')  # {x, y, width, height}
         source_path = data.get('source_path')  # Required source image path
+        image_filter = data.get('image_filter', 'none')  # Image preprocessing: none, greyscale, binary
         
         if not model or not area or not source_path:
             return jsonify({
@@ -906,7 +907,7 @@ def auto_detect_text():
                 'error': 'Model, area, and source_path are required'
             }), 400
             
-        print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}")
+        print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}, filter: {image_filter}")
         print(f"[@route:auto_detect_text] Using source image: {source_path}")
         
         # Validate source image exists
@@ -951,8 +952,61 @@ def auto_detect_text():
                     'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
                 }), 500
             
-            # Use tesseract to extract text and get detailed information
-            data_dict = pytesseract.image_to_data(cropped_image, output_type=pytesseract.Output.DICT)
+            # Apply image preprocessing based on filter option
+            processed_image = cropped_image.copy()
+            if image_filter == 'greyscale':
+                processed_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                # Convert back to BGR for consistency
+                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_GRAY2BGR)
+            elif image_filter == 'binary':
+                # Convert to greyscale first
+                gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                # Apply binary threshold (Otsu's method for automatic threshold)
+                _, processed_image = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                # Convert back to BGR for consistency
+                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_GRAY2BGR)
+            
+            # Save processed image if different from original
+            if image_filter != 'none':
+                processed_filename = f"text_autodetect_processed_{model}_{image_filter}.png"
+                processed_path = os.path.join(target_dir, processed_filename)
+                cv2.imwrite(processed_path, processed_image)
+                print(f"[@route:auto_detect_text] Saved processed image with {image_filter} filter: {processed_path}")
+            
+            # Use the processed image for OCR
+            ocr_image = processed_image if image_filter != 'none' else cropped_image
+            
+            # Language detection using OSD (Orientation and Script Detection)
+            detected_language = 'unknown'
+            language_confidence = 0
+            try:
+                # Use original cropped image for OSD (better for language detection)
+                osd_result = pytesseract.image_to_osd(cropped_image, output_type=pytesseract.Output.DICT)
+                script = osd_result.get('script', 'Unknown')
+                script_conf = float(osd_result.get('script_conf', 0))
+                
+                # Map script to language (basic mapping)
+                script_to_lang = {
+                    'Latin': 'eng',
+                    'Arabic': 'ara', 
+                    'Cyrillic': 'rus',
+                    'Devanagari': 'hin',
+                    'Han': 'chi_sim',
+                    'Hiragana': 'jpn',
+                    'Katakana': 'jpn'
+                }
+                detected_language = script_to_lang.get(script, 'eng')
+                language_confidence = script_conf / 100.0  # Convert to 0-1 range
+                
+                print(f"[@route:auto_detect_text] Detected script: {script} (confidence: {script_conf}%), using language: {detected_language}")
+            except Exception as osd_error:
+                print(f"[@route:auto_detect_text] Language detection failed, using default 'eng': {osd_error}")
+                detected_language = 'eng'
+                language_confidence = 0.5
+            
+            # Use tesseract to extract text with detected language
+            lang_config = f'-l {detected_language}'
+            data_dict = pytesseract.image_to_data(ocr_image, lang=detected_language, output_type=pytesseract.Output.DICT)
             
             # Extract text and calculate average confidence
             words = []
@@ -973,7 +1027,10 @@ def auto_detect_text():
                 return jsonify({
                     'success': False,
                     'error': 'No text detected in the specified area',
-                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
+                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                    'detected_language': detected_language,
+                    'language_confidence': language_confidence,
+                    'image_filter': image_filter
                 }), 400
                 
             # Combine all detected text
@@ -989,7 +1046,10 @@ def auto_detect_text():
                 'confidence': round(avg_confidence / 100, 3),  # Convert to 0-1 range
                 'font_size': round(avg_font_size),
                 'area': area,
-                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
+                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                'detected_language': detected_language,
+                'language_confidence': round(language_confidence, 3),
+                'image_filter': image_filter
             })
             
         except Exception as ocr_error:
@@ -997,7 +1057,8 @@ def auto_detect_text():
             return jsonify({
                 'success': False,
                 'error': f'OCR processing failed: {str(ocr_error)}',
-                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
+                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                'image_filter': image_filter
             }), 500
             
     except Exception as e:
