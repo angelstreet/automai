@@ -202,12 +202,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             overflow: 'hidden',
             mb: 0
           }}
-          onMouseLeave={() => {
-            if (selectedArea && onClearSelection) {
-              console.log('[@component:VerificationEditor] Auto-releasing drag on mouse leave');
-              onClearSelection();
-            }
-          }}
         >
           {capturedReferenceImage ? (
             <img 
