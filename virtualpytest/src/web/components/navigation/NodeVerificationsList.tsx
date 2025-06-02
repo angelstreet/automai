@@ -682,7 +682,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 
                 {/* Second Row: Comparison images/text below */}
                 {testResults[index] && (
-                  <Box sx={{ ml: 2, mt: 1 }}>
+                  <Box sx={{ mt: 0 }}>
                     {/* Image comparison thumbnails for image verifications */}
                     {verification.controller_type === 'image' && 
                      testResults[index].sourceImageUrl && 
@@ -713,7 +713,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         ))}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
         <Button
           size="small"
           variant="outlined"
