@@ -291,9 +291,109 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setShowConfirmDialog(false);
   };
 
-  const handleTest = () => {
+  const handleTest = async () => {
+    if (verifications.length === 0) {
+      console.log('[@component:VerificationEditor] No verifications to test');
+      return;
+    }
+
     console.log('[@component:VerificationEditor] Running verification tests:', verifications);
-    // TODO: Implement test functionality
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Step 1: Initialize verification controllers
+      console.log('[@component:VerificationEditor] Initializing verification controllers...');
+      const initResponse = await fetch('http://localhost:5009/api/virtualpytest/verification/take-control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          av_controller_type: 'android_mobile' // Use the model as controller type
+        }),
+      });
+
+      const initResult = await initResponse.json();
+      if (!initResult.success) {
+        setError(`Failed to initialize verification controllers: ${initResult.error}`);
+        console.error('[@component:VerificationEditor] Controller initialization failed:', initResult.error);
+        return;
+      }
+
+      console.log('[@component:VerificationEditor] Controllers initialized successfully');
+
+      // Step 2: Prepare verifications for API call
+      const verificationsToExecute = verifications.map(verification => {
+        // For image verifications, use the selected reference image or inputValue as image_path
+        let updatedParams = { ...verification.params };
+        
+        if (verification.controller_type === 'image' && verification.requiresInput) {
+          // Use the reference image name or manual input as image_path
+          const imagePath = verification.params?.reference_image || verification.inputValue || '';
+          if (imagePath) {
+            updatedParams.image_path = imagePath;
+          }
+        } else if (verification.controller_type === 'text' && verification.requiresInput) {
+          // For text verifications, use inputValue as text parameter
+          const textValue = verification.inputValue || '';
+          if (textValue) {
+            updatedParams.text = textValue;
+          }
+        }
+
+        return {
+          ...verification,
+          params: updatedParams
+        };
+      });
+
+      console.log('[@component:VerificationEditor] Executing verifications:', verificationsToExecute);
+
+      // Step 3: Call the batch verification API
+      const response = await fetch('http://localhost:5009/api/virtualpytest/verification/execute-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verifications: verificationsToExecute,
+          node_id: 'verification_editor_test',
+          tree_id: 'manual_test'
+        }),
+      });
+
+      const result = await response.json();
+      console.log('[@component:VerificationEditor] Test results:', result);
+      
+      if (result.success) {
+        const passedCount = result.passed_count || 0;
+        const totalCount = result.total_verifications || verifications.length;
+        
+        if (passedCount === totalCount) {
+          setSuccessMessage(`All ${totalCount} verification(s) passed!`);
+        } else {
+          setError(`${passedCount}/${totalCount} verification(s) passed. Check details in console.`);
+        }
+        
+        // Log individual results
+        if (result.results) {
+          result.results.forEach((res: any, index: number) => {
+            const status = res.success ? 'PASSED' : 'FAILED';
+            console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
+          });
+        }
+      } else {
+        setError(result.error || 'Verification test failed');
+        console.error('[@component:VerificationEditor] Test failed:', result.error);
+      }
+    } catch (error) {
+      console.error('[@component:VerificationEditor] Error running tests:', error);
+      setError('Failed to run verification tests');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canCapture = selectedArea;
