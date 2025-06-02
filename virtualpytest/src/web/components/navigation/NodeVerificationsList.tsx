@@ -367,6 +367,21 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     sourceUrl?: string;
     resultType: 'PASS' | 'FAIL' | 'ERROR';
   }> = ({ searchedText, extractedText, sourceUrl, resultType }) => {
+    
+    const handleSourceImageClick = () => {
+      if (sourceUrl) {
+        setImageComparisonDialog({
+          open: true,
+          sourceUrl: `http://localhost:5009${sourceUrl}`,
+          referenceUrl: '', // No reference for text verification
+          resultType,
+          userThreshold: undefined,
+          matchingResult: undefined,
+          imageFilter: undefined
+        });
+      }
+    };
+    
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -387,13 +402,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             <img
               src={`http://localhost:5009${sourceUrl}`}
               alt="Source"
+              onClick={handleSourceImageClick}
               style={{
                 width: '100px',
                 height: '100px',
                 objectFit: 'contain',
                 border: '1px solid #666',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                cursor: 'pointer'
               }}
+              title="Click to view full size"
             />
           </Box>
         )}
@@ -934,9 +952,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     
                     {/* Text comparison for text verifications */}
                     {verification.controller_type === 'text' && 
-                     testResults[index].searchedText && (
+                     (testResults[index].searchedText || testResults[index].sourceImageUrl) && (
                       <TextComparisonDisplay
-                        searchedText={testResults[index].searchedText!}
+                        searchedText={testResults[index].searchedText || verification.params?.reference_text || verification.inputValue || ''}
                         extractedText={testResults[index].extractedText || ''}
                         sourceUrl={testResults[index].sourceImageUrl}
                         resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
@@ -1042,7 +1060,21 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               )}
             </Box>
           ) : (
-            'Image Comparison'
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+              <Typography component="span">
+                {imageComparisonDialog.referenceUrl ? 'Image Comparison' : 'Text Verification Search Area'}
+              </Typography>
+              {imageComparisonDialog.resultType && (
+                <Typography component="span" sx={{ 
+                  color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
+                        imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }}>
+                  [{imageComparisonDialog.resultType}]
+                </Typography>
+              )}
+            </Box>
           )}
         </DialogTitle>
         <DialogContent sx={{ p: 2 }}>
@@ -1058,7 +1090,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 Source
               </Typography>
               <img
-                src={`http://localhost:5009${imageComparisonDialog.sourceUrl}`}
+                src={imageComparisonDialog.sourceUrl}
                 alt="Source Scaled"
                 style={{
                   width: '100%',
@@ -1069,22 +1101,24 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 }}
               />
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                Reference
-              </Typography>
-              <img
-                src={`http://localhost:5009${imageComparisonDialog.referenceUrl}`}
-                alt="Reference Scaled"
-                style={{
-                  width: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  border: '2px solid #666',
-                  borderRadius: '8px'
-                }}
-              />
-            </Box>
+            {imageComparisonDialog.referenceUrl && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
+                  Reference
+                </Typography>
+                <img
+                  src={imageComparisonDialog.referenceUrl}
+                  alt="Reference Scaled"
+                  style={{
+                    width: '100%',
+                    maxHeight: '70vh',
+                    objectFit: 'contain',
+                    border: '2px solid #666',
+                    borderRadius: '8px'
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
