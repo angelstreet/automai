@@ -396,31 +396,57 @@ class TextVerificationController(VerificationControllerInterface):
             for source_path in image_list:
                 if not os.path.exists(source_path):
                     continue
-                
-                # Apply filter to source image if specified
-                if image_filter and image_filter != 'none':
-                    if not apply_image_filter(source_path, image_filter):
-                        print(f"[@controller:TextVerification] Failed to apply filter to source: {source_path}")
-                        continue
                     
-                extracted_text = self._extract_text_from_area(source_path, area)
+                # Create a temporary copy for filtering (don't modify original)
+                filtered_source_path = source_path
+                if image_filter and image_filter != 'none':
+                    import tempfile
+                    import shutil
+                    
+                    # Create temporary file for filtered version
+                    temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_source_')
+                    os.close(temp_fd)
+                    
+                    # Copy original to temp location
+                    shutil.copy2(source_path, temp_path)
+                    
+                    # Apply filter to temporary copy
+                    if apply_image_filter(temp_path, image_filter):
+                        filtered_source_path = temp_path
+                        print(f"[@controller:TextVerification] Created filtered copy: {temp_path}")
+                    else:
+                        print(f"[@controller:TextVerification] Failed to apply filter, using original")
+                        os.unlink(temp_path)  # Clean up failed temp file
+                        filtered_source_path = source_path
+                else:
+                    filtered_source_path = source_path
+                    
+                extracted_text = self._extract_text_from_area(filtered_source_path, area)
                 
                 # Keep track of the longest extracted text as "closest"
                 if len(extracted_text.strip()) > len(closest_text):
                     closest_text = extracted_text.strip()
-                    best_source_path = source_path
+                    best_source_path = source_path  # Always use original path for saving
                 
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
                     
-                    # Save source image for UI comparison
+                    # Save source image for UI comparison (from ORIGINAL, not filtered)
                     if model is not None:
                         saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
                         if saved_source_path:
                             additional_data["source_image_path"] = saved_source_path
                     
+                    # Clean up temp file if it was created
+                    if filtered_source_path != source_path and os.path.exists(filtered_source_path):
+                        os.unlink(filtered_source_path)
+                    
                     additional_data["extracted_text"] = extracted_text.strip()
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
+                
+                # Clean up temp file if it was created
+                if filtered_source_path != source_path and os.path.exists(filtered_source_path):
+                    os.unlink(filtered_source_path)
             
             # If no match found, still save the best source for comparison
             if best_source_path and model is not None:
@@ -435,9 +461,106 @@ class TextVerificationController(VerificationControllerInterface):
                 return False, f"Text pattern '{text}' not found in provided images (no text extracted)", additional_data
         
         else:
-            # Use capture system
-            print(f"[@controller:TextVerification] Starting capture for {timeout}s")
-            return self._capture_and_search_text(text, timeout, case_sensitive, area, model, verification_index, additional_data, image_filter)
+            # Capture new image if no image list provided
+            print(f"[@controller:TextVerification] No image list provided, capturing new image")
+            
+            capture_path = self.av_controller.capture_screen()
+            if not capture_path:
+                return False, "Failed to capture screen for text verification", additional_data
+            
+            # Create a temporary copy for filtering (don't modify original)
+            filtered_capture_path = capture_path
+            if image_filter and image_filter != 'none':
+                import tempfile
+                import shutil
+                
+                # Create temporary file for filtered version
+                temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_capture_')
+                os.close(temp_fd)
+                
+                # Copy original to temp location
+                shutil.copy2(capture_path, temp_path)
+                
+                # Apply filter to temporary copy
+                if apply_image_filter(temp_path, image_filter):
+                    filtered_capture_path = temp_path
+                    print(f"[@controller:TextVerification] Created filtered capture copy: {temp_path}")
+                else:
+                    print(f"[@controller:TextVerification] Failed to apply filter, using original capture")
+                    os.unlink(temp_path)  # Clean up failed temp file
+                    filtered_capture_path = capture_path
+            else:
+                filtered_capture_path = capture_path
+            
+            start_time = time.time()
+            closest_text = ""
+            
+            while time.time() - start_time < timeout:
+                extracted_text = self._extract_text_from_area(filtered_capture_path, area)
+                
+                # Keep track of the longest extracted text as "closest"
+                if len(extracted_text.strip()) > len(closest_text):
+                    closest_text = extracted_text.strip()
+                
+                if self._text_matches(extracted_text, text, case_sensitive):
+                    print(f"[@controller:TextVerification] Text found in captured frame: '{extracted_text.strip()}'")
+                    
+                    # Save source image for UI comparison (from ORIGINAL, not filtered)
+                    if model is not None:
+                        saved_source_path = self._save_source_image_for_comparison(capture_path, model, verification_index)
+                        if saved_source_path:
+                            additional_data["source_image_path"] = saved_source_path
+                    
+                    # Clean up temp file if it was created
+                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                        os.unlink(filtered_capture_path)
+                    
+                    additional_data["extracted_text"] = extracted_text.strip()
+                    return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
+                
+                # Re-capture if we're in a loop
+                if time.time() - start_time < timeout:
+                    # Clean up previous temp file
+                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                        os.unlink(filtered_capture_path)
+                    
+                    capture_path = self.av_controller.capture_screen()
+                    if not capture_path:
+                        return False, "Failed to re-capture screen for text verification", additional_data
+                    
+                    # Create new filtered copy if needed
+                    filtered_capture_path = capture_path
+                    if image_filter and image_filter != 'none':
+                        import tempfile
+                        import shutil
+                        
+                        temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_capture_')
+                        os.close(temp_fd)
+                        shutil.copy2(capture_path, temp_path)
+                        
+                        if apply_image_filter(temp_path, image_filter):
+                            filtered_capture_path = temp_path
+                        else:
+                            os.unlink(temp_path)
+                            filtered_capture_path = capture_path
+                
+                time.sleep(0.5)
+            
+            # Save source for comparison even if not found (from ORIGINAL)
+            if model is not None:
+                saved_source_path = self._save_source_image_for_comparison(capture_path, model, verification_index)
+                if saved_source_path:
+                    additional_data["source_image_path"] = saved_source_path
+            
+            # Clean up temp file if it was created
+            if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                os.unlink(filtered_capture_path)
+            
+            additional_data["extracted_text"] = closest_text
+            if closest_text:
+                return False, f"Text pattern '{text}' not found after {timeout}s. Closest text found: '{closest_text}'", additional_data
+            else:
+                return False, f"Text pattern '{text}' not found after {timeout}s (no text extracted)", additional_data
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
                               area: tuple = None, image_list: List[str] = None, model: str = None,
@@ -504,93 +627,6 @@ class TextVerificationController(VerificationControllerInterface):
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
-
-    def _capture_and_search_text(self, text: str, timeout: float, case_sensitive: bool, area: tuple = None,
-                                model: str = None, verification_index: int = 0, additional_data: dict = None,
-                                image_filter: str = None) -> Tuple[bool, str, dict]:
-        """
-        Start capture, wait for timeout, stop capture, and search for text in captured frames.
-        Returns immediately on first match found.
-        """
-        if additional_data is None:
-            additional_data = {}
-            
-        try:
-            # Start capture
-            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', json={})
-            if not response.json().get('success'):
-                return False, "Failed to start capture", additional_data
-            
-            # Wait for timeout (capture all frames during this period)
-            time.sleep(timeout)
-            
-            # Stop capture and get frames
-            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', json={})
-            result = response.json()
-            
-            if not result.get('success'):
-                return False, "Failed to stop capture", additional_data
-            
-            frames_downloaded = result.get('frames_downloaded', 0)
-            if frames_downloaded == 0:
-                return False, "No frames captured", additional_data
-            
-            print(f"[@controller:TextVerification] Processing {frames_downloaded} captured frames...")
-            
-            # Search in captured frames - return immediately on first match
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            capture_dir = os.path.join(base_dir, 'tmp', 'captures')
-            
-            closest_text = ""
-            best_frame_path = None
-            
-            for i in range(1, frames_downloaded + 1):
-                frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
-                if not os.path.exists(frame_path):
-                    continue
-                
-                # Apply filter to frame if specified
-                if image_filter and image_filter != 'none':
-                    if not apply_image_filter(frame_path, image_filter):
-                        print(f"[@controller:TextVerification] Failed to apply filter to frame: {frame_path}")
-                        continue
-                
-                print(f"[@controller:TextVerification] Processing frame {i} for OCR...")
-                extracted_text = self._extract_text_from_area(frame_path, area)
-                
-                # Keep track of the longest extracted text as "closest"
-                if len(extracted_text.strip()) > len(closest_text):
-                    closest_text = extracted_text.strip()
-                    best_frame_path = frame_path
-                
-                # Return immediately on first match
-                if self._text_matches(extracted_text, text, case_sensitive):
-                    print(f"[@controller:TextVerification] Text match found in frame {i}! Stopping analysis.")
-                    
-                    # Save source image for UI comparison
-                    if model is not None:
-                        saved_source_path = self._save_source_image_for_comparison(frame_path, model, verification_index)
-                        if saved_source_path:
-                            additional_data["source_image_path"] = saved_source_path
-                    
-                    additional_data["extracted_text"] = extracted_text.strip()
-                    return True, f"Text found in frame {i}: '{extracted_text.strip()}'", additional_data
-            
-            # If no match found, still save the best frame for comparison
-            if best_frame_path and model is not None:
-                saved_source_path = self._save_source_image_for_comparison(best_frame_path, model, verification_index)
-                if saved_source_path:
-                    additional_data["source_image_path"] = saved_source_path
-            
-            additional_data["extracted_text"] = closest_text
-            if closest_text:
-                return False, f"Text pattern '{text}' not found in {frames_downloaded} frames. Closest text found: '{closest_text}'", additional_data
-            else:
-                return False, f"Text pattern '{text}' not found in {frames_downloaded} frames (no text extracted)", additional_data
-            
-        except Exception as e:
-            print(f"[@controller:TextVerification] Capture and search error: {e}")
-            return False, f"Capture error: {str(e)}", additional_data
 
     # Implementation of required abstract methods from VerificationControllerInterface
     
