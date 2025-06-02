@@ -1,5 +1,13 @@
 import React, { useMemo, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
+import { DragSelectionOverlay } from './DragSelectionOverlay';
+
+interface DragArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface ScreenshotCaptureProps {
   screenshotPath?: string;
@@ -11,6 +19,8 @@ interface ScreenshotCaptureProps {
     stream: string | null;
   };
   onImageLoad?: (ref: React.RefObject<HTMLImageElement>, dimensions: {width: number, height: number}, sourcePath: string) => void;
+  selectedArea?: DragArea | null;
+  onAreaSelected?: (area: DragArea) => void;
   sx?: any;
 }
 
@@ -20,6 +30,8 @@ export function ScreenshotCapture({
   isSaving,
   resolutionInfo,
   onImageLoad,
+  selectedArea,
+  onAreaSelected,
   sx = {}
 }: ScreenshotCaptureProps) {
   const imageRef = useRef<HTMLImageElement>(null);
@@ -96,6 +108,9 @@ export function ScreenshotCapture({
     return finalUrl;
   }, [screenshotPath]);
 
+  // Determine if drag selection should be enabled
+  const allowDragSelection = screenshotPath && imageUrl && !isCapturing && onAreaSelected && imageRef.current;
+
   return (
     <Box sx={{ 
       position: 'relative',
@@ -112,6 +127,16 @@ export function ScreenshotCapture({
       msUserSelect: 'none',
       ...sx 
     }}>
+      {/* Drag Selection Overlay - positioned over the entire content area */}
+      {allowDragSelection && (
+        <DragSelectionOverlay
+          imageRef={imageRef}
+          onAreaSelected={onAreaSelected}
+          selectedArea={selectedArea || null}
+          sx={{ zIndex: 10 }}
+        />
+      )}
+
       {/* Screenshot display - only shown when not capturing */}
       {screenshotPath && imageUrl && !isCapturing && (
         <img 

@@ -10,6 +10,14 @@ import {
   Pause,
 } from '@mui/icons-material';
 import { useCapture } from '../../hooks/useCapture';
+import { DragSelectionOverlay } from './DragSelectionOverlay';
+
+interface DragArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface VideoCaptureProps {
   deviceModel?: string;
@@ -22,6 +30,8 @@ interface VideoCaptureProps {
   isSaving?: boolean;
   savedFrameCount?: number;
   onImageLoad?: (ref: React.RefObject<HTMLImageElement>, dimensions: {width: number, height: number}, sourcePath: string) => void;
+  selectedArea?: DragArea | null;
+  onAreaSelected?: (area: DragArea) => void;
   sx?: any;
 }
 
@@ -36,6 +46,8 @@ export function VideoCapture({
   isSaving = false,
   savedFrameCount = 0,
   onImageLoad,
+  selectedArea,
+  onAreaSelected,
   sx = {}
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -168,6 +180,9 @@ export function VideoCapture({
     return `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(framePath)}&t=${timestamp}`;
   }, [videoFramesPath, currentValue, totalFrames]);
 
+  // Determine if drag selection should be enabled
+  const allowDragSelection = (videoFramesPath || !isCapturing) && onAreaSelected && imageRef.current;
+
   return (
     <Box sx={{ 
       width: '100%',
@@ -227,6 +242,16 @@ export function VideoCapture({
         justifyContent: 'center',
         backgroundColor: 'transparent',
       }}>
+        {/* Drag Selection Overlay - positioned over the entire content area */}
+        {allowDragSelection && (
+          <DragSelectionOverlay
+            imageRef={imageRef}
+            onAreaSelected={onAreaSelected}
+            selectedArea={selectedArea || null}
+            sx={{ zIndex: 10 }}
+          />
+        )}
+
         {/* Live capture view - show the latest captured frame */}
         {isCapturing && !videoFramesPath && (
           <img 

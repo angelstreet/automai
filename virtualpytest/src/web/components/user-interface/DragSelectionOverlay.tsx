@@ -26,114 +26,132 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
   const [currentDrag, setCurrentDrag] = useState<DragArea | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Debug logs
-  console.log('[@component:DragSelectionOverlay] Rendered with props:', {
-    hasImageRef: !!imageRef,
-    imageRefCurrent: !!imageRef?.current,
-    selectedArea,
-    isDragging
-  });
-
   const getImageBounds = useCallback(() => {
     if (!imageRef.current || !overlayRef.current) {
-      console.log('[@component:DragSelectionOverlay] getImageBounds: missing refs', {
-        imageRef: !!imageRef.current,
-        overlayRef: !!overlayRef.current
-      });
       return null;
     }
-    
-    const imageRect = imageRef.current.getBoundingClientRect();
-    const overlayRect = overlayRef.current.getBoundingClientRect();
-    
-    const bounds = {
-      left: imageRect.left - overlayRect.left,
-      top: imageRect.top - overlayRect.top,
-      width: imageRect.width,
-      height: imageRect.height
-    };
 
-    console.log('[@component:DragSelectionOverlay] getImageBounds:', bounds);
-    return bounds;
+    const image = imageRef.current;
+    const overlay = overlayRef.current;
+    
+    const imageRect = image.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    
+    // Calculate the actual displayed image dimensions (accounting for object-fit: contain)
+    const imageAspectRatio = image.naturalWidth / image.naturalHeight;
+    const containerAspectRatio = imageRect.width / imageRect.height;
+    
+    let displayedWidth, displayedHeight, offsetX, offsetY;
+    
+    if (imageAspectRatio > containerAspectRatio) {
+      // Image is wider than container - limited by width
+      displayedWidth = imageRect.width;
+      displayedHeight = imageRect.width / imageAspectRatio;
+      offsetX = 0;
+      offsetY = (imageRect.height - displayedHeight) / 2;
+    } else {
+      // Image is taller than container - limited by height
+      displayedWidth = imageRect.height * imageAspectRatio;
+      displayedHeight = imageRect.height;
+      offsetX = (imageRect.width - displayedWidth) / 2;
+      offsetY = 0;
+    }
+    
+    return {
+      left: imageRect.left - overlayRect.left + offsetX,
+      top: imageRect.top - overlayRect.top + offsetY,
+      width: displayedWidth,
+      height: displayedHeight,
+      scaleX: image.naturalWidth / displayedWidth,
+      scaleY: image.naturalHeight / displayedHeight
+    };
   }, [imageRef]);
 
-  const getRelativeCoordinates = useCallback((clientX: number, clientY: number) => {
-    if (!overlayRef.current) return { x: 0, y: 0 };
-    
-    const overlayRect = overlayRef.current.getBoundingClientRect();
-    const imageBounds = getImageBounds();
-    if (!imageBounds) return { x: 0, y: 0 };
-
-    let x = clientX - overlayRect.left - imageBounds.left;
-    let y = clientY - overlayRect.top - imageBounds.top;
-
-    // Constrain to image bounds
-    x = Math.max(0, Math.min(x, imageBounds.width));
-    y = Math.max(0, Math.min(y, imageBounds.height));
-
-    return { x, y };
-  }, [getImageBounds]);
-
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    console.log('[@component:DragSelectionOverlay] handleMouseDown called');
+    if (!imageRef.current) return;
     
-    const imageBounds = getImageBounds();
-    if (!imageBounds) {
-      console.log('[@component:DragSelectionOverlay] handleMouseDown: no image bounds');
-      return;
+    const bounds = getImageBounds();
+    if (!bounds) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if click is within image bounds
+    if (x >= bounds.left && x <= bounds.left + bounds.width && 
+        y >= bounds.top && y <= bounds.top + bounds.height) {
+      
+      setIsDragging(true);
+      setDragStart({ x, y });
+      setCurrentDrag(null);
+      e.preventDefault();
     }
-
-    const coords = getRelativeCoordinates(e.clientX, e.clientY);
-    console.log('[@component:DragSelectionOverlay] Starting drag at:', coords);
-    
-    setDragStart(coords);
-    setIsDragging(true);
-    setCurrentDrag({ x: coords.x, y: coords.y, width: 0, height: 0 });
-  }, [getImageBounds, getRelativeCoordinates]);
+  }, [imageRef, getImageBounds]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStart) return;
-
-    const coords = getRelativeCoordinates(e.clientX, e.clientY);
+    if (!isDragging || !dragStart || !imageRef.current) return;
     
-    const newArea: DragArea = {
-      x: Math.min(dragStart.x, coords.x),
-      y: Math.min(dragStart.y, coords.y),
-      width: Math.abs(coords.x - dragStart.x),
-      height: Math.abs(coords.y - dragStart.y)
-    };
-
-    setCurrentDrag(newArea);
-  }, [isDragging, dragStart, getRelativeCoordinates]);
+    const bounds = getImageBounds();
+    if (!bounds) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    
+    // Constrain mouse to image bounds
+    x = Math.max(bounds.left, Math.min(bounds.left + bounds.width, x));
+    y = Math.max(bounds.top, Math.min(bounds.top + bounds.height, y));
+    
+    const startX = Math.max(bounds.left, Math.min(bounds.left + bounds.width, dragStart.x));
+    const startY = Math.max(bounds.top, Math.min(bounds.top + bounds.height, dragStart.y));
+    
+    const left = Math.min(startX, x) - bounds.left;
+    const top = Math.min(startY, y) - bounds.top;
+    const width = Math.abs(x - startX);
+    const height = Math.abs(y - startY);
+    
+    // Minimum size constraint
+    if (width >= 10 && height >= 10) {
+      setCurrentDrag({ x: left, y: top, width, height });
+    }
+  }, [isDragging, dragStart, imageRef, getImageBounds]);
 
   const handleMouseUp = useCallback(() => {
-    if (!currentDrag || !isDragging) return;
-
-    console.log('[@component:DragSelectionOverlay] handleMouseUp:', currentDrag);
-
-    // Check minimum size (10x10px)
-    if (currentDrag.width >= 10 && currentDrag.height >= 10) {
-      console.log('[@component:DragSelectionOverlay] Area selected:', currentDrag);
-      onAreaSelected(currentDrag);
-    } else {
-      console.log('[@component:DragSelectionOverlay] Area too small, minimum 10x10px');
+    if (!isDragging || !currentDrag || !imageRef.current) {
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
     }
-
+    
+    const bounds = getImageBounds();
+    if (!bounds || !onAreaSelected) {
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+    
+    // Convert to original image coordinates
+    const originalArea = {
+      x: currentDrag.x * bounds.scaleX,
+      y: currentDrag.y * bounds.scaleY,
+      width: currentDrag.width * bounds.scaleX,
+      height: currentDrag.height * bounds.scaleY
+    };
+    
+    onAreaSelected(originalArea);
     setIsDragging(false);
     setDragStart(null);
     setCurrentDrag(null);
-  }, [currentDrag, isDragging, onAreaSelected]);
+  }, [isDragging, currentDrag, imageRef, getImageBounds, onAreaSelected]);
 
-  const displayArea = currentDrag || selectedArea;
-  const imageBounds = getImageBounds();
-
-  console.log('[@component:DragSelectionOverlay] Render state:', {
-    displayArea,
-    imageBounds,
-    isDragging,
-    hasOverlayRef: !!overlayRef.current
-  });
+  const displayArea = currentDrag || (selectedArea && getImageBounds() ? {
+    x: selectedArea.x / getImageBounds()!.scaleX,
+    y: selectedArea.y / getImageBounds()!.scaleY,
+    width: selectedArea.width / getImageBounds()!.scaleX,
+    height: selectedArea.height / getImageBounds()!.scaleY
+  } : null);
 
   return (
     <Box
@@ -144,52 +162,53 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        cursor: isDragging ? 'crosshair' : 'crosshair',
+        cursor: isDragging ? 'crosshair' : 'default',
         userSelect: 'none',
-        pointerEvents: 'all',
-        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Debug: add slight red tint to see overlay
-        border: '1px solid red', // Debug: border to see overlay bounds
+        pointerEvents: 'auto',
+        zIndex: 5,
         ...sx
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
-      {/* Selection Rectangle */}
-      {displayArea && imageBounds && (
+      {/* Selection rectangle */}
+      {displayArea && getImageBounds() && (
         <Box
           sx={{
             position: 'absolute',
-            left: imageBounds.left + displayArea.x,
-            top: imageBounds.top + displayArea.y,
+            left: getImageBounds()!.left + displayArea.x,
+            top: getImageBounds()!.top + displayArea.y,
             width: displayArea.width,
             height: displayArea.height,
             border: '2px solid white',
+            backgroundColor: 'transparent',
             pointerEvents: 'none',
             boxSizing: 'border-box'
           }}
         />
       )}
-
-      {/* Coordinates Display */}
-      {displayArea && imageBounds && !isDragging && (
+      
+      {/* Coordinates display */}
+      {displayArea && getImageBounds() && (
         <Box
           sx={{
             position: 'absolute',
-            left: imageBounds.left + displayArea.x,
-            top: imageBounds.top + displayArea.y - 25,
-            backgroundColor: 'rgba(0,0,0,0.8)',
+            left: getImageBounds()!.left + displayArea.x,
+            top: getImageBounds()!.top + displayArea.y - 25,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
             color: 'white',
             padding: '2px 6px',
+            borderRadius: '4px',
             fontSize: '0.7rem',
-            borderRadius: '2px',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
           }}
         >
-          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-            x: {Math.round(displayArea.x)}, y: {Math.round(displayArea.y)}, w: {Math.round(displayArea.width)}, h: {Math.round(displayArea.height)}
-          </Typography>
+          {selectedArea ? 
+            `x: ${Math.round(selectedArea.x)}, y: ${Math.round(selectedArea.y)}, w: ${Math.round(selectedArea.width)}, h: ${Math.round(selectedArea.height)}` :
+            'Drag to select area'
+          }
         </Box>
       )}
     </Box>

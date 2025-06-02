@@ -7,7 +7,6 @@ import {
 } from '@mui/material';
 import { Camera as CameraIcon } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
-import { DragSelectionOverlay } from './DragSelectionOverlay';
 
 interface VerificationAction {
   id: string;
@@ -52,6 +51,9 @@ interface VerificationEditorProps {
   captureImageDimensions?: { width: number; height: number };
   originalImageDimensions?: { width: number; height: number };
   captureSourcePath?: string;
+  selectedArea?: DragArea | null;
+  onAreaSelected?: (area: DragArea) => void;
+  onClearSelection?: () => void;
   sx?: any;
 }
 
@@ -63,13 +65,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   captureImageDimensions,
   originalImageDimensions,
   captureSourcePath,
+  selectedArea,
+  onAreaSelected,
+  onClearSelection,
   sx = {},
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedArea, setSelectedArea] = useState<DragArea | null>(null);
   const [referenceName, setReferenceName] = useState<string>('');
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
 
@@ -105,14 +109,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setVerifications(newVerifications);
   };
 
-  const handleAreaSelected = (area: DragArea) => {
-    console.log('[@component:VerificationEditor] Area selected:', area);
-    setSelectedArea(area);
-  };
-
   const handleClearSelection = () => {
-    setSelectedArea(null);
     setCapturedReferenceImage(null);
+    if (onClearSelection) {
+      onClearSelection();
+    }
   };
 
   const handleCaptureReference = async () => {
@@ -139,7 +140,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 460, 
+      width: 480, 
       height: 520, 
       p: 2, 
       display: 'flex', 
@@ -149,7 +150,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }}>
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>Verification Editor</Typography>
       
-      {/* Screenshot Capture Section with Drag Selection */}
+      {/* Screenshot Capture Section */}
       <Box>
         <Box 
           ref={captureContainerRef}
@@ -167,16 +168,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             overflow: 'hidden'
           }}
         >
-          {/* Drag Selection Overlay */}
-          {allowSelection && (
-            <DragSelectionOverlay
-              imageRef={captureImageRef}
-              onAreaSelected={handleAreaSelected}
-              selectedArea={selectedArea}
-              sx={{ zIndex: 2 }}
-            />
-          )}
-
           {capturedReferenceImage ? (
             <img 
               src={capturedReferenceImage}
@@ -189,7 +180,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             />
           ) : (
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
-              {allowSelection ? 'Drag to select area' : 'No image captured'}
+              {allowSelection ? 'Drag to select area on main image' : 'No image captured'}
             </Typography>
           )}
         </Box>

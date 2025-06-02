@@ -596,6 +596,34 @@ export function ScreenDefinitionEditor({
     return undefined;
   }, [avConfig]);
   
+  // VerificationEditor integration state
+  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
+  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
+  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
+
+  // Drag selection state
+  const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // Initialize verification image state
+  const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
+    console.log('[@component:ScreenDefinitionEditor] Image loaded for verification:', { dimensions, sourcePath });
+    setCaptureImageRef(ref);
+    setCaptureImageDimensions(dimensions);
+    setCaptureSourcePath(sourcePath);
+  }, []);
+
+  // Handle area selection from drag overlay
+  const handleAreaSelected = useCallback((area: { x: number; y: number; width: number; height: number }) => {
+    console.log('[@component:ScreenDefinitionEditor] Area selected:', area);
+    setSelectedArea(area);
+  }, []);
+
+  // Handle clearing selection
+  const handleClearSelection = useCallback(() => {
+    console.log('[@component:ScreenDefinitionEditor] Clearing selection');
+    setSelectedArea(null);
+  }, []);
+
   // Use the computed stream URL in the render function
   const renderViewComponent = () => {
     const commonProps = {
@@ -620,6 +648,8 @@ export function ScreenDefinitionEditor({
             isCapturing={false}
             isSaving={isSaving || isScreenshotLoading}
             onImageLoad={handleImageLoad}
+            selectedArea={selectedArea}
+            onAreaSelected={handleAreaSelected}
             {...commonProps}
           />
         );
@@ -637,6 +667,8 @@ export function ScreenDefinitionEditor({
             isSaving={isSaving}
             savedFrameCount={savedFrameCount}
             onImageLoad={handleImageLoad}
+            selectedArea={selectedArea}
+            onAreaSelected={handleAreaSelected}
             {...commonProps}
           />
         );
@@ -718,19 +750,6 @@ export function ScreenDefinitionEditor({
         );
     }
   };
-
-  // VerificationEditor integration state
-  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
-  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
-  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
-
-  // Initialize verification image state
-  const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
-    console.log('[@component:ScreenDefinitionEditor] Image loaded for verification:', { dimensions, sourcePath });
-    setCaptureImageRef(ref);
-    setCaptureImageDimensions(dimensions);
-    setCaptureSourcePath(sourcePath);
-  }, []);
 
   return (
     <Box sx={{ 
@@ -915,6 +934,9 @@ export function ScreenDefinitionEditor({
               captureImageRef={captureImageRef}
               captureImageDimensions={captureImageDimensions}
               captureSourcePath={captureSourcePath}
+              selectedArea={selectedArea}
+              onAreaSelected={handleAreaSelected}
+              onClearSelection={handleClearSelection}
               sx={{
                 backgroundColor: '#1E1E1E',
                 borderRadius: '0 1px 1px 0',
