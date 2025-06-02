@@ -13,6 +13,7 @@ import requests
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
 from ..base_controllers import VerificationControllerInterface
+from .image import apply_image_filter
 
 
 class TextVerificationController(VerificationControllerInterface):
@@ -354,7 +355,7 @@ class TextVerificationController(VerificationControllerInterface):
 
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
                            area: tuple = None, image_list: List[str] = None, model: str = None,
-                           verification_index: int = 0) -> Tuple[bool, str, dict]:
+                           verification_index: int = 0, image_filter: str = None) -> Tuple[bool, str, dict]:
         """
         Wait for specific text to appear either in provided image list or by capturing new frames.
         
@@ -366,14 +367,18 @@ class TextVerificationController(VerificationControllerInterface):
             image_list: Optional list of source image paths to search
             model: Model name for organizing output images
             verification_index: Index of verification for naming
+            image_filter: Optional image filter to apply
             
         Returns:
             Tuple of (success, message, additional_data)
         """
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
+        if image_filter and image_filter != 'none':
+            print(f"[@controller:TextVerification] Using image filter: {image_filter}")
         
         additional_data = {
-            "searched_text": text
+            "searched_text": text,
+            "image_filter": image_filter
         }
         
         if image_list:
@@ -385,6 +390,12 @@ class TextVerificationController(VerificationControllerInterface):
             for source_path in image_list:
                 if not os.path.exists(source_path):
                     continue
+                
+                # Apply filter to source image if specified
+                if image_filter and image_filter != 'none':
+                    if not apply_image_filter(source_path, image_filter):
+                        print(f"[@controller:TextVerification] Failed to apply filter to source: {source_path}")
+                        continue
                     
                 extracted_text = self._extract_text_from_area(source_path, area)
                 
@@ -420,18 +431,18 @@ class TextVerificationController(VerificationControllerInterface):
         else:
             # Use capture system
             print(f"[@controller:TextVerification] Starting capture for {timeout}s")
-            return self._capture_and_search_text(text, timeout, case_sensitive, area, model, verification_index, additional_data)
+            return self._capture_and_search_text(text, timeout, case_sensitive, area, model, verification_index, additional_data, image_filter)
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
                               area: tuple = None, image_list: List[str] = None, model: str = None,
-                              verification_index: int = 0) -> Tuple[bool, str, dict]:
+                              verification_index: int = 0, image_filter: str = None) -> Tuple[bool, str, dict]:
         """
         Wait for text to disappear by calling waitForTextToAppear and inverting the result.
         """
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
         # Smart reuse: call waitForTextToAppear and invert result
-        found, message, additional_data = self.waitForTextToAppear(text, timeout, case_sensitive, area, image_list, model, verification_index)
+        found, message, additional_data = self.waitForTextToAppear(text, timeout, case_sensitive, area, image_list, model, verification_index, image_filter)
         
         if found:
             # Text was found, so it hasn't disappeared
@@ -483,7 +494,8 @@ class TextVerificationController(VerificationControllerInterface):
             return ""
 
     def _capture_and_search_text(self, text: str, timeout: float, case_sensitive: bool, area: tuple = None,
-                                model: str = None, verification_index: int = 0, additional_data: dict = None) -> Tuple[bool, str, dict]:
+                                model: str = None, verification_index: int = 0, additional_data: dict = None,
+                                image_filter: str = None) -> Tuple[bool, str, dict]:
         """
         Start capture, wait for timeout, stop capture, and search for text in captured frames.
         Returns immediately on first match found.
@@ -524,6 +536,12 @@ class TextVerificationController(VerificationControllerInterface):
                 frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
                 if not os.path.exists(frame_path):
                     continue
+                
+                # Apply filter to frame if specified
+                if image_filter and image_filter != 'none':
+                    if not apply_image_filter(frame_path, image_filter):
+                        print(f"[@controller:TextVerification] Failed to apply filter to frame: {frame_path}")
+                        continue
                 
                 print(f"[@controller:TextVerification] Processing frame {i} for OCR...")
                 extracted_text = self._extract_text_from_area(frame_path, area)

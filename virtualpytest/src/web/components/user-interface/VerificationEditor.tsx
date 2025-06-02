@@ -56,6 +56,7 @@ interface VerificationTestResult {
   referenceImageUrl?: string;
   extractedText?: string;
   searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
 }
 
 interface DragArea {
@@ -606,7 +607,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             referenceImageUrl: res.reference_image_url,
             // Add text comparison data
             extractedText: res.extracted_text,
-            searchedText: res.searched_text
+            searchedText: res.searched_text,
+            imageFilter: res.image_filter
           });
         });
       }

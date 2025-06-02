@@ -11,6 +11,7 @@ from flask import Blueprint, request, jsonify, send_from_directory
 import time
 import os
 import sys
+import re
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -425,44 +426,79 @@ def execute_batch_verification():
                 additional_data = {}
                 
                 if command == 'waitForImageToAppear':
+                    image_path = params.get('image_path')
+                    if not image_path:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Image path parameter required for waitForImageToAppear command'
+                        }), 400
+                    
                     success, message, additional_data = controller.waitForImageToAppear(
-                        image_path=params.get('image_path'),
+                        image_path=image_path,
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area'),
                         image_list=params.get('image_list'),
                         model=model,
-                        verification_index=verification_index
+                        verification_index=verification_index,
+                        image_filter=params.get('image_filter', 'none')
                     )
+                    
                 elif command == 'waitForImageToDisappear':
+                    image_path = params.get('image_path')
+                    if not image_path:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Image path parameter required for waitForImageToDisappear command'
+                        }), 400
+                    
                     success, message, additional_data = controller.waitForImageToDisappear(
-                        image_path=params.get('image_path'),
+                        image_path=image_path,
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area'),
                         image_list=params.get('image_list'),
                         model=model,
-                        verification_index=verification_index
+                        verification_index=verification_index,
+                        image_filter=params.get('image_filter', 'none')
                     )
+                    
                 elif command == 'waitForTextToAppear':
+                    text = params.get('text')
+                    if not text:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Text parameter required for waitForTextToAppear command'
+                        }), 400
+                    
                     success, message, additional_data = controller.waitForTextToAppear(
-                        text=params.get('text'),
+                        text=text,
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
                         area=params.get('area'),
                         image_list=params.get('image_list'),
                         model=model,
-                        verification_index=verification_index
+                        verification_index=verification_index,
+                        image_filter=params.get('image_filter', 'none')
                     )
+                    
                 elif command == 'waitForTextToDisappear':
+                    text = params.get('text')
+                    if not text:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Text parameter required for waitForTextToDisappear command'
+                        }), 400
+                    
                     success, message, additional_data = controller.waitForTextToDisappear(
-                        text=params.get('text'),
+                        text=text,
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
                         area=params.get('area'),
                         image_list=params.get('image_list'),
                         model=model,
-                        verification_index=verification_index
+                        verification_index=verification_index,
+                        image_filter=params.get('image_filter', 'none')
                     )
                 
                 # Ensure we have a message, include threshold info for image verifications

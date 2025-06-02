@@ -70,6 +70,60 @@ def crop_reference_image(source_path, target_path, area):
         return False
 
 
+def apply_image_filter(image_path: str, filter_type: str) -> bool:
+    """
+    Apply image filter (greyscale or binary) to an image and overwrite it.
+    
+    Args:
+        image_path: Path to the image file
+        filter_type: Type of filter ('none', 'greyscale', 'binary')
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        if filter_type == 'none' or not filter_type:
+            return True  # No filtering needed
+            
+        # Read image
+        img = cv2.imread(image_path)
+        if img is None:
+            print(f"[@controller:ImageVerification] Could not read image for filtering: {image_path}")
+            return False
+        
+        if filter_type == 'greyscale':
+            # Convert to grayscale
+            filtered_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            # Convert back to 3-channel for consistency
+            filtered_img = cv2.cvtColor(filtered_img, cv2.COLOR_GRAY2BGR)
+            
+        elif filter_type == 'binary':
+            # Convert to grayscale first
+            gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            # Apply binary threshold (fixed threshold of 127)
+            _, binary_img = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)
+            # Convert back to 3-channel for consistency
+            filtered_img = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2BGR)
+            
+        else:
+            print(f"[@controller:ImageVerification] Unknown filter type: {filter_type}")
+            return False
+        
+        # Overwrite original image with filtered version
+        result = cv2.imwrite(image_path, filtered_img)
+        
+        if result:
+            print(f"[@controller:ImageVerification] Applied {filter_type} filter to: {image_path}")
+            return True
+        else:
+            print(f"[@controller:ImageVerification] Failed to save filtered image: {image_path}")
+            return False
+            
+    except Exception as e:
+        print(f"[@controller:ImageVerification] Error applying filter: {e}")
+        return False
+
+
 class ImageVerificationController(VerificationControllerInterface):
     """Image verification controller that uses template matching to detect images on screen."""
     
@@ -171,7 +225,7 @@ class ImageVerificationController(VerificationControllerInterface):
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
                             area: tuple = None, image_list: List[str] = None, model: str = None, 
-                            verification_index: int = 0) -> Tuple[bool, str, dict]:
+                            verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for image to appear either in provided image list or by capturing new frames.
         
@@ -183,22 +237,43 @@ class ImageVerificationController(VerificationControllerInterface):
             image_list: Optional list of source image paths to search
             model: Model name for organizing output images
             verification_index: Index of verification for naming
+            image_filter: Filter to apply ('none', 'greyscale', 'binary')
             
         Returns:
             Tuple of (success, message, additional_data)
         """
         print(f"[@controller:ImageVerification] Looking for image: {image_path}")
+        if image_filter and image_filter != 'none':
+            print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
         
         # Load reference image
         if not os.path.exists(image_path):
             return False, f"Reference image not found: {image_path}", {}
         
-        ref_img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        # Create filtered reference image if filter is applied
+        filtered_reference_path = image_path
+        if image_filter and image_filter != 'none' and model is not None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            filtered_ref_path = os.path.join(base_dir, 'tmp', model, f'reference_filtered_{verification_index}.png')
+            
+            # Copy reference to filtered location
+            import shutil
+            shutil.copy2(image_path, filtered_ref_path)
+            
+            # Apply filter to the reference copy
+            if apply_image_filter(filtered_ref_path, image_filter):
+                filtered_reference_path = filtered_ref_path
+                print(f"[@controller:ImageVerification] Created filtered reference: {filtered_reference_path}")
+            else:
+                print(f"[@controller:ImageVerification] Failed to apply filter to reference, using original")
+        
+        ref_img = cv2.imread(filtered_reference_path, cv2.IMREAD_COLOR)
         if ref_img is None:
-            return False, f"Could not load reference image: {image_path}", {}
+            return False, f"Could not load reference image: {filtered_reference_path}", {}
         
         additional_data = {
-            "reference_image_path": image_path
+            "reference_image_path": filtered_reference_path,
+            "image_filter": image_filter
         }
         
         if image_list:
@@ -210,6 +285,12 @@ class ImageVerificationController(VerificationControllerInterface):
             for source_path in image_list:
                 if not os.path.exists(source_path):
                     continue
+                
+                # Apply filter to source image if specified
+                if image_filter and image_filter != 'none':
+                    if not apply_image_filter(source_path, image_filter):
+                        print(f"[@controller:ImageVerification] Failed to apply filter to source: {source_path}")
+                        continue
                     
                 source_img = cv2.imread(source_path, cv2.IMREAD_COLOR)
                 if source_img is None:
@@ -243,18 +324,18 @@ class ImageVerificationController(VerificationControllerInterface):
         else:
             # Use capture system
             print(f"[@controller:ImageVerification] Starting capture for {timeout}s")
-            return self._capture_and_search(ref_img, timeout, threshold, area, model, verification_index, additional_data)
+            return self._capture_and_search(ref_img, timeout, threshold, area, model, verification_index, additional_data, image_filter)
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
                                area: tuple = None, image_list: List[str] = None, model: str = None,
-                               verification_index: int = 0) -> Tuple[bool, str, dict]:
+                               verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for image to disappear by calling waitForImageToAppear and inverting the result.
         """
         print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
         
         # Smart reuse: call waitForImageToAppear and invert result
-        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index)
+        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)
         
         if found:
             # Image was found, so it hasn't disappeared
@@ -287,7 +368,7 @@ class ImageVerificationController(VerificationControllerInterface):
             return 0.0
 
     def _capture_and_search(self, ref_img: np.ndarray, timeout: float, threshold: float, area: tuple = None, 
-                           model: str = None, verification_index: int = 0, additional_data: dict = None) -> Tuple[bool, str, dict]:
+                           model: str = None, verification_index: int = 0, additional_data: dict = None, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Start capture, wait for timeout, stop capture, and search for image in captured frames.
         Returns immediately on first match found.
@@ -328,6 +409,12 @@ class ImageVerificationController(VerificationControllerInterface):
                 frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
                 if not os.path.exists(frame_path):
                     continue
+                
+                # Apply filter to frame if specified
+                if image_filter and image_filter != 'none':
+                    if not apply_image_filter(frame_path, image_filter):
+                        print(f"[@controller:ImageVerification] Failed to apply filter to frame: {frame_path}")
+                        continue
                 
                 frame_img = cv2.imread(frame_path, cv2.IMREAD_COLOR)
                 if frame_img is None:

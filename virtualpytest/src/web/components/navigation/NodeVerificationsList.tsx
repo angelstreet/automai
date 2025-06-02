@@ -15,6 +15,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  FormLabel,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
 
@@ -41,6 +45,7 @@ interface VerificationTestResult {
   referenceImageUrl?: string;
   extractedText?: string;
   searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
 }
 
 interface VerificationAction {
@@ -102,12 +107,14 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     referenceUrl: string;
     threshold?: number;
     resultType?: 'PASS' | 'FAIL' | 'ERROR';
+    imageFilter?: 'none' | 'greyscale' | 'binary';
   }>({
     open: false,
     sourceUrl: '',
     referenceUrl: '',
     threshold: undefined,
-    resultType: undefined
+    resultType: undefined,
+    imageFilter: undefined
   });
 
   // Fetch available reference images on component mount
@@ -222,20 +229,32 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     }
   };
 
+  const handleImageFilterChange = (index: number, filter: 'none' | 'greyscale' | 'binary') => {
+    updateVerification(index, {
+      params: {
+        ...verifications[index].params,
+        image_filter: filter
+      }
+    });
+    console.log('[@component:NodeVerificationsList] Changed image filter to:', filter);
+  };
+
   // Component for displaying image comparison thumbnails
   const ImageComparisonThumbnails: React.FC<{
     sourceUrl: string;
     referenceUrl: string;
     resultType: 'PASS' | 'FAIL' | 'ERROR';
     threshold?: number;
-  }> = ({ sourceUrl, referenceUrl, resultType, threshold }) => {
+    imageFilter?: 'none' | 'greyscale' | 'binary';
+  }> = ({ sourceUrl, referenceUrl, resultType, threshold, imageFilter }) => {
     const handleDoubleClick = () => {
       setImageComparisonDialog({
         open: true,
         sourceUrl,
         referenceUrl,
         threshold,
-        resultType
+        resultType,
+        imageFilter
       });
     };
 
@@ -641,6 +660,40 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     />
                   )}
                   
+                  {/* Image Filter Selection - only for image verifications */}
+                  {verification.controller_type === 'image' && verification.id && (
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                      <FormLabel component="legend" sx={{ fontSize: '0.7rem', minWidth: 'auto', mr: 1 }}>
+                        Filter:
+                      </FormLabel>
+                      <RadioGroup
+                        row
+                        value={verification.params?.image_filter || 'none'}
+                        onChange={(e) => handleImageFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')}
+                        sx={{
+                          gap: 0.5,
+                          '& .MuiFormControlLabel-root': {
+                            margin: 0,
+                            '& .MuiFormControlLabel-label': {
+                              fontSize: '0.65rem',
+                              paddingLeft: '2px'
+                            },
+                            '& .MuiRadio-root': {
+                              padding: '2px',
+                              '& .MuiSvgIcon-root': {
+                                fontSize: '0.9rem'
+                              }
+                            }
+                          }
+                        }}
+                      >
+                        <FormControlLabel value="none" control={<Radio />} label="None" />
+                        <FormControlLabel value="greyscale" control={<Radio />} label="Grey" />
+                        <FormControlLabel value="binary" control={<Radio />} label="Binary" />
+                      </RadioGroup>
+                    </Box>
+                  )}
+                  
                   {/* Test Result Status Indicator */}
                   {testResults[index] && (
                     <Box sx={{ 
@@ -728,6 +781,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         referenceUrl={testResults[index].referenceImageUrl!}
                         resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
                         threshold={verification.params?.threshold}
+                        imageFilter={verification.params?.image_filter}
                       />
                     )}
                     
@@ -805,6 +859,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           {imageComparisonDialog.threshold !== undefined ? (
             <>
               Threshold: {(imageComparisonDialog.threshold * 100).toFixed(1)}% 
+              {imageComparisonDialog.imageFilter && imageComparisonDialog.imageFilter !== 'none' && (
+                <Typography component="span" sx={{ 
+                  ml: 2, 
+                  color: '#90caf9',
+                  fontWeight: 500,
+                  fontSize: '0.9rem'
+                }}>
+                  | Filter: {imageComparisonDialog.imageFilter}
+                </Typography>
+              )}
               {imageComparisonDialog.resultType && (
                 <Typography component="span" sx={{ 
                   ml: 2, 
