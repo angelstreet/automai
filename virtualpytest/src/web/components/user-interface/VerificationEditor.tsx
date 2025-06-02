@@ -46,6 +46,13 @@ interface NodeVerification {
   inputValue?: string;
 }
 
+interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+}
+
 interface DragArea {
   x: number;
   y: number;
@@ -92,6 +99,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [pendingSave, setPendingSave] = useState<boolean>(false);
+  const [testResults, setTestResults] = useState<VerificationTestResult[]>([]);
   
   // Collapsible sections state
   const [captureCollapsed, setCaptureCollapsed] = useState<boolean>(false);
@@ -145,6 +153,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const handleVerificationsChange = (newVerifications: NodeVerification[]) => {
     setVerifications(newVerifications);
+    // Clear test results when verifications change
+    setTestResults([]);
   };
 
   const handleClearSelection = () => {
@@ -367,6 +377,32 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       const result = await response.json();
       console.log('[@component:VerificationEditor] Test results:', result);
       
+      // Store test results for display
+      const newTestResults: VerificationTestResult[] = [];
+      if (result.results) {
+        result.results.forEach((res: any, index: number) => {
+          const status = res.success ? 'PASSED' : 'FAILED';
+          console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
+          
+          // Extract threshold from message if available (for image verifications)
+          let threshold: number | undefined = undefined;
+          if (verificationsToExecute[index]?.controller_type === 'image' && res.message) {
+            const thresholdMatch = res.message.match(/confidence ([\d.]+)/);
+            if (thresholdMatch) {
+              threshold = parseFloat(thresholdMatch[1]);
+            }
+          }
+          
+          newTestResults.push({
+            success: res.success,
+            message: res.message,
+            error: res.error,
+            threshold
+          });
+        });
+      }
+      setTestResults(newTestResults);
+      
       if (result.success) {
         const passedCount = result.passed_count || 0;
         const totalCount = result.total_verifications || verifications.length;
@@ -375,14 +411,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           setSuccessMessage(`All ${totalCount} verification(s) passed!`);
         } else {
           setError(`${passedCount}/${totalCount} verification(s) passed. Check details in console.`);
-        }
-        
-        // Log individual results
-        if (result.results) {
-          result.results.forEach((res: any, index: number) => {
-            const status = res.success ? 'PASSED' : 'FAILED';
-            console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
-          });
         }
       } else {
         setError(result.error || 'Verification test failed');
@@ -832,6 +860,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               error={error}
               model={model}
               onTest={handleTest}
+              testResults={testResults}
             />
           </Box>
         </Collapse>

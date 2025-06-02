@@ -27,6 +27,13 @@ interface NodeVerification {
   inputValue?: string;
 }
 
+interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+}
+
 interface VerificationAction {
   id: string;
   label: string;
@@ -59,6 +66,7 @@ interface NodeVerificationsListProps {
   error?: string | null;
   model?: string;
   onTest?: () => void;
+  testResults?: VerificationTestResult[];
 }
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
@@ -69,6 +77,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   error = null,
   model,
   onTest,
+  testResults = [],
 }) => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
@@ -378,7 +387,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 {verification.controller_type === 'image' && modelReferences.length > 0 ? (
                   <>
                     {/* Reference Image Dropdown */}
-                    <FormControl size="small" sx={{ flex: 1 }}>
+                    <FormControl size="small" sx={{ width: 200 }}>
                       <InputLabel>Reference Image</InputLabel>
                       <Select
                         value={verification.params?.reference_image || ''}
@@ -401,8 +410,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         ))}
                       </Select>
                     </FormControl>
-                    
-                   
                   </>
                 ) : (
                   /* Fallback to manual input */
@@ -412,8 +419,45 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     placeholder={verification.inputPlaceholder || 'Enter value...'}
                     value={verification.inputValue || ''}
                     onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                    fullWidth
+                    sx={{ width: 200 }}
                   />
+                )}
+                
+                {/* Test Result Status Indicator */}
+                {testResults[index] && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5,
+                    minWidth: 120,
+                    padding: '4px 8px',
+                    borderRadius: 1,
+                    backgroundColor: testResults[index].success ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                    border: `1px solid ${testResults[index].success ? '#4caf50' : '#f44336'}`
+                  }}>
+                    <Box sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: testResults[index].success ? '#4caf50' : '#f44336'
+                    }} />
+                    <Typography variant="caption" sx={{ 
+                      fontSize: '0.7rem',
+                      color: testResults[index].success ? '#4caf50' : '#f44336',
+                      fontWeight: 600
+                    }}>
+                      {testResults[index].success ? 'PASS' : 'FAIL'}
+                    </Typography>
+                    {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
+                      <Typography variant="caption" sx={{ 
+                        fontSize: '0.65rem',
+                        color: 'rgba(255,255,255,0.7)',
+                        ml: 0.5
+                      }}>
+                        {(testResults[index].threshold! * 100).toFixed(1)}%
+                      </Typography>
+                    )}
+                  </Box>
                 )}
                 
                 {/* Show loading indicator for references */}
