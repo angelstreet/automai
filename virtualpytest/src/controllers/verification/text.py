@@ -10,6 +10,8 @@ import time
 import os
 import re
 import requests
+import cv2
+import numpy as np
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
 from ..base_controllers import VerificationControllerInterface
@@ -38,7 +40,8 @@ class TextVerificationController(VerificationControllerInterface):
         # AV controller reference for screenshot capture only
         self.av_controller = av_controller
         self.ocr_language = kwargs.get('ocr_language', 'eng')
-        self.ocr_config = kwargs.get('ocr_config', '--psm 6')
+        self.ocr_config = kwargs.get('ocr_config', '--psm')
+        self.ocr_psm = kwargs.get('ocr_psm', '6')  # PSM 6 = Uniform block of text
         
         # Temporary files for analysis
         self.temp_image_path = Path("/tmp/text_verification")
@@ -69,81 +72,113 @@ class TextVerificationController(VerificationControllerInterface):
             "ocr_language": self.ocr_language
         }
 
-    def _capture_screenshot_for_ocr(self, area: dict = None) -> str:
+    def _crop_image_opencv(self, image_path: str, area: dict) -> str:
         """
-        Capture a screenshot for OCR analysis using the AV controller.
+        Crop image to specified area using OpenCV (same approach as image verification).
         
         Args:
-            area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
+            image_path: Path to the source image
+            area: Area to crop {'x': x, 'y': y, 'width': width, 'height': height}
             
         Returns:
-            Path to the screenshot file
+            Path to cropped image or None if failed
         """
-        timestamp = int(time.time())
-        screenshot_name = f"text_screenshot_{timestamp}.png"
-        
         try:
-            # Use AV controller to take screenshot
-            print(f"TextVerify[{self.device_name}]: Capturing screenshot via {self.av_controller.device_name}")
-            
-            # Try different screenshot methods that might be available
-            screenshot_path = None
-            if hasattr(self.av_controller, 'take_screenshot'):
-                screenshot_path = self.av_controller.take_screenshot(screenshot_name)
-            elif hasattr(self.av_controller, 'screenshot'):
-                screenshot_path = self.av_controller.screenshot(screenshot_name)
-            elif hasattr(self.av_controller, 'capture_frame'):
-                screenshot_path = self.av_controller.capture_frame(screenshot_name)
-            else:
-                print(f"TextVerify[{self.device_name}]: ERROR - No screenshot method available on AV controller")
+            # Load image using OpenCV
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"[@controller:TextVerification] Could not load image: {image_path}")
                 return None
             
-            if not screenshot_path:
-                print(f"TextVerify[{self.device_name}]: Failed to capture screenshot")
-                return None
-                
-            if area:
-                # Crop the image if area is specified
-                cropped_path = self._crop_image(screenshot_path, area)
-                return cropped_path or screenshot_path
-                
-            return screenshot_path
-            
-        except Exception as e:
-            print(f"TextVerify[{self.device_name}]: Screenshot capture error: {e}")
-            return None
-
-    def _crop_image(self, image_path: str, area: dict) -> str:
-        """Crop image to specified area using FFmpeg."""
-        try:
             # Handle area as dictionary (same as image verification)
             x = int(area['x'])
             y = int(area['y'])
             width = int(area['width'])
             height = int(area['height'])
             
+            # Ensure coordinates are within image bounds
+            img_height, img_width = img.shape[:2]
+            x = max(0, min(x, img_width - 1))
+            y = max(0, min(y, img_height - 1))
+            width = min(width, img_width - x)
+            height = min(height, img_height - y)
+            
+            # Crop using OpenCV (same as image verification approach)
+            cropped_img = img[y:y+height, x:x+width]
+            
+            # Save cropped image
             timestamp = int(time.time())
             cropped_path = self.temp_image_path / f"cropped_{timestamp}.png"
             
-            cmd = [
-                '/usr/bin/ffmpeg',
-                '-i', image_path,
-                '-filter:v', f'crop={width}:{height}:{x}:{y}',
-                '-y',
-                str(cropped_path)
-            ]
+            success = cv2.imwrite(str(cropped_path), cropped_img)
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0 and cropped_path.exists():
-                print(f"TextVerify[{self.device_name}]: Image cropped to area ({x},{y},{width},{height})")
+            if success and cropped_path.exists():
+                print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
                 return str(cropped_path)
             else:
-                print(f"TextVerify[{self.device_name}]: Image cropping failed: {result.stderr}")
+                print(f"[@controller:TextVerification] Failed to save cropped image: {cropped_path}")
                 return None
                 
         except Exception as e:
-            print(f"TextVerify[{self.device_name}]: Image cropping error: {e}")
+            print(f"[@controller:TextVerification] OpenCV cropping error: {e}")
+            return None
+
+    def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
+        """
+        Save a cropped version of the source image for UI comparison display (same as image verification).
+        
+        Args:
+            source_image_path: Path to the source image
+            area: Area to crop {x, y, width, height}
+            model: Model name for directory organization
+            verification_index: Index of verification for naming
+            
+        Returns:
+            Path to saved cropped image or None if failed
+        """
+        try:
+            # Create directory structure
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            output_dir = os.path.join(base_dir, 'tmp', model, f'verification_{verification_index}')
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Output path for cropped source
+            cropped_source_path = os.path.join(output_dir, 'source_cropped.png')
+            
+            # Read and crop source image using OpenCV
+            img = cv2.imread(source_image_path)
+            if img is None:
+                print(f"[@controller:TextVerification] Could not read source image: {source_image_path}")
+                return None
+                
+            # Extract area coordinates
+            x = int(area['x'])
+            y = int(area['y'])
+            width = int(area['width'])
+            height = int(area['height'])
+            
+            # Ensure coordinates are within image bounds
+            img_height, img_width = img.shape[:2]
+            x = max(0, min(x, img_width - 1))
+            y = max(0, min(y, img_height - 1))
+            width = min(width, img_width - x)
+            height = min(height, img_height - y)
+            
+            # Crop image to same area used for OCR
+            cropped_img = img[y:y+height, x:x+width]
+            
+            # Save cropped image
+            result = cv2.imwrite(cropped_source_path, cropped_img)
+            
+            if result:
+                print(f"[@controller:TextVerification] Saved cropped source: {cropped_source_path}")
+                return cropped_source_path
+            else:
+                print(f"[@controller:TextVerification] Failed to save cropped source: {cropped_source_path}")
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:TextVerification] Error saving cropped source: {e}")
             return None
 
     def _extract_text_from_image(self, image_path: str) -> str:
@@ -162,21 +197,21 @@ class TextVerificationController(VerificationControllerInterface):
                 image_path,
                 'stdout',
                 '-l', self.ocr_language,
-                self.ocr_config
+                self.ocr_config, self.ocr_psm
             ]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             
             if result.returncode == 0:
                 extracted_text = result.stdout.strip()
-                print(f"TextVerify[{self.device_name}]: Extracted text: '{extracted_text}'")
+                print(f"[@controller:TextVerification] Extracted text: '{extracted_text}'")
                 return extracted_text
             else:
-                print(f"TextVerify[{self.device_name}]: OCR failed: {result.stderr}")
+                print(f"[@controller:TextVerification] OCR failed: {result.stderr}")
                 return ""
                 
         except Exception as e:
-            print(f"TextVerify[{self.device_name}]: Text extraction error: {e}")
+            print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
 
     def _text_matches(self, extracted_text: str, target_text: str, case_sensitive: bool = False) -> bool:
@@ -314,11 +349,11 @@ class TextVerificationController(VerificationControllerInterface):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
                     text_found = True
                     
-                    # Save source image for UI comparison (from ORIGINAL, not filtered)
-                    if model is not None:
-                        saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
-                        if saved_source_path:
-                            additional_data["source_image_path"] = saved_source_path
+                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
+                    if area and model is not None:
+                        cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
+                        if cropped_source_path:
+                            additional_data["source_image_path"] = cropped_source_path
                     
                     # Clean up temp file if it was created
                     if filtered_source_path != source_path and os.path.exists(filtered_source_path):
@@ -334,17 +369,22 @@ class TextVerificationController(VerificationControllerInterface):
                     os.unlink(filtered_source_path)
             
             # If no match found, still save the best source for comparison
-            if best_source_path and model is not None:
-                saved_source_path = self._save_source_image_for_comparison(best_source_path, model, verification_index)
-                if saved_source_path:
-                    additional_data["source_image_path"] = saved_source_path
+            if best_source_path and area and model is not None:
+                cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
+                if cropped_source_path:
+                    additional_data["source_image_path"] = cropped_source_path
             elif image_list and model is not None:
                 # If no best_source_path but we have image_list, use the first available image
                 for source_path in image_list:
                     if os.path.exists(source_path):
-                        saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
-                        if saved_source_path:
-                            additional_data["source_image_path"] = saved_source_path
+                        if area:
+                            cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
+                            if cropped_source_path:
+                                additional_data["source_image_path"] = cropped_source_path
+                        else:
+                            saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
+                            if saved_source_path:
+                                additional_data["source_image_path"] = saved_source_path
                         break
             
             additional_data["extracted_text"] = closest_text
@@ -401,11 +441,11 @@ class TextVerificationController(VerificationControllerInterface):
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in captured frame: '{extracted_text.strip()}'")
                     
-                    # Save source image for UI comparison (from ORIGINAL, not filtered)
-                    if model is not None:
-                        saved_source_path = self._save_source_image_for_comparison(capture_path, model, verification_index)
-                        if saved_source_path:
-                            additional_data["source_image_path"] = saved_source_path
+                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
+                    if area and model is not None:
+                        cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                        if cropped_source_path:
+                            additional_data["source_image_path"] = cropped_source_path
                     
                     # Clean up temp file if it was created
                     if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
@@ -445,11 +485,11 @@ class TextVerificationController(VerificationControllerInterface):
                 
                 time.sleep(0.5)
             
-            # Save source for comparison even if not found (from ORIGINAL)
-            if model is not None:
-                saved_source_path = self._save_source_image_for_comparison(capture_path, model, verification_index)
-                if saved_source_path:
-                    additional_data["source_image_path"] = saved_source_path
+            # Save cropped source for comparison even if not found (from ORIGINAL)
+            if area and model is not None:
+                cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                if cropped_source_path:
+                    additional_data["source_image_path"] = cropped_source_path
             
             # Clean up temp file if it was created
             if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
@@ -513,20 +553,20 @@ class TextVerificationController(VerificationControllerInterface):
             Extracted text string
         """
         try:
-            # Crop image if area specified
+            # Crop image if area specified using OpenCV (same as image verification)
             input_path = image_path
             if area:
-                input_path = self._crop_image(image_path, area)
+                input_path = self._crop_image_opencv(image_path, area)
                 if not input_path:
                     input_path = image_path  # Fallback to full image
             
-            # Run OCR
+            # Run OCR with proper configuration
             cmd = [
                 'tesseract',
                 input_path,
                 'stdout',
                 '-l', self.ocr_language,
-                self.ocr_config
+                self.ocr_config, self.ocr_psm
             ]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -712,12 +752,56 @@ class TextVerificationController(VerificationControllerInterface):
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
             'ocr_language': self.ocr_language,
-            'ocr_config': self.ocr_config,
+            'ocr_config': f"{self.ocr_config} {self.ocr_psm}",
             'capabilities': [
                 'text_appears_verification', 'text_disappears_verification',
                 'area_based_ocr', 'case_sensitive_matching'
             ]
         }
+
+    def _capture_screenshot_for_ocr(self, area: dict = None) -> str:
+        """
+        Capture a screenshot for OCR analysis using the AV controller.
+        
+        Args:
+            area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
+            
+        Returns:
+            Path to the screenshot file
+        """
+        timestamp = int(time.time())
+        screenshot_name = f"text_screenshot_{timestamp}.png"
+        
+        try:
+            # Use AV controller to take screenshot
+            print(f"TextVerify[{self.device_name}]: Capturing screenshot via {self.av_controller.device_name}")
+            
+            # Try different screenshot methods that might be available
+            screenshot_path = None
+            if hasattr(self.av_controller, 'take_screenshot'):
+                screenshot_path = self.av_controller.take_screenshot(screenshot_name)
+            elif hasattr(self.av_controller, 'screenshot'):
+                screenshot_path = self.av_controller.screenshot(screenshot_name)
+            elif hasattr(self.av_controller, 'capture_frame'):
+                screenshot_path = self.av_controller.capture_frame(screenshot_name)
+            else:
+                print(f"TextVerify[{self.device_name}]: ERROR - No screenshot method available on AV controller")
+                return None
+            
+            if not screenshot_path:
+                print(f"TextVerify[{self.device_name}]: Failed to capture screenshot")
+                return None
+                
+            if area:
+                # Crop the image if area is specified
+                cropped_path = self._crop_image_opencv(screenshot_path, area)
+                return cropped_path or screenshot_path
+                
+            return screenshot_path
+            
+        except Exception as e:
+            print(f"TextVerify[{self.device_name}]: Screenshot capture error: {e}")
+            return None
 
 
 # Backward compatibility alias

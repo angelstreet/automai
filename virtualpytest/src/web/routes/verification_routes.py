@@ -997,7 +997,7 @@ def auto_detect_text():
         os.makedirs(target_dir, exist_ok=True)
         
         # Define target path for cropped preview (same as image capture)
-        preview_filename = f"text_autodetect_preview_{model}.png"
+        preview_filename = f"capture.png"  # Use same filename as image capture for consistency
         target_path = os.path.join(target_dir, preview_filename)
         
         # Import the crop function from image controller (same as image capture)

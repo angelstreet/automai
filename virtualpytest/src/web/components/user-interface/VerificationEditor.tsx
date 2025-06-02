@@ -681,7 +681,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         body: JSON.stringify({
           model,
           area: selectedArea,
-          source_path: captureSourcePath
+          source_path: captureSourcePath,
+          image_filter: textImageFilter
         }),
       });
 
@@ -698,13 +699,26 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
         
-        // Set preview image for the detected area (similar to image capture)
-        const timestamp = new Date().getTime();
-        const previewUrl = `http://localhost:5009/api/virtualpytest/reference/image/capture.png?t=${timestamp}`;
-        setCapturedReferenceImage(previewUrl);
-        setHasCaptured(true);
+        // Use the preview URL returned from the backend (not hardcoded capture.png)
+        if (result.preview_url) {
+          const previewUrl = `http://localhost:5009${result.preview_url}`;
+          console.log('[@component:VerificationEditor] Setting preview from backend response:', previewUrl);
+          setCapturedReferenceImage(previewUrl);
+          setHasCaptured(true);
+        } else {
+          console.warn('[@component:VerificationEditor] No preview URL in backend response');
+        }
       } else {
-        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status);
+        const errorResult = await response.json();
+        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status, errorResult);
+        
+        // Still show preview even if OCR failed (but area was cropped)
+        if (errorResult.preview_url) {
+          const previewUrl = `http://localhost:5009${errorResult.preview_url}`;
+          console.log('[@component:VerificationEditor] Setting preview from error response:', previewUrl);
+          setCapturedReferenceImage(previewUrl);
+          setHasCaptured(true);
+        }
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error during text auto-detection:', error);
