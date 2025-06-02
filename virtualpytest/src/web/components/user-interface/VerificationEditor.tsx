@@ -240,15 +240,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 }
               }}
               sx={{
+                height: '28px',
                 '& .MuiInputBase-root': {
-                  height: '28px !important',
+                  height: '28px',
                   minHeight: '28px',
                   maxHeight: '28px',
+                  overflow: 'hidden',
                 },
                 '& .MuiInputBase-input': {
                   fontSize: '0.7rem',
                   padding: '2px 8px',
                   height: '100%',
+                  boxSizing: 'border-box',
                 },
                 '& .MuiInputLabel-root': {
                   fontSize: '0.7rem',
@@ -274,15 +277,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 }
               }}
               sx={{
+                height: '28px',
                 '& .MuiInputBase-root': {
-                  height: '28px !important',
+                  height: '28px',
                   minHeight: '28px',
                   maxHeight: '28px',
+                  overflow: 'hidden',
                 },
                 '& .MuiInputBase-input': {
                   fontSize: '0.7rem',
                   padding: '2px 8px',
                   height: '100%',
+                  boxSizing: 'border-box',
                 },
                 '& .MuiInputLabel-root': {
                   fontSize: '0.7rem',
@@ -308,15 +314,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 }
               }}
               sx={{
+                height: '28px',
                 '& .MuiInputBase-root': {
-                  height: '28px !important',
+                  height: '28px',
                   minHeight: '28px',
                   maxHeight: '28px',
+                  overflow: 'hidden',
                 },
                 '& .MuiInputBase-input': {
                   fontSize: '0.7rem',
                   padding: '2px 8px',
                   height: '100%',
+                  boxSizing: 'border-box',
                 },
                 '& .MuiInputLabel-root': {
                   fontSize: '0.7rem',
@@ -342,15 +351,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 }
               }}
               sx={{
+                height: '28px',
                 '& .MuiInputBase-root': {
-                  height: '28px !important',
+                  height: '28px',
                   minHeight: '28px',
                   maxHeight: '28px',
+                  overflow: 'hidden',
                 },
                 '& .MuiInputBase-input': {
                   fontSize: '0.7rem',
                   padding: '2px 8px',
                   height: '100%',
+                  boxSizing: 'border-box',
                 },
                 '& .MuiInputLabel-root': {
                   fontSize: '0.7rem',
