@@ -241,7 +241,28 @@ export function ScreenDefinitionEditor({
   
   // Start video capture - simplified for new architecture
   const handleStartCapture = async () => {
-    if (!isConnected || isCapturing) return;
+    console.log(`[@component:ScreenDefinitionEditor] handleStartCapture called - viewMode: ${viewMode}, isConnected: ${isConnected}, isCapturing: ${isCapturing}`);
+    
+    if (!isConnected || isCapturing) {
+      console.log(`[@component:ScreenDefinitionEditor] Early return - isConnected: ${isConnected}, isCapturing: ${isCapturing}`);
+      return;
+    }
+    
+    // If already in capture mode (viewing saved frames), restart stream first, then start capturing
+    if (viewMode === 'capture') {
+      console.log('[@component:ScreenDefinitionEditor] Already in capture mode, restarting stream first...');
+      setViewMode('stream');
+      setLastScreenshotPath(undefined);
+      setVideoFramesPath(undefined);
+      setCurrentFrame(0);
+      setTotalFrames(0);
+      setSavedFrameCount(0);
+      await restartStream();
+      
+      // After restart, automatically proceed with capture start
+      console.log('[@component:ScreenDefinitionEditor] Stream restarted, now starting capture...');
+      // Don't return here, continue with the capture logic below
+    }
     
     try {
       console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
