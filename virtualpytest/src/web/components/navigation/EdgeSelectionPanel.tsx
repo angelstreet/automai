@@ -5,6 +5,7 @@ import {
   Button,
   IconButton,
   Paper,
+  LinearProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -305,6 +306,11 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             >
               {isRunning ? 'Running...' : 'Run'}
             </Button>
+          )}
+
+          {/* Linear Progress - shown when running */}
+          {isRunning && (
+            <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
           )}
 
           {/* Run result display */}
