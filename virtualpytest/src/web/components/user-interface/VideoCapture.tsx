@@ -19,6 +19,8 @@ interface VideoCaptureProps {
   totalFrames?: number;
   onFrameChange?: (frame: number) => void;
   onBackToStream?: () => void;
+  isSaving?: boolean;
+  savedFrameCount?: number;
   sx?: any;
 }
 
@@ -30,6 +32,8 @@ export function VideoCapture({
   totalFrames = 0,
   onFrameChange,
   onBackToStream,
+  isSaving = false,
+  savedFrameCount = 0,
   sx = {}
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -162,7 +166,7 @@ export function VideoCapture({
       ...sx 
     }}>
       {/* Minimal recording indicator header - only shown during capture */}
-      {isCapturing && !videoFramesPath && (
+      {(isCapturing || isSaving) && !videoFramesPath && (
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
@@ -175,7 +179,7 @@ export function VideoCapture({
             width: 8,
             height: 8,
             borderRadius: '50%',
-            backgroundColor: '#ff4444',
+            backgroundColor: isSaving ? '#ffaa44' : '#ff4444',
             marginRight: 1,
             animation: 'pulse 1s infinite',
             '@keyframes pulse': {
@@ -185,13 +189,13 @@ export function VideoCapture({
             }
           }} />
           <Typography variant="caption" sx={{ color: '#ffffff', fontSize: '10px' }}>
-            RECORDING
+            {isSaving ? 'SAVING FRAMES' : 'RECORDING'}
           </Typography>
           
-          {/* Display current frame number */}
-          {currentFrameNumber > 0 && (
+          {/* Display current frame number or saved frame count */}
+          {(currentFrameNumber > 0 || savedFrameCount > 0) && (
             <Typography variant="caption" sx={{ color: '#cccccc', fontSize: '10px', ml: 1 }}>
-              Frame: {currentFrameNumber}
+              {isSaving ? `Saved: ${savedFrameCount}` : `Frame: ${currentFrameNumber}`}
             </Typography>
           )}
         </Box>
@@ -251,8 +255,8 @@ export function VideoCapture({
           </>
         )}
 
-        {/* Placeholder when no capture is happening */}
-        {!isCapturing && !videoFramesPath && (
+        {/* Placeholder when no capture is happening and not saving */}
+        {!isCapturing && !videoFramesPath && !isSaving && (
           <Box sx={{
             width: '100%',
             height: '100%',
@@ -268,8 +272,63 @@ export function VideoCapture({
           </Box>
         )}
 
+        {/* Saving Frames Overlay - show when saving */}
+        {isSaving && (
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            zIndex: 10,
+          }}>
+            {/* Loading animation */}
+            <Box sx={{
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              mb: 2
+            }}>
+              {[0, 1, 2].map((index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: '#4caf50',
+                    animation: 'savePulse 1.4s ease-in-out infinite both',
+                    animationDelay: `${index * 0.16}s`,
+                    '@keyframes savePulse': {
+                      '0%, 80%, 100%': {
+                        transform: 'scale(0)',
+                        opacity: 0.5,
+                      },
+                      '40%': {
+                        transform: 'scale(1)',
+                        opacity: 1,
+                      },
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+            <Typography variant="h6" sx={{ color: '#ffffff', textAlign: 'center', mb: 1 }}>
+              Saving Frames...
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#cccccc', textAlign: 'center' }}>
+              Saved {savedFrameCount} frames
+            </Typography>
+          </Box>
+        )}
+
         {/* Error display - only show if critical */}
-        {error && (
+        {error && !isSaving && (
           <Typography 
             variant="caption" 
             sx={{ 
@@ -289,7 +348,7 @@ export function VideoCapture({
       </Box>
 
       {/* Simplified controls for video playback - only show in playback mode */}
-      {videoFramesPath && totalFrames > 0 && (
+      {videoFramesPath && totalFrames > 0 && !isSaving && (
         <Box sx={{ 
           position: 'absolute',
           bottom: 0,

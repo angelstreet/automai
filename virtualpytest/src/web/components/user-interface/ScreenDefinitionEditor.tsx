@@ -612,6 +612,8 @@ export function ScreenDefinitionEditor({
             totalFrames={totalFrames}
             onFrameChange={handleFrameChange}
             onBackToStream={handleBackToStream}
+            isSaving={isSaving}
+            savedFrameCount={savedFrameCount}
             {...commonProps}
           />
         );
