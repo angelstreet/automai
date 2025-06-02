@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 
 interface ScreenshotCaptureProps {
@@ -10,6 +10,7 @@ interface ScreenshotCaptureProps {
     capture: string | null;
     stream: string | null;
   };
+  onImageLoad?: (ref: React.RefObject<HTMLImageElement>, dimensions: {width: number, height: number}, sourcePath: string) => void;
   sx?: any;
 }
 
@@ -18,8 +19,23 @@ export function ScreenshotCapture({
   isCapturing,
   isSaving,
   resolutionInfo,
+  onImageLoad,
   sx = {}
 }: ScreenshotCaptureProps) {
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // Handle image load to pass ref and dimensions to parent
+  const handleImageLoad = () => {
+    if (imageRef.current && onImageLoad && screenshotPath) {
+      const img = imageRef.current;
+      const dimensions = {
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      };
+      onImageLoad(imageRef, dimensions, screenshotPath);
+    }
+  };
+
   // Memoize the image URL to prevent multiple re-calculations (same logic as original)
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
@@ -99,6 +115,7 @@ export function ScreenshotCapture({
       {/* Screenshot display - only shown when not capturing */}
       {screenshotPath && imageUrl && !isCapturing && (
         <img 
+          ref={imageRef}
           src={imageUrl}
           alt="Screenshot"
           style={{
@@ -110,6 +127,7 @@ export function ScreenshotCapture({
             backgroundColor: 'transparent'
           }}
           draggable={false}
+          onLoad={handleImageLoad}
           onError={(e) => {
             const imgSrc = (e.target as HTMLImageElement).src;
             console.error(`[@component:ScreenshotCapture] Failed to load image: ${imgSrc}`);

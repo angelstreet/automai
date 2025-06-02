@@ -619,6 +619,7 @@ export function ScreenDefinitionEditor({
             resolutionInfo={resolutionInfo}
             isCapturing={false}
             isSaving={isSaving || isScreenshotLoading}
+            onImageLoad={handleImageLoad}
             {...commonProps}
           />
         );
@@ -635,6 +636,7 @@ export function ScreenDefinitionEditor({
             onBackToStream={handleBackToStream}
             isSaving={isSaving}
             savedFrameCount={savedFrameCount}
+            onImageLoad={handleImageLoad}
             {...commonProps}
           />
         );
@@ -717,6 +719,18 @@ export function ScreenDefinitionEditor({
     }
   };
 
+  // VerificationEditor integration state
+  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
+  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
+  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
+
+  // Initialize verification image state
+  const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
+    console.log('[@component:ScreenDefinitionEditor] Image loaded for verification:', { dimensions, sourcePath });
+    setCaptureImageRef(ref);
+    setCaptureImageDimensions(dimensions);
+    setCaptureSourcePath(sourcePath);
+  }, []);
 
   return (
     <Box sx={{ 
@@ -892,53 +906,58 @@ export function ScreenDefinitionEditor({
             </Box>
           </Box>
 
-          {/* Verification Editor Side Panel */}
-          <VerificationEditor
-            isVisible={true}
-            isScreenshotMode={viewMode === 'screenshot'}
-            isCaptureActive={isCapturing}
-            sx={{
-              backgroundColor: '#1E1E1E',
-              borderRadius: '0 1px 1px 0',
-              border: '2px solid #1E1E1E',
-              borderLeft: 'none',
-              color: '#ffffff',
-              '& .MuiTypography-root': {
+          {/* Verification Editor Side Panel - only show during capture or screenshot modes */}
+          {(viewMode === 'screenshot' || viewMode === 'capture') && (
+            <VerificationEditor
+              isVisible={true}
+              isScreenshotMode={viewMode === 'screenshot'}
+              isCaptureActive={isCapturing}
+              captureImageRef={captureImageRef}
+              captureImageDimensions={captureImageDimensions}
+              captureSourcePath={captureSourcePath}
+              sx={{
+                backgroundColor: '#1E1E1E',
+                borderRadius: '0 1px 1px 0',
+                border: '2px solid #1E1E1E',
+                borderLeft: 'none',
                 color: '#ffffff',
-              },
-              '& .MuiTextField-root': {
-                '& .MuiInputLabel-root': {
+                '& .MuiTypography-root': {
                   color: '#ffffff',
                 },
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': {
-                    borderColor: '#333',
+                '& .MuiTextField-root': {
+                  '& .MuiInputLabel-root': {
+                    color: '#ffffff',
                   },
-                  '&:hover fieldset': {
-                    borderColor: '#555',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#666',
-                  },
-                },
-              },
-              '& .MuiSelect-root': {
-                color: '#ffffff',
-              },
-              '& .MuiFormControl-root': {
-                '& .MuiInputLabel-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': {
-                    borderColor: '#333',
+                  '& .MuiOutlinedInput-root': {
+                    color: '#ffffff',
+                    '& fieldset': {
+                      borderColor: '#333',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#555',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#666',
+                    },
                   },
                 },
-              },
-            }}
-          />
+                '& .MuiSelect-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiFormControl-root': {
+                  '& .MuiInputLabel-root': {
+                    color: '#ffffff',
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    color: '#ffffff',
+                    '& fieldset': {
+                      borderColor: '#333',
+                    },
+                  },
+                },
+              }}
+            />
+          )}
         </Box>
       ) : (
         // Compact view - exact same layout as before

@@ -21,6 +21,7 @@ interface VideoCaptureProps {
   onBackToStream?: () => void;
   isSaving?: boolean;
   savedFrameCount?: number;
+  onImageLoad?: (ref: React.RefObject<HTMLImageElement>, dimensions: {width: number, height: number}, sourcePath: string) => void;
   sx?: any;
 }
 
@@ -34,6 +35,7 @@ export function VideoCapture({
   onBackToStream,
   isSaving = false,
   savedFrameCount = 0,
+  onImageLoad,
   sx = {}
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -41,6 +43,7 @@ export function VideoCapture({
   const captureStartedRef = useRef(false);
   const [currentFrameNumber, setCurrentFrameNumber] = useState<number>(0);
   const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+  const imageRef = useRef<HTMLImageElement>(null);
 
   // Use the capture hook for rolling buffer functionality
   const {
@@ -123,6 +126,19 @@ export function VideoCapture({
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
+  };
+
+  // Handle image load to pass ref and dimensions to parent
+  const handleImageLoad = () => {
+    if (imageRef.current && onImageLoad) {
+      const img = imageRef.current;
+      const dimensions = {
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      };
+      const sourcePath = videoFramesPath ? videoFrameUrl : currentCapturedFrameUrl;
+      onImageLoad(imageRef, dimensions, sourcePath);
+    }
   };
 
   // Generate URL for the current captured frame with cache-busting
@@ -214,6 +230,7 @@ export function VideoCapture({
         {/* Live capture view - show the latest captured frame */}
         {isCapturing && !videoFramesPath && (
           <img 
+            ref={imageRef}
             src={currentCapturedFrameUrl}
             alt="Live Capture"
             style={{
@@ -225,6 +242,7 @@ export function VideoCapture({
               backgroundColor: 'transparent'
             }}
             draggable={false}
+            onLoad={handleImageLoad}
             onError={(e) => {
               console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
               // Keep the current image instead of showing an error placeholder
@@ -236,6 +254,7 @@ export function VideoCapture({
         {videoFramesPath && totalFrames > 0 && (
           <>
             <img 
+              ref={imageRef}
               src={videoFrameUrl}
               alt={`Frame ${currentValue}`}
               style={{
@@ -247,6 +266,7 @@ export function VideoCapture({
                 backgroundColor: 'transparent'
               }}
               draggable={false}
+              onLoad={handleImageLoad}
               onError={(e) => {
                 console.error(`[@component:VideoCapture] Failed to load frame: ${(e.target as HTMLImageElement).src}`);
                 (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
   Typography,
+  TextField,
 } from '@mui/material';
 import { Camera as CameraIcon } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
+import { DragSelectionOverlay } from './DragSelectionOverlay';
 
 interface VerificationAction {
   id: string;
@@ -35,10 +37,21 @@ interface NodeVerification {
   inputValue?: string;
 }
 
+interface DragArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface VerificationEditorProps {
   isVisible: boolean;
   isScreenshotMode: boolean;
   isCaptureActive: boolean;
+  captureImageRef?: React.RefObject<HTMLImageElement>;
+  captureImageDimensions?: { width: number; height: number };
+  originalImageDimensions?: { width: number; height: number };
+  captureSourcePath?: string;
   sx?: any;
 }
 
@@ -46,12 +59,21 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   isVisible,
   isScreenshotMode,
   isCaptureActive,
+  captureImageRef,
+  captureImageDimensions,
+  originalImageDimensions,
+  captureSourcePath,
   sx = {},
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<DragArea | null>(null);
+  const [referenceName, setReferenceName] = useState<string>('');
+  const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
+
+  const captureContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -83,27 +105,35 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setVerifications(newVerifications);
   };
 
-  const handleTakeScreenshot = async () => {
-    // TODO: Implement screenshot functionality for verification
-    console.log('[@component:VerificationEditor] Taking screenshot for verification');
+  const handleAreaSelected = (area: DragArea) => {
+    console.log('[@component:VerificationEditor] Area selected:', area);
+    setSelectedArea(area);
   };
 
-  const handleTestVerifications = async () => {
-    if (verifications.length === 0) return;
-    
-    console.log('[@component:VerificationEditor] Testing verifications:', verifications);
-    // TODO: Implement test functionality
+  const handleClearSelection = () => {
+    setSelectedArea(null);
+    setCapturedReferenceImage(null);
   };
 
-  const handleSaveVerifications = async () => {
-    if (verifications.length === 0) return;
-    
-    console.log('[@component:VerificationEditor] Saving verifications:', verifications);
-    // TODO: Implement save functionality
+  const handleCaptureReference = async () => {
+    if (!selectedArea || !captureSourcePath || !referenceName.trim()) {
+      console.error('[@component:VerificationEditor] Missing requirements for capture');
+      return;
+    }
+
+    console.log('[@component:VerificationEditor] Capturing reference:', {
+      area: selectedArea,
+      sourcePath: captureSourcePath,
+      referenceName: referenceName.trim()
+    });
+
+    // TODO: Implement API call to crop and save reference image
+    // For now, just show success
+    setCapturedReferenceImage(`/tmp/model/${referenceName.trim()}.png`);
   };
 
-  const canTest = verifications.length > 0 && verifications.some(v => v.id);
-  const canSave = verifications.length > 0 && verifications.every(v => v.id && (!v.requiresInput || v.inputValue?.trim()));
+  const canCapture = selectedArea && referenceName.trim() && captureSourcePath;
+  const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
 
   if (!isVisible) return null;
 
@@ -119,43 +149,119 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }}>
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>Verification Editor</Typography>
       
-      {/* Screenshot Capture Section */}
+      {/* Screenshot Capture Section with Drag Selection */}
       <Box>
-        <Box sx={{ 
-          width: '100%', 
-          height: 120, 
-          border: '2px dashed #444', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          mb: 1,
-          borderRadius: 1,
-          bgcolor: 'rgba(255,255,255,0.05)'
-        }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
-            No image captured
-          </Typography>
-        </Box>
-        <Button 
-          size="small" 
-          startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
-          variant="outlined"
-          fullWidth
-          onClick={handleTakeScreenshot}
-          sx={{
-            borderColor: '#444',
-            color: 'inherit',
-            fontSize: '0.75rem',
-            '&:hover': {
-              borderColor: '#666',
-            }
+        <Box 
+          ref={captureContainerRef}
+          sx={{ 
+            position: 'relative',
+            width: '100%', 
+            height: 120, 
+            border: '2px dashed #444', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            mb: 1,
+            borderRadius: 1,
+            bgcolor: 'rgba(255,255,255,0.05)',
+            overflow: 'hidden'
           }}
         >
-          Capture
-        </Button>
+          {/* Drag Selection Overlay */}
+          {allowSelection && (
+            <DragSelectionOverlay
+              imageRef={captureImageRef}
+              onAreaSelected={handleAreaSelected}
+              selectedArea={selectedArea}
+              sx={{ zIndex: 2 }}
+            />
+          )}
+
+          {capturedReferenceImage ? (
+            <img 
+              src={capturedReferenceImage}
+              alt="Reference"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
+            />
+          ) : (
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+              {allowSelection ? 'Drag to select area' : 'No image captured'}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Reference Name Input */}
+        <TextField
+          size="small"
+          placeholder="Reference name"
+          value={referenceName}
+          onChange={(e) => setReferenceName(e.target.value)}
+          sx={{
+            mb: 1,
+            '& .MuiInputBase-input': {
+              fontSize: '0.75rem',
+            },
+          }}
+          fullWidth
+        />
+
+        {/* Selection Info */}
+        {selectedArea && (
+          <Box sx={{ mb: 1, fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+            <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+              Selected: x:{Math.round(selectedArea.x)}, y:{Math.round(selectedArea.y)}, w:{Math.round(selectedArea.width)}, h:{Math.round(selectedArea.height)}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            size="small" 
+            startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
+            variant="contained"
+            onClick={handleCaptureReference}
+            disabled={!canCapture}
+            sx={{
+              bgcolor: '#444',
+              fontSize: '0.75rem',
+              '&:hover': {
+                bgcolor: '#555',
+              },
+              '&:disabled': {
+                bgcolor: '#333',
+                color: 'rgba(255,255,255,0.3)',
+              }
+            }}
+          >
+            Capture
+          </Button>
+          
+          {selectedArea && (
+            <Button 
+              size="small" 
+              variant="outlined"
+              onClick={handleClearSelection}
+              sx={{
+                borderColor: '#444',
+                color: 'inherit',
+                fontSize: '0.75rem',
+                '&:hover': {
+                  borderColor: '#666',
+                }
+              }}
+            >
+              Clear
+            </Button>
+          )}
+        </Box>
       </Box>
 
-      {/* Verifications List - Using same component as NodeEditDialog */}
+      {/* Verifications List */}
       <Box sx={{ 
         flex: 1, 
         overflow: 'hidden', 
@@ -218,8 +324,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         <Button 
           variant="outlined" 
           size="small"
-          onClick={handleTestVerifications}
-          disabled={!canTest}
+          disabled={verifications.length === 0}
           sx={{
             borderColor: '#444',
             color: 'inherit',
@@ -238,8 +343,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         <Button 
           variant="contained" 
           size="small"
-          onClick={handleSaveVerifications}
-          disabled={!canSave}
+          disabled={verifications.length === 0}
           sx={{
             bgcolor: '#444',
             fontSize: '0.75rem',
