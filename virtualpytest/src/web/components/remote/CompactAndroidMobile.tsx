@@ -44,6 +44,8 @@ export function CompactAndroidMobile({
   
   // Track if we've already initialized to prevent duplicate calls
   const isInitializedRef = useRef(false);
+  // Track if we've already attempted auto-connection to prevent retries
+  const connectionAttemptedRef = useRef(false);
 
   // Use the extended remote connection hook for Android mobile
   const {
@@ -99,9 +101,11 @@ export function CompactAndroidMobile({
         !session.connected && 
         !connectionLoading && 
         isInitializedRef.current && 
-        hasRequiredFields) {
+        hasRequiredFields && 
+        !connectionAttemptedRef.current) {
       console.log('[@component:CompactAndroidMobile] Auto-connecting to Android Mobile...');
       handleTakeControl();
+      connectionAttemptedRef.current = true;
     }
   }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl, connectionForm]);
 
