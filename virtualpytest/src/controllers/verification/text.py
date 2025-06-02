@@ -372,6 +372,12 @@ class TextVerificationController(VerificationControllerInterface):
         Returns:
             Tuple of (success, message, additional_data)
         """
+        # Check if text is provided
+        if not text or text.strip() == '':
+            error_msg = "No text specified. Please provide text to search for."
+            print(f"[@controller:TextVerification] {error_msg}")
+            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter}
+        
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
         if image_filter and image_filter != 'none':
             print(f"[@controller:TextVerification] Using image filter: {image_filter}")
@@ -439,6 +445,12 @@ class TextVerificationController(VerificationControllerInterface):
         """
         Wait for text to disappear by calling waitForTextToAppear and inverting the result.
         """
+        # Check if text is provided
+        if not text or text.strip() == '':
+            error_msg = "No text specified. Please provide text to search for."
+            print(f"[@controller:TextVerification] {error_msg}")
+            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter}
+            
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
         # Smart reuse: call waitForTextToAppear and invert result

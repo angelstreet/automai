@@ -272,15 +272,8 @@ def execute_verification():
         
         # Execute based on the command type
         if command == 'waitForImageToAppear':
-            image_path = params.get('image_path')
-            if not image_path:
-                return jsonify({
-                    'success': False,
-                    'error': 'Image path parameter required for waitForImageToAppear command'
-                }), 400
-            
             success, message = controller.waitForImageToAppear(
-                image_path=image_path,
+                image_path=params.get('image_path'),
                 timeout=params.get('timeout', 10.0),
                 threshold=params.get('threshold', 0.8),
                 area=params.get('area'),
@@ -288,15 +281,8 @@ def execute_verification():
             )
             
         elif command == 'waitForImageToDisappear':
-            image_path = params.get('image_path')
-            if not image_path:
-                return jsonify({
-                    'success': False,
-                    'error': 'Image path parameter required for waitForImageToDisappear command'
-                }), 400
-            
             success, message = controller.waitForImageToDisappear(
-                image_path=image_path,
+                image_path=params.get('image_path'),
                 timeout=params.get('timeout', 10.0),
                 threshold=params.get('threshold', 0.8),
                 area=params.get('area'),
@@ -426,15 +412,8 @@ def execute_batch_verification():
                 additional_data = {}
                 
                 if command == 'waitForImageToAppear':
-                    image_path = params.get('image_path')
-                    if not image_path:
-                        return jsonify({
-                            'success': False,
-                            'error': 'Image path parameter required for waitForImageToAppear command'
-                        }), 400
-                    
                     success, message, additional_data = controller.waitForImageToAppear(
-                        image_path=image_path,
+                        image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area'),
@@ -445,15 +424,8 @@ def execute_batch_verification():
                     )
                     
                 elif command == 'waitForImageToDisappear':
-                    image_path = params.get('image_path')
-                    if not image_path:
-                        return jsonify({
-                            'success': False,
-                            'error': 'Image path parameter required for waitForImageToDisappear command'
-                        }), 400
-                    
                     success, message, additional_data = controller.waitForImageToDisappear(
-                        image_path=image_path,
+                        image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area'),
@@ -532,6 +504,10 @@ def execute_batch_verification():
                                 ref_model = path_parts[0]
                                 ref_filename = path_parts[1]
                                 additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                        elif '/tmp/' in ref_path:
+                            # Handle filtered reference images saved to tmp directory
+                            relative_path = ref_path.split('/tmp/')[-1]
+                            additional_data['reference_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
                     
                     result.update(additional_data)
                 

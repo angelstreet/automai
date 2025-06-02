@@ -387,11 +387,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             imagePath = verification.inputValue;
           }
           
+          // Set image_path regardless - backend will handle validation
+          updatedParams.image_path = imagePath;
           if (imagePath) {
-            updatedParams.image_path = imagePath;
             console.log('[@component:VerificationEditor] Using image path for verification:', imagePath);
           } else {
-            console.warn('[@component:VerificationEditor] No image path found for verification');
+            console.warn('[@component:VerificationEditor] No image path found for verification - backend will return error');
           }
           
           // Determine what images to provide based on component state

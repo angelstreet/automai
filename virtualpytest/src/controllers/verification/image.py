@@ -242,13 +242,21 @@ class ImageVerificationController(VerificationControllerInterface):
         Returns:
             Tuple of (success, message, additional_data)
         """
+        # Check if image_path is provided
+        if not image_path or image_path.strip() == '':
+            error_msg = "No reference image specified. Please select a reference image or provide an image path."
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
+        
         print(f"[@controller:ImageVerification] Looking for image: {image_path}")
         if image_filter and image_filter != 'none':
             print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
         
         # Load reference image
         if not os.path.exists(image_path):
-            return False, f"Reference image not found: {image_path}", {}
+            error_msg = f"Reference image not found at path: {image_path}"
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
         
         # Create filtered reference image if filter is applied
         filtered_reference_path = image_path
@@ -332,7 +340,13 @@ class ImageVerificationController(VerificationControllerInterface):
         """
         Wait for image to disappear by calling waitForImageToAppear and inverting the result.
         """
-        print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
+        # Check if image_path is provided
+        if not image_path or image_path.strip() == '':
+            error_msg = "No reference image specified. Please select a reference image or provide an image path."
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
+            
+        print(f"[@component:ImageVerification] Looking for image to disappear: {image_path}")
         
         # Smart reuse: call waitForImageToAppear and invert result
         found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)

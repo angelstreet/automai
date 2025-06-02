@@ -405,6 +405,30 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
   const modelReferences = getModelReferences();
 
+  // Check if all verifications have required inputs
+  const areVerificationsValid = () => {
+    if (verifications.length === 0) return false;
+    
+    return verifications.every(verification => {
+      // Skip verifications that don't require input
+      if (!verification.requiresInput || !verification.id) return true;
+      
+      if (verification.controller_type === 'image') {
+        // Image verifications need a reference image
+        const hasImagePath = verification.params?.full_path || 
+                            verification.params?.reference_path || 
+                            verification.inputValue;
+        return Boolean(hasImagePath);
+      } else if (verification.controller_type === 'text') {
+        // Text verifications need text to search for
+        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        return Boolean(hasText);
+      }
+      
+      return true;
+    });
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 1 }}>
@@ -688,8 +712,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         }}
                       >
                         <FormControlLabel value="none" control={<Radio />} label="None" />
-                        <FormControlLabel value="greyscale" control={<Radio />} label="Grey" />
-                        <FormControlLabel value="binary" control={<Radio />} label="Binary" />
+                        <FormControlLabel value="greyscale" control={<Radio />} label="Greyscale" />
+                        <FormControlLabel value="binary" control={<Radio />} label="Binarization" />
                       </RadioGroup>
                     </Box>
                   )}
@@ -819,7 +843,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             variant="outlined"
             startIcon={<PlayIcon />}
             onClick={onTest}
-            disabled={verifications.length === 0}
+            disabled={!areVerificationsValid()}
             sx={{
               minWidth: 'auto',
               ml: 1,
