@@ -1039,8 +1039,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               )}
             </Box>
 
-            {/* 3. Reference Type Selection */}
-            <Box sx={{ display: 'flex', gap: 0, alignItems: 'center', mb: 0 }}>
+            {/* 3. Reference Type Selection with Image Processing Options */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0, flexWrap: 'wrap' }}>
               
               <RadioGroup
                 row
@@ -1070,55 +1070,55 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 <FormControlLabel value="image" control={<Radio size="small" />} label="Image" />
                 <FormControlLabel value="text" control={<Radio size="small" />} label="Text" />
               </RadioGroup>
-            </Box>
 
-            {/* 3.5. Image Processing Options (only for image type) */}
-            {referenceType === 'image' && (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
-                <FormControlLabel
-                  control={
-                    <input
-                      type="checkbox"
-                      checked={imageProcessingOptions.autocrop}
-                      onChange={(e) => setImageProcessingOptions(prev => ({ 
-                        ...prev, 
-                        autocrop: e.target.checked 
-                      }))}
-                      style={{ transform: 'scale(0.8)' }}
-                    />
-                  }
-                  label="Auto-crop"
-                  sx={{
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      fontSize: '0.7rem',
-                      color: 'rgba(255,255,255,0.9)',
-                    },
-                  }}
-                />
-                <FormControlLabel
-                  control={
-                    <input
-                      type="checkbox"
-                      checked={imageProcessingOptions.removeBackground}
-                      onChange={(e) => setImageProcessingOptions(prev => ({ 
-                        ...prev, 
-                        removeBackground: e.target.checked 
-                      }))}
-                      style={{ transform: 'scale(0.8)' }}
-                    />
-                  }
-                  label="Remove background"
-                  sx={{
-                    margin: 0,
-                    '& .MuiFormControlLabel-label': {
-                      fontSize: '0.7rem',
-                      color: 'rgba(255,255,255,0.9)',
-                    },
-                  }}
-                />
-              </Box>
-            )}
+              {/* Image Processing Options (only for image type) */}
+              {referenceType === 'image' && (
+                <>
+                  <FormControlLabel
+                    control={
+                      <input
+                        type="checkbox"
+                        checked={imageProcessingOptions.autocrop}
+                        onChange={(e) => setImageProcessingOptions(prev => ({ 
+                          ...prev, 
+                          autocrop: e.target.checked 
+                        }))}
+                        style={{ transform: 'scale(0.8)' }}
+                      />
+                    }
+                    label="Auto-crop"
+                    sx={{
+                      margin: 0,
+                      '& .MuiFormControlLabel-label': {
+                        fontSize: '0.7rem',
+                        color: 'rgba(255,255,255,0.9)',
+                      },
+                    }}
+                  />
+                  <FormControlLabel
+                    control={
+                      <input
+                        type="checkbox"
+                        checked={imageProcessingOptions.removeBackground}
+                        onChange={(e) => setImageProcessingOptions(prev => ({ 
+                          ...prev, 
+                          removeBackground: e.target.checked 
+                        }))}
+                        style={{ transform: 'scale(0.8)' }}
+                      />
+                    }
+                    label="Remove background"
+                    sx={{
+                      margin: 0,
+                      '& .MuiFormControlLabel-label': {
+                        fontSize: '0.7rem',
+                        color: 'rgba(255,255,255,0.9)',
+                      },
+                    }}
+                  />
+                </>
+              )}
+            </Box>
 
             {/* 4. Text Input and Auto-Detect (only for text type) */}
             {referenceType === 'text' && (
