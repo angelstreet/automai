@@ -32,6 +32,7 @@ interface VerificationTestResult {
   message?: string;
   error?: string;
   threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
 }
 
 interface VerificationAction {
@@ -187,6 +188,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           ...verifications[index].params,
           reference_image: selectedRef.name,
           reference_path: selectedRef.path,
+          full_path: selectedRef.full_path,
           area: {
             x: selectedRef.area.x,
             y: selectedRef.area.y,
@@ -195,7 +197,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           }
         }
       });
-      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name, 'with area:', selectedRef.area);
+      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name, 'with full_path:', selectedRef.full_path, 'and area:', selectedRef.area);
     }
   };
 
@@ -203,7 +205,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
         <CircularProgress size={20} />
-        <Typography>Loading verification actions...</Typography>
+        <Typography>Running verifications...</Typography>
       </Box>
     );
   }
@@ -444,21 +446,39 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     minWidth: 120,
                     padding: '4px 8px',
                     borderRadius: 1,
-                    backgroundColor: testResults[index].success ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                    border: `1px solid ${testResults[index].success ? '#4caf50' : '#f44336'}`
+                    backgroundColor: testResults[index].resultType === 'PASS' 
+                      ? 'rgba(76, 175, 80, 0.1)' 
+                      : testResults[index].resultType === 'ERROR' 
+                        ? 'rgba(255, 152, 0, 0.1)' 
+                        : 'rgba(244, 67, 54, 0.1)',
+                    border: `1px solid ${
+                      testResults[index].resultType === 'PASS' 
+                        ? '#4caf50' 
+                        : testResults[index].resultType === 'ERROR' 
+                          ? '#ff9800' 
+                          : '#f44336'
+                    }`
                   }}>
                     <Box sx={{
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor: testResults[index].success ? '#4caf50' : '#f44336'
+                      backgroundColor: testResults[index].resultType === 'PASS' 
+                        ? '#4caf50' 
+                        : testResults[index].resultType === 'ERROR' 
+                          ? '#ff9800' 
+                          : '#f44336'
                     }} />
                     <Typography variant="caption" sx={{ 
                       fontSize: '0.7rem',
-                      color: testResults[index].success ? '#4caf50' : '#f44336',
+                      color: testResults[index].resultType === 'PASS' 
+                        ? '#4caf50' 
+                        : testResults[index].resultType === 'ERROR' 
+                          ? '#ff9800' 
+                          : '#f44336',
                       fontWeight: 600
                     }}>
-                      {testResults[index].success ? 'PASS' : 'FAIL'}
+                      {testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
                     </Typography>
                     {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
                       <Typography variant="caption" sx={{ 
@@ -467,6 +487,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         ml: 0.5
                       }}>
                         {(testResults[index].threshold! * 100).toFixed(1)}%
+                      </Typography>
+                    )}
+                    {/* Show error message for ERROR type results */}
+                    {testResults[index].resultType === 'ERROR' && (testResults[index].message || testResults[index].error) && (
+                      <Typography variant="caption" sx={{ 
+                        fontSize: '0.6rem',
+                        color: 'rgba(255,255,255,0.8)',
+                        ml: 0.5,
+                        maxWidth: 200,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }} title={testResults[index].message || testResults[index].error}>
+                        {testResults[index].message || testResults[index].error}
                       </Typography>
                     )}
                   </Box>

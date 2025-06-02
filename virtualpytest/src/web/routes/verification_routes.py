@@ -392,18 +392,18 @@ def execute_batch_verification():
             }
             
             try:
-                # Reuse the single verification execution logic
-                single_result_data = {
-                    'verification': verification,
-                    'node_id': node_id,
-                    'tree_id': tree_id
-                }
-                
                 # Simulate the single verification execution
                 verification_id = verification.get('id')
                 command = verification.get('command')
                 params = verification.get('params', {})
                 controller_type = verification.get('controller_type', 'image')
+                
+                print(f"[@route:execute_batch_verification] Executing verification {verification_id}:")
+                print(f"  Command: {command}")
+                print(f"  Controller: {controller_type}")
+                print(f"  Params: {params}")
+                if params.get('area'):
+                    print(f"  Area coordinates: {params.get('area')}")
                 
                 # Get controller
                 controller = None
@@ -420,37 +420,49 @@ def execute_batch_verification():
                 
                 # Execute verification
                 success = False
+                message = ""
+                
                 if command == 'waitForImageToAppear':
-                    success = controller.waitForImageToAppear(
+                    success, message = controller.waitForImageToAppear(
                         image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area')
                     )
                 elif command == 'waitForImageToDisappear':
-                    success = controller.waitForImageToDisappear(
+                    success, message = controller.waitForImageToDisappear(
                         image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
                         area=params.get('area')
                     )
                 elif command == 'waitForTextToAppear':
-                    success = controller.waitForTextToAppear(
+                    success, message = controller.waitForTextToAppear(
                         text=params.get('text'),
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
                         area=params.get('area')
                     )
                 elif command == 'waitForTextToDisappear':
-                    success = controller.waitForTextToDisappear(
+                    success, message = controller.waitForTextToDisappear(
                         text=params.get('text'),
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
                         area=params.get('area')
                     )
                 
+                # Ensure we have a message, include threshold info for image verifications
+                if not message:
+                    if controller_type == 'image':
+                        threshold_val = params.get('threshold', 0.8)
+                        message = f'Verification {verification_id} {"passed" if success else "failed"} (threshold: {threshold_val})'
+                    else:
+                        message = f'Verification {verification_id} {"passed" if success else "failed"}'
+                
                 result['success'] = success
-                result['message'] = f'Verification {verification_id} {"passed" if success else "failed"}'
+                result['message'] = message
+                
+                print(f"[@route:execute_batch_verification] Result: {result}")
                 
                 if not success:
                     all_passed = False

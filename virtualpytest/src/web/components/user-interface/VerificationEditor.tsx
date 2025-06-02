@@ -51,6 +51,7 @@ interface VerificationTestResult {
   message?: string;
   error?: string;
   threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
 }
 
 interface DragArea {
@@ -344,20 +345,67 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       // Step 2: Prepare verifications for API call
       const verificationsToExecute = verifications.map(verification => {
-        // For image verifications, use the selected reference image or inputValue as image_path
+        // Start with all existing params including area coordinates
         let updatedParams = { ...verification.params };
         
+        console.log('[@component:VerificationEditor] Debug verification params for image:', {
+          full_path: verification.params?.full_path,
+          reference_path: verification.params?.reference_path,
+          reference_image: verification.params?.reference_image,
+          inputValue: verification.inputValue
+        });
+        
         if (verification.controller_type === 'image' && verification.requiresInput) {
-          // Use the reference image name or manual input as image_path
-          const imagePath = verification.params?.reference_image || verification.inputValue || '';
+          // Use the full absolute path for image verification
+          let imagePath = '';
+          
+          if (verification.params?.full_path) {
+            // Use full absolute path from reference data
+            imagePath = verification.params.full_path;
+          } else if (verification.params?.reference_path) {
+            // Fallback to relative path (may need to be converted to absolute)
+            imagePath = verification.params.reference_path;
+          } else if (verification.inputValue) {
+            // Manual input
+            imagePath = verification.inputValue;
+          }
+          
           if (imagePath) {
             updatedParams.image_path = imagePath;
+            console.log('[@component:VerificationEditor] Using image path for verification:', imagePath);
+          } else {
+            console.warn('[@component:VerificationEditor] No image path found for verification');
+          }
+          
+          // Provide current screenshot or capture source if available
+          if (captureSourcePath && !isCaptureActive) {
+            // If we have a screenshot displayed, use it for verification
+            updatedParams.image_list = [captureSourcePath];
+            console.log('[@component:VerificationEditor] Using current screenshot for verification:', captureSourcePath);
+          }
+          
+          // Ensure area coordinates are included (from reference or manual input)
+          if (verification.params?.area) {
+            updatedParams.area = verification.params.area;
+            console.log('[@component:VerificationEditor] Including area for image verification:', updatedParams.area);
           }
         } else if (verification.controller_type === 'text' && verification.requiresInput) {
           // For text verifications, use inputValue as text parameter
           const textValue = verification.inputValue || '';
           if (textValue) {
             updatedParams.text = textValue;
+          }
+          
+          // Provide current screenshot for text verification too
+          if (captureSourcePath && !isCaptureActive) {
+            updatedParams.image_list = [captureSourcePath];
+            console.log('[@component:VerificationEditor] Using current screenshot for text verification:', captureSourcePath);
+          }
+          
+          // Text verifications can also have area constraints
+          if (verification.params?.area) {
+            updatedParams.area = verification.params.area;
+            console.log('[@component:VerificationEditor] Including area for text verification:', updatedParams.area);
           }
         }
 
@@ -367,7 +415,19 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         };
       });
 
-      console.log('[@component:VerificationEditor] Executing verifications:', verificationsToExecute);
+      console.log('[@component:VerificationEditor] Executing verifications with details:');
+      verificationsToExecute.forEach((verification, index) => {
+        const strategy = verification.params?.image_list 
+          ? `Using existing screenshot: ${verification.params.image_list[0]}` 
+          : 'Will start new capture';
+        console.log(`[@component:VerificationEditor] Verification ${index + 1}:`, {
+          id: verification.id,
+          command: verification.command,
+          controller_type: verification.controller_type,
+          strategy: strategy,
+          params: verification.params
+        });
+      });
 
       // Step 3: Call the batch verification API
       const response = await fetch('http://localhost:5009/api/virtualpytest/verification/execute-batch', {
@@ -394,18 +454,71 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           
           // Extract threshold from message if available (for image verifications)
           let threshold: number | undefined = undefined;
-          if (verificationsToExecute[index]?.controller_type === 'image' && res.message) {
-            const thresholdMatch = res.message.match(/confidence ([\d.]+)/);
-            if (thresholdMatch) {
-              threshold = parseFloat(thresholdMatch[1]);
+          if (verificationsToExecute[index]?.controller_type === 'image') {
+            // Try to extract threshold from various message formats
+            if (res.message) {
+              // Try different patterns for confidence/threshold
+              const patterns = [
+                /confidence ([\d.]+)/i,
+                /threshold ([\d.]+)/i,
+                /match ([\d.]+)/i,
+                /score ([\d.]+)/i,
+                /([\d.]+)%/,
+                /(0\.\d+)/  // Direct decimal values
+              ];
+              
+              for (const pattern of patterns) {
+                const match = res.message.match(pattern);
+                if (match) {
+                  let value = parseFloat(match[1]);
+                  // Convert percentage to decimal if needed
+                  if (pattern.source.includes('%') && value > 1) {
+                    value = value / 100;
+                  }
+                  threshold = value;
+                  break;
+                }
+              }
+            }
+            
+            // If no threshold found in message, use the threshold from verification params
+            if (threshold === undefined && verificationsToExecute[index]?.params?.threshold) {
+              threshold = verificationsToExecute[index].params.threshold;
+              console.log(`[@component:VerificationEditor] Using verification threshold parameter: ${threshold}`);
             }
           }
           
+          // Determine if this is an ERROR (technical issue) or FAIL (test result)
+          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'ERROR';
+          if (res.success) {
+            resultType = 'PASS';
+          } else {
+            // Check if this is a technical error vs test failure
+            const errorMessage = res.message || res.error || '';
+            const isTechnicalError = errorMessage.includes('not found') || 
+                                   errorMessage.includes('Could not load') || 
+                                   errorMessage.includes('Failed to') ||
+                                   errorMessage.includes('Error') ||
+                                   errorMessage.includes('ERROR');
+            
+            resultType = isTechnicalError ? 'ERROR' : 'FAIL';
+          }
+          
+          console.log(`[@component:VerificationEditor] Verification ${index + 1} result:`, {
+            success: res.success,
+            resultType: resultType,
+            message: res.message,
+            error: res.error,
+            extractedThreshold: threshold,
+            controllerType: verificationsToExecute[index]?.controller_type
+          });
+
           newTestResults.push({
             success: res.success,
             message: res.message,
             error: res.error,
-            threshold
+            threshold,
+            resultType: resultType
           });
         });
       }
@@ -415,14 +528,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         const passedCount = result.passed_count || 0;
         const totalCount = result.total_verifications || verifications.length;
         
+        // Clear any previous errors since we have results
+        setError(null);
+        
         if (passedCount === totalCount) {
           setSuccessMessage(`All ${totalCount} verification(s) passed!`);
         } else {
-          setError(`${passedCount}/${totalCount} verification(s) passed. Check details in console.`);
+          setSuccessMessage(`${passedCount}/${totalCount} verification(s) passed. Check results below.`);
         }
       } else {
-        setError(result.error || 'Verification test failed');
-        console.error('[@component:VerificationEditor] Test failed:', result.error);
+        // Clear any previous errors and show success message with results info
+        setError(null);
+        const passedCount = result.passed_count || 0;
+        const totalCount = result.total_verifications || verifications.length;
+        setSuccessMessage(`Test completed: ${passedCount}/${totalCount} verification(s) passed. Check results below.`);
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error running tests:', error);
