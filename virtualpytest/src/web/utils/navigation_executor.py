@@ -449,6 +449,14 @@ def execute_action_object(action_obj: dict) -> bool:
         print(f"[@navigation:executor:execute_action_object] ERROR: Invalid action object: {action_obj}")
         return False
     
+    # ENHANCED LOGGING: Show original action object received
+    print(f"[@navigation:executor:execute_action_object] ORIGINAL ACTION OBJECT: {action_obj}")
+    print(f"[@navigation:executor:execute_action_object] Action keys: {list(action_obj.keys()) if action_obj else 'None'}")
+    print(f"[@navigation:executor:execute_action_object] Action command: '{action_obj.get('command')}'")
+    print(f"[@navigation:executor:execute_action_object] Action params: {action_obj.get('params')}")
+    print(f"[@navigation:executor:execute_action_object] Requires input: {action_obj.get('requiresInput')}")
+    print(f"[@navigation:executor:execute_action_object] Input value: '{action_obj.get('inputValue')}'")
+    
     try:
         print(f"[@navigation:executor:execute_action_object] Executing action: {action_obj}")
         
@@ -484,25 +492,37 @@ def execute_action_object(action_obj: dict) -> bool:
                     except ValueError:
                         print(f"[@navigation:executor:execute_action_object] WARNING: Invalid coordinates: {input_value}")
         
+        # ENHANCED LOGGING: Show exact action being sent to API
+        print(f"[@navigation:executor:execute_action_object] SENDING TO API: {action_to_execute}")
+        print(f"[@navigation:executor:execute_action_object] Action command: '{action_to_execute.get('command')}'")
+        print(f"[@navigation:executor:execute_action_object] Action params: {action_to_execute.get('params')}")
+        
         # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
         import requests
         
         api_controller_type = 'android-mobile'  # Default controller type
         api_url = f"http://localhost:5009/api/virtualpytest/{api_controller_type}/execute-action"
         
+        print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
+        
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
                                json={'action': action_to_execute},
                                timeout=30)
         
+        print(f"[@navigation:executor:execute_action_object] API Response Status: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
+            print(f"[@navigation:executor:execute_action_object] API Response Body: {result}")
+            
             if result.get('success'):
                 print(f"[@navigation:executor:execute_action_object] Action executed successfully: {result.get('message', 'Success')}")
                 return True
             else:
                 error_message = result.get('error', 'Unknown error')
                 print(f"[@navigation:executor:execute_action_object] Action failed: {error_message}")
+                print(f"[@navigation:executor:execute_action_object] Full error response: {result}")
                 
                 # Check if failure is acceptable (desired state already achieved)
                 if is_acceptable_failure(action_obj, error_message):
