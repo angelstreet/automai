@@ -631,7 +631,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+      <Box sx={{ display: 'flex', gap: 1, mt: 'auto', justifyContent: 'flex-end' }}>
         <Button 
           variant="outlined" 
           size="small"
