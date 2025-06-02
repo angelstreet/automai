@@ -247,7 +247,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     threshold?: number;
     imageFilter?: 'none' | 'greyscale' | 'binary';
   }> = ({ sourceUrl, referenceUrl, resultType, threshold, imageFilter }) => {
-    const handleDoubleClick = () => {
+    const handleImageClick = () => {
       setImageComparisonDialog({
         open: true,
         sourceUrl,
@@ -287,7 +287,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               borderRadius: '4px',
               cursor: 'pointer'
             }}
-            onDoubleClick={handleDoubleClick}
+            onClick={handleImageClick}
           />
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
@@ -306,7 +306,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               borderRadius: '4px',
               cursor: 'pointer'
             }}
-            onDoubleClick={handleDoubleClick}
+            onClick={handleImageClick}
           />
         </Box>
       </Box>

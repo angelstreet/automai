@@ -294,34 +294,63 @@ class ImageVerificationController(VerificationControllerInterface):
                 if not os.path.exists(source_path):
                     continue
                 
-                # Apply filter to source image if specified
+                # Create a temporary copy for filtering (don't modify original)
+                filtered_source_path = source_path
                 if image_filter and image_filter != 'none':
-                    if not apply_image_filter(source_path, image_filter):
-                        print(f"[@controller:ImageVerification] Failed to apply filter to source: {source_path}")
-                        continue
+                    import tempfile
+                    import shutil
                     
-                source_img = cv2.imread(source_path, cv2.IMREAD_COLOR)
+                    # Create temporary file for filtered version
+                    temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_source_')
+                    os.close(temp_fd)
+                    
+                    # Copy original to temp location
+                    shutil.copy2(source_path, temp_path)
+                    
+                    # Apply filter to temporary copy
+                    if apply_image_filter(temp_path, image_filter):
+                        filtered_source_path = temp_path
+                        print(f"[@controller:ImageVerification] Created filtered copy: {temp_path}")
+                    else:
+                        print(f"[@controller:ImageVerification] Failed to apply filter, using original")
+                        os.unlink(temp_path)  # Clean up failed temp file
+                        filtered_source_path = source_path
+                else:
+                    filtered_source_path = source_path
+                    
+                source_img = cv2.imread(filtered_source_path, cv2.IMREAD_COLOR)
                 if source_img is None:
+                    # Clean up temp file if it was created
+                    if filtered_source_path != source_path and os.path.exists(filtered_source_path):
+                        os.unlink(filtered_source_path)
                     continue
                 
                 confidence = self._match_template(ref_img, source_img, area)
                 
                 if confidence > max_confidence:
                     max_confidence = confidence
-                    best_source_path = source_path
+                    best_source_path = source_path  # Always use original path for cropping
                 
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
                     
-                    # Save cropped source image for UI comparison
+                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
                     
+                    # Clean up temp file if it was created
+                    if filtered_source_path != source_path and os.path.exists(filtered_source_path):
+                        os.unlink(filtered_source_path)
+                    
                     return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
+                
+                # Clean up temp file if it was created
+                if filtered_source_path != source_path and os.path.exists(filtered_source_path):
+                    os.unlink(filtered_source_path)
             
-            # If no match found, still save the best source for comparison
+            # If no match found, still save the best source for comparison (from ORIGINAL)
             if best_source_path and area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
                 if cropped_source_path:
@@ -330,9 +359,102 @@ class ImageVerificationController(VerificationControllerInterface):
             return False, f"Image not found. Best confidence: {max_confidence:.3f} (threshold: {threshold:.3f})", additional_data
         
         else:
-            # Use capture system
-            print(f"[@controller:ImageVerification] Starting capture for {timeout}s")
-            return self._capture_and_search(ref_img, timeout, threshold, area, model, verification_index, additional_data, image_filter)
+            # Capture new image if no image list provided
+            print(f"[@controller:ImageVerification] No image list provided, capturing new image")
+            
+            capture_path = self.av_controller.capture_screen()
+            if not capture_path:
+                return False, "Failed to capture screen for image verification", additional_data
+            
+            # Create a temporary copy for filtering (don't modify original)
+            filtered_capture_path = capture_path
+            if image_filter and image_filter != 'none':
+                import tempfile
+                import shutil
+                
+                # Create temporary file for filtered version
+                temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_capture_')
+                os.close(temp_fd)
+                
+                # Copy original to temp location
+                shutil.copy2(capture_path, temp_path)
+                
+                # Apply filter to temporary copy
+                if apply_image_filter(temp_path, image_filter):
+                    filtered_capture_path = temp_path
+                    print(f"[@controller:ImageVerification] Created filtered capture copy: {temp_path}")
+                else:
+                    print(f"[@controller:ImageVerification] Failed to apply filter, using original capture")
+                    os.unlink(temp_path)  # Clean up failed temp file
+                    filtered_capture_path = capture_path
+            else:
+                filtered_capture_path = capture_path
+            
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                source_img = cv2.imread(filtered_capture_path, cv2.IMREAD_COLOR)
+                if source_img is None:
+                    # Clean up temp file if it was created
+                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                        os.unlink(filtered_capture_path)
+                    return False, "Failed to load captured image for verification", additional_data
+                
+                confidence = self._match_template(ref_img, source_img, area)
+                
+                if confidence >= threshold:
+                    print(f"[@controller:ImageVerification] Image found in captured frame with confidence {confidence:.3f}")
+                    
+                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
+                    if area and model is not None:
+                        cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                        if cropped_source_path:
+                            additional_data["source_image_path"] = cropped_source_path
+                    
+                    # Clean up temp file if it was created
+                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                        os.unlink(filtered_capture_path)
+                    
+                    return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
+                
+                # Re-capture if we're in a loop
+                if time.time() - start_time < timeout:
+                    # Clean up previous temp file
+                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                        os.unlink(filtered_capture_path)
+                    
+                    capture_path = self.av_controller.capture_screen()
+                    if not capture_path:
+                        return False, "Failed to re-capture screen for image verification", additional_data
+                    
+                    # Create new filtered copy if needed
+                    filtered_capture_path = capture_path
+                    if image_filter and image_filter != 'none':
+                        import tempfile
+                        import shutil
+                        
+                        temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_capture_')
+                        os.close(temp_fd)
+                        shutil.copy2(capture_path, temp_path)
+                        
+                        if apply_image_filter(temp_path, image_filter):
+                            filtered_capture_path = temp_path
+                        else:
+                            os.unlink(temp_path)
+                            filtered_capture_path = capture_path
+                
+                time.sleep(0.5)
+            
+            # Save cropped source for comparison even if not found (from ORIGINAL)
+            if area and model is not None:
+                cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                if cropped_source_path:
+                    additional_data["source_image_path"] = cropped_source_path
+            
+            # Clean up temp file if it was created
+            if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
+                os.unlink(filtered_capture_path)
+            
+            return False, f"Image not found after {timeout}s timeout", additional_data
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
                                area: tuple = None, image_list: List[str] = None, model: str = None,
@@ -380,91 +502,6 @@ class ImageVerificationController(VerificationControllerInterface):
         except Exception as e:
             print(f"[@controller:ImageVerification] Template matching error: {e}")
             return 0.0
-
-    def _capture_and_search(self, ref_img: np.ndarray, timeout: float, threshold: float, area: tuple = None, 
-                           model: str = None, verification_index: int = 0, additional_data: dict = None, image_filter: str = 'none') -> Tuple[bool, str, dict]:
-        """
-        Start capture, wait for timeout, stop capture, and search for image in captured frames.
-        Returns immediately on first match found.
-        """
-        if additional_data is None:
-            additional_data = {}
-            
-        try:
-            # Start capture
-            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', json={})
-            if not response.json().get('success'):
-                return False, "Failed to start capture", additional_data
-            
-            # Wait for timeout (capture all frames during this period)
-            time.sleep(timeout)
-            
-            # Stop capture and get frames
-            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', json={})
-            result = response.json()
-            
-            if not result.get('success'):
-                return False, "Failed to stop capture", additional_data
-            
-            frames_downloaded = result.get('frames_downloaded', 0)
-            if frames_downloaded == 0:
-                return False, "No frames captured", additional_data
-            
-            print(f"[@controller:ImageVerification] Processing {frames_downloaded} captured frames...")
-            
-            # Search in captured frames - return immediately on first match
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            capture_dir = os.path.join(base_dir, 'tmp', 'captures')
-            
-            max_confidence = 0.0
-            best_frame_path = None
-            
-            for i in range(1, frames_downloaded + 1):
-                frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
-                if not os.path.exists(frame_path):
-                    continue
-                
-                # Apply filter to frame if specified
-                if image_filter and image_filter != 'none':
-                    if not apply_image_filter(frame_path, image_filter):
-                        print(f"[@controller:ImageVerification] Failed to apply filter to frame: {frame_path}")
-                        continue
-                
-                frame_img = cv2.imread(frame_path, cv2.IMREAD_COLOR)
-                if frame_img is None:
-                    continue
-                
-                confidence = self._match_template(ref_img, frame_img, area)
-                
-                if confidence > max_confidence:
-                    max_confidence = confidence
-                    best_frame_path = frame_path
-                
-                print(f"[@controller:ImageVerification] Frame {i}: confidence {confidence:.3f}")
-                
-                # Return immediately on first match
-                if confidence >= threshold:
-                    print(f"[@controller:ImageVerification] Match found in frame {i}! Stopping analysis.")
-                    
-                    # Save cropped source image for UI comparison
-                    if area and model is not None:
-                        cropped_source_path = self._save_cropped_source_image(frame_path, area, model, verification_index)
-                        if cropped_source_path:
-                            additional_data["source_image_path"] = cropped_source_path
-                    
-                    return True, f"Image found in frame {i} with confidence {confidence:.3f}", additional_data
-            
-            # If no match found, still save the best frame for comparison
-            if best_frame_path and area and model is not None:
-                cropped_source_path = self._save_cropped_source_image(best_frame_path, area, model, verification_index)
-                if cropped_source_path:
-                    additional_data["source_image_path"] = cropped_source_path
-            
-            return False, f"Image not found in {frames_downloaded} frames. Best confidence: {max_confidence:.3f} (threshold: {threshold:.3f})", additional_data
-            
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Capture and search error: {e}")
-            return False, f"Capture error: {str(e)}", additional_data
 
 # Backward compatibility alias
 ImageVerificationController = ImageVerificationController 
