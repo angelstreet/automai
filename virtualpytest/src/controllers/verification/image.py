@@ -16,6 +16,59 @@ from pathlib import Path
 from ..base_controllers import VerificationControllerInterface
 
 
+def crop_reference_image(source_path, target_path, area):
+    """
+    Crop a reference image from a source image and save it.
+    
+    Args:
+        source_path (str): Path to the source image
+        target_path (str): Path where the cropped image will be saved
+        area (dict): Area to crop {x, y, width, height}
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Read source image
+        img = cv2.imread(source_path)
+        if img is None:
+            print(f"Error: Could not read source image: {source_path}")
+            return False
+            
+        # Extract area coordinates
+        x = int(area['x'])
+        y = int(area['y'])
+        width = int(area['width'])
+        height = int(area['height'])
+        
+        # Ensure coordinates are within image bounds
+        img_height, img_width = img.shape[:2]
+        x = max(0, min(x, img_width - 1))
+        y = max(0, min(y, img_height - 1))
+        width = min(width, img_width - x)
+        height = min(height, img_height - y)
+        
+        # Crop image
+        cropped_img = img[y:y+height, x:x+width]
+        
+        # Create target directory if it doesn't exist
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        
+        # Save cropped image
+        result = cv2.imwrite(target_path, cropped_img)
+        
+        if result:
+            print(f"Reference image saved successfully: {target_path}")
+            return True
+        else:
+            print(f"Failed to save reference image: {target_path}")
+            return False
+            
+    except Exception as e:
+        print(f"Error cropping reference image: {str(e)}")
+        return False
+
+
 class ImageVerificationController(VerificationControllerInterface):
     """Image verification controller that uses template matching to detect images on screen."""
     

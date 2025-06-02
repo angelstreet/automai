@@ -138,9 +138,34 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       referenceName: referenceName.trim() || 'default_reference'
     });
 
-    // TODO: Implement API call to crop and save reference image
-    // For now, just show success
-    setCapturedReferenceImage(`/tmp/model/${referenceName.trim() || 'default_reference'}.png`);
+    try {
+      // Call the API to crop and save the reference image
+      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/capture', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          area: selectedArea,
+          source_path: captureSourcePath,
+          reference_name: referenceName.trim() || 'default_reference',
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        const timestamp = new Date().getTime();
+        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/${referenceName.trim() || 'default_reference'}.png?t=${timestamp}`;
+        console.log('[@component:VerificationEditor] Reference captured successfully, setting image URL:', imageUrl);
+        setCapturedReferenceImage(imageUrl);
+      } else {
+        console.error('[@component:VerificationEditor] Failed to capture reference:', result.error);
+        // Could add error state handling here
+      }
+    } catch (error) {
+      console.error('[@component:VerificationEditor] Error capturing reference:', error);
+    }
   };
 
   const canCapture = selectedArea;
@@ -150,7 +175,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 480, 
+      width: 400, 
       height: 520, 
       p: 1, 
       display: 'flex', 
@@ -167,7 +192,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           sx={{ 
             position: 'relative',
             width: '100%', 
-            height: 80, 
+            height: 200, 
             border: '2px dashed #444', 
             display: 'flex', 
             alignItems: 'center', 
@@ -175,7 +200,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             borderRadius: 1,
             bgcolor: 'rgba(255,255,255,0.05)',
             overflow: 'hidden',
-            mb: 0.25
+            mb: 0
           }}
           onMouseLeave={() => {
             if (selectedArea && onClearSelection) {
@@ -203,7 +228,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* 2. Drag Area Info (Selection Info) */}
-      <Box sx={{ mb: 0.25, fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+      <Box sx={{ mb: 0, fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
         <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
           {selectedArea 
             ? `Selected: x:${Math.round(selectedArea.x)}, y:${Math.round(selectedArea.y)}, w:${Math.round(selectedArea.width)}, h:${Math.round(selectedArea.height)}`
@@ -213,7 +238,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* 3. Reference Name + Action Buttons (Horizontal Row) */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0.5 }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0 }}>
         {/* Reference Name Input */}
         <TextField
           size="small"

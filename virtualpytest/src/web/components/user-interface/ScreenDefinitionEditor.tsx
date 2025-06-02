@@ -606,7 +606,6 @@ export function ScreenDefinitionEditor({
     } else if (avConfig?.host_ip) {
       // Try HTTPS URL first, but note that it might need to be HTTP depending on the server config
       return `https://${avConfig.host_ip}:444/stream/output.m3u8`;
-      // Alternative: return `http://${avConfig.host_ip}:444/stream/output.m3u8`;
     }
     return undefined;
   }, [avConfig]);

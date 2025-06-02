@@ -7,7 +7,7 @@ This module contains the verification API endpoints for:
 - Node verification execution
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_from_directory
 import time
 import os
 import sys
@@ -476,4 +476,94 @@ def execute_batch_verification():
         return jsonify({
             'success': False,
             'error': f'Batch verification execution error: {str(e)}'
+        }), 500
+
+
+# =====================================================
+# REFERENCE IMAGE CAPTURE
+# =====================================================
+
+@verification_bp.route('/api/virtualpytest/reference/capture', methods=['POST'])
+def capture_reference_image():
+    """Crop and save a reference image from a source screenshot or frame."""
+    try:
+        data = request.get_json()
+        area = data.get('area')
+        source_path = data.get('source_path')
+        reference_name = data.get('reference_name')
+        
+        print(f"[@route:capture_reference_image] Capturing reference image from {source_path} with area: {area}")
+        
+        # Validate required parameters
+        if not area or not source_path or not reference_name:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: area, source_path, or reference_name'
+            }), 400
+            
+        # Ensure target directory exists
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Define target path
+        target_path = os.path.join(target_dir, f"{reference_name}.png")
+        
+        # Import the crop function from image controller
+        from controllers.verification.image import crop_reference_image
+        
+        # Crop and save reference image
+        success = crop_reference_image(source_path, target_path, area)
+        
+        if success:
+            # Return success with image info
+            relative_path = f"/api/virtualpytest/reference/image/{reference_name}.png"
+            return jsonify({
+                'success': True,
+                'message': f'Reference image saved: {reference_name}',
+                'image_path': target_path,
+                'image_url': relative_path
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to crop and save reference image'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:capture_reference_image] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference capture error: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/reference/image/<filename>', methods=['GET'])
+def get_reference_image(filename):
+    """Serve a reference image."""
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        model_dir = os.path.join(base_dir, 'tmp', 'model')
+        
+        print(f"[@route:get_reference_image] Looking for image: {filename} in directory: {model_dir}")
+        file_path = os.path.join(model_dir, filename)
+        
+        if not os.path.exists(file_path):
+            print(f"[@route:get_reference_image] File not found: {file_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Reference image not found: {filename}'
+            }), 404
+        
+        print(f"[@route:get_reference_image] Serving image: {file_path}")
+        return send_from_directory(
+            model_dir, 
+            filename,
+            mimetype='image/png',
+            cache_timeout=0
+        )
+    except Exception as e:
+        print(f"[@route:get_reference_image] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve reference image: {str(e)}'
         }), 500 
