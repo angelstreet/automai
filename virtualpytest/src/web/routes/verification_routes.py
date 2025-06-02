@@ -904,15 +904,36 @@ def auto_detect_text():
             
         print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}")
         
-        # Initialize AV controller to capture current screen
-        av_controller = AVController()
+        # Get the appropriate AV controller from the app instance
+        import app
+        av_controller = None
+        
+        # Try to get active AV controller based on the model name
+        if model == 'android_mobile' and hasattr(app, 'android_mobile_controller'):
+            av_controller = app.android_mobile_controller
+        elif model == 'android_tv' and hasattr(app, 'android_tv_session'):
+            av_controller = app.android_tv_session.get('controller')
+        else:
+            # Default fallback - try android_mobile first
+            if hasattr(app, 'android_mobile_controller') and app.android_mobile_controller:
+                av_controller = app.android_mobile_controller
+            elif hasattr(app, 'android_tv_session') and app.android_tv_session:
+                av_controller = app.android_tv_session.get('controller')
+        
+        if not av_controller or not av_controller.is_connected:
+            return jsonify({
+                'success': False,
+                'error': f'No active AV controller found for model {model}. Please ensure the controller is connected.'
+            }), 400
+        
         capture_path = av_controller.capture_screen()
         
         if not capture_path:
             return jsonify({'error': 'Failed to capture screen'}), 500
             
         # Initialize text verification controller for OCR
-        text_controller = TextVerificationController()
+        from controllers.verification.text import TextVerificationController
+        text_controller = TextVerificationController(av_controller)
         
         # Use OCR to extract text from the specified area
         import cv2
@@ -924,7 +945,7 @@ def auto_detect_text():
             return jsonify({'error': 'Failed to load captured image'}), 500
             
         # Crop to the specified area
-        x, y, width, height = area['x'], area['y'], area['width'], area['height']
+        x, y, width, height = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
         cropped_image = image[y:y+height, x:x+width]
         
         # Use tesseract to extract text and get detailed information
@@ -962,8 +983,8 @@ def auto_detect_text():
             
             return jsonify({
                 'success': True,
-                'text': detected_text,
-                'confidence': round(avg_confidence, 1),
+                'detected_text': detected_text,
+                'confidence': round(avg_confidence / 100, 3),  # Convert to 0-1 range
                 'font_size': round(avg_font_size),
                 'area': area
             })
