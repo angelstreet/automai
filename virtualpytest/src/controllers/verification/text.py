@@ -376,7 +376,7 @@ class TextVerificationController(VerificationControllerInterface):
         if not text or text.strip() == '':
             error_msg = "No text specified. Please provide text to search for."
             print(f"[@controller:TextVerification] {error_msg}")
-            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter}
+            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0}
         
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
         if image_filter and image_filter != 'none':
@@ -392,6 +392,7 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"[@controller:TextVerification] Searching in {len(image_list)} provided images")
             closest_text = ""
             best_source_path = None
+            text_found = False
             
             for source_path in image_list:
                 if not os.path.exists(source_path):
@@ -430,6 +431,7 @@ class TextVerificationController(VerificationControllerInterface):
                 
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
+                    text_found = True
                     
                     # Save source image for UI comparison (from ORIGINAL, not filtered)
                     if model is not None:
@@ -442,6 +444,8 @@ class TextVerificationController(VerificationControllerInterface):
                         os.unlink(filtered_source_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
+                    # For text verification, set threshold to 1.0 when text is found
+                    additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
                 
                 # Clean up temp file if it was created
@@ -463,6 +467,8 @@ class TextVerificationController(VerificationControllerInterface):
                         break
             
             additional_data["extracted_text"] = closest_text
+            # For text verification, set threshold to 0.0 when text is not found
+            additional_data["threshold"] = 0.0
             if closest_text:
                 return False, f"Text pattern '{text}' not found. Closest text found: '{closest_text}'", additional_data
             else:
@@ -474,6 +480,7 @@ class TextVerificationController(VerificationControllerInterface):
             
             capture_path = self.av_controller.capture_screen()
             if not capture_path:
+                additional_data["threshold"] = 0.0
                 return False, "Failed to capture screen for text verification", additional_data
             
             # Create a temporary copy for filtering (don't modify original)
@@ -524,6 +531,8 @@ class TextVerificationController(VerificationControllerInterface):
                         os.unlink(filtered_capture_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
+                    # For text verification, set threshold to 1.0 when text is found
+                    additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
                 
                 # Re-capture if we're in a loop
@@ -534,6 +543,7 @@ class TextVerificationController(VerificationControllerInterface):
                     
                     capture_path = self.av_controller.capture_screen()
                     if not capture_path:
+                        additional_data["threshold"] = 0.0
                         return False, "Failed to re-capture screen for text verification", additional_data
                     
                     # Create new filtered copy if needed
@@ -565,6 +575,8 @@ class TextVerificationController(VerificationControllerInterface):
                 os.unlink(filtered_capture_path)
             
             additional_data["extracted_text"] = closest_text
+            # For text verification, set threshold to 0.0 when text is not found
+            additional_data["threshold"] = 0.0
             if closest_text:
                 return False, f"Text pattern '{text}' not found after {timeout}s. Closest text found: '{closest_text}'", additional_data
             else:
@@ -580,7 +592,7 @@ class TextVerificationController(VerificationControllerInterface):
         if not text or text.strip() == '':
             error_msg = "No text specified. Please provide text to search for."
             print(f"[@controller:TextVerification] {error_msg}")
-            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter}
+            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0}
             
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
@@ -590,23 +602,16 @@ class TextVerificationController(VerificationControllerInterface):
         # Invert the boolean result and adjust the message
         success = not found
         
-        # For disappear operations, invert any confidence values to make them more intuitive
-        # Note: Text verification doesn't typically have confidence thresholds like image matching,
-        # but if any confidence metrics are added in the future, this will handle them
-        if 'confidence' in additional_data and additional_data['confidence'] is not None:
-            original_confidence = additional_data['confidence']
-            inverted_confidence = 1.0 - original_confidence
-            additional_data['confidence'] = inverted_confidence
-            additional_data['original_confidence'] = original_confidence  # Keep original for debugging
-            print(f"[@controller:TextVerification] Inverted confidence for disappear: {original_confidence:.3f} -> {inverted_confidence:.3f}")
-        
-        # Also handle threshold if present (for consistency with image verification)
+        # For disappear operations, invert the threshold for UI display to make it intuitive
+        # If original threshold was 1.0 (text still there), show 0.0 (0% disappeared)
+        # If original threshold was 0.0 (text not found), show 1.0 (100% disappeared)
         if 'threshold' in additional_data and additional_data['threshold'] is not None:
             original_threshold = additional_data['threshold']
+            # Invert threshold for disappear operations: 1.0 - original gives intuitive "disappear percentage"
             inverted_threshold = 1.0 - original_threshold
             additional_data['threshold'] = inverted_threshold
             additional_data['original_threshold'] = original_threshold  # Keep original for debugging
-            print(f"[@controller:TextVerification] Inverted threshold for disappear: {original_threshold:.3f} -> {inverted_threshold:.3f}")
+            print(f"[@controller:TextVerification] Disappear threshold display: {original_threshold:.3f} -> {inverted_threshold:.3f} (inverted for UI)")
         
         if success:
             # Text has disappeared (was not found)

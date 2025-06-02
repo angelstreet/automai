@@ -515,43 +515,17 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           const status = res.success ? 'PASSED' : 'FAILED';
           console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
           
-          // Extract threshold from response or message (for image verifications)
+          // Use threshold directly from response (backend handles all processing)
           let threshold: number | undefined = undefined;
-          if (verificationsToExecute[index]?.controller_type === 'image') {
-            // First priority: use threshold directly from response (already processed by backend)
+          if (verificationsToExecute[index]?.controller_type === 'image' || verificationsToExecute[index]?.controller_type === 'text') {
+            // Use threshold directly from response (already processed by backend for appear/disappear operations)
             if (res.threshold !== undefined && res.threshold !== null) {
               threshold = res.threshold;
-              console.log(`[@component:VerificationEditor] Using direct threshold from response: ${threshold}`);
-            } else if (res.message) {
-              // Fallback: try to extract threshold from message text
-              const patterns = [
-                /confidence ([\d.]+)/i,
-                /threshold ([\d.]+)/i,
-                /match ([\d.]+)/i,
-                /score ([\d.]+)/i,
-                /([\d.]+)%/,
-                /(0\.\d+)/  // Direct decimal values
-              ];
-              
-              for (const pattern of patterns) {
-                const match = res.message.match(pattern);
-                if (match) {
-                  let value = parseFloat(match[1]);
-                  // Convert percentage to decimal if needed
-                  if (pattern.source.includes('%') && value > 1) {
-                    value = value / 100;
-                  }
-                  threshold = value;
-                  console.log(`[@component:VerificationEditor] Extracted threshold from message: ${threshold}`);
-                  break;
-                }
-              }
-            }
-            
-            // Last resort: use the threshold from verification params
-            if (threshold === undefined && verificationsToExecute[index]?.params?.threshold) {
-              threshold = verificationsToExecute[index].params.threshold;
-              console.log(`[@component:VerificationEditor] Using verification threshold parameter: ${threshold}`);
+              console.log(`[@component:VerificationEditor] Using threshold from response: ${threshold}`);
+            } else {
+              // Fallback to verification params if backend didn't provide threshold
+              threshold = verificationsToExecute[index]?.params?.threshold || 0.0;
+              console.log(`[@component:VerificationEditor] Using fallback threshold: ${threshold}`);
             }
           }
           
