@@ -208,9 +208,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               src={capturedReferenceImage}
               alt="Reference"
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain'
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
               }}
             />
           ) : (
@@ -224,7 +224,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       {/* 2. Drag Area Info (Selection Info) */}
       <Box sx={{ mb: 0 }}>
         {selectedArea ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5, height: '100%' }}>
             <TextField
               size="small"
               label="X"
