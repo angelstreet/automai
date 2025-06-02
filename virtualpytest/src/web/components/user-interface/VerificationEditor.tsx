@@ -279,15 +279,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       if (referenceType === 'image') {
         // Save image reference (existing logic)
-        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/image/save', {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: referenceName,
+            reference_name: referenceName,
+            model_name: model,
             area: selectedArea,
-            model,
           }),
         });
 
@@ -295,6 +295,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           console.log('[@component:VerificationEditor] Image reference saved successfully');
           setReferenceName('');
           setTempReferenceUrl('');
+          setSuccessMessage(`Reference "${referenceName}" saved successfully!`);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
@@ -327,6 +328,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           setReferenceName('');
           setReferenceText('');
           setDetectedTextData(null);
+          setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
@@ -629,10 +631,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    console.log('[@component:VerificationEditor] Auto-detecting text in area:', selectedArea);
+    console.log('[@component:VerificationEditor] Using source path:', captureSourcePath);
+
     try {
-      console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
-      console.log('[@component:VerificationEditor] Using source path:', captureSourcePath);
-      
       const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/auto-detect', {
         method: 'POST',
         headers: {
@@ -645,10 +647,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      const result = await response.json();
+      
+      if (result.success) {
         console.log('[@component:VerificationEditor] Text auto-detection successful:', result);
         
+        // Show the cropped image in preview (same as image capture)
+        if (result.preview_url) {
+          const timestamp = new Date().getTime();
+          const imageUrl = `http://localhost:5009${result.preview_url}&t=${timestamp}`;
+          setCapturedReferenceImage(imageUrl);
+          setHasCaptured(true);
+        }
+        
+        // Set detected text data
         setDetectedTextData({
           text: result.detected_text,
           fontSize: result.font_size,
@@ -658,8 +670,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
       } else {
-        const errorResult = await response.json();
-        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status, errorResult);
+        console.error('[@component:VerificationEditor] Text auto-detection failed:', result.error);
+        
+        // Still show preview image if available (even on failure)
+        if (result.preview_url) {
+          const timestamp = new Date().getTime();
+          const imageUrl = `http://localhost:5009${result.preview_url}&t=${timestamp}`;
+          setCapturedReferenceImage(imageUrl);
+          setHasCaptured(true);
+        }
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error during text auto-detection:', error);
@@ -1072,7 +1091,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   size="small"
                   variant="outlined"
                   onClick={handleAutoDetectText}
-                  disabled={!selectedArea || !model || !captureSourcePath}
+                  disabled={!canCapture}
                   sx={{
                     fontSize: '0.7rem',
                     whiteSpace: 'nowrap',

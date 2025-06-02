@@ -5,13 +5,44 @@
       "model": "android_mobile",
       "path": "resources/android_mobile/default_capture.png",
       "full_path": "/Users/cpeengineering/automai/automai/virtualpytest/src/resources/android_mobile/default_capture.png",
-      "created_at": "2025-06-02T17:40:08.190427",
+      "created_at": "2025-06-02T22:33:46.255303",
       "type": "reference_image",
       "area": {
-        "x": 754,
-        "y": 156,
-        "width": 246,
-        "height": 124
+        "x": 816,
+        "y": 221,
+        "width": 325,
+        "height": 143
+      }
+    },
+    {
+      "name": "default_text",
+      "model": "android_mobile",
+      "path": "",
+      "full_path": "",
+      "created_at": "2025-06-02T22:31:56.785983",
+      "type": "text_reference",
+      "area": {
+        "x": 793,
+        "y": 529,
+        "width": 121,
+        "height": 25
+      },
+      "text": "Anschauen",
+      "font_size": 17,
+      "confidence": 0.92
+    },
+    {
+      "name": "test_save",
+      "model": "android_mobile",
+      "path": "resources/android_mobile/test_save.png",
+      "full_path": "/Users/cpeengineering/automai/automai/virtualpytest/src/resources/android_mobile/test_save.png",
+      "created_at": "2025-06-02T22:31:50.279841",
+      "type": "reference_image",
+      "area": {
+        "x": 100,
+        "y": 100,
+        "width": 200,
+        "height": 50
       }
     }
   ]

@@ -893,7 +893,7 @@ def serve_tmp_image(filename):
 
 @verification_bp.route('/api/virtualpytest/reference/text/auto-detect', methods=['POST'])
 def auto_detect_text():
-    """Auto-detect text in the specified area using OCR"""
+    """Auto-detect text in the specified area using OCR - follows same pattern as image capture"""
     try:
         data = request.get_json()
         model = data.get('model')
@@ -916,25 +916,42 @@ def auto_detect_text():
                 'error': f'Source image not found: {source_path}'
             }), 400
         
-        # Use OCR to extract text from the specified area
-        import cv2
-        import pytesseract
+        # Use exact same logic as image capture - crop using existing function
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        os.makedirs(target_dir, exist_ok=True)
         
-        # Load the image
-        image = cv2.imread(source_path)
-        if image is None:
+        # Define target path for cropped preview (same as image capture)
+        preview_filename = f"text_autodetect_preview_{model}.png"
+        target_path = os.path.join(target_dir, preview_filename)
+        
+        # Import the crop function from image controller (same as image capture)
+        from controllers.verification.image import crop_reference_image
+        
+        # Crop and save reference image (same as image capture)
+        crop_success = crop_reference_image(source_path, target_path, area)
+        
+        if not crop_success:
             return jsonify({
                 'success': False,
-                'error': 'Failed to load source image'
+                'error': 'Failed to crop image from specified area'
             }), 500
-            
-        # Crop to the specified area
-        x, y, width, height = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
-        cropped_image = image[y:y+height, x:x+width]
         
-        # Use tesseract to extract text and get detailed information
+        # Now add OCR processing to the cropped image
         try:
-            # Get text with confidence data
+            import cv2
+            import pytesseract
+            
+            # Load the cropped image
+            cropped_image = cv2.imread(target_path)
+            if cropped_image is None:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to load cropped image for OCR',
+                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
+                }), 500
+            
+            # Use tesseract to extract text and get detailed information
             data_dict = pytesseract.image_to_data(cropped_image, output_type=pytesseract.Output.DICT)
             
             # Extract text and calculate average confidence
@@ -955,7 +972,8 @@ def auto_detect_text():
             if not words:
                 return jsonify({
                     'success': False,
-                    'error': 'No text detected in the specified area'
+                    'error': 'No text detected in the specified area',
+                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
                 }), 400
                 
             # Combine all detected text
@@ -970,14 +988,16 @@ def auto_detect_text():
                 'detected_text': detected_text,
                 'confidence': round(avg_confidence / 100, 3),  # Convert to 0-1 range
                 'font_size': round(avg_font_size),
-                'area': area
+                'area': area,
+                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
             })
             
         except Exception as ocr_error:
             print(f"[@route:auto_detect_text] OCR error: {ocr_error}")
             return jsonify({
                 'success': False,
-                'error': f'OCR processing failed: {str(ocr_error)}'
+                'error': f'OCR processing failed: {str(ocr_error)}',
+                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
             }), 500
             
     except Exception as e:
