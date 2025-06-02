@@ -58,6 +58,7 @@ interface NodeVerificationsListProps {
   loading?: boolean;
   error?: string | null;
   model?: string;
+  onTest?: () => void;
 }
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
@@ -67,6 +68,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   loading = false,
   error = null,
   model,
+  onTest,
 }) => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
@@ -197,19 +199,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={addVerification}
-          sx={{ minWidth: 'auto' }}
-        >
-          Add
-        </Button>
-      </Box>
-
       <Box sx={{ mb: 1 }}>
         {verifications.map((verification, index) => (
           <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -413,12 +402,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       </Select>
                     </FormControl>
                     
-                    {/* Show selected reference info */}
-                    {verification.params?.reference_image && (
-                      <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
-                        {verification.params.reference_image}
-                      </Typography>
-                    )}
+                   
                   </>
                 ) : (
                   /* Fallback to manual input */
@@ -440,6 +424,42 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             )}
           </Box>
         ))}
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 2 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={addVerification}
+          sx={{ minWidth: 'auto' }}
+        >
+          Add
+        </Button>
+        {onTest && (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={onTest}
+            disabled={verifications.length === 0}
+            sx={{
+              minWidth: 'auto',
+              ml: 1,
+              borderColor: '#444',
+              color: 'inherit',
+              fontSize: '0.75rem',
+              '&:hover': {
+                borderColor: '#666',
+              },
+              '&:disabled': {
+                borderColor: '#333',
+                color: 'rgba(255,255,255,0.3)',
+              }
+            }}
+          >
+            Test
+          </Button>
+        )}
       </Box>
     </Box>
   );

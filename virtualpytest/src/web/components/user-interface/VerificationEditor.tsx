@@ -291,6 +291,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setShowConfirmDialog(false);
   };
 
+  const handleTest = () => {
+    console.log('[@component:VerificationEditor] Running verification tests:', verifications);
+    // TODO: Implement test functionality
+  };
+
   const canCapture = selectedArea;
   const canSave = hasCaptured && referenceName.trim() && model && model.trim() !== '';
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
@@ -734,31 +739,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 loading={loading}
                 error={error}
                 model={model}
+                onTest={handleTest}
               />
             </Box>
-          </Box>
-
-          {/* Test Button */}
-          <Box sx={{ display: 'flex', gap: 1, mt: 'auto', justifyContent: 'flex-end', pt: 1 }}>
-            <Button 
-              variant="outlined" 
-              size="small"
-              disabled={verifications.length === 0}
-              sx={{
-                borderColor: '#444',
-                color: 'inherit',
-                fontSize: '0.75rem',
-                '&:hover': {
-                  borderColor: '#666',
-                },
-                '&:disabled': {
-                  borderColor: '#333',
-                  color: 'rgba(255,255,255,0.3)',
-                }
-              }}
-            >
-              Test
-            </Button>
           </Box>
         </Collapse>
       </Box>
