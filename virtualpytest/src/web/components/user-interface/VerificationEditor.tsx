@@ -624,13 +624,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleAutoDetectText = async () => {
-    if (!selectedArea || !model) {
-      console.log('[@component:VerificationEditor] Cannot auto-detect: missing area or model');
+    if (!selectedArea || !model || !captureSourcePath) {
+      console.log('[@component:VerificationEditor] Cannot auto-detect: missing area, model, or source path');
       return;
     }
 
     try {
       console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
+      console.log('[@component:VerificationEditor] Using source path:', captureSourcePath);
       
       const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/auto-detect', {
         method: 'POST',
@@ -639,7 +640,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         },
         body: JSON.stringify({
           model,
-          area: selectedArea
+          area: selectedArea,
+          source_path: captureSourcePath
         }),
       });
 
@@ -656,7 +658,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
       } else {
-        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status);
+        const errorResult = await response.json();
+        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status, errorResult);
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error during text auto-detection:', error);
@@ -1069,7 +1072,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   size="small"
                   variant="outlined"
                   onClick={handleAutoDetectText}
-                  disabled={!selectedArea || !model}
+                  disabled={!selectedArea || !model || !captureSourcePath}
                   sx={{
                     fontSize: '0.7rem',
                     whiteSpace: 'nowrap',

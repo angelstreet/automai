@@ -898,51 +898,35 @@ def auto_detect_text():
         data = request.get_json()
         model = data.get('model')
         area = data.get('area')  # {x, y, width, height}
+        source_path = data.get('source_path')  # Required source image path
         
-        if not model or not area:
-            return jsonify({'error': 'Model and area are required'}), 400
-            
-        print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}")
-        
-        # Get the appropriate AV controller from the app instance
-        import app
-        av_controller = None
-        
-        # Try to get active AV controller based on the model name
-        if model == 'android_mobile' and hasattr(app, 'android_mobile_controller'):
-            av_controller = app.android_mobile_controller
-        elif model == 'android_tv' and hasattr(app, 'android_tv_session'):
-            av_controller = app.android_tv_session.get('controller')
-        else:
-            # Default fallback - try android_mobile first
-            if hasattr(app, 'android_mobile_controller') and app.android_mobile_controller:
-                av_controller = app.android_mobile_controller
-            elif hasattr(app, 'android_tv_session') and app.android_tv_session:
-                av_controller = app.android_tv_session.get('controller')
-        
-        if not av_controller or not av_controller.is_connected:
+        if not model or not area or not source_path:
             return jsonify({
                 'success': False,
-                'error': f'No active AV controller found for model {model}. Please ensure the controller is connected.'
+                'error': 'Model, area, and source_path are required'
             }), 400
-        
-        capture_path = av_controller.capture_screen()
-        
-        if not capture_path:
-            return jsonify({'error': 'Failed to capture screen'}), 500
             
-        # Initialize text verification controller for OCR
-        from controllers.verification.text import TextVerificationController
-        text_controller = TextVerificationController(av_controller)
+        print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}")
+        print(f"[@route:auto_detect_text] Using source image: {source_path}")
+        
+        # Validate source image exists
+        if not os.path.exists(source_path):
+            return jsonify({
+                'success': False,
+                'error': f'Source image not found: {source_path}'
+            }), 400
         
         # Use OCR to extract text from the specified area
         import cv2
         import pytesseract
         
-        # Load the captured image
-        image = cv2.imread(capture_path)
+        # Load the image
+        image = cv2.imread(source_path)
         if image is None:
-            return jsonify({'error': 'Failed to load captured image'}), 500
+            return jsonify({
+                'success': False,
+                'error': 'Failed to load source image'
+            }), 500
             
         # Crop to the specified area
         x, y, width, height = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
