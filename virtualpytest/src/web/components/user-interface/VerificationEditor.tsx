@@ -147,7 +147,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     text: string;
     fontSize: number;
     confidence: number;
+    detectedLanguage?: string;
+    languageConfidence?: number;
+    imageFilter?: string;
   } | null>(null);
+  const [textImageFilter, setTextImageFilter] = useState<'none' | 'greyscale' | 'binary'>('none');
 
   useEffect(() => {
     if (isVisible) {
@@ -641,7 +645,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         body: JSON.stringify({
           model,
           area: selectedArea,
-          source_path: captureSourcePath
+          source_path: captureSourcePath,
+          image_filter: textImageFilter
         }),
       });
 
@@ -662,7 +667,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         setDetectedTextData({
           text: result.detected_text,
           fontSize: result.font_size,
-          confidence: result.confidence
+          confidence: result.confidence,
+          detectedLanguage: result.detected_language,
+          languageConfidence: result.language_confidence,
+          imageFilter: result.image_filter
         });
         
         // Pre-fill the text input with detected text
@@ -1103,12 +1111,50 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               </Box>
             )}
 
+            {/* 4.5. Image Filter for Text OCR (only for text type) */}
+            {referenceType === 'text' && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', minWidth: '60px' }}>
+                  OCR Filter:
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={textImageFilter}
+                    onChange={(e) => setTextImageFilter(e.target.value as 'none' | 'greyscale' | 'binary')}
+                    displayEmpty
+                    sx={{
+                      fontSize: '0.7rem',
+                      height: '28px',
+                      '& .MuiSelect-select': {
+                        padding: '4px 8px',
+                        fontSize: '0.7rem',
+                      },
+                    }}
+                  >
+                    <MenuItem value="none" sx={{ fontSize: '0.7rem' }}>None</MenuItem>
+                    <MenuItem value="greyscale" sx={{ fontSize: '0.7rem' }}>Greyscale</MenuItem>
+                    <MenuItem value="binary" sx={{ fontSize: '0.7rem' }}>Binary</MenuItem>
+                  </Select>
+                </FormControl>
+                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', fontStyle: 'italic' }}>
+                  Preprocessing can improve OCR accuracy
+                </Typography>
+              </Box>
+            )}
+
             {/* 5. Detected Text Info (only for text type with detected data) */}
             {referenceType === 'text' && detectedTextData && (
               <Box sx={{ mb: 0.5 }}>
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
                   Detected: Font Size {detectedTextData.fontSize}px, 
                   Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
+                  {detectedTextData.detectedLanguage && (
+                    <span>, Language: {detectedTextData.detectedLanguage} 
+                    ({(detectedTextData.languageConfidence! * 100).toFixed(1)}%)</span>
+                  )}
+                  {detectedTextData.imageFilter && detectedTextData.imageFilter !== 'none' && (
+                    <span>, Filter: {detectedTextData.imageFilter}</span>
+                  )}
                 </Typography>
               </Box>
             )}
