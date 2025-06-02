@@ -949,6 +949,7 @@ export function ScreenDefinitionEditor({
           {/* Verification Editor Side Panel - only show during capture or screenshot modes */}
           {(viewMode === 'screenshot' || viewMode === 'capture') && (
             <VerificationEditor
+              model={deviceModel}
               isVisible={true}
               isScreenshotMode={viewMode === 'screenshot'}
               isCaptureActive={isCapturing}

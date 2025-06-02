@@ -54,6 +54,7 @@ interface VerificationEditorProps {
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
+  model: string;
   sx?: any;
 }
 
@@ -68,6 +69,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   selectedArea,
   onAreaSelected,
   onClearSelection,
+  model,
   sx = {},
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
@@ -76,6 +78,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [referenceName, setReferenceName] = useState<string>('default_capture');
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
+  const [hasCaptured, setHasCaptured] = useState<boolean>(false);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +87,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       fetchVerificationActions();
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    if (!model || model.trim() === '') {
+      console.error('[@component:VerificationEditor] Model prop is required but not provided');
+      setError('Model is required for verification editor');
+    } else {
+      console.log(`[@component:VerificationEditor] Using model: ${model}`);
+    }
+  }, [model]);
 
   const fetchVerificationActions = async () => {
     setLoading(true);
@@ -111,14 +123,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const handleClearSelection = () => {
     setCapturedReferenceImage(null);
+    setHasCaptured(false);
     if (onClearSelection) {
       onClearSelection();
     }
   };
 
   const handleCaptureReference = async () => {
-    if (!selectedArea ||  !referenceName.trim()) {
-      console.error('[@component:VerificationEditor] Missing requirements for capture');
+    if (!selectedArea) {
+      console.error('[@component:VerificationEditor] Missing area selection for capture');
       return;
     }
 
@@ -127,19 +140,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
-    if (!referenceName.trim()) {
-      console.error('[@component:VerificationEditor] No reference name provided, using default');
-      setReferenceName('default_reference');
-    }
-
-    console.log('[@component:VerificationEditor] Capturing reference:', {
+    console.log('[@component:VerificationEditor] Capturing temporary reference:', {
       area: selectedArea,
       sourcePath: captureSourcePath,
-      referenceName: referenceName.trim() || 'default_reference'
     });
 
     try {
-      // Call the API to crop and save the reference image
+      // Always save as capture.png in /tmp folder (temporary capture)
       const response = await fetch('http://localhost:5009/api/virtualpytest/reference/capture', {
         method: 'POST',
         headers: {
@@ -148,7 +155,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         body: JSON.stringify({
           area: selectedArea,
           source_path: captureSourcePath,
-          reference_name: referenceName.trim() || 'default_reference',
+          reference_name: 'capture', // Always use 'capture' for temporary file
         }),
       });
 
@@ -156,22 +163,96 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       if (result.success) {
         const timestamp = new Date().getTime();
-        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/${referenceName.trim() || 'default_reference'}.png?t=${timestamp}`;
-        console.log('[@component:VerificationEditor] Reference captured successfully, setting image URL:', imageUrl);
+        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/capture.png?t=${timestamp}`;
+        console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
         setCapturedReferenceImage(imageUrl);
+        setHasCaptured(true);
       } else {
         console.error('[@component:VerificationEditor] Failed to capture reference:', result.error);
-        // Could add error state handling here
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error capturing reference:', error);
     }
   };
 
+  const handleSaveReference = async () => {
+    if (!model || model.trim() === '') {
+      console.error('[@component:VerificationEditor] Cannot save: model is not provided');
+      setError('Model is required to save references');
+      return;
+    }
+
+    if (!hasCaptured || !referenceName.trim()) {
+      console.error('[@component:VerificationEditor] Cannot save: no capture made or no reference name');
+      return;
+    }
+
+    console.log('[@component:VerificationEditor] Saving reference:', {
+      referenceName: referenceName.trim(),
+      modelName: model.trim(),
+    });
+
+    try {
+      // Save the temporary capture.png with the proper reference name and model
+      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reference_name: referenceName.trim(),
+          model_name: model.trim(),
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('[@component:VerificationEditor] Reference saved successfully');
+        // Update the image URL to point to the saved reference
+        const timestamp = new Date().getTime();
+        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/${model.trim()}/${referenceName.trim()}.png?t=${timestamp}`;
+        setCapturedReferenceImage(imageUrl);
+        // Clear any previous errors
+        setError(null);
+      } else {
+        console.error('[@component:VerificationEditor] Failed to save reference:', result.error);
+        setError(result.error || 'Failed to save reference');
+      }
+    } catch (error) {
+      console.error('[@component:VerificationEditor] Error saving reference:', error);
+      setError('Failed to save reference');
+    }
+  };
+
   const canCapture = selectedArea;
+  const canSave = hasCaptured && referenceName.trim() && model && model.trim() !== '';
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
 
   if (!isVisible) return null;
+
+  if (!model || model.trim() === '') {
+    return (
+      <Box sx={{ 
+        width: 400, 
+        height: 520, 
+        p: 1, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...sx 
+      }}>
+        <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
+          Configuration Error
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
+          Model prop is required for the Verification Editor
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ 
@@ -183,8 +264,19 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       gap: 1,
       ...sx 
     }}>
-      <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>Verification Editor</Typography>
+      <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+        Verification Editor
+        <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
+          ({model})
+        </Typography>
+      </Typography>
       
+      {error && (
+        <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
+          {error}
+        </Typography>
+      )}
+
       {/* 1. Capture Container (Reference Image Preview) */}
       <Box>
         <Box 
@@ -381,7 +473,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         )}
       </Box>
 
-      {/* 3. Reference Name + Action Buttons (Horizontal Row) */}
+      {/* 3. Reference Name + Action Buttons */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0 }}>
         {/* Reference Name Input */}
         <TextField
@@ -421,23 +513,22 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         <Button 
           size="small" 
-          variant="outlined"
-          onClick={handleClearSelection}
-          disabled={!selectedArea}
+          variant="contained"
+          onClick={handleSaveReference}
+          disabled={!canSave}
           sx={{
-            borderColor: '#444',
-            color: 'inherit',
+            bgcolor: '#444',
             fontSize: '0.75rem',
             '&:hover': {
-              borderColor: '#666',
+              bgcolor: '#555',
             },
             '&:disabled': {
-              borderColor: '#333',
+              bgcolor: '#333',
               color: 'rgba(255,255,255,0.3)',
             }
           }}
         >
-          Clear
+          Save
         </Button>
       </Box>
 
@@ -519,24 +610,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           }}
         >
           Test
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small"
-          disabled={verifications.length === 0}
-          sx={{
-            bgcolor: '#444',
-            fontSize: '0.75rem',
-            '&:hover': {
-              bgcolor: '#555',
-            },
-            '&:disabled': {
-              bgcolor: '#333',
-              color: 'rgba(255,255,255,0.3)',
-            }
-          }}
-        >
-          Save
         </Button>
       </Box>
     </Box>

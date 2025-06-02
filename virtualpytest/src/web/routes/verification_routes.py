@@ -537,15 +537,131 @@ def capture_reference_image():
             'error': f'Reference capture error: {str(e)}'
         }), 500
 
-@verification_bp.route('/api/virtualpytest/reference/image/<filename>', methods=['GET'])
+@verification_bp.route('/api/virtualpytest/reference/save', methods=['POST'])
+def save_reference_image():
+    """Save the temporary capture.png to the resources folder with proper naming and update registry."""
+    try:
+        data = request.get_json()
+        reference_name = data.get('reference_name')
+        model_name = data.get('model_name')
+        
+        print(f"[@route:save_reference_image] Saving reference: {reference_name} for model: {model_name}")
+        
+        # Validate required parameters
+        if not reference_name or not model_name:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: reference_name or model_name'
+            }), 400
+            
+        # Define paths
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        temp_file = os.path.join(base_dir, 'tmp', 'model', 'capture.png')
+        
+        # Ensure resources directory exists
+        resources_dir = os.path.join(base_dir, 'resources', model_name)
+        os.makedirs(resources_dir, exist_ok=True)
+        
+        # Define final path
+        final_path = os.path.join(resources_dir, f"{reference_name}.png")
+        
+        # Check if temporary file exists
+        if not os.path.exists(temp_file):
+            return jsonify({
+                'success': False,
+                'error': 'No temporary capture found. Please capture an image first.'
+            }), 400
+        
+        # Copy/move the temporary file to the final location
+        import shutil
+        shutil.copy2(temp_file, final_path)
+        
+        # Update resource registry
+        import json
+        registry_path = os.path.join(base_dir, 'config', 'resource', 'resource.json')
+        
+        # Load existing registry
+        registry_data = {'resources': []}
+        if os.path.exists(registry_path):
+            try:
+                with open(registry_path, 'r') as f:
+                    registry_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                registry_data = {'resources': []}
+        
+        # Ensure resources key exists
+        if 'resources' not in registry_data:
+            registry_data['resources'] = []
+        
+        # Create resource entry
+        from datetime import datetime
+        resource_entry = {
+            'name': reference_name,
+            'model': model_name,
+            'path': f"resources/{model_name}/{reference_name}.png",
+            'full_path': final_path,
+            'created_at': datetime.now().isoformat(),
+            'type': 'reference_image'
+        }
+        
+        # Check if resource already exists (update instead of duplicate)
+        existing_index = -1
+        for i, resource in enumerate(registry_data['resources']):
+            if resource.get('name') == reference_name and resource.get('model') == model_name:
+                existing_index = i
+                break
+        
+        if existing_index >= 0:
+            # Update existing entry
+            registry_data['resources'][existing_index] = resource_entry
+            print(f"[@route:save_reference_image] Updated existing resource: {reference_name}")
+        else:
+            # Add new entry
+            registry_data['resources'].append(resource_entry)
+            print(f"[@route:save_reference_image] Added new resource: {reference_name}")
+        
+        # Save updated registry
+        os.makedirs(os.path.dirname(registry_path), exist_ok=True)
+        with open(registry_path, 'w') as f:
+            json.dump(registry_data, f, indent=2)
+        
+        print(f"[@route:save_reference_image] Reference saved successfully: {final_path}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reference image saved: {reference_name}',
+            'resource_path': f"resources/{model_name}/{reference_name}.png",
+            'full_path': final_path
+        })
+        
+    except Exception as e:
+        print(f"[@route:save_reference_image] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference save error: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/reference/image/<path:filename>', methods=['GET'])
 def get_reference_image(filename):
-    """Serve a reference image."""
+    """Serve a reference image from tmp or resources folder."""
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_dir = os.path.join(base_dir, 'tmp', 'model')
         
-        print(f"[@route:get_reference_image] Looking for image: {filename} in directory: {model_dir}")
-        file_path = os.path.join(model_dir, filename)
+        # Check if it's a model-based path (contains '/')
+        if '/' in filename:
+            # Model-based path: resources/{model}/{reference_name}.png
+            resources_dir = os.path.join(base_dir, 'resources')
+            file_path = os.path.join(resources_dir, filename)
+            serve_dir = resources_dir
+            relative_path = filename
+        else:
+            # Single filename: tmp/model/{filename}
+            model_dir = os.path.join(base_dir, 'tmp', 'model')
+            file_path = os.path.join(model_dir, filename)
+            serve_dir = model_dir
+            relative_path = filename
+        
+        print(f"[@route:get_reference_image] Looking for image: {filename} at path: {file_path}")
         
         if not os.path.exists(file_path):
             print(f"[@route:get_reference_image] File not found: {file_path}")
@@ -557,12 +673,25 @@ def get_reference_image(filename):
         print(f"[@route:get_reference_image] Serving image: {file_path}")
         from flask import make_response
         
-        # Create response with proper cache control headers
-        response = make_response(send_from_directory(
-            model_dir, 
-            filename,
-            mimetype='image/png'
-        ))
+        # For model-based paths, we need to handle subdirectories
+        if '/' in filename:
+            # Split the path to get directory and filename
+            path_parts = filename.split('/')
+            subdirs = '/'.join(path_parts[:-1])
+            actual_filename = path_parts[-1]
+            actual_serve_dir = os.path.join(serve_dir, subdirs)
+            
+            response = make_response(send_from_directory(
+                actual_serve_dir,
+                actual_filename,
+                mimetype='image/png'
+            ))
+        else:
+            response = make_response(send_from_directory(
+                serve_dir, 
+                relative_path,
+                mimetype='image/png'
+            ))
         
         # Prevent caching to ensure fresh images
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
