@@ -774,7 +774,11 @@ export function ScreenDefinitionEditor({
                       onClick={handleTakeScreenshot} 
                       sx={{ 
                         color: viewMode === 'screenshot' ? '#ff4444' : '#ffffff',
-                        borderBottom: viewMode === 'screenshot' ? '2px solid #ff4444' : 'none'
+                        borderBottom: viewMode === 'screenshot' ? '2px solid #ff4444' : 'none',
+                        '&:active': {
+                          color: '#ff4444',
+                          borderBottom: '2px solid #ff4444'
+                        }
                       }}
                       disabled={!isConnected || isCapturing || isScreenshotLoading}
                     >
