@@ -213,7 +213,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             </Box>
             
             {/* Line 2: Timeout, threshold, and area controls */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 1 }}>
               {verification.id && (
                 <TextField
                   size="small"
@@ -243,7 +243,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       threshold: parseFloat(e.target.value) || 0.8 
                     }
                   })}
-                  sx={{ width: 100 }}
+                  sx={{ width: 80 }}
                   inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
                 />
               )}

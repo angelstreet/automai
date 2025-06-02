@@ -290,7 +290,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   if (!model || model.trim() === '') {
     return (
       <Box sx={{ 
-        width: 400, 
+        width: 440, 
         height: 520, 
         p: 1, 
         display: 'flex', 
@@ -312,7 +312,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 400, 
+      width: 440, 
       height: 520, 
       p: 1, 
       display: 'flex', 
