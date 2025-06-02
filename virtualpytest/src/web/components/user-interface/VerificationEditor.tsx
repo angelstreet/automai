@@ -387,7 +387,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   borderRadius: 1,
                   bgcolor: 'rgba(255,255,255,0.05)',
                   overflow: 'hidden',
-                  mb: 0.5
+                  mb: 1.5
                 }}
               >
                 {capturedReferenceImage ? (
@@ -436,7 +436,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             </Box>
 
             {/* 2. Drag Area Info (Selection Info) */}
-            <Box sx={{ mb: 0 }}>
+            <Box sx={{ mb: 0.5 }}>
               {selectedArea ? (
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5 }}>
                   <TextField
@@ -596,7 +596,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             </Box>
 
             {/* 3. Reference Name + Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0.5 }}>
               {/* Reference Name Input */}
               <TextField
                 size="small"

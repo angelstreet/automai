@@ -12,7 +12,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon } from '@mui/icons-material';
 
 interface NodeVerification {
   id: string;
@@ -440,6 +440,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           <Button
             size="small"
             variant="outlined"
+            startIcon={<PlayIcon />}
             onClick={onTest}
             disabled={verifications.length === 0}
             sx={{
