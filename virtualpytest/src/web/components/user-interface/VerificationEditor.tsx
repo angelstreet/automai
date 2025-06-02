@@ -10,6 +10,18 @@ import {
   DialogActions,
   Collapse,
   IconButton,
+  CircularProgress,
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  FormLabel,
+  Chip,
 } from '@mui/material';
 import { 
   Camera as CameraIcon,
@@ -17,6 +29,7 @@ import {
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
+import { styled } from '@mui/material/styles';
 
 interface VerificationAction {
   id: string;
@@ -85,6 +98,7 @@ interface VerificationEditorProps {
   // ScreenshotCapture component state  
   screenshotPath?: string;
   sx?: any;
+  onReferenceSaved?: (referenceName: string) => void;
 }
 
 export const VerificationEditor: React.FC<VerificationEditorProps> = ({
@@ -106,6 +120,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // ScreenshotCapture component state  
   screenshotPath,
   sx = {},
+  onReferenceSaved,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
@@ -124,6 +139,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
+
+  const [tempReferenceUrl, setTempReferenceUrl] = useState<string>('');
+  const [referenceText, setReferenceText] = useState<string>('');
+  const [referenceType, setReferenceType] = useState<'image' | 'text'>('image');
+  const [detectedTextData, setDetectedTextData] = useState<{
+    text: string;
+    fontSize: number;
+    confidence: number;
+  } | null>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -241,90 +265,76 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleSaveReference = async () => {
-    if (!model || model.trim() === '') {
-      console.error('[@component:VerificationEditor] Cannot save: model is not provided');
-      setError('Model is required to save references');
+    if (!referenceName.trim() || !selectedArea || !model) {
+      console.log('[@component:VerificationEditor] Cannot save: missing reference name, area, or model');
       return;
     }
-
-    if (!hasCaptured || !referenceName.trim()) {
-      console.error('[@component:VerificationEditor] Cannot save: no capture made or no reference name');
-      return;
-    }
-
-    if (!selectedArea) {
-      console.error('[@component:VerificationEditor] Cannot save: no area selected');
-      setError('Please select an area before saving the reference');
-      return;
-    }
-
-    // Check if reference already exists
-    const exists = await checkReferenceExists(referenceName.trim(), model.trim());
-    
-    if (exists) {
-      // Show confirmation dialog
-      setShowConfirmDialog(true);
-      return;
-    }
-
-    // If doesn't exist, proceed with save
-    await performSave();
-  };
-
-  const performSave = async () => {
-    console.log('[@component:VerificationEditor] Saving reference:', {
-      referenceName: referenceName.trim(),
-      modelName: model.trim(),
-      selectedArea: selectedArea,
-    });
-
-    setPendingSave(true);
 
     try {
-      // Save the temporary capture.png with the proper reference name and model
-      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reference_name: referenceName.trim(),
-          model_name: model.trim(),
-          area: selectedArea,
-        }),
+      console.log('[@component:VerificationEditor] Saving reference:', { 
+        name: referenceName, 
+        type: referenceType, 
+        area: selectedArea 
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log('[@component:VerificationEditor] Reference saved successfully with area:', selectedArea);
-        // Update the image URL to point to the saved reference
-        const timestamp = new Date().getTime();
-        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/${model.trim()}/${referenceName.trim()}.png?t=${timestamp}`;
-        setCapturedReferenceImage(imageUrl);
-        // Clear any previous errors
-        setError(null);
-        // Show success message
-        setSuccessMessage(`${referenceName.trim()} saved successfully`);
-      } else {
-        console.error('[@component:VerificationEditor] Failed to save reference:', result.error);
-        setError(result.error || 'Failed to save reference');
+      if (referenceType === 'image') {
+        // Save image reference (existing logic)
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/image/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: referenceName,
+            area: selectedArea,
+            model,
+          }),
+        });
+
+        if (response.ok) {
+          console.log('[@component:VerificationEditor] Image reference saved successfully');
+          setReferenceName('');
+          setTempReferenceUrl('');
+          onReferenceSaved?.(referenceName);
+        } else {
+          console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
+        }
+      } else if (referenceType === 'text') {
+        // Validate regex before saving
+        if (!validateRegex(referenceText)) {
+          console.error('[@component:VerificationEditor] Invalid regex pattern:', referenceText);
+          return;
+        }
+
+        // Save text reference
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: referenceName,
+            area: selectedArea,
+            model,
+            text: referenceText,
+            fontSize: detectedTextData?.fontSize,
+            confidence: detectedTextData?.confidence
+          }),
+        });
+
+        if (response.ok) {
+          console.log('[@component:VerificationEditor] Text reference saved successfully');
+          setReferenceName('');
+          setReferenceText('');
+          setDetectedTextData(null);
+          onReferenceSaved?.(referenceName);
+        } else {
+          console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
+        }
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error saving reference:', error);
-      setError('Failed to save reference');
-    } finally {
-      setPendingSave(false);
     }
-  };
-
-  const handleConfirmOverwrite = async () => {
-    setShowConfirmDialog(false);
-    await performSave();
-  };
-
-  const handleCancelOverwrite = () => {
-    setShowConfirmDialog(false);
   };
 
   const handleTest = async () => {
@@ -372,110 +382,81 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           inputValue: verification.inputValue
         });
         
-        if (verification.controller_type === 'image' && verification.requiresInput) {
-          // Use the full absolute path for image verification
-          let imagePath = '';
-          
+        if (verification.controller_type === 'image') {
+          // Handle image verification parameters
           if (verification.params?.full_path) {
             // Use full absolute path from reference data
-            imagePath = verification.params.full_path;
+            updatedParams.image_path = verification.params.full_path;
           } else if (verification.params?.reference_path) {
             // Fallback to relative path (may need to be converted to absolute)
-            imagePath = verification.params.reference_path;
+            updatedParams.image_path = verification.params.reference_path;
           } else if (verification.inputValue) {
             // Manual input
-            imagePath = verification.inputValue;
-          }
-          
-          // Set image_path regardless - backend will handle validation
-          updatedParams.image_path = imagePath;
-          if (imagePath) {
-            console.log('[@component:VerificationEditor] Using image path for verification:', imagePath);
+            updatedParams.image_path = verification.inputValue;
           } else {
-            console.warn('[@component:VerificationEditor] No image path found for verification - backend will return error');
+            // No image path provided
+            updatedParams.image_path = '';
+          }
+        } else if (verification.controller_type === 'text') {
+          // Handle text verification parameters
+          if (verification.params?.reference_text) {
+            // Use text from reference data
+            updatedParams.text = verification.params.reference_text;
+          } else if (verification.inputValue) {
+            // Manual input
+            updatedParams.text = verification.inputValue;
+          } else {
+            // No text provided
+            updatedParams.text = '';
           }
           
-          // Determine what images to provide based on component state
-          if (isScreenshotMode && screenshotPath) {
-            // Screenshot mode with screenshot available
-            updatedParams.image_list = [screenshotPath];
-            console.log('[@component:VerificationEditor] Using screenshot for verification:', screenshotPath);
-          } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
-            // Video mode with saved frames available
-            const framesList = [];
-            for (let i = 0; i < totalFrames; i++) {
-              const isCaptureFrames = videoFramesPath.includes('captures');
-              let framePath;
-              if (isCaptureFrames) {
-                framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
-              } else {
-                framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
-              }
-              framesList.push(framePath);
+          // Add text-specific parameters
+          if (verification.params?.font_size) {
+            updatedParams.font_size = verification.params.font_size;
+          }
+          if (verification.params?.confidence) {
+            updatedParams.confidence = verification.params.confidence;
+          }
+        }
+        
+        // Determine what images to provide based on component state
+        if (isScreenshotMode && screenshotPath) {
+          // Screenshot mode with screenshot available
+          updatedParams.image_list = [screenshotPath];
+          console.log('[@component:VerificationEditor] Using screenshot for verification:', screenshotPath);
+        } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
+          // Video mode with saved frames available
+          const framesList = [];
+          for (let i = 0; i < totalFrames; i++) {
+            const isCaptureFrames = videoFramesPath.includes('captures');
+            let framePath;
+            if (isCaptureFrames) {
+              framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
+            } else {
+              framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
             }
-            updatedParams.image_list = framesList;
-            console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for verification from:`, videoFramesPath);
-          } else if (!isScreenshotMode && isCaptureActive) {
-            // Video mode with active capture - backend will check /tmp/captures
-            console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames');
-          } else {
-            // No existing images - will start new capture
-            console.log('[@component:VerificationEditor] No existing images - will start new capture');
+            framesList.push(framePath);
           }
-          
-          // Ensure area coordinates are included (from reference or manual input)
-          if (verification.params?.area) {
-            updatedParams.area = verification.params.area;
-            console.log('[@component:VerificationEditor] Including area for image verification:', updatedParams.area);
-          }
-          
-          // Use actual timeout from verification params instead of hardcoded value
-          if (verification.params?.timeout) {
-            updatedParams.timeout = verification.params.timeout;
-            console.log('[@component:VerificationEditor] Using timeout from verification params:', updatedParams.timeout);
-          }
-        } else if (verification.controller_type === 'text' && verification.requiresInput) {
-          // For text verifications, use inputValue as text parameter
-          const textValue = verification.inputValue || '';
-          if (textValue) {
-            updatedParams.text = textValue;
-          }
-          
-          // Provide existing images for text verification too
-          if (isScreenshotMode && screenshotPath) {
-            updatedParams.image_list = [screenshotPath];
-            console.log('[@component:VerificationEditor] Using screenshot for text verification:', screenshotPath);
-          } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
-            const framesList = [];
-            for (let i = 0; i < totalFrames; i++) {
-              const isCaptureFrames = videoFramesPath.includes('captures');
-              let framePath;
-              if (isCaptureFrames) {
-                framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
-              } else {
-                framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
-              }
-              framesList.push(framePath);
-            }
-            updatedParams.image_list = framesList;
-            console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for text verification from:`, videoFramesPath);
-          } else if (!isScreenshotMode && isCaptureActive) {
-            console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames for text verification');
-          } else {
-            console.log('[@component:VerificationEditor] No existing images for text verification - will start new capture');
-          }
-          
-          // Text verifications can also have area constraints
-          if (verification.params?.area) {
-            updatedParams.area = verification.params.area;
-            console.log('[@component:VerificationEditor] Including area for text verification:', updatedParams.area);
-          }
-          
-          // Use actual timeout from verification params
-          if (verification.params?.timeout) {
-            updatedParams.timeout = verification.params.timeout;
-            console.log('[@component:VerificationEditor] Using timeout from verification params for text:', updatedParams.timeout);
-          }
+          updatedParams.image_list = framesList;
+          console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for verification from:`, videoFramesPath);
+        } else if (!isScreenshotMode && isCaptureActive) {
+          // Video mode with active capture - backend will check /tmp/captures
+          console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames');
+        } else {
+          // No existing images - will start new capture
+          console.log('[@component:VerificationEditor] No existing images - will start new capture');
+        }
+        
+        // Ensure area coordinates are included (from reference or manual input)
+        if (verification.params?.area) {
+          updatedParams.area = verification.params.area;
+          console.log('[@component:VerificationEditor] Including area for verification:', updatedParams.area);
+        }
+        
+        // Use actual timeout from verification params instead of hardcoded value
+        if (verification.params?.timeout) {
+          updatedParams.timeout = verification.params.timeout;
+          console.log('[@component:VerificationEditor] Using timeout from verification params:', updatedParams.timeout);
         }
 
         return {
@@ -642,9 +623,81 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
+  const handleAutoDetectText = async () => {
+    if (!selectedArea || !model) {
+      console.log('[@component:VerificationEditor] Cannot auto-detect: missing area or model');
+      return;
+    }
+
+    try {
+      console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
+      
+      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/auto-detect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          area: selectedArea
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[@component:VerificationEditor] Text auto-detection successful:', result);
+        
+        setDetectedTextData({
+          text: result.detected_text,
+          fontSize: result.font_size,
+          confidence: result.confidence
+        });
+        
+        // Pre-fill the text input with detected text
+        setReferenceText(result.detected_text);
+      } else {
+        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status);
+      }
+    } catch (error) {
+      console.error('[@component:VerificationEditor] Error during text auto-detection:', error);
+    }
+  };
+
+  const validateRegex = (text: string): boolean => {
+    if (!text) return true; // Empty text is valid
+    
+    try {
+      new RegExp(text);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const canCapture = selectedArea;
-  const canSave = hasCaptured && referenceName.trim() && model && model.trim() !== '';
+  const canSave = (() => {
+    if (!referenceName.trim() || !selectedArea || !model || model.trim() === '') {
+      return false;
+    }
+    
+    if (referenceType === 'image') {
+      return hasCaptured; // Image type requires capture
+    } else if (referenceType === 'text') {
+      return referenceText.trim() !== '' && validateRegex(referenceText); // Text type requires valid text/regex
+    }
+    
+    return false;
+  })();
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
+
+  const handleConfirmOverwrite = async () => {
+    setShowConfirmDialog(false);
+    await handleSaveReference();
+  };
+
+  const handleCancelOverwrite = () => {
+    setShowConfirmDialog(false);
+  };
 
   if (!isVisible) return null;
 
@@ -798,7 +851,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             </Box>
 
             {/* 2. Drag Area Info (Selection Info) */}
-            <Box sx={{ mb: 0.5 }}>
+            <Box sx={{ mb: 0 }}>
               {selectedArea ? (
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5 }}>
                   <TextField
@@ -957,7 +1010,87 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               )}
             </Box>
 
-            {/* 3. Reference Name + Action Buttons */}
+            {/* 3. Reference Type Selection */}
+            <Box sx={{ display: 'flex', gap: 0, alignItems: 'center', mb: 0 }}>
+              
+              <RadioGroup
+                row
+                value={referenceType}
+                onChange={(e) => {
+                  setReferenceType(e.target.value as 'image' | 'text');
+                  // Reset related states when switching types
+                  if (e.target.value === 'text') {
+                    setReferenceText('');
+                    setDetectedTextData(null);
+                  } else {
+                    setTempReferenceUrl('');
+                  }
+                }}
+                sx={{
+                  gap: 1,
+                  '& .MuiFormControlLabel-root': {
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: '0.7rem',
+                    },
+                  },
+                }}
+              >
+                <FormControlLabel value="image" control={<Radio size="small" />} label="Image" />
+                <FormControlLabel value="text" control={<Radio size="small" />} label="Text" />
+              </RadioGroup>
+            </Box>
+
+            {/* 4. Text Input and Auto-Detect (only for text type) */}
+            {referenceType === 'text' && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0.5 }}>
+                <TextField
+                  size="small"
+                  label="Text / Regex Pattern"
+                  placeholder="Enter text to find or regex pattern"
+                  value={referenceText}
+                  onChange={(e) => setReferenceText(e.target.value)}
+                  error={!!(referenceText && !validateRegex(referenceText))}
+                  helperText={referenceText && !validateRegex(referenceText) ? 'Invalid regex pattern' : ''}
+                  sx={{
+                    flex: 1,
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '0.75rem',
+                    },
+                    '& .MuiFormHelperText-root': {
+                      fontSize: '0.65rem',
+                    },
+                  }}
+                />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleAutoDetectText}
+                  disabled={!selectedArea || !model}
+                  sx={{
+                    fontSize: '0.7rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Auto-Detect
+                </Button>
+              </Box>
+            )}
+
+            {/* 5. Detected Text Info (only for text type with detected data) */}
+            {referenceType === 'text' && detectedTextData && (
+              <Box sx={{ mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+                  Detected: Font Size {detectedTextData.fontSize}px, 
+                  Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
+                </Typography>
+              </Box>
+            )}
+
+            {/* 6. Reference Name + Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0.5 }}>
               {/* Reference Name Input */}
               <TextField
@@ -974,26 +1107,28 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               />
 
               {/* Action Buttons */}
-              <Button 
-                size="small" 
-                startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
-                variant="contained"
-                onClick={handleCaptureReference}
-                disabled={!canCapture}
-                sx={{
-                  bgcolor: '#1976d2',
-                  fontSize: '0.75rem',
-                  '&:hover': {
-                    bgcolor: '#1565c0',
-                  },
-                  '&:disabled': {
-                    bgcolor: '#333',
-                    color: 'rgba(255,255,255,0.3)',
-                  }
-                }}
-              >
-                Capture
-              </Button>
+              {referenceType === 'image' && (
+                <Button 
+                  size="small" 
+                  startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
+                  variant="contained"
+                  onClick={handleCaptureReference}
+                  disabled={!canCapture}
+                  sx={{
+                    bgcolor: '#1976d2',
+                    fontSize: '0.75rem',
+                    '&:hover': {
+                      bgcolor: '#1565c0',
+                    },
+                    '&:disabled': {
+                      bgcolor: '#333',
+                      color: 'rgba(255,255,255,0.3)',
+                    }
+                  }}
+                >
+                  Capture
+                </Button>
+              )}
               
               <Button 
                 size="small" 

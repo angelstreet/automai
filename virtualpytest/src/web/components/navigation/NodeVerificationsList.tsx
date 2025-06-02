@@ -69,13 +69,17 @@ interface ReferenceImage {
   path: string;
   full_path: string;
   created_at: string;
-  type: string;
+  type: 'image' | 'text';
   area: {
     x: number;
     y: number;
     width: number;
     height: number;
   };
+  // Text reference specific fields
+  text?: string;
+  font_size?: number;
+  confidence?: number;
 }
 
 interface NodeVerificationsListProps {
@@ -210,22 +214,42 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   const handleReferenceSelect = (index: number, referenceName: string) => {
     const selectedRef = getModelReferences().find(ref => ref.name === referenceName);
     if (selectedRef) {
-      updateVerification(index, {
-        inputValue: selectedRef.name,
-        params: {
-          ...verifications[index].params,
-          reference_image: selectedRef.name,
-          reference_path: selectedRef.path,
-          full_path: selectedRef.full_path,
-          area: {
-            x: selectedRef.area.x,
-            y: selectedRef.area.y,
-            width: selectedRef.area.width,
-            height: selectedRef.area.height
-          }
+      const baseParams = {
+        ...verifications[index].params,
+        area: {
+          x: selectedRef.area.x,
+          y: selectedRef.area.y,
+          width: selectedRef.area.width,
+          height: selectedRef.area.height
         }
-      });
-      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name, 'with full_path:', selectedRef.full_path, 'and area:', selectedRef.area);
+      };
+
+      if (selectedRef.type === 'image') {
+        // Image reference parameters
+        updateVerification(index, {
+          inputValue: selectedRef.name,
+          params: {
+            ...baseParams,
+            reference_image: selectedRef.name,
+            reference_path: selectedRef.path,
+            full_path: selectedRef.full_path
+          }
+        });
+        console.log('[@component:NodeVerificationsList] Selected image reference:', selectedRef.name, 'with full_path:', selectedRef.full_path);
+      } else if (selectedRef.type === 'text') {
+        // Text reference parameters
+        updateVerification(index, {
+          inputValue: selectedRef.text || selectedRef.name,
+          params: {
+            ...baseParams,
+            reference_text: selectedRef.text,
+            reference_name: selectedRef.name,
+            font_size: selectedRef.font_size,
+            confidence: selectedRef.confidence
+          }
+        });
+        console.log('[@component:NodeVerificationsList] Selected text reference:', selectedRef.name, 'with text:', selectedRef.text);
+      }
     }
   };
 
@@ -645,15 +669,15 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {/* First Row: Reference selection and test result status */}
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  {verification.controller_type === 'image' && modelReferences.length > 0 ? (
+                  {verification.requiresInput && verification.id && modelReferences.length > 0 ? (
                     <>
-                      {/* Reference Image Dropdown */}
+                      {/* Reference Dropdown - shows both image and text references */}
                       <FormControl size="small" sx={{ width: 250 }}>
-                        <InputLabel>Reference Image</InputLabel>
+                        <InputLabel>Reference</InputLabel>
                         <Select
-                          value={verification.params?.reference_image || ''}
+                          value={verification.params?.reference_image || verification.params?.reference_name || ''}
                           onChange={(e) => handleReferenceSelect(index, e.target.value)}
-                          label="Reference Image"
+                          label="Reference"
                           size="small"
                           sx={{
                             '& .MuiSelect-select': {
@@ -662,27 +686,53 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                           }}
                         >
                           <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
-                            <em>Select reference image...</em>
+                            <em>Select reference...</em>
                           </MenuItem>
-                          {modelReferences.map((ref) => (
+                          {modelReferences
+                            .filter(ref => {
+                              // Filter references based on verification type
+                              if (verification.controller_type === 'image') {
+                                return ref.type === 'image';
+                              } else if (verification.controller_type === 'text') {
+                                return ref.type === 'text';
+                              }
+                              return true; // Show all if type is not determined
+                            })
+                            .map((ref) => (
                             <MenuItem key={ref.name} value={ref.name} sx={{ fontSize: '0.75rem' }}>
-                              {ref.name}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                {ref.type === 'image' ? '🖼️' : '📝'}
+                                <span>{ref.name}</span>
+                                {ref.type === 'text' && ref.text && (
+                                  <Typography variant="caption" sx={{ 
+                                    fontSize: '0.65rem', 
+                                    color: 'text.secondary',
+                                    ml: 0.5,
+                                    maxWidth: 100,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    ({ref.text})
+                                  </Typography>
+                                )}
+                              </Box>
                             </MenuItem>
                           ))}
                         </Select>
                       </FormControl>
                     </>
-                  ) : (
-                    /* Fallback to manual input */
+                  ) : verification.requiresInput && verification.id ? (
+                    /* Fallback to manual input when no references available */
                     <TextField
                       size="small"
                       label={verification.inputLabel || 'Input Value'}
                       placeholder={verification.inputPlaceholder || 'Enter value...'}
                       value={verification.inputValue || ''}
                       onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                      sx={{ width: 200 }}
+                      sx={{ width: 250 }}
                     />
-                  )}
+                  ) : null}
                   
                   {/* Image Filter Selection - only for image verifications */}
                   {verification.controller_type === 'image' && verification.id && (

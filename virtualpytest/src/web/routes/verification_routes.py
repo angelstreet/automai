@@ -12,6 +12,8 @@ import time
 import os
 import sys
 import re
+import json
+from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -647,7 +649,6 @@ def save_reference_image():
         shutil.copy2(temp_file, final_path)
         
         # Update resource registry
-        import json
         registry_path = os.path.join(base_dir, 'config', 'resource', 'resource.json')
         
         # Load existing registry
@@ -664,7 +665,6 @@ def save_reference_image():
             registry_data['resources'] = []
         
         # Create resource entry with required area coordinates
-        from datetime import datetime
         resource_entry = {
             'name': reference_name,
             'model': model_name,
@@ -787,48 +787,65 @@ def get_reference_image(filename):
 
 @verification_bp.route('/api/virtualpytest/reference/list', methods=['GET'])
 def list_reference_images():
-    """List all available reference images from resource.json."""
+    """List all available reference images and text references from resource.json."""
     try:
-        import json
-        import os
-        from pathlib import Path
+        print(f"[@route:list_reference_images] Listing available reference images and text references")
         
-        print(f"[@route:list_reference_images] Listing available reference images")
+        base_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+        registry_path = os.path.join(base_dir, 'config', 'resource', 'resource.json')
         
-        # Path to resource.json
-        resource_file = Path(__file__).parent.parent.parent / 'config' / 'resource' / 'resource.json'
+        all_references = []
         
-        if not resource_file.exists():
-            print(f"[@route:list_reference_images] Resource file not found: {resource_file}")
-            return jsonify({
-                'success': True,
-                'references': []
-            })
+        if os.path.exists(registry_path):
+            with open(registry_path, 'r') as f:
+                registry_data = json.load(f)
+            
+            # Process the flat resources array
+            for resource in registry_data.get('resources', []):
+                if isinstance(resource, dict):
+                    # Determine type based on existing type field or infer from structure
+                    resource_type = resource.get('type', 'reference_image')
+                    
+                    if resource_type == 'reference_image':
+                        # Image reference
+                        reference = {
+                            'name': resource.get('name', ''),
+                            'model': resource.get('model', ''),
+                            'path': resource.get('path', ''),
+                            'full_path': resource.get('full_path', ''),
+                            'created_at': resource.get('created_at', ''),
+                            'type': 'image',
+                            'area': resource.get('area', {})
+                        }
+                        all_references.append(reference)
+                    elif resource_type == 'text_reference':
+                        # Text reference
+                        reference = {
+                            'name': resource.get('name', ''),
+                            'model': resource.get('model', ''),
+                            'path': '',  # No file path for text references
+                            'full_path': '',  # No file path for text references
+                            'created_at': resource.get('created_at', ''),
+                            'type': 'text',
+                            'area': resource.get('area', {}),
+                            'text': resource.get('text', ''),
+                            'font_size': resource.get('font_size'),
+                            'confidence': resource.get('confidence')
+                        }
+                        all_references.append(reference)
         
-        # Read the resource.json file
-        with open(resource_file, 'r') as f:
-            resource_data = json.load(f)
-        
-        references = resource_data.get('resources', [])
-        
-        # Filter only reference images
-        reference_images = [
-            ref for ref in references 
-            if ref.get('type') == 'reference_image'
-        ]
-        
-        print(f"[@route:list_reference_images] Found {len(reference_images)} reference images")
-        
+        print(f"[@route:list_reference_images] Found {len(all_references)} references total")
         return jsonify({
             'success': True,
-            'references': reference_images
+            'references': all_references
         })
         
     except Exception as e:
-        print(f"[@route:list_reference_images] Error listing references: {str(e)}")
+        print(f"[@route:list_reference_images] Error: {e}")
         return jsonify({
             'success': False,
-            'error': f'Failed to list reference images: {str(e)}'
+            'error': str(e),
+            'references': []
         }), 500
 
 # =====================================================
@@ -872,4 +889,171 @@ def serve_tmp_image(filename):
         return jsonify({
             'success': False,
             'error': f'Error serving image: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/reference/text/auto-detect', methods=['POST'])
+def auto_detect_text():
+    """Auto-detect text in the specified area using OCR"""
+    try:
+        data = request.get_json()
+        model = data.get('model')
+        area = data.get('area')  # {x, y, width, height}
+        
+        if not model or not area:
+            return jsonify({'error': 'Model and area are required'}), 400
+            
+        print(f"[@route:auto_detect_text] Starting text auto-detection for model: {model}, area: {area}")
+        
+        # Initialize AV controller to capture current screen
+        av_controller = AVController()
+        capture_path = av_controller.capture_screen()
+        
+        if not capture_path:
+            return jsonify({'error': 'Failed to capture screen'}), 500
+            
+        # Initialize text verification controller for OCR
+        text_controller = TextVerificationController()
+        
+        # Use OCR to extract text from the specified area
+        import cv2
+        import pytesseract
+        
+        # Load the captured image
+        image = cv2.imread(capture_path)
+        if image is None:
+            return jsonify({'error': 'Failed to load captured image'}), 500
+            
+        # Crop to the specified area
+        x, y, width, height = area['x'], area['y'], area['width'], area['height']
+        cropped_image = image[y:y+height, x:x+width]
+        
+        # Use tesseract to extract text and get detailed information
+        try:
+            # Get text with confidence data
+            data_dict = pytesseract.image_to_data(cropped_image, output_type=pytesseract.Output.DICT)
+            
+            # Extract text and calculate average confidence
+            words = []
+            confidences = []
+            font_sizes = []
+            
+            for i in range(len(data_dict['text'])):
+                text = data_dict['text'][i].strip()
+                conf = int(data_dict['conf'][i])
+                height = int(data_dict['height'][i])
+                
+                if text and conf > 0:  # Only include confident text
+                    words.append(text)
+                    confidences.append(conf)
+                    font_sizes.append(height)
+            
+            if not words:
+                return jsonify({
+                    'success': False,
+                    'error': 'No text detected in the specified area'
+                }), 400
+                
+            # Combine all detected text
+            detected_text = ' '.join(words)
+            avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+            avg_font_size = sum(font_sizes) / len(font_sizes) if font_sizes else 12
+            
+            print(f"[@route:auto_detect_text] Detected text: '{detected_text}' with confidence: {avg_confidence:.1f}%")
+            
+            return jsonify({
+                'success': True,
+                'text': detected_text,
+                'confidence': round(avg_confidence, 1),
+                'font_size': round(avg_font_size),
+                'area': area
+            })
+            
+        except Exception as ocr_error:
+            print(f"[@route:auto_detect_text] OCR error: {ocr_error}")
+            return jsonify({
+                'success': False,
+                'error': f'OCR processing failed: {str(ocr_error)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:auto_detect_text] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/reference/text/save', methods=['POST'])
+def save_text_reference():
+    """Save text reference to resource.json"""
+    try:
+        data = request.get_json()
+        reference_name = data.get('name')
+        model_name = data.get('model')
+        area = data.get('area')
+        text = data.get('text')
+        font_size = data.get('fontSize')
+        confidence = data.get('confidence')
+        
+        if not all([reference_name, model_name, area, text]):
+            return jsonify({'error': 'Name, model, area, and text are required'}), 400
+            
+        print(f"[@route:save_text_reference] Saving text reference: {reference_name} for model: {model_name}")
+        
+        # Path to resource.json
+        base_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+        registry_path = os.path.join(base_dir, 'config', 'resource', 'resource.json')
+        
+        # Load existing resource data
+        resource_data = {'resources': []}
+        if os.path.exists(registry_path):
+            with open(registry_path, 'r') as f:
+                resource_data = json.load(f)
+        
+        # Check if reference already exists
+        existing_index = None
+        for i, resource in enumerate(resource_data.get('resources', [])):
+            if (resource.get('name') == reference_name and 
+                resource.get('model') == model_name and 
+                resource.get('type') == 'text_reference'):
+                existing_index = i
+                break
+        
+        # Create new text reference entry
+        text_reference = {
+            'name': reference_name,
+            'model': model_name,
+            'path': '',  # No file path for text references
+            'full_path': '',  # No file path for text references
+            'created_at': datetime.now().isoformat(),
+            'type': 'text_reference',
+            'area': area,
+            'text': text,
+            'font_size': font_size,
+            'confidence': confidence
+        }
+        
+        # Add or update the reference
+        if existing_index is not None:
+            resource_data['resources'][existing_index] = text_reference
+            print(f"[@route:save_text_reference] Updated existing text reference: {reference_name}")
+        else:
+            resource_data['resources'].append(text_reference)
+            print(f"[@route:save_text_reference] Added new text reference: {reference_name}")
+        
+        # Save back to file
+        os.makedirs(os.path.dirname(registry_path), exist_ok=True)
+        with open(registry_path, 'w') as f:
+            json.dump(resource_data, f, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Text reference "{reference_name}" saved successfully',
+            'reference': text_reference
+        })
+        
+    except Exception as e:
+        print(f"[@route:save_text_reference] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500 
