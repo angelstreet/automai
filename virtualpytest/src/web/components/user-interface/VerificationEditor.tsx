@@ -185,7 +185,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         },
       }}>
         <Box sx={{ 
-          height: '250px', 
+          height: '220px', 
           overflowY: 'auto',
           overflowX: 'hidden',
           '&::-webkit-scrollbar': {
