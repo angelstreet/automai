@@ -704,4 +704,50 @@ def get_reference_image(filename):
         return jsonify({
             'success': False,
             'error': f'Failed to retrieve reference image: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/reference/list', methods=['GET'])
+def list_reference_images():
+    """List all available reference images from resource.json."""
+    try:
+        import json
+        import os
+        from pathlib import Path
+        
+        print(f"[@route:list_reference_images] Listing available reference images")
+        
+        # Path to resource.json
+        resource_file = Path(__file__).parent.parent.parent / 'config' / 'resource' / 'resource.json'
+        
+        if not resource_file.exists():
+            print(f"[@route:list_reference_images] Resource file not found: {resource_file}")
+            return jsonify({
+                'success': True,
+                'references': []
+            })
+        
+        # Read the resource.json file
+        with open(resource_file, 'r') as f:
+            resource_data = json.load(f)
+        
+        references = resource_data.get('resources', [])
+        
+        # Filter only reference images
+        reference_images = [
+            ref for ref in references 
+            if ref.get('type') == 'reference_image'
+        ]
+        
+        print(f"[@route:list_reference_images] Found {len(reference_images)} reference images")
+        
+        return jsonify({
+            'success': True,
+            'references': reference_images
+        })
+        
+    except Exception as e:
+        print(f"[@route:list_reference_images] Error listing references: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to list reference images: {str(e)}'
         }), 500 

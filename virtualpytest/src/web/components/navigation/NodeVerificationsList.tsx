@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -42,12 +42,22 @@ interface VerificationActions {
   [category: string]: VerificationAction[];
 }
 
+interface ReferenceImage {
+  name: string;
+  model: string;
+  path: string;
+  full_path: string;
+  created_at: string;
+  type: string;
+}
+
 interface NodeVerificationsListProps {
   verifications: NodeVerification[];
   availableActions: VerificationActions;
   onVerificationsChange: (verifications: NodeVerification[]) => void;
   loading?: boolean;
   error?: string | null;
+  model?: string;
 }
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
@@ -56,7 +66,41 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   onVerificationsChange,
   loading = false,
   error = null,
+  model,
 }) => {
+  const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
+  const [referencesLoading, setReferencesLoading] = useState(false);
+
+  // Fetch available reference images on component mount
+  useEffect(() => {
+    fetchAvailableReferences();
+  }, []);
+
+  const fetchAvailableReferences = async () => {
+    setReferencesLoading(true);
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/list');
+      const result = await response.json();
+      
+      if (result.success) {
+        setAvailableReferences(result.references || []);
+        console.log('[@component:NodeVerificationsList] Loaded references:', result.references);
+      } else {
+        console.error('[@component:NodeVerificationsList] Failed to load references:', result.error);
+      }
+    } catch (error) {
+      console.error('[@component:NodeVerificationsList] Error fetching references:', error);
+    } finally {
+      setReferencesLoading(false);
+    }
+  };
+
+  // Filter references by current model
+  const getModelReferences = () => {
+    if (!model) return availableReferences;
+    return availableReferences.filter(ref => ref.model === model);
+  };
+
   const addVerification = () => {
     const newVerification: NodeVerification = {
       id: '',
@@ -86,7 +130,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     let selectedAction: VerificationAction | undefined = undefined;
     let controllerType: 'text' | 'image' = 'text';
     
-    Object.entries(availableActions).forEach(([category, actions]) => {
+    // Search through all categories to find the action
+    for (const [category, actions] of Object.entries(availableActions)) {
       const action = actions.find(a => a.id === actionId);
       if (action) {
         selectedAction = action;
@@ -96,8 +141,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         } else {
           controllerType = 'text';
         }
+        break;
       }
-    });
+    }
 
     if (selectedAction) {
       updateVerification(index, {
@@ -112,6 +158,21 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         inputPlaceholder: selectedAction.inputPlaceholder,
         inputValue: ''
       });
+    }
+  };
+
+  const handleReferenceSelect = (index: number, referenceName: string) => {
+    const selectedRef = getModelReferences().find(ref => ref.name === referenceName);
+    if (selectedRef) {
+      updateVerification(index, {
+        inputValue: selectedRef.name, // Set the reference name as input value
+        params: {
+          ...verifications[index].params,
+          reference_image: selectedRef.name,
+          reference_path: selectedRef.path
+        }
+      });
+      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name);
     }
   };
 
@@ -132,12 +193,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     );
   }
 
+  const modelReferences = getModelReferences();
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-          Verifications
-        </Typography>
+        
         <Button
           size="small"
           variant="outlined"
@@ -254,7 +315,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="X"
-                    value={verification.params?.area?.x || verification.params?.area?.split(',')[0] || 0}
+                    value={verification.params?.area?.x || verification.params?.area?.split?.(',')[0] || 0}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
@@ -271,7 +332,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Y"
-                    value={verification.params?.area?.y || verification.params?.area?.split(',')[1] || 0}
+                    value={verification.params?.area?.y || verification.params?.area?.split?.(',')[1] || 0}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
@@ -288,7 +349,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Width"
-                    value={verification.params?.area?.width || verification.params?.area?.split(',')[2] || 100}
+                    value={verification.params?.area?.width || verification.params?.area?.split?.(',')[2] || 100}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
@@ -305,7 +366,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Height"
-                    value={verification.params?.area?.height || verification.params?.area?.split(',')[3] || 100}
+                    value={verification.params?.area?.height || verification.params?.area?.split?.(',')[3] || 100}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
@@ -322,17 +383,59 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               )}
             </Box>
             
-            {/* Line 3: Image path input */}
+            {/* Line 3: Reference Image Selector or Manual Input */}
             {verification.requiresInput && verification.id && (
-              <Box>
-                <TextField
-                  size="small"
-                  label={verification.inputLabel || 'Input Value'}
-                  placeholder={verification.inputPlaceholder || 'Enter value...'}
-                  value={verification.inputValue || ''}
-                  onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                  fullWidth
-                />
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {verification.controller_type === 'image' && modelReferences.length > 0 ? (
+                  <>
+                    {/* Reference Image Dropdown */}
+                    <FormControl size="small" sx={{ flex: 1 }}>
+                      <InputLabel>Reference Image</InputLabel>
+                      <Select
+                        value={verification.params?.reference_image || ''}
+                        onChange={(e) => handleReferenceSelect(index, e.target.value)}
+                        label="Reference Image"
+                        size="small"
+                        sx={{
+                          '& .MuiSelect-select': {
+                            fontSize: '0.75rem',
+                          },
+                        }}
+                      >
+                        <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
+                          <em>Select reference image...</em>
+                        </MenuItem>
+                        {modelReferences.map((ref) => (
+                          <MenuItem key={ref.name} value={ref.name} sx={{ fontSize: '0.75rem' }}>
+                            {ref.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    {/* Show selected reference info */}
+                    {verification.params?.reference_image && (
+                      <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                        {verification.params.reference_image}
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  /* Fallback to manual input */
+                  <TextField
+                    size="small"
+                    label={verification.inputLabel || 'Input Value'}
+                    placeholder={verification.inputPlaceholder || 'Enter value...'}
+                    value={verification.inputValue || ''}
+                    onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
+                    fullWidth
+                  />
+                )}
+                
+                {/* Show loading indicator for references */}
+                {verification.controller_type === 'image' && referencesLoading && (
+                  <CircularProgress size={16} />
+                )}
               </Box>
             )}
           </Box>

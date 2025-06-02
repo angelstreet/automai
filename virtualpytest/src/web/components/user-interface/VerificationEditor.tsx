@@ -8,8 +8,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Collapse,
+  IconButton,
 } from '@mui/material';
-import { Camera as CameraIcon } from '@mui/icons-material';
+import { 
+  Camera as CameraIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+} from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
 
 interface VerificationAction {
@@ -86,6 +92,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [pendingSave, setPendingSave] = useState<boolean>(false);
+  
+  // Collapsible sections state
+  const [captureCollapsed, setCaptureCollapsed] = useState<boolean>(false);
+  const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
 
@@ -334,367 +344,423 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </Typography>
       )}
 
-      {/* 1. Capture Container (Reference Image Preview) */}
+      {/* =================== CAPTURE SECTION =================== */}
       <Box>
-        <Box 
-          ref={captureContainerRef}
-          sx={{ 
-            position: 'relative',
-            width: '100%', 
-            height: 200, 
-            border: '2px dashed #444', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            borderRadius: 1,
-            bgcolor: 'rgba(255,255,255,0.05)',
-            overflow: 'hidden',
-            mb: 0.5
-          }}
-        >
-          {capturedReferenceImage ? (
-            <>
-              <img 
-                src={capturedReferenceImage}
-                alt="Reference"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'fill'
+        {/* Capture Section Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <IconButton 
+            size="small" 
+            onClick={() => setCaptureCollapsed(!captureCollapsed)}
+            sx={{ p: 0.25, mr: 0.5 }}
+          >
+            {captureCollapsed ? (
+              <ArrowRightIcon sx={{ fontSize: '1rem' }} />
+            ) : (
+              <ArrowDownIcon sx={{ fontSize: '1rem' }} />
+            )}
+          </IconButton>
+          <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            Capture
+          </Typography>
+        </Box>
+
+        {/* Collapsible Capture Content */}
+        <Collapse in={!captureCollapsed}>
+          <Box>
+            {/* 1. Capture Container (Reference Image Preview) */}
+            <Box>
+              <Box 
+                ref={captureContainerRef}
+                sx={{ 
+                  position: 'relative',
+                  width: '100%', 
+                  height: 200, 
+                  border: '2px dashed #444', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  borderRadius: 1,
+                  bgcolor: 'rgba(255,255,255,0.05)',
+                  overflow: 'hidden',
+                  mb: 0.5
+                }}
+              >
+                {capturedReferenceImage ? (
+                  <>
+                    <img 
+                      src={capturedReferenceImage}
+                      alt="Reference"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'fill'
+                      }}
+                    />
+                    {/* Success message overlay */}
+                    {successMessage && (
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        zIndex: 10
+                      }}>
+                        <Typography variant="body2" sx={{ 
+                          color: '#4caf50', 
+                          fontSize: '0.9rem', 
+                          fontWeight: 600,
+                          textAlign: 'center',
+                          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                        }}>
+                          {successMessage}
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
+                    {allowSelection ? 'Drag area on main image' : 'No image'}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+
+            {/* 2. Drag Area Info (Selection Info) */}
+            <Box sx={{ mb: 0 }}>
+              {selectedArea ? (
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5 }}>
+                  <TextField
+                    size="small"
+                    label="X"
+                    type="number"
+                    value={Math.round(selectedArea.x)}
+                    onChange={(e) => {
+                      const newX = parseFloat(e.target.value) || 0;
+                      if (onAreaSelected) {
+                        onAreaSelected({
+                          ...selectedArea,
+                          x: newX
+                        });
+                      }
+                    }}
+                    sx={{
+                      height: '28px',
+                      '& .MuiInputBase-root': {
+                        height: '28px',
+                        minHeight: '28px',
+                        maxHeight: '28px',
+                        overflow: 'hidden',
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        padding: '2px 8px',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.7rem',
+                        transform: 'translate(14px, 6px) scale(1)',
+                        '&.Mui-focused, &.MuiFormLabel-filled': {
+                          transform: 'translate(14px, -9px) scale(0.75)',
+                        },
+                      },
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Y"
+                    type="number"
+                    value={Math.round(selectedArea.y)}
+                    onChange={(e) => {
+                      const newY = parseFloat(e.target.value) || 0;
+                      if (onAreaSelected) {
+                        onAreaSelected({
+                          ...selectedArea,
+                          y: newY
+                        });
+                      }
+                    }}
+                    sx={{
+                      height: '28px',
+                      '& .MuiInputBase-root': {
+                        height: '28px',
+                        minHeight: '28px',
+                        maxHeight: '28px',
+                        overflow: 'hidden',
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        padding: '2px 8px',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.7rem',
+                        transform: 'translate(14px, 6px) scale(1)',
+                        '&.Mui-focused, &.MuiFormLabel-filled': {
+                          transform: 'translate(14px, -9px) scale(0.75)',
+                        },
+                      },
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Width"
+                    type="number"
+                    value={Math.round(selectedArea.width)}
+                    onChange={(e) => {
+                      const newWidth = parseFloat(e.target.value) || 0;
+                      if (onAreaSelected) {
+                        onAreaSelected({
+                          ...selectedArea,
+                          width: newWidth
+                        });
+                      }
+                    }}
+                    sx={{
+                      height: '28px',
+                      '& .MuiInputBase-root': {
+                        height: '28px',
+                        minHeight: '28px',
+                        maxHeight: '28px',
+                        overflow: 'hidden',
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        padding: '2px 8px',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.7rem',
+                        transform: 'translate(14px, 6px) scale(1)',
+                        '&.Mui-focused, &.MuiFormLabel-filled': {
+                          transform: 'translate(14px, -9px) scale(0.75)',
+                        },
+                      },
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Height"
+                    type="number"
+                    value={Math.round(selectedArea.height)}
+                    onChange={(e) => {
+                      const newHeight = parseFloat(e.target.value) || 0;
+                      if (onAreaSelected) {
+                        onAreaSelected({
+                          ...selectedArea,
+                          height: newHeight
+                        });
+                      }
+                    }}
+                    sx={{
+                      height: '28px',
+                      '& .MuiInputBase-root': {
+                        height: '28px',
+                        minHeight: '28px',
+                        maxHeight: '28px',
+                        overflow: 'hidden',
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        padding: '2px 8px',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.7rem',
+                        transform: 'translate(14px, 6px) scale(1)',
+                        '&.Mui-focused, &.MuiFormLabel-filled': {
+                          transform: 'translate(14px, -9px) scale(0.75)',
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+                  No area selected
+                </Typography>
+              )}
+            </Box>
+
+            {/* 3. Reference Name + Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 1 }}>
+              {/* Reference Name Input */}
+              <TextField
+                size="small"
+                placeholder="Reference name"
+                value={referenceName}
+                onChange={(e) => setReferenceName(e.target.value)}
+                sx={{
+                  flex: 1,
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                  },
                 }}
               />
-              {/* Success message overlay */}
-              {successMessage && (
-                <Box sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                  zIndex: 10
-                }}>
-                  <Typography variant="body2" sx={{ 
-                    color: '#4caf50', 
-                    fontSize: '0.9rem', 
-                    fontWeight: 600,
-                    textAlign: 'center',
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-                  }}>
-                    {successMessage}
-                  </Typography>
-                </Box>
-              )}
-            </>
-          ) : (
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
-              {allowSelection ? 'Drag area on main image' : 'No image'}
-            </Typography>
-          )}
-        </Box>
-      </Box>
 
-      {/* 2. Drag Area Info (Selection Info) */}
-      <Box sx={{ mb: 0 }}>
-        {selectedArea ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5 }}>
-            <TextField
-              size="small"
-              label="X"
-              type="number"
-              value={Math.round(selectedArea.x)}
-              onChange={(e) => {
-                const newX = parseFloat(e.target.value) || 0;
-                if (onAreaSelected) {
-                  onAreaSelected({
-                    ...selectedArea,
-                    x: newX
-                  });
-                }
-              }}
-              sx={{
-                height: '28px',
-                '& .MuiInputBase-root': {
-                  height: '28px',
-                  minHeight: '28px',
-                  maxHeight: '28px',
-                  overflow: 'hidden',
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.7rem',
-                  padding: '2px 8px',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                },
-                '& .MuiInputLabel-root': {
-                  fontSize: '0.7rem',
-                  transform: 'translate(14px, 6px) scale(1)',
-                  '&.Mui-focused, &.MuiFormLabel-filled': {
-                    transform: 'translate(14px, -9px) scale(0.75)',
+              {/* Action Buttons */}
+              <Button 
+                size="small" 
+                startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
+                variant="contained"
+                onClick={handleCaptureReference}
+                disabled={!canCapture}
+                sx={{
+                  bgcolor: '#1976d2',
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: '#1565c0',
                   },
-                },
-              }}
-            />
-            <TextField
-              size="small"
-              label="Y"
-              type="number"
-              value={Math.round(selectedArea.y)}
-              onChange={(e) => {
-                const newY = parseFloat(e.target.value) || 0;
-                if (onAreaSelected) {
-                  onAreaSelected({
-                    ...selectedArea,
-                    y: newY
-                  });
-                }
-              }}
-              sx={{
-                height: '28px',
-                '& .MuiInputBase-root': {
-                  height: '28px',
-                  minHeight: '28px',
-                  maxHeight: '28px',
-                  overflow: 'hidden',
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.7rem',
-                  padding: '2px 8px',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                },
-                '& .MuiInputLabel-root': {
-                  fontSize: '0.7rem',
-                  transform: 'translate(14px, 6px) scale(1)',
-                  '&.Mui-focused, &.MuiFormLabel-filled': {
-                    transform: 'translate(14px, -9px) scale(0.75)',
+                  '&:disabled': {
+                    bgcolor: '#333',
+                    color: 'rgba(255,255,255,0.3)',
+                  }
+                }}
+              >
+                Capture
+              </Button>
+              
+              <Button 
+                size="small" 
+                variant="contained"
+                onClick={handleSaveReference}
+                disabled={!canSave || pendingSave}
+                sx={{
+                  bgcolor: '#4caf50',
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: '#45a049',
                   },
-                },
-              }}
-            />
-            <TextField
-              size="small"
-              label="Width"
-              type="number"
-              value={Math.round(selectedArea.width)}
-              onChange={(e) => {
-                const newWidth = parseFloat(e.target.value) || 0;
-                if (onAreaSelected) {
-                  onAreaSelected({
-                    ...selectedArea,
-                    width: newWidth
-                  });
-                }
-              }}
-              sx={{
-                height: '28px',
-                '& .MuiInputBase-root': {
-                  height: '28px',
-                  minHeight: '28px',
-                  maxHeight: '28px',
-                  overflow: 'hidden',
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.7rem',
-                  padding: '2px 8px',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                },
-                '& .MuiInputLabel-root': {
-                  fontSize: '0.7rem',
-                  transform: 'translate(14px, 6px) scale(1)',
-                  '&.Mui-focused, &.MuiFormLabel-filled': {
-                    transform: 'translate(14px, -9px) scale(0.75)',
-                  },
-                },
-              }}
-            />
-            <TextField
-              size="small"
-              label="Height"
-              type="number"
-              value={Math.round(selectedArea.height)}
-              onChange={(e) => {
-                const newHeight = parseFloat(e.target.value) || 0;
-                if (onAreaSelected) {
-                  onAreaSelected({
-                    ...selectedArea,
-                    height: newHeight
-                  });
-                }
-              }}
-              sx={{
-                height: '28px',
-                '& .MuiInputBase-root': {
-                  height: '28px',
-                  minHeight: '28px',
-                  maxHeight: '28px',
-                  overflow: 'hidden',
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.7rem',
-                  padding: '2px 8px',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                },
-                '& .MuiInputLabel-root': {
-                  fontSize: '0.7rem',
-                  transform: 'translate(14px, 6px) scale(1)',
-                  '&.Mui-focused, &.MuiFormLabel-filled': {
-                    transform: 'translate(14px, -9px) scale(0.75)',
-                  },
-                },
-              }}
-            />
+                  '&:disabled': {
+                    bgcolor: '#333',
+                    color: 'rgba(255,255,255,0.3)',
+                  }
+                }}
+              >
+                {pendingSave ? 'Saving...' : 'Save'}
+              </Button>
+            </Box>
           </Box>
-        ) : (
-          <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
-            No area selected
-          </Typography>
-        )}
+        </Collapse>
       </Box>
 
-      {/* 3. Reference Name + Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mb: 0 }}>
-        {/* Reference Name Input */}
-        <TextField
-          size="small"
-          placeholder="Reference name"
-          value={referenceName}
-          onChange={(e) => setReferenceName(e.target.value)}
-          sx={{
-            flex: 1,
-            '& .MuiInputBase-input': {
+      {/* =================== VERIFICATIONS SECTION =================== */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Verifications Section Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <IconButton 
+            size="small" 
+            onClick={() => setVerificationsCollapsed(!verificationsCollapsed)}
+            sx={{ p: 0.25, mr: 0.5 }}
+          >
+            {verificationsCollapsed ? (
+              <ArrowRightIcon sx={{ fontSize: '1rem' }} />
+            ) : (
+              <ArrowDownIcon sx={{ fontSize: '1rem' }} />
+            )}
+          </IconButton>
+          <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            Verifications
+            {model && (
+              <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.secondary', ml: 1 }}>
+                ({verifications.length})
+              </Typography>
+            )}
+          </Typography>
+        </Box>
+
+        {/* Collapsible Verifications Content */}
+        <Collapse in={!verificationsCollapsed} sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ 
+            flex: 1, 
+            overflow: 'hidden', 
+            display: 'flex', 
+            flexDirection: 'column',
+            '& .MuiTypography-subtitle2': {
               fontSize: '0.75rem',
             },
-          }}
-        />
+            '& .MuiButton-root': {
+              fontSize: '0.7rem',
+            },
+            '& .MuiTextField-root': {
+              '& .MuiInputLabel-root': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiInputBase-input': {
+                fontSize: '0.75rem',
+              },
+            },
+            '& .MuiSelect-root': {
+              fontSize: '0.75rem',
+            },
+            '& .MuiFormControl-root': {
+              '& .MuiInputLabel-root': {
+                fontSize: '0.75rem',
+              },
+            },
+          }}>
+            <Box sx={{ 
+              height: verificationsCollapsed ? 0 : '220px', 
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              transition: 'height 0.3s ease',
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(255,255,255,0.3)',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: 'rgba(255,255,255,0.5)',
+                },
+              },
+            }}>
+              <NodeVerificationsList
+                verifications={verifications}
+                availableActions={verificationActions}
+                onVerificationsChange={handleVerificationsChange}
+                loading={loading}
+                error={error}
+                model={model}
+              />
+            </Box>
+          </Box>
 
-        {/* Action Buttons */}
-        <Button 
-          size="small" 
-          startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
-          variant="contained"
-          onClick={handleCaptureReference}
-          disabled={!canCapture}
-          sx={{
-            bgcolor: '#1976d2',
-            fontSize: '0.75rem',
-            '&:hover': {
-              bgcolor: '#1565c0',
-            },
-            '&:disabled': {
-              bgcolor: '#333',
-              color: 'rgba(255,255,255,0.3)',
-            }
-          }}
-        >
-          Capture
-        </Button>
-        
-        <Button 
-          size="small" 
-          variant="contained"
-          onClick={handleSaveReference}
-          disabled={!canSave || pendingSave}
-          sx={{
-            bgcolor: '#4caf50',
-            fontSize: '0.75rem',
-            '&:hover': {
-              bgcolor: '#45a049',
-            },
-            '&:disabled': {
-              bgcolor: '#333',
-              color: 'rgba(255,255,255,0.3)',
-            }
-          }}
-        >
-          {pendingSave ? 'Saving...' : 'Save'}
-        </Button>
-      </Box>
-
-      {/* 4. Verifications List */}
-      <Box sx={{ 
-        flex: 1, 
-        overflow: 'hidden', 
-        display: 'flex', 
-        flexDirection: 'column',
-        '& .MuiTypography-subtitle2': {
-          fontSize: '0.75rem',
-        },
-        '& .MuiButton-root': {
-          fontSize: '0.7rem',
-        },
-        '& .MuiTextField-root': {
-          '& .MuiInputLabel-root': {
-            fontSize: '0.75rem',
-          },
-          '& .MuiInputBase-input': {
-            fontSize: '0.75rem',
-          },
-        },
-        '& .MuiSelect-root': {
-          fontSize: '0.75rem',
-        },
-        '& .MuiFormControl-root': {
-          '& .MuiInputLabel-root': {
-            fontSize: '0.75rem',
-          },
-        },
-      }}>
-        <Box sx={{ 
-          height: '220px', 
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          '&::-webkit-scrollbar': {
-            width: '6px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '3px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: 'rgba(255,255,255,0.3)',
-            borderRadius: '3px',
-            '&:hover': {
-              background: 'rgba(255,255,255,0.5)',
-            },
-          },
-        }}>
-          <NodeVerificationsList
-            verifications={verifications}
-            availableActions={verificationActions}
-            onVerificationsChange={handleVerificationsChange}
-            loading={loading}
-            error={error}
-          />
-        </Box>
-      </Box>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, mt: 'auto', justifyContent: 'flex-end' }}>
-        <Button 
-          variant="outlined" 
-          size="small"
-          disabled={verifications.length === 0}
-          sx={{
-            borderColor: '#444',
-            color: 'inherit',
-            fontSize: '0.75rem',
-            '&:hover': {
-              borderColor: '#666',
-            },
-            '&:disabled': {
-              borderColor: '#333',
-              color: 'rgba(255,255,255,0.3)',
-            }
-          }}
-        >
-          Test
-        </Button>
+          {/* Test Button */}
+          <Box sx={{ display: 'flex', gap: 1, mt: 'auto', justifyContent: 'flex-end', pt: 1 }}>
+            <Button 
+              variant="outlined" 
+              size="small"
+              disabled={verifications.length === 0}
+              sx={{
+                borderColor: '#444',
+                color: 'inherit',
+                fontSize: '0.75rem',
+                '&:hover': {
+                  borderColor: '#666',
+                },
+                '&:disabled': {
+                  borderColor: '#333',
+                  color: 'rgba(255,255,255,0.3)',
+                }
+              }}
+            >
+              Test
+            </Button>
+          </Box>
+        </Collapse>
       </Box>
 
       {/* Confirmation Dialog */}
