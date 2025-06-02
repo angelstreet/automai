@@ -1118,10 +1118,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   Detected: Font Size {detectedTextData.fontSize}px, 
                   Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
                   {detectedTextData.detectedLanguage && (
-                    <span>, Language: {detectedTextData.detectedLanguage} 
+                    <span>, Language: {(() => {
+                      const langNames = {
+                        'eng': 'English',
+                        'fra': 'French', 
+                        'ita': 'Italian',
+                        'deu': 'German'
+                      };
+                      return langNames[detectedTextData.detectedLanguage as keyof typeof langNames] || detectedTextData.detectedLanguage;
+                    })()} 
                     ({(detectedTextData.languageConfidence! * 100).toFixed(1)}%)</span>
                   )}
-                 
+                  {detectedTextData.imageFilter && detectedTextData.imageFilter !== 'none' && (
+                    <span>, Filter: {detectedTextData.imageFilter}</span>
+                  )}
                 </Typography>
               </Box>
             )}

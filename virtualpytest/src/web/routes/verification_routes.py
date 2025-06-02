@@ -976,110 +976,48 @@ def auto_detect_text():
             # Use the processed image for OCR
             ocr_image = processed_image if image_filter != 'none' else cropped_image
             
-            # Language detection using multi-language OCR testing
-            detected_language = 'eng'  # default
-            language_confidence = 0
-            best_confidence = 0
-            best_language = 'eng'
-            
-            # Languages to test (English, French, Italian, German)
-            languages_to_test = ['eng', 'fra', 'ita', 'deu']
-            language_names = {
-                'eng': 'English',
-                'fra': 'French', 
-                'ita': 'Italian',
-                'deu': 'German'
-            }
-            
-            print(f"[@route:auto_detect_text] Testing OCR with languages: {languages_to_test}")
-            
+            # Language detection using text controller's multi-language OCR testing
             try:
-                # Test each language and find the one with highest confidence
-                for lang_code in languages_to_test:
-                    try:
-                        # Run OCR with this specific language
-                        test_data = pytesseract.image_to_data(
-                            ocr_image, 
-                            lang=lang_code, 
-                            output_type=pytesseract.Output.DICT
-                        )
-                        
-                        # Calculate average confidence for this language
-                        lang_confidences = []
-                        lang_words = []
-                        
-                        for i in range(len(test_data['text'])):
-                            text = test_data['text'][i].strip()
-                            conf = int(test_data['conf'][i])
-                            
-                            if text and conf > 0:  # Only include confident text
-                                lang_confidences.append(conf)
-                                lang_words.append(text)
-                        
-                        if lang_confidences:
-                            avg_conf = sum(lang_confidences) / len(lang_confidences)
-                            word_count = len(lang_words)
-                            
-                            # Weight confidence by number of words found (more words = more reliable)
-                            weighted_score = avg_conf * min(word_count / 3.0, 1.0)  # Cap word bonus at 3 words
-                            
-                            print(f"[@route:auto_detect_text] {language_names[lang_code]} ({lang_code}): "
-                                  f"{avg_conf:.1f}% confidence, {word_count} words, "
-                                  f"weighted score: {weighted_score:.1f}")
-                            
-                            if weighted_score > best_confidence:
-                                best_confidence = weighted_score
-                                best_language = lang_code
-                                
-                    except Exception as lang_error:
-                        print(f"[@route:auto_detect_text] Failed to test language {lang_code}: {lang_error}")
-                        continue
+                # Import text controller for language detection
+                from controllers.verification.text import TextVerificationController
                 
-                detected_language = best_language
-                language_confidence = best_confidence / 100.0  # Convert to 0-1 range
+                # Create a temporary text controller instance for language detection
+                # We don't need a real AV controller for this static method
+                class DummyAVController:
+                    device_name = "temp_for_language_detection"
                 
-                print(f"[@route:auto_detect_text] Best language: {language_names[detected_language]} "
-                      f"({detected_language}) with confidence: {best_confidence:.1f}%")
+                temp_controller = TextVerificationController(DummyAVController())
+                
+                # Use the text controller's language detection method
+                detected_language, language_confidence, detected_text = temp_controller._detect_text_language(target_path)
+                
+                print(f"[@route:auto_detect_text] Language detection completed: {detected_language} "
+                      f"with confidence: {language_confidence:.3f}")
+                
+                if not detected_text or detected_text.strip() == '':
+                    return jsonify({
+                        'success': False,
+                        'error': 'No text detected in the specified area',
+                        'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                        'detected_language': detected_language,
+                        'language_confidence': language_confidence,
+                        'image_filter': image_filter
+                    }), 400
+                
+                # We have detected text - calculate average font size
+                avg_confidence = language_confidence
+                avg_font_size = 12  # Default font size
+                
+                print(f"[@route:auto_detect_text] Detected text: '{detected_text}' with confidence: {avg_confidence:.3f}")
                 
             except Exception as lang_detection_error:
-                print(f"[@route:auto_detect_text] Language detection failed, using default 'eng': {lang_detection_error}")
-                detected_language = 'eng'
-                language_confidence = 0.5
-            
-            # Use tesseract to extract text with detected language (final OCR pass)
-            data_dict = pytesseract.image_to_data(ocr_image, lang=detected_language, output_type=pytesseract.Output.DICT)
-            
-            # Extract text and calculate average confidence
-            words = []
-            confidences = []
-            font_sizes = []
-            
-            for i in range(len(data_dict['text'])):
-                text = data_dict['text'][i].strip()
-                conf = int(data_dict['conf'][i])
-                height = int(data_dict['height'][i])
-                
-                if text and conf > 0:  # Only include confident text
-                    words.append(text)
-                    confidences.append(conf)
-                    font_sizes.append(height)
-            
-            if not words:
+                print(f"[@route:auto_detect_text] Language detection failed: {lang_detection_error}")
                 return jsonify({
                     'success': False,
-                    'error': 'No text detected in the specified area',
+                    'error': f'OCR processing failed: {str(lang_detection_error)}',
                     'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
-                    'detected_language': detected_language,
-                    'language_confidence': language_confidence,
                     'image_filter': image_filter
-                }), 400
-                
-            # Combine all detected text
-            detected_text = ' '.join(words)
-            avg_confidence = sum(confidences) / len(confidences) if confidences else 0
-            avg_font_size = sum(font_sizes) / len(font_sizes) if font_sizes else 12
-            
-            print(f"[@route:auto_detect_text] Detected text: '{detected_text}' with confidence: {avg_confidence:.1f}%")
+                }), 500
             
             return jsonify({
                 'success': True,

@@ -628,6 +628,95 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
 
+    def _detect_text_language(self, image_path: str) -> Tuple[str, float, str]:
+        """
+        Detect the most likely language in the image by testing OCR with multiple languages.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            Tuple of (language_code, confidence, detected_text)
+        """
+        # Languages to test (English, French, Italian, German)
+        languages_to_test = ['eng', 'fra', 'ita', 'deu']
+        language_names = {
+            'eng': 'English',
+            'fra': 'French', 
+            'ita': 'Italian',
+            'deu': 'German'
+        }
+        
+        best_confidence = 0
+        best_language = 'eng'
+        best_text = ''
+        
+        print(f"[@controller:TextVerification] Testing OCR with languages: {languages_to_test}")
+        
+        try:
+            import pytesseract
+            import cv2
+            
+            # Load image for OCR testing
+            image = cv2.imread(image_path)
+            if image is None:
+                print(f"[@controller:TextVerification] Failed to load image for language detection")
+                return 'eng', 0.5, ''
+            
+            # Test each language and find the one with highest confidence
+            for lang_code in languages_to_test:
+                try:
+                    # Run OCR with this specific language
+                    test_data = pytesseract.image_to_data(
+                        image, 
+                        lang=lang_code, 
+                        output_type=pytesseract.Output.DICT
+                    )
+                    
+                    # Calculate average confidence for this language
+                    lang_confidences = []
+                    lang_words = []
+                    
+                    for i in range(len(test_data['text'])):
+                        text = test_data['text'][i].strip()
+                        conf = int(test_data['conf'][i])
+                        
+                        if text and conf > 0:  # Only include confident text
+                            lang_confidences.append(conf)
+                            lang_words.append(text)
+                    
+                    if lang_confidences:
+                        avg_conf = sum(lang_confidences) / len(lang_confidences)
+                        word_count = len(lang_words)
+                        detected_text = ' '.join(lang_words)
+                        
+                        # Weight confidence by number of words found (more words = more reliable)
+                        weighted_score = avg_conf * min(word_count / 3.0, 1.0)  # Cap word bonus at 3 words
+                        
+                        print(f"[@controller:TextVerification] {language_names[lang_code]} ({lang_code}): "
+                              f"{avg_conf:.1f}% confidence, {word_count} words, "
+                              f"weighted score: {weighted_score:.1f}")
+                        
+                        if weighted_score > best_confidence:
+                            best_confidence = weighted_score
+                            best_language = lang_code
+                            best_text = detected_text
+                            
+                except Exception as lang_error:
+                    print(f"[@controller:TextVerification] Failed to test language {lang_code}: {lang_error}")
+                    continue
+            
+            language_confidence = best_confidence / 100.0  # Convert to 0-1 range
+            
+            print(f"[@controller:TextVerification] Best language: {language_names[best_language]} "
+                  f"({best_language}) with confidence: {best_confidence:.1f}%")
+            
+            return best_language, language_confidence, best_text
+            
+        except Exception as lang_detection_error:
+            print(f"[@controller:TextVerification] Language detection failed, using default 'eng': {lang_detection_error}")
+            return 'eng', 0.5, ''
+
     # Implementation of required abstract methods from VerificationControllerInterface
     
     def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
