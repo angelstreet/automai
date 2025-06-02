@@ -263,6 +263,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     console.log('[@component:NodeVerificationsList] Changed image filter to:', filter);
   };
 
+  const handleTextFilterChange = (index: number, filter: 'none' | 'greyscale' | 'binary') => {
+    updateVerification(index, {
+      params: {
+        ...verifications[index].params,
+        text_filter: filter
+      }
+    });
+    console.log('[@component:NodeVerificationsList] Changed text filter to:', filter);
+  };
+
   // Component for displaying image comparison thumbnails
   const ImageComparisonThumbnails: React.FC<{
     sourceUrl: string;
@@ -566,7 +576,30 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 />
               )}
               
-              {verification.controller_type === 'image' && (
+              {verification.controller_type === 'text' && (
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Confidence"
+                  value={verification.params?.confidence || 0.8}
+                  onChange={(e) => updateVerification(index, { 
+                    params: { 
+                      ...verification.params, 
+                      confidence: parseFloat(e.target.value) || 0.8 
+                    }
+                  })}
+                  sx={{ 
+                    width: 80,
+                    '& .MuiInputBase-input': {
+                      padding: '4px 8px',
+                      fontSize: '0.8rem'
+                    }
+                  }}
+                  inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
+                />
+              )}
+              
+              {(verification.controller_type === 'image' || verification.controller_type === 'text') && (
                 <>
                   <TextField
                     size="small"
@@ -740,6 +773,36 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       <RadioGroup
                         value={verification.params?.image_filter || 'none'}
                         onChange={(e) => handleImageFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')}
+                        sx={{
+                          gap: 0,
+                          '& .MuiFormControlLabel-root': {
+                            margin: 0,
+                            '& .MuiFormControlLabel-label': {
+                              fontSize: '0.65rem',
+                              paddingLeft: '2px'
+                            },
+                            '& .MuiRadio-root': {
+                              padding: '2px',
+                              '& .MuiSvgIcon-root': {
+                                fontSize: '0.9rem'
+                              }
+                            }
+                          }
+                        }}
+                      >
+                        <FormControlLabel value="none" control={<Radio />} label="None" />
+                        <FormControlLabel value="greyscale" control={<Radio />} label="Greyscale" />
+                        <FormControlLabel value="binary" control={<Radio />} label="Binarization" />
+                      </RadioGroup>
+                    </Box>
+                  )}
+                  
+                  {/* Text Filter Selection - only for text verifications */}
+                  {verification.controller_type === 'text' && verification.id && (
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
+                      <RadioGroup
+                        value={verification.params?.text_filter || 'none'}
+                        onChange={(e) => handleTextFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')}
                         sx={{
                           gap: 0,
                           '& .MuiFormControlLabel-root': {

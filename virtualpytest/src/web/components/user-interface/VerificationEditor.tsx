@@ -147,11 +147,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     text: string;
     fontSize: number;
     confidence: number;
-    detectedLanguage?: string;
-    languageConfidence?: number;
-    imageFilter?: string;
   } | null>(null);
-  const [textImageFilter, setTextImageFilter] = useState<'none' | 'greyscale' | 'binary'>('none');
 
   useEffect(() => {
     if (isVisible) {
@@ -283,22 +279,22 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       if (referenceType === 'image') {
         // Save image reference (existing logic)
-        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/image/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            reference_name: referenceName,
-            model_name: model,
+            name: referenceName,
             area: selectedArea,
+            model,
           }),
         });
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
+          setReferenceName('');
           setTempReferenceUrl('');
-          setSuccessMessage(`Reference "${referenceName}" saved successfully!`);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
@@ -328,9 +324,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Text reference saved successfully');
+          setReferenceName('');
           setReferenceText('');
           setDetectedTextData(null);
-          setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
@@ -628,15 +624,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleAutoDetectText = async () => {
-    if (!selectedArea || !model || !captureSourcePath) {
-      console.log('[@component:VerificationEditor] Cannot auto-detect: missing area, model, or source path');
+    if (!selectedArea || !model) {
+      console.log('[@component:VerificationEditor] Cannot auto-detect: missing area or model');
       return;
     }
 
-    console.log('[@component:VerificationEditor] Auto-detecting text in area:', selectedArea);
-    console.log('[@component:VerificationEditor] Using source path:', captureSourcePath);
-
     try {
+      console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
+      
       const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/auto-detect', {
         method: 'POST',
         headers: {
@@ -644,50 +639,24 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         },
         body: JSON.stringify({
           model,
-          area: selectedArea,
-          source_path: captureSourcePath,
-          image_filter: textImageFilter
+          area: selectedArea
         }),
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.ok) {
+        const result = await response.json();
         console.log('[@component:VerificationEditor] Text auto-detection successful:', result);
         
-        // Show the cropped image in preview (same as image capture)
-        if (result.preview_url) {
-          const timestamp = new Date().getTime();
-          const imageUrl = `http://localhost:5009${result.preview_url}&t=${timestamp}`;
-          setCapturedReferenceImage(imageUrl);
-          setHasCaptured(true);
-        }
-        
-        // Set detected text data
         setDetectedTextData({
           text: result.detected_text,
           fontSize: result.font_size,
-          confidence: result.confidence,
-          detectedLanguage: result.detected_language,
-          languageConfidence: result.language_confidence,
-          imageFilter: result.image_filter
+          confidence: result.confidence
         });
         
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
       } else {
-        console.error('[@component:VerificationEditor] Text auto-detection failed:', result.error);
-        
-        // Set failed message in text input to show user what happened
-        setReferenceText('failed to find text');
-        
-        // Still show preview image if available (even on failure)
-        if (result.preview_url) {
-          const timestamp = new Date().getTime();
-          const imageUrl = `http://localhost:5009${result.preview_url}&t=${timestamp}`;
-          setCapturedReferenceImage(imageUrl);
-          setHasCaptured(true);
-        }
+        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status);
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error during text auto-detection:', error);
@@ -1100,7 +1069,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   size="small"
                   variant="outlined"
                   onClick={handleAutoDetectText}
-                  disabled={!canCapture}
+                  disabled={!selectedArea || !model}
                   sx={{
                     fontSize: '0.7rem',
                     whiteSpace: 'nowrap',
@@ -1117,21 +1086,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
                   Detected: Font Size {detectedTextData.fontSize}px, 
                   Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
-                  {detectedTextData.detectedLanguage && (
-                    <span>, Language: {(() => {
-                      const langNames = {
-                        'eng': 'English',
-                        'fra': 'French', 
-                        'ita': 'Italian',
-                        'deu': 'German'
-                      };
-                      return langNames[detectedTextData.detectedLanguage as keyof typeof langNames] || detectedTextData.detectedLanguage;
-                    })()} 
-                    ({(detectedTextData.languageConfidence! * 100).toFixed(1)}%)</span>
-                  )}
-                  {detectedTextData.imageFilter && detectedTextData.imageFilter !== 'none' && (
-                    <span>, Filter: {detectedTextData.imageFilter}</span>
-                  )}
                 </Typography>
               </Box>
             )}
