@@ -200,7 +200,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             borderRadius: 1,
             bgcolor: 'rgba(255,255,255,0.05)',
             overflow: 'hidden',
-            mb: 0
+            mb: 0.5
           }}
         >
           {capturedReferenceImage ? (
@@ -222,13 +222,107 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* 2. Drag Area Info (Selection Info) */}
-      <Box sx={{ mb: 0, fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
-        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-          {selectedArea 
-            ? `Selected: x:${Math.round(selectedArea.x)}, y:${Math.round(selectedArea.y)}, w:${Math.round(selectedArea.width)}, h:${Math.round(selectedArea.height)}`
-            : 'No area selected'
-          }
-        </Typography>
+      <Box sx={{ mb: 0 }}>
+        {selectedArea ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 1 }}>
+            <TextField
+              size="small"
+              label="X"
+              type="number"
+              value={Math.round(selectedArea.x)}
+              onChange={(e) => {
+                const newX = parseFloat(e.target.value) || 0;
+                if (onAreaSelected) {
+                  onAreaSelected({
+                    ...selectedArea,
+                    x: newX
+                  });
+                }
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.7rem',
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.7rem',
+                },
+              }}
+            />
+            <TextField
+              size="small"
+              label="Y"
+              type="number"
+              value={Math.round(selectedArea.y)}
+              onChange={(e) => {
+                const newY = parseFloat(e.target.value) || 0;
+                if (onAreaSelected) {
+                  onAreaSelected({
+                    ...selectedArea,
+                    y: newY
+                  });
+                }
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.7rem',
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.7rem',
+                },
+              }}
+            />
+            <TextField
+              size="small"
+              label="Width"
+              type="number"
+              value={Math.round(selectedArea.width)}
+              onChange={(e) => {
+                const newWidth = parseFloat(e.target.value) || 0;
+                if (onAreaSelected) {
+                  onAreaSelected({
+                    ...selectedArea,
+                    width: newWidth
+                  });
+                }
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.7rem',
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.7rem',
+                },
+              }}
+            />
+            <TextField
+              size="small"
+              label="Height"
+              type="number"
+              value={Math.round(selectedArea.height)}
+              onChange={(e) => {
+                const newHeight = parseFloat(e.target.value) || 0;
+                if (onAreaSelected) {
+                  onAreaSelected({
+                    ...selectedArea,
+                    height: newHeight
+                  });
+                }
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.7rem',
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.7rem',
+                },
+              }}
+            />
+          </Box>
+        ) : (
+          <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+            No area selected
+          </Typography>
+        )}
       </Box>
 
       {/* 3. Reference Name + Action Buttons (Horizontal Row) */}
