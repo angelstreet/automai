@@ -109,7 +109,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 460, 
+      width: 480, 
       height: '100%', 
       p: 2, 
       display: 'flex', 
@@ -117,7 +117,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       gap: 2,
       ...sx 
     }}>
-      <Typography variant="h6">Verification Editor</Typography>
+      <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>Verification Editor</Typography>
       
       {/* Screenshot Capture Section */}
       <Box>
@@ -132,19 +132,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           borderRadius: 1,
           bgcolor: 'rgba(255,255,255,0.05)'
         }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
             No image captured
           </Typography>
         </Box>
         <Button 
           size="small" 
-          startIcon={<CameraIcon />}
+          startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
           variant="outlined"
           fullWidth
           onClick={handleTakeScreenshot}
           sx={{
             borderColor: '#444',
             color: 'inherit',
+            fontSize: '0.75rem',
             '&:hover': {
               borderColor: '#666',
             }
@@ -155,7 +156,34 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* Verifications List - Using same component as NodeEditDialog */}
-      <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'hidden', 
+        display: 'flex', 
+        flexDirection: 'column',
+        '& .MuiTypography-subtitle2': {
+          fontSize: '0.75rem',
+        },
+        '& .MuiButton-root': {
+          fontSize: '0.7rem',
+        },
+        '& .MuiTextField-root': {
+          '& .MuiInputLabel-root': {
+            fontSize: '0.75rem',
+          },
+          '& .MuiInputBase-input': {
+            fontSize: '0.75rem',
+          },
+        },
+        '& .MuiSelect-root': {
+          fontSize: '0.75rem',
+        },
+        '& .MuiFormControl-root': {
+          '& .MuiInputLabel-root': {
+            fontSize: '0.75rem',
+          },
+        },
+      }}>
         <NodeVerificationsList
           verifications={verifications}
           availableActions={verificationActions}
@@ -175,6 +203,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           sx={{
             borderColor: '#444',
             color: 'inherit',
+            fontSize: '0.75rem',
             '&:hover': {
               borderColor: '#666',
             },
@@ -193,6 +222,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           disabled={!canSave}
           sx={{
             bgcolor: '#444',
+            fontSize: '0.75rem',
             '&:hover': {
               bgcolor: '#555',
             },

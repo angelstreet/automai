@@ -159,9 +159,31 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   value={verification.id}
                   onChange={(e) => handleVerificationSelect(index, e.target.value)}
                   displayEmpty
+                  size="small"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 200,
+                        '& .MuiMenuItem-root': {
+                          fontSize: '0.8rem',
+                          minHeight: '28px',
+                          paddingTop: '1px',
+                          paddingBottom: '1px',
+                          lineHeight: 0.8,
+                        },
+                      },
+                    },
+                  }}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      fontSize: '0.8rem',
+                      paddingTop: '4px',
+                      paddingBottom: '2px',
+                    },
+                  }}
                   renderValue={(selected) => {
                     if (!selected) {
-                      return <em>Select verification...</em>;
+                      return <em style={{ fontSize: '0.8rem' }}>Select verification...</em>;
                     }
                     // Find the selected verification to display its label
                     let selectedLabel = '';
@@ -173,11 +195,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   }}
                 >
                   {Object.entries(availableActions).map(([category, actions]) => [
-                    <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold' }}>
+                    <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}>
                       {category.replace(/_/g, ' ').toUpperCase()}
                     </MenuItem>,
                     ...actions.map(action => (
-                      <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
+                      <MenuItem key={action.id} value={action.id} sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}>
                         {action.label}
                       </MenuItem>
                     ))
