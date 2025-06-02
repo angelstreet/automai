@@ -79,6 +79,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [referenceName, setReferenceName] = useState<string>('default_capture');
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
   const [hasCaptured, setHasCaptured] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
 
@@ -96,6 +97,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       console.log(`[@component:VerificationEditor] Using model: ${model}`);
     }
   }, [model]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const fetchVerificationActions = async () => {
     setLoading(true);
@@ -215,6 +225,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         setCapturedReferenceImage(imageUrl);
         // Clear any previous errors
         setError(null);
+        // Show success message
+        setSuccessMessage(`${referenceName.trim()} saved successfully`);
       } else {
         console.error('[@component:VerificationEditor] Failed to save reference:', result.error);
         setError(result.error || 'Failed to save reference');
@@ -274,6 +286,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       {error && (
         <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
           {error}
+        </Typography>
+      )}
+
+      {successMessage && (
+        <Typography variant="caption" sx={{ color: '#4caf50', fontSize: '0.7rem', fontWeight: 500 }}>
+          {successMessage}
         </Typography>
       )}
 
@@ -517,10 +535,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           onClick={handleSaveReference}
           disabled={!canSave}
           sx={{
-            bgcolor: '#444',
+            bgcolor: '#4caf50',
             fontSize: '0.75rem',
             '&:hover': {
-              bgcolor: '#555',
+              bgcolor: '#45a049',
             },
             '&:disabled': {
               bgcolor: '#333',
