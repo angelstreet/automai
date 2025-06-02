@@ -515,12 +515,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           const status = res.success ? 'PASSED' : 'FAILED';
           console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
           
-          // Extract threshold from message if available (for image verifications)
+          // Extract threshold from response or message (for image verifications)
           let threshold: number | undefined = undefined;
           if (verificationsToExecute[index]?.controller_type === 'image') {
-            // Try to extract threshold from various message formats
-            if (res.message) {
-              // Try different patterns for confidence/threshold
+            // First priority: use threshold directly from response (already processed by backend)
+            if (res.threshold !== undefined && res.threshold !== null) {
+              threshold = res.threshold;
+              console.log(`[@component:VerificationEditor] Using direct threshold from response: ${threshold}`);
+            } else if (res.message) {
+              // Fallback: try to extract threshold from message text
               const patterns = [
                 /confidence ([\d.]+)/i,
                 /threshold ([\d.]+)/i,
@@ -539,12 +542,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                     value = value / 100;
                   }
                   threshold = value;
+                  console.log(`[@component:VerificationEditor] Extracted threshold from message: ${threshold}`);
                   break;
                 }
               }
             }
             
-            // If no threshold found in message, use the threshold from verification params
+            // Last resort: use the threshold from verification params
             if (threshold === undefined && verificationsToExecute[index]?.params?.threshold) {
               threshold = verificationsToExecute[index].params.threshold;
               console.log(`[@component:VerificationEditor] Using verification threshold parameter: ${threshold}`);

@@ -491,15 +491,16 @@ class ImageVerificationController(VerificationControllerInterface):
         # Invert the boolean result and adjust the message
         success = not found
         
-        # For disappear operations, invert the threshold to make it more intuitive
-        # If original match was 100% (image still there), disappear threshold should be 0%
-        # If original match was 0% (image not found), disappear threshold should be 100%
+        # For disappear operations, invert the threshold for UI display to make it intuitive
+        # If original match was 100% (image still there), show 0% (0% disappeared)
+        # If original match was 0% (image not found), show 100% (100% disappeared)
         if 'threshold' in additional_data and additional_data['threshold'] is not None:
             original_threshold = additional_data['threshold']
+            # Invert threshold for disappear operations: 1.0 - original gives intuitive "disappear percentage"
             inverted_threshold = 1.0 - original_threshold
             additional_data['threshold'] = inverted_threshold
             additional_data['original_threshold'] = original_threshold  # Keep original for debugging
-            print(f"[@controller:ImageVerification] Inverted threshold for disappear: {original_threshold:.3f} -> {inverted_threshold:.3f}")
+            print(f"[@controller:ImageVerification] Disappear threshold display: {original_threshold:.3f} -> {inverted_threshold:.3f} (inverted for UI)")
         
         if success:
             # Image has disappeared (was not found)
