@@ -469,11 +469,18 @@ const NavigationEditorContent: React.FC = () => {
 
   // Memoize disconnect complete handler
   const handleDisconnectComplete = useCallback(() => {
-    handleTakeControl();
+    // Do NOT automatically release control when the remote component disconnects
+    // This prevents the SSH session from being destroyed after navigation operations
+    console.log('[@component:NavigationEditor] Remote component disconnected, but maintaining control session for navigation');
+    
+    // Only hide the remote panel if it's open, but keep control active
     if (isRemotePanelOpen) {
       handleToggleRemotePanel();
     }
-  }, [handleTakeControl, isRemotePanelOpen, handleToggleRemotePanel]);
+    
+    // The control session should only be released manually by the user clicking "Release Control"
+    // or when explicitly changing devices, not during automatic disconnections
+  }, [isRemotePanelOpen, handleToggleRemotePanel]);
 
   // Handle taking screenshot
   const handleTakeScreenshot = async () => {
@@ -905,7 +912,7 @@ const NavigationEditorContent: React.FC = () => {
                       selectedDevice={selectedDevice}
                       onTakeScreenshot={handleTakeScreenshot}
                       treeId={currentTreeId || ''}
-                      currentNodeId={focusNodeId}
+                      currentNodeId={focusNodeId || undefined}
                       onVerification={handleVerification}
                       isVerificationActive={isVerificationActive}
                       verificationControllerStatus={verificationControllerStatus}
