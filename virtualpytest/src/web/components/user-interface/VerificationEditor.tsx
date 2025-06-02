@@ -686,9 +686,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         <Collapse in={!verificationsCollapsed} sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ 
             flex: 1, 
-            overflow: 'hidden', 
             display: 'flex', 
             flexDirection: 'column',
+            minHeight: 0, // Important for flex scrolling
             '& .MuiTypography-subtitle2': {
               fontSize: '0.75rem',
             },
@@ -713,10 +713,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             },
           }}>
             <Box sx={{ 
-              height: verificationsCollapsed ? 0 : '220px', 
+              flex: 1,
+              minHeight: 150, // Minimum height for verifications
+              maxHeight: captureCollapsed ? 400 : 200, // Adjust max height based on capture section state
               overflowY: 'auto',
               overflowX: 'hidden',
-              transition: 'height 0.3s ease',
               '&::-webkit-scrollbar': {
                 width: '6px',
               },

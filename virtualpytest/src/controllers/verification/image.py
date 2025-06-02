@@ -110,12 +110,12 @@ class ImageVerificationController(VerificationControllerInterface):
             "controller_type": "image"
         }
 
-    def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, 
+    def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
                             area: tuple = None) -> bool:
        
        return False
 
-    def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8,
+    def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
                                area: tuple = None) -> bool:
         return False
 
