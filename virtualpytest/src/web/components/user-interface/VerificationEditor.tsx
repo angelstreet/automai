@@ -148,7 +148,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       {/* Row 2: Dynamic Parameters */}
       <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>Parameters</Typography>
+        <Typography variant="subtitle2" sx={{ mb: 0 }}>Parameters</Typography>
         {selectedVerification && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <TextField
