@@ -390,7 +390,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     <Box>
       <Box sx={{ mb: 1 }}>
         {verifications.map((verification, index) => (
-          <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+          <Box key={index} sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
             {/* Line 1: Verification dropdown */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
               <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
@@ -452,7 +452,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             </Box>
             
             {/* Line 2: Timeout, threshold, and area controls */}
-            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 1, px: 0, mx: 0 }}>
               {verification.id && (
                 <TextField
                   size="small"
@@ -465,7 +465,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       timeout: parseFloat(e.target.value) || 10 
                     }
                   })}
-                  sx={{ width: 80 }}
+                  sx={{ 
+                    width: 80,
+                    '& .MuiInputBase-input': {
+                      padding: '4px 8px',
+                      fontSize: '0.8rem'
+                    }
+                  }}
                   inputProps={{ min: 1, max: 60, step: 0.5 }}
                 />
               )}
@@ -482,7 +488,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       threshold: parseFloat(e.target.value) || 0.8 
                     }
                   })}
-                  sx={{ width: 80 }}
+                  sx={{ 
+                    width: 80,
+                    '& .MuiInputBase-input': {
+                      padding: '4px 8px',
+                      fontSize: '0.8rem'
+                    }
+                  }}
                   inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
                 />
               )}
@@ -503,7 +515,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         }
                       }
                     })}
-                    sx={{ width: 70 }}
+                    sx={{ 
+                      width: 70,
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px',
+                        fontSize: '0.8rem'
+                      }
+                    }}
                     inputProps={{ min: 0 }}
                   />
                   <TextField
@@ -520,7 +538,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         }
                       }
                     })}
-                    sx={{ width: 70 }}
+                    sx={{ 
+                      width: 70,
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px',
+                        fontSize: '0.8rem'
+                      }
+                    }}
                     inputProps={{ min: 0 }}
                   />
                   <TextField
@@ -537,7 +561,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         }
                       }
                     })}
-                    sx={{ width: 80 }}
+                    sx={{ 
+                      width: 80,
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px',
+                        fontSize: '0.8rem'
+                      }
+                    }}
                     inputProps={{ min: 1 }}
                   />
                   <TextField
@@ -554,7 +584,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         }
                       }
                     })}
-                    sx={{ width: 80 }}
+                    sx={{ 
+                      width: 80,
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px',
+                        fontSize: '0.8rem'
+                      }
+                    }}
                     inputProps={{ min: 1 }}
                   />
                 </>
@@ -578,7 +614,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                           size="small"
                           sx={{
                             '& .MuiSelect-select': {
-                              fontSize: '0.75rem',
+                              fontSize: '0.8rem',
                             },
                           }}
                         >
