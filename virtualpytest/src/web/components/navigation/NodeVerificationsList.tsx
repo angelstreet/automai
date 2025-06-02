@@ -91,6 +91,7 @@ interface NodeVerificationsListProps {
   model?: string;
   onTest?: () => void;
   testResults?: VerificationTestResult[];
+  reloadTrigger?: number; // Trigger to reload references
 }
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
@@ -102,6 +103,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   model,
   onTest,
   testResults = [],
+  reloadTrigger = 0,
 }) => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
@@ -127,6 +129,14 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   useEffect(() => {
     fetchAvailableReferences();
   }, []);
+
+  // Reload references when reloadTrigger changes
+  useEffect(() => {
+    if (reloadTrigger > 0) {
+      console.log('[@component:NodeVerificationsList] Reloading references due to trigger:', reloadTrigger);
+      fetchAvailableReferences();
+    }
+  }, [reloadTrigger]);
 
   const fetchAvailableReferences = async () => {
     setReferencesLoading(true);

@@ -148,6 +148,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     fontSize: number;
     confidence: number;
   } | null>(null);
+  const [textImageFilter, setTextImageFilter] = useState<'none' | 'greyscale' | 'binary'>('none');
+  const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
 
   useEffect(() => {
     if (isVisible) {
@@ -293,8 +295,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
-          setReferenceName('');
+          setSuccessMessage(`Image reference "${referenceName}" saved successfully!`);
           setTempReferenceUrl('');
+          setReferenceSaveCounter(prev => prev + 1);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
@@ -323,9 +326,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Text reference saved successfully');
-          setReferenceName('');
-          setReferenceText('');
+          setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
           setDetectedTextData(null);
+          setReferenceSaveCounter(prev => prev + 1);
           onReferenceSaved?.(referenceName);
         } else {
           console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
@@ -660,6 +663,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
+        
+        // Set preview image for the detected area (similar to image capture)
+        const timestamp = new Date().getTime();
+        const previewUrl = `http://localhost:5009/api/virtualpytest/reference/image/capture.png?t=${timestamp}`;
+        setCapturedReferenceImage(previewUrl);
+        setHasCaptured(true);
       } else {
         console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status);
       }
@@ -1074,7 +1083,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   size="small"
                   variant="outlined"
                   onClick={handleAutoDetectText}
-                  disabled={!selectedArea || !model}
+                  disabled={!selectedArea || !model || !captureSourcePath}
                   sx={{
                     fontSize: '0.7rem',
                     whiteSpace: 'nowrap',
@@ -1219,6 +1228,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               model={model}
               onTest={handleTest}
               testResults={testResults}
+              reloadTrigger={referenceSaveCounter}
             />
           </Box>
         </Collapse>
