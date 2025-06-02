@@ -333,6 +333,22 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       display: 'flex', 
       flexDirection: 'column', 
       gap: 1,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      '&::-webkit-scrollbar': {
+        width: '6px',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: 'rgba(255,255,255,0.1)',
+        borderRadius: '3px',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: 'rgba(255,255,255,0.3)',
+        borderRadius: '3px',
+        '&:hover': {
+          background: 'rgba(255,255,255,0.5)',
+        },
+      },
       ...sx 
     }}>
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
@@ -658,7 +674,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       </Box>
 
       {/* =================== VERIFICATIONS SECTION =================== */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box>
         {/* Verifications Section Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <IconButton 
@@ -683,12 +699,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </Box>
 
         {/* Collapsible Verifications Content */}
-        <Collapse in={!verificationsCollapsed} sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Collapse in={!verificationsCollapsed}>
           <Box sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column',
-            minHeight: 0, // Important for flex scrolling
             '& .MuiTypography-subtitle2': {
               fontSize: '0.75rem',
             },
@@ -712,37 +724,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               },
             },
           }}>
-            <Box sx={{ 
-              flex: 1,
-              minHeight: 150, // Minimum height for verifications
-              maxHeight: captureCollapsed ? 400 : 200, // Adjust max height based on capture section state
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              '&::-webkit-scrollbar': {
-                width: '6px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '3px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(255,255,255,0.3)',
-                borderRadius: '3px',
-                '&:hover': {
-                  background: 'rgba(255,255,255,0.5)',
-                },
-              },
-            }}>
-              <NodeVerificationsList
-                verifications={verifications}
-                availableActions={verificationActions}
-                onVerificationsChange={handleVerificationsChange}
-                loading={loading}
-                error={error}
-                model={model}
-                onTest={handleTest}
-              />
-            </Box>
+            <NodeVerificationsList
+              verifications={verifications}
+              availableActions={verificationActions}
+              onVerificationsChange={handleVerificationsChange}
+              loading={loading}
+              error={error}
+              model={model}
+              onTest={handleTest}
+            />
           </Box>
         </Collapse>
       </Box>
