@@ -283,15 +283,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </Typography>
       </Typography>
       
+      {/* Show error message if any */}
       {error && (
         <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
           {error}
-        </Typography>
-      )}
-
-      {successMessage && (
-        <Typography variant="caption" sx={{ color: '#4caf50', fontSize: '0.7rem', fontWeight: 500 }}>
-          {successMessage}
         </Typography>
       )}
 
@@ -314,15 +309,42 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           }}
         >
           {capturedReferenceImage ? (
-            <img 
-              src={capturedReferenceImage}
-              alt="Reference"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'fill'
-              }}
-            />
+            <>
+              <img 
+                src={capturedReferenceImage}
+                alt="Reference"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'fill'
+                }}
+              />
+              {/* Success message overlay */}
+              {successMessage && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  zIndex: 10
+                }}>
+                  <Typography variant="body2" sx={{ 
+                    color: '#4caf50', 
+                    fontSize: '0.9rem', 
+                    fontWeight: 600,
+                    textAlign: 'center',
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                  }}>
+                    {successMessage}
+                  </Typography>
+                </Box>
+              )}
+            </>
           ) : (
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
               {allowSelection ? 'Drag area on main image' : 'No image'}
