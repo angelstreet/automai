@@ -370,6 +370,7 @@ def execute_batch_verification():
         verifications = data.get('verifications', [])
         node_id = data.get('node_id')
         tree_id = data.get('tree_id')
+        model = data.get('model', 'default')  # Get model name for organizing output images
         
         if not verifications:
             return jsonify({
@@ -377,12 +378,12 @@ def execute_batch_verification():
                 'error': 'No verifications provided'
             }), 400
         
-        print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node {node_id}")
+        print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node {node_id} with model {model}")
         
         results = []
         all_passed = True
         
-        for verification in verifications:
+        for verification_index, verification in enumerate(verifications):
             # Execute each verification individually
             result = {
                 'verification_id': verification.get('id'),
@@ -398,7 +399,7 @@ def execute_batch_verification():
                 params = verification.get('params', {})
                 controller_type = verification.get('controller_type', 'image')
                 
-                print(f"[@route:execute_batch_verification] Executing verification {verification_id}:")
+                print(f"[@route:execute_batch_verification] Executing verification {verification_index}: {verification_id}")
                 print(f"  Command: {command}")
                 print(f"  Controller: {controller_type}")
                 print(f"  Params: {params}")
@@ -418,37 +419,50 @@ def execute_batch_verification():
                     results.append(result)
                     continue
                 
-                # Execute verification
+                # Execute verification with new signature
                 success = False
                 message = ""
+                additional_data = {}
                 
                 if command == 'waitForImageToAppear':
-                    success, message = controller.waitForImageToAppear(
+                    success, message, additional_data = controller.waitForImageToAppear(
                         image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
-                        area=params.get('area')
+                        area=params.get('area'),
+                        image_list=params.get('image_list'),
+                        model=model,
+                        verification_index=verification_index
                     )
                 elif command == 'waitForImageToDisappear':
-                    success, message = controller.waitForImageToDisappear(
+                    success, message, additional_data = controller.waitForImageToDisappear(
                         image_path=params.get('image_path'),
                         timeout=params.get('timeout', 10.0),
                         threshold=params.get('threshold', 0.8),
-                        area=params.get('area')
+                        area=params.get('area'),
+                        image_list=params.get('image_list'),
+                        model=model,
+                        verification_index=verification_index
                     )
                 elif command == 'waitForTextToAppear':
-                    success, message = controller.waitForTextToAppear(
+                    success, message, additional_data = controller.waitForTextToAppear(
                         text=params.get('text'),
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
-                        area=params.get('area')
+                        area=params.get('area'),
+                        image_list=params.get('image_list'),
+                        model=model,
+                        verification_index=verification_index
                     )
                 elif command == 'waitForTextToDisappear':
-                    success, message = controller.waitForTextToDisappear(
+                    success, message, additional_data = controller.waitForTextToDisappear(
                         text=params.get('text'),
                         timeout=params.get('timeout', 10.0),
                         case_sensitive=params.get('case_sensitive', False),
-                        area=params.get('area')
+                        area=params.get('area'),
+                        image_list=params.get('image_list'),
+                        model=model,
+                        verification_index=verification_index
                     )
                 
                 # Ensure we have a message, include threshold info for image verifications
@@ -461,6 +475,29 @@ def execute_batch_verification():
                 
                 result['success'] = success
                 result['message'] = message
+                
+                # Include additional data for UI thumbnails
+                if additional_data:
+                    # Convert absolute paths to relative URLs for web access
+                    if 'source_image_path' in additional_data:
+                        # Convert /path/to/tmp/model/verification_x/source_cropped.png to /api/virtualpytest/tmp/model/verification_x/source_cropped.png
+                        source_path = additional_data['source_image_path']
+                        if '/tmp/' in source_path:
+                            relative_path = source_path.split('/tmp/')[-1]
+                            additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                    
+                    if 'reference_image_path' in additional_data:
+                        # Convert absolute reference path to relative URL
+                        ref_path = additional_data['reference_image_path']
+                        if '/resources/' in ref_path:
+                            # Extract model and filename from path like /path/to/resources/model/filename.png
+                            path_parts = ref_path.split('/resources/')[-1].split('/')
+                            if len(path_parts) >= 2:
+                                ref_model = path_parts[0]
+                                ref_filename = path_parts[1]
+                                additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                    
+                    result.update(additional_data)
                 
                 print(f"[@route:execute_batch_verification] Result: {result}")
                 
@@ -478,6 +515,7 @@ def execute_batch_verification():
             'message': f'Batch verification {"passed" if all_passed else "failed"} ({len([r for r in results if r["success"]])}/{len(results)} passed)',
             'node_id': node_id,
             'tree_id': tree_id,
+            'model': model,
             'total_verifications': len(verifications),
             'passed_count': len([r for r in results if r['success']]),
             'failed_count': len([r for r in results if not r['success']]),
@@ -779,4 +817,47 @@ def list_reference_images():
         return jsonify({
             'success': False,
             'error': f'Failed to list reference images: {str(e)}'
+        }), 500
+
+# =====================================================
+# SERVE TEMPORARY IMAGES
+# =====================================================
+
+@verification_bp.route('/api/virtualpytest/tmp/<path:filename>', methods=['GET'])
+def serve_tmp_image(filename):
+    """Serve temporary images from the /tmp directory for UI comparison display."""
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        tmp_dir = os.path.join(base_dir, 'tmp')
+        
+        # Security check - ensure path is within tmp directory
+        requested_path = os.path.join(tmp_dir, filename)
+        canonical_tmp = os.path.realpath(tmp_dir)
+        canonical_requested = os.path.realpath(requested_path)
+        
+        if not canonical_requested.startswith(canonical_tmp):
+            return jsonify({
+                'success': False,
+                'error': 'Access denied'
+            }), 403
+        
+        if not os.path.exists(requested_path):
+            return jsonify({
+                'success': False,
+                'error': 'File not found'
+            }), 404
+        
+        # Determine file extension for content type
+        file_ext = os.path.splitext(filename)[1].lower()
+        content_type = 'image/png'
+        if file_ext == '.jpg' or file_ext == '.jpeg':
+            content_type = 'image/jpeg'
+        
+        return send_from_directory(tmp_dir, filename, mimetype=content_type)
+        
+    except Exception as e:
+        print(f"[@route:serve_tmp_image] Error serving tmp image {filename}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Error serving image: {str(e)}'
         }), 500 

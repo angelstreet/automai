@@ -11,8 +11,12 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
 
 interface NodeVerification {
   id: string;
@@ -33,6 +37,10 @@ interface VerificationTestResult {
   error?: string;
   threshold?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
 }
 
 interface VerificationAction {
@@ -88,6 +96,19 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 }) => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
+  const [imageComparisonDialog, setImageComparisonDialog] = useState<{
+    open: boolean;
+    sourceUrl: string;
+    referenceUrl: string;
+    threshold?: number;
+    resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  }>({
+    open: false,
+    sourceUrl: '',
+    referenceUrl: '',
+    threshold: undefined,
+    resultType: undefined
+  });
 
   // Fetch available reference images on component mount
   useEffect(() => {
@@ -199,6 +220,151 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       });
       console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name, 'with full_path:', selectedRef.full_path, 'and area:', selectedRef.area);
     }
+  };
+
+  // Component for displaying image comparison thumbnails
+  const ImageComparisonThumbnails: React.FC<{
+    sourceUrl: string;
+    referenceUrl: string;
+    resultType: 'PASS' | 'FAIL' | 'ERROR';
+    threshold?: number;
+  }> = ({ sourceUrl, referenceUrl, resultType, threshold }) => {
+    const handleDoubleClick = () => {
+      setImageComparisonDialog({
+        open: true,
+        sourceUrl,
+        referenceUrl,
+        threshold,
+        resultType
+      });
+    };
+
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 0.5, 
+        alignItems: 'center',
+        padding: '4px',
+        border: `1px solid ${
+          resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
+        }`,
+        borderRadius: 1,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        width: '100%'
+      }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
+            Source
+          </Typography>
+          <img
+            src={`http://localhost:5009${sourceUrl}`}
+            alt="Source"
+            style={{
+              width: '100%',
+              maxWidth: '200px',
+              height: '150px',
+              objectFit: 'contain',
+              border: '1px solid #666',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+            onDoubleClick={handleDoubleClick}
+          />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
+            Reference
+          </Typography>
+          <img
+            src={`http://localhost:5009${referenceUrl}`}
+            alt="Reference"
+            style={{
+              width: '100%',
+              maxWidth: '200px',
+              height: '150px',
+              objectFit: 'contain',
+              border: '1px solid #666',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+            onDoubleClick={handleDoubleClick}
+          />
+        </Box>
+      </Box>
+    );
+  };
+
+  // Component for displaying text comparison
+  const TextComparisonDisplay: React.FC<{
+    searchedText: string;
+    extractedText: string;
+    sourceUrl?: string;
+    resultType: 'PASS' | 'FAIL' | 'ERROR';
+  }> = ({ searchedText, extractedText, sourceUrl, resultType }) => {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 1, 
+        alignItems: 'flex-start',
+        padding: '8px',
+        border: `1px solid ${
+          resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
+        }`,
+        borderRadius: 1,
+        backgroundColor: 'rgba(0,0,0,0.1)'
+      }}>
+        {sourceUrl && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1 }}>
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
+              Source
+            </Typography>
+            <img
+              src={`http://localhost:5009${sourceUrl}`}
+              alt="Source"
+              style={{
+                width: '100px',
+                height: '100px',
+                objectFit: 'contain',
+                border: '1px solid #666',
+                borderRadius: '4px'
+              }}
+            />
+          </Box>
+        )}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
+              Searched:
+            </Typography>
+            <Typography variant="caption" sx={{ 
+              fontSize: '0.7rem', 
+              display: 'block',
+              color: '#90caf9',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
+            }}>
+              "{searchedText}"
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
+              Found:
+            </Typography>
+            <Typography variant="caption" sx={{ 
+              fontSize: '0.7rem', 
+              display: 'block',
+              color: resultType === 'PASS' ? '#4caf50' : '#f44336',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word'
+            }}>
+              "{extractedText || 'No text found'}"
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    );
   };
 
   if (loading) {
@@ -397,118 +563,149 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             
             {/* Line 3: Reference Image Selector or Manual Input */}
             {verification.requiresInput && verification.id && (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {verification.controller_type === 'image' && modelReferences.length > 0 ? (
-                  <>
-                    {/* Reference Image Dropdown */}
-                    <FormControl size="small" sx={{ width: 200 }}>
-                      <InputLabel>Reference Image</InputLabel>
-                      <Select
-                        value={verification.params?.reference_image || ''}
-                        onChange={(e) => handleReferenceSelect(index, e.target.value)}
-                        label="Reference Image"
-                        size="small"
-                        sx={{
-                          '& .MuiSelect-select': {
-                            fontSize: '0.75rem',
-                          },
-                        }}
-                      >
-                        <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
-                          <em>Select reference image...</em>
-                        </MenuItem>
-                        {modelReferences.map((ref) => (
-                          <MenuItem key={ref.name} value={ref.name} sx={{ fontSize: '0.75rem' }}>
-                            {ref.name}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {/* First Row: Reference selection and test result status */}
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {verification.controller_type === 'image' && modelReferences.length > 0 ? (
+                    <>
+                      {/* Reference Image Dropdown */}
+                      <FormControl size="small" sx={{ width: 200 }}>
+                        <InputLabel>Reference Image</InputLabel>
+                        <Select
+                          value={verification.params?.reference_image || ''}
+                          onChange={(e) => handleReferenceSelect(index, e.target.value)}
+                          label="Reference Image"
+                          size="small"
+                          sx={{
+                            '& .MuiSelect-select': {
+                              fontSize: '0.75rem',
+                            },
+                          }}
+                        >
+                          <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
+                            <em>Select reference image...</em>
                           </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </>
-                ) : (
-                  /* Fallback to manual input */
-                  <TextField
-                    size="small"
-                    label={verification.inputLabel || 'Input Value'}
-                    placeholder={verification.inputPlaceholder || 'Enter value...'}
-                    value={verification.inputValue || ''}
-                    onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
-                    sx={{ width: 200 }}
-                  />
-                )}
-                
-                {/* Test Result Status Indicator */}
-                {testResults[index] && (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.5,
-                    minWidth: 120,
-                    padding: '4px 8px',
-                    borderRadius: 1,
-                    backgroundColor: testResults[index].resultType === 'PASS' 
-                      ? 'rgba(76, 175, 80, 0.1)' 
-                      : testResults[index].resultType === 'ERROR' 
-                        ? 'rgba(255, 152, 0, 0.1)' 
-                        : 'rgba(244, 67, 54, 0.1)',
-                    border: `1px solid ${
-                      testResults[index].resultType === 'PASS' 
-                        ? '#4caf50' 
-                        : testResults[index].resultType === 'ERROR' 
-                          ? '#ff9800' 
-                          : '#f44336'
-                    }`
-                  }}>
-                    <Box sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
+                          {modelReferences.map((ref) => (
+                            <MenuItem key={ref.name} value={ref.name} sx={{ fontSize: '0.75rem' }}>
+                              {ref.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </>
+                  ) : (
+                    /* Fallback to manual input */
+                    <TextField
+                      size="small"
+                      label={verification.inputLabel || 'Input Value'}
+                      placeholder={verification.inputPlaceholder || 'Enter value...'}
+                      value={verification.inputValue || ''}
+                      onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
+                      sx={{ width: 200 }}
+                    />
+                  )}
+                  
+                  {/* Test Result Status Indicator */}
+                  {testResults[index] && (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 0.5,
+                      minWidth: 120,
+                      padding: '4px 8px',
+                      borderRadius: 1,
                       backgroundColor: testResults[index].resultType === 'PASS' 
-                        ? '#4caf50' 
+                        ? 'rgba(76, 175, 80, 0.1)' 
                         : testResults[index].resultType === 'ERROR' 
-                          ? '#ff9800' 
-                          : '#f44336'
-                    }} />
-                    <Typography variant="caption" sx={{ 
-                      fontSize: '0.7rem',
-                      color: testResults[index].resultType === 'PASS' 
-                        ? '#4caf50' 
-                        : testResults[index].resultType === 'ERROR' 
-                          ? '#ff9800' 
-                          : '#f44336',
-                      fontWeight: 600
+                          ? 'rgba(255, 152, 0, 0.1)' 
+                          : 'rgba(244, 67, 54, 0.1)',
+                      border: `1px solid ${
+                        testResults[index].resultType === 'PASS' 
+                          ? '#4caf50' 
+                          : testResults[index].resultType === 'ERROR' 
+                            ? '#ff9800' 
+                            : '#f44336'
+                      }`
                     }}>
-                      {testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
-                    </Typography>
-                    {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
+                      <Box sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: testResults[index].resultType === 'PASS' 
+                          ? '#4caf50' 
+                          : testResults[index].resultType === 'ERROR' 
+                            ? '#ff9800' 
+                            : '#f44336'
+                      }} />
                       <Typography variant="caption" sx={{ 
-                        fontSize: '0.65rem',
-                        color: 'rgba(255,255,255,0.7)',
-                        ml: 0.5
+                        fontSize: '0.7rem',
+                        color: testResults[index].resultType === 'PASS' 
+                          ? '#4caf50' 
+                          : testResults[index].resultType === 'ERROR' 
+                            ? '#ff9800' 
+                            : '#f44336',
+                        fontWeight: 600
                       }}>
-                        {(testResults[index].threshold! * 100).toFixed(1)}%
+                        {testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
                       </Typography>
+                      {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
+                        <Typography variant="caption" sx={{ 
+                          fontSize: '0.65rem',
+                          color: 'rgba(255,255,255,0.7)',
+                          ml: 0.5
+                        }}>
+                          {(testResults[index].threshold! * 100).toFixed(1)}%
+                        </Typography>
+                      )}
+                      {/* Show error message for ERROR type results */}
+                      {testResults[index].resultType === 'ERROR' && (testResults[index].message || testResults[index].error) && (
+                        <Typography variant="caption" sx={{ 
+                          fontSize: '0.6rem',
+                          color: 'rgba(255,255,255,0.8)',
+                          ml: 0.5,
+                          maxWidth: 200,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }} title={testResults[index].message || testResults[index].error}>
+                          {testResults[index].message || testResults[index].error}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                  
+                  {/* Show loading indicator for references */}
+                  {verification.controller_type === 'image' && referencesLoading && (
+                    <CircularProgress size={16} />
+                  )}
+                </Box>
+                
+                {/* Second Row: Comparison images/text below */}
+                {testResults[index] && (
+                  <Box sx={{ ml: 2, mt: 1 }}>
+                    {/* Image comparison thumbnails for image verifications */}
+                    {verification.controller_type === 'image' && 
+                     testResults[index].sourceImageUrl && 
+                     testResults[index].referenceImageUrl && (
+                      <ImageComparisonThumbnails
+                        sourceUrl={testResults[index].sourceImageUrl!}
+                        referenceUrl={testResults[index].referenceImageUrl!}
+                        resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
+                        threshold={verification.params?.threshold}
+                      />
                     )}
-                    {/* Show error message for ERROR type results */}
-                    {testResults[index].resultType === 'ERROR' && (testResults[index].message || testResults[index].error) && (
-                      <Typography variant="caption" sx={{ 
-                        fontSize: '0.6rem',
-                        color: 'rgba(255,255,255,0.8)',
-                        ml: 0.5,
-                        maxWidth: 200,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }} title={testResults[index].message || testResults[index].error}>
-                        {testResults[index].message || testResults[index].error}
-                      </Typography>
+                    
+                    {/* Text comparison for text verifications */}
+                    {verification.controller_type === 'text' && 
+                     testResults[index].searchedText && (
+                      <TextComparisonDisplay
+                        searchedText={testResults[index].searchedText!}
+                        extractedText={testResults[index].extractedText || ''}
+                        sourceUrl={testResults[index].sourceImageUrl}
+                        resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
+                      />
                     )}
                   </Box>
-                )}
-                
-                {/* Show loading indicator for references */}
-                {verification.controller_type === 'image' && referencesLoading && (
-                  <CircularProgress size={16} />
                 )}
               </Box>
             )}
@@ -552,6 +749,102 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           </Button>
         )}
       </Box>
+      
+      {/* Scaled Image Modal */}
+      <Dialog
+        open={imageComparisonDialog.open}
+        onClose={() => setImageComparisonDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: '#2E2E2E',
+            color: '#ffffff',
+            maxWidth: '95vw',
+            maxHeight: '95vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem', textAlign: 'center' }}>
+          {imageComparisonDialog.threshold !== undefined ? (
+            <>
+              Threshold: {(imageComparisonDialog.threshold * 100).toFixed(1)}% 
+              {imageComparisonDialog.resultType && (
+                <Typography component="span" sx={{ 
+                  ml: 2, 
+                  color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
+                        imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
+                  fontWeight: 600 
+                }}>
+                  [{imageComparisonDialog.resultType}]
+                </Typography>
+              )}
+            </>
+          ) : (
+            'Image Comparison'
+          )}
+        </DialogTitle>
+        <DialogContent sx={{ p: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            width: '100%'
+          }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
+                Source
+              </Typography>
+              <img
+                src={`http://localhost:5009${imageComparisonDialog.sourceUrl}`}
+                alt="Source Scaled"
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain',
+                  border: '2px solid #666',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
+                Reference
+              </Typography>
+              <img
+                src={`http://localhost:5009${imageComparisonDialog.referenceUrl}`}
+                alt="Reference Scaled"
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain',
+                  border: '2px solid #666',
+                  borderRadius: '8px'
+                }}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
+          <Button 
+            onClick={() => setImageComparisonDialog(prev => ({ ...prev, open: false }))}
+            variant="outlined"
+            size="small"
+            sx={{
+              borderColor: '#666',
+              color: '#ffffff',
+              fontSize: '0.75rem',
+              '&:hover': {
+                borderColor: '#888',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+              }
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }; 

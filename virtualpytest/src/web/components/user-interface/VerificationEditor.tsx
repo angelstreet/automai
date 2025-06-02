@@ -52,6 +52,10 @@ interface VerificationTestResult {
   error?: string;
   threshold?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
 }
 
 interface DragArea {
@@ -73,6 +77,12 @@ interface VerificationEditorProps {
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
   model: string;
+  // VideoCapture component state
+  videoFramesPath?: string;
+  totalFrames?: number;
+  currentFrame?: number;
+  // ScreenshotCapture component state  
+  screenshotPath?: string;
   sx?: any;
 }
 
@@ -88,6 +98,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   onAreaSelected,
   onClearSelection,
   model,
+  // VideoCapture component state
+  videoFramesPath,
+  totalFrames,
+  currentFrame,
+  // ScreenshotCapture component state  
+  screenshotPath,
   sx = {},
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
@@ -377,17 +393,44 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             console.warn('[@component:VerificationEditor] No image path found for verification');
           }
           
-          // Provide current screenshot or capture source if available
-          if (captureSourcePath && !isCaptureActive) {
-            // If we have a screenshot displayed, use it for verification
-            updatedParams.image_list = [captureSourcePath];
-            console.log('[@component:VerificationEditor] Using current screenshot for verification:', captureSourcePath);
+          // Determine what images to provide based on component state
+          if (isScreenshotMode && screenshotPath) {
+            // Screenshot mode with screenshot available
+            updatedParams.image_list = [screenshotPath];
+            console.log('[@component:VerificationEditor] Using screenshot for verification:', screenshotPath);
+          } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
+            // Video mode with saved frames available
+            const framesList = [];
+            for (let i = 0; i < totalFrames; i++) {
+              const isCaptureFrames = videoFramesPath.includes('captures');
+              let framePath;
+              if (isCaptureFrames) {
+                framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
+              } else {
+                framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
+              }
+              framesList.push(framePath);
+            }
+            updatedParams.image_list = framesList;
+            console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for verification from:`, videoFramesPath);
+          } else if (!isScreenshotMode && isCaptureActive) {
+            // Video mode with active capture - backend will check /tmp/captures
+            console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames');
+          } else {
+            // No existing images - will start new capture
+            console.log('[@component:VerificationEditor] No existing images - will start new capture');
           }
           
           // Ensure area coordinates are included (from reference or manual input)
           if (verification.params?.area) {
             updatedParams.area = verification.params.area;
             console.log('[@component:VerificationEditor] Including area for image verification:', updatedParams.area);
+          }
+          
+          // Use actual timeout from verification params instead of hardcoded value
+          if (verification.params?.timeout) {
+            updatedParams.timeout = verification.params.timeout;
+            console.log('[@component:VerificationEditor] Using timeout from verification params:', updatedParams.timeout);
           }
         } else if (verification.controller_type === 'text' && verification.requiresInput) {
           // For text verifications, use inputValue as text parameter
@@ -396,16 +439,40 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             updatedParams.text = textValue;
           }
           
-          // Provide current screenshot for text verification too
-          if (captureSourcePath && !isCaptureActive) {
-            updatedParams.image_list = [captureSourcePath];
-            console.log('[@component:VerificationEditor] Using current screenshot for text verification:', captureSourcePath);
+          // Provide existing images for text verification too
+          if (isScreenshotMode && screenshotPath) {
+            updatedParams.image_list = [screenshotPath];
+            console.log('[@component:VerificationEditor] Using screenshot for text verification:', screenshotPath);
+          } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
+            const framesList = [];
+            for (let i = 0; i < totalFrames; i++) {
+              const isCaptureFrames = videoFramesPath.includes('captures');
+              let framePath;
+              if (isCaptureFrames) {
+                framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
+              } else {
+                framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
+              }
+              framesList.push(framePath);
+            }
+            updatedParams.image_list = framesList;
+            console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for text verification from:`, videoFramesPath);
+          } else if (!isScreenshotMode && isCaptureActive) {
+            console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames for text verification');
+          } else {
+            console.log('[@component:VerificationEditor] No existing images for text verification - will start new capture');
           }
           
           // Text verifications can also have area constraints
           if (verification.params?.area) {
             updatedParams.area = verification.params.area;
             console.log('[@component:VerificationEditor] Including area for text verification:', updatedParams.area);
+          }
+          
+          // Use actual timeout from verification params
+          if (verification.params?.timeout) {
+            updatedParams.timeout = verification.params.timeout;
+            console.log('[@component:VerificationEditor] Using timeout from verification params for text:', updatedParams.timeout);
           }
         }
 
@@ -417,15 +484,25 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       console.log('[@component:VerificationEditor] Executing verifications with details:');
       verificationsToExecute.forEach((verification, index) => {
-        const strategy = verification.params?.image_list 
-          ? `Using existing screenshot: ${verification.params.image_list[0]}` 
-          : 'Will start new capture';
+        let strategy = 'Will start new capture';
+        if (verification.params?.image_list && verification.params.image_list.length > 0) {
+          if (isScreenshotMode) {
+            strategy = `Using existing screenshot: ${verification.params.image_list[0]}`;
+          } else {
+            strategy = `Using ${verification.params.image_list.length} existing frames from: ${videoFramesPath}`;
+          }
+        } else if (!isScreenshotMode && isCaptureActive) {
+          strategy = 'Using active capture frames from /tmp/captures';
+        }
+        
         console.log(`[@component:VerificationEditor] Verification ${index + 1}:`, {
           id: verification.id,
           command: verification.command,
           controller_type: verification.controller_type,
           strategy: strategy,
-          params: verification.params
+          timeout: verification.params?.timeout,
+          area: verification.params?.area,
+          image_path: verification.params?.image_path
         });
       });
 
@@ -438,7 +515,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         body: JSON.stringify({
           verifications: verificationsToExecute,
           node_id: 'verification_editor_test',
-          tree_id: 'manual_test'
+          tree_id: 'manual_test',
+          model: model  // Pass model name for organizing output images
         }),
       });
 
@@ -510,7 +588,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             message: res.message,
             error: res.error,
             extractedThreshold: threshold,
-            controllerType: verificationsToExecute[index]?.controller_type
+            controllerType: verificationsToExecute[index]?.controller_type,
+            sourceImageUrl: res.source_image_url,
+            referenceImageUrl: res.reference_image_url,
+            extractedText: res.extracted_text,
+            searchedText: res.searched_text
           });
 
           newTestResults.push({
@@ -518,7 +600,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             message: res.message,
             error: res.error,
             threshold,
-            resultType: resultType
+            resultType: resultType,
+            // Add image comparison data for UI thumbnails
+            sourceImageUrl: res.source_image_url,
+            referenceImageUrl: res.reference_image_url,
+            // Add text comparison data
+            extractedText: res.extracted_text,
+            searchedText: res.searched_text
           });
         });
       }

@@ -320,8 +320,41 @@ class TextVerificationController(VerificationControllerInterface):
         })
         return False
 
+    def _save_source_image_for_comparison(self, source_image_path: str, model: str, verification_index: int) -> str:
+        """
+        Save the source image for UI comparison display.
+        
+        Args:
+            source_image_path: Path to the source image
+            model: Model name for directory organization
+            verification_index: Index of verification for naming
+            
+        Returns:
+            Path to saved source image or None if failed
+        """
+        try:
+            # Create directory structure
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            output_dir = os.path.join(base_dir, 'tmp', model, f'verification_{verification_index}')
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Output path for source image
+            saved_source_path = os.path.join(output_dir, 'source_image.png')
+            
+            # Copy source image to output location
+            import shutil
+            shutil.copy2(source_image_path, saved_source_path)
+            
+            print(f"[@controller:TextVerification] Saved source image: {saved_source_path}")
+            return saved_source_path
+                
+        except Exception as e:
+            print(f"[@controller:TextVerification] Error saving source image: {e}")
+            return None
+
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
-                           area: tuple = None, image_list: List[str] = None) -> Tuple[bool, str]:
+                           area: tuple = None, image_list: List[str] = None, model: str = None,
+                           verification_index: int = 0) -> Tuple[bool, str, dict]:
         """
         Wait for specific text to appear either in provided image list or by capturing new frames.
         
@@ -331,59 +364,81 @@ class TextVerificationController(VerificationControllerInterface):
             case_sensitive: Whether to match case exactly
             area: Optional area to search (x, y, width, height)
             image_list: Optional list of source image paths to search
+            model: Model name for organizing output images
+            verification_index: Index of verification for naming
             
         Returns:
-            Tuple of (success, message)
+            Tuple of (success, message, additional_data)
         """
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
+        
+        additional_data = {
+            "searched_text": text
+        }
         
         if image_list:
             # Search in provided images
             print(f"[@controller:TextVerification] Searching in {len(image_list)} provided images")
+            closest_text = ""
+            best_source_path = None
             
             for source_path in image_list:
                 if not os.path.exists(source_path):
                     continue
                     
                 extracted_text = self._extract_text_from_area(source_path, area)
+                
+                # Keep track of the longest extracted text as "closest"
+                if len(extracted_text.strip()) > len(closest_text):
+                    closest_text = extracted_text.strip()
+                    best_source_path = source_path
+                
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
-                    return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'"
+                    
+                    # Save source image for UI comparison
+                    if model is not None:
+                        saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
+                        if saved_source_path:
+                            additional_data["source_image_path"] = saved_source_path
+                    
+                    additional_data["extracted_text"] = extracted_text.strip()
+                    return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
             
-            return False, f"Text pattern '{text}' not found in provided images"
+            # If no match found, still save the best source for comparison
+            if best_source_path and model is not None:
+                saved_source_path = self._save_source_image_for_comparison(best_source_path, model, verification_index)
+                if saved_source_path:
+                    additional_data["source_image_path"] = saved_source_path
+            
+            additional_data["extracted_text"] = closest_text
+            if closest_text:
+                return False, f"Text pattern '{text}' not found. Closest text found: '{closest_text}'", additional_data
+            else:
+                return False, f"Text pattern '{text}' not found in provided images (no text extracted)", additional_data
         
         else:
             # Use capture system
             print(f"[@controller:TextVerification] Starting capture for {timeout}s")
-            return self._capture_and_search_text(text, timeout, case_sensitive, area)
+            return self._capture_and_search_text(text, timeout, case_sensitive, area, model, verification_index, additional_data)
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
-                              area: tuple = None, image_list: List[str] = None) -> Tuple[bool, str]:
+                              area: tuple = None, image_list: List[str] = None, model: str = None,
+                              verification_index: int = 0) -> Tuple[bool, str, dict]:
         """
-        Wait for specific text to disappear either in provided image list or by capturing new frames.
+        Wait for text to disappear by calling waitForTextToAppear and inverting the result.
         """
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
-        if image_list:
-            # Search in provided images
-            print(f"[@controller:TextVerification] Checking disappearance in {len(image_list)} provided images")
-            
-            for source_path in image_list:
-                if not os.path.exists(source_path):
-                    continue
-                    
-                extracted_text = self._extract_text_from_area(source_path, area)
-                if self._text_matches(extracted_text, text, case_sensitive):
-                    print(f"[@controller:TextVerification] Text still present in {source_path}: '{extracted_text.strip()}'")
-                    return False, f"Text pattern '{text}' still present: '{extracted_text.strip()}'"
-            
-            return True, f"Text pattern '{text}' not found in any provided images"
+        # Smart reuse: call waitForTextToAppear and invert result
+        found, message, additional_data = self.waitForTextToAppear(text, timeout, case_sensitive, area, image_list, model, verification_index)
         
+        if found:
+            # Text was found, so it hasn't disappeared
+            return False, f"Text still present: {message}", additional_data
         else:
-            # Use capture system - check if text is NOT found
-            print(f"[@controller:TextVerification] Starting capture to check disappearance for {timeout}s")
-            found, message = self._capture_and_search_text(text, timeout, case_sensitive, area)
-            return not found, f"Text pattern {'still present' if found else 'disappeared'}"
+            # Text was not found, so it has disappeared (or was never there)
+            return True, f"Text disappeared: {message}", additional_data
 
     def _extract_text_from_area(self, image_path: str, area: tuple = None) -> str:
         """
@@ -427,17 +482,22 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
 
-    def _capture_and_search_text(self, text: str, timeout: float, case_sensitive: bool, area: tuple = None) -> Tuple[bool, str]:
+    def _capture_and_search_text(self, text: str, timeout: float, case_sensitive: bool, area: tuple = None,
+                                model: str = None, verification_index: int = 0, additional_data: dict = None) -> Tuple[bool, str, dict]:
         """
         Start capture, wait for timeout, stop capture, and search for text in captured frames.
+        Returns immediately on first match found.
         """
+        if additional_data is None:
+            additional_data = {}
+            
         try:
             # Start capture
             response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', json={})
             if not response.json().get('success'):
-                return False, "Failed to start capture"
+                return False, "Failed to start capture", additional_data
             
-            # Wait for timeout
+            # Wait for timeout (capture all frames during this period)
             time.sleep(timeout)
             
             # Stop capture and get frames
@@ -445,30 +505,62 @@ class TextVerificationController(VerificationControllerInterface):
             result = response.json()
             
             if not result.get('success'):
-                return False, "Failed to stop capture"
+                return False, "Failed to stop capture", additional_data
             
             frames_downloaded = result.get('frames_downloaded', 0)
             if frames_downloaded == 0:
-                return False, "No frames captured"
+                return False, "No frames captured", additional_data
             
-            # Search in captured frames
+            print(f"[@controller:TextVerification] Processing {frames_downloaded} captured frames...")
+            
+            # Search in captured frames - return immediately on first match
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             capture_dir = os.path.join(base_dir, 'tmp', 'captures')
+            
+            closest_text = ""
+            best_frame_path = None
             
             for i in range(1, frames_downloaded + 1):
                 frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
                 if not os.path.exists(frame_path):
                     continue
                 
+                print(f"[@controller:TextVerification] Processing frame {i} for OCR...")
                 extracted_text = self._extract_text_from_area(frame_path, area)
+                
+                # Keep track of the longest extracted text as "closest"
+                if len(extracted_text.strip()) > len(closest_text):
+                    closest_text = extracted_text.strip()
+                    best_frame_path = frame_path
+                
+                # Return immediately on first match
                 if self._text_matches(extracted_text, text, case_sensitive):
-                    return True, f"Text found in frame {i}: '{extracted_text.strip()}'"
+                    print(f"[@controller:TextVerification] Text match found in frame {i}! Stopping analysis.")
+                    
+                    # Save source image for UI comparison
+                    if model is not None:
+                        saved_source_path = self._save_source_image_for_comparison(frame_path, model, verification_index)
+                        if saved_source_path:
+                            additional_data["source_image_path"] = saved_source_path
+                    
+                    additional_data["extracted_text"] = extracted_text.strip()
+                    return True, f"Text found in frame {i}: '{extracted_text.strip()}'", additional_data
             
-            return False, f"Text pattern '{text}' not found in {frames_downloaded} frames"
+            # If no match found, still save the best frame for comparison
+            if best_frame_path and model is not None:
+                saved_source_path = self._save_source_image_for_comparison(best_frame_path, model, verification_index)
+                if saved_source_path:
+                    additional_data["source_image_path"] = saved_source_path
+            
+            additional_data["extracted_text"] = closest_text
+            if closest_text:
+                return False, f"Text pattern '{text}' not found in {frames_downloaded} frames. Closest text found: '{closest_text}'", additional_data
+            else:
+                return False, f"Text pattern '{text}' not found in {frames_downloaded} frames (no text extracted)", additional_data
             
         except Exception as e:
             print(f"[@controller:TextVerification] Capture and search error: {e}")
-            return False, f"Capture error: {str(e)}"
+            return False, f"Capture error: {str(e)}", additional_data
 
     # Implementation of required abstract methods from VerificationControllerInterface
     

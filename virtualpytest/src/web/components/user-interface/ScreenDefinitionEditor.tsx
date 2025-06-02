@@ -959,6 +959,10 @@ export function ScreenDefinitionEditor({
               selectedArea={selectedArea}
               onAreaSelected={handleAreaSelected}
               onClearSelection={handleClearSelection}
+              screenshotPath={lastScreenshotPath}
+              videoFramesPath={videoFramesPath}
+              totalFrames={totalFrames}
+              currentFrame={currentFrame}
               sx={{
                 backgroundColor: '#1E1E1E',
                 borderRadius: '0 1px 1px 0',
