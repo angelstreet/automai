@@ -117,8 +117,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleCaptureReference = async () => {
-    if (!selectedArea || !captureSourcePath || !referenceName.trim()) {
+    if (!selectedArea || !referenceName.trim()) {
       console.error('[@component:VerificationEditor] Missing requirements for capture');
+      return;
+    }
+
+    if (!captureSourcePath) {
+      console.error('[@component:VerificationEditor] No capture source path available');
       return;
     }
 
@@ -133,7 +138,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setCapturedReferenceImage(`/tmp/model/${referenceName.trim()}.png`);
   };
 
-  const canCapture = selectedArea && captureSourcePath;
+  const canCapture = selectedArea && referenceName.trim();
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
 
   if (!isVisible) return null;

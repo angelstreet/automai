@@ -162,7 +162,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        cursor: isDragging ? 'crosshair' : 'default',
+        cursor: 'crosshair',
         userSelect: 'none',
         pointerEvents: 'auto',
         zIndex: 5,
