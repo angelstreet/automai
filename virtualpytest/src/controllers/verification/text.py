@@ -72,57 +72,6 @@ class TextVerificationController(VerificationControllerInterface):
             "ocr_language": self.ocr_language
         }
 
-    def _crop_image_opencv(self, image_path: str, area: dict) -> str:
-        """
-        Crop image to specified area using OpenCV (same approach as image verification).
-        
-        Args:
-            image_path: Path to the source image
-            area: Area to crop {'x': x, 'y': y, 'width': width, 'height': height}
-            
-        Returns:
-            Path to cropped image or None if failed
-        """
-        try:
-            # Load image using OpenCV
-            img = cv2.imread(image_path)
-            if img is None:
-                print(f"[@controller:TextVerification] Could not load image: {image_path}")
-                return None
-            
-            # Handle area as dictionary (same as image verification)
-            x = int(area['x'])
-            y = int(area['y'])
-            width = int(area['width'])
-            height = int(area['height'])
-            
-            # Ensure coordinates are within image bounds
-            img_height, img_width = img.shape[:2]
-            x = max(0, min(x, img_width - 1))
-            y = max(0, min(y, img_height - 1))
-            width = min(width, img_width - x)
-            height = min(height, img_height - y)
-            
-            # Crop using OpenCV (same as image verification approach)
-            cropped_img = img[y:y+height, x:x+width]
-            
-            # Save cropped image
-            timestamp = int(time.time())
-            cropped_path = self.temp_image_path / f"cropped_{timestamp}.png"
-            
-            success = cv2.imwrite(str(cropped_path), cropped_img)
-            
-            if success and cropped_path.exists():
-                print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
-                return str(cropped_path)
-            else:
-                print(f"[@controller:TextVerification] Failed to save cropped image: {cropped_path}")
-                return None
-                
-        except Exception as e:
-            print(f"[@controller:TextVerification] OpenCV cropping error: {e}")
-            return None
-
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
         """
         Save a cropped version of the source image for UI comparison display (same as image verification).
@@ -192,6 +141,13 @@ class TextVerificationController(VerificationControllerInterface):
             Extracted text string
         """
         try:
+            print(f"[@controller:TextVerification] Running OCR on image: {image_path}")
+            print(f"[@controller:TextVerification] Image exists: {os.path.exists(image_path)}")
+            
+            if not os.path.exists(image_path):
+                print(f"[@controller:TextVerification] Image file not found: {image_path}")
+                return ""
+            
             cmd = [
                 'tesseract',
                 image_path,
@@ -200,16 +156,28 @@ class TextVerificationController(VerificationControllerInterface):
                 self.ocr_config, self.ocr_psm
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            print(f"[@controller:TextVerification] OCR command: {' '.join(cmd)}")
+            
+            # Run the command with proper encoding handling
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=30)
+            
+            print(f"[@controller:TextVerification] OCR return code: {result.returncode}")
+            print(f"[@controller:TextVerification] OCR stderr: {result.stderr}")
             
             if result.returncode == 0:
                 extracted_text = result.stdout.strip()
                 print(f"[@controller:TextVerification] Extracted text: '{extracted_text}'")
                 return extracted_text
             else:
-                print(f"[@controller:TextVerification] OCR failed: {result.stderr}")
+                print(f"[@controller:TextVerification] OCR failed with stderr: {result.stderr}")
                 return ""
                 
+        except subprocess.TimeoutExpired:
+            print(f"[@controller:TextVerification] OCR timeout - command took longer than 30 seconds")
+            return ""
+        except UnicodeDecodeError as e:
+            print(f"[@controller:TextVerification] Unicode decode error: {e}")
+            return ""
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
@@ -544,6 +512,7 @@ class TextVerificationController(VerificationControllerInterface):
     def _extract_text_from_area(self, image_path: str, area: dict = None) -> str:
         """
         Extract text from image area using Tesseract OCR.
+        Uses the exact same cropping approach as image verification.
         
         Args:
             image_path: Path to the image file
@@ -553,31 +522,50 @@ class TextVerificationController(VerificationControllerInterface):
             Extracted text string
         """
         try:
-            # Crop image if area specified using OpenCV (same as image verification)
-            input_path = image_path
-            if area:
-                input_path = self._crop_image_opencv(image_path, area)
-                if not input_path:
-                    input_path = image_path  # Fallback to full image
-            
-            # Run OCR with proper configuration
-            cmd = [
-                'tesseract',
-                input_path,
-                'stdout',
-                '-l', self.ocr_language,
-                self.ocr_config, self.ocr_psm
-            ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            
-            if result.returncode == 0:
-                extracted_text = result.stdout.strip()
-                print(f"[@controller:TextVerification] Extracted text: '{extracted_text}'")
-                return extracted_text
-            else:
-                print(f"[@controller:TextVerification] OCR failed: {result.stderr}")
+            # Load image using OpenCV (same as image verification)
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"[@controller:TextVerification] Could not load image: {image_path}")
                 return ""
+            
+            # Crop image to area if specified (exact same approach as image verification)
+            if area:
+                x = int(area['x'])
+                y = int(area['y'])
+                width = int(area['width'])
+                height = int(area['height'])
+                
+                # Ensure coordinates are within image bounds (same as image verification)
+                img_height, img_width = img.shape[:2]
+                x = max(0, min(x, img_width - 1))
+                y = max(0, min(y, img_height - 1))
+                width = min(width, img_width - x)
+                height = min(height, img_height - y)
+                
+                # Crop using OpenCV (exact same as image verification: img[y:y+height, x:x+width])
+                img = img[y:y+height, x:x+width]
+                
+                print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
+            
+            # Save cropped image to temporary file for OCR
+            timestamp = int(time.time())
+            temp_path = self.temp_image_path / f"text_ocr_{timestamp}.png"
+            
+            success = cv2.imwrite(str(temp_path), img)
+            if not success:
+                print(f"[@controller:TextVerification] Failed to save cropped image for OCR: {temp_path}")
+                return ""
+            
+            # Run OCR on the cropped image
+            extracted_text = self._extract_text_from_image(str(temp_path))
+            
+            # Clean up temporary file
+            try:
+                temp_path.unlink()
+            except:
+                pass
+                
+            return extracted_text
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
