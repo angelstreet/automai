@@ -139,8 +139,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 480, 
-      height: '100%', 
+      width: 460, 
+      height: 520, 
       p: 2, 
       display: 'flex', 
       flexDirection: 'column', 
