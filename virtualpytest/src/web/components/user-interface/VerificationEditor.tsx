@@ -317,8 +317,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             area: selectedArea,
             model,
             text: referenceText,
-            fontSize: detectedTextData?.fontSize,
-            confidence: detectedTextData?.confidence
+            fontSize: detectedTextData?.fontSize
           }),
         });
 
@@ -629,6 +628,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    if (!captureSourcePath) {
+      console.log('[@component:VerificationEditor] Cannot auto-detect: missing capture source path');
+      return;
+    }
+
     try {
       console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
       
@@ -639,7 +643,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         },
         body: JSON.stringify({
           model,
-          area: selectedArea
+          area: selectedArea,
+          source_path: captureSourcePath
         }),
       });
 

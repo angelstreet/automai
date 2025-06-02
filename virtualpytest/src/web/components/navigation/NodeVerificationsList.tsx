@@ -109,14 +109,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     open: boolean;
     sourceUrl: string;
     referenceUrl: string;
-    threshold?: number;
+    userThreshold?: number;
+    matchingResult?: number;
     resultType?: 'PASS' | 'FAIL' | 'ERROR';
     imageFilter?: 'none' | 'greyscale' | 'binary';
   }>({
     open: false,
     sourceUrl: '',
     referenceUrl: '',
-    threshold: undefined,
+    userThreshold: undefined,
+    matchingResult: undefined,
     resultType: undefined,
     imageFilter: undefined
   });
@@ -244,8 +246,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             ...baseParams,
             reference_text: selectedRef.text,
             reference_name: selectedRef.name,
-            font_size: selectedRef.font_size,
-            confidence: selectedRef.confidence
+            font_size: selectedRef.font_size
           }
         });
         console.log('[@component:NodeVerificationsList] Selected text reference:', selectedRef.name, 'with text:', selectedRef.text);
@@ -278,15 +279,17 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     sourceUrl: string;
     referenceUrl: string;
     resultType: 'PASS' | 'FAIL' | 'ERROR';
-    threshold?: number;
+    userThreshold?: number;
+    matchingResult?: number;
     imageFilter?: 'none' | 'greyscale' | 'binary';
-  }> = ({ sourceUrl, referenceUrl, resultType, threshold, imageFilter }) => {
+  }> = ({ sourceUrl, referenceUrl, resultType, userThreshold, matchingResult, imageFilter }) => {
     const handleImageClick = () => {
       setImageComparisonDialog({
         open: true,
         sourceUrl,
         referenceUrl,
-        threshold,
+        userThreshold,
+        matchingResult,
         resultType,
         imageFilter
       });
@@ -913,7 +916,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         sourceUrl={testResults[index].sourceImageUrl!}
                         referenceUrl={testResults[index].referenceImageUrl!}
                         resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
-                        threshold={verification.params?.threshold}
+                        userThreshold={verification.params?.threshold}
+                        matchingResult={testResults[index].threshold}
                         imageFilter={verification.params?.image_filter}
                       />
                     )}
@@ -989,30 +993,44 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         }}
       >
         <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem', textAlign: 'center' }}>
-          {imageComparisonDialog.threshold !== undefined ? (
-            <>
-              Threshold: {(imageComparisonDialog.threshold * 100).toFixed(1)}% 
+          {imageComparisonDialog.userThreshold !== undefined || imageComparisonDialog.matchingResult !== undefined ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {imageComparisonDialog.userThreshold !== undefined && (
+                  <Typography component="span" sx={{ fontSize: '0.9rem' }}>
+                    Threshold: {(imageComparisonDialog.userThreshold * 100).toFixed(1)}%
+                  </Typography>
+                )}
+                {imageComparisonDialog.matchingResult !== undefined && (
+                  <Typography component="span" sx={{ 
+                    fontSize: '0.9rem',
+                    color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : '#f44336',
+                    fontWeight: 600
+                  }}>
+                    Matching: {(imageComparisonDialog.matchingResult * 100).toFixed(1)}%
+                  </Typography>
+                )}
+                {imageComparisonDialog.resultType && (
+                  <Typography component="span" sx={{ 
+                    color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
+                          imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
+                  }}>
+                    [{imageComparisonDialog.resultType}]
+                  </Typography>
+                )}
+              </Box>
               {imageComparisonDialog.imageFilter && imageComparisonDialog.imageFilter !== 'none' && (
                 <Typography component="span" sx={{ 
-                  ml: 2, 
                   color: '#90caf9',
                   fontWeight: 500,
-                  fontSize: '0.9rem'
+                  fontSize: '0.8rem'
                 }}>
-                  | Filter: {imageComparisonDialog.imageFilter}
+                  Filter: {imageComparisonDialog.imageFilter}
                 </Typography>
               )}
-              {imageComparisonDialog.resultType && (
-                <Typography component="span" sx={{ 
-                  ml: 2, 
-                  color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
-                        imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                  fontWeight: 600 
-                }}>
-                  [{imageComparisonDialog.resultType}]
-                </Typography>
-              )}
-            </>
+            </Box>
           ) : (
             'Image Comparison'
           )}
