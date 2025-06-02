@@ -25,6 +25,7 @@ import {
 import { StreamViewer } from './StreamViewer';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
+import { VerificationEditor } from './VerificationEditor';
 
 interface ScreenDefinitionEditorProps {
   /** Device configuration with AV parameters */
@@ -704,155 +705,210 @@ export function ScreenDefinitionEditor({
       }
     }}>
       {isExpanded ? (
-        // Expanded view - exact same layout as before but using new components
+        // Expanded view with VerificationEditor side panel
         <Box sx={{
-          width: '350px',
-          height: '520px',
+          display: 'flex',
+          gap: 0,
           boxShadow: 2,
           borderRadius: 1,
           overflow: 'hidden',
-          bgcolor: '#1E1E1E',
-          border: '2px solid #1E1E1E',
         }}>
-          {/* Header with controls - fixed width sections to prevent flickering */}
-          <Box sx={{ 
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            p: 1,
-            borderBottom: '1px solid #333',
-            height: '48px'
+          {/* Main Screen Definition Editor Panel */}
+          <Box sx={{
+            width: '350px',
+            height: '520px',
+            bgcolor: '#1E1E1E',
+            border: '2px solid #1E1E1E',
+            borderRadius: '1px 0 0 1px',
           }}>
-            {/* Left section - status indicator */}
+            {/* Header with controls - fixed width sections to prevent flickering */}
             <Box sx={{ 
-              width: '80px', 
-              display: 'flex', 
-              justifyContent: 'flex-start'
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              p: 1,
+              borderBottom: '1px solid #333',
+              height: '48px'
             }}>
-              {/* Simple connection status - no recording/saving states here */}
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                borderRadius: 1,
-                padding: '2px 8px',
-                width: '70px',
-                justifyContent: 'center'
+              {/* Left section - status indicator */}
+              <Box sx={{ 
+                width: '80px', 
+                display: 'flex', 
+                justifyContent: 'flex-start'
               }}>
+                {/* Simple connection status - no recording/saving states here */}
                 <Box sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
-                }} />
-                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
-                  {streamStatus === 'running' ? 'Live' : 'Stopped'}
-                </Typography>
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  borderRadius: 1,
+                  padding: '2px 8px',
+                  width: '70px',
+                  justifyContent: 'center'
+                }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
+                  }} />
+                  <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
+                    {streamStatus === 'running' ? 'Live' : 'Stopped'}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Center section - action buttons */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1, 
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1
+              }}>
+                <Tooltip title="Take Screenshot">
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={handleTakeScreenshot} 
+                      sx={{ 
+                        color: viewMode === 'screenshot' ? '#ff4444' : '#ffffff',
+                        borderBottom: viewMode === 'screenshot' ? '2px solid #ff4444' : 'none'
+                      }}
+                      disabled={!isConnected || isCapturing || isScreenshotLoading}
+                    >
+                      <PhotoCamera />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                
+                {isCapturing ? (
+                  <Tooltip title="Stop Capture">
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={handleStopCapture} 
+                        sx={{ 
+                          color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
+                          borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                        }}
+                       
+                      >
+                        <StopCircle />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Start Capture">
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={handleStartCapture} 
+                        sx={{ 
+                          color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
+                          borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                        }}
+                        disabled={!isConnected}
+                      >
+                        <VideoCall />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
+                
+                <Tooltip title="Restart Stream">
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={restartStream} 
+                      sx={{ color: '#ffffff' }}
+                      disabled={!isConnected || isCapturing}
+                    >
+                      <Refresh />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+              
+              {/* Right section - minimize button */}
+              <Box sx={{ 
+                width: '40px', 
+                display: 'flex', 
+                justifyContent: 'flex-end'
+              }}>
+                <Tooltip title="Minimize">
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={handleToggleExpanded}
+                      sx={{ color: '#ffffff' }}
+                    >
+                      <FullscreenExit />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Box>
             </Box>
-            
-            {/* Center section - action buttons */}
+
+            {/* Main viewing area using new component architecture */}
             <Box sx={{ 
-              display: 'flex', 
-              gap: 1, 
-              alignItems: 'center',
-              justifyContent: 'center',
-              flex: 1
+              flex: 1,
+              position: 'relative',
+              overflow: 'hidden',
+              height: 'calc(100% - 48px)'
             }}>
-              <Tooltip title="Take Screenshot">
-                <span>
-                  <IconButton 
-                    size="small" 
-                    onClick={handleTakeScreenshot} 
-                    sx={{ 
-                      color: viewMode === 'screenshot' ? '#ff4444' : '#ffffff',
-                      borderBottom: viewMode === 'screenshot' ? '2px solid #ff4444' : 'none'
-                    }}
-                    disabled={!isConnected || isCapturing || isScreenshotLoading}
-                  >
-                    <PhotoCamera />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              
-              {isCapturing ? (
-                <Tooltip title="Stop Capture">
-                  <span>
-                    <IconButton 
-                      size="small" 
-                      onClick={handleStopCapture} 
-                      sx={{ 
-                        color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
-                        borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
-                      }}
-                     
-                    >
-                      <StopCircle />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              ) : (
-                <Tooltip title="Start Capture">
-                  <span>
-                    <IconButton 
-                      size="small" 
-                      onClick={handleStartCapture} 
-                      sx={{ 
-                        color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
-                        borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
-                      }}
-                      disabled={!isConnected}
-                    >
-                      <VideoCall />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-              
-              <Tooltip title="Restart Stream">
-                <span>
-                  <IconButton 
-                    size="small" 
-                    onClick={restartStream} 
-                    sx={{ color: '#ffffff' }}
-                    disabled={!isConnected || isCapturing}
-                  >
-                    <Refresh />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </Box>
-            
-            {/* Right section - minimize button */}
-            <Box sx={{ 
-              width: '40px', 
-              display: 'flex', 
-              justifyContent: 'flex-end'
-            }}>
-              <Tooltip title="Minimize">
-                <span>
-                  <IconButton 
-                    size="small" 
-                    onClick={handleToggleExpanded}
-                    sx={{ color: '#ffffff' }}
-                  >
-                    <FullscreenExit />
-                  </IconButton>
-                </span>
-              </Tooltip>
+              {renderViewComponent()}
             </Box>
           </Box>
 
-          {/* Main viewing area using new component architecture */}
-          <Box sx={{ 
-            flex: 1,
-            position: 'relative',
-            overflow: 'hidden',
-            height: 'calc(100% - 48px)'
-          }}>
-            {renderViewComponent()}
-          </Box>
+          {/* Verification Editor Side Panel */}
+          <VerificationEditor
+            isVisible={true}
+            isScreenshotMode={viewMode === 'screenshot'}
+            isCaptureActive={isCapturing}
+            sx={{
+              backgroundColor: '#1E1E1E',
+              borderRadius: '0 1px 1px 0',
+              border: '2px solid #1E1E1E',
+              borderLeft: 'none',
+              color: '#ffffff',
+              '& .MuiTypography-root': {
+                color: '#ffffff',
+              },
+              '& .MuiTextField-root': {
+                '& .MuiInputLabel-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#333',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#555',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#666',
+                  },
+                },
+              },
+              '& .MuiSelect-root': {
+                color: '#ffffff',
+              },
+              '& .MuiFormControl-root': {
+                '& .MuiInputLabel-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#333',
+                  },
+                },
+              },
+            }}
+          />
         </Box>
       ) : (
         // Compact view - exact same layout as before
