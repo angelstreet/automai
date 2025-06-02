@@ -295,33 +295,29 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Verification Section - styled like EdgeEditDialog actions */}
-          {nodeForm.type !== 'entry' && (
-            <>
-              <NodeVerificationsList
-                verifications={nodeForm.verifications || []}
-                availableActions={verificationActions}
-                onVerificationsChange={(newVerifications: NodeVerification[]) => 
-                  setNodeForm({ ...nodeForm, verifications: newVerifications })
-                }
-                loading={loadingVerifications}
-                error={verificationError}
-              />
+          {/* Verification Section - now available for all node types including entry */}
+          <NodeVerificationsList
+            verifications={nodeForm.verifications || []}
+            availableActions={verificationActions}
+            onVerificationsChange={(newVerifications: NodeVerification[]) => 
+              setNodeForm({ ...nodeForm, verifications: newVerifications })
+            }
+            loading={loadingVerifications}
+            error={verificationError}
+          />
 
-              {verificationResult && (
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: verificationResult.includes('❌') ? 'error.light' : 'success.light', 
-                  borderRadius: 1,
-                  maxHeight: 200,
-                  overflow: 'auto'
-                }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                    {verificationResult}
-                  </Typography>
-                </Box>
-              )}
-            </>
+          {verificationResult && (
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: verificationResult.includes('❌') ? 'error.light' : 'success.light', 
+              borderRadius: 1,
+              maxHeight: 200,
+              overflow: 'auto'
+            }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+                {verificationResult}
+              </Typography>
+            </Box>
           )}
           
           {/* Entry node note */}

@@ -133,7 +133,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setCapturedReferenceImage(`/tmp/model/${referenceName.trim()}.png`);
   };
 
-  const canCapture = selectedArea && referenceName.trim() && captureSourcePath;
+  const canCapture = selectedArea && captureSourcePath;
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
 
   if (!isVisible) return null;
@@ -152,39 +152,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       {/* Screenshot Capture Section */}
       <Box>
-        <Box 
-          ref={captureContainerRef}
-          sx={{ 
-            position: 'relative',
-            width: '100%', 
-            height: 120, 
-            border: '2px dashed #444', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            mb: 1,
-            borderRadius: 1,
-            bgcolor: 'rgba(255,255,255,0.05)',
-            overflow: 'hidden'
-          }}
-        >
-          {capturedReferenceImage ? (
-            <img 
-              src={capturedReferenceImage}
-              alt="Reference"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain'
-              }}
-            />
-          ) : (
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
-              {allowSelection ? 'Drag to select area on main image' : 'No image captured'}
-            </Typography>
-          )}
-        </Box>
-
         {/* Reference Name Input */}
         <TextField
           size="small"
@@ -209,46 +176,85 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           </Box>
         )}
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button 
-            size="small" 
-            startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
-            variant="contained"
-            onClick={handleCaptureReference}
-            disabled={!canCapture}
-            sx={{
-              bgcolor: '#444',
-              fontSize: '0.75rem',
-              '&:hover': {
-                bgcolor: '#555',
-              },
-              '&:disabled': {
-                bgcolor: '#333',
-                color: 'rgba(255,255,255,0.3)',
-              }
+        {/* Reference Image and Action Buttons Row */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+          {/* Reference Image Preview */}
+          <Box 
+            ref={captureContainerRef}
+            sx={{ 
+              position: 'relative',
+              width: 120, 
+              height: 80, 
+              border: '2px dashed #444', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderRadius: 1,
+              bgcolor: 'rgba(255,255,255,0.05)',
+              overflow: 'hidden',
+              flexShrink: 0
             }}
           >
-            Capture
-          </Button>
-          
-          {selectedArea && (
+            {capturedReferenceImage ? (
+              <img 
+                src={capturedReferenceImage}
+                alt="Reference"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            ) : (
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
+                {allowSelection ? 'Drag area on main image' : 'No image'}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
             <Button 
               size="small" 
-              variant="outlined"
-              onClick={handleClearSelection}
+              startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
+              variant="contained"
+              onClick={handleCaptureReference}
+              disabled={!canCapture}
               sx={{
-                borderColor: '#444',
-                color: 'inherit',
+                bgcolor: '#444',
                 fontSize: '0.75rem',
+                width: '100%',
                 '&:hover': {
-                  borderColor: '#666',
+                  bgcolor: '#555',
+                },
+                '&:disabled': {
+                  bgcolor: '#333',
+                  color: 'rgba(255,255,255,0.3)',
                 }
               }}
             >
-              Clear
+              Capture
             </Button>
-          )}
+            
+            {selectedArea && (
+              <Button 
+                size="small" 
+                variant="outlined"
+                onClick={handleClearSelection}
+                sx={{
+                  borderColor: '#444',
+                  color: 'inherit',
+                  fontSize: '0.75rem',
+                  width: '100%',
+                  '&:hover': {
+                    borderColor: '#666',
+                  }
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </Box>
         </Box>
       </Box>
 

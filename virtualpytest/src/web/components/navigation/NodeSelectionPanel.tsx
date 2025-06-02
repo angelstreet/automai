@@ -132,9 +132,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const showScreenshotButton = isControlActive && selectedDevice && onTakeScreenshot;
   
   // Check if Go To button should be displayed
-  // Only show for non-root nodes when device is under control
-  const isRootNode = !selectedNode.data.parent || selectedNode.data.parent.length === 0;
-  const showGoToButton = isControlActive && selectedDevice && treeId && !isRootNode;
+  // Show for all nodes when device is under control
+  const showGoToButton = isControlActive && selectedDevice && treeId;
 
   // Check if verification button should be displayed
   const hasNodeVerifications = selectedNode.data.verifications && 

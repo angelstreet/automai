@@ -398,6 +398,9 @@ export function ScreenDefinitionEditor({
       setTotalFrames(0);
       setViewMode('stream');
       
+      // Clear drag selection when disconnecting
+      setSelectedArea(null);
+      
       if (onDisconnectComplete) {
         onDisconnectComplete();
       }
@@ -527,6 +530,10 @@ export function ScreenDefinitionEditor({
 
   const handleToggleExpanded = () => {
     setIsExpanded(!isExpanded);
+    // Clear drag selection when collapsing
+    if (isExpanded) {
+      setSelectedArea(null);
+    }
   };
 
   // Handle frame change in preview
@@ -542,6 +549,8 @@ export function ScreenDefinitionEditor({
     setCurrentFrame(0);
     setTotalFrames(0);
     setSavedFrameCount(0);
+    // Clear drag selection when returning to stream
+    setSelectedArea(null);
   };
 
   // Add type safety to the onScreenshotTaken handler
@@ -750,6 +759,13 @@ export function ScreenDefinitionEditor({
         );
     }
   };
+
+  // Clear drag selection when view mode changes away from screenshot/capture
+  useEffect(() => {
+    if (viewMode === 'stream') {
+      setSelectedArea(null);
+    }
+  }, [viewMode]);
 
   return (
     <Box sx={{ 
