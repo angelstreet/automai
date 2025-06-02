@@ -151,6 +151,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [textImageFilter, setTextImageFilter] = useState<'none' | 'greyscale' | 'binary'>('none');
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
 
+  // Image processing options for capture only
+  const [imageProcessingOptions, setImageProcessingOptions] = useState({
+    autocrop: false,
+    removeBackground: false
+  });
+
   useEffect(() => {
     if (isVisible) {
       fetchVerificationActions();
@@ -223,23 +229,43 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     console.log('[@component:VerificationEditor] Capturing temporary reference:', {
       area: selectedArea,
       sourcePath: captureSourcePath,
+      processingOptions: referenceType === 'image' ? imageProcessingOptions : undefined
     });
 
     try {
-      // Always save as capture.png in /tmp folder (temporary capture)
-      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/capture', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          area: selectedArea,
-          source_path: captureSourcePath,
-          reference_name: 'capture', // Always use 'capture' for temporary file
-        }),
-      });
+      let captureResponse;
+      
+      // For image type with processing options, use the process-area endpoint
+      if (referenceType === 'image' && (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)) {
+        captureResponse = await fetch('http://localhost:5009/api/virtualpytest/reference/process-area', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: 'capture', // Always use 'capture' for temporary file
+            autocrop: imageProcessingOptions.autocrop,
+            remove_background: imageProcessingOptions.removeBackground,
+          }),
+        });
+      } else {
+        // Standard capture without processing
+        captureResponse = await fetch('http://localhost:5009/api/virtualpytest/reference/capture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: 'capture', // Always use 'capture' for temporary file
+          }),
+        });
+      }
 
-      const result = await response.json();
+      const result = await captureResponse.json();
       
       if (result.success) {
         const timestamp = new Date().getTime();
@@ -247,6 +273,17 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
         setCapturedReferenceImage(imageUrl);
         setHasCaptured(true);
+        
+        // If autocrop was applied and new area dimensions are provided, update the selected area
+        if (imageProcessingOptions.autocrop && result.processed_area && onAreaSelected) {
+          console.log('[@component:VerificationEditor] Updating area after autocrop:', result.processed_area);
+          onAreaSelected({
+            x: result.processed_area.x,
+            y: result.processed_area.y,
+            width: result.processed_area.width,
+            height: result.processed_area.height
+          });
+        }
       } else {
         console.error('[@component:VerificationEditor] Failed to capture reference:', result.error);
       }
@@ -1014,6 +1051,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   if (e.target.value === 'text') {
                     setReferenceText('');
                     setDetectedTextData(null);
+                    // Reset image processing options when switching to text
+                    setImageProcessingOptions({ autocrop: false, removeBackground: false });
                   } else {
                     setTempReferenceUrl('');
                   }
@@ -1032,6 +1071,54 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 <FormControlLabel value="text" control={<Radio size="small" />} label="Text" />
               </RadioGroup>
             </Box>
+
+            {/* 3.5. Image Processing Options (only for image type) */}
+            {referenceType === 'image' && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                <FormControlLabel
+                  control={
+                    <input
+                      type="checkbox"
+                      checked={imageProcessingOptions.autocrop}
+                      onChange={(e) => setImageProcessingOptions(prev => ({ 
+                        ...prev, 
+                        autocrop: e.target.checked 
+                      }))}
+                      style={{ transform: 'scale(0.8)' }}
+                    />
+                  }
+                  label="Auto-crop"
+                  sx={{
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: '0.7rem',
+                      color: 'rgba(255,255,255,0.9)',
+                    },
+                  }}
+                />
+                <FormControlLabel
+                  control={
+                    <input
+                      type="checkbox"
+                      checked={imageProcessingOptions.removeBackground}
+                      onChange={(e) => setImageProcessingOptions(prev => ({ 
+                        ...prev, 
+                        removeBackground: e.target.checked 
+                      }))}
+                      style={{ transform: 'scale(0.8)' }}
+                    />
+                  }
+                  label="Remove background"
+                  sx={{
+                    margin: 0,
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: '0.7rem',
+                      color: 'rgba(255,255,255,0.9)',
+                    },
+                  }}
+                />
+              </Box>
+            )}
 
             {/* 4. Text Input and Auto-Detect (only for text type) */}
             {referenceType === 'text' && (

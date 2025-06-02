@@ -601,6 +601,80 @@ def capture_reference_image():
             'error': f'Reference capture error: {str(e)}'
         }), 500
 
+@verification_bp.route('/api/virtualpytest/reference/process-area', methods=['POST'])
+def process_area_reference():
+    """Crop, process (autocrop/remove background), and save a reference image."""
+    try:
+        data = request.get_json()
+        area = data.get('area')
+        source_path = data.get('source_path')
+        reference_name = data.get('reference_name')
+        autocrop = data.get('autocrop', False)
+        remove_background = data.get('remove_background', False)
+        
+        print(f"[@route:process_area_reference] Processing area from {source_path} with area: {area}")
+        print(f"[@route:process_area_reference] Processing options: autocrop={autocrop}, remove_background={remove_background}")
+        
+        # Validate required parameters
+        if not area or not source_path or not reference_name:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: area, source_path, or reference_name'
+            }), 400
+            
+        # Ensure target directory exists
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Define target path
+        target_path = os.path.join(target_dir, f"{reference_name}.png")
+        
+        # Import processing functions
+        from controllers.verification.image import crop_reference_image, process_reference_image
+        
+        # First crop the image normally
+        crop_success = crop_reference_image(source_path, target_path, area)
+        
+        if not crop_success:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to crop reference image'
+            }), 500
+        
+        # Process the cropped image if options are enabled
+        processed_area = area  # Default to original area
+        if autocrop or remove_background:
+            try:
+                processed_area = process_reference_image(target_path, autocrop, remove_background)
+                print(f"[@route:process_area_reference] Processing complete, new area: {processed_area}")
+            except Exception as e:
+                print(f"[@route:process_area_reference] Processing failed: {e}")
+                # Continue with unprocessed image if processing fails
+                processed_area = area
+        
+        # Return success with processed area info
+        relative_path = f"/api/virtualpytest/reference/image/{reference_name}.png"
+        return jsonify({
+            'success': True,
+            'message': f'Reference image processed and saved: {reference_name}',
+            'image_path': target_path,
+            'image_url': relative_path,
+            'processed_area': {
+                'x': processed_area['x'],
+                'y': processed_area['y'], 
+                'width': processed_area['width'],
+                'height': processed_area['height']
+            } if processed_area != area else None
+        })
+        
+    except Exception as e:
+        print(f"[@route:process_area_reference] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference processing error: {str(e)}'
+        }), 500
+
 @verification_bp.route('/api/virtualpytest/reference/save', methods=['POST'])
 def save_reference_image():
     """Save the temporary capture.png to the resources folder with proper naming and update registry."""

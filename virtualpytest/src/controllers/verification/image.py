@@ -124,6 +124,143 @@ def apply_image_filter(image_path: str, filter_type: str) -> bool:
         return False
 
 
+def process_reference_image(image_path: str, autocrop: bool = False, remove_background: bool = False) -> dict:
+    """
+    Process a reference image with autocrop and/or background removal.
+    
+    Args:
+        image_path: Path to the cropped reference image
+        autocrop: Whether to apply auto-cropping to improve area selection
+        remove_background: Whether to remove background (make transparent)
+        
+    Returns:
+        dict: New area coordinates if autocrop was applied, otherwise original area
+    """
+    try:
+        print(f"[@controller:ImageVerification] Processing image: {image_path}")
+        print(f"[@controller:ImageVerification] Options: autocrop={autocrop}, remove_background={remove_background}")
+        
+        # Read the image
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            raise Exception(f"Could not read image: {image_path}")
+        
+        original_height, original_width = img.shape[:2]
+        processed_img = img.copy()
+        
+        # Auto-crop: find the main content area and crop tighter
+        if autocrop:
+            print(f"[@controller:ImageVerification] Applying auto-crop")
+            
+            # Convert to grayscale for processing
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+            
+            # Apply Gaussian blur to reduce noise
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            
+            # Apply threshold to get binary image
+            _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Find contours
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            if contours:
+                # Find the largest contour (main content)
+                largest_contour = max(contours, key=cv2.contourArea)
+                
+                # Get bounding rectangle of the largest contour
+                x, y, w, h = cv2.boundingRect(largest_contour)
+                
+                # Add small padding (5% of image size)
+                padding_x = max(1, int(original_width * 0.05))
+                padding_y = max(1, int(original_height * 0.05))
+                
+                # Ensure padding doesn't go outside image bounds
+                x = max(0, x - padding_x)
+                y = max(0, y - padding_y)
+                w = min(original_width - x, w + 2 * padding_x)
+                h = min(original_height - y, h + 2 * padding_y)
+                
+                # Crop the image to the auto-detected area
+                processed_img = processed_img[y:y+h, x:x+w]
+                
+                print(f"[@controller:ImageVerification] Auto-crop applied: ({x}, {y}, {w}, {h})")
+                
+                # Update area coordinates (relative to original crop)
+                autocrop_area = {
+                    'x': x,
+                    'y': y,
+                    'width': w,
+                    'height': h
+                }
+            else:
+                print(f"[@controller:ImageVerification] No contours found for auto-crop, using original")
+                autocrop_area = {
+                    'x': 0,
+                    'y': 0,
+                    'width': original_width,
+                    'height': original_height
+                }
+        else:
+            autocrop_area = {
+                'x': 0,
+                'y': 0,
+                'width': original_width,
+                'height': original_height
+            }
+        
+        # Remove background: make background transparent
+        if remove_background:
+            print(f"[@controller:ImageVerification] Applying background removal")
+            
+            # Convert to RGBA if not already
+            if len(processed_img.shape) == 3:
+                processed_img = cv2.cvtColor(processed_img, cv2.COLOR_BGR2BGRA)
+            
+            # Use GrabCut algorithm for background removal
+            height, width = processed_img.shape[:2]
+            
+            # Create mask for GrabCut (initialize as probable background)
+            mask = np.zeros((height, width), np.uint8)
+            
+            # Define a rectangle around the center content (excluding edges)
+            margin_x = max(1, width // 10)
+            margin_y = max(1, height // 10)
+            rect = (margin_x, margin_y, width - 2*margin_x, height - 2*margin_y)
+            
+            # Temporary arrays for GrabCut
+            bgd_model = np.zeros((1, 65), np.float64)
+            fgd_model = np.zeros((1, 65), np.float64)
+            
+            # Convert to 3-channel for GrabCut
+            grabcut_img = processed_img[:, :, :3].copy()
+            
+            # Apply GrabCut
+            cv2.grabCut(grabcut_img, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+            
+            # Create final mask (foreground pixels)
+            final_mask = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+            
+            # Apply mask to make background transparent
+            processed_img[:, :, 3] = final_mask * 255
+            
+            print(f"[@controller:ImageVerification] Background removal applied")
+        
+        # Save the processed image
+        success = cv2.imwrite(image_path, processed_img)
+        
+        if not success:
+            raise Exception(f"Failed to save processed image: {image_path}")
+        
+        print(f"[@controller:ImageVerification] Image processing complete: {image_path}")
+        
+        return autocrop_area
+        
+    except Exception as e:
+        print(f"[@controller:ImageVerification] Error processing image: {e}")
+        raise e
+
+
 class ImageVerificationController(VerificationControllerInterface):
     """Image verification controller that uses template matching to detect images on screen."""
     
@@ -512,6 +649,7 @@ class ImageVerificationController(VerificationControllerInterface):
     def _match_template(self, ref_img: np.ndarray, source_img: np.ndarray, area: tuple = None) -> float:
         """
         Perform template matching between reference and source images.
+        Handles transparent backgrounds by ignoring transparent pixels.
         
         Returns:
             Confidence score (0.0 to 1.0)
@@ -522,9 +660,46 @@ class ImageVerificationController(VerificationControllerInterface):
                 x, y, w, h = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
                 source_img = source_img[y:y+h, x:x+w]
             
-            # Perform template matching
-            result = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, _ = cv2.minMaxLoc(result)
+            # Check if reference image has alpha channel (transparency)
+            if len(ref_img.shape) == 4 and ref_img.shape[2] == 4:
+                print(f"[@controller:ImageVerification] Reference has transparency, using masked template matching")
+                
+                # Convert source to RGBA if needed
+                if len(source_img.shape) == 3:
+                    source_img = cv2.cvtColor(source_img, cv2.COLOR_BGR2BGRA)
+                elif len(source_img.shape) == 4 and source_img.shape[2] == 4:
+                    pass  # Already RGBA
+                else:
+                    # Handle grayscale
+                    source_img = cv2.cvtColor(source_img, cv2.COLOR_GRAY2BGRA)
+                
+                # Extract alpha channel from reference as mask
+                ref_alpha = ref_img[:, :, 3]
+                mask = np.where(ref_alpha > 128, 255, 0).astype(np.uint8)
+                
+                # Convert both images to BGR for template matching
+                ref_bgr = cv2.cvtColor(ref_img, cv2.COLOR_BGRA2BGR)
+                source_bgr = cv2.cvtColor(source_img, cv2.COLOR_BGRA2BGR)
+                
+                # Perform masked template matching
+                result = cv2.matchTemplate(source_bgr, ref_bgr, cv2.TM_CCOEFF_NORMED, mask=mask)
+                _, max_val, _, _ = cv2.minMaxLoc(result)
+                
+                print(f"[@controller:ImageVerification] Masked template matching confidence: {max_val:.3f}")
+                
+            else:
+                # Standard template matching for non-transparent images
+                print(f"[@controller:ImageVerification] Standard template matching (no transparency)")
+                
+                # Ensure both images are in the same color space
+                if len(ref_img.shape) == 4:
+                    ref_img = cv2.cvtColor(ref_img, cv2.COLOR_BGRA2BGR)
+                if len(source_img.shape) == 4:
+                    source_img = cv2.cvtColor(source_img, cv2.COLOR_BGRA2BGR)
+                
+                # Perform standard template matching
+                result = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, _ = cv2.minMaxLoc(result)
             
             return float(max_val)
             
