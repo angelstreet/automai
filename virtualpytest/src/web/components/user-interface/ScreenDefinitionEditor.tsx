@@ -250,6 +250,11 @@ export function ScreenDefinitionEditor({
       setSavedFrameCount(0);
       setIsCapturing(true);
       
+      // If in screenshot view, restart stream first
+      if (viewMode === 'screenshot') {
+        await restartStream();
+      }
+      
       // Call the capture start API directly
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', {
         method: 'POST',
