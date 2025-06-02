@@ -8,7 +8,9 @@ It can wait for text to appear or disappear in specific areas of the screen.
 import subprocess
 import time
 import os
-from typing import Dict, Any, Optional, Tuple
+import re
+import requests
+from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
 from ..base_controllers import VerificationControllerInterface
 
@@ -173,21 +175,26 @@ class TextVerificationController(VerificationControllerInterface):
 
     def _text_matches(self, extracted_text: str, target_text: str, case_sensitive: bool = False) -> bool:
         """
-        Check if target text is found in extracted text.
+        Check if target text is found in extracted text using regex.
         
         Args:
             extracted_text: Text extracted from image
-            target_text: Text to search for
+            target_text: Text pattern to search for (regex supported)
             case_sensitive: Whether to match case exactly
             
         Returns:
             True if text matches, False otherwise
         """
-        if not case_sensitive:
-            extracted_text = extracted_text.lower()
-            target_text = target_text.lower()
-        
-        return target_text in extracted_text
+        try:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            pattern = re.compile(target_text, flags)
+            return bool(pattern.search(extracted_text))
+        except re.error:
+            # If regex is invalid, fall back to simple string matching
+            if not case_sensitive:
+                extracted_text = extracted_text.lower()
+                target_text = target_text.lower()
+            return target_text in extracted_text
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
         """
@@ -312,6 +319,156 @@ class TextVerificationController(VerificationControllerInterface):
             "area": area
         })
         return False
+
+    def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
+                           area: tuple = None, image_list: List[str] = None) -> Tuple[bool, str]:
+        """
+        Wait for specific text to appear either in provided image list or by capturing new frames.
+        
+        Args:
+            text: Text pattern to look for (regex supported)
+            timeout: Maximum time to wait in seconds  
+            case_sensitive: Whether to match case exactly
+            area: Optional area to search (x, y, width, height)
+            image_list: Optional list of source image paths to search
+            
+        Returns:
+            Tuple of (success, message)
+        """
+        print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
+        
+        if image_list:
+            # Search in provided images
+            print(f"[@controller:TextVerification] Searching in {len(image_list)} provided images")
+            
+            for source_path in image_list:
+                if not os.path.exists(source_path):
+                    continue
+                    
+                extracted_text = self._extract_text_from_area(source_path, area)
+                if self._text_matches(extracted_text, text, case_sensitive):
+                    print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
+                    return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'"
+            
+            return False, f"Text pattern '{text}' not found in provided images"
+        
+        else:
+            # Use capture system
+            print(f"[@controller:TextVerification] Starting capture for {timeout}s")
+            return self._capture_and_search_text(text, timeout, case_sensitive, area)
+
+    def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
+                              area: tuple = None, image_list: List[str] = None) -> Tuple[bool, str]:
+        """
+        Wait for specific text to disappear either in provided image list or by capturing new frames.
+        """
+        print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
+        
+        if image_list:
+            # Search in provided images
+            print(f"[@controller:TextVerification] Checking disappearance in {len(image_list)} provided images")
+            
+            for source_path in image_list:
+                if not os.path.exists(source_path):
+                    continue
+                    
+                extracted_text = self._extract_text_from_area(source_path, area)
+                if self._text_matches(extracted_text, text, case_sensitive):
+                    print(f"[@controller:TextVerification] Text still present in {source_path}: '{extracted_text.strip()}'")
+                    return False, f"Text pattern '{text}' still present: '{extracted_text.strip()}'"
+            
+            return True, f"Text pattern '{text}' not found in any provided images"
+        
+        else:
+            # Use capture system - check if text is NOT found
+            print(f"[@controller:TextVerification] Starting capture to check disappearance for {timeout}s")
+            found, message = self._capture_and_search_text(text, timeout, case_sensitive, area)
+            return not found, f"Text pattern {'still present' if found else 'disappeared'}"
+
+    def _extract_text_from_area(self, image_path: str, area: tuple = None) -> str:
+        """
+        Extract text from image area using Tesseract OCR.
+        
+        Args:
+            image_path: Path to the image file
+            area: Optional area to crop (x, y, width, height)
+            
+        Returns:
+            Extracted text string
+        """
+        try:
+            # Crop image if area specified
+            input_path = image_path
+            if area:
+                input_path = self._crop_image(image_path, area)
+                if not input_path:
+                    input_path = image_path  # Fallback to full image
+            
+            # Run OCR
+            cmd = [
+                'tesseract',
+                input_path,
+                'stdout',
+                '-l', self.ocr_language,
+                self.ocr_config
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                extracted_text = result.stdout.strip()
+                print(f"[@controller:TextVerification] Extracted text: '{extracted_text}'")
+                return extracted_text
+            else:
+                print(f"[@controller:TextVerification] OCR failed: {result.stderr}")
+                return ""
+                
+        except Exception as e:
+            print(f"[@controller:TextVerification] Text extraction error: {e}")
+            return ""
+
+    def _capture_and_search_text(self, text: str, timeout: float, case_sensitive: bool, area: tuple = None) -> Tuple[bool, str]:
+        """
+        Start capture, wait for timeout, stop capture, and search for text in captured frames.
+        """
+        try:
+            # Start capture
+            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', json={})
+            if not response.json().get('success'):
+                return False, "Failed to start capture"
+            
+            # Wait for timeout
+            time.sleep(timeout)
+            
+            # Stop capture and get frames
+            response = requests.post('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', json={})
+            result = response.json()
+            
+            if not result.get('success'):
+                return False, "Failed to stop capture"
+            
+            frames_downloaded = result.get('frames_downloaded', 0)
+            if frames_downloaded == 0:
+                return False, "No frames captured"
+            
+            # Search in captured frames
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            capture_dir = os.path.join(base_dir, 'tmp', 'captures')
+            
+            for i in range(1, frames_downloaded + 1):
+                frame_path = os.path.join(capture_dir, f'capture_{i}.jpg')
+                if not os.path.exists(frame_path):
+                    continue
+                
+                extracted_text = self._extract_text_from_area(frame_path, area)
+                if self._text_matches(extracted_text, text, case_sensitive):
+                    return True, f"Text found in frame {i}: '{extracted_text.strip()}'"
+            
+            return False, f"Text pattern '{text}' not found in {frames_downloaded} frames"
+            
+        except Exception as e:
+            print(f"[@controller:TextVerification] Capture and search error: {e}")
+            return False, f"Capture error: {str(e)}"
 
     # Implementation of required abstract methods from VerificationControllerInterface
     

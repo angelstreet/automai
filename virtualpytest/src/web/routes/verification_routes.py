@@ -278,13 +278,13 @@ def execute_verification():
                     'error': 'Image path parameter required for waitForImageToAppear command'
                 }), 400
             
-            success = controller.waitForImageToAppear(
+            success, message = controller.waitForImageToAppear(
                 image_path=image_path,
                 timeout=params.get('timeout', 10.0),
                 threshold=params.get('threshold', 0.8),
-                area=params.get('area')
+                area=params.get('area'),
+                image_list=params.get('image_list')
             )
-            message = f'Image "{image_path}" {"appeared" if success else "not found"}'
             
         elif command == 'waitForImageToDisappear':
             image_path = params.get('image_path')
@@ -294,13 +294,13 @@ def execute_verification():
                     'error': 'Image path parameter required for waitForImageToDisappear command'
                 }), 400
             
-            success = controller.waitForImageToDisappear(
+            success, message = controller.waitForImageToDisappear(
                 image_path=image_path,
                 timeout=params.get('timeout', 10.0),
                 threshold=params.get('threshold', 0.8),
-                area=params.get('area')
+                area=params.get('area'),
+                image_list=params.get('image_list')
             )
-            message = f'Image "{image_path}" {"disappeared" if success else "still present"}'
             
         elif command == 'waitForTextToAppear':
             text = params.get('text')
@@ -310,13 +310,13 @@ def execute_verification():
                     'error': 'Text parameter required for waitForTextToAppear command'
                 }), 400
             
-            success = controller.waitForTextToAppear(
+            success, message = controller.waitForTextToAppear(
                 text=text,
                 timeout=params.get('timeout', 10.0),
                 case_sensitive=params.get('case_sensitive', False),
-                area=params.get('area')
+                area=params.get('area'),
+                image_list=params.get('image_list')
             )
-            message = f'Text "{text}" {"appeared" if success else "not found"}'
             
         elif command == 'waitForTextToDisappear':
             text = params.get('text')
@@ -326,13 +326,13 @@ def execute_verification():
                     'error': 'Text parameter required for waitForTextToDisappear command'
                 }), 400
             
-            success = controller.waitForTextToDisappear(
+            success, message = controller.waitForTextToDisappear(
                 text=text,
                 timeout=params.get('timeout', 10.0),
                 case_sensitive=params.get('case_sensitive', False),
-                area=params.get('area')
+                area=params.get('area'),
+                image_list=params.get('image_list')
             )
-            message = f'Text "{text}" {"disappeared" if success else "still present"}'
             
         else:
             return jsonify({
