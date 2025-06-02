@@ -555,12 +555,21 @@ def get_reference_image(filename):
             }), 404
         
         print(f"[@route:get_reference_image] Serving image: {file_path}")
-        return send_from_directory(
+        from flask import make_response
+        
+        # Create response with proper cache control headers
+        response = make_response(send_from_directory(
             model_dir, 
             filename,
-            mimetype='image/png',
-            cache_timeout=0
-        )
+            mimetype='image/png'
+        ))
+        
+        # Prevent caching to ensure fresh images
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         print(f"[@route:get_reference_image] Error: {str(e)}")
         return jsonify({
