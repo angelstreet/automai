@@ -473,12 +473,25 @@ class ImageVerificationController(VerificationControllerInterface):
         # Smart reuse: call waitForImageToAppear and invert result
         found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)
         
-        if found:
-            # Image was found, so it hasn't disappeared
-            return False, f"Image still present: {message}", additional_data
-        else:
-            # Image was not found, so it has disappeared (or was never there)
+        # Invert the boolean result and adjust the message
+        success = not found
+        
+        # For disappear operations, invert the threshold to make it more intuitive
+        # If original match was 100% (image still there), disappear threshold should be 0%
+        # If original match was 0% (image not found), disappear threshold should be 100%
+        if 'threshold' in additional_data and additional_data['threshold'] is not None:
+            original_threshold = additional_data['threshold']
+            inverted_threshold = 1.0 - original_threshold
+            additional_data['threshold'] = inverted_threshold
+            additional_data['original_threshold'] = original_threshold  # Keep original for debugging
+            print(f"[@controller:ImageVerification] Inverted threshold for disappear: {original_threshold:.3f} -> {inverted_threshold:.3f}")
+        
+        if success:
+            # Image has disappeared (was not found)
             return True, f"Image disappeared: {message}", additional_data
+        else:
+            # Image is still present (was found)
+            return False, f"Image still present: {message}", additional_data
 
     def _match_template(self, ref_img: np.ndarray, source_img: np.ndarray, area: tuple = None) -> float:
         """

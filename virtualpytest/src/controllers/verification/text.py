@@ -579,12 +579,33 @@ class TextVerificationController(VerificationControllerInterface):
         # Smart reuse: call waitForTextToAppear and invert result
         found, message, additional_data = self.waitForTextToAppear(text, timeout, case_sensitive, area, image_list, model, verification_index, image_filter)
         
-        if found:
-            # Text was found, so it hasn't disappeared
-            return False, f"Text still present: {message}", additional_data
-        else:
-            # Text was not found, so it has disappeared (or was never there)
+        # Invert the boolean result and adjust the message
+        success = not found
+        
+        # For disappear operations, invert any confidence values to make them more intuitive
+        # Note: Text verification doesn't typically have confidence thresholds like image matching,
+        # but if any confidence metrics are added in the future, this will handle them
+        if 'confidence' in additional_data and additional_data['confidence'] is not None:
+            original_confidence = additional_data['confidence']
+            inverted_confidence = 1.0 - original_confidence
+            additional_data['confidence'] = inverted_confidence
+            additional_data['original_confidence'] = original_confidence  # Keep original for debugging
+            print(f"[@controller:TextVerification] Inverted confidence for disappear: {original_confidence:.3f} -> {inverted_confidence:.3f}")
+        
+        # Also handle threshold if present (for consistency with image verification)
+        if 'threshold' in additional_data and additional_data['threshold'] is not None:
+            original_threshold = additional_data['threshold']
+            inverted_threshold = 1.0 - original_threshold
+            additional_data['threshold'] = inverted_threshold
+            additional_data['original_threshold'] = original_threshold  # Keep original for debugging
+            print(f"[@controller:TextVerification] Inverted threshold for disappear: {original_threshold:.3f} -> {inverted_threshold:.3f}")
+        
+        if success:
+            # Text has disappeared (was not found)
             return True, f"Text disappeared: {message}", additional_data
+        else:
+            # Text is still present (was found)
+            return False, f"Text still present: {message}", additional_data
 
     def _extract_text_from_area(self, image_path: str, area: tuple = None) -> str:
         """
