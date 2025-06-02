@@ -142,23 +142,36 @@ export const useNavigationEditor = () => {
   // Override onNodesChange to save to history and track changes
   const onNodesChangeWithHistory = useCallback((changes: any[]) => {
     navigationState.onNodesChange(changes);
-    navigationState.setNodes((currentNodes) => {
-      const newNodes = [...currentNodes];
-      historyHook.saveToHistory();
-      navigationState.setHasUnsavedChanges(true);
-      return newNodes;
-    });
+    // Only save to history for meaningful changes (not just selection)
+    const hasMeaningfulChange = changes.some(change => 
+      change.type === 'add' || 
+      change.type === 'remove' || 
+      (change.type === 'position' && change.dragging === false)
+    );
+    
+    if (hasMeaningfulChange) {
+      setTimeout(() => {
+        historyHook.saveToHistory();
+        navigationState.setHasUnsavedChanges(true);
+      }, 0);
+    }
   }, [navigationState.onNodesChange, historyHook.saveToHistory, navigationState.setHasUnsavedChanges]);
 
   // Override onEdgesChange to save to history and track changes
   const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
     navigationState.onEdgesChange(changes);
-    navigationState.setEdges((currentEdges) => {
-      const newEdges = [...currentEdges];
-      historyHook.saveToHistory();
-      navigationState.setHasUnsavedChanges(true);
-      return newEdges;
-    });
+    // Only save to history for meaningful changes (not just selection)
+    const hasMeaningfulChange = changes.some(change => 
+      change.type === 'add' || 
+      change.type === 'remove'
+    );
+    
+    if (hasMeaningfulChange) {
+      setTimeout(() => {
+        historyHook.saveToHistory();
+        navigationState.setHasUnsavedChanges(true);
+      }, 0);
+    }
   }, [navigationState.onEdgesChange, historyHook.saveToHistory, navigationState.setHasUnsavedChanges]);
 
   // Override onConnect to save to history and track changes

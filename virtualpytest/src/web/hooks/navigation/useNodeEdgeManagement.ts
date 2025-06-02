@@ -37,6 +37,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
         description: '',
         parent: [],
         depth: 0,
+        is_root: false,
       },
     };
 
@@ -57,7 +58,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     state.setIsNodeDialogOpen(true);
     state.setIsNewNode(true);
     state.setHasUnsavedChanges(true);
-    console.log('[@hook:useNodeEdgeManagement] Added new node:', newNode.data.label);
+    console.log('[@hook:useNodeEdgeManagement] Added new node:', newNode.data.label, 'with is_root: false');
   }, [state]);
 
   // Save node changes
@@ -78,6 +79,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       screenshot: state.nodeForm.screenshot,
       depth: state.nodeForm.depth || 0,
       menu_type: state.nodeForm.menu_type || (state.nodeForm.type === 'menu' ? 'main' : undefined),
+      is_root: state.selectedNode.data.is_root,
     };
     
     // Update function for nodes

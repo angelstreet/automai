@@ -8,8 +8,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
-  // Check if this node is a root node (no parent)
-  const isRootNode = !data.parent || data.parent.length === 0;
+  // Check if this node is a root node (should only be true for actual root nodes)
+  const isRootNode = data.is_root === true;
   // Check if this is an entry point node
   const isEntryNode = data.type === 'entry';
   
