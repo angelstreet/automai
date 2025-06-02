@@ -74,7 +74,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [referenceName, setReferenceName] = useState<string>('');
+  const [referenceName, setReferenceName] = useState<string>('default_capture');
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
@@ -117,7 +117,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleCaptureReference = async () => {
-    if (!selectedArea || !referenceName.trim()) {
+    if (!selectedArea ||  !referenceName.trim()) {
       console.error('[@component:VerificationEditor] Missing requirements for capture');
       return;
     }
@@ -127,18 +127,23 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    if (!referenceName.trim()) {
+      console.error('[@component:VerificationEditor] No reference name provided, using default');
+      setReferenceName('default_reference');
+    }
+
     console.log('[@component:VerificationEditor] Capturing reference:', {
       area: selectedArea,
       sourcePath: captureSourcePath,
-      referenceName: referenceName.trim()
+      referenceName: referenceName.trim() || 'default_reference'
     });
 
     // TODO: Implement API call to crop and save reference image
     // For now, just show success
-    setCapturedReferenceImage(`/tmp/model/${referenceName.trim()}.png`);
+    setCapturedReferenceImage(`/tmp/model/${referenceName.trim() || 'default_reference'}.png`);
   };
 
-  const canCapture = selectedArea && referenceName.trim();
+  const canCapture = selectedArea;
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
 
   if (!isVisible) return null;
@@ -229,12 +234,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
           variant="contained"
           onClick={handleCaptureReference}
-          disabled={!canCapture || !referenceName.trim()}
+          disabled={!canCapture}
           sx={{
-            bgcolor: '#444',
+            bgcolor: '#1976d2',
             fontSize: '0.75rem',
             '&:hover': {
-              bgcolor: '#555',
+              bgcolor: '#1565c0',
             },
             '&:disabled': {
               bgcolor: '#333',
