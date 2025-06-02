@@ -495,7 +495,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             </Box>
             
             {/* Line 2: Timeout, threshold, and area controls */}
-            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 1, px: 0, mx: 0 }}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0 , px: 0, mx: 0 }}>
               {verification.id && (
                 <TextField
                   size="small"
@@ -648,7 +648,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   {verification.controller_type === 'image' && modelReferences.length > 0 ? (
                     <>
                       {/* Reference Image Dropdown */}
-                      <FormControl size="small" sx={{ width: 200 }}>
+                      <FormControl size="small" sx={{ width: 250 }}>
                         <InputLabel>Reference Image</InputLabel>
                         <Select
                           value={verification.params?.reference_image || ''}
@@ -686,16 +686,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                   
                   {/* Image Filter Selection - only for image verifications */}
                   {verification.controller_type === 'image' && verification.id && (
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
-                      <FormLabel component="legend" sx={{ fontSize: '0.7rem', minWidth: 'auto', mr: 1 }}>
-                        Filter:
-                      </FormLabel>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
                       <RadioGroup
-                        row
                         value={verification.params?.image_filter || 'none'}
                         onChange={(e) => handleImageFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')}
                         sx={{
-                          gap: 0.5,
+                          gap: 0,
                           '& .MuiFormControlLabel-root': {
                             margin: 0,
                             '& .MuiFormControlLabel-label': {
