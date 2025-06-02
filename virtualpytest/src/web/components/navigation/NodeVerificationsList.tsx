@@ -167,8 +167,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         '& .MuiMenuItem-root': {
                           fontSize: '0.8rem',
                           minHeight: '28px',
-                          paddingTop: '1px',
-                          paddingBottom: '1px',
+                          paddingTop: '2px',
+                          paddingBottom: '2px',
                           lineHeight: 0.8,
                         },
                       },
