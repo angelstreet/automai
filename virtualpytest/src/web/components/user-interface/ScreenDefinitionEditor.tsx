@@ -393,6 +393,8 @@ export function ScreenDefinitionEditor({
     try {
       // Set loading state
       setIsScreenshotLoading(true);
+      // Switch to screenshot view immediately to remove highlight from other icons
+      setViewMode('screenshot');
       
       // First stop the stream
       console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
@@ -421,7 +423,7 @@ export function ScreenDefinitionEditor({
       if (data.success) {
         console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', data.screenshot_path);
         setLastScreenshotPath(data.screenshot_path);
-        setViewMode('screenshot');
+        // View mode already set to screenshot above
         
         // Update resolution info
         if (data.device_resolution) {
@@ -595,7 +597,7 @@ export function ScreenDefinitionEditor({
             screenshotPath={lastScreenshotPath}
             resolutionInfo={resolutionInfo}
             isCapturing={false}
-            isSaving={isSaving}
+            isSaving={isSaving || isScreenshotLoading}
             {...commonProps}
           />
         );
