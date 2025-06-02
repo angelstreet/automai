@@ -293,7 +293,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
-          setReferenceName('');
           setTempReferenceUrl('');
           setSuccessMessage(`Reference "${referenceName}" saved successfully!`);
           onReferenceSaved?.(referenceName);
@@ -325,7 +324,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         if (response.ok) {
           console.log('[@component:VerificationEditor] Text reference saved successfully');
-          setReferenceName('');
           setReferenceText('');
           setDetectedTextData(null);
           setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
