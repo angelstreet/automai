@@ -976,36 +976,77 @@ def auto_detect_text():
             # Use the processed image for OCR
             ocr_image = processed_image if image_filter != 'none' else cropped_image
             
-            # Language detection using OSD (Orientation and Script Detection)
-            detected_language = 'unknown'
+            # Language detection using multi-language OCR testing
+            detected_language = 'eng'  # default
             language_confidence = 0
+            best_confidence = 0
+            best_language = 'eng'
+            
+            # Languages to test (English, French, Italian, German)
+            languages_to_test = ['eng', 'fra', 'ita', 'deu']
+            language_names = {
+                'eng': 'English',
+                'fra': 'French', 
+                'ita': 'Italian',
+                'deu': 'German'
+            }
+            
+            print(f"[@route:auto_detect_text] Testing OCR with languages: {languages_to_test}")
+            
             try:
-                # Use original cropped image for OSD (better for language detection)
-                osd_result = pytesseract.image_to_osd(cropped_image, output_type=pytesseract.Output.DICT)
-                script = osd_result.get('script', 'Unknown')
-                script_conf = float(osd_result.get('script_conf', 0))
+                # Test each language and find the one with highest confidence
+                for lang_code in languages_to_test:
+                    try:
+                        # Run OCR with this specific language
+                        test_data = pytesseract.image_to_data(
+                            ocr_image, 
+                            lang=lang_code, 
+                            output_type=pytesseract.Output.DICT
+                        )
+                        
+                        # Calculate average confidence for this language
+                        lang_confidences = []
+                        lang_words = []
+                        
+                        for i in range(len(test_data['text'])):
+                            text = test_data['text'][i].strip()
+                            conf = int(test_data['conf'][i])
+                            
+                            if text and conf > 0:  # Only include confident text
+                                lang_confidences.append(conf)
+                                lang_words.append(text)
+                        
+                        if lang_confidences:
+                            avg_conf = sum(lang_confidences) / len(lang_confidences)
+                            word_count = len(lang_words)
+                            
+                            # Weight confidence by number of words found (more words = more reliable)
+                            weighted_score = avg_conf * min(word_count / 3.0, 1.0)  # Cap word bonus at 3 words
+                            
+                            print(f"[@route:auto_detect_text] {language_names[lang_code]} ({lang_code}): "
+                                  f"{avg_conf:.1f}% confidence, {word_count} words, "
+                                  f"weighted score: {weighted_score:.1f}")
+                            
+                            if weighted_score > best_confidence:
+                                best_confidence = weighted_score
+                                best_language = lang_code
+                                
+                    except Exception as lang_error:
+                        print(f"[@route:auto_detect_text] Failed to test language {lang_code}: {lang_error}")
+                        continue
                 
-                # Map script to language (basic mapping)
-                script_to_lang = {
-                    'Latin': 'eng',
-                    'Arabic': 'ara', 
-                    'Cyrillic': 'rus',
-                    'Devanagari': 'hin',
-                    'Han': 'chi_sim',
-                    'Hiragana': 'jpn',
-                    'Katakana': 'jpn'
-                }
-                detected_language = script_to_lang.get(script, 'eng')
-                language_confidence = script_conf / 100.0  # Convert to 0-1 range
+                detected_language = best_language
+                language_confidence = best_confidence / 100.0  # Convert to 0-1 range
                 
-                print(f"[@route:auto_detect_text] Detected script: {script} (confidence: {script_conf}%), using language: {detected_language}")
-            except Exception as osd_error:
-                print(f"[@route:auto_detect_text] Language detection failed, using default 'eng': {osd_error}")
+                print(f"[@route:auto_detect_text] Best language: {language_names[detected_language]} "
+                      f"({detected_language}) with confidence: {best_confidence:.1f}%")
+                
+            except Exception as lang_detection_error:
+                print(f"[@route:auto_detect_text] Language detection failed, using default 'eng': {lang_detection_error}")
                 detected_language = 'eng'
                 language_confidence = 0.5
             
-            # Use tesseract to extract text with detected language
-            lang_config = f'-l {detected_language}'
+            # Use tesseract to extract text with detected language (final OCR pass)
             data_dict = pytesseract.image_to_data(ocr_image, lang=detected_language, output_type=pytesseract.Output.DICT)
             
             # Extract text and calculate average confidence
