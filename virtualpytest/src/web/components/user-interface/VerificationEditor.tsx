@@ -4,6 +4,10 @@ import {
   Button,
   Typography,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Camera as CameraIcon } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
@@ -80,6 +84,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
   const [hasCaptured, setHasCaptured] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const [pendingSave, setPendingSave] = useState<boolean>(false);
 
   const captureContainerRef = useRef<HTMLDivElement>(null);
 
@@ -185,6 +191,17 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
+  const checkReferenceExists = async (referenceName: string, modelName: string): Promise<boolean> => {
+    try {
+      // Check if the reference already exists by trying to fetch it
+      const response = await fetch(`http://localhost:5009/api/virtualpytest/reference/image/${modelName}/${referenceName}.png`);
+      return response.ok;
+    } catch (error) {
+      // If there's an error fetching, assume it doesn't exist
+      return false;
+    }
+  };
+
   const handleSaveReference = async () => {
     if (!model || model.trim() === '') {
       console.error('[@component:VerificationEditor] Cannot save: model is not provided');
@@ -197,10 +214,26 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    // Check if reference already exists
+    const exists = await checkReferenceExists(referenceName.trim(), model.trim());
+    
+    if (exists) {
+      // Show confirmation dialog
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    // If doesn't exist, proceed with save
+    await performSave();
+  };
+
+  const performSave = async () => {
     console.log('[@component:VerificationEditor] Saving reference:', {
       referenceName: referenceName.trim(),
       modelName: model.trim(),
     });
+
+    setPendingSave(true);
 
     try {
       // Save the temporary capture.png with the proper reference name and model
@@ -234,7 +267,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     } catch (error) {
       console.error('[@component:VerificationEditor] Error saving reference:', error);
       setError('Failed to save reference');
+    } finally {
+      setPendingSave(false);
     }
+  };
+
+  const handleConfirmOverwrite = async () => {
+    setShowConfirmDialog(false);
+    await performSave();
+  };
+
+  const handleCancelOverwrite = () => {
+    setShowConfirmDialog(false);
   };
 
   const canCapture = selectedArea;
@@ -555,7 +599,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           size="small" 
           variant="contained"
           onClick={handleSaveReference}
-          disabled={!canSave}
+          disabled={!canSave || pendingSave}
           sx={{
             bgcolor: '#4caf50',
             fontSize: '0.75rem',
@@ -568,7 +612,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             }
           }}
         >
-          Save
+          {pendingSave ? 'Saving...' : 'Save'}
         </Button>
       </Box>
 
@@ -652,6 +696,60 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           Test
         </Button>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={showConfirmDialog}
+        onClose={handleCancelOverwrite}
+        PaperProps={{
+          sx: {
+            backgroundColor: '#2E2E2E',
+            color: '#ffffff',
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem' }}>
+          Warning: Overwrite Reference
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
+            A reference image named "{referenceName}" already exists for model "{model}".
+            Do you want to overwrite it?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1, p: 2 }}>
+          <Button 
+            onClick={handleCancelOverwrite}
+            variant="outlined"
+            size="small"
+            sx={{
+              borderColor: '#666',
+              color: '#ffffff',
+              fontSize: '0.75rem',
+              '&:hover': {
+                borderColor: '#888',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmOverwrite}
+            variant="contained"
+            size="small"
+            sx={{
+              bgcolor: '#f44336',
+              fontSize: '0.75rem',
+              '&:hover': {
+                bgcolor: '#d32f2f',
+              }
+            }}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
