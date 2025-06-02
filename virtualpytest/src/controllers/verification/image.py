@@ -340,6 +340,9 @@ class ImageVerificationController(VerificationControllerInterface):
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
                     
+                    # Save actual confidence for threshold display and disappear operations
+                    additional_data["threshold"] = confidence
+                    
                     # Clean up temp file if it was created
                     if filtered_source_path != source_path and os.path.exists(filtered_source_path):
                         os.unlink(filtered_source_path)
@@ -355,6 +358,9 @@ class ImageVerificationController(VerificationControllerInterface):
                 cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
+            
+            # Save best confidence for threshold display and disappear operations
+            additional_data["threshold"] = max_confidence
             
             return False, f"Image not found. Best confidence: {max_confidence:.3f} (threshold: {threshold:.3f})", additional_data
         
@@ -410,6 +416,9 @@ class ImageVerificationController(VerificationControllerInterface):
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
                     
+                    # Save actual confidence for threshold display and disappear operations
+                    additional_data["threshold"] = confidence
+                    
                     # Clean up temp file if it was created
                     if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
                         os.unlink(filtered_capture_path)
@@ -450,6 +459,12 @@ class ImageVerificationController(VerificationControllerInterface):
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
             
+            # Save last confidence for threshold display and disappear operations
+            if 'confidence' in locals():
+                additional_data["threshold"] = confidence
+            else:
+                additional_data["threshold"] = 0.0
+            
             # Clean up temp file if it was created
             if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
                 os.unlink(filtered_capture_path)
@@ -465,7 +480,7 @@ class ImageVerificationController(VerificationControllerInterface):
         # Check if image_path is provided
         if not image_path or image_path.strip() == '':
             error_msg = "No reference image specified. Please select a reference image or provide an image path."
-            print(f"[@controller:ImageVerification] {error_msg}")
+            print(f"[@component:ImageVerification] {error_msg}")
             return False, error_msg, {}
             
         print(f"[@component:ImageVerification] Looking for image to disappear: {image_path}")

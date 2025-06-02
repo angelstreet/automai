@@ -296,8 +296,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     const handleImageClick = () => {
       setImageComparisonDialog({
         open: true,
-        sourceUrl,
-        referenceUrl,
+        sourceUrl: `http://localhost:5009${sourceUrl}`,
+        referenceUrl: `http://localhost:5009${referenceUrl}`,
         userThreshold,
         matchingResult,
         resultType,
@@ -1091,7 +1091,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               </Typography>
               <img
                 src={imageComparisonDialog.sourceUrl}
-                alt="Source Scaled"
+                alt="Source Image"
                 style={{
                   width: '100%',
                   maxHeight: '70vh',
@@ -1108,7 +1108,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 </Typography>
                 <img
                   src={imageComparisonDialog.referenceUrl}
-                  alt="Reference Scaled"
+                  alt="Reference Image"
                   style={{
                     width: '100%',
                     maxHeight: '70vh',

@@ -453,6 +453,14 @@ class TextVerificationController(VerificationControllerInterface):
                 saved_source_path = self._save_source_image_for_comparison(best_source_path, model, verification_index)
                 if saved_source_path:
                     additional_data["source_image_path"] = saved_source_path
+            elif image_list and model is not None:
+                # If no best_source_path but we have image_list, use the first available image
+                for source_path in image_list:
+                    if os.path.exists(source_path):
+                        saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
+                        if saved_source_path:
+                            additional_data["source_image_path"] = saved_source_path
+                        break
             
             additional_data["extracted_text"] = closest_text
             if closest_text:
