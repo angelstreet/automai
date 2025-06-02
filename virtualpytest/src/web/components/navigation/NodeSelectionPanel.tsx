@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -75,6 +75,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
   // Add state to control showing/hiding the NodeGotoPanel
   const [showGotoPanel, setShowGotoPanel] = useState(false);
+  
+  // Clear the goto panel when the component unmounts or when a new node is selected
+  useEffect(() => {
+    // Close the goto panel when the selected node changes
+    setShowGotoPanel(false);
+  }, [selectedNode.id]);
   
   // Add states for confirmation dialogs
   const [showResetConfirm, setShowResetConfirm] = useState(false);

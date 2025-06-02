@@ -71,6 +71,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
   // Load navigation preview on component mount
   useEffect(() => {
+    // Clear any previous execution messages when loading for a new node
+    setError(null);
+    setExecutionResult(null);
+    setExecutionMessage(null);
+    
     loadNavigationPreview();
     checkTakeControlStatus();
   }, [treeId, selectedNode.id, currentNodeId]);
@@ -351,9 +356,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           {/* Execution Progress */}
           {isExecuting && (
             <Box sx={{ mt: 1 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, textAlign: 'center' }}>
-                Executing navigation...
-              </Typography>
+             
               <LinearProgress />
             </Box>
           )}
