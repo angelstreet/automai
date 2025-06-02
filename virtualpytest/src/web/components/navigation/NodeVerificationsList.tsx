@@ -56,6 +56,12 @@ interface ReferenceImage {
   full_path: string;
   created_at: string;
   type: string;
+  area: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 interface NodeVerificationsListProps {
@@ -176,14 +182,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     const selectedRef = getModelReferences().find(ref => ref.name === referenceName);
     if (selectedRef) {
       updateVerification(index, {
-        inputValue: selectedRef.name, // Set the reference name as input value
+        inputValue: selectedRef.name,
         params: {
           ...verifications[index].params,
           reference_image: selectedRef.name,
-          reference_path: selectedRef.path
+          reference_path: selectedRef.path,
+          area: {
+            x: selectedRef.area.x,
+            y: selectedRef.area.y,
+            width: selectedRef.area.width,
+            height: selectedRef.area.height
+          }
         }
       });
-      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name);
+      console.log('[@component:NodeVerificationsList] Selected reference:', selectedRef.name, 'with area:', selectedRef.area);
     }
   };
 
@@ -313,12 +325,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="X"
-                    value={verification.params?.area?.x || verification.params?.area?.split?.(',')[0] || 0}
+                    value={verification.params?.area?.x || 0}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
                         area: { 
-                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
                           x: parseInt(e.target.value) || 0 
                         }
                       }
@@ -330,12 +342,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Y"
-                    value={verification.params?.area?.y || verification.params?.area?.split?.(',')[1] || 0}
+                    value={verification.params?.area?.y || 0}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
                         area: { 
-                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
                           y: parseInt(e.target.value) || 0 
                         }
                       }
@@ -347,12 +359,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Width"
-                    value={verification.params?.area?.width || verification.params?.area?.split?.(',')[2] || 100}
+                    value={verification.params?.area?.width || 100}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
                         area: { 
-                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
                           width: parseInt(e.target.value) || 100 
                         }
                       }
@@ -364,12 +376,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     size="small"
                     type="number"
                     label="Height"
-                    value={verification.params?.area?.height || verification.params?.area?.split?.(',')[3] || 100}
+                    value={verification.params?.area?.height || 100}
                     onChange={(e) => updateVerification(index, { 
                       params: { 
                         ...verification.params, 
                         area: { 
-                          ...(typeof verification.params.area === 'object' ? verification.params.area : { x: 0, y: 0, width: 100, height: 100 }),
+                          ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
                           height: parseInt(e.target.value) || 100 
                         }
                       }

@@ -234,6 +234,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    if (!selectedArea) {
+      console.error('[@component:VerificationEditor] Cannot save: no area selected');
+      setError('Please select an area before saving the reference');
+      return;
+    }
+
     // Check if reference already exists
     const exists = await checkReferenceExists(referenceName.trim(), model.trim());
     
@@ -251,6 +257,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     console.log('[@component:VerificationEditor] Saving reference:', {
       referenceName: referenceName.trim(),
       modelName: model.trim(),
+      selectedArea: selectedArea,
     });
 
     setPendingSave(true);
@@ -265,13 +272,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         body: JSON.stringify({
           reference_name: referenceName.trim(),
           model_name: model.trim(),
+          area: selectedArea,
         }),
       });
 
       const result = await response.json();
       
       if (result.success) {
-        console.log('[@component:VerificationEditor] Reference saved successfully');
+        console.log('[@component:VerificationEditor] Reference saved successfully with area:', selectedArea);
         // Update the image URL to point to the saved reference
         const timestamp = new Date().getTime();
         const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/${model.trim()}/${referenceName.trim()}.png?t=${timestamp}`;

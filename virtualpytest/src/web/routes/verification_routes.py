@@ -544,14 +544,22 @@ def save_reference_image():
         data = request.get_json()
         reference_name = data.get('reference_name')
         model_name = data.get('model_name')
+        area = data.get('area')
         
-        print(f"[@route:save_reference_image] Saving reference: {reference_name} for model: {model_name}")
+        print(f"[@route:save_reference_image] Saving reference: {reference_name} for model: {model_name} with area: {area}")
         
         # Validate required parameters
-        if not reference_name or not model_name:
+        if not reference_name or not model_name or not area:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: reference_name or model_name'
+                'error': 'Missing required parameters: reference_name, model_name, or area'
+            }), 400
+            
+        # Validate area structure
+        if not isinstance(area, dict) or not all(key in area for key in ['x', 'y', 'width', 'height']):
+            return jsonify({
+                'success': False,
+                'error': 'Area must be an object with x, y, width, height properties'
             }), 400
             
         # Define paths
@@ -593,7 +601,7 @@ def save_reference_image():
         if 'resources' not in registry_data:
             registry_data['resources'] = []
         
-        # Create resource entry
+        # Create resource entry with required area coordinates
         from datetime import datetime
         resource_entry = {
             'name': reference_name,
@@ -601,8 +609,16 @@ def save_reference_image():
             'path': f"resources/{model_name}/{reference_name}.png",
             'full_path': final_path,
             'created_at': datetime.now().isoformat(),
-            'type': 'reference_image'
+            'type': 'reference_image',
+            'area': {
+                'x': int(area['x']),
+                'y': int(area['y']),
+                'width': int(area['width']),
+                'height': int(area['height'])
+            }
         }
+        
+        print(f"[@route:save_reference_image] Saved area coordinates: {resource_entry['area']}")
         
         # Check if resource already exists (update instead of duplicate)
         existing_index = -1
@@ -631,7 +647,8 @@ def save_reference_image():
             'success': True,
             'message': f'Reference image saved: {reference_name}',
             'resource_path': f"resources/{model_name}/{reference_name}.png",
-            'full_path': final_path
+            'full_path': final_path,
+            'area': resource_entry['area']
         })
         
     except Exception as e:

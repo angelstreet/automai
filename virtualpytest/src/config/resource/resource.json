@@ -6,7 +6,13 @@
       "path": "resources/android_mobile/default_capture.png",
       "full_path": "/Users/cpeengineering/automai/automai/virtualpytest/src/resources/android_mobile/default_capture.png",
       "created_at": "2025-06-02T15:52:48.906370",
-      "type": "reference_image"
+      "type": "reference_image",
+      "area": {
+        "x": 100,
+        "y": 100,
+        "width": 200,
+        "height": 150
+      }
     }
   ]
 }
