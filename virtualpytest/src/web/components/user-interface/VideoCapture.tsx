@@ -104,6 +104,13 @@ export function VideoCapture({
     setCurrentValue(currentFrame);
   }, [currentFrame]);
 
+  // Update frame number from capture status
+  useEffect(() => {
+    if (captureStatus && captureStatus.current_frame !== undefined) {
+      setCurrentFrameNumber(captureStatus.current_frame);
+    }
+  }, [captureStatus]);
+
   const handleSliderChange = (event: Event, newValue: number | number[]) => {
     const frame = newValue as number;
     setCurrentValue(frame);

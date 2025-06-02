@@ -6,6 +6,7 @@ import Hls from 'hls.js';
 interface StreamViewerProps {
   streamUrl?: string;
   isStreamActive?: boolean;
+  isCapturing?: boolean;
   sx?: any;
   videoElementRef?: React.RefObject<HTMLVideoElement>;
 }
@@ -13,6 +14,7 @@ interface StreamViewerProps {
 export function StreamViewer({
   streamUrl,
   isStreamActive = false,
+  isCapturing = false,
   sx = {},
   videoElementRef,
 }: StreamViewerProps) {
@@ -246,6 +248,25 @@ export function StreamViewer({
         muted
         draggable={false}
       />
+
+      {/* Red blinking dot during capture */}
+      {isCapturing && (
+        <Box sx={{
+          position: 'absolute',
+          top: 8,
+          left: 8,
+          width: 12,
+          height: 12,
+          borderRadius: '50%',
+          backgroundColor: '#ff4444',
+          zIndex: 10,
+          animation: 'captureBlink 1s infinite',
+          '@keyframes captureBlink': {
+            '0%, 50%': { opacity: 1 },
+            '51%, 100%': { opacity: 0.3 }
+          }
+        }} />
+      )}
 
       {streamLoaded && requiresUserInteraction && (
         <Box

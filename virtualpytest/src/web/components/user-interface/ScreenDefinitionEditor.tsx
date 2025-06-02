@@ -705,7 +705,7 @@ export function ScreenDefinitionEditor({
       }
     }}>
       {isExpanded ? (
-        // Expanded view with optional VerificationEditor side panel
+        // Expanded view with VerificationEditor side panel
         <Box sx={{
           display: 'flex',
           gap: 0,
@@ -719,7 +719,7 @@ export function ScreenDefinitionEditor({
             height: '520px',
             bgcolor: '#1E1E1E',
             border: '2px solid #1E1E1E',
-            borderRadius: (viewMode === 'screenshot' || viewMode === 'capture') ? '1px 0 0 1px' : '1px',
+            borderRadius: '1px 0 0 1px',
           }}>
             {/* Header with controls - fixed width sections to prevent flickering */}
             <Box sx={{ 
@@ -862,55 +862,53 @@ export function ScreenDefinitionEditor({
             </Box>
           </Box>
 
-          {/* Verification Editor Side Panel - Only show when in screenshot or capture mode */}
-          {(viewMode === 'screenshot' || viewMode === 'capture') && (
-            <VerificationEditor
-              isVisible={true}
-              isScreenshotMode={viewMode === 'screenshot'}
-              isCaptureActive={isCapturing}
-              sx={{
-                backgroundColor: '#1E1E1E',
-                borderRadius: '0 1px 1px 0',
-                border: '2px solid #1E1E1E',
-                borderLeft: 'none',
+          {/* Verification Editor Side Panel */}
+          <VerificationEditor
+            isVisible={true}
+            isScreenshotMode={viewMode === 'screenshot'}
+            isCaptureActive={isCapturing}
+            sx={{
+              backgroundColor: '#1E1E1E',
+              borderRadius: '0 1px 1px 0',
+              border: '2px solid #1E1E1E',
+              borderLeft: 'none',
+              color: '#ffffff',
+              '& .MuiTypography-root': {
                 color: '#ffffff',
-                '& .MuiTypography-root': {
+              },
+              '& .MuiTextField-root': {
+                '& .MuiInputLabel-root': {
                   color: '#ffffff',
                 },
-                '& .MuiTextField-root': {
-                  '& .MuiInputLabel-root': {
-                    color: '#ffffff',
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#333',
                   },
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#333',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#555',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#666',
-                    },
+                  '&:hover fieldset': {
+                    borderColor: '#555',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#666',
                   },
                 },
-                '& .MuiSelect-root': {
+              },
+              '& .MuiSelect-root': {
+                color: '#ffffff',
+              },
+              '& .MuiFormControl-root': {
+                '& .MuiInputLabel-root': {
                   color: '#ffffff',
                 },
-                '& .MuiFormControl-root': {
-                  '& .MuiInputLabel-root': {
-                    color: '#ffffff',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#333',
-                    },
+                '& .MuiOutlinedInput-root': {
+                  color: '#ffffff',
+                  '& fieldset': {
+                    borderColor: '#333',
                   },
                 },
-              }}
-            />
-          )}
+              },
+            }}
+          />
         </Box>
       ) : (
         // Compact view - exact same layout as before
