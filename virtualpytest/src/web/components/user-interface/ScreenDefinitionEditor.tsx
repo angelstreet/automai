@@ -528,7 +528,13 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  const handleToggleExpanded = () => {
+  const handleToggleExpanded = async () => {
+    // If we're collapsing and currently in capture or screenshot view, restart stream
+    if (isExpanded && (viewMode === 'capture' || viewMode === 'screenshot')) {
+      console.log('[@component:ScreenDefinitionEditor] Collapsing from capture/screenshot view, restarting stream...');
+      await restartStream();
+    }
+    
     setIsExpanded(!isExpanded);
     // Clear drag selection when collapsing
     if (isExpanded) {
