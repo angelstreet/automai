@@ -192,20 +192,22 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             
             {/* Line 2: Timeout, threshold, and area controls */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-              <TextField
-                size="small"
-                type="number"
-                label="Timeout"
-                value={verification.params?.timeout || 10}
-                onChange={(e) => updateVerification(index, { 
-                  params: { 
-                    ...verification.params, 
-                    timeout: parseFloat(e.target.value) || 10 
-                  }
-                })}
-                sx={{ width: 80 }}
-                inputProps={{ min: 1, max: 60, step: 0.5 }}
-              />
+              {verification.id && (
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Timeout"
+                  value={verification.params?.timeout || 10}
+                  onChange={(e) => updateVerification(index, { 
+                    params: { 
+                      ...verification.params, 
+                      timeout: parseFloat(e.target.value) || 10 
+                    }
+                  })}
+                  sx={{ width: 80 }}
+                  inputProps={{ min: 1, max: 60, step: 0.5 }}
+                />
+              )}
               
               {verification.controller_type === 'image' && (
                 <TextField
