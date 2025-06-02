@@ -292,11 +292,28 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
-  const checkReferenceExists = async (referenceName: string, modelName: string): Promise<boolean> => {
+  const checkReferenceExists = async (referenceName: string, modelName: string, referenceType: 'image' | 'text'): Promise<boolean> => {
     try {
-      // Check if the reference already exists by trying to fetch it
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/reference/image/${modelName}/${referenceName}.png`);
-      return response.ok;
+      if (referenceType === 'image') {
+        // Check if the image reference already exists by trying to fetch it
+        const response = await fetch(`http://localhost:5009/api/virtualpytest/reference/image/${modelName}/${referenceName}.png`);
+        return response.ok;
+      } else if (referenceType === 'text') {
+        // Check if text reference exists by fetching the reference list and looking for matching name/model
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/list');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.references) {
+            return result.references.some((ref: any) => 
+              ref.name === referenceName && 
+              ref.model === modelName && 
+              ref.type === 'text'
+            );
+          }
+        }
+        return false;
+      }
+      return false;
     } catch (error) {
       // If there's an error fetching, assume it doesn't exist
       return false;
@@ -309,6 +326,32 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
+    // Validate regex for text references before checking existence
+    if (referenceType === 'text' && !validateRegex(referenceText)) {
+      console.error('[@component:VerificationEditor] Invalid regex pattern:', referenceText);
+      return;
+    }
+
+    try {
+      // Check if reference already exists
+      const exists = await checkReferenceExists(referenceName, model, referenceType);
+      
+      if (exists) {
+        // Show confirmation dialog for both image and text references
+        console.log(`[@component:VerificationEditor] ${referenceType} reference "${referenceName}" already exists, showing confirmation`);
+        setShowConfirmDialog(true);
+        return;
+      }
+
+      // If doesn't exist, proceed with save
+      await performSaveReference();
+
+    } catch (error) {
+      console.error('[@component:VerificationEditor] Error checking/saving reference:', error);
+    }
+  };
+
+  const performSaveReference = async () => {
     try {
       console.log('[@component:VerificationEditor] Saving reference:', { 
         name: referenceName, 
@@ -317,16 +360,16 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       });
 
       if (referenceType === 'image') {
-        // Save image reference (existing logic)
-        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/image/save', {
+        // Save image reference
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: referenceName,
+            reference_name: referenceName,
+            model_name: model,
             area: selectedArea,
-            model,
           }),
         });
 
@@ -340,12 +383,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
         }
       } else if (referenceType === 'text') {
-        // Validate regex before saving
-        if (!validateRegex(referenceText)) {
-          console.error('[@component:VerificationEditor] Invalid regex pattern:', referenceText);
-          return;
-        }
-
         // Save text reference
         const response = await fetch('http://localhost:5009/api/virtualpytest/reference/text/save', {
           method: 'POST',
@@ -354,10 +391,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           },
           body: JSON.stringify({
             name: referenceName,
+            model: model,
             area: selectedArea,
-            model,
             text: referenceText,
-            fontSize: detectedTextData?.fontSize
+            fontSize: detectedTextData?.fontSize,
+            confidence: detectedTextData?.confidence
           }),
         });
 
@@ -754,7 +792,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const handleConfirmOverwrite = async () => {
     setShowConfirmDialog(false);
-    await handleSaveReference();
+    await performSaveReference();
   };
 
   const handleCancelOverwrite = () => {
@@ -1348,7 +1386,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
-            A reference image named "{referenceName}" already exists for model "{model}".
+            A {referenceType} reference named "{referenceName}" already exists for model "{model}".
             Do you want to overwrite it?
           </Typography>
         </DialogContent>

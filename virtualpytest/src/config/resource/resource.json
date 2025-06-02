@@ -19,7 +19,7 @@
       "model": "android_mobile",
       "path": "",
       "full_path": "",
-      "created_at": "2025-06-03T00:17:27.221393",
+      "created_at": "2025-06-03T00:18:05.638070",
       "type": "text_reference",
       "area": {
         "x": 734,
@@ -28,7 +28,7 @@
         "height": 21
       },
       "text": "Beliebt im TV",
-      "font_size": 12,
+      "font_size": null,
       "confidence": null
     },
     {
