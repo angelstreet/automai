@@ -573,13 +573,32 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           } else {
             // Check if this is a technical error vs test failure
             const errorMessage = res.message || res.error || '';
-            const isTechnicalError = errorMessage.includes('not found') || 
-                                   errorMessage.includes('Could not load') || 
-                                   errorMessage.includes('Failed to') ||
-                                   errorMessage.includes('Error') ||
-                                   errorMessage.includes('ERROR');
             
-            resultType = isTechnicalError ? 'ERROR' : 'FAIL';
+            // Text/Image not found should be FAIL (test failure), not ERROR (technical issue)
+            const isTestFailure = errorMessage.includes('Text pattern') ||
+                                 errorMessage.includes('Image not found') ||
+                                 errorMessage.includes('not found after') ||
+                                 errorMessage.includes('Best confidence:') ||
+                                 errorMessage.includes('Closest text found:');
+            
+            // Technical errors are things like file access, OCR failures, etc.
+            const isTechnicalError = errorMessage.includes('Could not load') || 
+                                    errorMessage.includes('Failed to capture') ||
+                                    errorMessage.includes('Failed to re-capture') ||
+                                    errorMessage.includes('OCR failed') ||
+                                    errorMessage.includes('controller not') ||
+                                    errorMessage.includes('No text specified') ||
+                                    errorMessage.includes('No reference image specified') ||
+                                    errorMessage.includes('ERROR:');
+            
+            if (isTestFailure) {
+              resultType = 'FAIL';
+            } else if (isTechnicalError) {
+              resultType = 'ERROR';
+            } else {
+              // Default to FAIL for unknown cases (better to show as test failure than technical error)
+              resultType = 'FAIL';
+            }
           }
           
           console.log(`[@component:VerificationEditor] Verification ${index + 1} result:`, {

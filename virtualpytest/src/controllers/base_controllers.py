@@ -209,16 +209,6 @@ class VerificationControllerInterface(BaseController):
         self.verification_session_id = None
         self.verification_results = []
     
-    @abstractmethod
-    def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
-        """Wait for specific image to appear on screen. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
-        """Wait for specific image to disappear from screen. Must be implemented by subclasses."""
-        pass
-    
     # Common verification logging methods
     def _log_verification(self, verification_type: str, target: str, result: bool, params: Dict[str, Any]) -> None:
         """Log verification result for reporting. Common implementation."""

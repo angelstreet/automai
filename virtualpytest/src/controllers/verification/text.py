@@ -69,12 +69,12 @@ class TextVerificationController(VerificationControllerInterface):
             "ocr_language": self.ocr_language
         }
 
-    def _capture_screenshot_for_ocr(self, area: tuple = None) -> str:
+    def _capture_screenshot_for_ocr(self, area: dict = None) -> str:
         """
         Capture a screenshot for OCR analysis using the AV controller.
         
         Args:
-            area: Optional area to crop (x, y, width, height)
+            area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
             
         Returns:
             Path to the screenshot file
@@ -113,10 +113,15 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"TextVerify[{self.device_name}]: Screenshot capture error: {e}")
             return None
 
-    def _crop_image(self, image_path: str, area: tuple) -> str:
+    def _crop_image(self, image_path: str, area: dict) -> str:
         """Crop image to specified area using FFmpeg."""
         try:
-            x, y, width, height = area
+            # Handle area as dictionary (same as image verification)
+            x = int(area['x'])
+            y = int(area['y'])
+            width = int(area['width'])
+            height = int(area['height'])
+            
             timestamp = int(time.time())
             cropped_path = self.temp_image_path / f"cropped_{timestamp}.png"
             
@@ -197,130 +202,6 @@ class TextVerificationController(VerificationControllerInterface):
                 target_text = target_text.lower()
             return target_text in extracted_text
 
-    def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
-        """
-        Wait for specific text to appear on screen (mapped to text verification).
-        
-        Args:
-            image_path: Text to look for (treated as text for OCR)
-            timeout: Maximum time to wait in seconds
-            threshold: Not used for text verification (OCR doesn't use confidence threshold)
-            area: Optional area to search (x, y, width, height)
-            
-        Returns:
-            True if text appears, False if timeout
-        """
-        # For text verification, image_path is actually the text to search for
-        text = image_path
-        case_sensitive = False  # Default for text verification
-        
-        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to appear (timeout: {timeout}s)")
-        if area:
-            print(f"TextVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
-        
-        start_time = time.time()
-        check_interval = 2.0  # Check every 2 seconds (OCR is slower)
-        
-        while time.time() - start_time < timeout:
-            # Capture screenshot
-            screenshot = self._capture_screenshot_for_ocr(area)
-            if not screenshot:
-                time.sleep(check_interval)
-                continue
-            
-            # Extract text using OCR
-            extracted_text = self._extract_text_from_image(screenshot)
-            
-            # Check if target text is found
-            if self._text_matches(extracted_text, text, case_sensitive):
-                print(f"TextVerify[{self.device_name}]: Text '{text}' found!")
-                self._log_verification("text_appear", text, True, {
-                    "extracted_text": extracted_text,
-                    "case_sensitive": case_sensitive,
-                    "area": area
-                })
-                return True
-            
-            # Clean up screenshot
-            try:
-                if os.path.exists(screenshot):
-                    os.remove(screenshot)
-            except:
-                pass
-            
-            # Wait before next check
-            time.sleep(check_interval)
-        
-        print(f"TextVerify[{self.device_name}]: Timeout waiting for text '{text}' to appear")
-        self._log_verification("text_appear", text, False, {
-            "timeout": timeout,
-            "case_sensitive": case_sensitive,
-            "area": area
-        })
-        return False
-
-    def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, threshold: float = 0.8, area: tuple = None) -> bool:
-        """
-        Wait for specific text to disappear from screen (mapped to text verification).
-        
-        Args:
-            image_path: Text to look for (treated as text for OCR)
-            timeout: Maximum time to wait in seconds
-            threshold: Not used for text verification (OCR doesn't use confidence threshold)
-            area: Optional area to search (x, y, width, height)
-            
-        Returns:
-            True if text disappears, False if timeout
-        """
-        # For text verification, image_path is actually the text to search for
-        text = image_path
-        case_sensitive = False  # Default for text verification
-        
-        print(f"TextVerify[{self.device_name}]: Waiting for text '{text}' to disappear (timeout: {timeout}s)")
-        if area:
-            print(f"TextVerify[{self.device_name}]: Search area: ({area[0]},{area[1]},{area[2]},{area[3]})")
-        
-        start_time = time.time()
-        check_interval = 2.0  # Check every 2 seconds (OCR is slower)
-        
-        while time.time() - start_time < timeout:
-            # Capture screenshot
-            screenshot = self._capture_screenshot_for_ocr(area)
-            if not screenshot:
-                time.sleep(check_interval)
-                continue
-            
-            # Extract text using OCR
-            extracted_text = self._extract_text_from_image(screenshot)
-            
-            # Check if target text is NOT found (disappeared)
-            if not self._text_matches(extracted_text, text, case_sensitive):
-                print(f"TextVerify[{self.device_name}]: Text '{text}' has disappeared!")
-                self._log_verification("text_disappear", text, True, {
-                    "extracted_text": extracted_text,
-                    "case_sensitive": case_sensitive,
-                    "area": area
-                })
-                return True
-            
-            # Clean up screenshot
-            try:
-                if os.path.exists(screenshot):
-                    os.remove(screenshot)
-            except:
-                pass
-            
-            # Wait before next check
-            time.sleep(check_interval)
-        
-        print(f"TextVerify[{self.device_name}]: Timeout waiting for text '{text}' to disappear")
-        self._log_verification("text_disappear", text, False, {
-            "timeout": timeout,
-            "case_sensitive": case_sensitive,
-            "area": area
-        })
-        return False
-
     def _save_source_image_for_comparison(self, source_image_path: str, model: str, verification_index: int) -> str:
         """
         Save the source image for UI comparison display.
@@ -354,7 +235,7 @@ class TextVerificationController(VerificationControllerInterface):
             return None
 
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
-                           area: tuple = None, image_list: List[str] = None, model: str = None,
+                           area: dict = None, image_list: List[str] = None, model: str = None,
                            verification_index: int = 0, image_filter: str = None) -> Tuple[bool, str, dict]:
         """
         Wait for specific text to appear either in provided image list or by capturing new frames.
@@ -583,7 +464,7 @@ class TextVerificationController(VerificationControllerInterface):
                 return False, f"Text pattern '{text}' not found after {timeout}s (no text extracted)", additional_data
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False,
-                              area: tuple = None, image_list: List[str] = None, model: str = None,
+                              area: dict = None, image_list: List[str] = None, model: str = None,
                               verification_index: int = 0, image_filter: str = None) -> Tuple[bool, str, dict]:
         """
         Wait for text to disappear by calling waitForTextToAppear and inverting the result.
@@ -620,13 +501,13 @@ class TextVerificationController(VerificationControllerInterface):
             # Text is still present (was found)
             return False, f"Text still present: {message}", additional_data
 
-    def _extract_text_from_area(self, image_path: str, area: tuple = None) -> str:
+    def _extract_text_from_area(self, image_path: str, area: dict = None) -> str:
         """
         Extract text from image area using Tesseract OCR.
         
         Args:
             image_path: Path to the image file
-            area: Optional area to crop (x, y, width, height)
+            area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
             
         Returns:
             Extracted text string
@@ -784,13 +665,15 @@ class TextVerificationController(VerificationControllerInterface):
         
     def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
         """
-        Verify screen state based on text content.
+        Verify screen state based on text content using proper text verification.
         
         Args:
             expected_state: Expected state text to look for
             timeout: Maximum time to wait for state
         """
-        return self.waitForImageToAppear(expected_state, timeout)
+        # Use proper text verification methods instead of legacy image methods
+        success, message, additional_data = self.waitForTextToAppear(expected_state, timeout)
+        return success
         
     def verify_performance_metric(self, metric_name: str, expected_value: float, tolerance: float = 10.0) -> bool:
         """Performance metrics not applicable for text controller."""
@@ -802,16 +685,19 @@ class TextVerificationController(VerificationControllerInterface):
         if verification_type == "text_appears":
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.waitForImageToAppear(target, timeout, case_sensitive, area)
+            success, message, additional_data = self.waitForTextToAppear(target, timeout, case_sensitive, area)
+            return success
         elif verification_type == "text_disappears":
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.waitForImageToDisappear(target, timeout, case_sensitive, area)
+            success, message, additional_data = self.waitForTextToDisappear(target, timeout, case_sensitive, area)
+            return success
         elif verification_type == "text":
             # Default to text appears
             case_sensitive = kwargs.get("case_sensitive", False)
             area = kwargs.get("area", None)
-            return self.waitForImageToAppear(target, timeout, case_sensitive, area)
+            success, message, additional_data = self.waitForTextToAppear(target, timeout, case_sensitive, area)
+            return success
         else:
             print(f"TextVerify[{self.device_name}]: Unknown text verification type: {verification_type}")
             return False
