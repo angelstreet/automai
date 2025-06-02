@@ -210,7 +210,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover'
+                objectFit: 'fill'
               }}
             />
           ) : (
@@ -224,7 +224,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       {/* 2. Drag Area Info (Selection Info) */}
       <Box sx={{ mb: 0 }}>
         {selectedArea ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5, height: '100%' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0.5 }}>
             <TextField
               size="small"
               label="X"
@@ -240,8 +240,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 }
               }}
               sx={{
+                '& .MuiInputBase-root': {
+                  height: '32px',
+                },
                 '& .MuiInputBase-input': {
                   fontSize: '0.7rem',
+                  padding: '6px 8px',
                 },
                 '& .MuiInputLabel-root': {
                   fontSize: '0.7rem',
