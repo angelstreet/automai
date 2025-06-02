@@ -65,7 +65,7 @@ export const useNavigationState = () => {
   
   // Tree filtering state
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
-  const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(2);
+  const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(5);
   const [availableFocusNodes, setAvailableFocusNodes] = useState<{id: string, label: string, depth: number}[]>([]);
 
   // Progressive loading state
