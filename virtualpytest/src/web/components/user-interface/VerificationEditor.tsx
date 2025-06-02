@@ -2,14 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
   Typography,
 } from '@mui/material';
 import { Camera as CameraIcon } from '@mui/icons-material';
+import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
 
 interface VerificationAction {
   id: string;
@@ -26,6 +22,19 @@ interface VerificationActions {
   [category: string]: VerificationAction[];
 }
 
+interface NodeVerification {
+  id: string;
+  label: string;
+  command: string;
+  controller_type: 'text' | 'image';
+  params: any;
+  description?: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+  inputValue?: string;
+}
+
 interface VerificationEditorProps {
   isVisible: boolean;
   isScreenshotMode: boolean;
@@ -40,10 +49,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   sx = {},
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
-  const [selectedVerification, setSelectedVerification] = useState<VerificationAction | null>(null);
-  const [parameters, setParameters] = useState<any>({});
-  const [referenceName, setReferenceName] = useState('');
+  const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -53,66 +61,57 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const fetchVerificationActions = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch('http://localhost:5009/api/virtualpytest/verification/actions');
       const result = await response.json();
       
       if (result.success) {
         setVerificationActions(result.verifications);
+      } else {
+        setError(result.error || 'Failed to load verification actions');
       }
     } catch (error) {
       console.error('Error fetching verification actions:', error);
+      setError('Failed to connect to verification server');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerificationSelect = (actionId: string) => {
-    let selectedAction: VerificationAction | null = null;
+  const handleVerificationsChange = (newVerifications: NodeVerification[]) => {
+    setVerifications(newVerifications);
+  };
+
+  const handleTakeScreenshot = async () => {
+    // TODO: Implement screenshot functionality for verification
+    console.log('[@component:VerificationEditor] Taking screenshot for verification');
+  };
+
+  const handleTestVerifications = async () => {
+    if (verifications.length === 0) return;
     
-    Object.values(verificationActions).forEach(actions => {
-      const action = actions.find(a => a.id === actionId);
-      if (action) {
-        selectedAction = action;
-      }
-    });
-
-    if (selectedAction) {
-      setSelectedVerification(selectedAction);
-      setParameters({
-        timeout: 10,
-        threshold: 0.8,
-        area: { x: 0, y: 0, width: 100, height: 100 },
-        ...selectedAction.params
-      });
-    }
+    console.log('[@component:VerificationEditor] Testing verifications:', verifications);
+    // TODO: Implement test functionality
   };
 
-  const updateParameter = (key: string, value: any) => {
-    setParameters(prev => ({ ...prev, [key]: value }));
+  const handleSaveVerifications = async () => {
+    if (verifications.length === 0) return;
+    
+    console.log('[@component:VerificationEditor] Saving verifications:', verifications);
+    // TODO: Implement save functionality
   };
 
-  const updateAreaParameter = (key: string, value: number) => {
-    setParameters(prev => ({
-      ...prev,
-      area: { ...prev.area, [key]: value }
-    }));
-  };
-
-  const isValidName = (name: string) => {
-    return /^[a-z0-9_-]+$/.test(name);
-  };
-
-  const canSave = selectedVerification && referenceName && isValidName(referenceName);
+  const canTest = verifications.length > 0 && verifications.some(v => v.id);
+  const canSave = verifications.length > 0 && verifications.every(v => v.id && (!v.requiresInput || v.inputValue?.trim()));
 
   if (!isVisible) return null;
 
   return (
     <Box sx={{ 
-      width: 400, 
+      width: 460, 
       height: '100%', 
       p: 2, 
-      border: '1px solid #ddd', 
       display: 'flex', 
       flexDirection: 'column', 
       gap: 2,
@@ -120,18 +119,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }}>
       <Typography variant="h6">Verification Editor</Typography>
       
-      {/* Row 1: Thumbnail + Capture */}
+      {/* Screenshot Capture Section */}
       <Box>
         <Box sx={{ 
           width: '100%', 
-          height: 150, 
-          border: '2px dashed #ccc', 
+          height: 120, 
+          border: '2px dashed #444', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          mb: 1
+          mb: 1,
+          borderRadius: 1,
+          bgcolor: 'rgba(255,255,255,0.05)'
         }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             No image captured
           </Typography>
         </Box>
@@ -140,128 +141,66 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           startIcon={<CameraIcon />}
           variant="outlined"
           fullWidth
-          disabled={!selectedVerification}
+          onClick={handleTakeScreenshot}
+          sx={{
+            borderColor: '#444',
+            color: 'inherit',
+            '&:hover': {
+              borderColor: '#666',
+            }
+          }}
         >
           Capture
         </Button>
       </Box>
 
-      {/* Row 2: Dynamic Parameters */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 0 }}>Parameters</Typography>
-        {selectedVerification && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <TextField
-              size="small"
-              type="number"
-              label="Timeout"
-              value={parameters.timeout || 10}
-              onChange={(e) => updateParameter('timeout', parseFloat(e.target.value) || 10)}
-              inputProps={{ min: 1, max: 60, step: 0.5 }}
-            />
-            
-            {selectedVerification.command.includes('image') && (
-              <>
-                <TextField
-                  size="small"
-                  type="number"
-                  label="Threshold"
-                  value={parameters.threshold || 0.8}
-                  onChange={(e) => updateParameter('threshold', parseFloat(e.target.value) || 0.8)}
-                  inputProps={{ min: 0.1, max: 1.0, step: 0.05 }}
-                />
-                
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="X"
-                    value={parameters.area?.x || 0}
-                    onChange={(e) => updateAreaParameter('x', parseInt(e.target.value) || 0)}
-                    sx={{ width: '25%' }}
-                  />
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="Y"
-                    value={parameters.area?.y || 0}
-                    onChange={(e) => updateAreaParameter('y', parseInt(e.target.value) || 0)}
-                    sx={{ width: '25%' }}
-                  />
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="Width"
-                    value={parameters.area?.width || 100}
-                    onChange={(e) => updateAreaParameter('width', parseInt(e.target.value) || 100)}
-                    sx={{ width: '25%' }}
-                  />
-                  <TextField
-                    size="small"
-                    type="number"
-                    label="Height"
-                    value={parameters.area?.height || 100}
-                    onChange={(e) => updateAreaParameter('height', parseInt(e.target.value) || 100)}
-                    sx={{ width: '25%' }}
-                  />
-                </Box>
-              </>
-            )}
-          </Box>
-        )}
-      </Box>
-
-      {/* Row 3: Verification Selection */}
-      <Box>
-        <FormControl fullWidth size="small">
-          <InputLabel>Verification Type</InputLabel>
-          <Select
-            value={selectedVerification?.id || ''}
-            label="Verification Type"
-            onChange={(e) => handleVerificationSelect(e.target.value)}
-            disabled={loading}
-          >
-            {Object.entries(verificationActions).map(([category, actions]) => [
-              <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold' }}>
-                {category.replace(/_/g, ' ').toUpperCase()}
-              </MenuItem>,
-              ...actions.map(action => (
-                <MenuItem key={action.id} value={action.id} sx={{ pl: 3 }}>
-                  {action.label}
-                </MenuItem>
-              ))
-            ])}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Row 4: Reference Name */}
-      <Box>
-        <TextField
-          fullWidth
-          size="small"
-          label="Reference Name"
-          value={referenceName}
-          onChange={(e) => setReferenceName(e.target.value.toLowerCase())}
-          placeholder="my_button"
-          error={referenceName && !isValidName(referenceName)}
-          helperText={referenceName && !isValidName(referenceName) ? 'Only lowercase letters, numbers, - and _' : ''}
+      {/* Verifications List - Using same component as NodeEditDialog */}
+      <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <NodeVerificationsList
+          verifications={verifications}
+          availableActions={verificationActions}
+          onVerificationsChange={handleVerificationsChange}
+          loading={loading}
+          error={error}
         />
       </Box>
 
-      {/* Row 5: Action Buttons */}
+      {/* Action Buttons */}
       <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
         <Button 
           variant="outlined" 
           size="small"
-          disabled={!selectedVerification}
+          onClick={handleTestVerifications}
+          disabled={!canTest}
+          sx={{
+            borderColor: '#444',
+            color: 'inherit',
+            '&:hover': {
+              borderColor: '#666',
+            },
+            '&:disabled': {
+              borderColor: '#333',
+              color: 'rgba(255,255,255,0.3)',
+            }
+          }}
         >
           Test
         </Button>
         <Button 
           variant="contained" 
           size="small"
+          onClick={handleSaveVerifications}
           disabled={!canSave}
+          sx={{
+            bgcolor: '#444',
+            '&:hover': {
+              bgcolor: '#555',
+            },
+            '&:disabled': {
+              bgcolor: '#333',
+              color: 'rgba(255,255,255,0.3)',
+            }
+          }}
         >
           Save
         </Button>
