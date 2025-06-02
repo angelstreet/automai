@@ -790,10 +790,10 @@ export function ScreenDefinitionEditor({
                         size="small" 
                         onClick={handleStopCapture} 
                         sx={{ 
-                          color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
-                          borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                          color: (viewMode === 'capture' || isCapturing) ? '#ff4444' : '#ffffff',
+                          borderBottom: (viewMode === 'capture' || isCapturing) ? '2px solid #ff4444' : 'none'
                         }}
-                       
+                        disabled={isStoppingCapture}
                       >
                         <StopCircle />
                       </IconButton>
@@ -806,8 +806,8 @@ export function ScreenDefinitionEditor({
                         size="small" 
                         onClick={handleStartCapture} 
                         sx={{ 
-                          color: viewMode === 'capture' ? '#ff4444' : '#ffffff',
-                          borderBottom: viewMode === 'capture' ? '2px solid #ff4444' : 'none'
+                          color: (viewMode === 'capture' || isCapturing) ? '#ff4444' : '#ffffff',
+                          borderBottom: (viewMode === 'capture' || isCapturing) ? '2px solid #ff4444' : 'none'
                         }}
                         disabled={!isConnected}
                       >
