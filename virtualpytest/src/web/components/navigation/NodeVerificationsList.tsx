@@ -49,6 +49,8 @@ interface VerificationTestResult {
   // Language detection for text verifications
   detectedLanguage?: string;
   languageConfidence?: number;
+  // OCR confidence for text verifications
+  ocrConfidence?: number;
 }
 
 interface VerificationAction {
