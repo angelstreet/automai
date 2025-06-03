@@ -19,6 +19,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .utils import check_controllers_available
+from utils.sshSessionRegistry import SSHSessionRegistry
 
 # Create blueprint
 verification_bp = Blueprint('verification', __name__)
@@ -203,83 +204,44 @@ def take_verification_control():
             'error': f'Verification controller initialization error: {str(e)}'
         }), 500
 
-@verification_bp.route('/api/virtualpytest/verification/adb/take-control', methods=['POST'])
-def take_adb_verification_control():
-    """Initialize ADB verification controller with SSH connection."""
+@verification_bp.route('/api/virtualpytest/verification/adb/take-control-shared', methods=['POST'])
+def take_adb_verification_control_shared():
+    """Initialize ADB verification controller using shared SSH session from registry."""
     try:
         import app
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import create_ssh_connection
         
-        data = request.get_json()
+        print(f"[@route:take_adb_verification_control_shared] Looking for shared SSH session")
         
-        # SSH connection parameters
-        host_ip = data.get('host_ip')
-        host_username = data.get('host_username')
-        host_password = data.get('host_password', '')
-        host_port = data.get('host_port', 22)
-        device_id = data.get('device_id')
-        
-        # Validate required parameters
-        if not host_ip:
-            return jsonify({
-                'success': False,
-                'error': 'host_ip is required for ADB verification'
-            }), 400
-        
-        if not host_username:
-            return jsonify({
-                'success': False,
-                'error': 'host_username is required for ADB verification'
-            }), 400
-            
-        if not device_id:
-            return jsonify({
-                'success': False,
-                'error': 'device_id is required for ADB verification'
-            }), 400
-        
-        print(f"[@route:take_adb_verification_control] Connecting to SSH host {host_ip} for ADB verification")
-        
-        # Create SSH connection
-        ssh_connection = create_ssh_connection(
-            host=host_ip,
-            port=host_port,
-            username=host_username,
-            password=host_password,
-            timeout=10
-        )
+        # Get existing SSH session from registry
+        ssh_connection = SSHSessionRegistry.get_session()
         
         if not ssh_connection:
             return jsonify({
                 'success': False,
-                'error': f'Failed to establish SSH connection to {host_ip}'
+                'error': 'No active SSH session found. Please ensure remote control is connected first.'
             }), 400
         
-        # Initialize ADB verification controller
+        # Get session info for device details
+        session_info = SSHSessionRegistry.get_session_info()
+        device_ip = session_info.get('device_ip', 'unknown')
+        
+        print(f"[@route:take_adb_verification_control_shared] Found shared SSH session for device: {device_ip}")
+        
+        # Initialize ADB verification controller with shared SSH session
         adb_controller = ADBVerificationController(
             ssh_connection=ssh_connection,
-            device_id=device_id,
-            device_name=f"ADB-{device_id}"
+            device_id=device_ip,  # Use device_ip as identifier
+            device_name=f"ADB-{device_ip}"
         )
         
-        # Test connection
-        if not adb_controller.connect():
-            ssh_connection.disconnect()
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to ADB device {device_id}'
-            }), 400
-        
-        # Store controller globally
+        # Store controller globally (don't store SSH connection since it's managed by registry)
         app.adb_verification_controller = adb_controller
-        app.adb_ssh_connection = ssh_connection  # Keep SSH connection alive
         
         return jsonify({
             'success': True,
-            'message': f'ADB verification controller initialized for device {device_id}',
-            'device_id': device_id,
-            'ssh_host': host_ip,
+            'message': f'ADB verification controller initialized with shared SSH session for device {device_ip}',
+            'shared_session': True,
             'controllers_available': ['adb']
         })
         
@@ -287,6 +249,62 @@ def take_adb_verification_control():
         return jsonify({
             'success': False,
             'error': f'ADB verification controller initialization error: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/verification/register-ssh-session', methods=['POST'])
+def register_ssh_session():
+    """Register an SSH session in the registry for sharing with verification system."""
+    try:
+        data = request.get_json()
+        device_id = data.get('device_id')
+        ssh_session_data = data.get('ssh_session_data')  # Connection parameters
+        
+        if not device_id or not ssh_session_data:
+            return jsonify({
+                'success': False,
+                'error': 'device_id and ssh_session_data are required'
+            }), 400
+        
+        # For now, we'll register that a session exists
+        # The actual SSH connection object should be registered by the remote control system
+        print(f"[@route:register_ssh_session] Registering SSH session for device: {device_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'SSH session registered for device {device_id}',
+            'device_id': device_id
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'SSH session registration error: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/verification/cleanup-ssh-session', methods=['POST'])
+def cleanup_ssh_session():
+    """Clean up SSH session from registry when remote control disconnects."""
+    try:
+        print(f"[@route:cleanup_ssh_session] Cleaning up SSH session")
+        
+        # Remove session from registry
+        SSHSessionRegistry.remove_session()
+        
+        # Also clean up any ADB verification controller using this session
+        import app
+        if hasattr(app, 'adb_verification_controller') and app.adb_verification_controller:
+            print(f"[@route:cleanup_ssh_session] Cleaning up ADB controller")
+            app.adb_verification_controller = None
+        
+        return jsonify({
+            'success': True,
+            'message': 'SSH session cleaned up successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'SSH session cleanup error: {str(e)}'
         }), 500
 
 @verification_bp.route('/api/virtualpytest/verification/release-control', methods=['POST'])
@@ -304,10 +322,6 @@ def release_verification_control():
             if app.adb_verification_controller:
                 app.adb_verification_controller.disconnect()
             app.adb_verification_controller = None
-        if hasattr(app, 'adb_ssh_connection'):
-            if app.adb_ssh_connection:
-                app.adb_ssh_connection.disconnect()
-            app.adb_ssh_connection = None
         
         return jsonify({
             'success': True,
@@ -367,6 +381,7 @@ def execute_verification():
         verification_data = data.get('verification')
         node_id = data.get('node_id')
         tree_id = data.get('tree_id')
+        device_id = data.get('device_id')  # Add device_id for ADB verifications
         
         if not verification_data:
             return jsonify({
@@ -404,12 +419,34 @@ def execute_verification():
                 }), 400
             controller = app.text_verification_controller
         elif controller_type == 'adb':
+            # For ADB, try to initialize with shared session if not already available
             if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
-                return jsonify({
-                    'success': False,
-                    'error': 'ADB verification controller not initialized'
-                }), 400
-            controller = app.adb_verification_controller
+                print(f"[@route:execute_verification] ADB controller not initialized, trying to initialize with shared session")
+                
+                # Try to get shared SSH session
+                ssh_connection = SSHSessionRegistry.get_session()
+                if ssh_connection:
+                    from controllers.verification.adb import ADBVerificationController
+                    
+                    # Get session info for device details
+                    session_info = SSHSessionRegistry.get_session_info()
+                    device_ip = session_info.get('device_ip', 'unknown')
+                    
+                    adb_controller = ADBVerificationController(
+                        ssh_connection=ssh_connection,
+                        device_id=device_ip,
+                        device_name=f"ADB-{device_ip}"
+                    )
+                    app.adb_verification_controller = adb_controller
+                    controller = adb_controller
+                    print(f"[@route:execute_verification] Successfully initialized ADB controller with shared session")
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No shared SSH session available. Please ensure remote control is connected.'
+                    }), 400
+            else:
+                controller = app.adb_verification_controller
         else:
             return jsonify({
                 'success': False,
@@ -422,43 +459,54 @@ def execute_verification():
         
         # Execute based on the command type and controller
         if controller_type == 'adb':
-            # ADB-specific commands
-            if command == 'verifyElementExists':
-                success, message, additional_data = controller.verify_element_exists(**params)
-            elif command == 'verifyTextExists':
-                text = params.get('text')
-                if not text:
-                    return jsonify({
-                        'success': False,
-                        'error': 'Text parameter required for verifyTextExists command'
-                    }), 400
-                success, message, additional_data = controller.verify_text_exists(text, **params)
-            elif command == 'verifyAppState':
-                package_name = params.get('package_name')
-                if not package_name:
-                    return jsonify({
-                        'success': False,
-                        'error': 'package_name parameter required for verifyAppState command'
-                    }), 400
-                success, message, additional_data = controller.verify_app_state(package_name, **params)
-            elif command == 'waitAndVerify':
-                verification_type = params.get('verification_type')
-                target = params.get('target')
-                if not verification_type or not target:
-                    return jsonify({
-                        'success': False,
-                        'error': 'verification_type and target parameters required for waitAndVerify command'
-                    }), 400
-                success = controller.wait_and_verify(verification_type, target, **params)
-                message = f"Wait and verify {'succeeded' if success else 'failed'}"
-                additional_data = {'verification_type': verification_type, 'target': target}
+            # ADB-specific commands - update to use new method signatures
+            if command == 'waitForElementToAppear':
+                # Parse input criteria from inputValue if available
+                input_value = verification_data.get('inputValue', '')
+                criteria = {}
+                
+                # Parse criteria from input (e.g., "text=Button" or "resource-id=btn_submit")
+                if input_value:
+                    if '=' in input_value:
+                        key, value = input_value.split('=', 1)
+                        key = key.strip().replace('-', '_')  # Convert resource-id to resource_id
+                        criteria[key] = value.strip()
+                    else:
+                        # Default to text search if no = found
+                        criteria['text'] = input_value.strip()
+                
+                # Add timeout from params
+                criteria['timeout'] = params.get('timeout', 10.0)
+                
+                success, message, additional_data = controller.waitForElementToAppear(**criteria)
+                
+            elif command == 'waitForElementToDisappear':
+                # Parse input criteria from inputValue if available
+                input_value = verification_data.get('inputValue', '')
+                criteria = {}
+                
+                # Parse criteria from input (e.g., "text=Button" or "resource-id=btn_submit")
+                if input_value:
+                    if '=' in input_value:
+                        key, value = input_value.split('=', 1)
+                        key = key.strip().replace('-', '_')  # Convert resource-id to resource_id
+                        criteria[key] = value.strip()
+                    else:
+                        # Default to text search if no = found
+                        criteria['text'] = input_value.strip()
+                
+                # Add timeout from params
+                criteria['timeout'] = params.get('timeout', 10.0)
+                
+                success, message, additional_data = controller.waitForElementToDisappear(**criteria)
+                
             else:
                 return jsonify({
                     'success': False,
                     'error': f'Unknown ADB verification command: {command}'
                 }), 400
         else:
-            # Image/Text controller commands
+            # Image/Text controller commands (existing code)
             if command == 'waitForImageToAppear':
                 success, message = controller.waitForImageToAppear(
                     image_path=params.get('image_path'),
@@ -515,6 +563,9 @@ def execute_verification():
                     'error': f'Unknown verification command: {command}'
                 }), 400
         
+        # Convert success/message to result type for consistent response
+        result_type = 'PASS' if success else 'FAIL'
+        
         return jsonify({
             'success': success,
             'message': message,
@@ -523,13 +574,16 @@ def execute_verification():
             'controller_type': controller_type,
             'node_id': node_id,
             'tree_id': tree_id,
+            'device_id': device_id,
+            'resultType': result_type,
             'additional_data': additional_data
         })
         
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Verification execution error: {str(e)}'
+            'error': f'Verification execution error: {str(e)}',
+            'resultType': 'ERROR'
         }), 500
 
 # =====================================================

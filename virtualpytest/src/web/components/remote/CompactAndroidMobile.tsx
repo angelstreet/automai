@@ -57,6 +57,7 @@ export function CompactAndroidMobile({
     androidElements,
     androidApps,
     androidScreenshot,
+    deviceId,
     handleTakeControl,
     handleReleaseControl,
     handleRemoteCommand,

@@ -18,6 +18,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .utils import check_controllers_available
 
+# Add SSH session registry import
+from utils.sshSessionRegistry import SSHSessionRegistry
+
 # Create blueprint
 remote_bp = Blueprint('remote', __name__)
 
@@ -348,7 +351,7 @@ def android_mobile_take_control():
         from controllers.remote.android_mobile import AndroidMobileRemoteController
         
         data = request.get_json()
-        print(f"[@api:android-mobile:take-control] Connection data received: {data}")
+        print(f"[@api:android-mobile:take-control] Connection data received")
         
         # Create controller instance with connection parameters
         controller = AndroidMobileRemoteController(
@@ -365,6 +368,16 @@ def android_mobile_take_control():
         if controller.connect():
             # Store controller globally for subsequent commands
             app.android_mobile_controller = controller
+            
+            # Register SSH session in registry for sharing with verification system
+            if hasattr(controller, 'ssh_connection') and controller.ssh_connection:
+                session_info = {
+                    'device_ip': data.get('device_ip'),
+                    'device_port': data.get('device_port', 5555),
+                    'host_ip': data.get('host_ip')
+                }
+                SSHSessionRegistry.register_session(controller.ssh_connection, session_info)
+                print(f"[@api:android-mobile:take-control] Registered SSH session for sharing")
             
             return jsonify({
                 'success': True,
@@ -391,6 +404,10 @@ def android_mobile_release_control():
         if hasattr(app, 'android_mobile_controller') and app.android_mobile_controller:
             app.android_mobile_controller.disconnect()
             app.android_mobile_controller = None
+            
+        # Clean up SSH session from registry
+        SSHSessionRegistry.remove_session()
+        print(f"[@api:android-mobile:release-control] Cleaned up SSH session")
             
         return jsonify({
             'success': True,

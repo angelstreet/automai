@@ -29,7 +29,7 @@ interface NodeVerification {
   id: string;
   label: string;
   command: string;
-  controller_type: 'text' | 'image';
+  controller_type: 'text' | 'image' | 'adb';
   params: any;
   description?: string;
   requiresInput?: boolean;

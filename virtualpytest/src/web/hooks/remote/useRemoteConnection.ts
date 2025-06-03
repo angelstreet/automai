@@ -112,7 +112,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.log('[@hook:useRemoteConnection] Starting take control process with form:', connectionForm);
 
       // Validate required fields - all remote types require these four fields
-      const requiredFields = ['host_ip', 'host_username', 'host_password', 'device_ip'];
+      const requiredFields: (keyof ConnectionForm)[] = ['host_ip', 'host_username', 'host_password', 'device_ip'];
       const missingFields = requiredFields.filter(field => !connectionForm[field]);
       
       if (missingFields.length > 0) {

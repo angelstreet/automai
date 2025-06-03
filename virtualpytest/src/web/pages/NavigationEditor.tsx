@@ -105,7 +105,7 @@ function CompactAndroidMobileWithSessionTracking({
   onSessionStateChange,
   sx
 }: SSHSessionTrackerProps) {
-  const { session, connectionLoading, connectionError } = useRemoteConnection('android-mobile');
+  const { session, connectionLoading, connectionError, deviceId } = useRemoteConnection('android-mobile');
   
   // Update parent component when SSH session state changes
   useEffect(() => {
