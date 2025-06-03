@@ -122,10 +122,10 @@ def get_verification_actions():
                     'params': {
                         'timeout': 10.0
                     },
-                    'description': 'Wait for UI element to appear using ADB',
+                    'description': 'Wait for UI element to appear using ADB (case-insensitive search across all attributes)',
                     'requiresInput': True,
-                    'inputLabel': 'Element Criteria',
-                    'inputPlaceholder': 'text=Button'
+                    'inputLabel': 'Search Term',
+                    'inputPlaceholder': 'HOME'
                 },
                 {
                     'id': 'wait_for_element_disappear',
@@ -134,10 +134,10 @@ def get_verification_actions():
                     'params': {
                         'timeout': 10.0
                     },
-                    'description': 'Wait for UI element to disappear using ADB',
+                    'description': 'Wait for UI element to disappear using ADB (case-insensitive search across all attributes)',
                     'requiresInput': True,
-                    'inputLabel': 'Element Criteria',
-                    'inputPlaceholder': 'resource-id=loading'
+                    'inputLabel': 'Search Term',
+                    'inputPlaceholder': 'loading'
                 }
             ]
         }
@@ -474,9 +474,8 @@ def execute_verification():
                 
                 # Get timeout from params
                 timeout = params.get('timeout', 10.0)
-                check_interval = params.get('check_interval', 1.0)
                 
-                success, message, additional_data = controller.waitForElementToAppear(search_term, timeout, check_interval)
+                success, message, additional_data = controller.waitForElementToAppear(search_term, timeout)
                 
             elif command == 'waitForElementToDisappear':
                 # Get search term from inputValue
@@ -492,9 +491,8 @@ def execute_verification():
                 
                 # Get timeout from params
                 timeout = params.get('timeout', 10.0)
-                check_interval = params.get('check_interval', 1.0)
                 
-                success, message, additional_data = controller.waitForElementToDisappear(search_term, timeout, check_interval)
+                success, message, additional_data = controller.waitForElementToDisappear(search_term, timeout)
                 
             else:
                 return jsonify({
@@ -559,8 +557,122 @@ def execute_verification():
                     'error': f'Unknown verification command: {command}'
                 }), 400
         
-        # Convert success/message to result type for consistent response
-        result_type = 'PASS' if success else 'FAIL'
+        # Store test results for display
+        result['success'] = success
+        result['message'] = message
+        
+        # Add resultType for consistent frontend handling
+        if success:
+            result['resultType'] = 'PASS'
+        elif result.get('error'):
+            result['resultType'] = 'ERROR'  
+        else:
+            result['resultType'] = 'FAIL'
+        
+        # Include additional data for UI thumbnails
+        if additional_data:
+            # Convert reference path to URL for UI display
+            if 'reference_image_path' in additional_data:
+                ref_path = additional_data['reference_image_path']
+                print(f"[@route:execute_verification] Converting reference path: {ref_path}")
+                
+                # Check if we have an image filter and update the reference URL accordingly
+                image_filter = verification_data.get('params', {}).get('image_filter')
+                
+                if '/resources/' in ref_path:
+                    # Extract model and filename from path like /path/to/resources/{model}/filename.png
+                    path_parts = ref_path.split('/resources/')[-1].split('/')
+                    if len(path_parts) >= 2:
+                        ref_model = path_parts[0]
+                        ref_filename = path_parts[1]
+                        
+                        # If filter is applied and filtered reference exists, use filtered version
+                        if image_filter and image_filter != 'none':
+                            # Get base filename without extension
+                            base_name, ext = os.path.splitext(ref_filename)
+                            filtered_filename = f"{base_name}_{image_filter}{ext}"
+                            
+                            # Check if filtered reference exists
+                            filtered_ref_path = ref_path.replace(ref_filename, filtered_filename)
+                            if os.path.exists(filtered_ref_path):
+                                additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{filtered_filename}'
+                                print(f"[@route:execute_verification] Using filtered reference URL: {additional_data['reference_image_url']}")
+                            else:
+                                additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                                print(f"[@route:execute_verification] Filtered reference not found, using original: {additional_data['reference_image_url']}")
+                        else:
+                            additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                            print(f"[@route:execute_verification] Set reference_image_url: {additional_data['reference_image_url']}")
+                    else:
+                        print(f"[@route:execute_verification] ERROR: Invalid path structure for resources: {path_parts}")
+                elif '/tmp/' in ref_path:
+                    # Handle filtered reference images saved to tmp directory with flat structure
+                    relative_path = ref_path.split('/tmp/')[-1]
+                    additional_data['reference_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                    print(f"[@route:execute_verification] Set reference_image_url (tmp): {additional_data['reference_image_url']}")
+                else:
+                    print(f"[@route:execute_verification] ERROR: Reference path doesn't contain /resources/ or /tmp/: {ref_path}")
+            else:
+                print(f"[@route:execute_verification] WARNING: No reference_image_path in additional_data for image verification")
+            
+            # Convert source path to URL for UI display with filter applied if available
+            if 'source_image_path' in additional_data:
+                source_path = additional_data['source_image_path']
+                print(f"[@route:execute_verification] Converting source path: {source_path}")
+                
+                image_filter = verification_data.get('params', {}).get('image_filter')
+                print(f"[@route:execute_verification] Retrieved image_filter: '{image_filter}'")
+                
+                if '/tmp/' in source_path:
+                    relative_path = source_path.split('/tmp/')[-1]
+                    
+                    # If filter is applied, check if filtered source exists and use it for display
+                    if image_filter and image_filter != 'none':
+                        print(f"[@route:execute_verification] Looking for filtered source with filter: {image_filter}")
+                        # Get base filename without extension  
+                        base_path, ext = os.path.splitext(source_path)
+                        filtered_source_path = f"{base_path}_{image_filter}{ext}"
+                        print(f"[@route:execute_verification] Checking for filtered source: {filtered_source_path}")
+                        
+                        if os.path.exists(filtered_source_path):
+                            # Update the source path to filtered version for UI display
+                            filtered_relative_path = filtered_source_path.split('/tmp/')[-1]
+                            additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{filtered_relative_path}'
+                            print(f"[@route:execute_verification] Using filtered source URL: {additional_data['source_image_url']}")
+                        else:
+                            additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                            print(f"[@route:execute_verification] Filtered source not found, using original: {additional_data['source_image_url']}")
+                    else:
+                        additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                        print(f"[@route:execute_verification] No filter applied, using original source: {additional_data['source_image_url']}")
+                else:
+                    print(f"[@route:execute_verification] WARNING: Source path doesn't contain /tmp/: {source_path}")
+            else:
+                print(f"[@route:execute_verification] WARNING: No source_image_path in additional_data for verification")
+            
+            # Extract and include OCR confidence for text verifications
+            if controller_type == 'text' and 'ocr_confidence' in additional_data:
+                result['ocr_confidence'] = additional_data['ocr_confidence']
+                print(f"[@route:execute_verification] Added OCR confidence: {additional_data['ocr_confidence']:.1f}%")
+            
+            # Extract other text-specific data
+            if 'extracted_text' in additional_data:
+                result['extracted_text'] = additional_data['extracted_text']
+            
+            if 'searched_text' in additional_data:
+                result['searched_text'] = additional_data['searched_text']
+            
+            if 'detected_language' in additional_data:
+                result['detected_language'] = additional_data['detected_language']
+                
+            if 'language_confidence' in additional_data:
+                result['language_confidence'] = additional_data['language_confidence']
+            
+            print(f"[@route:execute_verification] Final additional_data keys: {list(additional_data.keys())}")
+            
+            result.update(additional_data)
+        
+        print(f"[@route:execute_verification] Result: {result}")
         
         return jsonify({
             'success': success,
@@ -571,8 +683,8 @@ def execute_verification():
             'node_id': node_id,
             'tree_id': tree_id,
             'device_id': device_id,
-            'resultType': result_type,
-            'additional_data': additional_data
+            'resultType': result['resultType'],
+            'additional_data': result
         })
         
     except Exception as e:
@@ -644,6 +756,35 @@ def execute_batch_verification():
                     controller = app.image_verification_controller
                 elif controller_type == 'text':
                     controller = app.text_verification_controller
+                elif controller_type == 'adb':
+                    # For ADB, try to initialize with shared session if not already available
+                    if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
+                        print(f"[@route:execute_batch_verification] ADB controller not initialized, trying to initialize with shared session")
+                        
+                        # Try to get shared SSH session
+                        ssh_connection = SSHSessionRegistry.get_session()
+                        if ssh_connection:
+                            from controllers.verification.adb import ADBVerificationController
+                            
+                            # Get session info for device details
+                            session_info = SSHSessionRegistry.get_session_info()
+                            device_ip = session_info.get('device_ip', 'unknown')
+                            
+                            adb_controller = ADBVerificationController(
+                                ssh_connection=ssh_connection,
+                                device_id=device_ip,
+                                device_name=f"ADB-{device_ip}"
+                            )
+                            app.adb_verification_controller = adb_controller
+                            controller = adb_controller
+                            print(f"[@route:execute_batch_verification] Successfully initialized ADB controller with shared session")
+                        else:
+                            result['error'] = 'No shared SSH session available. Please ensure remote control is connected.'
+                            all_passed = False
+                            results.append(result)
+                            continue
+                    else:
+                        controller = app.adb_verification_controller
                 
                 if not controller:
                     result['error'] = f'Controller {controller_type} not available'
@@ -651,72 +792,123 @@ def execute_batch_verification():
                     results.append(result)
                     continue
                 
-                # Execute verification with new signature
+                # Execute verification with appropriate API based on controller type
                 success = False
                 message = ""
                 additional_data = {}
                 
-                if command == 'waitForImageToAppear':
-                    success, message, additional_data = controller.waitForImageToAppear(
-                        image_path=params.get('image_path'),
-                        timeout=params.get('timeout', 10.0),
-                        threshold=params.get('threshold', 0.8),
-                        area=params.get('area'),
-                        image_list=params.get('image_list'),
-                        model=model,
-                        verification_index=verification_index,
-                        image_filter=params.get('image_filter', 'none')
-                    )
-                    
-                elif command == 'waitForImageToDisappear':
-                    success, message, additional_data = controller.waitForImageToDisappear(
-                        image_path=params.get('image_path'),
-                        timeout=params.get('timeout', 10.0),
-                        threshold=params.get('threshold', 0.8),
-                        area=params.get('area'),
-                        image_list=params.get('image_list'),
-                        model=model,
-                        verification_index=verification_index,
-                        image_filter=params.get('image_filter', 'none')
-                    )
-                    
-                elif command == 'waitForTextToAppear':
-                    text = params.get('text')
-                    if not text:
-                        return jsonify({
-                            'success': False,
-                            'error': 'Text parameter required for waitForTextToAppear command'
-                        }), 400
-                    
-                    success, message, additional_data = controller.waitForTextToAppear(
-                        text=text,
-                        timeout=params.get('timeout', 10.0),
-                        case_sensitive=params.get('case_sensitive', False),
-                        area=params.get('area'),
-                        image_list=params.get('image_list'),
-                        model=model,
-                        verification_index=verification_index,
-                        image_filter=params.get('image_filter', 'none')
-                    )
-                    
-                elif command == 'waitForTextToDisappear':
-                    text = params.get('text')
-                    if not text:
-                        return jsonify({
-                            'success': False,
-                            'error': 'Text parameter required for waitForTextToDisappear command'
-                        }), 400
-                    
-                    success, message, additional_data = controller.waitForTextToDisappear(
-                        text=text,
-                        timeout=params.get('timeout', 10.0),
-                        case_sensitive=params.get('case_sensitive', False),
-                        area=params.get('area'),
-                        image_list=params.get('image_list'),
-                        model=model,
-                        verification_index=verification_index,
-                        image_filter=params.get('image_filter', 'none')
-                    )
+                if controller_type == 'adb':
+                    # ADB verifications use clean API with search_term from inputValue
+                    if command == 'waitForElementToAppear':
+                        # Get search term from verification inputValue
+                        input_value = verification.get('inputValue', '')
+                        search_term = input_value.strip() if input_value else ''
+                        
+                        if not search_term:
+                            result['error'] = 'Search term is required for ADB element verification'
+                            all_passed = False
+                            results.append(result)
+                            continue
+                        
+                        timeout = params.get('timeout', 10.0)
+                        
+                        success, message, additional_data = controller.waitForElementToAppear(search_term, timeout)
+                        
+                    elif command == 'waitForElementToDisappear':
+                        # Get search term from verification inputValue
+                        input_value = verification.get('inputValue', '')
+                        search_term = input_value.strip() if input_value else ''
+                        
+                        if not search_term:
+                            result['error'] = 'Search term is required for ADB element verification'
+                            all_passed = False
+                            results.append(result)
+                            continue
+                        
+                        timeout = params.get('timeout', 10.0)
+                        
+                        success, message, additional_data = controller.waitForElementToDisappear(search_term, timeout)
+                        
+                    else:
+                        result['error'] = f'Unknown ADB verification command: {command}'
+                        all_passed = False
+                        results.append(result)
+                        continue
+                
+                elif controller_type in ['image', 'text']:
+                    # Image/Text verifications use the existing API with model parameters
+                    if command == 'waitForImageToAppear':
+                        success, message, additional_data = controller.waitForImageToAppear(
+                            image_path=params.get('image_path'),
+                            timeout=params.get('timeout', 10.0),
+                            threshold=params.get('threshold', 0.8),
+                            area=params.get('area'),
+                            image_list=params.get('image_list'),
+                            model=model,
+                            verification_index=verification_index,
+                            image_filter=params.get('image_filter', 'none')
+                        )
+                        
+                    elif command == 'waitForImageToDisappear':
+                        success, message, additional_data = controller.waitForImageToDisappear(
+                            image_path=params.get('image_path'),
+                            timeout=params.get('timeout', 10.0),
+                            threshold=params.get('threshold', 0.8),
+                            area=params.get('area'),
+                            image_list=params.get('image_list'),
+                            model=model,
+                            verification_index=verification_index,
+                            image_filter=params.get('image_filter', 'none')
+                        )
+                        
+                    elif command == 'waitForTextToAppear':
+                        text = params.get('text')
+                        if not text:
+                            return jsonify({
+                                'success': False,
+                                'error': 'Text parameter required for waitForTextToAppear command'
+                            }), 400
+                        
+                        success, message, additional_data = controller.waitForTextToAppear(
+                            text=text,
+                            timeout=params.get('timeout', 10.0),
+                            case_sensitive=params.get('case_sensitive', False),
+                            area=params.get('area'),
+                            image_list=params.get('image_list'),
+                            model=model,
+                            verification_index=verification_index,
+                            image_filter=params.get('image_filter', 'none')
+                        )
+                        
+                    elif command == 'waitForTextToDisappear':
+                        text = params.get('text')
+                        if not text:
+                            return jsonify({
+                                'success': False,
+                                'error': 'Text parameter required for waitForTextToDisappear command'
+                            }), 400
+                        
+                        success, message, additional_data = controller.waitForTextToDisappear(
+                            text=text,
+                            timeout=params.get('timeout', 10.0),
+                            case_sensitive=params.get('case_sensitive', False),
+                            area=params.get('area'),
+                            image_list=params.get('image_list'),
+                            model=model,
+                            verification_index=verification_index,
+                            image_filter=params.get('image_filter', 'none')
+                        )
+                        
+                    else:
+                        result['error'] = f'Unknown {controller_type} verification command: {command}'
+                        all_passed = False
+                        results.append(result)
+                        continue
+                else:
+                    result['error'] = f'Unsupported controller type: {controller_type}'
+                    all_passed = False
+                    results.append(result)
+                    continue
                 
                 # Ensure we have a message, include threshold info for image verifications
                 if not message:
@@ -728,6 +920,14 @@ def execute_batch_verification():
                 
                 result['success'] = success
                 result['message'] = message
+                
+                # Add resultType for consistent frontend handling
+                if success:
+                    result['resultType'] = 'PASS'
+                elif result.get('error'):
+                    result['resultType'] = 'ERROR'  
+                else:
+                    result['resultType'] = 'FAIL'
                 
                 # Include additional data for UI thumbnails
                 if additional_data:
@@ -1723,9 +1923,8 @@ def adb_wait_for_element_to_appear():
             }), 400
         
         timeout = data.get('timeout', 10.0)
-        check_interval = data.get('check_interval', 1.0)
         
-        success, message, additional_data = app.adb_verification_controller.waitForElementToAppear(search_term, timeout, check_interval)
+        success, message, additional_data = app.adb_verification_controller.waitForElementToAppear(search_term, timeout)
         
         return jsonify({
             'success': success,
@@ -1761,9 +1960,8 @@ def adb_wait_for_element_to_disappear():
             }), 400
         
         timeout = data.get('timeout', 10.0)
-        check_interval = data.get('check_interval', 1.0)
         
-        success, message, additional_data = app.adb_verification_controller.waitForElementToDisappear(search_term, timeout, check_interval)
+        success, message, additional_data = app.adb_verification_controller.waitForElementToDisappear(search_term, timeout)
         
         return jsonify({
             'success': success,

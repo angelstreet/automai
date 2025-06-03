@@ -35,7 +35,8 @@ import {
   Alert,
   Container,
   Typography,
-  Button
+  Button,
+  IconButton
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -62,6 +63,7 @@ import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
+import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
 
 // Import NEW generic remote components instead of device-specific ones
 import { CompactRemote } from '../components/remote/CompactRemote';
@@ -200,6 +202,11 @@ const NavigationEditorContent: React.FC = () => {
     text_controller_available: false,
   });
   
+  // Add verification results state 
+  const [verificationResults, setVerificationResults] = useState<any[]>([]);
+  const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
+  const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
+
   // Device state
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
@@ -677,6 +684,10 @@ const NavigationEditorContent: React.FC = () => {
     try {
       console.log(`[@component:NavigationEditor] Executing ${verifications.length} verifications for node: ${nodeId}`);
       
+      // Clear previous results and set current node
+      setVerificationResults([]);
+      setLastVerifiedNodeId(nodeId);
+      
       const response = await fetch('http://localhost:5009/api/virtualpytest/verification/execute-batch', {
         method: 'POST',
         headers: {
@@ -684,6 +695,8 @@ const NavigationEditorContent: React.FC = () => {
         },
         body: JSON.stringify({
           verifications: verifications,
+          node_id: nodeId,
+          model: selectedDeviceData?.model || 'android_mobile' // Add model for proper result handling
         }),
       });
 
@@ -691,20 +704,58 @@ const NavigationEditorContent: React.FC = () => {
         const data = await response.json();
         console.log('[@component:NavigationEditor] Verification results:', data);
         
-        // You can add logic here to handle verification results
-        // For example, show success/failure notifications, update UI, etc.
+        // Process results to match VerificationTestResult interface
+        const processedResults = data.results ? data.results.map((result: any, index: number) => {
+          const verification = verifications[index];
+          
+          // Determine result type
+          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
+          if (result.success) {
+            resultType = 'PASS';
+          } else if (result.error && !result.message) {
+            resultType = 'ERROR';
+          }
+          
+          return {
+            success: result.success,
+            message: result.message,
+            error: result.error,
+            threshold: result.threshold,
+            resultType: resultType,
+            sourceImageUrl: result.source_image_url,
+            referenceImageUrl: result.reference_image_url,
+            extractedText: result.extracted_text,
+            searchedText: result.searched_text,
+            imageFilter: result.image_filter,
+            detectedLanguage: result.detected_language,
+            languageConfidence: result.language_confidence,
+            ocrConfidence: result.ocr_confidence,
+          };
+        }) : [];
+        
+        setVerificationResults(processedResults);
+        
+        // Show summary like in NodeVerificationsList
         if (data.results) {
           const passed = data.results.filter((r: any) => r.success).length;
           const total = data.results.length;
           console.log(`[@component:NavigationEditor] Verification completed: ${passed}/${total} passed`);
+          
+          // Log final result based on pass condition
+          const finalPassed = verificationPassCondition === 'all'
+            ? passed === total
+            : passed > 0;
+          console.log(`[@component:NavigationEditor] Final result (${verificationPassCondition}): ${finalPassed ? 'PASS' : 'FAIL'}`);
         }
       } else {
         console.error('[@component:NavigationEditor] Verification failed:', response.status, response.statusText);
+        setVerificationResults([]);
       }
     } catch (error) {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
+      setVerificationResults([]);
     }
-  }, [isVerificationActive]);
+  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition]);
 
   // Effect to initialize/release verification controllers when control state changes
   useEffect(() => {
@@ -714,6 +765,14 @@ const NavigationEditorContent: React.FC = () => {
       releaseVerificationControllers();
     }
   }, [isControlActive, selectedDevice, initializeVerificationControllers, releaseVerificationControllers]);
+
+  // Clear verification results when a different node is selected
+  useEffect(() => {
+    if (selectedNode?.id && lastVerifiedNodeId && selectedNode.id !== lastVerifiedNodeId) {
+      setVerificationResults([]);
+      setLastVerifiedNodeId(null);
+    }
+  }, [selectedNode?.id, lastVerifiedNodeId]);
 
   return (
     <Box sx={{ 
@@ -892,6 +951,51 @@ const NavigationEditorContent: React.FC = () => {
                     console.log('[@component:NavigationEditor] Screen definition editor disconnected');
                   }}
                 />
+              )}
+
+              {/* Verification Results Display - Show when there are verification results */}
+              {verificationResults.length > 0 && lastVerifiedNodeId && (
+                <Box sx={{
+                  position: 'absolute',
+                  bottom: 16,
+                  left: 16,
+                  right: selectedNode || selectedEdge ? '220px' : '16px', // Account for selection panel
+                  maxWidth: '800px',
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 2,
+                  zIndex: 900,
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1 }}>
+                      Verification Results - Node: {nodes.find(n => n.id === lastVerifiedNodeId)?.data.label || lastVerifiedNodeId}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setVerificationResults([]);
+                        setLastVerifiedNodeId(null);
+                      }}
+                      sx={{ p: 0.25 }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  
+                  <VerificationResultsDisplay
+                    testResults={verificationResults}
+                    verifications={nodes.find(n => n.id === lastVerifiedNodeId)?.data.verifications || []}
+                    passCondition={verificationPassCondition}
+                    onPassConditionChange={setVerificationPassCondition}
+                    showPassConditionSelector={true}
+                    compact={false}
+                  />
+                </Box>
               )}
 
               {/* Selection Info Panel */}
