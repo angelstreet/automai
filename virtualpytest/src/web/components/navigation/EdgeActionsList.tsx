@@ -82,12 +82,6 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     onActionsChange(newActions);
   };
 
-  // Find the selected action that requires input (for single input field)
-  const getSelectedActionWithInput = () => {
-    return actions.find(action => action.id && action.requiresInput);
-  };
-
-  const selectedActionWithInput = getSelectedActionWithInput();
   const allAvailableActions = getAllActions();
 
   return (
@@ -130,54 +124,9 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
               availableActions={allAvailableActions}
               onUpdate={(updates) => updateAction(index, updates)}
               onRemove={() => removeAction(index)}
-              showInput={false} // We'll show input separately below
+              showInput={true} // Show input fields for each action that needs them
             />
           ))}
-        </Box>
-      )}
-
-      {selectedActionWithInput && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Input for {selectedActionWithInput.label}:
-          </Typography>
-          <TextField
-            size="small"
-            value={selectedActionWithInput.inputValue || ''}
-            onChange={(e) => {
-              const actionIndex = actions.findIndex(a => a.id === selectedActionWithInput.id);
-              if (actionIndex !== -1) {
-                updateAction(actionIndex, { inputValue: e.target.value });
-                
-                // Update params based on command type
-                const updatedParams = { ...selectedActionWithInput.params };
-                const value = e.target.value;
-                
-                if (selectedActionWithInput.command === 'launch_app') {
-                  updatedParams.package = value;
-                } else if (selectedActionWithInput.command === 'input_text') {
-                  updatedParams.text = value;
-                } else if (selectedActionWithInput.command === 'click_element') {
-                  updatedParams.element_id = value;
-                } else if (selectedActionWithInput.command === 'coordinate_tap') {
-                  const coords = value.split(',').map(coord => parseInt(coord.trim()));
-                  if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-                    updatedParams.x = coords[0];
-                    updatedParams.y = coords[1];
-                  }
-                }
-                
-                updateAction(actionIndex, { params: updatedParams });
-              }
-            }}
-            placeholder={
-              selectedActionWithInput.command === 'launch_app' ? 'com.example.app' :
-              selectedActionWithInput.command === 'input_text' ? 'Enter text to send' :
-              selectedActionWithInput.command === 'click_element' ? 'Element ID' :
-              selectedActionWithInput.command === 'coordinate_tap' ? 'x,y (e.g., 100,200)' : 'Input value'
-            }
-            fullWidth
-          />
         </Box>
       )}
 
