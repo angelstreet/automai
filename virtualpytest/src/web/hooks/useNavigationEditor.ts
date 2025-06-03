@@ -188,6 +188,26 @@ export const useNavigationEditor = () => {
       return;
     }
     
+    // DEBUG: Log the current state of both nodes before connection
+    console.log('[@component:NavigationEditor] BEFORE CONNECTION - Source node:', {
+      id: sourceNode.id,
+      label: sourceNode.data.label,
+      type: sourceNode.data.type,
+      parent: sourceNode.data.parent,
+      depth: sourceNode.data.depth
+    });
+    console.log('[@component:NavigationEditor] BEFORE CONNECTION - Target node:', {
+      id: targetNode.id,
+      label: targetNode.data.label,
+      type: targetNode.data.type,
+      parent: targetNode.data.parent,
+      depth: targetNode.data.depth
+    });
+    console.log('[@component:NavigationEditor] Connection params:', {
+      sourceHandle: params.sourceHandle,
+      targetHandle: params.targetHandle
+    });
+    
     // Use the new connection rules function
     const connectionResult = validateConnection(sourceNode, targetNode, params);
     
