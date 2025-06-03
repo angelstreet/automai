@@ -54,7 +54,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
       {!compact && (
         <Box sx={{ mb: 2 }}>
           {testResults.map((result, index) => (
-            <Box key={index} sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Box key={index} sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 {/* Verification Label */}
                 <Typography variant="body2" sx={{ flex: 1, fontSize: '0.8rem' }}>
@@ -108,7 +108,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                   {verifications[index]?.controller_type === 'image' && result.threshold !== undefined && (
                     <Typography variant="caption" sx={{ 
                       fontSize: '0.65rem',
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'text.secondary',
                       ml: 0.5
                     }}>
                       {(result.threshold * 100).toFixed(1)}%
@@ -119,7 +119,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                   {verifications[index]?.controller_type === 'text' && result.ocrConfidence !== undefined && (
                     <Typography variant="caption" sx={{ 
                       fontSize: '0.65rem',
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'text.secondary',
                       ml: 0.5
                     }}>
                       {result.ocrConfidence.toFixed(1)}%
@@ -144,7 +144,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
       )}
 
       {/* Pass Condition Selector and Final Result */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mt: 2 }}>
         {showPassConditionSelector && onPassConditionChange && (
           <FormControl size="small" sx={{ minWidth: 100 }}>
             <Select
