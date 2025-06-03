@@ -7,7 +7,7 @@
 export interface StreamViewerLayoutConfig {
   minHeight: string;
   aspectRatio: string;
-  objectFit: 'cover' | 'contain';
+  objectFit: 'cover' | 'contain' | 'fill';
   isMobileModel: boolean;
 }
 
@@ -27,12 +27,9 @@ export interface VerificationEditorLayoutConfig {
  */
 export const isMobileModel = (model?: string): boolean => {
   if (!model) return false;
-  
   const modelLower = model.toLowerCase();
   return (
-    modelLower.includes('mobile') || 
-    modelLower.includes('android') || 
-    modelLower.includes('ios')
+    modelLower.includes('mobile') || modelLower.includes('android') || modelLower.includes('ios')
   );
 };
 
@@ -43,7 +40,6 @@ export const isMobileModel = (model?: string): boolean => {
  */
 export const getStreamViewerLayout = (model?: string): StreamViewerLayoutConfig => {
   const mobile = isMobileModel(model);
-  
   return mobile
     ? {
         minHeight: '400px',
@@ -66,7 +62,6 @@ export const getStreamViewerLayout = (model?: string): StreamViewerLayoutConfig 
  */
 export const getVerificationEditorLayout = (model?: string): VerificationEditorLayoutConfig => {
   const mobile = isMobileModel(model);
-  
   return mobile
     ? {
         width: 440,
@@ -82,4 +77,4 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
         objectFit: 'contain',
         isMobileModel: false,
       };
-}; 
+};

@@ -244,6 +244,10 @@ export function StreamViewer({
         WebkitUserSelect: 'none',
         MozUserSelect: 'none',
         msUserSelect: 'none',
+        ...(finalLayoutConfig.isMobileModel && {
+          maxHeight: 'none', // Remove max height constraint for mobile
+          flexGrow: 1, // Allow it to grow to fill available space
+        }),
         ...sx,
       }}
     >

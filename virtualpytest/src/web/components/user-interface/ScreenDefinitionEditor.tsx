@@ -695,6 +695,7 @@ export function ScreenDefinitionEditor({
             <StreamViewer
               streamUrl={streamUrl}
               isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
+              model={deviceModel}
               {...commonProps}
             />
             
