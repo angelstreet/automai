@@ -388,7 +388,7 @@ export function CompactAndroidMobile({
         <div style={{ 
           position: 'fixed',
           left: '83px',
-          top: '181px',
+          top: '170px',
           zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
           transformOrigin: 'top left',
