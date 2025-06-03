@@ -282,7 +282,7 @@ export function AndroidMobileOverlay({
               right: '0px',
               backgroundColor: element.color,
               color: 'white',
-              fontSize: '10px',
+              fontSize: '60px',
               lineHeight: '12px',
               padding: '1px 3px',
               borderRadius: '2px',
