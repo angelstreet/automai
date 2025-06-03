@@ -652,6 +652,14 @@ export function ScreenDefinitionEditor({
       console.log(`[@component:ScreenDefinitionEditor] Using stream URL: ${streamUrl}`);
     }
 
+    // Create layout config override for collapsed mode
+    const layoutConfigOverride = !isExpanded ? {
+      minHeight: '250px', // Match collapsed container height
+      aspectRatio: '3/5', // Better ratio for collapsed mobile view (150px/250px)
+      objectFit: 'cover' as const,
+      isMobileModel: true,
+    } : undefined;
+
     // Show the appropriate component based on viewMode (no special handling for isCapturing)
     switch (viewMode) {
       case 'screenshot':
@@ -696,6 +704,7 @@ export function ScreenDefinitionEditor({
               streamUrl={streamUrl}
               isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
               model={deviceModel}
+              layoutConfig={layoutConfigOverride}
               {...commonProps}
             />
             
