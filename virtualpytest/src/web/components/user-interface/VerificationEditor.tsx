@@ -252,6 +252,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: 'capture', // Always use 'capture' for temporary file
+            model: model,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -267,6 +268,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: 'capture', // Always use 'capture' for temporary file
+            model: model,
           }),
         });
       }
@@ -275,7 +277,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       if (result.success) {
         const timestamp = new Date().getTime();
-        const imageUrl = `http://localhost:5009/api/virtualpytest/reference/image/capture.png?t=${timestamp}`;
+        const imageUrl = `http://localhost:5009${result.image_url}?t=${timestamp}`;
         console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
         setCapturedReferenceImage(imageUrl);
         setHasCaptured(true);
@@ -664,7 +666,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             error: res.error,
             threshold,
             resultType: resultType,
-            // Add image comparison data for UI thumbnails
+            // Add image comparison data for UI thumbnails - fix property names
             sourceImageUrl: res.source_image_url,
             referenceImageUrl: res.reference_image_url,
             // Add text comparison data
@@ -694,9 +696,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       } else {
         // Clear any previous errors and show success message with results info
         setError(null);
-        const passedCount = result.passed_count || 0;
-        const totalCount = result.total_verifications || verifications.length;
-        setSuccessMessage(`Test completed: ${passedCount}/${totalCount} verification(s) passed. Check results below.`);
+       
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error running tests:', error);

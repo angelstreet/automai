@@ -534,7 +534,8 @@ class ImageVerificationController(VerificationControllerInterface):
                 
                 confidence = self._match_template(ref_img, source_img, area)
                 
-                if confidence > max_confidence:
+                # Always set first valid source as best_source_path, then update if better confidence found
+                if best_source_path is None or confidence > max_confidence:
                     max_confidence = confidence
                     best_source_path = source_path
                 

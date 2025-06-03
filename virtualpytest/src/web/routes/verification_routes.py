@@ -375,12 +375,18 @@ def execute_batch_verification():
         verifications = data.get('verifications', [])
         node_id = data.get('node_id')
         tree_id = data.get('tree_id')
-        model = data.get('model', 'default')  # Get model name for organizing output images
+        model = data.get('model')  # Remove 'default' fallback
         
         if not verifications:
             return jsonify({
                 'success': False,
                 'error': 'No verifications provided'
+            }), 400
+
+        if not model:
+            return jsonify({
+                'success': False,
+                'error': 'Model parameter is required for batch verification'
             }), 400
         
         print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node {node_id} with model {model}")
@@ -580,6 +586,8 @@ def execute_batch_verification():
                                 print(f"[@route:execute_batch_verification] No filter applied, using original source: {additional_data['source_image_url']}")
                         else:
                             print(f"[@route:execute_batch_verification] WARNING: Source path doesn't contain /tmp/: {source_path}")
+                    else:
+                        print(f"[@route:execute_batch_verification] WARNING: No source_image_path in additional_data for verification")
                     
                     print(f"[@route:execute_batch_verification] Final additional_data keys: {list(additional_data.keys())}")
                     
@@ -627,23 +635,23 @@ def capture_reference_image():
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
-        model = data.get('model', 'default')  # Get actual model name
+        model = data.get('model')  # Remove 'default' fallback
         
         print(f"[@route:capture_reference_image] Capturing reference image from {source_path} with area: {area}")
         
-        # Validate required parameters
-        if not area or not source_path or not reference_name:
+        # Validate required parameters including model
+        if not area or not source_path or not reference_name or not model:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: area, source_path, or reference_name'
+                'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
             
-        # Create resources directory structure: /resources/{model}/
+        # Create tmp directory structure for preview: /tmp/{model}/
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'resources', model)
+        target_dir = os.path.join(base_dir, 'tmp', model)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Define target path in resources directory
+        # Define target path in tmp directory for preview
         target_path = os.path.join(target_dir, f"{reference_name}.png")
         
         # Import the crop function from image controller
@@ -653,8 +661,8 @@ def capture_reference_image():
         success = crop_reference_image(source_path, target_path, area)
         
         if success:
-            # Return success with image info
-            relative_path = f"/api/virtualpytest/reference/image/{model}/{reference_name}.png"
+            # Return success with image info for preview
+            relative_path = f"/api/virtualpytest/capture/image/{model}/{reference_name}.png"
             return jsonify({
                 'success': True,
                 'message': f'Reference image saved with filtered versions: {reference_name}',
@@ -682,18 +690,18 @@ def process_area_reference():
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
-        model = data.get('model', 'default')  # Get actual model name
+        model = data.get('model')  # Remove 'default' fallback
         autocrop = data.get('autocrop', False)
         remove_background = data.get('remove_background', False)
         
         print(f"[@route:process_area_reference] Processing area from {source_path} with area: {area}")
         print(f"[@route:process_area_reference] Processing options: autocrop={autocrop}, remove_background={remove_background}")
         
-        # Validate required parameters
-        if not area or not source_path or not reference_name:
+        # Validate required parameters including model
+        if not area or not source_path or not reference_name or not model:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: area, source_path, or reference_name'
+                'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
             
         # Create flat directory structure: /tmp/{model}/
@@ -728,7 +736,7 @@ def process_area_reference():
                 processed_area = area
         
         # Return success with processed area info
-        relative_path = f"/api/virtualpytest/reference/image/{model}/{reference_name}.png"
+        relative_path = f"/api/virtualpytest/capture/image/{model}/{reference_name}.png"
         return jsonify({
             'success': True,
             'message': f'Reference image processed and saved: {reference_name}',
@@ -1329,4 +1337,66 @@ def save_text_reference():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/capture/image/<path:filename>', methods=['GET'])
+def get_capture_image(filename):
+    """Serve temporary captured images from the /tmp directory (before saving as references)."""
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        tmp_dir = os.path.join(base_dir, 'tmp')
+        
+        # Security check - ensure path is within tmp directory
+        requested_path = os.path.join(tmp_dir, filename)
+        canonical_tmp = os.path.realpath(tmp_dir)
+        canonical_requested = os.path.realpath(requested_path)
+        
+        if not canonical_requested.startswith(canonical_tmp):
+            return jsonify({
+                'success': False,
+                'error': 'Access denied'
+            }), 403
+        
+        print(f"[@route:get_capture_image] Looking for captured image: {filename} at path: {requested_path}")
+        
+        if not os.path.exists(requested_path):
+            print(f"[@route:get_capture_image] Captured image not found: {requested_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Captured image not found: {filename}'
+            }), 404
+        
+        print(f"[@route:get_capture_image] Serving captured image: {requested_path}")
+        from flask import make_response
+        
+        # Handle subdirectories in filename (e.g., "android_mobile/capture.png")
+        if '/' in filename:
+            path_parts = filename.split('/')
+            subdirs = '/'.join(path_parts[:-1])
+            actual_filename = path_parts[-1]
+            actual_serve_dir = os.path.join(tmp_dir, subdirs)
+            
+            response = make_response(send_from_directory(
+                actual_serve_dir,
+                actual_filename,
+                mimetype='image/png'
+            ))
+        else:
+            response = make_response(send_from_directory(
+                tmp_dir, 
+                filename,
+                mimetype='image/png'
+            ))
+        
+        # Prevent caching to ensure fresh images
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
+    except Exception as e:
+        print(f"[@route:get_capture_image] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve captured image: {str(e)}'
         }), 500 
