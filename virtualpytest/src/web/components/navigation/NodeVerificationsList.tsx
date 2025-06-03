@@ -647,7 +647,24 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 />
               )}
               
-              {verification.id && verification.controller_type === 'image' && (
+              {verification.id && verification.controller_type === 'adb' && verification.requiresInput && (
+                <TextField
+                  size="small"
+                  label={verification.inputLabel || 'Element Criteria'}
+                  placeholder={verification.inputPlaceholder || 'text=Button'}
+                  value={verification.inputValue || ''}
+                  onChange={(e) => updateVerification(index, { inputValue: e.target.value })}
+                  sx={{ 
+                    flex: 1,
+                    '& .MuiInputBase-input': {
+                      padding: '4px 8px',
+                      fontSize: '0.8rem'
+                    }
+                  }}
+                />
+              )}
+              
+              {verification.id && (verification.controller_type === 'image' || verification.controller_type === 'text') && (
                 <TextField
                   size="small"
                   type="number"
@@ -791,12 +808,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               )}
             </Box>
             
-            {/* Line 3: Reference Image Selector or Manual Input */}
-            {verification.requiresInput && verification.id && (
+            {/* Line 3: Reference Image Selector or Manual Input - exclude ADB verifications */}
+            {verification.requiresInput && verification.id && verification.controller_type !== 'adb' && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {/* First Row: Reference selection and test result status */}
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  {verification.requiresInput && verification.id && verification.controller_type !== 'adb' && modelReferences.length > 0 ? (
+                  {verification.requiresInput && verification.id && modelReferences.length > 0 ? (
                     <>
                       {/* Reference Dropdown - shows both image and text references */}
                       <FormControl size="small" sx={{ width: 250 }}>
@@ -850,7 +867,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       </FormControl>
                     </>
                   ) : verification.requiresInput && verification.id ? (
-                    /* Manual input for ADB element criteria or when no references available */
+                    /* Manual input for text/image when no references available */
                     <TextField
                       size="small"
                       label={verification.inputLabel || 'Input Value'}
