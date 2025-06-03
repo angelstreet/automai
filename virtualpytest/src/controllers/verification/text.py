@@ -314,50 +314,23 @@ class TextVerificationController(VerificationControllerInterface):
                 if not os.path.exists(source_path):
                     continue
                     
-                # Create a temporary copy for filtering (don't modify original)
-                filtered_source_path = source_path
-                if image_filter and image_filter != 'none':
-                    import tempfile
-                    import shutil
-                    
-                    # Create temporary file for filtered version
-                    temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_source_')
-                    os.close(temp_fd)
-                    
-                    # Copy original to temp location
-                    shutil.copy2(source_path, temp_path)
-                    
-                    # Apply filter to temporary copy
-                    if apply_image_filter(temp_path, image_filter):
-                        filtered_source_path = temp_path
-                        print(f"[@controller:TextVerification] Created filtered copy: {temp_path}")
-                    else:
-                        print(f"[@controller:TextVerification] Failed to apply filter, using original")
-                        os.unlink(temp_path)  # Clean up failed temp file
-                        filtered_source_path = source_path
-                else:
-                    filtered_source_path = source_path
-                    
-                extracted_text, detected_language, language_confidence = self._extract_text_from_area(filtered_source_path, area)
+                # Use original source images (text verification processes images as needed)
+                extracted_text, detected_language, language_confidence = self._extract_text_from_area(source_path, area, image_filter)
                 
                 # Keep track of the longest extracted text as "closest"
                 if len(extracted_text.strip()) > len(closest_text):
                     closest_text = extracted_text.strip()
-                    best_source_path = source_path  # Always use original path for saving
+                    best_source_path = source_path
                 
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
                     text_found = True
                     
-                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
+                    # Save cropped source image for UI comparison
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
-                    
-                    # Clean up temp file if it was created
-                    if filtered_source_path != source_path and os.path.exists(filtered_source_path):
-                        os.unlink(filtered_source_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
@@ -365,10 +338,6 @@ class TextVerificationController(VerificationControllerInterface):
                     # For text verification, set threshold to 1.0 when text is found
                     additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
-                
-                # Clean up temp file if it was created
-                if filtered_source_path != source_path and os.path.exists(filtered_source_path):
-                    os.unlink(filtered_source_path)
             
             # If no match found, still save the best source for comparison
             if best_source_path and area and model is not None:
@@ -408,35 +377,12 @@ class TextVerificationController(VerificationControllerInterface):
                 additional_data["threshold"] = 0.0
                 return False, "Failed to capture screen for text verification", additional_data
             
-            # Create a temporary copy for filtering (don't modify original)
-            filtered_capture_path = capture_path
-            if image_filter and image_filter != 'none':
-                import tempfile
-                import shutil
-                
-                # Create temporary file for filtered version
-                temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_capture_')
-                os.close(temp_fd)
-                
-                # Copy original to temp location
-                shutil.copy2(capture_path, temp_path)
-                
-                # Apply filter to temporary copy
-                if apply_image_filter(temp_path, image_filter):
-                    filtered_capture_path = temp_path
-                    print(f"[@controller:TextVerification] Created filtered capture copy: {temp_path}")
-                else:
-                    print(f"[@controller:TextVerification] Failed to apply filter, using original capture")
-                    os.unlink(temp_path)  # Clean up failed temp file
-                    filtered_capture_path = capture_path
-            else:
-                filtered_capture_path = capture_path
-            
             start_time = time.time()
             closest_text = ""
             
             while time.time() - start_time < timeout:
-                extracted_text, detected_language, language_confidence = self._extract_text_from_area(filtered_capture_path, area)
+                # Use original captured images (text verification processes images as needed)
+                extracted_text, detected_language, language_confidence = self._extract_text_from_area(capture_path, area, image_filter)
                 
                 # Keep track of the longest extracted text as "closest"
                 if len(extracted_text.strip()) > len(closest_text):
@@ -445,15 +391,11 @@ class TextVerificationController(VerificationControllerInterface):
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in captured frame: '{extracted_text.strip()}'")
                     
-                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
+                    # Save cropped source image for UI comparison
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
-                    
-                    # Clean up temp file if it was created
-                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                        os.unlink(filtered_capture_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
@@ -464,42 +406,18 @@ class TextVerificationController(VerificationControllerInterface):
                 
                 # Re-capture if we're in a loop
                 if time.time() - start_time < timeout:
-                    # Clean up previous temp file
-                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                        os.unlink(filtered_capture_path)
-                    
                     capture_path = self.av_controller.capture_screen()
                     if not capture_path:
                         additional_data["threshold"] = 0.0
                         return False, "Failed to re-capture screen for text verification", additional_data
-                    
-                    # Create new filtered copy if needed
-                    filtered_capture_path = capture_path
-                    if image_filter and image_filter != 'none':
-                        import tempfile
-                        import shutil
-                        
-                        temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_capture_')
-                        os.close(temp_fd)
-                        shutil.copy2(capture_path, temp_path)
-                        
-                        if apply_image_filter(temp_path, image_filter):
-                            filtered_capture_path = temp_path
-                        else:
-                            os.unlink(temp_path)
-                            filtered_capture_path = capture_path
                 
                 time.sleep(0.5)
             
-            # Save cropped source for comparison even if not found (from ORIGINAL)
+            # Save cropped source for comparison even if not found
             if area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
-            
-            # Clean up temp file if it was created
-            if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                os.unlink(filtered_capture_path)
             
             additional_data["extracted_text"] = closest_text
             additional_data["detected_language"] = "eng"
@@ -549,7 +467,7 @@ class TextVerificationController(VerificationControllerInterface):
             # Text is still present (was found)
             return False, f"Text still present: {message}", additional_data
 
-    def _extract_text_from_area(self, image_path: str, area: dict = None) -> tuple:
+    def _extract_text_from_area(self, image_path: str, area: dict = None, image_filter: str = None) -> tuple:
         """
         Extract text from image area using Tesseract OCR.
         Uses the exact same cropping approach as image verification.
@@ -557,15 +475,45 @@ class TextVerificationController(VerificationControllerInterface):
         Args:
             image_path: Path to the image file
             area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
+            image_filter: Optional filter to apply to the image before OCR
             
         Returns:
             Tuple of (extracted_text, detected_language, language_confidence)
         """
         try:
+            # Apply filtering to source image if needed
+            filtered_source_path = image_path
+            temp_file_created = False
+            
+            if image_filter and image_filter != 'none':
+                import tempfile
+                import shutil
+                
+                # Create temporary file for filtered version
+                temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_text_')
+                os.close(temp_fd)
+                temp_file_created = True
+                
+                # Copy original to temp location
+                shutil.copy2(image_path, temp_path)
+                
+                # Apply filter to temporary copy
+                if apply_image_filter(temp_path, image_filter):
+                    filtered_source_path = temp_path
+                    print(f"[@controller:TextVerification] Created filtered text source copy: {temp_path}")
+                else:
+                    print(f"[@controller:TextVerification] Failed to apply filter, using original")
+                    os.unlink(temp_path)  # Clean up failed temp file
+                    temp_file_created = False
+                    filtered_source_path = image_path
+            
             # Load image using OpenCV (same as image verification)
-            img = cv2.imread(image_path)
+            img = cv2.imread(filtered_source_path)
             if img is None:
-                print(f"[@controller:TextVerification] Could not load image: {image_path}")
+                print(f"[@controller:TextVerification] Could not load image: {filtered_source_path}")
+                # Clean up temp file if it was created
+                if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
+                    os.unlink(filtered_source_path)
                 return "", "eng", 0.0
             
             # Crop image to area if specified (exact same approach as image verification)
@@ -600,21 +548,31 @@ class TextVerificationController(VerificationControllerInterface):
             success = cv2.imwrite(temp_path, img)
             if not success:
                 print(f"[@controller:TextVerification] Failed to save cropped image for OCR: {temp_path}")
+                # Clean up source filter temp file if it was created
+                if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
+                    os.unlink(filtered_source_path)
                 return "", "eng", 0.0
             
             # Run language detection on the cropped image
             detected_language, language_confidence, detected_text = self._detect_text_language(temp_path)
             
-            # Clean up temporary file
+            # Clean up temporary files
             try:
                 os.unlink(temp_path)
             except:
                 pass
+            
+            # Clean up source filter temp file if it was created
+            if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
+                os.unlink(filtered_source_path)
                 
             return detected_text, detected_language, language_confidence
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
+            # Clean up source filter temp file if it was created
+            if 'temp_file_created' in locals() and temp_file_created and 'filtered_source_path' in locals() and filtered_source_path != image_path and os.path.exists(filtered_source_path):
+                os.unlink(filtered_source_path)
             return "", "eng", 0.0
 
     def _detect_text_language(self, image_path: str) -> Tuple[str, float, str]:

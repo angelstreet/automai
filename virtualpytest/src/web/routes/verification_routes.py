@@ -504,26 +504,38 @@ def execute_batch_verification():
                 
                 # Include additional data for UI thumbnails
                 if additional_data:
-                    # Convert absolute paths to relative URLs for web access
-                    if 'source_image_path' in additional_data:
-                        # Convert /path/to/tmp/{model}/source_cropped_{index}.png to /api/virtualpytest/tmp/{model}/source_cropped_{index}.png
-                        source_path = additional_data['source_image_path']
-                        if '/tmp/' in source_path:
-                            relative_path = source_path.split('/tmp/')[-1]
-                            additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
-                    
+                    # Convert reference path to URL for UI display
                     if 'reference_image_path' in additional_data:
-                        print(f"[@route:execute_batch_verification] Converting reference path: {additional_data['reference_image_path']}")
-                        # Convert absolute reference path to relative URL
                         ref_path = additional_data['reference_image_path']
+                        print(f"[@route:execute_batch_verification] Converting reference path: {ref_path}")
+                        
+                        # Check if we have an image filter and update the reference URL accordingly
+                        image_filter = verification.get('image_filter')
+                        
                         if '/resources/' in ref_path:
                             # Extract model and filename from path like /path/to/resources/{model}/filename.png
                             path_parts = ref_path.split('/resources/')[-1].split('/')
                             if len(path_parts) >= 2:
                                 ref_model = path_parts[0]
                                 ref_filename = path_parts[1]
-                                additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
-                                print(f"[@route:execute_batch_verification] Set reference_image_url: {additional_data['reference_image_url']}")
+                                
+                                # If filter is applied and filtered reference exists, use filtered version
+                                if image_filter and image_filter != 'none':
+                                    # Get base filename without extension
+                                    base_name, ext = os.path.splitext(ref_filename)
+                                    filtered_filename = f"{base_name}_{image_filter}{ext}"
+                                    
+                                    # Check if filtered reference exists
+                                    filtered_ref_path = ref_path.replace(ref_filename, filtered_filename)
+                                    if os.path.exists(filtered_ref_path):
+                                        additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{filtered_filename}'
+                                        print(f"[@route:execute_batch_verification] Using filtered reference URL: {additional_data['reference_image_url']}")
+                                    else:
+                                        additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                                        print(f"[@route:execute_batch_verification] Filtered reference not found, using original: {additional_data['reference_image_url']}")
+                                else:
+                                    additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                                    print(f"[@route:execute_batch_verification] Set reference_image_url: {additional_data['reference_image_url']}")
                             else:
                                 print(f"[@route:execute_batch_verification] ERROR: Invalid path structure for resources: {path_parts}")
                         elif '/tmp/' in ref_path:
@@ -535,6 +547,36 @@ def execute_batch_verification():
                             print(f"[@route:execute_batch_verification] ERROR: Reference path doesn't contain /resources/ or /tmp/: {ref_path}")
                     else:
                         print(f"[@route:execute_batch_verification] WARNING: No reference_image_path in additional_data for image verification")
+                    
+                    # Convert source path to URL for UI display with filter applied if available
+                    if 'source_image_path' in additional_data:
+                        source_path = additional_data['source_image_path']
+                        print(f"[@route:execute_batch_verification] Converting source path: {source_path}")
+                        
+                        image_filter = verification.get('image_filter')
+                        
+                        if '/tmp/' in source_path:
+                            relative_path = source_path.split('/tmp/')[-1]
+                            
+                            # If filter is applied, check if filtered source exists and use it for display
+                            if image_filter and image_filter != 'none':
+                                # Get base filename without extension  
+                                base_path, ext = os.path.splitext(source_path)
+                                filtered_source_path = f"{base_path}_{image_filter}{ext}"
+                                
+                                if os.path.exists(filtered_source_path):
+                                    # Update the source path to filtered version for UI display
+                                    filtered_relative_path = filtered_source_path.split('/tmp/')[-1]
+                                    additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{filtered_relative_path}'
+                                    print(f"[@route:execute_batch_verification] Using filtered source URL: {additional_data['source_image_url']}")
+                                else:
+                                    additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                                    print(f"[@route:execute_batch_verification] Filtered source not found, using original: {additional_data['source_image_url']}")
+                            else:
+                                additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                                print(f"[@route:execute_batch_verification] Set source_image_url: {additional_data['source_image_url']}")
+                        else:
+                            print(f"[@route:execute_batch_verification] WARNING: Source path doesn't contain /tmp/: {source_path}")
                     
                     print(f"[@route:execute_batch_verification] Final additional_data keys: {list(additional_data.keys())}")
                     
@@ -593,18 +635,18 @@ def capture_reference_image():
                 'error': 'Missing required parameters: area, source_path, or reference_name'
             }), 400
             
-        # Create flat directory structure: /tmp/{model}/
+        # Create resources directory structure: /resources/{model}/
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', model)
+        target_dir = os.path.join(base_dir, 'resources', model)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Define target path with consistent naming
+        # Define target path in resources directory
         target_path = os.path.join(target_dir, f"{reference_name}.png")
         
         # Import the crop function from image controller
         from controllers.verification.image import crop_reference_image
         
-        # Crop and save reference image
+        # Crop and save reference image (this will automatically create filtered versions)
         success = crop_reference_image(source_path, target_path, area)
         
         if success:
@@ -612,7 +654,7 @@ def capture_reference_image():
             relative_path = f"/api/virtualpytest/reference/image/{model}/{reference_name}.png"
             return jsonify({
                 'success': True,
-                'message': f'Reference image saved: {reference_name}',
+                'message': f'Reference image saved with filtered versions: {reference_name}',
                 'image_path': target_path,
                 'image_url': relative_path
             })

@@ -1401,7 +1401,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
-            A {referenceType} reference named "{referenceName}" already exists for model "{model}".
+            A {referenceType} reference named "{referenceName}" already exists for model "{model}".<br />
             Do you want to overwrite it?
           </Typography>
         </DialogContent>

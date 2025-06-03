@@ -465,28 +465,22 @@ class ImageVerificationController(VerificationControllerInterface):
         if image_filter and image_filter != 'none':
             print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
         
-        # Load reference image
+        # Load reference image - use pre-existing filtered version if available
         if not os.path.exists(image_path):
             error_msg = f"Reference image not found at path: {image_path}"
             print(f"[@controller:ImageVerification] {error_msg}")
             return False, error_msg, {}
         
-        # Create filtered reference image if filter is applied
+        # Get filtered reference image path (only change the reference, not source)
         filtered_reference_path = image_path
-        if image_filter and image_filter != 'none' and model is not None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            filtered_ref_path = os.path.join(base_dir, 'tmp', model, f'reference_filtered_{verification_index}.png')
-            
-            # Copy reference to filtered location
-            import shutil
-            shutil.copy2(image_path, filtered_ref_path)
-            
-            # Apply filter to the reference copy
-            if apply_image_filter(filtered_ref_path, image_filter):
-                filtered_reference_path = filtered_ref_path
-                print(f"[@controller:ImageVerification] Created filtered reference: {filtered_reference_path}")
+        if image_filter and image_filter != 'none':
+            base_path, ext = os.path.splitext(image_path)
+            filtered_path = f"{base_path}_{image_filter}{ext}"
+            if os.path.exists(filtered_path):
+                filtered_reference_path = filtered_path
+                print(f"[@controller:ImageVerification] Using pre-existing filtered reference: {filtered_reference_path}")
             else:
-                print(f"[@controller:ImageVerification] Failed to apply filter to reference, using original")
+                print(f"[@controller:ImageVerification] Filtered reference not found, using original: {image_path}")
         
         ref_img = cv2.imread(filtered_reference_path, cv2.IMREAD_COLOR)
         if ref_img is None:
@@ -507,7 +501,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 if not os.path.exists(source_path):
                     continue
                 
-                # Create a temporary copy for filtering (don't modify original)
+                # Apply filtering to source images if needed
                 filtered_source_path = source_path
                 if image_filter and image_filter != 'none':
                     import tempfile
@@ -523,14 +517,14 @@ class ImageVerificationController(VerificationControllerInterface):
                     # Apply filter to temporary copy
                     if apply_image_filter(temp_path, image_filter):
                         filtered_source_path = temp_path
-                        print(f"[@controller:ImageVerification] Created filtered copy: {temp_path}")
+                        print(f"[@controller:ImageVerification] Created filtered source copy: {temp_path}")
                     else:
                         print(f"[@controller:ImageVerification] Failed to apply filter, using original")
                         os.unlink(temp_path)  # Clean up failed temp file
                         filtered_source_path = source_path
                 else:
                     filtered_source_path = source_path
-                    
+                
                 source_img = cv2.imread(filtered_source_path, cv2.IMREAD_COLOR)
                 if source_img is None:
                     # Clean up temp file if it was created
@@ -542,7 +536,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 
                 if confidence > max_confidence:
                     max_confidence = confidence
-                    best_source_path = source_path  # Always use original path for cropping
+                    best_source_path = source_path
                 
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
@@ -566,7 +560,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 if filtered_source_path != source_path and os.path.exists(filtered_source_path):
                     os.unlink(filtered_source_path)
             
-            # If no match found, still save the best source for comparison (from ORIGINAL)
+            # If no match found, still save the best source for comparison
             if best_source_path and area and model is not None:
                 print(f"[@controller:ImageVerification] Attempting to save cropped source for comparison:")
                 print(f"  best_source_path: {best_source_path}")
@@ -599,40 +593,43 @@ class ImageVerificationController(VerificationControllerInterface):
             if not capture_path:
                 return False, "Failed to capture screen for image verification", additional_data
             
-            # Create a temporary copy for filtering (don't modify original)
-            filtered_capture_path = capture_path
-            if image_filter and image_filter != 'none':
-                import tempfile
-                import shutil
-                
-                # Create temporary file for filtered version
-                temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_capture_')
-                os.close(temp_fd)
-                
-                # Copy original to temp location
-                shutil.copy2(capture_path, temp_path)
-                
-                # Apply filter to temporary copy
-                if apply_image_filter(temp_path, image_filter):
-                    filtered_capture_path = temp_path
-                    print(f"[@controller:ImageVerification] Created filtered capture copy: {temp_path}")
-                else:
-                    print(f"[@controller:ImageVerification] Failed to apply filter, using original capture")
-                    os.unlink(temp_path)  # Clean up failed temp file
-                    filtered_capture_path = capture_path
-            else:
-                filtered_capture_path = capture_path
-            
             start_time = time.time()
+            last_confidence = 0.0  # Track last confidence for final reporting
+            
             while time.time() - start_time < timeout:
-                source_img = cv2.imread(filtered_capture_path, cv2.IMREAD_COLOR)
+                # Apply filtering to captured source image if needed
+                filtered_source_path = capture_path
+                if image_filter and image_filter != 'none':
+                    import tempfile
+                    import shutil
+                    
+                    # Create temporary file for filtered version
+                    temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_capture_')
+                    os.close(temp_fd)
+                    
+                    # Copy original to temp location
+                    shutil.copy2(capture_path, temp_path)
+                    
+                    # Apply filter to temporary copy
+                    if apply_image_filter(temp_path, image_filter):
+                        filtered_source_path = temp_path
+                        print(f"[@controller:ImageVerification] Created filtered capture copy: {temp_path}")
+                    else:
+                        print(f"[@controller:ImageVerification] Failed to apply filter, using original")
+                        os.unlink(temp_path)  # Clean up failed temp file
+                        filtered_source_path = capture_path
+                else:
+                    filtered_source_path = capture_path
+                
+                source_img = cv2.imread(filtered_source_path, cv2.IMREAD_COLOR)
                 if source_img is None:
                     # Clean up temp file if it was created
-                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                        os.unlink(filtered_capture_path)
+                    if filtered_source_path != capture_path and os.path.exists(filtered_source_path):
+                        os.unlink(filtered_source_path)
                     return False, "Failed to load captured image for verification", additional_data
                 
                 confidence = self._match_template(ref_img, source_img, area)
+                last_confidence = confidence  # Keep track of last confidence
                 
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Image found in captured frame with confidence {confidence:.3f}")
@@ -647,54 +644,31 @@ class ImageVerificationController(VerificationControllerInterface):
                     additional_data["threshold"] = confidence
                     
                     # Clean up temp file if it was created
-                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                        os.unlink(filtered_capture_path)
+                    if filtered_source_path != capture_path and os.path.exists(filtered_source_path):
+                        os.unlink(filtered_source_path)
                     
                     return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
                 
+                # Clean up temp file before next iteration
+                if filtered_source_path != capture_path and os.path.exists(filtered_source_path):
+                    os.unlink(filtered_source_path)
+                
                 # Re-capture if we're in a loop
                 if time.time() - start_time < timeout:
-                    # Clean up previous temp file
-                    if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                        os.unlink(filtered_capture_path)
-                    
                     capture_path = self.av_controller.capture_screen()
                     if not capture_path:
                         return False, "Failed to re-capture screen for image verification", additional_data
-                    
-                    # Create new filtered copy if needed
-                    filtered_capture_path = capture_path
-                    if image_filter and image_filter != 'none':
-                        import tempfile
-                        import shutil
-                        
-                        temp_fd, temp_path = tempfile.mkstemp(suffix='.png', prefix='filtered_capture_')
-                        os.close(temp_fd)
-                        shutil.copy2(capture_path, temp_path)
-                        
-                        if apply_image_filter(temp_path, image_filter):
-                            filtered_capture_path = temp_path
-                        else:
-                            os.unlink(temp_path)
-                            filtered_capture_path = capture_path
                 
                 time.sleep(0.5)
             
-            # Save cropped source for comparison even if not found (from ORIGINAL)
+            # Save cropped source for comparison even if not found (from ORIGINAL, not filtered)
             if area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
             
             # Save last confidence for threshold display and disappear operations
-            if 'confidence' in locals():
-                additional_data["threshold"] = confidence
-            else:
-                additional_data["threshold"] = 0.0
-            
-            # Clean up temp file if it was created
-            if filtered_capture_path != capture_path and os.path.exists(filtered_capture_path):
-                os.unlink(filtered_capture_path)
+            additional_data["threshold"] = last_confidence
             
             return False, f"Image not found after {timeout}s timeout", additional_data
 
