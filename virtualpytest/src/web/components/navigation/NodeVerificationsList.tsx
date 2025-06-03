@@ -1139,7 +1139,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
               <Typography component="span">
-                {imageComparisonDialog.referenceUrl ? 'Image Comparison' : 'Text Verification Search Area'}
+                {imageComparisonDialog.referenceUrl ? 'Image Comparison' : 'Text Verification'}
               </Typography>
               {imageComparisonDialog.resultType && (
                 <Typography component="span" sx={{ 
@@ -1163,9 +1163,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             width: '100%'
           }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                Source
-              </Typography>
               <img
                 src={imageComparisonDialog.sourceUrl}
                 alt="Source Image"
