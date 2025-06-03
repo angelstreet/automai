@@ -964,6 +964,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                           OCR: {testResults[index].ocrConfidence!.toFixed(1)}%
                         </Typography>
                       )}
+                      {/* Show threshold for text verifications as fallback */}
+                      {verification.controller_type === 'text' && testResults[index].ocrConfidence === undefined && testResults[index].threshold !== undefined && (
+                        <Typography variant="caption" sx={{ 
+                          fontSize: '0.65rem',
+                          color: 'rgba(255,255,255,0.7)',
+                          ml: 0.5
+                        }}>
+                          {(testResults[index].threshold! * 100).toFixed(1)}%
+                        </Typography>
+                      )}
                       {/* Show error message for ERROR type results */}
                       {testResults[index].resultType === 'ERROR' && (testResults[index].message || testResults[index].error) && (
                         <Typography variant="caption" sx={{ 
