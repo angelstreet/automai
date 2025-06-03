@@ -22,6 +22,15 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
 
+// Import extracted components
+import { ImageComparisonThumbnails } from '../verification/ImageComparisonThumbnails';
+import { TextComparisonDisplay } from '../verification/TextComparisonDisplay';
+import { ImageComparisonModal } from '../verification/ImageComparisonModal';
+
+// Import extracted hooks
+import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
+import { useImageComparisonModal } from '../../hooks/verification/useImageComparisonModal';
+
 interface NodeVerification {
   id: string;
   label: string;
@@ -68,25 +77,6 @@ interface VerificationActions {
   [category: string]: VerificationAction[];
 }
 
-interface ReferenceImage {
-  name: string;
-  model: string;
-  path: string;
-  full_path: string;
-  created_at: string;
-  type: 'image' | 'text';
-  area: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  // Text reference specific fields
-  text?: string;
-  font_size?: number;
-  confidence?: number;
-}
-
 interface NodeVerificationsListProps {
   verifications: NodeVerification[];
   availableActions: VerificationActions;
@@ -110,64 +100,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   testResults = [],
   reloadTrigger = 0,
 }) => {
-  const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
-  const [referencesLoading, setReferencesLoading] = useState(false);
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
-  const [imageComparisonDialog, setImageComparisonDialog] = useState<{
-    open: boolean;
-    sourceUrl: string;
-    referenceUrl: string;
-    userThreshold?: number;
-    matchingResult?: number;
-    resultType?: 'PASS' | 'FAIL' | 'ERROR';
-    imageFilter?: 'none' | 'greyscale' | 'binary';
-  }>({
-    open: false,
-    sourceUrl: '',
-    referenceUrl: '',
-    userThreshold: undefined,
-    matchingResult: undefined,
-    resultType: undefined,
-    imageFilter: undefined
-  });
 
-  // Fetch available reference images on component mount
-  useEffect(() => {
-    fetchAvailableReferences();
-  }, []);
+  // Use extracted hooks
+  const {
+    availableReferences,
+    referencesLoading,
+    getModelReferences
+  } = useVerificationReferences(reloadTrigger);
 
-  // Reload references when reloadTrigger changes
-  useEffect(() => {
-    if (reloadTrigger > 0) {
-      console.log('[@component:NodeVerificationsList] Reloading references due to trigger:', reloadTrigger);
-      fetchAvailableReferences();
-    }
-  }, [reloadTrigger]);
-
-  const fetchAvailableReferences = async () => {
-    setReferencesLoading(true);
-    try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/list');
-      const result = await response.json();
-      
-      if (result.success) {
-        setAvailableReferences(result.references || []);
-        console.log('[@component:NodeVerificationsList] Loaded references:', result.references);
-      } else {
-        console.error('[@component:NodeVerificationsList] Failed to load references:', result.error);
-      }
-    } catch (error) {
-      console.error('[@component:NodeVerificationsList] Error fetching references:', error);
-    } finally {
-      setReferencesLoading(false);
-    }
-  };
-
-  // Filter references by current model
-  const getModelReferences = () => {
-    if (!model) return availableReferences;
-    return availableReferences.filter(ref => ref.model === model);
-  };
+  const {
+    imageComparisonDialog,
+    openImageComparisonModal,
+    closeImageComparisonModal
+  } = useImageComparisonModal();
 
   const addVerification = () => {
     const newVerification: NodeVerification = {
@@ -232,7 +178,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   };
 
   const handleReferenceSelect = (index: number, referenceName: string) => {
-    const selectedRef = getModelReferences().find(ref => ref.name === referenceName);
+    const selectedRef = getModelReferences(model).find(ref => ref.name === referenceName);
     if (selectedRef) {
       console.log('[@component:NodeVerificationsList] Selected reference details:', {
         name: selectedRef.name,
@@ -309,230 +255,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     console.log('[@component:NodeVerificationsList] Changed text filter to:', filter);
   };
 
-  // Component for displaying image comparison thumbnails
-  const ImageComparisonThumbnails: React.FC<{
-    sourceUrl: string;
-    referenceUrl: string;
-    resultType: 'PASS' | 'FAIL' | 'ERROR';
-    userThreshold?: number;
-    matchingResult?: number;
-    imageFilter?: 'none' | 'greyscale' | 'binary';
-  }> = ({ sourceUrl, referenceUrl, resultType, userThreshold, matchingResult, imageFilter }) => {
-    const handleImageClick = () => {
-      setImageComparisonDialog({
-        open: true,
-        sourceUrl: `http://localhost:5009${sourceUrl}`,
-        referenceUrl: `http://localhost:5009${referenceUrl}`,
-        userThreshold,
-        matchingResult,
-        resultType,
-        imageFilter
-      });
-    };
-
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 0.5, 
-        alignItems: 'center',
-        padding: '4px',
-        border: `1px solid ${
-          resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
-        }`,
-        borderRadius: 1,
-        backgroundColor: 'rgba(0,0,0,0.1)',
-        width: '100%'
-      }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
-            Source
-          </Typography>
-          <img
-            src={`http://localhost:5009${sourceUrl}`}
-            alt="Source"
-            style={{
-              width: '100%',
-              maxWidth: '200px',
-              height: '150px',
-              objectFit: 'contain',
-              border: '1px solid #666',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-            onClick={handleImageClick}
-          />
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
-            Reference
-          </Typography>
-          <img
-            src={`http://localhost:5009${referenceUrl}`}
-            alt="Reference"
-            style={{
-              width: '100%',
-              maxWidth: '200px',
-              height: '150px',
-              objectFit: 'contain',
-              border: '1px solid #666',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-            onClick={handleImageClick}
-          />
-        </Box>
-      </Box>
-    );
-  };
-
-  // Component for displaying text comparison
-  const TextComparisonDisplay: React.FC<{
-    searchedText: string;
-    extractedText: string;
-    sourceUrl?: string;
-    resultType: 'PASS' | 'FAIL' | 'ERROR';
-    detectedLanguage?: string;
-    languageConfidence?: number;
-  }> = ({ searchedText, extractedText, sourceUrl, resultType, detectedLanguage, languageConfidence }) => {
-    
-    const handleSourceImageClick = () => {
-      if (sourceUrl) {
-        setImageComparisonDialog({
-          open: true,
-          sourceUrl: `http://localhost:5009${sourceUrl}`,
-          referenceUrl: '', // No reference for text verification
-          resultType,
-          userThreshold: undefined,
-          matchingResult: undefined,
-          imageFilter: undefined
-        });
-      }
-    };
-
-    // Map language codes to readable names
-    const getLanguageName = (langCode: string) => {
-      const languageMap: { [key: string]: string } = {
-        'eng': 'English',
-        'fra': 'French',
-        'ita': 'Italian',
-        'deu': 'German',
-        'spa': 'Spanish',
-        'por': 'Portuguese',
-        'rus': 'Russian',
-        'jpn': 'Japanese',
-        'chi': 'Chinese',
-        'kor': 'Korean'
-      };
-      return languageMap[langCode] || langCode.toUpperCase();
-    };
-    
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
-        alignItems: 'flex-start',
-        padding: '8px',
-        border: `1px solid ${
-          resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
-        }`,
-        borderRadius: 1,
-        backgroundColor: 'rgba(0,0,0,0.1)'
-      }}>
-        {sourceUrl && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1 }}>
-            <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
-              Source
-            </Typography>
-            <img
-              src={`http://localhost:5009${sourceUrl}`}
-              alt="Source"
-              onClick={handleSourceImageClick}
-              style={{
-                width: '100px',
-                height: '100px',
-                objectFit: 'contain',
-                border: '1px solid #666',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-              title="Click to view full size"
-            />
-          </Box>
-        )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
-              Searched:
-            </Typography>
-            <Typography variant="caption" sx={{ 
-              fontSize: '0.7rem', 
-              display: 'block',
-              color: '#90caf9',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              "{searchedText}"
-            </Typography>
-          </Box>
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
-              Found:
-            </Typography>
-            <Typography variant="caption" sx={{ 
-              fontSize: '0.7rem', 
-              display: 'block',
-              color: resultType === 'PASS' ? '#4caf50' : '#f44336',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              "{extractedText || 'No text found'}"
-            </Typography>
-          </Box>
-          {/* Language detection information */}
-          {detectedLanguage && languageConfidence !== undefined && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography variant="caption" sx={{ 
-                fontSize: '0.6rem', 
-                color: '#ffb74d',
-                fontWeight: 500
-              }}>
-                {getLanguageName(detectedLanguage)}
-              </Typography>
-              <Typography variant="caption" sx={{ 
-                fontSize: '0.6rem', 
-                color: '#81c784',
-                fontWeight: 500
-              }}>
-                {(languageConfidence * 100).toFixed(1)}% confidence
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </Box>
-    );
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
-        <CircularProgress size={20} />
-        <Typography>Running verifications...</Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
-
-  const modelReferences = getModelReferences();
-
   // Check if all verifications have required inputs
   const areVerificationsValid = () => {
     if (verifications.length === 0) return false;
@@ -556,6 +278,25 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       return true;
     });
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
+        <CircularProgress size={20} />
+        <Typography>Running verifications...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  const modelReferences = getModelReferences(model);
 
   return (
     <Box>
@@ -1038,6 +779,14 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         userThreshold={verification.params?.threshold}
                         matchingResult={testResults[index].threshold}
                         imageFilter={verification.params?.image_filter}
+                        onImageClick={() => openImageComparisonModal({
+                          sourceUrl: testResults[index].sourceImageUrl!,
+                          referenceUrl: testResults[index].referenceImageUrl!,
+                          userThreshold: verification.params?.threshold,
+                          matchingResult: testResults[index].threshold,
+                          resultType: testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL'),
+                          imageFilter: verification.params?.image_filter
+                        })}
                       />
                     )}
                     
@@ -1051,6 +800,18 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
                         detectedLanguage={testResults[index].detectedLanguage}
                         languageConfidence={testResults[index].languageConfidence}
+                        onSourceImageClick={() => {
+                          if (testResults[index].sourceImageUrl) {
+                            openImageComparisonModal({
+                              sourceUrl: testResults[index].sourceImageUrl!,
+                              referenceUrl: '', // No reference for text verification
+                              resultType: testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL'),
+                              userThreshold: undefined,
+                              matchingResult: undefined,
+                              imageFilter: undefined
+                            });
+                          }
+                        }}
                       />
                     )}
                   </Box>
@@ -1164,143 +925,17 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         </Box>
       )}
       
-      {/* Scaled Image Modal */}
-      <Dialog
+      {/* Use extracted ImageComparisonModal component */}
+      <ImageComparisonModal
         open={imageComparisonDialog.open}
-        onClose={() => setImageComparisonDialog(prev => ({ ...prev, open: false }))}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: '#2E2E2E',
-            color: '#ffffff',
-            maxWidth: '95vw',
-            maxHeight: '95vh'
-          }
-        }}
-      >
-        <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem', textAlign: 'center' }}>
-          {imageComparisonDialog.userThreshold !== undefined || imageComparisonDialog.matchingResult !== undefined ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                {imageComparisonDialog.userThreshold !== undefined && (
-                  <Typography component="span" sx={{ fontSize: '0.9rem' }}>
-                    Threshold: {(imageComparisonDialog.userThreshold * 100).toFixed(1)}%
-                  </Typography>
-                )}
-                {imageComparisonDialog.matchingResult !== undefined && (
-                  <Typography component="span" sx={{ 
-                    fontSize: '0.9rem',
-                    color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : '#f44336',
-                    fontWeight: 600
-                  }}>
-                    Matching: {(imageComparisonDialog.matchingResult * 100).toFixed(1)}%
-                  </Typography>
-                )}
-                {imageComparisonDialog.resultType && (
-                  <Typography component="span" sx={{ 
-                    color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
-                          imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                    fontWeight: 600,
-                    fontSize: '0.9rem'
-                  }}>
-                    [{imageComparisonDialog.resultType}]
-                  </Typography>
-                )}
-              </Box>
-              {imageComparisonDialog.imageFilter && imageComparisonDialog.imageFilter !== 'none' && (
-                <Typography component="span" sx={{ 
-                  color: '#90caf9',
-                  fontWeight: 500,
-                  fontSize: '0.8rem'
-                }}>
-                  Filter: {imageComparisonDialog.imageFilter}
-                </Typography>
-              )}
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-              <Typography component="span">
-                {imageComparisonDialog.referenceUrl ? 'Image Comparison' : 'Text Verification'}
-              </Typography>
-              {imageComparisonDialog.resultType && (
-                <Typography component="span" sx={{ 
-                  color: imageComparisonDialog.resultType === 'PASS' ? '#4caf50' : 
-                        imageComparisonDialog.resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                  fontWeight: 600,
-                  fontSize: '0.9rem'
-                }}>
-                  [{imageComparisonDialog.resultType}]
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogTitle>
-        <DialogContent sx={{ p: 2 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2, 
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            width: '100%'
-          }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-              {imageComparisonDialog.referenceUrl && (
-                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                  Source
-                </Typography>
-              )}
-              <img
-                src={imageComparisonDialog.sourceUrl}
-                alt="Source Image"
-                style={{
-                  width: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  border: '2px solid #666',
-                  borderRadius: '8px'
-                }}
-              />
-            </Box>
-            {imageComparisonDialog.referenceUrl && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                  Reference
-                </Typography>
-                <img
-                  src={imageComparisonDialog.referenceUrl}
-                  alt="Reference Image"
-                  style={{
-                    width: '100%',
-                    maxHeight: '70vh',
-                    objectFit: 'contain',
-                    border: '2px solid #666',
-                    borderRadius: '8px'
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
-          <Button 
-            onClick={() => setImageComparisonDialog(prev => ({ ...prev, open: false }))}
-            variant="outlined"
-            size="small"
-            sx={{
-              borderColor: '#666',
-              color: '#ffffff',
-              fontSize: '0.75rem',
-              '&:hover': {
-                borderColor: '#888',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-              }
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        sourceUrl={imageComparisonDialog.sourceUrl}
+        referenceUrl={imageComparisonDialog.referenceUrl}
+        userThreshold={imageComparisonDialog.userThreshold}
+        matchingResult={imageComparisonDialog.matchingResult}
+        resultType={imageComparisonDialog.resultType}
+        imageFilter={imageComparisonDialog.imageFilter}
+        onClose={closeImageComparisonModal}
+      />
     </Box>
   );
 }; 
