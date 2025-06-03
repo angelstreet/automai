@@ -231,6 +231,15 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   const handleReferenceSelect = (index: number, referenceName: string) => {
     const selectedRef = getModelReferences().find(ref => ref.name === referenceName);
     if (selectedRef) {
+      console.log('[@component:NodeVerificationsList] Selected reference details:', {
+        name: selectedRef.name,
+        model: selectedRef.model,
+        type: selectedRef.type,
+        path: selectedRef.path,
+        full_path: selectedRef.full_path,
+        area: selectedRef.area
+      });
+      
       const baseParams = {
         ...verifications[index].params,
         area: {
@@ -252,7 +261,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             full_path: selectedRef.full_path
           }
         });
-        console.log('[@component:NodeVerificationsList] Selected image reference:', selectedRef.name, 'with full_path:', selectedRef.full_path);
+        console.log('[@component:NodeVerificationsList] Updated verification with image reference:', {
+          reference_image: selectedRef.name,
+          reference_path: selectedRef.path,
+          full_path: selectedRef.full_path
+        });
       } else if (selectedRef.type === 'text') {
         // Text reference parameters
         updateVerification(index, {
@@ -264,7 +277,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             font_size: selectedRef.font_size
           }
         });
-        console.log('[@component:NodeVerificationsList] Selected text reference:', selectedRef.name, 'with text:', selectedRef.text);
+        console.log('[@component:NodeVerificationsList] Updated verification with text reference:', {
+          reference_text: selectedRef.text,
+          reference_name: selectedRef.name,
+          font_size: selectedRef.font_size
+        });
       }
     }
   };
@@ -1039,7 +1056,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             size="small"
             variant="outlined"
             startIcon={<PlayIcon />}
-            onClick={onTest}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTest();
+            }}
             disabled={!areVerificationsValid()}
             sx={{
               minWidth: 'auto',

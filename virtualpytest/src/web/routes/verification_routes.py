@@ -784,7 +784,7 @@ def save_reference_image():
             
         # Define paths
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        temp_file = os.path.join(base_dir, 'tmp', 'model', 'capture.png')
+        temp_file = os.path.join(base_dir, 'tmp', model_name, 'capture.png')  # Use actual model_name instead of hardcoded 'model'
         
         # Ensure resources directory exists
         resources_dir = os.path.join(base_dir, 'resources', model_name)
@@ -837,6 +837,13 @@ def save_reference_image():
         }
         
         print(f"[@route:save_reference_image] Saved area coordinates: {resource_entry['area']}")
+        print(f"[@route:save_reference_image] Resource entry details:")
+        print(f"  - name: {resource_entry['name']}")
+        print(f"  - model: {resource_entry['model']}")
+        print(f"  - path: {resource_entry['path']}")
+        print(f"  - full_path: {resource_entry['full_path']}")
+        print(f"  - temp_file used: {temp_file}")
+        print(f"  - final_path: {final_path}")
         
         # Check if resource already exists (update instead of duplicate)
         existing_index = -1

@@ -422,7 +422,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
-  const handleTest = async () => {
+  const handleTest = async (event?: React.MouseEvent) => {
+    // Prevent any default form submission behavior
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     if (verifications.length === 0) {
       console.log('[@component:VerificationEditor] No verifications to test');
       return;

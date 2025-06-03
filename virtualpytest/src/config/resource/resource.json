@@ -5,13 +5,13 @@
       "model": "android_mobile",
       "path": "resources/android_mobile/default_capture.png",
       "full_path": "/Users/cpeengineering/automai/automai/virtualpytest/src/resources/android_mobile/default_capture.png",
-      "created_at": "2025-06-03T14:31:58.318639",
+      "created_at": "2025-06-03T14:36:00.650125",
       "type": "reference_image",
       "area": {
-        "x": 722,
-        "y": 189,
-        "width": 401,
-        "height": 263
+        "x": 754,
+        "y": 147,
+        "width": 415,
+        "height": 311
       }
     },
     {
@@ -19,17 +19,17 @@
       "model": "android_mobile",
       "path": "",
       "full_path": "",
-      "created_at": "2025-06-03T10:19:40.950291",
+      "created_at": "2025-06-03T14:37:33.847091",
       "type": "text_reference",
       "area": {
-        "x": 729.2307692307692,
+        "x": 733.8461538461538,
         "y": 600,
-        "width": 156.9230769230769,
-        "height": 36.92307692307692
+        "width": 154.6153846153846,
+        "height": 34.61538461538461
       },
       "text": "Beliebt im TV",
       "font_size": 16,
-      "confidence": 0.9333333333333332
+      "confidence": 0.93
     },
     {
       "name": "test_save",
