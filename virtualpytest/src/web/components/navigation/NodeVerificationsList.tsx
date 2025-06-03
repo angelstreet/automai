@@ -21,33 +21,6 @@ import {
   FormLabel,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
-import { MODEL_TYPES, ModelType } from '../../types/model.types';
-
-// Model-Verification Controller Compatibility Configuration
-// Based on the actual MODEL_TYPES from model.types.ts
-const MODEL_VERIFICATION_COMPATIBILITY: { [key in ModelType | string]: string[] } = {
-  // Android devices support all verification types including ADB
-  'Android Phone': ['image', 'text', 'adb'],
-  'Android TV': ['image', 'text'],
-  'Android Tablet': ['image', 'text', 'adb'],
-  'Nvidia Shield': ['image', 'text'], // Android-based
-  
-  // iOS devices support image and text only (no ADB)
-  'iOs Phone': ['image', 'text'],
-  'iOs Tablet': ['image', 'text'],
-  
-  // TV platforms support image and text only
-  'Fire TV': ['image', 'text'],
-  'Apple TV': ['image', 'text'],
-  'Tizen TV': ['image', 'text'], // Samsung TV OS
-  'LG TV': ['image', 'text'], // webOS
-  'STB': ['image', 'text'], // Generic Set Top Box
-  
-  // Desktop/PC platforms support image and text
-  'Linux': ['image', 'text'],
-  'Windows': ['image', 'text'],
-  
-};
 
 interface NodeVerification {
   id: string;
@@ -158,47 +131,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     imageFilter: undefined
   });
 
-  // Helper function to get compatible verification controllers for a model
-  const getCompatibleControllers = (modelName?: string): string[] => {
-    if (!modelName) {
-      console.log('[@component:NodeVerificationsList] No model specified, using default compatibility');
-      return MODEL_VERIFICATION_COMPATIBILITY['default'] || ['image', 'text'];
-    }
-    
-    const compatible = MODEL_VERIFICATION_COMPATIBILITY[modelName] || MODEL_VERIFICATION_COMPATIBILITY['default'] || ['image', 'text'];
-    console.log(`[@component:NodeVerificationsList] Model "${modelName}" supports controllers: [${compatible.join(', ')}]`);
-    return compatible;
-  };
-
-  // Filter available actions based on model compatibility
-  const getFilteredActions = (): VerificationActions => {
-    if (!model) {
-      console.log('[@component:NodeVerificationsList] No model specified, showing all actions');
-      return availableActions;
-    }
-
-    const compatibleControllers = getCompatibleControllers(model);
-    const filteredActions: VerificationActions = {};
-
-    // Filter actions by compatible controller types
-    Object.entries(availableActions).forEach(([category, actions]) => {
-      // Determine if this category is compatible with the model
-      const categoryType = category.toLowerCase();
-      const isCompatible = compatibleControllers.some(controller => 
-        categoryType.includes(controller) || controller === 'adb' && categoryType === 'adb'
-      );
-
-      if (isCompatible) {
-        filteredActions[category] = actions;
-        console.log(`[@component:NodeVerificationsList] Including category "${category}" for model "${model}"`);
-      } else {
-        console.log(`[@component:NodeVerificationsList] Excluding category "${category}" for model "${model}" (not in compatible controllers: [${compatibleControllers.join(', ')}])`);
-      }
-    });
-
-    return filteredActions;
-  };
-
   // Fetch available reference images on component mount
   useEffect(() => {
     fetchAvailableReferences();
@@ -262,15 +194,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   };
 
   const handleVerificationSelect = (index: number, actionId: string) => {
-    // Use filtered actions instead of all available actions
-    const filteredActions = getFilteredActions();
-    
-    // Find the selected action from filtered actions
+    // Find the selected action from available actions
     let selectedAction: VerificationAction | undefined = undefined;
     let controllerType: 'text' | 'image' = 'text';
     
     // Search through all categories to find the action
-    for (const [category, actions] of Object.entries(filteredActions)) {
+    for (const [category, actions] of Object.entries(availableActions)) {
       const action = actions.find(a => a.id === actionId);
       if (action) {
         selectedAction = action;
@@ -626,9 +555,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     });
   };
 
-  // Get filtered actions for current model
-  const filteredActions = getFilteredActions();
-
   return (
     <Box>
       <Box sx={{ mb: 1 }}>
@@ -669,14 +595,14 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     }
                     // Find the selected verification to display its label
                     let selectedLabel = '';
-                    Object.values(filteredActions).forEach(actions => {
+                    Object.values(availableActions).forEach(actions => {
                       const action = actions.find(a => a.id === selected);
                       if (action) selectedLabel = action.label;
                     });
                     return selectedLabel;
                   }}
                 >
-                  {Object.entries(filteredActions).map(([category, actions]) => [
+                  {Object.entries(availableActions).map(([category, actions]) => [
                     <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}>
                       {category.replace(/_/g, ' ').toUpperCase()}
                     </MenuItem>,

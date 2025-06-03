@@ -112,6 +112,42 @@ def get_verification_actions():
                     'inputLabel': 'Text',
                     'inputPlaceholder': 'Loading...'
                 }
+            ],
+            'adb': [
+                {
+                    'id': 'wait_for_element_appear',
+                    'label': 'Wait for Element to Appear',
+                    'command': 'waitForElementToAppear',
+                    'params': {
+                        'criteria': {},
+                        'timeout': 10.0
+                    },
+                    'description': 'Wait for UI element to appear using ADB',
+                    'requiresInput': True,
+                    'inputLabel': 'Element Criteria',
+                    'inputPlaceholder': 'text=Button'
+                },
+                {
+                    'id': 'wait_for_element_disappear',
+                    'label': 'Wait for Element to Disappear',
+                    'command': 'waitForElementToDisappear',
+                    'params': {
+                        'criteria': {},
+                        'timeout': 10.0
+                    },
+                    'description': 'Wait for UI element to disappear using ADB',
+                    'requiresInput': True,
+                    'inputLabel': 'Element Criteria',
+                    'inputPlaceholder': 'resource-id=loading'
+                },
+                {
+                    'id': 'get_element_lists',
+                    'label': 'Get Element Lists',
+                    'command': 'getElementLists',
+                    'params': {},
+                    'description': 'Get all UI elements using ADB',
+                    'requiresInput': False
+                }
             ]
         }
         
