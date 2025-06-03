@@ -980,7 +980,8 @@ def execute_batch_verification():
                         else:
                             print(f"[@route:execute_batch_verification] ERROR: Reference path doesn't contain /resources/ or /tmp/: {ref_path}")
                     else:
-                        print(f"[@route:execute_batch_verification] WARNING: No reference_image_path in additional_data for image verification")
+                        if controller_type in ['image', 'text']:  # Only show warning for verifications that need images
+                            print(f"[@route:execute_batch_verification] WARNING: No reference_image_path in additional_data for image verification")
                     
                     # Convert source path to URL for UI display with filter applied if available
                     if 'source_image_path' in additional_data:
@@ -1014,8 +1015,8 @@ def execute_batch_verification():
                                 print(f"[@route:execute_batch_verification] No filter applied, using original source: {additional_data['source_image_url']}")
                         else:
                             print(f"[@route:execute_batch_verification] WARNING: Source path doesn't contain /tmp/: {source_path}")
-                    else:
-                        print(f"[@route:execute_batch_verification] WARNING: No source_image_path in additional_data for verification")
+                        if controller_type in ['image', 'text']:  # Only show warning for verifications that need images
+                            print(f"[@route:execute_batch_verification] WARNING: No source_image_path in additional_data for verification")
                     
                     # Extract and include OCR confidence for text verifications
                     if controller_type == 'text' and 'ocr_confidence' in additional_data:

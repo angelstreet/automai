@@ -739,6 +739,52 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             {/* Comparison results section - also moved outside ADB exclusion */}
             {testResults[index] && (
               <Box sx={{ mt: 0 }}>
+                {/* Universal Test Result Status Indicator - shows for ALL verification types */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  minWidth: 120,
+                  padding: '4px 8px',
+                  borderRadius: 1,
+                  mb: 1,
+                  backgroundColor: testResults[index].resultType === 'PASS' || testResults[index].success
+                    ? 'rgba(76, 175, 80, 0.1)' 
+                    : testResults[index].resultType === 'ERROR' 
+                      ? 'rgba(255, 152, 0, 0.1)' 
+                      : 'rgba(244, 67, 54, 0.1)',
+                  border: `2px solid ${
+                    testResults[index].resultType === 'PASS' || testResults[index].success
+                      ? '#4caf50' 
+                      : testResults[index].resultType === 'ERROR' 
+                        ? '#ff9800' 
+                        : '#f44336'
+                  }`
+                }}>
+                  <Typography sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    color: testResults[index].resultType === 'PASS' || testResults[index].success
+                      ? '#4caf50' 
+                      : testResults[index].resultType === 'ERROR' 
+                        ? '#ff9800' 
+                        : '#f44336'
+                  }}>
+                    {testResults[index].resultType === 'PASS' || testResults[index].success ? 'PASS' : 
+                     testResults[index].resultType === 'ERROR' ? 'ERROR' : 'FAIL'}
+                  </Typography>
+                  
+                  {testResults[index].message && (
+                    <Typography sx={{ 
+                      fontSize: '0.7rem',
+                      color: 'text.secondary',
+                      ml: 1
+                    }}>
+                      {testResults[index].message}
+                    </Typography>
+                  )}
+                </Box>
+                
                 {/* Image comparison thumbnails for image verifications */}
                 {verification.controller_type === 'image' && 
                  testResults[index].sourceImageUrl && 
