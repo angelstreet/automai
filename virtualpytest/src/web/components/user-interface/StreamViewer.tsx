@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import Hls from 'hls.js';
+import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
 
 interface StreamViewerProps {
   streamUrl?: string;
@@ -9,6 +10,8 @@ interface StreamViewerProps {
   isCapturing?: boolean;
   sx?: any;
   videoElementRef?: React.RefObject<HTMLVideoElement>;
+  model?: string;
+  layoutConfig?: StreamViewerLayoutConfig; // Allow direct override if needed
 }
 
 export function StreamViewer({
@@ -17,6 +20,8 @@ export function StreamViewer({
   isCapturing = false,
   sx = {},
   videoElementRef,
+  model,
+  layoutConfig,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -28,6 +33,9 @@ export function StreamViewer({
   const maxRetries = 5;
   const retryDelay = 3000;
   const lastInitTime = useRef<number>(0);
+
+  // Use the provided layout config or get it from the model type
+  const finalLayoutConfig = layoutConfig || getStreamViewerLayout(model);
 
   // Expose video ref to parent if provided
   useEffect(() => {
@@ -225,6 +233,8 @@ export function StreamViewer({
         position: 'relative',
         width: '100%',
         height: '100%',
+        minHeight: finalLayoutConfig.minHeight,
+        aspectRatio: finalLayoutConfig.aspectRatio,
         backgroundColor: '#000000',
         display: 'flex',
         alignItems: 'center',
@@ -245,7 +255,7 @@ export function StreamViewer({
           left: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
+          objectFit: finalLayoutConfig.objectFit,
           backgroundColor: '#000000',
           display: streamLoaded && !requiresUserInteraction ? 'block' : 'none',
           userSelect: 'none',
@@ -323,7 +333,7 @@ export function StreamViewer({
           sx={{
             width: '100%',
             height: '100%',
-            minHeight: '400px',
+            minHeight: finalLayoutConfig.minHeight,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

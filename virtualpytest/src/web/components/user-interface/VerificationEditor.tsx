@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
 import { styled } from '@mui/material/styles';
+import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../../../config/layoutConfig';
 
 interface VerificationAction {
   id: string;
@@ -102,6 +103,7 @@ interface VerificationEditorProps {
   screenshotPath?: string;
   sx?: any;
   onReferenceSaved?: (referenceName: string) => void;
+  layoutConfig?: VerificationEditorLayoutConfig; // Allow direct override if needed
 }
 
 export const VerificationEditor: React.FC<VerificationEditorProps> = ({
@@ -124,6 +126,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   screenshotPath,
   sx = {},
   onReferenceSaved,
+  layoutConfig,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
@@ -162,6 +165,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     autocrop: false,
     removeBackground: false
   });
+
+  // Use the provided layout config or get it from the model type
+  const finalLayoutConfig = layoutConfig || getVerificationEditorLayout(model);
 
   useEffect(() => {
     if (isVisible) {
@@ -822,8 +828,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   if (!model || model.trim() === '') {
     return (
       <Box sx={{ 
-        width: 440, 
-        height: 520, 
+        width: finalLayoutConfig.width, 
+        height: finalLayoutConfig.height, 
         p: 1, 
         display: 'flex', 
         flexDirection: 'column', 
@@ -844,8 +850,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   return (
     <Box sx={{ 
-      width: 440, 
-      height: 520, 
+      width: finalLayoutConfig.width, 
+      height: finalLayoutConfig.height, 
       p: 1, 
       display: 'flex', 
       flexDirection: 'column', 
@@ -871,7 +877,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
         Verification Editor
         <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
-          ({model})
+          ({model}) {!finalLayoutConfig.isMobileModel && <Typography component="span" sx={{ fontSize: '0.7rem' }}>[Landscape]</Typography>}
         </Typography>
       </Typography>
       
@@ -912,7 +918,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 sx={{ 
                   position: 'relative',
                   width: '100%', 
-                  height: 200, 
+                  height: finalLayoutConfig.captureHeight, 
                   border: '2px dashed #444', 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -931,7 +937,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'fill'
+                        objectFit: finalLayoutConfig.objectFit
                       }}
                     />
                     {/* Success message overlay */}
