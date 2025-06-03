@@ -13,8 +13,8 @@ import json
 import os
 from pathlib import Path
 from ..base_controllers import RemoteControllerInterface
-from ..lib.sshUtils import SSHConnection, create_ssh_connection
-from ..lib.adbUtils import ADBUtils, AndroidElement, AndroidApp
+from utils.sshUtils import SSHConnection, create_ssh_connection
+from utils.adbUtils import ADBUtils, AndroidElement, AndroidApp
 
 
 class AndroidMobileRemoteController(RemoteControllerInterface):

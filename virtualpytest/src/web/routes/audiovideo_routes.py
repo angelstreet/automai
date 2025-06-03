@@ -73,7 +73,7 @@ def hdmi_stream_take_control():
         
         # Use the same SSH connection approach as AndroidMobileRemoteController
         try:
-            from controllers.lib.sshUtils import create_ssh_connection
+            from utils.sshUtils import create_ssh_connection
             
             # Create SSH connection
             ssh_connection = create_ssh_connection(

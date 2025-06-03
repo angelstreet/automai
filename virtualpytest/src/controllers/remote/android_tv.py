@@ -15,8 +15,8 @@ from ..base_controllers import RemoteControllerInterface
 
 # Import SSH utilities and ADB utilities
 try:
-    from ..lib.sshUtils import create_ssh_connection
-    from ..lib.adbUtils import ADBUtils
+    from utils.sshUtils import create_ssh_connection
+    from utils.adbUtils import ADBUtils
     SSH_AVAILABLE = True
 except ImportError:
     print("Warning: SSH/ADB utilities not available. SSH functionality will be limited.")

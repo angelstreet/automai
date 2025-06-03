@@ -1,0 +1,652 @@
+"""
+ADB Utilities for VirtualPyTest Controllers
+
+This module provides ADB command execution utilities for Android device control
+over SSH connections, mirroring the functionality from adbActions.ts.
+"""
+
+import re
+import time
+import base64
+from typing import Dict, Any, List, Optional, Tuple
+from .sshUtils import SSHConnection
+
+
+class AndroidElement:
+    """Represents an Android UI element."""
+    
+    def __init__(self, element_id: int, tag: str, text: str, resource_id: str, 
+                 content_desc: str, class_name: str, bounds: str, clickable: bool = False, enabled: bool = True):
+        self.id = element_id
+        self.tag = tag
+        self.text = text
+        self.resource_id = resource_id
+        self.content_desc = content_desc
+        self.class_name = class_name
+        self.bounds = bounds
+        self.clickable = clickable
+        self.enabled = enabled
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary representation."""
+        return {
+            'id': self.id,
+            'tag': self.tag,
+            'text': self.text,
+            'resourceId': self.resource_id,
+            'contentDesc': self.content_desc,
+            'className': self.class_name,
+            'bounds': self.bounds,
+            'clickable': self.clickable,
+            'enabled': self.enabled
+        }
+
+
+class AndroidApp:
+    """Represents an Android application."""
+    
+    def __init__(self, package_name: str, label: str):
+        self.package_name = package_name
+        self.label = label
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary representation."""
+        return {
+            'packageName': self.package_name,
+            'label': self.label
+        }
+
+
+class ADBUtils:
+    """ADB utilities for Android device control over SSH."""
+    
+    # ADB key mappings (supporting both simple and DPAD formats)
+    ADB_KEYS = {
+        # Simple directional keys
+        'UP': 'KEYCODE_DPAD_UP',
+        'DOWN': 'KEYCODE_DPAD_DOWN',
+        'LEFT': 'KEYCODE_DPAD_LEFT',
+        'RIGHT': 'KEYCODE_DPAD_RIGHT',
+        'SELECT': 'KEYCODE_DPAD_CENTER',
+        
+        # DPAD format (for Android TV remote compatibility)
+        'DPAD_UP': 'KEYCODE_DPAD_UP',
+        'DPAD_DOWN': 'KEYCODE_DPAD_DOWN',
+        'DPAD_LEFT': 'KEYCODE_DPAD_LEFT',
+        'DPAD_RIGHT': 'KEYCODE_DPAD_RIGHT',
+        'DPAD_CENTER': 'KEYCODE_DPAD_CENTER',
+        
+        # System keys
+        'BACK': 'KEYCODE_BACK',
+        'HOME': 'KEYCODE_HOME',
+        'MENU': 'KEYCODE_MENU',
+        'POWER': 'KEYCODE_POWER',
+        
+        # Volume keys
+        'VOLUME_UP': 'KEYCODE_VOLUME_UP',
+        'VOLUME_DOWN': 'KEYCODE_VOLUME_DOWN',
+        'VOLUME_MUTE': 'KEYCODE_VOLUME_MUTE',
+        
+        # Phone specific keys
+        'CAMERA': 'KEYCODE_CAMERA',
+        'CALL': 'KEYCODE_CALL',
+        'ENDCALL': 'KEYCODE_ENDCALL',
+        
+        # TV/Media specific keys
+        'MEDIA_PLAY_PAUSE': 'KEYCODE_MEDIA_PLAY_PAUSE',
+        'MEDIA_PLAY': 'KEYCODE_MEDIA_PLAY',
+        'MEDIA_PAUSE': 'KEYCODE_MEDIA_PAUSE',
+        'MEDIA_STOP': 'KEYCODE_MEDIA_STOP',
+        'MEDIA_REWIND': 'KEYCODE_MEDIA_REWIND',
+        'MEDIA_FAST_FORWARD': 'KEYCODE_MEDIA_FAST_FORWARD',
+        'MEDIA_NEXT': 'KEYCODE_MEDIA_NEXT',
+        'MEDIA_PREVIOUS': 'KEYCODE_MEDIA_PREVIOUS',
+    }
+    
+    def __init__(self, ssh_connection: SSHConnection):
+        """
+        Initialize ADB utilities with SSH connection.
+        
+        Args:
+            ssh_connection: Established SSH connection
+        """
+        self.ssh = ssh_connection
+        
+    def connect_device(self, device_id: str) -> bool:
+        """
+        Connect to ADB device over SSH.
+        
+        Args:
+            device_id: Android device ID (IP:port)
+            
+        Returns:
+            bool: True if connection successful
+        """
+        try:
+            print(f"[@lib:adbUtils:connect_device] Connecting to ADB device: {device_id}")
+            
+            # Connect to ADB device
+            success, stdout, stderr, exit_code = self.ssh.execute_command(f"adb connect {device_id}")
+            
+            if not success or exit_code != 0:
+                print(f"[@lib:adbUtils:connect_device] ADB connect failed: {stderr}")
+                return False
+                
+            print(f"[@lib:adbUtils:connect_device] ADB connect output: {stdout.strip()}")
+            
+            # Verify device is connected
+            success, stdout, stderr, exit_code = self.ssh.execute_command("adb devices")
+            
+            if not success or exit_code != 0:
+                print(f"[@lib:adbUtils:connect_device] Failed to verify device connection")
+                return False
+                
+            # Check if device appears in devices list
+            device_lines = [line.strip() for line in stdout.split('\n') 
+                          if line.strip() and not line.startswith('List of devices')]
+            
+            device_found = None
+            for line in device_lines:
+                if device_id in line:
+                    device_found = line
+                    break
+                    
+            if not device_found:
+                print(f"[@lib:adbUtils:connect_device] Device {device_id} not found in adb devices list")
+                return False
+                
+            if 'offline' in device_found:
+                print(f"[@lib:adbUtils:connect_device] Device {device_id} is offline")
+                return False
+                
+            if 'device' not in device_found:
+                status = device_found.split('\t')[1] if '\t' in device_found else 'unknown'
+                print(f"[@lib:adbUtils:connect_device] Device {device_id} status: {status}")
+                return False
+                
+            print(f"[@lib:adbUtils:connect_device] Successfully connected to device {device_id}")
+            return True
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:connect_device] Error: {e}")
+            return False
+            
+    def execute_key_command(self, device_id: str, key: str) -> bool:
+        """
+        Execute ADB key command.
+        
+        Args:
+            device_id: Android device ID
+            key: Key name (e.g., 'UP', 'DOWN', 'HOME', 'DPAD_RIGHT')
+            
+        Returns:
+            bool: True if command successful
+        """
+        try:
+            print(f"[@lib:adbUtils:execute_key_command] Attempting to execute key: '{key}' (normalized: '{key.upper()}')")
+            
+            keycode = self.ADB_KEYS.get(key.upper())
+            if not keycode:
+                available_keys = list(self.ADB_KEYS.keys())
+                print(f"[@lib:adbUtils:execute_key_command] Invalid key: '{key}'")
+                print(f"[@lib:adbUtils:execute_key_command] Available keys: {', '.join(available_keys[:10])}...")
+                print(f"[@lib:adbUtils:execute_key_command] Total available keys: {len(available_keys)}")
+                return False
+                
+            command = f"adb -s {device_id} shell input keyevent {keycode}"
+            print(f"[@lib:adbUtils:execute_key_command] Executing: {command}")
+            
+            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:execute_key_command] Successfully sent keyevent {keycode} for key '{key}'")
+                return True
+            else:
+                print(f"[@lib:adbUtils:execute_key_command] Key command failed: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"[@lib:adbUtils:execute_key_command] Error: {e}")
+            return False
+            
+    def get_installed_apps(self, device_id: str) -> List[AndroidApp]:
+        """
+        Get list of installed apps on Android device.
+        
+        Args:
+            device_id: Android device ID
+            
+        Returns:
+            List of AndroidApp objects
+        """
+        try:
+            print(f"[@lib:adbUtils:get_installed_apps] Getting apps for device {device_id}")
+            
+            # Get list of installed packages (3rd party apps only)
+            command = f"adb -s {device_id} shell pm list packages -3"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            
+            if not success or exit_code != 0:
+                print(f"[@lib:adbUtils:get_installed_apps] Failed to get packages list: {stderr}")
+                return []
+                
+            packages = []
+            for line in stdout.split('\n'):
+                if line.startswith('package:'):
+                    package_name = line.replace('package:', '').strip()
+                    packages.append(package_name)
+                    
+            apps = []
+            # Get app labels for each package (limit to first 20 for performance)
+            for package_name in packages[:20]:
+                try:
+                    label_command = f"adb -s {device_id} shell dumpsys package {package_name} | grep -A1 'applicationLabel'"
+                    success, stdout, stderr, exit_code = self.ssh.execute_command(label_command)
+                    
+                    label = package_name  # Default to package name
+                    if success and stdout:
+                        match = re.search(r'applicationLabel=(.+)', stdout)
+                        if match:
+                            label = match.group(1).strip()
+                            
+                    apps.append(AndroidApp(package_name, label))
+                    
+                except Exception:
+                    # If we can't get the label, use package name
+                    apps.append(AndroidApp(package_name, package_name))
+                    
+            print(f"[@lib:adbUtils:get_installed_apps] Found {len(apps)} apps")
+            return apps
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:get_installed_apps] Error: {e}")
+            return []
+            
+    def launch_app(self, device_id: str, package_name: str) -> bool:
+        """
+        Launch an app by package name.
+        
+        Args:
+            device_id: Android device ID
+            package_name: App package name
+            
+        Returns:
+            bool: True if launch successful
+        """
+        try:
+            print(f"[@lib:adbUtils:launch_app] Launching app {package_name} on device {device_id}")
+            
+            command = f"adb -s {device_id} shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:launch_app] Successfully launched {package_name}")
+                return True
+            else:
+                print(f"[@lib:adbUtils:launch_app] App launch failed: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"[@lib:adbUtils:launch_app] Error: {e}")
+            return False
+            
+    def dump_ui_elements(self, device_id: str) -> Tuple[bool, List[AndroidElement], str]:
+        """
+        Dump UI elements from Android device (similar to TypeScript version).
+        
+        Args:
+            device_id: Android device ID
+            
+        Returns:
+            Tuple of (success, elements_list, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:dump_ui_elements] Dumping UI elements for device {device_id}")
+            
+            # First, dump the UI hierarchy to a file
+            dump_command = f"adb -s {device_id} shell uiautomator dump --compressed /sdcard/ui_dump.xml"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(dump_command)
+            
+            if not success or exit_code != 0:
+                error_msg = f"Failed to dump UI: {stderr}"
+                print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
+                return False, [], error_msg
+                
+            print(f"[@lib:adbUtils:dump_ui_elements] Dump successful, reading file...")
+            
+            # Read the dumped file
+            read_command = f"adb -s {device_id} shell cat /sdcard/ui_dump.xml"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(read_command)
+            
+            if not success or exit_code != 0:
+                error_msg = f"Failed to read UI dump: {stderr}"
+                print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
+                return False, [], error_msg
+                
+            if not stdout or stdout.strip() == "":
+                error_msg = "No UI data received from device"
+                print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
+                return False, [], error_msg
+                
+            print(f"[@lib:adbUtils:dump_ui_elements] Received XML data, length: {len(stdout)}")
+            
+            # Parse XML to extract elements
+            elements = self._parse_ui_elements(stdout)
+            
+            print(f"[@lib:adbUtils:dump_ui_elements] Processing complete: {len(elements)} useful elements")
+            return True, elements, ""
+            
+        except Exception as e:
+            error_msg = f"Error dumping UI elements: {e}"
+            print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
+            return False, [], error_msg
+            
+    def _parse_ui_elements(self, xml_data: str) -> List[AndroidElement]:
+        """
+        Parse XML data to extract UI elements.
+        
+        Args:
+            xml_data: XML content from uiautomator dump
+            
+        Returns:
+            List of AndroidElement objects
+        """
+        elements = []
+        
+        # Check if we have valid XML
+        if '<node' not in xml_data or '</hierarchy>' not in xml_data:
+            print(f"[@lib:adbUtils:_parse_ui_elements] Invalid XML format received")
+            return elements
+            
+        # Try different regex patterns to find nodes (same as TypeScript version)
+        print(f"[@lib:adbUtils:_parse_ui_elements] Testing different regex patterns...")
+        
+        # Pattern 1: Self-closing nodes
+        self_closing_pattern = r'<node[^>]*\/>'
+        self_closing_matches = re.findall(self_closing_pattern, xml_data, re.DOTALL)
+        print(f"[@lib:adbUtils:_parse_ui_elements] Self-closing nodes found: {len(self_closing_matches)}")
+        
+        # Pattern 2: Open/close nodes
+        open_close_pattern = r'<node[^>]*>.*?<\/node>'
+        open_close_matches = re.findall(open_close_pattern, xml_data, re.DOTALL)
+        print(f"[@lib:adbUtils:_parse_ui_elements] Open/close nodes found: {len(open_close_matches)}")
+        
+        # Pattern 3: All nodes (both patterns combined)
+        all_nodes_pattern = r'<node[^>]*(?:\/>|>.*?<\/node>)'
+        all_matches = re.findall(all_nodes_pattern, xml_data, re.DOTALL)
+        print(f"[@lib:adbUtils:_parse_ui_elements] All nodes found: {len(all_matches)}")
+        
+        # Use the pattern that finds the most nodes (same logic as TypeScript)
+        matches = all_matches
+        if len(self_closing_matches) > len(all_matches):
+            matches = self_closing_matches
+            print(f"[@lib:adbUtils:_parse_ui_elements] Using self-closing pattern (found more matches)")
+        
+        print(f"[@lib:adbUtils:_parse_ui_elements] Selected {len(matches)} total node elements for processing")
+        
+        # Log first few matches for debugging (same as TypeScript)
+        print(f"[@lib:adbUtils:_parse_ui_elements] First 3 node matches:")
+        for i in range(min(3, len(matches))):
+            preview = matches[i][:200] + "..." if len(matches[i]) > 200 else matches[i]
+            print(f"[@lib:adbUtils:_parse_ui_elements] Node {i + 1}: {preview}")
+        
+        element_counter = 0
+        filtered_out_count = 0
+        
+        for i, match in enumerate(matches):
+            try:
+                # Extract attributes using regex
+                def get_attr(attr_name: str) -> str:
+                    pattern = f'{attr_name}="([^"]*)"'
+                    attr_match = re.search(pattern, match)
+                    return attr_match.group(1) if attr_match else ''
+                
+                text = get_attr('text').strip()
+                resource_id = get_attr('resource-id')
+                content_desc = get_attr('content-desc')
+                class_name = get_attr('class')
+                bounds = get_attr('bounds')
+                clickable = get_attr('clickable') == 'true'
+                enabled = get_attr('enabled') == 'true'
+                
+                # Log details of first 10 elements for debugging (same as TypeScript)
+                if i < 10:
+                    print(f"[@lib:adbUtils:_parse_ui_elements] Element {i + 1} details:")
+                    print(f"  - Class: \"{class_name}\"")
+                    print(f"  - Text: \"{text}\"")
+                    print(f"  - Resource-ID: \"{resource_id}\"")
+                    print(f"  - Content-Desc: \"{content_desc}\"")
+                    print(f"  - Clickable: {clickable}")
+                    print(f"  - Enabled: {enabled}")
+                    print(f"  - Bounds: \"{bounds}\"")
+                
+                # Apply filtering logic (same as TypeScript version)
+                should_filter = False
+                filter_reason = ''
+                
+                # Skip elements with no useful identifiers
+                if (not class_name or class_name.lower() == 'none' or class_name == '') and \
+                   (not text or text == '') and \
+                   (not resource_id or resource_id == 'null' or resource_id == '') and \
+                   (not content_desc or content_desc == ''):
+                    should_filter = True
+                    filter_reason = 'No useful identifiers (class, text, resource-id, content-desc all empty/null)'
+                
+                # Skip elements with null resource-id
+                if resource_id == 'null':
+                    should_filter = True
+                    filter_reason = 'Resource-ID is null'
+                
+                # Skip elements that are not interactive and have no text
+                if not clickable and not enabled and (not text or text == ''):
+                    should_filter = True
+                    filter_reason = 'Not interactive (not clickable, not enabled, no text)'
+                
+                if should_filter:
+                    filtered_out_count += 1
+                    if i < 10:
+                        print(f"[@lib:adbUtils:_parse_ui_elements]   -> FILTERED OUT: {filter_reason}")
+                    continue
+                
+                element_counter += 1
+                element = AndroidElement(
+                    element_id=element_counter,
+                    tag=class_name or 'unknown',
+                    text=text or '<no text>',
+                    resource_id=resource_id or '<no resource-id>',
+                    content_desc=content_desc or '<no content-desc>',
+                    class_name=class_name or '',
+                    bounds=bounds or '',
+                    clickable=clickable,
+                    enabled=enabled
+                )
+                
+                elements.append(element)
+                
+                if i < 10:
+                    print(f"[@lib:adbUtils:_parse_ui_elements]   -> KEPT: Element ID {element_counter}")
+                
+            except Exception as e:
+                print(f"[@lib:adbUtils:_parse_ui_elements] Error parsing element {i+1}: {e}")
+                filtered_out_count += 1
+        
+        print(f"[@lib:adbUtils:_parse_ui_elements] Processing complete:")
+        print(f"[@lib:adbUtils:_parse_ui_elements] - Total nodes found: {len(matches)}")
+        print(f"[@lib:adbUtils:_parse_ui_elements] - Useful elements: {len(elements)}")
+        print(f"[@lib:adbUtils:_parse_ui_elements] - Filtered out: {filtered_out_count}")
+        
+        # Log all kept elements for debugging (same as TypeScript)
+        print(f"[@lib:adbUtils:_parse_ui_elements] Final kept elements (OVERLAY NUMBERS):")
+        print(f"[@lib:adbUtils:_parse_ui_elements] ===============================================")
+        for index, el in enumerate(elements):
+            overlay_number = index + 1
+            print(f"[@lib:adbUtils:_parse_ui_elements] {overlay_number}.element{overlay_number} | ID={el.id} | Class={el.tag} | Text=\"{el.text}\" | ResourceID=\"{el.resource_id}\" | ContentDesc=\"{el.content_desc}\" | Bounds={el.bounds}")
+        print(f"[@lib:adbUtils:_parse_ui_elements] ===============================================")
+        
+        return elements
+        
+    def click_element(self, device_id: str, element: AndroidElement) -> bool:
+        """
+        Click on a UI element.
+        
+        Args:
+            device_id: Android device ID
+            element: AndroidElement to click
+            
+        Returns:
+            bool: True if click successful
+        """
+        try:
+            print(f"[@lib:adbUtils:click_element] Attempting to click element ID={element.id}")
+            
+            # Parse bounds to get coordinates if available
+            coordinates = None
+            if element.bounds and element.bounds != '':
+                # Bounds format: [x1,y1][x2,y2]
+                bounds_match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', element.bounds)
+                if bounds_match:
+                    x1, y1, x2, y2 = map(int, bounds_match.groups())
+                    coordinates = {
+                        'x': (x1 + x2) // 2,
+                        'y': (y1 + y2) // 2
+                    }
+                    print(f"[@lib:adbUtils:click_element] Calculated tap coordinates: {coordinates['x']}, {coordinates['y']}")
+            
+            # If we have coordinates from bounds, use direct tap
+            if coordinates:
+                command = f"adb -s {device_id} shell input tap {coordinates['x']} {coordinates['y']}"
+                success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+                
+                if success and exit_code == 0:
+                    print(f"[@lib:adbUtils:click_element] Successfully clicked element using coordinates")
+                    return True
+                else:
+                    print(f"[@lib:adbUtils:click_element] Direct tap failed: {stderr}")
+            
+            # Fallback methods would go here (resource ID, text, content-desc)
+            # For now, we'll just return False if direct tap failed
+            print(f"[@lib:adbUtils:click_element] All click methods failed for element")
+            return False
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:click_element] Error: {e}")
+            return False
+            
+    def get_device_resolution(self, device_id: str) -> Optional[Dict[str, int]]:
+        """
+        Get device screen resolution.
+        
+        Args:
+            device_id: Android device ID
+            
+        Returns:
+            Dictionary with width and height, or None if failed
+        """
+        try:
+            print(f"[@lib:adbUtils:get_device_resolution] Getting resolution for device {device_id}")
+            
+            command = f"adb -s {device_id} shell wm size"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            
+            if not success or exit_code != 0:
+                print(f"[@lib:adbUtils:get_device_resolution] Command failed: {stderr}")
+                return None
+                
+            # Parse output like "Physical size: 1080x2340"
+            match = re.search(r'(\d+)x(\d+)', stdout)
+            if not match:
+                print(f"[@lib:adbUtils:get_device_resolution] Could not parse screen resolution")
+                return None
+                
+            width = int(match.group(1))
+            height = int(match.group(2))
+            
+            print(f"[@lib:adbUtils:get_device_resolution] Device resolution: {width}x{height}")
+            return {'width': width, 'height': height}
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:get_device_resolution] Error: {e}")
+            return None
+            
+    def take_screenshot(self, device_id: str) -> Tuple[bool, str, str]:
+        """
+        Take a screenshot of the Android device.
+        
+        Args:
+            device_id: Android device ID
+            
+        Returns:
+            Tuple of (success, base64_screenshot_data, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:take_screenshot] Taking screenshot for device {device_id}")
+            
+            # Take screenshot and save to device
+            screenshot_path = "/sdcard/screenshot.png"
+            screenshot_command = f"adb -s {device_id} shell screencap -p {screenshot_path}"
+            
+            success, stdout, stderr, exit_code = self.ssh.execute_command(screenshot_command, timeout=30)
+            
+            if not success or exit_code != 0:
+                error_msg = f"Failed to take screenshot: {stderr}"
+                print(f"[@lib:adbUtils:take_screenshot] {error_msg}")
+                return False, "", error_msg
+                
+            print(f"[@lib:adbUtils:take_screenshot] Screenshot saved to device at {screenshot_path}")
+            
+            # Pull screenshot to SSH host
+            remote_temp_path = "/tmp/android_screenshot.png"
+            pull_command = f"adb -s {device_id} pull {screenshot_path} {remote_temp_path}"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(pull_command, timeout=30)
+            
+            if not success or exit_code != 0:
+                error_msg = f"Failed to pull screenshot: {stderr}"
+                print(f"[@lib:adbUtils:take_screenshot] {error_msg}")
+                return False, "", error_msg
+                
+            print(f"[@lib:adbUtils:take_screenshot] Screenshot pulled to SSH host at {remote_temp_path}")
+            
+            # Download the file from SSH host to our local server
+            import tempfile
+            import os
+            
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                local_temp_path = temp_file.name
+                
+            try:
+                success, error_msg = self.ssh.download_file(remote_temp_path, local_temp_path)
+                
+                if not success:
+                    print(f"[@lib:adbUtils:take_screenshot] Failed to download file: {error_msg}")
+                    return False, "", error_msg
+                    
+                print(f"[@lib:adbUtils:take_screenshot] Screenshot downloaded to local server at {local_temp_path}")
+                
+                # Now do base64 encoding locally on our server (much more reliable)
+                with open(local_temp_path, 'rb') as f:
+                    screenshot_data = base64.b64encode(f.read()).decode('utf-8')
+                    
+                print(f"[@lib:adbUtils:take_screenshot] Screenshot encoded locally, data length: {len(screenshot_data)}")
+                
+            finally:
+                # Clean up local temp file
+                try:
+                    os.unlink(local_temp_path)
+                except:
+                    pass
+            
+            # Clean up files on remote hosts
+            cleanup_commands = [
+                f"adb -s {device_id} shell rm {screenshot_path}",  # Remove from device
+                f"rm -f {remote_temp_path}"  # Remove from SSH host
+            ]
+            
+            for cleanup_cmd in cleanup_commands:
+                self.ssh.execute_command(cleanup_cmd)  # Don't check result, it's cleanup
+            
+            return True, screenshot_data, ""
+            
+        except Exception as e:
+            error_msg = f"Screenshot error: {e}"
+            print(f"[@lib:adbUtils:take_screenshot] {error_msg}")
+            return False, "", error_msg 
