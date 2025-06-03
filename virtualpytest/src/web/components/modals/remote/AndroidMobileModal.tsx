@@ -10,7 +10,9 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
@@ -213,7 +215,19 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
   return (
     <>
       <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
-        <DialogTitle>Android Mobile Remote Control</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" component="div">
+            Android Mobile Remote Control
+          </Typography>
+          <IconButton
+            onClick={handleCloseModal}
+            size="small"
+            sx={{ ml: 1 }}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           {/* Two-column layout: Connection form/screenshot on left, remote control on right */}
           <Grid container spacing={3}>
