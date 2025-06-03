@@ -288,9 +288,9 @@ const UserInterface: React.FC = () => {
           treeName: rootTree.name
         });
         
-        // Open navigation editor with proper URL encoding
+        // Navigate to navigation editor in the same tab
         const url = `/navigation-editor/${encodeURIComponent(rootTree.name)}/${encodeURIComponent(rootTree.id)}`;
-        window.open(url, '_blank');
+        window.location.href = url;
       } else {
         console.warn('[@component:UserInterface] No root navigation tree found for user interface:', userInterface.id);
         setError('No root navigation tree found for this user interface. You may need to create one first or reload the data.');
