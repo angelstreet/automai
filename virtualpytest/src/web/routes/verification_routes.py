@@ -139,14 +139,6 @@ def get_verification_actions():
                     'requiresInput': True,
                     'inputLabel': 'Element Criteria',
                     'inputPlaceholder': 'resource-id=loading'
-                },
-                {
-                    'id': 'get_element_lists',
-                    'label': 'Get Element Lists',
-                    'command': 'getElementLists',
-                    'params': {},
-                    'description': 'Get all UI elements using ADB',
-                    'requiresInput': False
                 }
             ]
         }
@@ -1631,7 +1623,7 @@ def get_capture_image(filename):
 
 @verification_bp.route('/api/virtualpytest/verification/adb/getElementLists', methods=['POST'])
 def adb_get_element_lists():
-    """Get UI element lists from ADB controller."""
+    """Get UI element lists from ADB controller (utility function, not verification)."""
     try:
         import app
         
