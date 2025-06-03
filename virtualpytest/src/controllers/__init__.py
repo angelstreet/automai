@@ -19,7 +19,6 @@ from .base_controllers import (
 
 # Import mock implementations
 from .audiovideo.hdmi_stream import HDMIStreamController
-from .verification.mock import MockVerificationController
 from .power.mock import MockPowerController
 
 # Import real implementations
@@ -27,6 +26,11 @@ from .remote.android_tv import AndroidTVRemoteController
 from .remote.android_mobile import AndroidMobileRemoteController
 from .remote.infrared import IRRemoteController
 from .remote.bluetooth import BluetoothRemoteController
+
+# Import verification implementations
+from .verification.image import ImageVerificationController
+from .verification.text import TextVerificationController
+from .verification.adb import ADBVerificationController
 
 # Controller type registry
 CONTROLLER_REGISTRY = {
@@ -40,10 +44,10 @@ CONTROLLER_REGISTRY = {
         'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
     },
     'verification': {
-        'mock': MockVerificationController,
-        'ocr': MockVerificationController,   # Can be replaced with OCR implementation
-        'image': MockVerificationController, # Can be replaced with image matching implementation
-        'ai': MockVerificationController,    # Can be replaced with AI-based verification
+        'ocr': TextVerificationController,   # OCR-based text verification using Tesseract
+        'image': ImageVerificationController, # Template matching-based image verification using OpenCV
+        'adb': ADBVerificationController,    # Direct ADB element verification using SSH+ADB commands
+        'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {
         'mock': MockPowerController,
@@ -111,7 +115,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_verification_controller(
-        verification_type: str = "mock",
+        verification_type: str = "ocr",
         device_name: str = "Unknown Device",
         **kwargs
     ) -> VerificationControllerInterface:
@@ -119,7 +123,7 @@ class ControllerFactory:
         Create a verification controller instance.
         
         Args:
-            verification_type: Type of verification implementation (mock, ocr, image, ai, etc.)
+            verification_type: Type of verification implementation (ocr, image, ai, etc.)
             device_name: Name of the device for logging
             **kwargs: Additional parameters for the controller
         
@@ -202,7 +206,7 @@ class DeviceControllerSet:
         device_name: str,
         remote_type: str = "android_tv",
         av_type: str = "hdmi_stream", 
-        verification_type: str = "mock",
+        verification_type: str = "ocr",
         power_type: str = "mock",
         **controller_kwargs
     ):

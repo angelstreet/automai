@@ -177,6 +177,92 @@ def take_verification_control():
             'error': f'Verification controller initialization error: {str(e)}'
         }), 500
 
+@verification_bp.route('/api/virtualpytest/verification/adb/take-control', methods=['POST'])
+def take_adb_verification_control():
+    """Initialize ADB verification controller with SSH connection."""
+    try:
+        import app
+        from controllers.verification.adb import ADBVerificationController
+        from utils.sshUtils import create_ssh_connection
+        
+        data = request.get_json()
+        
+        # SSH connection parameters
+        host_ip = data.get('host_ip')
+        host_username = data.get('host_username')
+        host_password = data.get('host_password', '')
+        host_port = data.get('host_port', 22)
+        device_id = data.get('device_id')
+        
+        # Validate required parameters
+        if not host_ip:
+            return jsonify({
+                'success': False,
+                'error': 'host_ip is required for ADB verification'
+            }), 400
+        
+        if not host_username:
+            return jsonify({
+                'success': False,
+                'error': 'host_username is required for ADB verification'
+            }), 400
+            
+        if not device_id:
+            return jsonify({
+                'success': False,
+                'error': 'device_id is required for ADB verification'
+            }), 400
+        
+        print(f"[@route:take_adb_verification_control] Connecting to SSH host {host_ip} for ADB verification")
+        
+        # Create SSH connection
+        ssh_connection = create_ssh_connection(
+            host=host_ip,
+            port=host_port,
+            username=host_username,
+            password=host_password,
+            timeout=10
+        )
+        
+        if not ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to establish SSH connection to {host_ip}'
+            }), 400
+        
+        # Initialize ADB verification controller
+        adb_controller = ADBVerificationController(
+            ssh_connection=ssh_connection,
+            device_id=device_id,
+            device_name=f"ADB-{device_id}"
+        )
+        
+        # Test connection
+        if not adb_controller.connect():
+            ssh_connection.disconnect()
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to ADB device {device_id}'
+            }), 400
+        
+        # Store controller globally
+        app.adb_verification_controller = adb_controller
+        app.adb_ssh_connection = ssh_connection  # Keep SSH connection alive
+        
+        return jsonify({
+            'success': True,
+            'message': f'ADB verification controller initialized for device {device_id}',
+            'device_id': device_id,
+            'ssh_host': host_ip,
+            'controllers_available': ['adb']
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'ADB verification controller initialization error: {str(e)}'
+        }), 500
+
 @verification_bp.route('/api/virtualpytest/verification/release-control', methods=['POST'])
 def release_verification_control():
     """Release verification controllers."""
@@ -188,6 +274,14 @@ def release_verification_control():
             app.image_verification_controller = None
         if hasattr(app, 'text_verification_controller'):
             app.text_verification_controller = None
+        if hasattr(app, 'adb_verification_controller'):
+            if app.adb_verification_controller:
+                app.adb_verification_controller.disconnect()
+            app.adb_verification_controller = None
+        if hasattr(app, 'adb_ssh_connection'):
+            if app.adb_ssh_connection:
+                app.adb_ssh_connection.disconnect()
+            app.adb_ssh_connection = None
         
         return jsonify({
             'success': True,
@@ -209,6 +303,7 @@ def get_verification_status():
         status = {
             'image_controller_available': hasattr(app, 'image_verification_controller') and app.image_verification_controller is not None,
             'text_controller_available': hasattr(app, 'text_verification_controller') and app.text_verification_controller is not None,
+            'adb_controller_available': hasattr(app, 'adb_verification_controller') and app.adb_verification_controller is not None,
             'controllers': {}
         }
         
@@ -217,6 +312,9 @@ def get_verification_status():
         
         if status['text_controller_available']:
             status['controllers']['text'] = app.text_verification_controller.get_status()
+            
+        if status['adb_controller_available']:
+            status['controllers']['adb'] = app.adb_verification_controller.get_status()
         
         return jsonify({
             'success': True,
@@ -279,6 +377,13 @@ def execute_verification():
                     'error': 'Text verification controller not initialized'
                 }), 400
             controller = app.text_verification_controller
+        elif controller_type == 'adb':
+            if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
+                return jsonify({
+                    'success': False,
+                    'error': 'ADB verification controller not initialized'
+                }), 400
+            controller = app.adb_verification_controller
         else:
             return jsonify({
                 'success': False,
@@ -287,63 +392,102 @@ def execute_verification():
         
         success = False
         message = ""
+        additional_data = {}
         
-        # Execute based on the command type
-        if command == 'waitForImageToAppear':
-            success, message = controller.waitForImageToAppear(
-                image_path=params.get('image_path'),
-                timeout=params.get('timeout', 10.0),
-                threshold=params.get('threshold', 0.8),
-                area=params.get('area'),
-                image_list=params.get('image_list')
-            )
-            
-        elif command == 'waitForImageToDisappear':
-            success, message = controller.waitForImageToDisappear(
-                image_path=params.get('image_path'),
-                timeout=params.get('timeout', 10.0),
-                threshold=params.get('threshold', 0.8),
-                area=params.get('area'),
-                image_list=params.get('image_list')
-            )
-            
-        elif command == 'waitForTextToAppear':
-            text = params.get('text')
-            if not text:
+        # Execute based on the command type and controller
+        if controller_type == 'adb':
+            # ADB-specific commands
+            if command == 'verifyElementExists':
+                success, message, additional_data = controller.verify_element_exists(**params)
+            elif command == 'verifyTextExists':
+                text = params.get('text')
+                if not text:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Text parameter required for verifyTextExists command'
+                    }), 400
+                success, message, additional_data = controller.verify_text_exists(text, **params)
+            elif command == 'verifyAppState':
+                package_name = params.get('package_name')
+                if not package_name:
+                    return jsonify({
+                        'success': False,
+                        'error': 'package_name parameter required for verifyAppState command'
+                    }), 400
+                success, message, additional_data = controller.verify_app_state(package_name, **params)
+            elif command == 'waitAndVerify':
+                verification_type = params.get('verification_type')
+                target = params.get('target')
+                if not verification_type or not target:
+                    return jsonify({
+                        'success': False,
+                        'error': 'verification_type and target parameters required for waitAndVerify command'
+                    }), 400
+                success = controller.wait_and_verify(verification_type, target, **params)
+                message = f"Wait and verify {'succeeded' if success else 'failed'}"
+                additional_data = {'verification_type': verification_type, 'target': target}
+            else:
                 return jsonify({
                     'success': False,
-                    'error': 'Text parameter required for waitForTextToAppear command'
+                    'error': f'Unknown ADB verification command: {command}'
                 }), 400
-            
-            success, message = controller.waitForTextToAppear(
-                text=text,
-                timeout=params.get('timeout', 10.0),
-                case_sensitive=params.get('case_sensitive', False),
-                area=params.get('area'),
-                image_list=params.get('image_list')
-            )
-            
-        elif command == 'waitForTextToDisappear':
-            text = params.get('text')
-            if not text:
-                return jsonify({
-                    'success': False,
-                    'error': 'Text parameter required for waitForTextToDisappear command'
-                }), 400
-            
-            success, message = controller.waitForTextToDisappear(
-                text=text,
-                timeout=params.get('timeout', 10.0),
-                case_sensitive=params.get('case_sensitive', False),
-                area=params.get('area'),
-                image_list=params.get('image_list')
-            )
-            
         else:
-            return jsonify({
-                'success': False,
-                'error': f'Unknown verification command: {command}'
-            }), 400
+            # Image/Text controller commands
+            if command == 'waitForImageToAppear':
+                success, message = controller.waitForImageToAppear(
+                    image_path=params.get('image_path'),
+                    timeout=params.get('timeout', 10.0),
+                    threshold=params.get('threshold', 0.8),
+                    area=params.get('area'),
+                    image_list=params.get('image_list')
+                )
+                
+            elif command == 'waitForImageToDisappear':
+                success, message = controller.waitForImageToDisappear(
+                    image_path=params.get('image_path'),
+                    timeout=params.get('timeout', 10.0),
+                    threshold=params.get('threshold', 0.8),
+                    area=params.get('area'),
+                    image_list=params.get('image_list')
+                )
+                
+            elif command == 'waitForTextToAppear':
+                text = params.get('text')
+                if not text:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Text parameter required for waitForTextToAppear command'
+                    }), 400
+                
+                success, message = controller.waitForTextToAppear(
+                    text=text,
+                    timeout=params.get('timeout', 10.0),
+                    case_sensitive=params.get('case_sensitive', False),
+                    area=params.get('area'),
+                    image_list=params.get('image_list')
+                )
+                
+            elif command == 'waitForTextToDisappear':
+                text = params.get('text')
+                if not text:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Text parameter required for waitForTextToDisappear command'
+                    }), 400
+                
+                success, message = controller.waitForTextToDisappear(
+                    text=text,
+                    timeout=params.get('timeout', 10.0),
+                    case_sensitive=params.get('case_sensitive', False),
+                    area=params.get('area'),
+                    image_list=params.get('image_list')
+                )
+                
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Unknown verification command: {command}'
+                }), 400
         
         return jsonify({
             'success': success,
@@ -352,7 +496,8 @@ def execute_verification():
             'command': command,
             'controller_type': controller_type,
             'node_id': node_id,
-            'tree_id': tree_id
+            'tree_id': tree_id,
+            'additional_data': additional_data
         })
         
     except Exception as e:

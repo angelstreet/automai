@@ -57,13 +57,13 @@ def get_controller_types():
         # Add metadata for each controller type
         controller_metadata = {
             'remote': {
-                'android_tv': {'name': 'Android TV (SSH+ADB)', 'description': 'Real Android TV via SSH+ADB connection', 'status': 'available'},
-                'real_android_mobile': {'name': 'Android Mobile (SSH+ADB)', 'description': 'Real Android Mobile via SSH+ADB connection', 'status': 'available'},
-                'ir_remote': {'name': 'IR Remote', 'description': 'Infrared remote control with classic TV/STB buttons', 'status': 'available'},
-                'bluetooth_remote': {'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote control', 'status': 'available'},
+                'android_tv': {'name': 'Android TV Remote', 'description': 'SSH+ADB Android TV controller', 'status': 'available'},
+                'real_android_mobile': {'name': 'Android Mobile Remote', 'description': 'SSH+ADB Android Mobile controller', 'status': 'available'},
+                'ir_remote': {'name': 'IR Remote', 'description': 'Infrared remote controller', 'status': 'available'},
+                'bluetooth_remote': {'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote controller', 'status': 'available'},
             },
             'av': {
-                'hdmi_stream': {'name': 'HDMI Stream', 'description': 'HDMI stream URL viewer and controller', 'status': 'available'},
+                'hdmi_stream': {'name': 'HDMI Stream', 'description': 'HDMI stream URL capture', 'status': 'available'},
             },
             'network': {
                 'network': {'name': 'Network Stream', 'description': 'Network-based audio/video streaming', 'status': 'placeholder'},
@@ -72,9 +72,9 @@ def get_controller_types():
                 'webrtc': {'name': 'WebRTC', 'description': 'Web Real-Time Communication', 'status': 'placeholder'},
             },
             'verification': {
-                'mock': {'name': 'Mock Verification', 'description': 'Simulated verification', 'status': 'available'},
-                'ocr': {'name': 'OCR Verification', 'description': 'Optical Character Recognition', 'status': 'placeholder'},
-                'image': {'name': 'Image Verification', 'description': 'Image matching verification', 'status': 'placeholder'},
+                'ocr': {'name': 'OCR Verification', 'description': 'Optical Character Recognition', 'status': 'available'},
+                'image': {'name': 'Image Verification', 'description': 'Image matching verification', 'status': 'available'},
+                'adb': {'name': 'ADB Verification', 'description': 'Direct ADB element verification via SSH', 'status': 'available'},
                 'audio': {'name': 'Audio Verification', 'description': 'Audio content verification', 'status': 'placeholder'},
                 'video': {'name': 'Video Verification', 'description': 'Video content verification', 'status': 'placeholder'},
                 'ai': {'name': 'AI Verification', 'description': 'AI-based verification', 'status': 'placeholder'},
