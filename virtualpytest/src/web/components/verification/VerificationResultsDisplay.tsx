@@ -21,6 +21,34 @@ interface VerificationTestResult {
   detectedLanguage?: string;
   languageConfidence?: number;
   ocrConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
 }
 
 interface VerificationResultsDisplayProps {
@@ -47,6 +75,136 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
   const finalPassed = passCondition === 'all'
     ? testResults.every(result => result.success || result.resultType === 'PASS')
     : testResults.some(result => result.success || result.resultType === 'PASS');
+
+  // Helper function to render detailed ADB element info for PASS results
+  const renderADBElementDetails = (result: VerificationTestResult, verificationIndex: number) => {
+    if (verifications[verificationIndex]?.controller_type !== 'adb' || 
+        result.resultType !== 'PASS' || 
+        !result.matches || 
+        result.matches.length === 0) {
+      return null;
+    }
+
+    return (
+      <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(76, 175, 80, 0.05)', borderRadius: 1 }}>
+        <Typography variant="caption" sx={{ 
+          fontSize: '0.7rem', 
+          fontWeight: 600, 
+          color: '#4caf50',
+          display: 'block',
+          mb: 1
+        }}>
+          Found Elements ({result.total_matches || result.matches.length}):
+        </Typography>
+        
+        {result.matches.map((match, matchIndex) => (
+          <Box key={matchIndex} sx={{ 
+            mb: matchIndex < result.matches!.length - 1 ? 1.5 : 0,
+            p: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: 0.5,
+            border: '1px solid rgba(76, 175, 80, 0.2)'
+          }}>
+            {/* Match Summary */}
+            <Typography variant="caption" sx={{ 
+              fontSize: '0.7rem', 
+              fontWeight: 600, 
+              color: '#2e7d32',
+              display: 'block',
+              mb: 0.5
+            }}>
+              Element #{match.element_id} - {match.match_reason}
+            </Typography>
+            
+            {/* Element Details Grid */}
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'auto 1fr', 
+              gap: 0.5, 
+              fontSize: '0.65rem',
+              '& > *:nth-of-type(odd)': {
+                fontWeight: 600,
+                color: 'text.secondary',
+                pr: 1
+              },
+              '& > *:nth-of-type(even)': {
+                color: 'text.primary',
+                fontFamily: 'monospace',
+                wordBreak: 'break-all'
+              }
+            }}>
+              <span>ID:</span>
+              <span>{match.full_element.id}</span>
+              
+              <span>Class:</span>
+              <span>{match.full_element.className || '(empty)'}</span>
+              
+              <span>Text:</span>
+              <span>{match.full_element.text || '(empty)'}</span>
+              
+              <span>Resource-ID:</span>
+              <span>{match.full_element.resourceId || '(empty)'}</span>
+              
+              <span>Content-Desc:</span>
+              <span>{match.full_element.contentDesc || '(empty)'}</span>
+              
+              <span>Bounds:</span>
+              <span>{match.full_element.bounds || '(empty)'}</span>
+              
+              <span>Clickable:</span>
+              <span>{match.full_element.clickable ? 'true' : 'false'}</span>
+              
+              <span>Enabled:</span>
+              <span>{match.full_element.enabled ? 'true' : 'false'}</span>
+              
+              {match.full_element.tag && (
+                <>
+                  <span>Tag:</span>
+                  <span>{match.full_element.tag}</span>
+                </>
+              )}
+            </Box>
+            
+            {/* Show all matching attributes */}
+            {match.all_matches && match.all_matches.length > 1 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 600, 
+                  color: 'text.secondary',
+                  display: 'block',
+                  mb: 0.5
+                }}>
+                  All Matches:
+                </Typography>
+                {match.all_matches.map((attrMatch, attrIndex) => (
+                  <Typography key={attrIndex} variant="caption" sx={{ 
+                    fontSize: '0.6rem', 
+                    color: 'text.secondary',
+                    display: 'block',
+                    ml: 1
+                  }}>
+                    • {attrMatch.attribute}: "{attrMatch.value}"
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </Box>
+        ))}
+        
+        {/* Search Details */}
+        <Typography variant="caption" sx={{ 
+          fontSize: '0.65rem', 
+          color: 'text.secondary',
+          display: 'block',
+          mt: 1,
+          fontStyle: 'italic'
+        }}>
+          Search: "{result.search_term}" (case-insensitive) • Wait time: {result.wait_time?.toFixed(1)}s
+        </Typography>
+      </Box>
+    );
+  };
 
   return (
     <Box>
@@ -138,6 +296,9 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                   {result.message || result.error}
                 </Typography>
               )}
+              
+              {/* Show detailed ADB element info for PASS results */}
+              {renderADBElementDetails(result, index)}
             </Box>
           ))}
         </Box>

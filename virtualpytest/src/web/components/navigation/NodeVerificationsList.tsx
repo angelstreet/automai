@@ -60,6 +60,34 @@ interface VerificationTestResult {
   languageConfidence?: number;
   // OCR confidence for text verifications
   ocrConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
 }
 
 interface VerificationAction {
@@ -290,6 +318,10 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         // Text verifications need text to search for
         const hasText = verification.inputValue && verification.inputValue.trim() !== '';
         return Boolean(hasText);
+      } else if (verification.controller_type === 'adb') {
+        // ADB verifications need search criteria
+        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+        return Boolean(hasSearchTerm);
       }
       
       return true;
@@ -696,140 +728,144 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                     </Box>
                   )}
                   
-                  {/* Test Result Status Indicator */}
-                  {testResults[index] && (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 0.5,
-                      minWidth: 120,
-                      padding: '4px 8px',
-                      borderRadius: 1,
-                      backgroundColor: testResults[index].resultType === 'PASS' 
-                        ? 'rgba(76, 175, 80, 0.1)' 
-                        : testResults[index].resultType === 'ERROR' 
-                          ? 'rgba(255, 152, 0, 0.1)' 
-                          : 'rgba(244, 67, 54, 0.1)',
-                      border: `1px solid ${
-                        testResults[index].resultType === 'PASS' 
-                          ? '#4caf50' 
-                          : testResults[index].resultType === 'ERROR' 
-                            ? '#ff9800' 
-                            : '#f44336'
-                      }`
-                    }}>
-                      <Box sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: testResults[index].resultType === 'PASS' 
-                          ? '#4caf50' 
-                          : testResults[index].resultType === 'ERROR' 
-                            ? '#ff9800' 
-                            : '#f44336'
-                      }} />
-                      <Typography variant="caption" sx={{ 
-                        fontSize: '0.7rem',
-                        color: testResults[index].resultType === 'PASS' 
-                          ? '#4caf50' 
-                          : testResults[index].resultType === 'ERROR' 
-                            ? '#ff9800' 
-                            : '#f44336',
-                        fontWeight: 600
-                      }}>
-                        {testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
-                      </Typography>
-                      {/* Show threshold for image verifications */}
-                      {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
-                        <Typography variant="caption" sx={{ 
-                          fontSize: '0.65rem',
-                          color: 'rgba(255,255,255,0.7)',
-                          ml: 0.5
-                        }}>
-                          {(testResults[index].threshold! * 100).toFixed(1)}%
-                        </Typography>
-                      )}
-                      {/* Show OCR confidence for text verifications */}
-                      {verification.controller_type === 'text' && testResults[index].ocrConfidence !== undefined && (
-                        <Typography variant="caption" sx={{ 
-                          fontSize: '0.65rem',
-                          color: 'rgba(255,255,255,0.7)',
-                          ml: 0.5
-                        }}>
-                          {testResults[index].ocrConfidence!.toFixed(1)}%
-                        </Typography>
-                      )}
-                      {/* Show error message for ERROR type results */}
-                      {testResults[index].resultType === 'ERROR' && (testResults[index].message || testResults[index].error) && (
-                        <Typography variant="caption" sx={{ 
-                          fontSize: '0.6rem',
-                          color: 'rgba(255,255,255,0.8)',
-                          ml: 0.5,
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }} title={testResults[index].message || testResults[index].error}>
-                          {testResults[index].message || testResults[index].error}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                  
                   {/* Show loading indicator for references */}
                   {verification.controller_type === 'image' && referencesLoading && (
                     <CircularProgress size={16} />
                   )}
                 </Box>
+              </Box>
+            )}
+            
+            {/* Comparison results section - also moved outside ADB exclusion */}
+            {testResults[index] && (
+              <Box sx={{ mt: 0 }}>
+                {/* Image comparison thumbnails for image verifications */}
+                {verification.controller_type === 'image' && 
+                 testResults[index].sourceImageUrl && 
+                 testResults[index].referenceImageUrl && (
+                  <ImageComparisonThumbnails
+                    sourceUrl={testResults[index].sourceImageUrl!}
+                    referenceUrl={testResults[index].referenceImageUrl!}
+                    resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
+                    userThreshold={verification.params?.threshold}
+                    matchingResult={testResults[index].threshold}
+                    imageFilter={verification.params?.image_filter}
+                    onImageClick={() => openImageComparisonModal({
+                      sourceUrl: testResults[index].sourceImageUrl!,
+                      referenceUrl: testResults[index].referenceImageUrl!,
+                      userThreshold: verification.params?.threshold,
+                      matchingResult: testResults[index].threshold,
+                      resultType: testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL'),
+                      imageFilter: verification.params?.image_filter
+                    })}
+                  />
+                )}
                 
-                {/* Second Row: Comparison images/text below */}
-                {testResults[index] && (
-                  <Box sx={{ mt: 0 }}>
-                    {/* Image comparison thumbnails for image verifications */}
-                    {verification.controller_type === 'image' && 
-                     testResults[index].sourceImageUrl && 
-                     testResults[index].referenceImageUrl && (
-                      <ImageComparisonThumbnails
-                        sourceUrl={testResults[index].sourceImageUrl!}
-                        referenceUrl={testResults[index].referenceImageUrl!}
-                        resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
-                        userThreshold={verification.params?.threshold}
-                        matchingResult={testResults[index].threshold}
-                        imageFilter={verification.params?.image_filter}
-                        onImageClick={() => openImageComparisonModal({
+                {/* Text comparison for text verifications */}
+                {verification.controller_type === 'text' && 
+                 (testResults[index].searchedText || testResults[index].sourceImageUrl) && (
+                  <TextComparisonDisplay
+                    searchedText={testResults[index].searchedText || verification.params?.reference_text || verification.inputValue || ''}
+                    extractedText={testResults[index].extractedText || ''}
+                    sourceUrl={testResults[index].sourceImageUrl}
+                    resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
+                    detectedLanguage={testResults[index].detectedLanguage}
+                    languageConfidence={testResults[index].languageConfidence}
+                    onSourceImageClick={() => {
+                      if (testResults[index].sourceImageUrl) {
+                        openImageComparisonModal({
                           sourceUrl: testResults[index].sourceImageUrl!,
-                          referenceUrl: testResults[index].referenceImageUrl!,
-                          userThreshold: verification.params?.threshold,
-                          matchingResult: testResults[index].threshold,
+                          referenceUrl: '', // No reference for text verification
                           resultType: testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL'),
-                          imageFilter: verification.params?.image_filter
-                        })}
-                      />
-                    )}
-                    
-                    {/* Text comparison for text verifications */}
-                    {verification.controller_type === 'text' && 
-                     (testResults[index].searchedText || testResults[index].sourceImageUrl) && (
-                      <TextComparisonDisplay
-                        searchedText={testResults[index].searchedText || verification.params?.reference_text || verification.inputValue || ''}
-                        extractedText={testResults[index].extractedText || ''}
-                        sourceUrl={testResults[index].sourceImageUrl}
-                        resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
-                        detectedLanguage={testResults[index].detectedLanguage}
-                        languageConfidence={testResults[index].languageConfidence}
-                        onSourceImageClick={() => {
-                          if (testResults[index].sourceImageUrl) {
-                            openImageComparisonModal({
-                              sourceUrl: testResults[index].sourceImageUrl!,
-                              referenceUrl: '', // No reference for text verification
-                              resultType: testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL'),
-                              userThreshold: undefined,
-                              matchingResult: undefined,
-                              imageFilter: undefined
-                            });
-                          }
-                        }}
-                      />
+                          userThreshold: undefined,
+                          matchingResult: undefined,
+                          imageFilter: undefined
+                        });
+                      }
+                    }}
+                  />
+                )}
+                
+                {/* ADB element details for ADB verifications */}
+                {(verification.controller_type as string) === 'adb' && testResults[index] && (
+                  <Box sx={{ 
+                    mt: 1, 
+                    p: 1, 
+                    bgcolor: testResults[index].success 
+                      ? 'rgba(76, 175, 80, 0.05)' 
+                      : 'rgba(244, 67, 54, 0.05)', 
+                    borderRadius: 1, 
+                    border: `1px solid ${testResults[index].success ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'}`
+                  }}>
+                    {testResults[index].success && testResults[index].matches ? (
+                      <>
+                        <Typography variant="caption" sx={{ 
+                          fontSize: '0.7rem', 
+                          fontWeight: 600, 
+                          color: '#4caf50',
+                          display: 'block',
+                          mb: 0.5
+                        }}>
+                          Found {testResults[index].total_matches} element(s) after {testResults[index].wait_time?.toFixed(1)}s
+                        </Typography>
+                        
+                        {testResults[index].matches?.map((match: any, matchIndex: number) => (
+                          <Box key={matchIndex} sx={{ 
+                            mb: 1, 
+                            p: 0.5, 
+                            bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                            borderRadius: 0.5,
+                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                          }}>
+                            <Typography variant="caption" sx={{ 
+                              fontSize: '0.65rem', 
+                              fontWeight: 600,
+                              display: 'block'
+                            }}>
+                              Element {match.element_id}: {match.match_reason}
+                            </Typography>
+                            
+                            {match.full_element && (
+                              <Box sx={{ mt: 0.5, fontSize: '0.6rem', color: 'text.secondary' }}>
+                                {match.full_element.text && match.full_element.text !== '<no text>' && (
+                                  <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                    <strong>Text:</strong> {match.full_element.text}
+                                  </Typography>
+                                )}
+                                {match.full_element.contentDesc && match.full_element.contentDesc !== '<no content-desc>' && (
+                                  <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                    <strong>Content-Desc:</strong> {match.full_element.contentDesc}
+                                  </Typography>
+                                )}
+                                {match.full_element.resourceId && match.full_element.resourceId !== '<no resource-id>' && (
+                                  <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                    <strong>Resource-ID:</strong> {match.full_element.resourceId}
+                                  </Typography>
+                                )}
+                                <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                  <strong>Class:</strong> {match.full_element.className || 'N/A'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                  <strong>Bounds:</strong> {match.full_element.bounds || 'N/A'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                  <strong>Clickable:</strong> {match.full_element.clickable ? 'Yes' : 'No'} | 
+                                  <strong> Enabled:</strong> {match.full_element.enabled ? 'Yes' : 'No'}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+                        ))}
+                      </>
+                    ) : (
+                      <Typography variant="caption" sx={{ 
+                        fontSize: '0.7rem', 
+                        fontWeight: 600, 
+                        color: '#f44336',
+                        display: 'block'
+                      }}>
+                        {testResults[index].message || testResults[index].error || 'ADB verification failed'}
+                      </Typography>
                     )}
                   </Box>
                 )}

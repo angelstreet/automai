@@ -80,6 +80,51 @@ import { deviceApi, Device } from '../services/deviceService';
 // Import the hook to access SSH session state
 import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
 
+// Local interface for verification test results including ADB fields
+interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  detectedLanguage?: string;
+  languageConfidence?: number;
+  ocrConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
+}
+
 // Node types for React Flow
 const nodeTypes = {
   uiScreen: UINavigationNode,
@@ -708,6 +753,9 @@ const NavigationEditorContent: React.FC = () => {
         const processedResults = data.results ? data.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
+          console.log(`[@component:NavigationEditor] Processing result ${index}:`, result);
+          console.log(`[@component:NavigationEditor] Verification ${index}:`, verification);
+          
           // Determine result type
           let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
           if (result.success) {
@@ -716,7 +764,7 @@ const NavigationEditorContent: React.FC = () => {
             resultType = 'ERROR';
           }
           
-          return {
+          const processedResult = {
             success: result.success,
             message: result.message,
             error: result.error,
@@ -730,9 +778,18 @@ const NavigationEditorContent: React.FC = () => {
             detectedLanguage: result.detected_language,
             languageConfidence: result.language_confidence,
             ocrConfidence: result.ocr_confidence,
+            // Add ADB-specific fields
+            search_term: result.search_term,
+            wait_time: result.wait_time,
+            total_matches: result.total_matches,
+            matches: result.matches,
           };
+          
+          console.log(`[@component:NavigationEditor] Processed result ${index}:`, processedResult);
+          return processedResult;
         }) : [];
         
+        console.log(`[@component:NavigationEditor] Setting verification results:`, processedResults);
         setVerificationResults(processedResults);
         
         // Show summary like in NodeVerificationsList
@@ -954,7 +1011,14 @@ const NavigationEditorContent: React.FC = () => {
               )}
 
               {/* Verification Results Display - Show when there are verification results */}
-              {verificationResults.length > 0 && lastVerifiedNodeId && (
+              {(() => {
+                const shouldShow = verificationResults.length > 0 && lastVerifiedNodeId;
+                console.log(`[@component:NavigationEditor] Verification display check: results.length=${verificationResults.length}, lastVerifiedNodeId=${lastVerifiedNodeId}, shouldShow=${shouldShow}`);
+                if (shouldShow) {
+                  console.log(`[@component:NavigationEditor] Rendering verification results for node:`, nodes.find(n => n.id === lastVerifiedNodeId)?.data.label);
+                }
+                return shouldShow;
+              })() && (
                 <Box sx={{
                   position: 'absolute',
                   bottom: 16,

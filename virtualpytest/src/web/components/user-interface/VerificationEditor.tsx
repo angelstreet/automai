@@ -51,7 +51,7 @@ interface NodeVerification {
   id: string;
   label: string;
   command: string;
-  controller_type: 'text' | 'image';
+  controller_type: 'text' | 'image' | 'adb';
   params: any;
   description?: string;
   requiresInput?: boolean;
@@ -60,6 +60,9 @@ interface NodeVerification {
   inputValue?: string;
 }
 
+// Centralized VerificationTestResult interface - MUST match NodeVerificationsList.tsx
+// This ensures all verification types (text, image, ADB) use the same result structure
+// and are handled uniformly throughout the application
 interface VerificationTestResult {
   success: boolean;
   message?: string;
@@ -74,6 +77,34 @@ interface VerificationTestResult {
   // Language detection for text verifications
   detectedLanguage?: string;
   languageConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
 }
 
 interface DragArea {
@@ -687,7 +718,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             imageFilter: res.image_filter,
             // Language detection for text verifications
             detectedLanguage: res.detected_language,
-            languageConfidence: res.language_confidence
+            languageConfidence: res.language_confidence,
+            // ADB-specific result data
+            search_term: res.search_term,
+            wait_time: res.wait_time,
+            total_matches: res.total_matches,
+            matches: res.matches
           });
         });
       }
