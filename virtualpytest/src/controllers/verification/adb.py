@@ -7,12 +7,11 @@ It uses existing SSH session and adbUtils for element verification.
 
 import time
 from typing import Dict, Any, List, Optional, Tuple
-from ..base_controllers import VerificationControllerInterface
 from utils.sshUtils import SSHConnection
 from utils.adbUtils import ADBUtils, AndroidElement
 
 
-class ADBVerificationController(VerificationControllerInterface):
+class ADBVerificationController:
     """ADB verification controller that uses SSH+ADB commands to verify UI elements."""
     
     def __init__(self, ssh_connection: SSHConnection, device_id: str, device_name: str = "ADB Device", **kwargs):
@@ -24,8 +23,7 @@ class ADBVerificationController(VerificationControllerInterface):
             device_id: Android device ID (e.g., "192.168.1.100:5555")
             device_name: Name of the device for logging
         """
-        super().__init__(device_name)
-        
+        self.device_name = device_name
         self.ssh_connection = ssh_connection
         self.device_id = device_id
         self.adb_utils = ADBUtils(ssh_connection)
