@@ -510,7 +510,7 @@ def execute_batch_verification():
                         print(f"[@route:execute_batch_verification] Converting reference path: {ref_path}")
                         
                         # Check if we have an image filter and update the reference URL accordingly
-                        image_filter = verification.get('image_filter')
+                        image_filter = verification.get('params', {}).get('image_filter')
                         
                         if '/resources/' in ref_path:
                             # Extract model and filename from path like /path/to/resources/{model}/filename.png
@@ -553,16 +553,19 @@ def execute_batch_verification():
                         source_path = additional_data['source_image_path']
                         print(f"[@route:execute_batch_verification] Converting source path: {source_path}")
                         
-                        image_filter = verification.get('image_filter')
+                        image_filter = verification.get('params', {}).get('image_filter')
+                        print(f"[@route:execute_batch_verification] Retrieved image_filter: '{image_filter}'")
                         
                         if '/tmp/' in source_path:
                             relative_path = source_path.split('/tmp/')[-1]
                             
                             # If filter is applied, check if filtered source exists and use it for display
                             if image_filter and image_filter != 'none':
+                                print(f"[@route:execute_batch_verification] Looking for filtered source with filter: {image_filter}")
                                 # Get base filename without extension  
                                 base_path, ext = os.path.splitext(source_path)
                                 filtered_source_path = f"{base_path}_{image_filter}{ext}"
+                                print(f"[@route:execute_batch_verification] Checking for filtered source: {filtered_source_path}")
                                 
                                 if os.path.exists(filtered_source_path):
                                     # Update the source path to filtered version for UI display
@@ -574,7 +577,7 @@ def execute_batch_verification():
                                     print(f"[@route:execute_batch_verification] Filtered source not found, using original: {additional_data['source_image_url']}")
                             else:
                                 additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
-                                print(f"[@route:execute_batch_verification] Set source_image_url: {additional_data['source_image_url']}")
+                                print(f"[@route:execute_batch_verification] No filter applied, using original source: {additional_data['source_image_url']}")
                         else:
                             print(f"[@route:execute_batch_verification] WARNING: Source path doesn't contain /tmp/: {source_path}")
                     
