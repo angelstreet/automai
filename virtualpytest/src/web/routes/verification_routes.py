@@ -969,7 +969,16 @@ def serve_tmp_image(filename):
         if file_ext == '.jpg' or file_ext == '.jpeg':
             content_type = 'image/jpeg'
         
-        return send_from_directory(tmp_dir, filename, mimetype=content_type)
+        from flask import make_response
+        
+        response = make_response(send_from_directory(tmp_dir, filename, mimetype=content_type))
+        
+        # Prevent caching to ensure fresh images (same as get_reference_image)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
         
     except Exception as e:
         print(f"[@route:serve_tmp_image] Error serving tmp image {filename}: {str(e)}")
