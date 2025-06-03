@@ -26,7 +26,7 @@ interface NodeVerification {
   id: string;
   label: string;
   command: string;
-  controller_type: 'text' | 'image';
+  controller_type: 'text' | 'image' | 'adb';
   params: any;
   description?: string;
   requiresInput?: boolean;
@@ -196,7 +196,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   const handleVerificationSelect = (index: number, actionId: string) => {
     // Find the selected action from available actions
     let selectedAction: VerificationAction | undefined = undefined;
-    let controllerType: 'text' | 'image' = 'text';
+    let controllerType: 'text' | 'image' | 'adb' = 'text';
     
     // Search through all categories to find the action
     for (const [category, actions] of Object.entries(availableActions)) {
@@ -206,6 +206,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         // Determine controller type from category or action properties
         if (category.toLowerCase().includes('image') || action.command.includes('image')) {
           controllerType = 'image';
+        } else if (category.toLowerCase().includes('adb')) {
+          controllerType = 'adb';
         } else {
           controllerType = 'text';
         }
@@ -645,7 +647,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 />
               )}
               
-              {verification.controller_type === 'image' && (
+              {verification.id && verification.controller_type === 'image' && (
                 <TextField
                   size="small"
                   type="number"
@@ -668,7 +670,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 />
               )}
               
-              {verification.controller_type === 'text' && (
+              {verification.id && verification.controller_type === 'text' && (
                 <TextField
                   size="small"
                   type="number"
@@ -691,7 +693,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                 />
               )}
               
-              {(verification.controller_type === 'image' || verification.controller_type === 'text') && (
+              {verification.id && (verification.controller_type === 'image' || verification.controller_type === 'text') && (
                 <>
                   <TextField
                     size="small"
@@ -794,7 +796,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {/* First Row: Reference selection and test result status */}
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  {verification.requiresInput && verification.id && modelReferences.length > 0 ? (
+                  {verification.requiresInput && verification.id && verification.controller_type !== 'adb' && modelReferences.length > 0 ? (
                     <>
                       {/* Reference Dropdown - shows both image and text references */}
                       <FormControl size="small" sx={{ width: 250 }}>
@@ -848,7 +850,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       </FormControl>
                     </>
                   ) : verification.requiresInput && verification.id ? (
-                    /* Fallback to manual input when no references available */
+                    /* Manual input for ADB element criteria or when no references available */
                     <TextField
                       size="small"
                       label={verification.inputLabel || 'Input Value'}
