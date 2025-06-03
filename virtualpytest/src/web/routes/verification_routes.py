@@ -822,6 +822,24 @@ def save_reference_image():
         import shutil
         shutil.copy2(temp_file, final_path)
         
+        # Also copy filtered versions if they exist
+        greyscale_temp_file = os.path.join(base_dir, 'tmp', model_name, 'capture_greyscale.png')
+        binary_temp_file = os.path.join(base_dir, 'tmp', model_name, 'capture_binary.png')
+        greyscale_final_path = os.path.join(resources_dir, f"{reference_name}_greyscale.png")
+        binary_final_path = os.path.join(resources_dir, f"{reference_name}_binary.png")
+        
+        if os.path.exists(greyscale_temp_file):
+            shutil.copy2(greyscale_temp_file, greyscale_final_path)
+            print(f"[@route:save_reference_image] Copied greyscale version to: {greyscale_final_path}")
+        else:
+            print(f"[@route:save_reference_image] Greyscale version not found at: {greyscale_temp_file}")
+        
+        if os.path.exists(binary_temp_file):
+            shutil.copy2(binary_temp_file, binary_final_path)
+            print(f"[@route:save_reference_image] Copied binary version to: {binary_final_path}")
+        else:
+            print(f"[@route:save_reference_image] Binary version not found at: {binary_temp_file}")
+        
         # Update resource registry
         registry_path = os.path.join(base_dir, 'config', 'resource', 'resource.json')
         

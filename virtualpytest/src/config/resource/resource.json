@@ -5,13 +5,13 @@
       "model": "android_mobile",
       "path": "resources/android_mobile/default_capture.png",
       "full_path": "/Users/cpeengineering/automai/automai/virtualpytest/src/resources/android_mobile/default_capture.png",
-      "created_at": "2025-06-03T14:36:00.650125",
+      "created_at": "2025-06-03T15:57:52.585195",
       "type": "reference_image",
       "area": {
-        "x": 754,
-        "y": 147,
-        "width": 415,
-        "height": 311
+        "x": 745,
+        "y": 175,
+        "width": 426,
+        "height": 233
       }
     },
     {
