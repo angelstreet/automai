@@ -1042,8 +1042,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         ))}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-        <FormControl size="small" sx={{ minWidth: 130 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+        <FormControl size="small" sx={{ minWidth: 100, mr: 1 }}>
           <Select
             value={passCondition}
             onChange={(e) => setPassCondition(e.target.value as 'all' | 'any')}
@@ -1061,46 +1061,44 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           </Select>
         </FormControl>
         
-        <Box sx={{ display: 'flex' }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={addVerification}
+          sx={{ minWidth: 'auto' }}
+        >
+          Add
+        </Button>
+        {onTest && (
           <Button
             size="small"
             variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={addVerification}
-            sx={{ minWidth: 'auto' }}
+            startIcon={<PlayIcon />}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTest();
+            }}
+            disabled={!areVerificationsValid()}
+            sx={{
+              minWidth: 'auto',
+              ml: 1,
+              borderColor: '#444',
+              color: 'inherit',
+              fontSize: '0.75rem',
+              '&:hover': {
+                borderColor: '#666',
+              },
+              '&:disabled': {
+                borderColor: '#333',
+                color: 'rgba(255,255,255,0.3)',
+              }
+            }}
           >
-            Add
+            Test
           </Button>
-          {onTest && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<PlayIcon />}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onTest();
-              }}
-              disabled={!areVerificationsValid()}
-              sx={{
-                minWidth: 'auto',
-                ml: 1,
-                borderColor: '#444',
-                color: 'inherit',
-                fontSize: '0.75rem',
-                '&:hover': {
-                  borderColor: '#666',
-                },
-                '&:disabled': {
-                  borderColor: '#333',
-                  color: 'rgba(255,255,255,0.3)',
-                }
-              }}
-            >
-              Test
-            </Button>
-          )}
-        </Box>
+        )}
       </Box>
       
       {/* Final Result indicator */}
