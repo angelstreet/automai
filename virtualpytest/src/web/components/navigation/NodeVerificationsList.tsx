@@ -112,6 +112,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 }) => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
+  const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
   const [imageComparisonDialog, setImageComparisonDialog] = useState<{
     open: boolean;
     sourceUrl: string;
@@ -1041,46 +1042,110 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         ))}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={addVerification}
-          sx={{ minWidth: 'auto' }}
-        >
-          Add
-        </Button>
-        {onTest && (
-          <Button
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+        <FormControl size="small" sx={{ minWidth: 130 }}>
+          <Select
+            value={passCondition}
+            onChange={(e) => setPassCondition(e.target.value as 'all' | 'any')}
             size="small"
-            variant="outlined"
-            startIcon={<PlayIcon />}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onTest();
-            }}
-            disabled={!areVerificationsValid()}
             sx={{
-              minWidth: 'auto',
-              ml: 1,
-              borderColor: '#444',
-              color: 'inherit',
               fontSize: '0.75rem',
-              '&:hover': {
-                borderColor: '#666',
-              },
-              '&:disabled': {
-                borderColor: '#333',
-                color: 'rgba(255,255,255,0.3)',
+              height: '30px',
+              '& .MuiSelect-select': {
+                padding: '5px 10px',
               }
             }}
           >
-            Test
+            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All must pass</MenuItem>
+            <MenuItem value="any" sx={{ fontSize: '0.75rem' }}>Any can pass</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <Box sx={{ display: 'flex' }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={addVerification}
+            sx={{ minWidth: 'auto' }}
+          >
+            Add
           </Button>
-        )}
+          {onTest && (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<PlayIcon />}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onTest();
+              }}
+              disabled={!areVerificationsValid()}
+              sx={{
+                minWidth: 'auto',
+                ml: 1,
+                borderColor: '#444',
+                color: 'inherit',
+                fontSize: '0.75rem',
+                '&:hover': {
+                  borderColor: '#666',
+                },
+                '&:disabled': {
+                  borderColor: '#333',
+                  color: 'rgba(255,255,255,0.3)',
+                }
+              }}
+            >
+              Test
+            </Button>
+          )}
+        </Box>
       </Box>
+      
+      {/* Final Result indicator */}
+      {testResults.length > 0 && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mt: 2,
+          p: 1,
+          borderRadius: 1,
+          backgroundColor: passCondition === 'all'
+            ? (testResults.every(result => result.success || result.resultType === 'PASS') 
+              ? 'rgba(76, 175, 80, 0.1)' 
+              : 'rgba(244, 67, 54, 0.1)')
+            : (testResults.some(result => result.success || result.resultType === 'PASS')
+              ? 'rgba(76, 175, 80, 0.1)' 
+              : 'rgba(244, 67, 54, 0.1)'),
+          border: `1px solid ${
+            passCondition === 'all'
+              ? (testResults.every(result => result.success || result.resultType === 'PASS') 
+                ? '#4caf50' 
+                : '#f44336')
+              : (testResults.some(result => result.success || result.resultType === 'PASS')
+                ? '#4caf50' 
+                : '#f44336')
+          }`
+        }}>
+          <Typography sx={{ 
+            fontWeight: 'bold',
+            color: passCondition === 'all'
+              ? (testResults.every(result => result.success || result.resultType === 'PASS') 
+                ? '#4caf50' 
+                : '#f44336')
+              : (testResults.some(result => result.success || result.resultType === 'PASS')
+                ? '#4caf50' 
+                : '#f44336')
+          }}>
+            Final Result: {
+              passCondition === 'all'
+                ? (testResults.every(result => result.success || result.resultType === 'PASS') ? 'PASS' : 'FAIL')
+                : (testResults.some(result => result.success || result.resultType === 'PASS') ? 'PASS' : 'FAIL')
+            }
+          </Typography>
+        </Box>
+      )}
       
       {/* Scaled Image Modal */}
       <Dialog
