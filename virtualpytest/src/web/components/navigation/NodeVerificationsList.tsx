@@ -944,6 +944,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                       }}>
                         {testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
                       </Typography>
+                      {/* Show threshold for image verifications */}
                       {verification.controller_type === 'image' && testResults[index].threshold !== undefined && (
                         <Typography variant="caption" sx={{ 
                           fontSize: '0.65rem',
@@ -951,6 +952,16 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                           ml: 0.5
                         }}>
                           {(testResults[index].threshold! * 100).toFixed(1)}%
+                        </Typography>
+                      )}
+                      {/* Show OCR confidence for text verifications */}
+                      {verification.controller_type === 'text' && testResults[index].ocrConfidence !== undefined && (
+                        <Typography variant="caption" sx={{ 
+                          fontSize: '0.65rem',
+                          color: 'rgba(255,255,255,0.7)',
+                          ml: 0.5
+                        }}>
+                          OCR: {testResults[index].ocrConfidence!.toFixed(1)}%
                         </Typography>
                       )}
                       {/* Show error message for ERROR type results */}
