@@ -27,6 +27,7 @@ export function StreamViewer({
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
   const maxRetries = 5;
   const retryDelay = 3000;
+  const lastInitTime = useRef<number>(0);
 
   // Expose video ref to parent if provided
   useEffect(() => {
@@ -80,6 +81,13 @@ export function StreamViewer({
 
   // Initialize or reinitialize stream
   const initializeStream = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastInitTime.current < 3000) {
+      console.log('[@component:StreamViewer] Skipping stream initialization due to debounce');
+      return;
+    }
+    lastInitTime.current = now;
+
     if (!streamUrl || !videoRef.current) {
       setStreamError('Stream URL or video element not available');
       return;
@@ -351,4 +359,6 @@ export function StreamViewer({
   );
 }
 
-export default StreamViewer;
+export default React.memo(StreamViewer, (prevProps, nextProps) => {
+  return prevProps.streamUrl === nextProps.streamUrl && prevProps.isStreamActive === nextProps.isStreamActive;
+});
