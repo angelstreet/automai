@@ -8,7 +8,7 @@ export interface StreamViewerLayoutConfig {
   minHeight: string;
   aspectRatio: string;
   objectFit: 'cover' | 'contain' | 'fill';
-  isMobileModel: boolean; 
+  isMobileModel: boolean;
 }
 
 // Layout configuration for VerificationEditor component
