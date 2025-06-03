@@ -18,6 +18,52 @@ from ..base_controllers import VerificationControllerInterface
 from .image import apply_image_filter
 
 
+def _create_filtered_versions(image_path: str) -> None:
+    """
+    Automatically create greyscale and binary versions of an image.
+    
+    Args:
+        image_path: Path to the original image
+    """
+    try:
+        if not os.path.exists(image_path):
+            print(f"[@controller:TextVerification] Original image not found for filtering: {image_path}")
+            return
+        
+        # Get base path and extension
+        base_path, ext = os.path.splitext(image_path)
+        
+        # Create greyscale version
+        greyscale_path = f"{base_path}_greyscale{ext}"
+        import shutil
+        shutil.copy2(image_path, greyscale_path)
+        if apply_image_filter(greyscale_path, 'greyscale'):
+            print(f"[@controller:TextVerification] Created greyscale version: {greyscale_path}")
+        else:
+            print(f"[@controller:TextVerification] Failed to create greyscale version: {greyscale_path}")
+            # Clean up failed file
+            try:
+                os.unlink(greyscale_path)
+            except:
+                pass
+        
+        # Create binary version
+        binary_path = f"{base_path}_binary{ext}"
+        shutil.copy2(image_path, binary_path)
+        if apply_image_filter(binary_path, 'binary'):
+            print(f"[@controller:TextVerification] Created binary version: {binary_path}")
+        else:
+            print(f"[@controller:TextVerification] Failed to create binary version: {binary_path}")
+            # Clean up failed file
+            try:
+                os.unlink(binary_path)
+            except:
+                pass
+                
+    except Exception as e:
+        print(f"[@controller:TextVerification] Error creating filtered versions: {e}")
+
+
 class TextVerificationController(VerificationControllerInterface):
     """Text verification controller that uses OCR to detect text on screen."""
     
@@ -118,6 +164,8 @@ class TextVerificationController(VerificationControllerInterface):
             
             if result:
                 print(f"[@controller:TextVerification] Saved cropped source: {cropped_source_path}")
+                # Automatically create greyscale and binary versions
+                _create_filtered_versions(cropped_source_path)
                 return cropped_source_path
             else:
                 print(f"[@controller:TextVerification] Failed to save cropped source: {cropped_source_path}")
@@ -213,6 +261,8 @@ class TextVerificationController(VerificationControllerInterface):
             shutil.copy2(source_image_path, saved_source_path)
             
             print(f"[@controller:TextVerification] Saved source image: {saved_source_path}")
+            # Automatically create greyscale and binary versions
+            _create_filtered_versions(saved_source_path)
             return saved_source_path
                 
         except Exception as e:

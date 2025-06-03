@@ -60,6 +60,8 @@ def crop_reference_image(source_path, target_path, area):
         
         if result:
             print(f"Reference image saved successfully: {target_path}")
+            # Automatically create greyscale and binary versions
+            _create_filtered_versions(target_path)
             return True
         else:
             print(f"Failed to save reference image: {target_path}")
@@ -68,6 +70,52 @@ def crop_reference_image(source_path, target_path, area):
     except Exception as e:
         print(f"Error cropping reference image: {str(e)}")
         return False
+
+
+def _create_filtered_versions(image_path: str) -> None:
+    """
+    Automatically create greyscale and binary versions of an image.
+    
+    Args:
+        image_path: Path to the original image
+    """
+    try:
+        if not os.path.exists(image_path):
+            print(f"[@controller:ImageVerification] Original image not found for filtering: {image_path}")
+            return
+        
+        # Get base path and extension
+        base_path, ext = os.path.splitext(image_path)
+        
+        # Create greyscale version
+        greyscale_path = f"{base_path}_greyscale{ext}"
+        import shutil
+        shutil.copy2(image_path, greyscale_path)
+        if apply_image_filter(greyscale_path, 'greyscale'):
+            print(f"[@controller:ImageVerification] Created greyscale version: {greyscale_path}")
+        else:
+            print(f"[@controller:ImageVerification] Failed to create greyscale version: {greyscale_path}")
+            # Clean up failed file
+            try:
+                os.unlink(greyscale_path)
+            except:
+                pass
+        
+        # Create binary version
+        binary_path = f"{base_path}_binary{ext}"
+        shutil.copy2(image_path, binary_path)
+        if apply_image_filter(binary_path, 'binary'):
+            print(f"[@controller:ImageVerification] Created binary version: {binary_path}")
+        else:
+            print(f"[@controller:ImageVerification] Failed to create binary version: {binary_path}")
+            # Clean up failed file
+            try:
+                os.unlink(binary_path)
+            except:
+                pass
+                
+    except Exception as e:
+        print(f"[@controller:ImageVerification] Error creating filtered versions: {e}")
 
 
 def apply_image_filter(image_path: str, filter_type: str) -> bool:
@@ -375,6 +423,8 @@ class ImageVerificationController(VerificationControllerInterface):
             
             if result:
                 print(f"[@controller:ImageVerification] Saved cropped source: {cropped_source_path}")
+                # Automatically create greyscale and binary versions
+                _create_filtered_versions(cropped_source_path)
                 return cropped_source_path
             else:
                 print(f"[@controller:ImageVerification] Failed to save cropped source: {cropped_source_path}")
