@@ -1163,6 +1163,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             width: '100%'
           }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+              {imageComparisonDialog.referenceUrl && (
+                <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
+                  Source
+                </Typography>
+              )}
               <img
                 src={imageComparisonDialog.sourceUrl}
                 alt="Source Image"
