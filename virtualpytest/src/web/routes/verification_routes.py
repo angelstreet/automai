@@ -1587,4 +1587,98 @@ def get_capture_image(filename):
         return jsonify({
             'success': False,
             'error': f'Failed to retrieve captured image: {str(e)}'
+        }), 500
+
+# =====================================================
+# ADB VERIFICATION ROUTES
+# =====================================================
+
+@verification_bp.route('/api/virtualpytest/verification/adb/getElementLists', methods=['POST'])
+def adb_get_element_lists():
+    """Get UI element lists from ADB controller."""
+    try:
+        import app
+        
+        if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
+            return jsonify({
+                'success': False,
+                'error': 'ADB verification controller not initialized'
+            }), 400
+        
+        success, element_list, error = app.adb_verification_controller.getElementLists()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'elements': element_list,
+                'count': len(element_list)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get element lists: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/verification/adb/waitForElementToAppear', methods=['POST'])
+def adb_wait_for_element_to_appear():
+    """Wait for element to appear using ADB controller."""
+    try:
+        import app
+        
+        if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
+            return jsonify({
+                'success': False,
+                'error': 'ADB verification controller not initialized'
+            }), 400
+        
+        data = request.get_json()
+        criteria = data or {}
+        
+        success, message, additional_data = app.adb_verification_controller.waitForElementToAppear(**criteria)
+        
+        return jsonify({
+            'success': success,
+            'message': message,
+            'data': additional_data
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to wait for element: {str(e)}'
+        }), 500
+
+@verification_bp.route('/api/virtualpytest/verification/adb/waitForElementToDisappear', methods=['POST'])
+def adb_wait_for_element_to_disappear():
+    """Wait for element to disappear using ADB controller."""
+    try:
+        import app
+        
+        if not hasattr(app, 'adb_verification_controller') or not app.adb_verification_controller:
+            return jsonify({
+                'success': False,
+                'error': 'ADB verification controller not initialized'
+            }), 400
+        
+        data = request.get_json()
+        criteria = data or {}
+        
+        success, message, additional_data = app.adb_verification_controller.waitForElementToDisappear(**criteria)
+        
+        return jsonify({
+            'success': success,
+            'message': message,
+            'data': additional_data
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to wait for element disappear: {str(e)}'
         }), 500 

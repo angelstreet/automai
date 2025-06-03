@@ -72,7 +72,7 @@ def get_controller_types():
                 'webrtc': {'name': 'WebRTC', 'description': 'Web Real-Time Communication', 'status': 'placeholder'},
             },
             'verification': {
-                'ocr': {'name': 'OCR Verification', 'description': 'Optical Character Recognition', 'status': 'available'},
+                'ocr': {'name': 'Text Verification', 'description': 'Text matching verification', 'status': 'available'},
                 'image': {'name': 'Image Verification', 'description': 'Image matching verification', 'status': 'available'},
                 'adb': {'name': 'ADB Verification', 'description': 'Direct ADB element verification via SSH', 'status': 'available'},
                 'audio': {'name': 'Audio Verification', 'description': 'Audio content verification', 'status': 'placeholder'},
