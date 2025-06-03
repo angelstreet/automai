@@ -457,6 +457,13 @@ def execute_verification():
         message = ""
         additional_data = {}
         
+        # Initialize result dictionary for response
+        result = {
+            'success': False,
+            'message': '',
+            'error': None
+        }
+        
         # Execute based on the command type and controller
         if controller_type == 'adb':
             # ADB-specific commands - new clean API
