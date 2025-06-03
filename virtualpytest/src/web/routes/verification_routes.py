@@ -1140,32 +1140,40 @@ def auto_detect_text():
                     'image_filter': image_filter
                 }), 400
             
-            # Use TextBlob for free local language detection
+            # Use langdetect for free local language detection
             detected_language = 'en'  # Default to English
             language_confidence = 0.8  # Default confidence
             detected_language_name = 'English'  # Default name
             
             try:
-                # Try TextBlob for free local language detection
-                from textblob import TextBlob
+                # Try langdetect for free local language detection with confidence
+                from langdetect import detect, detect_langs
                 
-                blob = TextBlob(detected_text)
-                detected_lang = blob.detect_language()
+                # Use detect_langs to get confidence scores
+                lang_probs = detect_langs(detected_text)
                 
-                print(f"[@route:auto_detect_text] TextBlob detected language: {detected_lang}")
-                
-                # Convert language code to display name and add confidence in parentheses
-                detected_language = detected_lang
-                language_confidence = 0.9  # TextBlob doesn't provide confidence, assume high confidence
-                base_language_name = _get_language_display_name(detected_lang)
-                detected_language_name = f"{base_language_name} ({int(language_confidence * 100)}%)"
+                if lang_probs and len(lang_probs) > 0:
+                    # Get the most probable language
+                    best_lang = lang_probs[0]
+                    detected_language = best_lang.lang
+                    language_confidence = best_lang.prob
+                    
+                    print(f"[@route:auto_detect_text] langdetect result: {detected_language} (confidence: {language_confidence:.3f})")
+                    
+                    # Convert language code to display name and add confidence in parentheses
+                    base_language_name = _get_language_display_name(detected_language)
+                    detected_language_name = f"{base_language_name} ({int(language_confidence * 100)}%)"
+                else:
+                    print(f"[@route:auto_detect_text] langdetect returned no results")
+                    detected_language_name = "English (80%)"  # Default fallback
+                    language_confidence = 0.8
                 
             except ImportError:
-                print(f"[@route:auto_detect_text] TextBlob not available (pip install textblob)")
+                print(f"[@route:auto_detect_text] langdetect not available (pip install langdetect)")
                 detected_language_name = "English (80%)"  # Default fallback with confidence
                 language_confidence = 0.8
-            except Exception as textblob_error:
-                print(f"[@route:auto_detect_text] TextBlob language detection error: {textblob_error}")
+            except Exception as langdetect_error:
+                print(f"[@route:auto_detect_text] langdetect error: {langdetect_error}")
                 detected_language_name = "English (80%)"  # Default fallback with confidence
                 language_confidence = 0.8
             

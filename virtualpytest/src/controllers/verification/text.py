@@ -569,8 +569,8 @@ class TextVerificationController(VerificationControllerInterface):
 
     def _detect_text_language(self, image_path: str) -> Tuple[str, float, str]:
         """
-        Detect the most likely language in the image using Google Translate API.
-        First extracts text using English OCR, then uses Google Translate for language detection.
+        Detect the most likely language in the image using langdetect.
+        First extracts text using English OCR, then uses langdetect for language detection.
         
         Args:
             image_path: Path to the image file
@@ -596,28 +596,28 @@ class TextVerificationController(VerificationControllerInterface):
                 print(f"[@controller:TextVerification] Text too short for reliable language detection")
                 return 'eng', 0.5, detected_text
             
-            # Try Google Translate API for language detection
-            google_result = self._detect_language_with_google_translate(detected_text)
-            if google_result:
-                google_lang, google_confidence = google_result
-                print(f"[@controller:TextVerification] Google Translate detected: {google_lang} with confidence: {google_confidence:.3f}")
+            # Try langdetect for language detection
+            langdetect_result = self._detect_language_with_langdetect(detected_text)
+            if langdetect_result:
+                lang_code, confidence = langdetect_result
+                print(f"[@controller:TextVerification] langdetect detected: {lang_code} with confidence: {confidence:.3f}")
                 
-                # Convert Google language code to Tesseract language code for consistency
-                tesseract_lang = self._convert_google_to_tesseract_lang(google_lang)
+                # Convert to Tesseract language code for consistency
+                tesseract_lang = self._convert_to_tesseract_lang(lang_code)
                 print(f"[@controller:TextVerification] Using language: {tesseract_lang}")
                 
-                return tesseract_lang, google_confidence, detected_text
+                return tesseract_lang, confidence, detected_text
             else:
-                print(f"[@controller:TextVerification] Google Translate not available, defaulting to English")
+                print(f"[@controller:TextVerification] langdetect not available, defaulting to English")
                 return 'eng', 0.8, detected_text  # High confidence for English as fallback
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Language detection error: {e}")
             return 'eng', 0.5, ''
 
-    def _detect_language_with_google_translate(self, text: str) -> Optional[Tuple[str, float]]:
+    def _detect_language_with_langdetect(self, text: str) -> Optional[Tuple[str, float]]:
         """
-        Use Google Translate API to detect language and confidence.
+        Use langdetect library to detect language and confidence.
         
         Args:
             text: Text to analyze for language detection
@@ -626,42 +626,44 @@ class TextVerificationController(VerificationControllerInterface):
             Tuple of (language_code, confidence) or None if failed
         """
         try:
-            # Try to import and use Google Translate API
-            from google.cloud import translate_v2 as translate
+            # Try to import and use langdetect
+            from langdetect import detect_langs
             
-            # Initialize client (requires GOOGLE_APPLICATION_CREDENTIALS env var or service account)
-            client = translate.Client()
+            # Detect language with confidence
+            lang_probs = detect_langs(text)
             
-            # Detect language
-            result = client.detect_language(text)
-            
-            language_code = result['language']
-            confidence = result['confidence']
-            
-            print(f"[@controller:TextVerification] Google Translate API result: {language_code} (confidence: {confidence:.3f})")
-            
-            return language_code, confidence
+            if lang_probs and len(lang_probs) > 0:
+                # Get the most probable language
+                best_lang = lang_probs[0]
+                language_code = best_lang.lang
+                confidence = best_lang.prob
+                
+                print(f"[@controller:TextVerification] langdetect result: {language_code} (confidence: {confidence:.3f})")
+                
+                return language_code, confidence
+            else:
+                print(f"[@controller:TextVerification] langdetect returned no results")
+                return None
             
         except ImportError:
-            print(f"[@controller:TextVerification] Google Cloud Translate not available (pip install google-cloud-translate)")
+            print(f"[@controller:TextVerification] langdetect not available (pip install langdetect)")
             return None
-        except Exception as google_error:
-            print(f"[@controller:TextVerification] Google Translate API error: {google_error}")
-            print(f"[@controller:TextVerification] Ensure GOOGLE_APPLICATION_CREDENTIALS is set or service account is configured")
+        except Exception as langdetect_error:
+            print(f"[@controller:TextVerification] langdetect error: {langdetect_error}")
             return None
 
-    def _convert_google_to_tesseract_lang(self, google_lang_code: str) -> str:
+    def _convert_to_tesseract_lang(self, lang_code: str) -> str:
         """
-        Convert Google Translate language code to Tesseract language code.
+        Convert langdetect language code to Tesseract language code.
         
         Args:
-            google_lang_code: Google language code (e.g., 'en', 'fr', 'de', 'it')
+            lang_code: langdetect language code (e.g., 'en', 'fr', 'de', 'it')
             
         Returns:
             Tesseract language code (e.g., 'eng', 'fra', 'deu', 'ita')
         """
-        # Mapping from Google language codes to Tesseract language codes
-        google_to_tesseract = {
+        # Mapping from langdetect codes to Tesseract language codes
+        lang_to_tesseract = {
             'en': 'eng',    # English
             'fr': 'fra',    # French
             'de': 'deu',    # German
@@ -672,17 +674,16 @@ class TextVerificationController(VerificationControllerInterface):
             'ru': 'rus',    # Russian
             'ja': 'jpn',    # Japanese
             'ko': 'kor',    # Korean
-            'zh': 'chi_sim', # Chinese Simplified
             'zh-cn': 'chi_sim', # Chinese Simplified
             'zh-tw': 'chi_tra', # Chinese Traditional
             'ar': 'ara',    # Arabic
             'hi': 'hin',    # Hindi
         }
         
-        tesseract_code = google_to_tesseract.get(google_lang_code, 'eng')  # Default to English
+        tesseract_code = lang_to_tesseract.get(lang_code, 'eng')  # Default to English
         
         if tesseract_code != 'eng':
-            print(f"[@controller:TextVerification] Converted Google '{google_lang_code}' to Tesseract '{tesseract_code}'")
+            print(f"[@controller:TextVerification] Converted langdetect '{lang_code}' to Tesseract '{tesseract_code}'")
         
         return tesseract_code
 

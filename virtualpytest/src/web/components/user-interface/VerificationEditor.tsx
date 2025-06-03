@@ -150,6 +150,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     text: string;
     fontSize: number;
     confidence: number;
+    detectedLanguage?: string;
+    detectedLanguageName?: string;
+    languageConfidence?: number;
   } | null>(null);
   const [textImageFilter, setTextImageFilter] = useState<'none' | 'greyscale' | 'binary'>('none');
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
@@ -737,7 +740,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         setDetectedTextData({
           text: result.detected_text,
           fontSize: result.font_size,
-          confidence: result.confidence
+          confidence: result.confidence,
+          detectedLanguage: result.detected_language,
+          detectedLanguageName: result.detected_language_name,
+          languageConfidence: result.language_confidence
         });
         
         // Pre-fill the text input with detected text
@@ -1242,6 +1248,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
                   Detected: Font Size {detectedTextData.fontSize}px, 
                   Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
+                  {detectedTextData.detectedLanguageName && (
+                    <>, Language: {detectedTextData.detectedLanguageName}</>
+                  )}
                 </Typography>
               </Box>
             )}
