@@ -101,14 +101,6 @@ export function ScreenDefinitionEditor({
   // Add state to track stop button click
   const [isStoppingCapture, setIsStoppingCapture] = useState(false);
   
-  // Log stream URL for debugging
-  useEffect(() => {
-    if (avConfig) {
-      console.log('[@component:ScreenDefinitionEditor] Stream URL config:', avConfig.stream_url);
-      console.log('[@component:ScreenDefinitionEditor] Host IP:', avConfig.host_ip);
-    }
-  }, [avConfig]);
-
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | undefined>(undefined);
   const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
@@ -647,11 +639,6 @@ export function ScreenDefinitionEditor({
     // Get the proper stream URL
     const streamUrl = getStreamUrl();
     
-    // Log the actual URL being used
-    if (viewMode === 'stream') {
-      console.log(`[@component:ScreenDefinitionEditor] Using stream URL: ${streamUrl}`);
-    }
-
     // Create layout config override for collapsed mode
     const layoutConfigOverride = !isExpanded ? {
       minHeight: '250px', // Match collapsed container height
