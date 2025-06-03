@@ -119,7 +119,6 @@ def get_verification_actions():
                     'label': 'Wait for Element to Appear',
                     'command': 'waitForElementToAppear',
                     'params': {
-                        'criteria': {},
                         'timeout': 10.0
                     },
                     'description': 'Wait for UI element to appear using ADB',
@@ -132,7 +131,6 @@ def get_verification_actions():
                     'label': 'Wait for Element to Disappear',
                     'command': 'waitForElementToDisappear',
                     'params': {
-                        'criteria': {},
                         'timeout': 10.0
                     },
                     'description': 'Wait for UI element to disappear using ADB',
