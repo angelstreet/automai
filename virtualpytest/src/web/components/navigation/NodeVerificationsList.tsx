@@ -115,6 +115,23 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     closeImageComparisonModal
   } = useImageComparisonModal();
 
+  // Add debounced state management to prevent excessive parent re-renders
+  const [localVerifications, setLocalVerifications] = useState(verifications);
+  
+  // Debounce the parent notification
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onVerificationsChange(localVerifications);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timeoutId);
+  }, [localVerifications, onVerificationsChange]);
+  
+  // Update local state when prop changes (from parent)
+  useEffect(() => {
+    setLocalVerifications(verifications);
+  }, [verifications]);
+
   const addVerification = () => {
     const newVerification: NodeVerification = {
       id: '',

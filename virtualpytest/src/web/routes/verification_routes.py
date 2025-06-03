@@ -459,46 +459,42 @@ def execute_verification():
         
         # Execute based on the command type and controller
         if controller_type == 'adb':
-            # ADB-specific commands - update to use new method signatures
+            # ADB-specific commands - new clean API
             if command == 'waitForElementToAppear':
-                # Parse input criteria from inputValue if available
+                # Get search term from inputValue 
                 input_value = verification_data.get('inputValue', '')
-                criteria = {}
+                search_term = input_value.strip() if input_value else ''
                 
-                # Parse criteria from input (e.g., "text=Button" or "resource-id=btn_submit")
-                if input_value:
-                    if '=' in input_value:
-                        key, value = input_value.split('=', 1)
-                        key = key.strip().replace('-', '_')  # Convert resource-id to resource_id
-                        criteria[key] = value.strip()
-                    else:
-                        # Default to text search if no = found
-                        criteria['text'] = input_value.strip()
+                if not search_term:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Search term is required for ADB element verification',
+                        'resultType': 'ERROR'
+                    }), 400
                 
-                # Add timeout from params
-                criteria['timeout'] = params.get('timeout', 10.0)
+                # Get timeout from params
+                timeout = params.get('timeout', 10.0)
+                check_interval = params.get('check_interval', 1.0)
                 
-                success, message, additional_data = controller.waitForElementToAppear(**criteria)
+                success, message, additional_data = controller.waitForElementToAppear(search_term, timeout, check_interval)
                 
             elif command == 'waitForElementToDisappear':
-                # Parse input criteria from inputValue if available
+                # Get search term from inputValue
                 input_value = verification_data.get('inputValue', '')
-                criteria = {}
+                search_term = input_value.strip() if input_value else ''
                 
-                # Parse criteria from input (e.g., "text=Button" or "resource-id=btn_submit")
-                if input_value:
-                    if '=' in input_value:
-                        key, value = input_value.split('=', 1)
-                        key = key.strip().replace('-', '_')  # Convert resource-id to resource_id
-                        criteria[key] = value.strip()
-                    else:
-                        # Default to text search if no = found
-                        criteria['text'] = input_value.strip()
+                if not search_term:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Search term is required for ADB element verification',
+                        'resultType': 'ERROR'
+                    }), 400
                 
-                # Add timeout from params
-                criteria['timeout'] = params.get('timeout', 10.0)
+                # Get timeout from params
+                timeout = params.get('timeout', 10.0)
+                check_interval = params.get('check_interval', 1.0)
                 
-                success, message, additional_data = controller.waitForElementToDisappear(**criteria)
+                success, message, additional_data = controller.waitForElementToDisappear(search_term, timeout, check_interval)
                 
             else:
                 return jsonify({
@@ -1718,9 +1714,18 @@ def adb_wait_for_element_to_appear():
             }), 400
         
         data = request.get_json()
-        criteria = data or {}
+        search_term = data.get('search_term', '')
         
-        success, message, additional_data = app.adb_verification_controller.waitForElementToAppear(**criteria)
+        if not search_term:
+            return jsonify({
+                'success': False,
+                'error': 'search_term parameter is required'
+            }), 400
+        
+        timeout = data.get('timeout', 10.0)
+        check_interval = data.get('check_interval', 1.0)
+        
+        success, message, additional_data = app.adb_verification_controller.waitForElementToAppear(search_term, timeout, check_interval)
         
         return jsonify({
             'success': success,
@@ -1747,9 +1752,18 @@ def adb_wait_for_element_to_disappear():
             }), 400
         
         data = request.get_json()
-        criteria = data or {}
+        search_term = data.get('search_term', '')
         
-        success, message, additional_data = app.adb_verification_controller.waitForElementToDisappear(**criteria)
+        if not search_term:
+            return jsonify({
+                'success': False,
+                'error': 'search_term parameter is required'
+            }), 400
+        
+        timeout = data.get('timeout', 10.0)
+        check_interval = data.get('check_interval', 1.0)
+        
+        success, message, additional_data = app.adb_verification_controller.waitForElementToDisappear(search_term, timeout, check_interval)
         
         return jsonify({
             'success': success,
