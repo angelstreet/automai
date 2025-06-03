@@ -490,26 +490,37 @@ def execute_batch_verification():
                 if additional_data:
                     # Convert absolute paths to relative URLs for web access
                     if 'source_image_path' in additional_data:
-                        # Convert /path/to/tmp/model/verification_x/source_cropped.png to /api/virtualpytest/tmp/model/verification_x/source_cropped.png
+                        # Convert /path/to/tmp/{model}/source_cropped_{index}.png to /api/virtualpytest/tmp/{model}/source_cropped_{index}.png
                         source_path = additional_data['source_image_path']
                         if '/tmp/' in source_path:
                             relative_path = source_path.split('/tmp/')[-1]
                             additional_data['source_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
                     
                     if 'reference_image_path' in additional_data:
+                        print(f"[@route:execute_batch_verification] Converting reference path: {additional_data['reference_image_path']}")
                         # Convert absolute reference path to relative URL
                         ref_path = additional_data['reference_image_path']
                         if '/resources/' in ref_path:
-                            # Extract model and filename from path like /path/to/resources/model/filename.png
+                            # Extract model and filename from path like /path/to/resources/{model}/filename.png
                             path_parts = ref_path.split('/resources/')[-1].split('/')
                             if len(path_parts) >= 2:
                                 ref_model = path_parts[0]
                                 ref_filename = path_parts[1]
                                 additional_data['reference_image_url'] = f'/api/virtualpytest/reference/image/{ref_model}/{ref_filename}'
+                                print(f"[@route:execute_batch_verification] Set reference_image_url: {additional_data['reference_image_url']}")
+                            else:
+                                print(f"[@route:execute_batch_verification] ERROR: Invalid path structure for resources: {path_parts}")
                         elif '/tmp/' in ref_path:
-                            # Handle filtered reference images saved to tmp directory
+                            # Handle filtered reference images saved to tmp directory with flat structure
                             relative_path = ref_path.split('/tmp/')[-1]
                             additional_data['reference_image_url'] = f'/api/virtualpytest/tmp/{relative_path}'
+                            print(f"[@route:execute_batch_verification] Set reference_image_url (tmp): {additional_data['reference_image_url']}")
+                        else:
+                            print(f"[@route:execute_batch_verification] ERROR: Reference path doesn't contain /resources/ or /tmp/: {ref_path}")
+                    else:
+                        print(f"[@route:execute_batch_verification] WARNING: No reference_image_path in additional_data for image verification")
+                    
+                    print(f"[@route:execute_batch_verification] Final additional_data keys: {list(additional_data.keys())}")
                     
                     result.update(additional_data)
                 
@@ -555,6 +566,7 @@ def capture_reference_image():
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
+        model = data.get('model', 'default')  # Get actual model name
         
         print(f"[@route:capture_reference_image] Capturing reference image from {source_path} with area: {area}")
         
@@ -565,12 +577,12 @@ def capture_reference_image():
                 'error': 'Missing required parameters: area, source_path, or reference_name'
             }), 400
             
-        # Ensure target directory exists
+        # Create flat directory structure: /tmp/{model}/
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        target_dir = os.path.join(base_dir, 'tmp', model)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Define target path
+        # Define target path with consistent naming
         target_path = os.path.join(target_dir, f"{reference_name}.png")
         
         # Import the crop function from image controller
@@ -581,7 +593,7 @@ def capture_reference_image():
         
         if success:
             # Return success with image info
-            relative_path = f"/api/virtualpytest/reference/image/{reference_name}.png"
+            relative_path = f"/api/virtualpytest/reference/image/{model}/{reference_name}.png"
             return jsonify({
                 'success': True,
                 'message': f'Reference image saved: {reference_name}',
@@ -609,6 +621,7 @@ def process_area_reference():
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
+        model = data.get('model', 'default')  # Get actual model name
         autocrop = data.get('autocrop', False)
         remove_background = data.get('remove_background', False)
         
@@ -622,12 +635,12 @@ def process_area_reference():
                 'error': 'Missing required parameters: area, source_path, or reference_name'
             }), 400
             
-        # Ensure target directory exists
+        # Create flat directory structure: /tmp/{model}/
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        target_dir = os.path.join(base_dir, 'tmp', model)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Define target path
+        # Define target path with consistent naming
         target_path = os.path.join(target_dir, f"{reference_name}.png")
         
         # Import processing functions
@@ -654,7 +667,7 @@ def process_area_reference():
                 processed_area = area
         
         # Return success with processed area info
-        relative_path = f"/api/virtualpytest/reference/image/{reference_name}.png"
+        relative_path = f"/api/virtualpytest/reference/image/{model}/{reference_name}.png"
         return jsonify({
             'success': True,
             'message': f'Reference image processed and saved: {reference_name}',
@@ -991,13 +1004,13 @@ def auto_detect_text():
                 'error': f'Source image not found: {source_path}'
             }), 400
         
-        # Use exact same logic as image capture - crop using existing function
+        # Create flat directory structure: /tmp/{model}/
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', 'model')
+        target_dir = os.path.join(base_dir, 'tmp', model)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Define target path for cropped preview (same as image capture)
-        preview_filename = f"capture.png"  # Use same filename as image capture for consistency
+        # Use consistent naming for text auto-detect preview
+        preview_filename = "text_autodetect.png"
         target_path = os.path.join(target_dir, preview_filename)
         
         # Import the crop function from image controller (same as image capture)
@@ -1023,7 +1036,7 @@ def auto_detect_text():
                 return jsonify({
                     'success': False,
                     'error': 'Failed to load cropped image for OCR',
-                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}'
+                    'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}'
                 }), 500
             
             # Apply image preprocessing based on filter option
@@ -1042,7 +1055,7 @@ def auto_detect_text():
             
             # Save processed image if different from original
             if image_filter != 'none':
-                processed_filename = f"text_autodetect_processed_{model}_{image_filter}.png"
+                processed_filename = f"text_autodetect_processed_{image_filter}.png"
                 processed_path = os.path.join(target_dir, processed_filename)
                 cv2.imwrite(processed_path, processed_image)
                 print(f"[@route:auto_detect_text] Saved processed image with {image_filter} filter: {processed_path}")
@@ -1072,7 +1085,7 @@ def auto_detect_text():
                     return jsonify({
                         'success': False,
                         'error': 'No text detected in the specified area',
-                        'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                        'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
                         'detected_language': detected_language,
                         'language_confidence': language_confidence,
                         'image_filter': image_filter
@@ -1089,7 +1102,7 @@ def auto_detect_text():
                 return jsonify({
                     'success': False,
                     'error': f'OCR processing failed: {str(lang_detection_error)}',
-                    'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                    'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
                     'image_filter': image_filter
                 }), 500
             
@@ -1099,7 +1112,7 @@ def auto_detect_text():
                 'confidence': round(avg_confidence / 100, 3),  # Convert to 0-1 range
                 'font_size': round(avg_font_size),
                 'area': area,
-                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
                 'detected_language': detected_language,
                 'language_confidence': round(language_confidence, 3),
                 'image_filter': image_filter
@@ -1110,7 +1123,7 @@ def auto_detect_text():
             return jsonify({
                 'success': False,
                 'error': f'OCR processing failed: {str(ocr_error)}',
-                'preview_url': f'/api/virtualpytest/reference/image/{preview_filename}?t={int(time.time() * 1000)}',
+                'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
                 'image_filter': image_filter
             }), 500
             

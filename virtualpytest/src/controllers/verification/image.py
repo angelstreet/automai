@@ -316,37 +316,61 @@ class ImageVerificationController(VerificationControllerInterface):
             Path to saved cropped image or None if failed
         """
         try:
-            # Create directory structure
+            print(f"[@controller:ImageVerification] _save_cropped_source_image called with:")
+            print(f"  source_image_path: {source_image_path}")
+            print(f"  area: {area}")
+            print(f"  model: {model}")
+            print(f"  verification_index: {verification_index}")
+            
+            # Create flat directory structure: /tmp/{model}/
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            output_dir = os.path.join(base_dir, 'tmp', model, f'verification_{verification_index}')
+            output_dir = os.path.join(base_dir, 'tmp', model)
+            print(f"[@controller:ImageVerification] Creating output directory: {output_dir}")
             os.makedirs(output_dir, exist_ok=True)
             
-            # Output path for cropped source
-            cropped_source_path = os.path.join(output_dir, 'source_cropped.png')
+            # Use consistent naming: source_cropped_{verification_index}.png
+            cropped_source_path = os.path.join(output_dir, f'source_cropped_{verification_index}.png')
+            print(f"[@controller:ImageVerification] Target cropped source path: {cropped_source_path}")
+            
+            # Check if source image exists and is readable
+            if not os.path.exists(source_image_path):
+                print(f"[@controller:ImageVerification] ERROR: Source image does not exist: {source_image_path}")
+                return None
             
             # Read and crop source image
+            print(f"[@controller:ImageVerification] Reading source image with cv2.imread...")
             img = cv2.imread(source_image_path)
             if img is None:
-                print(f"[@controller:ImageVerification] Could not read source image: {source_image_path}")
+                print(f"[@controller:ImageVerification] ERROR: Could not read source image with cv2: {source_image_path}")
                 return None
                 
+            print(f"[@controller:ImageVerification] Source image loaded successfully, shape: {img.shape}")
+            
             # Extract area coordinates
             x = int(area['x'])
             y = int(area['y'])
             width = int(area['width'])
             height = int(area['height'])
             
+            print(f"[@controller:ImageVerification] Cropping coordinates: x={x}, y={y}, width={width}, height={height}")
+            
             # Ensure coordinates are within image bounds
             img_height, img_width = img.shape[:2]
+            print(f"[@controller:ImageVerification] Source image dimensions: {img_width}x{img_height}")
+            
             x = max(0, min(x, img_width - 1))
             y = max(0, min(y, img_height - 1))
             width = min(width, img_width - x)
             height = min(height, img_height - y)
             
+            print(f"[@controller:ImageVerification] Adjusted coordinates: x={x}, y={y}, width={width}, height={height}")
+            
             # Crop image to same area used for comparison
             cropped_img = img[y:y+height, x:x+width]
+            print(f"[@controller:ImageVerification] Cropped image shape: {cropped_img.shape}")
             
             # Save cropped image
+            print(f"[@controller:ImageVerification] Saving cropped image to: {cropped_source_path}")
             result = cv2.imwrite(cropped_source_path, cropped_img)
             
             if result:
@@ -358,6 +382,8 @@ class ImageVerificationController(VerificationControllerInterface):
                 
         except Exception as e:
             print(f"[@controller:ImageVerification] Error saving cropped source: {e}")
+            import traceback
+            print(f"[@controller:ImageVerification] Full traceback: {traceback.format_exc()}")
             return None
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
@@ -492,9 +518,23 @@ class ImageVerificationController(VerificationControllerInterface):
             
             # If no match found, still save the best source for comparison (from ORIGINAL)
             if best_source_path and area and model is not None:
+                print(f"[@controller:ImageVerification] Attempting to save cropped source for comparison:")
+                print(f"  best_source_path: {best_source_path}")
+                print(f"  area: {area}")
+                print(f"  model: {model}")
+                print(f"  verification_index: {verification_index}")
+                
                 cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
+                    print(f"[@controller:ImageVerification] Successfully saved cropped source for UI comparison")
+                else:
+                    print(f"[@controller:ImageVerification] Failed to save cropped source for UI comparison")
+            else:
+                print(f"[@controller:ImageVerification] Skipping cropped source save - conditions not met:")
+                print(f"  best_source_path: {bool(best_source_path)}")
+                print(f"  area: {bool(area)}")
+                print(f"  model: {model}")
             
             # Save best confidence for threshold display and disappear operations
             additional_data["threshold"] = max_confidence

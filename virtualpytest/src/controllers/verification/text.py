@@ -29,7 +29,6 @@ class TextVerificationController(VerificationControllerInterface):
             av_controller: Reference to AV controller for screenshot capture
             **kwargs: Optional parameters:
                 - ocr_language: Language for OCR (default: 'eng')
-                - ocr_config: Tesseract configuration string
         """
         if not av_controller:
             raise ValueError("av_controller is required for screenshot capture")
@@ -40,8 +39,6 @@ class TextVerificationController(VerificationControllerInterface):
         # AV controller reference for screenshot capture only
         self.av_controller = av_controller
         self.ocr_language = kwargs.get('ocr_language', 'eng')
-        self.ocr_config = kwargs.get('ocr_config', '--psm')
-        self.ocr_psm = kwargs.get('ocr_psm', '6')  # PSM 6 = Uniform block of text
         
         # Temporary files for analysis
         self.temp_image_path = Path("/tmp/text_verification")
@@ -86,13 +83,13 @@ class TextVerificationController(VerificationControllerInterface):
             Path to saved cropped image or None if failed
         """
         try:
-            # Create directory structure
+            # Create flat directory structure: /tmp/{model}/
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            output_dir = os.path.join(base_dir, 'tmp', model, f'verification_{verification_index}')
+            output_dir = os.path.join(base_dir, 'tmp', model)
             os.makedirs(output_dir, exist_ok=True)
             
-            # Output path for cropped source
-            cropped_source_path = os.path.join(output_dir, 'source_cropped.png')
+            # Use consistent naming: source_cropped_{verification_index}.png
+            cropped_source_path = os.path.join(output_dir, f'source_cropped_{verification_index}.png')
             
             # Read and crop source image using OpenCV
             img = cv2.imread(source_image_path)
@@ -132,7 +129,7 @@ class TextVerificationController(VerificationControllerInterface):
 
     def _extract_text_from_image(self, image_path: str) -> str:
         """
-        Extract text from image using Tesseract OCR.
+        Extract text from image using pytesseract (same as auto-detect).
         
         Args:
             image_path: Path to the image file
@@ -141,6 +138,9 @@ class TextVerificationController(VerificationControllerInterface):
             Extracted text string
         """
         try:
+            import pytesseract
+            import cv2
+            
             print(f"[@controller:TextVerification] Running OCR on image: {image_path}")
             print(f"[@controller:TextVerification] Image exists: {os.path.exists(image_path)}")
             
@@ -148,36 +148,18 @@ class TextVerificationController(VerificationControllerInterface):
                 print(f"[@controller:TextVerification] Image file not found: {image_path}")
                 return ""
             
-            cmd = [
-                'tesseract',
-                image_path,
-                'stdout',
-                '-l', self.ocr_language,
-                self.ocr_config, self.ocr_psm
-            ]
-            
-            print(f"[@controller:TextVerification] OCR command: {' '.join(cmd)}")
-            
-            # Run the command with proper encoding handling
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=30)
-            
-            print(f"[@controller:TextVerification] OCR return code: {result.returncode}")
-            print(f"[@controller:TextVerification] OCR stderr: {result.stderr}")
-            
-            if result.returncode == 0:
-                extracted_text = result.stdout.strip()
-                print(f"[@controller:TextVerification] Extracted text: '{extracted_text}'")
-                return extracted_text
-            else:
-                print(f"[@controller:TextVerification] OCR failed with stderr: {result.stderr}")
+            # Load image
+            image = cv2.imread(image_path)
+            if image is None:
+                print(f"[@controller:TextVerification] Could not load image: {image_path}")
                 return ""
+            
+            # Use pytesseract directly (same as auto-detect)
+            extracted_text = pytesseract.image_to_string(image, lang=self.ocr_language)
+            
+            print(f"[@controller:TextVerification] Extracted text: '{extracted_text.strip()}'")
+            return extracted_text.strip()
                 
-        except subprocess.TimeoutExpired:
-            print(f"[@controller:TextVerification] OCR timeout - command took longer than 30 seconds")
-            return ""
-        except UnicodeDecodeError as e:
-            print(f"[@controller:TextVerification] Unicode decode error: {e}")
-            return ""
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             return ""
@@ -218,13 +200,13 @@ class TextVerificationController(VerificationControllerInterface):
             Path to saved source image or None if failed
         """
         try:
-            # Create directory structure
+            # Create flat directory structure: /tmp/{model}/
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            output_dir = os.path.join(base_dir, 'tmp', model, f'verification_{verification_index}')
+            output_dir = os.path.join(base_dir, 'tmp', model)
             os.makedirs(output_dir, exist_ok=True)
             
-            # Output path for source image
-            saved_source_path = os.path.join(output_dir, 'source_image.png')
+            # Use consistent naming: source_image_{verification_index}.png
+            saved_source_path = os.path.join(output_dir, f'source_image_{verification_index}.png')
             
             # Copy source image to output location
             import shutil
@@ -547,21 +529,27 @@ class TextVerificationController(VerificationControllerInterface):
                 
                 print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
             
-            # Save cropped image to temporary file for OCR
-            timestamp = int(time.time())
-            temp_path = self.temp_image_path / f"text_ocr_{timestamp}.png"
+            # Save cropped image to temporary file for OCR using consistent naming
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            temp_dir = os.path.join(base_dir, 'tmp', 'text_ocr')
+            os.makedirs(temp_dir, exist_ok=True)
             
-            success = cv2.imwrite(str(temp_path), img)
+            # Use simple incremental naming instead of timestamp
+            import time
+            temp_id = int(time.time()) % 10000  # Simple ID to avoid conflicts
+            temp_path = os.path.join(temp_dir, f"text_ocr_{temp_id}.png")
+            
+            success = cv2.imwrite(temp_path, img)
             if not success:
                 print(f"[@controller:TextVerification] Failed to save cropped image for OCR: {temp_path}")
                 return ""
             
             # Run OCR on the cropped image
-            extracted_text = self._extract_text_from_image(str(temp_path))
+            extracted_text = self._extract_text_from_image(temp_path)
             
             # Clean up temporary file
             try:
-                temp_path.unlink()
+                os.unlink(temp_path)
             except:
                 pass
                 
@@ -740,7 +728,6 @@ class TextVerificationController(VerificationControllerInterface):
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
             'ocr_language': self.ocr_language,
-            'ocr_config': f"{self.ocr_config} {self.ocr_psm}",
             'capabilities': [
                 'text_appears_verification', 'text_disappears_verification',
                 'area_based_ocr', 'case_sensitive_matching'
