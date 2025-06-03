@@ -1096,22 +1096,37 @@ def auto_detect_text():
             # Get detailed OCR data including confidence
             ocr_data = pytesseract.image_to_data(cv2.imread(ocr_image_path), lang='eng', output_type=pytesseract.Output.DICT)
             
-            # Extract text and calculate average confidence
+            # Extract text and calculate average confidence (more lenient approach)
             detected_text_parts = []
             confidences = []
+            
+            print(f"[@route:auto_detect_text] OCR data length: {len(ocr_data['text'])}")
             
             for i in range(len(ocr_data['text'])):
                 text = ocr_data['text'][i].strip()
                 confidence = int(ocr_data['conf'][i])
                 
-                if text and confidence > 0:  # Only include text with positive confidence
+                print(f"[@route:auto_detect_text] OCR item {i}: text='{text}', conf={confidence}")
+                
+                # Be more lenient - include text with any confidence >= -1 (Tesseract can return -1)
+                if text and confidence >= -1:
                     detected_text_parts.append(text)
-                    confidences.append(confidence)
+                    confidences.append(max(0, confidence))  # Treat negative confidence as 0
             
             detected_text = ' '.join(detected_text_parts).strip()
+            
+            # If no text found with data method, fallback to simple string method
+            if not detected_text:
+                print(f"[@route:auto_detect_text] No text with image_to_data, trying image_to_string fallback")
+                fallback_text = pytesseract.image_to_string(cv2.imread(ocr_image_path), lang='eng').strip()
+                if fallback_text:
+                    detected_text = fallback_text
+                    confidences = [70]  # Assume reasonable confidence for fallback
+                    print(f"[@route:auto_detect_text] Fallback detected: '{detected_text}'")
+            
             ocr_confidence = sum(confidences) / len(confidences) if confidences else 0
             
-            print(f"[@route:auto_detect_text] OCR extracted text: '{detected_text}' with confidence: {ocr_confidence:.1f}%")
+            print(f"[@route:auto_detect_text] Final OCR result: text='{detected_text}', confidence={ocr_confidence:.1f}%")
             
             if not detected_text:
                 return jsonify({
@@ -1125,35 +1140,32 @@ def auto_detect_text():
                     'image_filter': image_filter
                 }), 400
             
-            # Use Google Translate for language detection
-            detected_language = 'eng'  # Default to English
-            language_confidence = 0.0  # Default confidence
+            # Use TextBlob for free local language detection
+            detected_language = 'en'  # Default to English
+            language_confidence = 0.8  # Default confidence
             detected_language_name = 'English'  # Default name
             
             try:
-                # Try Google Translate API for language detection
-                from google.cloud import translate_v2 as translate
+                # Try TextBlob for free local language detection
+                from textblob import TextBlob
                 
-                client = translate.Client()
-                result = client.detect_language(detected_text)
+                blob = TextBlob(detected_text)
+                detected_lang = blob.detect_language()
                 
-                google_lang = result['language']
-                google_confidence = result['confidence']
+                print(f"[@route:auto_detect_text] TextBlob detected language: {detected_lang}")
                 
-                print(f"[@route:auto_detect_text] Google Translate detected: {google_lang} with confidence: {google_confidence:.3f}")
-                
-                # Convert Google language code to display name and add confidence in parentheses
-                detected_language = google_lang
-                language_confidence = google_confidence
-                base_language_name = _get_language_display_name(google_lang)
-                detected_language_name = f"{base_language_name} ({int(google_confidence * 100)}%)"
+                # Convert language code to display name and add confidence in parentheses
+                detected_language = detected_lang
+                language_confidence = 0.9  # TextBlob doesn't provide confidence, assume high confidence
+                base_language_name = _get_language_display_name(detected_lang)
+                detected_language_name = f"{base_language_name} ({int(language_confidence * 100)}%)"
                 
             except ImportError:
-                print(f"[@route:auto_detect_text] Google Cloud Translate not available (pip install google-cloud-translate)")
+                print(f"[@route:auto_detect_text] TextBlob not available (pip install textblob)")
                 detected_language_name = "English (80%)"  # Default fallback with confidence
                 language_confidence = 0.8
-            except Exception as google_error:
-                print(f"[@route:auto_detect_text] Google Translate API error: {google_error}")
+            except Exception as textblob_error:
+                print(f"[@route:auto_detect_text] TextBlob language detection error: {textblob_error}")
                 detected_language_name = "English (80%)"  # Default fallback with confidence
                 language_confidence = 0.8
             
