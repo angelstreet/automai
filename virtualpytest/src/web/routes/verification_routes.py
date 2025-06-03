@@ -589,6 +589,24 @@ def execute_batch_verification():
                     else:
                         print(f"[@route:execute_batch_verification] WARNING: No source_image_path in additional_data for verification")
                     
+                    # Extract and include OCR confidence for text verifications
+                    if controller_type == 'text' and 'ocr_confidence' in additional_data:
+                        result['ocr_confidence'] = additional_data['ocr_confidence']
+                        print(f"[@route:execute_batch_verification] Added OCR confidence: {additional_data['ocr_confidence']:.1f}%")
+                    
+                    # Extract other text-specific data
+                    if 'extracted_text' in additional_data:
+                        result['extracted_text'] = additional_data['extracted_text']
+                    
+                    if 'searched_text' in additional_data:
+                        result['searched_text'] = additional_data['searched_text']
+                    
+                    if 'detected_language' in additional_data:
+                        result['detected_language'] = additional_data['detected_language']
+                        
+                    if 'language_confidence' in additional_data:
+                        result['language_confidence'] = additional_data['language_confidence']
+                    
                     print(f"[@route:execute_batch_verification] Final additional_data keys: {list(additional_data.keys())}")
                     
                     result.update(additional_data)

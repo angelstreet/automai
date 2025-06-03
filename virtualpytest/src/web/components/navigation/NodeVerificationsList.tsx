@@ -978,7 +978,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                           color: 'rgba(255,255,255,0.7)',
                           ml: 0.5
                         }}>
-                          OCR: {testResults[index].ocrConfidence!.toFixed(1)}%
+                          {testResults[index].ocrConfidence!.toFixed(1)}%
                         </Typography>
                       )}
                       {/* Show error message for ERROR type results */}

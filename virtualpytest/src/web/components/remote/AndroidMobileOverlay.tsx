@@ -147,7 +147,7 @@ export function AndroidMobileOverlay({
     console.log(`  Content offset: (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
 
     // HARDCODED FIXES based on UIElementsOverlay
-    const MODAL_HEADER_HEIGHT_OFFSET = 0; // Move overlay up by reducing offset
+    const MODAL_HEADER_HEIGHT_OFFSET = -50; // Move overlay up by reducing offset
     const WIDTH_CORRECTION_FACTOR = 1; // Increase scale slightly from 0.75 to 0.85
 
     const scaleX = (actualImageWidth * WIDTH_CORRECTION_FACTOR) / deviceWidth;

@@ -292,7 +292,7 @@ class TextVerificationController(VerificationControllerInterface):
         if not text or text.strip() == '':
             error_msg = "No text specified. Please provide text to search for."
             print(f"[@controller:TextVerification] {error_msg}")
-            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0}
+            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0, "ocr_confidence": 0.0}
         
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
         if image_filter and image_filter != 'none':
@@ -309,18 +309,20 @@ class TextVerificationController(VerificationControllerInterface):
             closest_text = ""
             best_source_path = None
             text_found = False
+            best_ocr_confidence = 0.0
             
             for source_path in image_list:
                 if not os.path.exists(source_path):
                     continue
                     
                 # Use original source images (text verification processes images as needed)
-                extracted_text, detected_language, language_confidence = self._extract_text_from_area(source_path, area, image_filter)
+                extracted_text, detected_language, language_confidence, ocr_confidence = self._extract_text_from_area(source_path, area, image_filter)
                 
-                # Keep track of the longest extracted text as "closest"
+                # Keep track of the longest extracted text as "closest" and best OCR confidence
                 if len(extracted_text.strip()) > len(closest_text):
                     closest_text = extracted_text.strip()
                     best_source_path = source_path
+                    best_ocr_confidence = ocr_confidence
                 
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
@@ -335,6 +337,7 @@ class TextVerificationController(VerificationControllerInterface):
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
                     additional_data["language_confidence"] = language_confidence
+                    additional_data["ocr_confidence"] = ocr_confidence
                     # For text verification, set threshold to 1.0 when text is found
                     additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
@@ -361,6 +364,7 @@ class TextVerificationController(VerificationControllerInterface):
             additional_data["extracted_text"] = closest_text
             additional_data["detected_language"] = "eng"
             additional_data["language_confidence"] = 0.0
+            additional_data["ocr_confidence"] = best_ocr_confidence
             # For text verification, set threshold to 0.0 when text is not found
             additional_data["threshold"] = 0.0
             if closest_text:
@@ -375,18 +379,21 @@ class TextVerificationController(VerificationControllerInterface):
             capture_path = self.av_controller.capture_screen()
             if not capture_path:
                 additional_data["threshold"] = 0.0
+                additional_data["ocr_confidence"] = 0.0
                 return False, "Failed to capture screen for text verification", additional_data
             
             start_time = time.time()
             closest_text = ""
+            best_ocr_confidence = 0.0
             
             while time.time() - start_time < timeout:
                 # Use original captured images (text verification processes images as needed)
-                extracted_text, detected_language, language_confidence = self._extract_text_from_area(capture_path, area, image_filter)
+                extracted_text, detected_language, language_confidence, ocr_confidence = self._extract_text_from_area(capture_path, area, image_filter)
                 
-                # Keep track of the longest extracted text as "closest"
+                # Keep track of the longest extracted text as "closest" and best OCR confidence
                 if len(extracted_text.strip()) > len(closest_text):
                     closest_text = extracted_text.strip()
+                    best_ocr_confidence = ocr_confidence
                 
                 if self._text_matches(extracted_text, text, case_sensitive):
                     print(f"[@controller:TextVerification] Text found in captured frame: '{extracted_text.strip()}'")
@@ -400,6 +407,7 @@ class TextVerificationController(VerificationControllerInterface):
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
                     additional_data["language_confidence"] = language_confidence
+                    additional_data["ocr_confidence"] = ocr_confidence
                     # For text verification, set threshold to 1.0 when text is found
                     additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
@@ -409,6 +417,7 @@ class TextVerificationController(VerificationControllerInterface):
                     capture_path = self.av_controller.capture_screen()
                     if not capture_path:
                         additional_data["threshold"] = 0.0
+                        additional_data["ocr_confidence"] = 0.0
                         return False, "Failed to re-capture screen for text verification", additional_data
                 
                 time.sleep(0.5)
@@ -422,6 +431,7 @@ class TextVerificationController(VerificationControllerInterface):
             additional_data["extracted_text"] = closest_text
             additional_data["detected_language"] = "eng"
             additional_data["language_confidence"] = 0.0
+            additional_data["ocr_confidence"] = best_ocr_confidence
             # For text verification, set threshold to 0.0 when text is not found
             additional_data["threshold"] = 0.0
             if closest_text:
@@ -478,7 +488,7 @@ class TextVerificationController(VerificationControllerInterface):
             image_filter: Optional filter to apply to the image before OCR
             
         Returns:
-            Tuple of (extracted_text, detected_language, language_confidence)
+            Tuple of (extracted_text, detected_language, language_confidence, ocr_confidence)
         """
         try:
             # Apply filtering to source image if needed
@@ -514,7 +524,7 @@ class TextVerificationController(VerificationControllerInterface):
                 # Clean up temp file if it was created
                 if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
                     os.unlink(filtered_source_path)
-                return "", "eng", 0.0
+                return "", "eng", 0.0, 0.0
             
             # Crop image to area if specified (exact same approach as image verification)
             if area:
@@ -551,10 +561,10 @@ class TextVerificationController(VerificationControllerInterface):
                 # Clean up source filter temp file if it was created
                 if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
                     os.unlink(filtered_source_path)
-                return "", "eng", 0.0
+                return "", "eng", 0.0, 0.0
             
             # Run language detection on the cropped image
-            detected_language, language_confidence, detected_text = self._detect_text_language(temp_path)
+            detected_language, language_confidence, detected_text, ocr_confidence = self._detect_text_language(temp_path)
             
             # Clean up temporary files
             try:
@@ -566,16 +576,16 @@ class TextVerificationController(VerificationControllerInterface):
             if temp_file_created and filtered_source_path != image_path and os.path.exists(filtered_source_path):
                 os.unlink(filtered_source_path)
                 
-            return detected_text, detected_language, language_confidence
+            return detected_text, detected_language, language_confidence, ocr_confidence
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
             # Clean up source filter temp file if it was created
             if 'temp_file_created' in locals() and temp_file_created and 'filtered_source_path' in locals() and filtered_source_path != image_path and os.path.exists(filtered_source_path):
                 os.unlink(filtered_source_path)
-            return "", "eng", 0.0
+            return "", "eng", 0.0, 0.0
 
-    def _detect_text_language(self, image_path: str) -> Tuple[str, float, str]:
+    def _detect_text_language(self, image_path: str) -> Tuple[str, float, str, float]:
         """
         Detect the most likely language in the image using langdetect.
         First extracts text using English OCR, then uses langdetect for language detection.
@@ -584,7 +594,7 @@ class TextVerificationController(VerificationControllerInterface):
             image_path: Path to the image file
             
         Returns:
-            Tuple of (language_code, confidence, detected_text)
+            Tuple of (language_code, confidence, detected_text, ocr_confidence)
         """
         try:
             import pytesseract
@@ -594,15 +604,42 @@ class TextVerificationController(VerificationControllerInterface):
             image = cv2.imread(image_path)
             if image is None:
                 print(f"[@controller:TextVerification] Failed to load image for language detection")
-                return 'eng', 0.5, ''
+                return 'eng', 0.5, '', 0.0
             
-            # Extract text using English OCR (same approach as auto-detect)
-            detected_text = pytesseract.image_to_string(image, lang='eng').strip()
+            # Extract text using English OCR with confidence data
+            try:
+                # Get detailed OCR data including confidence
+                ocr_data = pytesseract.image_to_data(image, lang='eng', output_type=pytesseract.Output.DICT)
+                
+                # Extract text and calculate average confidence
+                detected_text_parts = []
+                confidences = []
+                
+                for i in range(len(ocr_data['text'])):
+                    text = ocr_data['text'][i].strip()
+                    confidence = int(ocr_data['conf'][i])
+                    
+                    # Be lenient - include text with any confidence >= -1 (Tesseract can return -1)
+                    if text and confidence >= -1:
+                        detected_text_parts.append(text)
+                        confidences.append(max(0, confidence))  # Treat negative confidence as 0
+                
+                detected_text = ' '.join(detected_text_parts).strip()
+                ocr_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+                
+                print(f"[@controller:TextVerification] OCR confidence calculated: {ocr_confidence:.1f}% for text: '{detected_text}'")
+                
+            except Exception as ocr_error:
+                print(f"[@controller:TextVerification] OCR data extraction failed, trying fallback: {ocr_error}")
+                # Fallback to simple string method
+                detected_text = pytesseract.image_to_string(image, lang='eng').strip()
+                ocr_confidence = 70.0 if detected_text else 0.0  # Assume reasonable confidence for fallback
+            
             print(f"[@controller:TextVerification] Extracted text: '{detected_text}' ({len(detected_text)} chars)")
             
             if not detected_text or len(detected_text) < 3:
                 print(f"[@controller:TextVerification] Text too short for reliable language detection")
-                return 'eng', 0.5, detected_text
+                return 'eng', 0.5, detected_text, ocr_confidence
             
             # Try langdetect for language detection
             langdetect_result = self._detect_language_with_langdetect(detected_text)
@@ -614,14 +651,14 @@ class TextVerificationController(VerificationControllerInterface):
                 tesseract_lang = self._convert_to_tesseract_lang(lang_code)
                 print(f"[@controller:TextVerification] Using language: {tesseract_lang}")
                 
-                return tesseract_lang, confidence, detected_text
+                return tesseract_lang, confidence, detected_text, ocr_confidence
             else:
                 print(f"[@controller:TextVerification] langdetect not available, defaulting to English")
-                return 'eng', 0.8, detected_text  # High confidence for English as fallback
+                return 'eng', 0.8, detected_text, ocr_confidence  # High confidence for English as fallback
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Language detection error: {e}")
-            return 'eng', 0.5, ''
+            return 'eng', 0.5, '', 0.0
 
     def _detect_language_with_langdetect(self, text: str) -> Optional[Tuple[str, float]]:
         """
