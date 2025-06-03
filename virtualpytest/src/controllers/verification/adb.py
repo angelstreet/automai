@@ -79,22 +79,31 @@ class ADBVerificationController:
             start_time = time.time()
             
             while time.time() - start_time < timeout:
-                # Get current UI elements using adbUtils
-                success, elements, error = self.adb_utils.dump_ui_elements(self.device_id)
+                # Use efficient element existence check that returns element details
+                exists, element, error = self.adb_utils.check_element_exists(self.device_id, **criteria)
                 
-                if success:
-                    # Search for matching elements
-                    matching_elements = self._findMatchingElements(elements, criteria)
+                if error:
+                    print(f"[@controller:ADBVerification:waitForElementToAppear] Check failed: {error}")
+                    # Continue checking even if one check fails
+                
+                if exists:
+                    elapsed = time.time() - start_time
+                    message = f"Element appeared after {elapsed:.1f}s"
+                    print(f"[@controller:ADBVerification:waitForElementToAppear] SUCCESS: {message}")
                     
-                    if matching_elements:
-                        elapsed = time.time() - start_time
-                        message = f"Element appeared after {elapsed:.1f}s"
-                        print(f"[@controller:ADBVerification:waitForElementToAppear] SUCCESS: {message}")
-                        
-                        return True, message, {
-                            'matching_elements': [el.to_dict() for el in matching_elements],
-                            'wait_time': elapsed
-                        }
+                    result_data = {
+                        'criteria': criteria,
+                        'wait_time': elapsed
+                    }
+                    
+                    # Add element details if we have them
+                    if element:
+                        result_data['element'] = element.to_dict()
+                        print(f"[@controller:ADBVerification:waitForElementToAppear] Element details: {element.to_dict()}")
+                    else:
+                        print(f"[@controller:ADBVerification:waitForElementToAppear] Element found but no details available")
+                    
+                    return True, message, result_data
                 
                 time.sleep(check_interval)
             
@@ -129,19 +138,19 @@ class ADBVerificationController:
             start_time = time.time()
             
             while time.time() - start_time < timeout:
-                # Get current UI elements using adbUtils
-                success, elements, error = self.adb_utils.dump_ui_elements(self.device_id)
+                # Use efficient element existence check that returns element details
+                exists, element, error = self.adb_utils.check_element_exists(self.device_id, **criteria)
                 
-                if success:
-                    # Search for matching elements
-                    matching_elements = self._findMatchingElements(elements, criteria)
+                if error:
+                    print(f"[@controller:ADBVerification:waitForElementToDisappear] Check failed: {error}")
+                    # Continue checking even if one check fails
+                
+                if not exists:
+                    elapsed = time.time() - start_time
+                    message = f"Element disappeared after {elapsed:.1f}s"
+                    print(f"[@controller:ADBVerification:waitForElementToDisappear] SUCCESS: {message}")
                     
-                    if not matching_elements:
-                        elapsed = time.time() - start_time
-                        message = f"Element disappeared after {elapsed:.1f}s"
-                        print(f"[@controller:ADBVerification:waitForElementToDisappear] SUCCESS: {message}")
-                        
-                        return True, message, {'wait_time': elapsed}
+                    return True, message, {'wait_time': elapsed}
                 
                 time.sleep(check_interval)
             
@@ -149,36 +158,22 @@ class ADBVerificationController:
             message = f"Element still present after {elapsed:.1f}s"
             print(f"[@controller:ADBVerification:waitForElementToDisappear] FAILED: {message}")
             
-            return False, message, {'wait_time': elapsed}
+            # If element is still present, include its details in the failure response
+            result_data = {'wait_time': elapsed}
+            
+            # Get final check to include element details in failure
+            try:
+                final_exists, final_element, _ = self.adb_utils.check_element_exists(self.device_id, **criteria)
+                if final_exists and final_element:
+                    result_data['still_present_element'] = final_element.to_dict()
+                    print(f"[@controller:ADBVerification:waitForElementToDisappear] Element still present: {final_element.to_dict()}")
+            except:
+                pass  # Don't fail the whole operation if final check fails
+            
+            return False, message, result_data
             
         except Exception as e:
             error_msg = f"Wait for element disappear error: {e}"
             print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: {error_msg}")
             return False, error_msg, {}
-
-    def _findMatchingElements(self, elements: List[AndroidElement], criteria: Dict[str, Any]) -> List[AndroidElement]:
-        """Find elements matching the given criteria."""
-        matching_elements = []
-        
-        resource_id = criteria.get('resource_id', '')
-        text = criteria.get('text', '')
-        content_desc = criteria.get('content_desc', '')
-        class_name = criteria.get('class_name', '')
-        
-        for element in elements:
-            matches = True
-            
-            if resource_id and resource_id not in element.resource_id:
-                matches = False
-            if text and text not in element.text:
-                matches = False
-            if content_desc and content_desc not in element.content_desc:
-                matches = False
-            if class_name and class_name not in element.class_name:
-                matches = False
-                
-            if matches:
-                matching_elements.append(element)
-        
-        return matching_elements
     

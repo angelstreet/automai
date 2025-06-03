@@ -650,3 +650,108 @@ class ADBUtils:
             error_msg = f"Screenshot error: {e}"
             print(f"[@lib:adbUtils:take_screenshot] {error_msg}")
             return False, "", error_msg 
+
+    def check_element_exists(self, device_id: str, **criteria) -> Tuple[bool, Optional[AndroidElement], str]:
+        """
+        Efficiently check if an element exists and return its details if found.
+        
+        Args:
+            device_id: Android device ID
+            **criteria: Element search criteria (resource_id, text, content_desc, class_name)
+        
+        Returns:
+            Tuple of (exists, element_data_if_found, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:check_element_exists] Checking element existence for device {device_id}")
+            print(f"[@lib:adbUtils:check_element_exists] Criteria: {criteria}")
+            
+            # Build grep pattern based on criteria
+            grep_patterns = []
+            
+            if criteria.get('resource_id'):
+                resource_id = criteria['resource_id']
+                grep_patterns.append(f'resource-id="{resource_id}"')
+            
+            if criteria.get('text'):
+                text = criteria['text']
+                grep_patterns.append(f'text="{text}"')
+            
+            if criteria.get('content_desc'):
+                content_desc = criteria['content_desc']
+                grep_patterns.append(f'content-desc="{content_desc}"')
+            
+            if criteria.get('class_name'):
+                class_name = criteria['class_name']
+                grep_patterns.append(f'class="{class_name}"')
+            
+            if not grep_patterns:
+                return False, None, "No search criteria provided"
+            
+            # Step 1: Quick existence check (efficient)
+            grep_pattern = ' | '.join([f'grep -q "{pattern}"' for pattern in grep_patterns])
+            quick_check_cmd = f"adb -s {device_id} shell \"uiautomator dump /dev/stdout | {grep_pattern} && echo 'FOUND' || echo 'NOT_FOUND'\""
+            
+            print(f"[@lib:adbUtils:check_element_exists] Quick check: {quick_check_cmd}")
+            
+            success, stdout, stderr, exit_code = self.ssh.execute_command(quick_check_cmd)
+            
+            if not success or exit_code != 0:
+                print(f"[@lib:adbUtils:check_element_exists] Quick check failed: {stderr}")
+                return False, None, f"Command execution failed: {stderr}"
+            
+            output = stdout.strip()
+            exists = output == "FOUND"
+            
+            if not exists:
+                print(f"[@lib:adbUtils:check_element_exists] Element not found")
+                return False, None, ""
+            
+            print(f"[@lib:adbUtils:check_element_exists] Element exists! Getting full details...")
+            
+            # Step 2: Get full element details (only if element exists)
+            dump_success, elements, dump_error = self.dump_ui_elements(device_id)
+            
+            if not dump_success:
+                print(f"[@lib:adbUtils:check_element_exists] Failed to get element details: {dump_error}")
+                # Still return True for exists, but without details
+                return True, None, f"Element exists but failed to get details: {dump_error}"
+            
+            # Step 3: Find the matching element from the full dump
+            matching_element = self._find_matching_element(elements, criteria)
+            
+            if matching_element:
+                print(f"[@lib:adbUtils:check_element_exists] Found matching element with details: ID={matching_element.id}")
+                return True, matching_element, ""
+            else:
+                print(f"[@lib:adbUtils:check_element_exists] Element exists but couldn't find details (timing issue?)")
+                return True, None, "Element exists but details not found"
+            
+        except Exception as e:
+            error_msg = f"Element existence check failed: {e}"
+            print(f"[@lib:adbUtils:check_element_exists] ERROR: {error_msg}")
+            return False, None, error_msg
+    
+    def _find_matching_element(self, elements: List[AndroidElement], criteria: Dict[str, Any]) -> Optional[AndroidElement]:
+        """Find the first element matching the given criteria."""
+        resource_id = criteria.get('resource_id', '')
+        text = criteria.get('text', '')
+        content_desc = criteria.get('content_desc', '')
+        class_name = criteria.get('class_name', '')
+        
+        for element in elements:
+            matches = True
+            
+            if resource_id and resource_id not in element.resource_id:
+                matches = False
+            if text and text not in element.text:
+                matches = False
+            if content_desc and content_desc not in element.content_desc:
+                matches = False
+            if class_name and class_name not in element.class_name:
+                matches = False
+                
+            if matches:
+                return element
+        
+        return None 
