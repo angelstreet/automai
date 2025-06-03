@@ -288,7 +288,7 @@ class TextVerificationController(VerificationControllerInterface):
                 else:
                     filtered_source_path = source_path
                     
-                extracted_text = self._extract_text_from_area(filtered_source_path, area)
+                extracted_text, detected_language, language_confidence = self._extract_text_from_area(filtered_source_path, area)
                 
                 # Keep track of the longest extracted text as "closest"
                 if len(extracted_text.strip()) > len(closest_text):
@@ -310,6 +310,8 @@ class TextVerificationController(VerificationControllerInterface):
                         os.unlink(filtered_source_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
+                    additional_data["detected_language"] = detected_language
+                    additional_data["language_confidence"] = language_confidence
                     # For text verification, set threshold to 1.0 when text is found
                     additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
@@ -338,6 +340,8 @@ class TextVerificationController(VerificationControllerInterface):
                         break
             
             additional_data["extracted_text"] = closest_text
+            additional_data["detected_language"] = "eng"
+            additional_data["language_confidence"] = 0.0
             # For text verification, set threshold to 0.0 when text is not found
             additional_data["threshold"] = 0.0
             if closest_text:
@@ -382,7 +386,7 @@ class TextVerificationController(VerificationControllerInterface):
             closest_text = ""
             
             while time.time() - start_time < timeout:
-                extracted_text = self._extract_text_from_area(filtered_capture_path, area)
+                extracted_text, detected_language, language_confidence = self._extract_text_from_area(filtered_capture_path, area)
                 
                 # Keep track of the longest extracted text as "closest"
                 if len(extracted_text.strip()) > len(closest_text):
@@ -402,6 +406,8 @@ class TextVerificationController(VerificationControllerInterface):
                         os.unlink(filtered_capture_path)
                     
                     additional_data["extracted_text"] = extracted_text.strip()
+                    additional_data["detected_language"] = detected_language
+                    additional_data["language_confidence"] = language_confidence
                     # For text verification, set threshold to 1.0 when text is found
                     additional_data["threshold"] = 1.0
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
@@ -446,6 +452,8 @@ class TextVerificationController(VerificationControllerInterface):
                 os.unlink(filtered_capture_path)
             
             additional_data["extracted_text"] = closest_text
+            additional_data["detected_language"] = "eng"
+            additional_data["language_confidence"] = 0.0
             # For text verification, set threshold to 0.0 when text is not found
             additional_data["threshold"] = 0.0
             if closest_text:
@@ -491,7 +499,7 @@ class TextVerificationController(VerificationControllerInterface):
             # Text is still present (was found)
             return False, f"Text still present: {message}", additional_data
 
-    def _extract_text_from_area(self, image_path: str, area: dict = None) -> str:
+    def _extract_text_from_area(self, image_path: str, area: dict = None) -> tuple:
         """
         Extract text from image area using Tesseract OCR.
         Uses the exact same cropping approach as image verification.
@@ -501,14 +509,14 @@ class TextVerificationController(VerificationControllerInterface):
             area: Optional area to crop {'x': x, 'y': y, 'width': width, 'height': height}
             
         Returns:
-            Extracted text string
+            Tuple of (extracted_text, detected_language, language_confidence)
         """
         try:
             # Load image using OpenCV (same as image verification)
             img = cv2.imread(image_path)
             if img is None:
                 print(f"[@controller:TextVerification] Could not load image: {image_path}")
-                return ""
+                return "", "eng", 0.0
             
             # Crop image to area if specified (exact same approach as image verification)
             if area:
@@ -542,10 +550,10 @@ class TextVerificationController(VerificationControllerInterface):
             success = cv2.imwrite(temp_path, img)
             if not success:
                 print(f"[@controller:TextVerification] Failed to save cropped image for OCR: {temp_path}")
-                return ""
+                return "", "eng", 0.0
             
-            # Run OCR on the cropped image
-            extracted_text = self._extract_text_from_image(temp_path)
+            # Run language detection on the cropped image
+            detected_language, language_confidence, detected_text = self._detect_text_language(temp_path)
             
             # Clean up temporary file
             try:
@@ -553,15 +561,16 @@ class TextVerificationController(VerificationControllerInterface):
             except:
                 pass
                 
-            return extracted_text
+            return detected_text, detected_language, language_confidence
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Text extraction error: {e}")
-            return ""
+            return "", "eng", 0.0
 
     def _detect_text_language(self, image_path: str) -> Tuple[str, float, str]:
         """
-        Detect the most likely language in the image by testing OCR with multiple languages.
+        Detect the most likely language in the image using Google Translate API.
+        First extracts text using English OCR, then uses Google Translate for language detection.
         
         Args:
             image_path: Path to the image file
@@ -569,84 +578,113 @@ class TextVerificationController(VerificationControllerInterface):
         Returns:
             Tuple of (language_code, confidence, detected_text)
         """
-        # Languages to test (English, French, Italian, German)
-        languages_to_test = ['eng', 'fra', 'ita', 'deu']
-        language_names = {
-            'eng': 'English',
-            'fra': 'French', 
-            'ita': 'Italian',
-            'deu': 'German'
-        }
-        
-        best_confidence = 0
-        best_language = 'eng'
-        best_text = ''
-        
-        print(f"[@controller:TextVerification] Testing OCR with languages: {languages_to_test}")
-        
         try:
             import pytesseract
             import cv2
             
-            # Load image for OCR testing
+            # Load image for OCR
             image = cv2.imread(image_path)
             if image is None:
                 print(f"[@controller:TextVerification] Failed to load image for language detection")
                 return 'eng', 0.5, ''
             
-            # Test each language and find the one with highest confidence
-            for lang_code in languages_to_test:
-                try:
-                    # Run OCR with this specific language
-                    test_data = pytesseract.image_to_data(
-                        image, 
-                        lang=lang_code, 
-                        output_type=pytesseract.Output.DICT
-                    )
-                    
-                    # Calculate average confidence for this language
-                    lang_confidences = []
-                    lang_words = []
-                    
-                    for i in range(len(test_data['text'])):
-                        text = test_data['text'][i].strip()
-                        conf = int(test_data['conf'][i])
-                        
-                        if text and conf > 0:  # Only include confident text
-                            lang_confidences.append(conf)
-                            lang_words.append(text)
-                    
-                    if lang_confidences:
-                        avg_conf = sum(lang_confidences) / len(lang_confidences)
-                        word_count = len(lang_words)
-                        detected_text = ' '.join(lang_words)
-                        
-                        # Weight confidence by number of words found (more words = more reliable)
-                        weighted_score = avg_conf * min(word_count / 3.0, 1.0)  # Cap word bonus at 3 words
-                        
-                        print(f"[@controller:TextVerification] {language_names[lang_code]} ({lang_code}): "
-                              f"{avg_conf:.1f}% confidence, {word_count} words, "
-                              f"weighted score: {weighted_score:.1f}")
-                        
-                        if weighted_score > best_confidence:
-                            best_confidence = weighted_score
-                            best_language = lang_code
-                            best_text = detected_text
-                            
-                except Exception as lang_error:
-                    print(f"[@controller:TextVerification] Failed to test language {lang_code}: {lang_error}")
-                    continue
+            # Extract text using English OCR (same approach as auto-detect)
+            detected_text = pytesseract.image_to_string(image, lang='eng').strip()
+            print(f"[@controller:TextVerification] Extracted text: '{detected_text}' ({len(detected_text)} chars)")
             
-            language_confidence = best_confidence / 100.0  # Convert to 0-1 range
+            if not detected_text or len(detected_text) < 3:
+                print(f"[@controller:TextVerification] Text too short for reliable language detection")
+                return 'eng', 0.5, detected_text
             
-            print(f"[@controller:TextVerification] Best language: {language_names[best_language]} "
-                  f"({best_language}) with confidence: {best_confidence:.1f}%")
-            
-            return best_language, language_confidence, best_text
-            
-        except Exception as lang_detection_error:
-            print(f"[@controller:TextVerification] Language detection failed, using default 'eng': {lang_detection_error}")
+            # Try Google Translate API for language detection
+            google_result = self._detect_language_with_google_translate(detected_text)
+            if google_result:
+                google_lang, google_confidence = google_result
+                print(f"[@controller:TextVerification] Google Translate detected: {google_lang} with confidence: {google_confidence:.3f}")
+                
+                # Convert Google language code to Tesseract language code for consistency
+                tesseract_lang = self._convert_google_to_tesseract_lang(google_lang)
+                print(f"[@controller:TextVerification] Using language: {tesseract_lang}")
+                
+                return tesseract_lang, google_confidence, detected_text
+            else:
+                print(f"[@controller:TextVerification] Google Translate not available, defaulting to English")
+                return 'eng', 0.8, detected_text  # High confidence for English as fallback
+                
+        except Exception as e:
+            print(f"[@controller:TextVerification] Language detection error: {e}")
             return 'eng', 0.5, ''
+
+    def _detect_language_with_google_translate(self, text: str) -> Optional[Tuple[str, float]]:
+        """
+        Use Google Translate API to detect language and confidence.
+        
+        Args:
+            text: Text to analyze for language detection
+            
+        Returns:
+            Tuple of (language_code, confidence) or None if failed
+        """
+        try:
+            # Try to import and use Google Translate API
+            from google.cloud import translate_v2 as translate
+            
+            # Initialize client (requires GOOGLE_APPLICATION_CREDENTIALS env var or service account)
+            client = translate.Client()
+            
+            # Detect language
+            result = client.detect_language(text)
+            
+            language_code = result['language']
+            confidence = result['confidence']
+            
+            print(f"[@controller:TextVerification] Google Translate API result: {language_code} (confidence: {confidence:.3f})")
+            
+            return language_code, confidence
+            
+        except ImportError:
+            print(f"[@controller:TextVerification] Google Cloud Translate not available (pip install google-cloud-translate)")
+            return None
+        except Exception as google_error:
+            print(f"[@controller:TextVerification] Google Translate API error: {google_error}")
+            print(f"[@controller:TextVerification] Ensure GOOGLE_APPLICATION_CREDENTIALS is set or service account is configured")
+            return None
+
+    def _convert_google_to_tesseract_lang(self, google_lang_code: str) -> str:
+        """
+        Convert Google Translate language code to Tesseract language code.
+        
+        Args:
+            google_lang_code: Google language code (e.g., 'en', 'fr', 'de', 'it')
+            
+        Returns:
+            Tesseract language code (e.g., 'eng', 'fra', 'deu', 'ita')
+        """
+        # Mapping from Google language codes to Tesseract language codes
+        google_to_tesseract = {
+            'en': 'eng',    # English
+            'fr': 'fra',    # French
+            'de': 'deu',    # German
+            'it': 'ita',    # Italian
+            'es': 'spa',    # Spanish
+            'pt': 'por',    # Portuguese
+            'nl': 'nld',    # Dutch
+            'ru': 'rus',    # Russian
+            'ja': 'jpn',    # Japanese
+            'ko': 'kor',    # Korean
+            'zh': 'chi_sim', # Chinese Simplified
+            'zh-cn': 'chi_sim', # Chinese Simplified
+            'zh-tw': 'chi_tra', # Chinese Traditional
+            'ar': 'ara',    # Arabic
+            'hi': 'hin',    # Hindi
+        }
+        
+        tesseract_code = google_to_tesseract.get(google_lang_code, 'eng')  # Default to English
+        
+        if tesseract_code != 'eng':
+            print(f"[@controller:TextVerification] Converted Google '{google_lang_code}' to Tesseract '{tesseract_code}'")
+        
+        return tesseract_code
 
     # Implementation of required abstract methods from VerificationControllerInterface
     

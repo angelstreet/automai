@@ -46,6 +46,9 @@ interface VerificationTestResult {
   extractedText?: string;
   searchedText?: string;
   imageFilter?: 'none' | 'greyscale' | 'binary';
+  // Language detection for text verifications
+  detectedLanguage?: string;
+  languageConfidence?: number;
 }
 
 interface VerificationAction {
@@ -366,7 +369,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     extractedText: string;
     sourceUrl?: string;
     resultType: 'PASS' | 'FAIL' | 'ERROR';
-  }> = ({ searchedText, extractedText, sourceUrl, resultType }) => {
+    detectedLanguage?: string;
+    languageConfidence?: number;
+  }> = ({ searchedText, extractedText, sourceUrl, resultType, detectedLanguage, languageConfidence }) => {
     
     const handleSourceImageClick = () => {
       if (sourceUrl) {
@@ -380,6 +385,23 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           imageFilter: undefined
         });
       }
+    };
+
+    // Map language codes to readable names
+    const getLanguageName = (langCode: string) => {
+      const languageMap: { [key: string]: string } = {
+        'eng': 'English',
+        'fra': 'French',
+        'ita': 'Italian',
+        'deu': 'German',
+        'spa': 'Spanish',
+        'por': 'Portuguese',
+        'rus': 'Russian',
+        'jpn': 'Japanese',
+        'chi': 'Chinese',
+        'kor': 'Korean'
+      };
+      return languageMap[langCode] || langCode.toUpperCase();
     };
     
     return (
@@ -431,7 +453,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               "{searchedText}"
             </Typography>
           </Box>
-          <Box>
+          <Box sx={{ mb: 1 }}>
             <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
               Found:
             </Typography>
@@ -446,6 +468,25 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               "{extractedText || 'No text found'}"
             </Typography>
           </Box>
+          {/* Language detection information */}
+          {detectedLanguage && languageConfidence !== undefined && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography variant="caption" sx={{ 
+                fontSize: '0.6rem', 
+                color: '#ffb74d',
+                fontWeight: 500
+              }}>
+                {getLanguageName(detectedLanguage)}
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                fontSize: '0.6rem', 
+                color: '#81c784',
+                fontWeight: 500
+              }}>
+                {(languageConfidence * 100).toFixed(1)}% confidence
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Box>
     );
@@ -958,6 +999,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
                         extractedText={testResults[index].extractedText || ''}
                         sourceUrl={testResults[index].sourceImageUrl}
                         resultType={testResults[index].resultType || (testResults[index].success ? 'PASS' : 'FAIL')}
+                        detectedLanguage={testResults[index].detectedLanguage}
+                        languageConfidence={testResults[index].languageConfidence}
                       />
                     )}
                   </Box>

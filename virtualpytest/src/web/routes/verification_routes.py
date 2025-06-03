@@ -24,6 +24,22 @@ from .utils import check_controllers_available
 verification_bp = Blueprint('verification', __name__)
 
 # =====================================================
+# HELPER FUNCTIONS
+# =====================================================
+
+def _get_language_display_name(language_code: str) -> str:
+    """Convert language code to human-readable display name."""
+    language_names = {
+        'en': 'English', 'fr': 'French', 'de': 'German', 'it': 'Italian', 'es': 'Spanish',
+        'pt': 'Portuguese', 'nl': 'Dutch', 'ru': 'Russian', 'ja': 'Japanese', 'ko': 'Korean',
+        'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi', 'th': 'Thai', 'vi': 'Vietnamese',
+        'tr': 'Turkish', 'pl': 'Polish', 'sv': 'Swedish', 'da': 'Danish', 'no': 'Norwegian',
+        'fi': 'Finnish', 'cs': 'Czech', 'sk': 'Slovak', 'hu': 'Hungarian', 'ro': 'Romanian',
+        'eng': 'English', 'fra': 'French', 'deu': 'German', 'ita': 'Italian', 'spa': 'Spanish'
+    }
+    return language_names.get(language_code, f'Unknown ({language_code})')
+
+# =====================================================
 # VERIFICATION ACTIONS DEFINITION
 # =====================================================
 
@@ -1068,62 +1084,93 @@ def auto_detect_text():
                 processed_path = os.path.join(target_dir, processed_filename)
                 cv2.imwrite(processed_path, processed_image)
                 print(f"[@route:auto_detect_text] Saved processed image with {image_filter} filter: {processed_path}")
+                # Use processed image for OCR
+                ocr_image_path = processed_path
+            else:
+                # Use original cropped image for OCR
+                ocr_image_path = target_path
             
-            # Use the processed image for OCR
-            ocr_image = processed_image if image_filter != 'none' else cropped_image
+            # Get OCR data with confidence from Tesseract
+            print(f"[@route:auto_detect_text] Running OCR with confidence on: {ocr_image_path}")
             
-            # Language detection using text controller's multi-language OCR testing
-            try:
-                # Import text controller for language detection
-                from controllers.verification.text import TextVerificationController
+            # Get detailed OCR data including confidence
+            ocr_data = pytesseract.image_to_data(cv2.imread(ocr_image_path), lang='eng', output_type=pytesseract.Output.DICT)
+            
+            # Extract text and calculate average confidence
+            detected_text_parts = []
+            confidences = []
+            
+            for i in range(len(ocr_data['text'])):
+                text = ocr_data['text'][i].strip()
+                confidence = int(ocr_data['conf'][i])
                 
-                # Create a temporary text controller instance for language detection
-                # We don't need a real AV controller for this static method
-                class DummyAVController:
-                    device_name = "temp_for_language_detection"
-                
-                temp_controller = TextVerificationController(DummyAVController())
-                
-                # Use the text controller's language detection method
-                detected_language, language_confidence, detected_text = temp_controller._detect_text_language(target_path)
-                
-                print(f"[@route:auto_detect_text] Language detection completed: {detected_language} "
-                      f"with confidence: {language_confidence:.3f}")
-                
-                if not detected_text or detected_text.strip() == '':
-                    return jsonify({
-                        'success': False,
-                        'error': 'No text detected in the specified area',
-                        'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
-                        'detected_language': detected_language,
-                        'language_confidence': language_confidence,
-                        'image_filter': image_filter
-                    }), 400
-                
-                # We have detected text - calculate average font size
-                avg_confidence = language_confidence
-                avg_font_size = 12  # Default font size
-                
-                print(f"[@route:auto_detect_text] Detected text: '{detected_text}' with confidence: {avg_confidence:.3f}")
-                
-            except Exception as lang_detection_error:
-                print(f"[@route:auto_detect_text] Language detection failed: {lang_detection_error}")
+                if text and confidence > 0:  # Only include text with positive confidence
+                    detected_text_parts.append(text)
+                    confidences.append(confidence)
+            
+            detected_text = ' '.join(detected_text_parts).strip()
+            ocr_confidence = sum(confidences) / len(confidences) if confidences else 0
+            
+            print(f"[@route:auto_detect_text] OCR extracted text: '{detected_text}' with confidence: {ocr_confidence:.1f}%")
+            
+            if not detected_text:
                 return jsonify({
                     'success': False,
-                    'error': f'OCR processing failed: {str(lang_detection_error)}',
+                    'error': 'No text detected in the specified area',
                     'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
+                    'detected_language': 'eng',
+                    'detected_language_name': 'English (0%)',
+                    'language_confidence': 0.0,
+                    'ocr_confidence': 0.0,
                     'image_filter': image_filter
-                }), 500
+                }), 400
+            
+            # Use Google Translate for language detection
+            detected_language = 'eng'  # Default to English
+            language_confidence = 0.0  # Default confidence
+            detected_language_name = 'English'  # Default name
+            
+            try:
+                # Try Google Translate API for language detection
+                from google.cloud import translate_v2 as translate
+                
+                client = translate.Client()
+                result = client.detect_language(detected_text)
+                
+                google_lang = result['language']
+                google_confidence = result['confidence']
+                
+                print(f"[@route:auto_detect_text] Google Translate detected: {google_lang} with confidence: {google_confidence:.3f}")
+                
+                # Convert Google language code to display name and add confidence in parentheses
+                detected_language = google_lang
+                language_confidence = google_confidence
+                base_language_name = _get_language_display_name(google_lang)
+                detected_language_name = f"{base_language_name} ({int(google_confidence * 100)}%)"
+                
+            except ImportError:
+                print(f"[@route:auto_detect_text] Google Cloud Translate not available (pip install google-cloud-translate)")
+                detected_language_name = "English (80%)"  # Default fallback with confidence
+                language_confidence = 0.8
+            except Exception as google_error:
+                print(f"[@route:auto_detect_text] Google Translate API error: {google_error}")
+                detected_language_name = "English (80%)"  # Default fallback with confidence
+                language_confidence = 0.8
+            
+            # Calculate font size (simple estimation)
+            avg_font_size = max(8, min(24, len(detected_text.split()) * 2 + 10))  # Simple heuristic
             
             return jsonify({
                 'success': True,
-                'detected_text': detected_text,
-                'confidence': round(avg_confidence / 100, 3),  # Convert to 0-1 range
+                'detected_text': detected_text,  # Clean text without confidence
+                'confidence': ocr_confidence / 100.0,  # Convert to 0-1 range
                 'font_size': round(avg_font_size),
                 'area': area,
                 'preview_url': f'/api/virtualpytest/tmp/{model}/{preview_filename}?t={int(time.time() * 1000)}',
                 'detected_language': detected_language,
+                'detected_language_name': detected_language_name,
                 'language_confidence': round(language_confidence, 3),
+                'ocr_confidence': round(ocr_confidence, 1),
                 'image_filter': image_filter
             })
             

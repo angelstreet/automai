@@ -16,4 +16,7 @@ regex>=2021.0.0
 typing-extensions>=4.0.0
 
 # Navigation pathfinding support
-networkx>=3.2.1 
+networkx>=3.2.1
+
+# Google Cloud Translate API for language detection
+google-cloud-translate>=3.8.0 

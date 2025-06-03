@@ -70,6 +70,9 @@ interface VerificationTestResult {
   extractedText?: string;
   searchedText?: string;
   imageFilter?: 'none' | 'greyscale' | 'binary';
+  // Language detection for text verifications
+  detectedLanguage?: string;
+  languageConfidence?: number;
 }
 
 interface DragArea {
@@ -664,7 +667,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             // Add text comparison data
             extractedText: res.extracted_text,
             searchedText: res.searched_text,
-            imageFilter: res.image_filter
+            imageFilter: res.image_filter,
+            // Language detection for text verifications
+            detectedLanguage: res.detected_language,
+            languageConfidence: res.language_confidence
           });
         });
       }
