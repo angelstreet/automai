@@ -469,11 +469,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                 label="Type"
                 onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
               >
-                <MenuItem value="screen">Screen</MenuItem>
-                <MenuItem value="dialog">Dialog</MenuItem>
-                <MenuItem value="popup">Popup</MenuItem>
-                <MenuItem value="overlay">Overlay</MenuItem>
                 <MenuItem value="menu">Menu</MenuItem>
+                <MenuItem value="screen">Screen</MenuItem>
+                <MenuItem value="action">Action</MenuItem>
               </Select>
             </FormControl>
           </Box>

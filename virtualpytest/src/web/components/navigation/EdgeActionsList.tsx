@@ -39,17 +39,17 @@ interface ControllerActions {
 
 interface EdgeActionsListProps {
   actions: EdgeAction[];
-  retryActions?: EdgeAction[];
+  retryActions: EdgeAction[];
   finalWaitTime: number;
   availableActions: ControllerActions;
   onActionsChange: (actions: EdgeAction[]) => void;
-  onRetryActionsChange?: (retryActions: EdgeAction[]) => void;
+  onRetryActionsChange: (retryActions: EdgeAction[]) => void;
   onFinalWaitTimeChange: (waitTime: number) => void;
 }
 
 export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   actions,
-  retryActions = [],
+  retryActions,
   finalWaitTime,
   availableActions,
   onActionsChange,
@@ -82,8 +82,6 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   };
 
   const addRetryAction = () => {
-    if (!onRetryActionsChange) return;
-    
     const newAction: EdgeAction = {
       id: '',
       label: '',
@@ -102,8 +100,6 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   };
 
   const removeRetryAction = (index: number) => {
-    if (!onRetryActionsChange) return;
-    
     const newRetryActions = retryActions.filter((_, i) => i !== index);
     onRetryActionsChange(newRetryActions);
   };
@@ -116,8 +112,6 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   };
 
   const updateRetryAction = (index: number, updates: Partial<EdgeAction>) => {
-    if (!onRetryActionsChange) return;
-    
     const newRetryActions = retryActions.map((action, i) => 
       i === index ? { ...action, ...updates } : action
     );
@@ -139,14 +133,14 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   };
 
   const moveRetryActionUp = (index: number) => {
-    if (!onRetryActionsChange || index === 0) return; // Can't move first item up
+    if (index === 0) return; // Can't move first item up
     const newRetryActions = [...retryActions];
     [newRetryActions[index - 1], newRetryActions[index]] = [newRetryActions[index], newRetryActions[index - 1]];
     onRetryActionsChange(newRetryActions);
   };
 
   const moveRetryActionDown = (index: number) => {
-    if (!onRetryActionsChange || index === retryActions.length - 1) return; // Can't move last item down
+    if (index === retryActions.length - 1) return; // Can't move last item down
     const newRetryActions = [...retryActions];
     [newRetryActions[index], newRetryActions[index + 1]] = [newRetryActions[index + 1], newRetryActions[index]];
     onRetryActionsChange(newRetryActions);
@@ -266,8 +260,8 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
         'No actions added. Click "Add" to create your first action.'
       )}
 
-      {/* Retry Actions Section - Only show if onRetryActionsChange is provided */}
-      {onRetryActionsChange && renderActionSection(
+      {/* Retry Actions Section */}
+      {renderActionSection(
         "Retry on Failure",
         retryActions,
         isRetryExpanded,
