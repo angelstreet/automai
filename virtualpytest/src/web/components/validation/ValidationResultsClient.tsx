@@ -289,8 +289,8 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                             <Box sx={{ p: 2, bgcolor: 'transparent' }}>
                               {/* Action Results */}
                               {edge.actionResults && edge.actionResults.length > 0 && (
-                                <Box mb={2}>
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box mb={1}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     Actions Executed ({edge.actionResults.length}):
                                   </Typography>
                                   {edge.actionResults.map((action, actionIndex) => {
@@ -318,26 +318,26 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                         key={actionIndex}
                                         severity={action.success ? 'success' : 'error'}
                                         sx={{ 
-                                          mb: 1, 
+                                          mb: 0, 
                                           fontSize: '0.875rem',
                                           '&:hover': {
                                             backgroundColor: 'transparent !important',
                                           }
                                         }}
                                       >
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0 }}>
                                           {action.actionIndex + 1}. {action.actionLabel}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                        <Typography variant="body2" sx={{ mb: 0 }}>
                                           Command: <code>{action.actionCommand}</code>
                                         </Typography>
                                         {inputValue && (
-                                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                          <Typography variant="body2" sx={{ mb: 0 }}>
                                             Input: <strong>{inputValue}</strong>
                                           </Typography>
                                         )}
                                         {!inputValue && !action.success && (
-                                          <Typography variant="body2" sx={{ mb: 0.5, color: 'warning.main' }}>
+                                          <Typography variant="body2" sx={{ mb: 0, color: 'warning.main' }}>
                                             Input: <em>No input value provided</em>
                                           </Typography>
                                         )}
@@ -346,11 +346,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                             Error: {action.error}
                                           </Typography>
                                         )}
-                                        {process.env.NODE_ENV === 'development' && (
-                                          <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
-                                            Debug: Available fields: {Object.keys(action).join(', ')}
-                                          </Typography>
-                                        )}
+                                        
                                       </Alert>
                                     );
                                   })}
@@ -395,19 +391,19 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                           }
                                         }}
                                       >
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0 }}>
                                           {verification.verificationLabel}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                        <Typography variant="body2" sx={{ mb: 0 }}>
                                           Command: <code>{verification.verificationCommand}</code>
                                         </Typography>
                                         {inputValue && (
-                                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                          <Typography variant="body2" sx={{ mb: 0 }}>
                                             Input: <strong>{inputValue}</strong>
                                           </Typography>
                                         )}
                                         {!inputValue && !verification.success && (
-                                          <Typography variant="body2" sx={{ mb: 0.5, color: 'warning.main' }}>
+                                          <Typography variant="body2" sx={{ mb: 0, color: 'warning.main' }}>
                                             Input: <em>No input value provided</em>
                                           </Typography>
                                         )}
@@ -416,11 +412,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                             Error: {verification.error}
                                           </Typography>
                                         )}
-                                        {process.env.NODE_ENV === 'development' && (
-                                          <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
-                                            Debug: Available fields: {Object.keys(verification).join(', ')}
-                                          </Typography>
-                                        )}
+                                       
                                       </Alert>
                                     );
                                   })}
@@ -429,13 +421,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                 <Box>
                                   <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
                                     No verifications found for {edge.toName || edge.to}. 
-                                    Target node might not have verifications defined.
+                                    
                                   </Typography>
-                                  {/* Debug information */}
-                                  <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                                    Debug: Edge data available: actionResults={edge.actionResults?.length || 0}, 
-                                    verificationResults={edge.verificationResults?.length || 0}
-                                  </Typography>
+                                 
                                 </Box>
                               )}
 
