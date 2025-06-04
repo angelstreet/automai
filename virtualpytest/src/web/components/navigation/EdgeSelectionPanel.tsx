@@ -292,7 +292,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
                   color: confidenceInfo.score >= 0.7 ? '#4caf50' : // Green for 70%+
                          confidenceInfo.score >= 0.5 ? '#ff9800' : // Orange for 50-70%
                          '#f44336', // Red for <50%
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   padding: '2px 6px',
                   borderRadius: '4px',
                 }}

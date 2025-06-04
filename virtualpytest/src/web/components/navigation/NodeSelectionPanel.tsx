@@ -13,6 +13,7 @@ import {
   ListItem,
   ListItemText,
   Chip,
+  LinearProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -34,6 +35,7 @@ interface NodeSelectionPanelProps {
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
   onReset?: (id: string) => void;
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
   // Device control props
   isControlActive?: boolean;
   selectedDevice?: string | null;
@@ -60,6 +62,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   setNodeForm,
   setIsNodeDialogOpen,
   onReset,
+  onUpdateNode,
   isControlActive = false,
   selectedDevice = null,
   onTakeScreenshot,
@@ -87,6 +90,17 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
   const [showVerificationConfirm, setShowVerificationConfirm] = useState(false);
+
+  // Add states for verification execution
+  const [isRunningVerifications, setIsRunningVerifications] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<string | null>(null);
+  const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{[index: number]: boolean[]}>({});
+
+  // Clear verification results when node selection changes
+  useEffect(() => {
+    setVerificationResult(null);
+    setLocalVerificationUpdates({});
+  }, [selectedNode.id]);
 
   const handleEdit = () => {
     setNodeForm({
@@ -124,6 +138,107 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     setShowVerificationConfirm(false);
   };
 
+  // Update verification results in the actual node data
+  const updateVerificationResults = (verificationIndex: number, success: boolean) => {
+    if (!onUpdateNode || !selectedNode.data.verifications) return;
+
+    const updatedVerifications = [...selectedNode.data.verifications];
+    const verification = updatedVerifications[verificationIndex];
+    
+    // Update the last_run_result array
+    const currentResults = verification.last_run_result || [];
+    const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
+    
+    updatedVerifications[verificationIndex] = {
+      ...verification,
+      last_run_result: newResults
+    };
+
+    // Update the node data
+    const updatedNodeData = {
+      ...selectedNode.data,
+      verifications: updatedVerifications
+    };
+
+    // Call the parent callback to update the node
+    onUpdateNode(selectedNode.id, updatedNodeData);
+  };
+
+  // Execute all node verifications
+  const handleRunVerifications = async () => {
+    if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
+      console.log('[@component:NodeSelectionPanel] No verifications to run');
+      return;
+    }
+    
+    setIsRunningVerifications(true);
+    setVerificationResult(null);
+    
+    try {
+      let results: string[] = [];
+      const verifications = selectedNode.data.verifications;
+      
+      for (let i = 0; i < verifications.length; i++) {
+        const verification = verifications[i];
+        
+        console.log(`[@component:NodeSelectionPanel] Executing verification ${i + 1}/${verifications.length}: ${verification.label}`);
+        
+        let verificationSuccess = false;
+        
+        try {
+          // Execute verification based on controller type
+          const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              verification: verification
+            }),
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+            verificationSuccess = true;
+          } else {
+            results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+            verificationSuccess = false;
+          }
+        } catch (err: any) {
+          results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
+          verificationSuccess = false;
+        }
+        
+        // Update verification result in the actual node data
+        updateVerificationResults(i, verificationSuccess);
+        
+        // Also store locally for immediate confidence display
+        setLocalVerificationUpdates(prev => ({
+          ...prev,
+          [i]: [verificationSuccess, ...(verification.last_run_result || [])].slice(0, 10)
+        }));
+        
+        // Calculate and display confidence
+        const currentResults = verification.last_run_result || [];
+        const newResults = [verificationSuccess, ...currentResults].slice(0, 10);
+        const newConfidence = calculateConfidenceScore(newResults);
+        results.push(`   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`);
+        console.log(`[@component:NodeSelectionPanel] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${newConfidence.toFixed(3)}`);
+      }
+      
+      setVerificationResult(results.join('\n'));
+      console.log(`[@component:NodeSelectionPanel] All verifications completed`);
+      
+    } catch (err: any) {
+      console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
+      setVerificationResult(`❌ ${err.message}`);
+    } finally {
+      setIsRunningVerifications(false);
+    }
+  };
+
   const getParentNames = (parentIds: string[]): string => {
     if (!parentIds || parentIds.length === 0) return 'None';
     if (!nodes || !Array.isArray(nodes)) return 'None';
@@ -153,6 +268,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                                hasNodeVerifications &&
                                onVerification;
 
+  // Can run verifications if we have control and device (same logic as NodeEditDialog)
+  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
+
   // Check if node can be deleted (protect entry points and home nodes)
   const isProtectedNode = selectedNode.data.is_root || 
                          selectedNode.data.type === 'entry' ||
@@ -167,19 +285,23 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       return { score: null, text: 'unknown' };
     }
     
-    // Get all verifications with results
-    const verificationsWithResults = selectedNode.data.verifications.filter(v => 
-      v.last_run_result && v.last_run_result.length > 0
-    );
+    // Get all verifications with results (use local updates if available)
+    const verificationsWithResults = selectedNode.data.verifications.filter((v, index) => {
+      const localResults = localVerificationUpdates[index];
+      const results = localResults || v.last_run_result;
+      return results && results.length > 0;
+    });
     
     if (verificationsWithResults.length === 0) {
       return { score: null, text: 'unknown' };
     }
     
-    // Calculate average confidence across all verifications
-    const confidenceScores = verificationsWithResults.map(v => 
-      calculateConfidenceScore(v.last_run_result)
-    );
+    // Calculate average confidence across all verifications (use local updates if available)
+    const confidenceScores = verificationsWithResults.map((v, index) => {
+      const localResults = localVerificationUpdates[index];
+      const results = localResults || v.last_run_result;
+      return calculateConfidenceScore(results);
+    });
     const averageConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
     
     return { 
@@ -218,7 +340,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                     color: confidenceInfo.score >= 0.7 ? '#4caf50' : // Green for 70%+
                            confidenceInfo.score >= 0.5 ? '#ff9800' : // Orange for 50-70%
                            '#f44336', // Red for <50%
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     padding: '2px 6px',
                     borderRadius: '4px',
                   }}
@@ -325,6 +446,53 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               >
                 Verify ({selectedNode.data.verifications?.length || 0})
               </Button>
+            )}
+
+            {/* Direct Run Verifications button - show when verifications exist */}
+            {hasNodeVerifications && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={handleRunVerifications}
+                disabled={!canRunVerifications}
+                startIcon={<VerifiedIcon fontSize="small" />}
+                title={
+                  !isControlActive || !selectedDevice 
+                    ? 'Device control required to run verifications' 
+                    : ''
+                }
+              >
+                {isRunningVerifications ? 'Running...' : 'Run Verifications'}
+              </Button>
+            )}
+
+            {/* Debug: Show when node has no verifications */}
+            {!hasNodeVerifications && (
+              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontStyle: 'italic' }}>
+                No verifications configured
+              </Typography>
+            )}
+
+            {/* Linear Progress - shown when running verifications */}
+            {isRunningVerifications && (
+              <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
+            )}
+
+            {/* Verification result display */}
+            {verificationResult && (
+              <Box sx={{ 
+                mt: 0.5,
+                p: 0.5,
+                bgcolor: verificationResult.includes('❌') ? 'error.light' : 
+                         verificationResult.includes('⚠️') ? 'warning.light' : 'success.light',
+                borderRadius: 0.5
+              }}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+                  {verificationResult}
+                </Typography>
+              </Box>
             )}
           </Box>
         </Box>
