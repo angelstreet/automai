@@ -125,16 +125,75 @@ export const useNavigationCRUD = (state: CRUDState) => {
         
         // Validate that we have nodes and edges
         if (treeData.nodes && Array.isArray(treeData.nodes)) {
-          state.setAllNodes(treeData.nodes);
-          state.setInitialState({ nodes: treeData.nodes, edges: treeData.edges || [] });
-          console.log(`[@hook:useNavigationCRUD] Successfully loaded ${treeData.nodes.length} nodes from database for tree ID: ${state.currentTreeId}`);
+          // Ensure all nodes have valid position data to prevent auto-positioning
+          const validatedNodes = treeData.nodes.map((node: UINavigationNode, index: number) => {
+            // Check if position is missing or invalid
+            if (!node.position || 
+                typeof node.position.x !== 'number' || 
+                typeof node.position.y !== 'number' ||
+                isNaN(node.position.x) || 
+                isNaN(node.position.y)) {
+              
+              console.log(`[@hook:useNavigationCRUD] Node ${node.data?.label || node.id} missing or invalid position, setting default position`);
+              
+              // Provide a default position to prevent auto-positioning
+              // Use a grid layout for nodes without positions
+              const defaultX = 200 + (index % 5) * 250; // 5 columns
+              const defaultY = 100 + Math.floor(index / 5) * 150; // Row spacing
+              
+              return {
+                ...node,
+                position: { x: defaultX, y: defaultY }
+              };
+            }
+            
+            // Check if position is unreasonably far outside typical bounds
+            // React Flow might auto-correct positions that are too extreme
+            const REASONABLE_BOUNDS = {
+              minX: -5000,
+              maxX: 10000,
+              minY: -5000,
+              maxY: 10000
+            };
+            
+            if (node.position.x < REASONABLE_BOUNDS.minX || 
+                node.position.x > REASONABLE_BOUNDS.maxX ||
+                node.position.y < REASONABLE_BOUNDS.minY || 
+                node.position.y > REASONABLE_BOUNDS.maxY) {
+              
+              console.log(`[@hook:useNavigationCRUD] Node ${node.data?.label || node.id} position outside reasonable bounds (${node.position.x}, ${node.position.y}), repositioning`);
+              
+              // Reposition to a safe location
+              const safeX = Math.max(REASONABLE_BOUNDS.minX + 100, Math.min(node.position.x, REASONABLE_BOUNDS.maxX - 100));
+              const safeY = Math.max(REASONABLE_BOUNDS.minY + 100, Math.min(node.position.y, REASONABLE_BOUNDS.maxY - 100));
+              
+              return {
+                ...node,
+                position: { x: safeX, y: safeY }
+              };
+            }
+            
+            // Position is valid, keep as is
+            return node;
+          });
+          
+          console.log(`[@hook:useNavigationCRUD] Validated ${validatedNodes.length} nodes with positions`);
+          
+          state.setAllNodes(validatedNodes);
+          state.setInitialState({ nodes: validatedNodes, edges: treeData.edges || [] });
+          console.log(`[@hook:useNavigationCRUD] Successfully loaded ${validatedNodes.length} nodes from database for tree ID: ${state.currentTreeId}`);
           
           // Initialize view state - use first node as root
-          const rootNode = treeData.nodes[0];
+          const rootNode = validatedNodes[0];
           if (rootNode) {
             state.setCurrentViewRootId(rootNode.id);
             state.setViewPath([{ id: rootNode.id, name: rootNode.data.label }]);
           }
+          
+          // Small delay to ensure React Flow has processed positions before any filtering
+          setTimeout(() => {
+            console.log(`[@hook:useNavigationCRUD] Position validation complete, ready for filtering`);
+          }, 100);
         } else {
           state.setAllNodes([]);
           state.setInitialState({ nodes: [], edges: [] });

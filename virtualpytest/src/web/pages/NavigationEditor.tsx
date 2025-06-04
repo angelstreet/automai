@@ -964,6 +964,9 @@ const NavigationEditorContent: React.FC = () => {
                     style: { strokeWidth: 2, stroke: '#b1b1b7' },
                   }}
                   defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                  // Ensure consistent viewport and prevent auto-fitting
+                  translateExtent={[[-5000, -5000], [10000, 10000]]}
+                  nodeExtent={[[-5000, -5000], [10000, 10000]]}
                   attributionPosition="bottom-left"
                   connectionLineType={ConnectionLineType.SmoothStep}
                   snapToGrid={true}
@@ -987,6 +990,12 @@ const NavigationEditorContent: React.FC = () => {
                   proOptions={{ hideAttribution: true }}
                   // Prevent automatic layout algorithms
                   nodeOrigin={[0, 0]}
+                  // Additional props to prevent automatic positioning
+                  autoPanOnConnect={false}
+                  autoPanOnNodeDrag={false}
+                  connectOnClick={false}
+                  // Prevent automatic centering or repositioning
+                  onlyRenderVisibleElements={false}
                 >
                   <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                   <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
