@@ -108,7 +108,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
           variant="outlined" 
           sx={{ 
             bgcolor: 'background.paper',
-            maxHeight: 400,
             '& .MuiTableHead-root': {
               '& .MuiTableCell-root': {
                 bgcolor: 'action.hover',
