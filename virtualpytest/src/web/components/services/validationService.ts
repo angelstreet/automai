@@ -35,8 +35,8 @@ class ValidationService {
     }
   }
 
-  async runValidation(treeId: string): Promise<ValidationResults> {
-    console.log(`[@service:validationService] Running validation for tree: ${treeId}`);
+  async runValidation(treeId: string, skippedEdges?: Array<{ from: string; to: string }>): Promise<ValidationResults> {
+    console.log(`[@service:validationService] Running validation for tree: ${treeId}`, skippedEdges ? `with ${skippedEdges.length} skipped edges` : '');
     
     // Generate a unique session ID for this validation run
     const sessionId = `validation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -47,14 +47,21 @@ class ValidationService {
         this.setupProgressStream(sessionId);
       }
       
+      const requestBody: any = {
+        session_id: this.progressCallback ? sessionId : undefined
+      };
+      
+      // Add skipped edges if provided
+      if (skippedEdges && skippedEdges.length > 0) {
+        requestBody.skipped_edges = skippedEdges;
+      }
+      
       const response = await fetch(`${this.baseUrl}/run/${treeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          session_id: this.progressCallback ? sessionId : undefined
-        })
+        body: JSON.stringify(requestBody)
       });
       
       const data: ValidationRunResponse = await response.json();

@@ -277,7 +277,13 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
 
                     {/* Detailed Results Row */}
                     {expandedRows.has(index) && hasExpandableContent && (
-                      <TableRow>
+                      <TableRow
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'transparent !important',
+                          },
+                        }}
+                      >
                         <TableCell colSpan={7} sx={{ p: 0, border: 'none' }}>
                           <Collapse in={expandedRows.has(index)}>
                             <Box sx={{ p: 2, bgcolor: 'transparent' }}>
@@ -291,7 +297,13 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                     <Alert
                                       key={actionIndex}
                                       severity={action.success ? 'success' : 'error'}
-                                      sx={{ mb: 1, fontSize: '0.875rem' }}
+                                      sx={{ 
+                                        mb: 1, 
+                                        fontSize: '0.875rem',
+                                        '&:hover': {
+                                          backgroundColor: 'transparent !important',
+                                        }
+                                      }}
                                     >
                                       <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
                                         {action.actionIndex + 1}. {action.actionLabel}
@@ -324,7 +336,13 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                     <Alert
                                       key={verificationIndex}
                                       severity={verification.success ? 'success' : 'error'}
-                                      sx={{ mb: 1, fontSize: '0.875rem' }}
+                                      sx={{ 
+                                        mb: 1, 
+                                        fontSize: '0.875rem',
+                                        '&:hover': {
+                                          backgroundColor: 'transparent !important',
+                                        }
+                                      }}
                                     >
                                       <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
                                         {verification.verificationLabel}

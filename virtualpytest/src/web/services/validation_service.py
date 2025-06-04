@@ -128,11 +128,20 @@ class ValidationService:
             print(f"[@service:validation:get_validation_preview] Error: {e}")
             raise
     
-    def run_comprehensive_validation(self, tree_id: str, team_id: str) -> Dict[str, Any]:
+    def run_comprehensive_validation(self, tree_id: str, team_id: str, skipped_edges: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Run comprehensive validation by testing all navigation paths with smart dependency logic
+        
+        Args:
+            tree_id: Navigation tree ID
+            team_id: Team ID
+            skipped_edges: Optional list of edges to skip in format [{"from": "node1", "to": "node2"}]
         """
         print(f"[@service:validation:run_comprehensive_validation] Starting validation for tree {tree_id}")
+        
+        if skipped_edges:
+            print(f"[@service:validation:run_comprehensive_validation] Will skip {len(skipped_edges)} user-selected edges")
+        
         start_time = time.time()
         
         try:
@@ -140,6 +149,13 @@ class ValidationService:
             G = get_cached_graph(tree_id, team_id)
             if not G:
                 raise Exception(f"Failed to load graph for tree {tree_id}")
+            
+            # Convert skipped_edges to a set of tuples for efficient lookup
+            skipped_edge_set = set()
+            if skipped_edges:
+                for edge in skipped_edges:
+                    skipped_edge_set.add((edge['from'], edge['to']))
+                print(f"[@service:validation:run_comprehensive_validation] Skipped edges: {skipped_edge_set}")
             
             # Find entry nodes first - these are always reachable as starting points
             entry_nodes = set()
@@ -175,15 +191,22 @@ class ValidationService:
                             entry_nodes.add(node_id)
                             print(f"[@service:validation:run_comprehensive_validation] ✓ Found implicit ENTRY node: {node_id}")
             
-            # Get all edges to test
+            # Get all edges to test, filtering out skipped edges
             all_edges = list(G.edges(data=True))
             testable_edges = []
             
             for edge in all_edges:
                 from_node, to_node, edge_data = edge
+                edge_tuple = (from_node, to_node)
+                
+                # Skip if this edge is in the skipped list
+                if edge_tuple in skipped_edge_set:
+                    print(f"[@service:validation:run_comprehensive_validation] ⏭️ Skipping edge {from_node} → {to_node} (user selected)")
+                    continue
+                    
                 testable_edges.append((from_node, to_node, edge_data))
             
-            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} edges with smart dependency logic")
+            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} edges (skipped {len(skipped_edge_set)}) with smart dependency logic")
             
             # Track which nodes are reachable (start with entry nodes as they are always reachable)
             reachable_nodes = set(entry_nodes)

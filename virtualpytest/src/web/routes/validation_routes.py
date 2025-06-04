@@ -260,6 +260,10 @@ def run_validation(tree_id):
         team_id = get_team_id()
         data = request.get_json() or {}
         session_id = data.get('session_id')  # Optional session ID for progress tracking
+        skipped_edges = data.get('skipped_edges', [])  # Optional list of edges to skip
+        
+        if skipped_edges:
+            print(f"[@api:validation:run] Received {len(skipped_edges)} skipped edges")
         
         # If session_id is provided, set up progress callback
         if session_id:
@@ -275,8 +279,8 @@ def run_validation(tree_id):
             # Clear any existing progress callback
             validation_service.set_progress_callback(None)
         
-        # Run validation (this will now call progress callback during execution)
-        results = validation_service.run_comprehensive_validation(tree_id, team_id)
+        # Run validation with optional skipped edges (this will now call progress callback during execution)
+        results = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges=skipped_edges)
         
         # Clear progress callback after completion
         validation_service.set_progress_callback(None)
@@ -289,6 +293,10 @@ def run_validation(tree_id):
         # Include session_id in response if it was provided
         if session_id:
             response_data['session_id'] = session_id
+            
+        # Include skipped edges info in response if provided
+        if skipped_edges:
+            response_data['skipped_edges_count'] = len(skipped_edges)
         
         return jsonify(response_data)
         

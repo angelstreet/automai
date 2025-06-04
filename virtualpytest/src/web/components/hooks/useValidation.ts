@@ -39,8 +39,8 @@ export function useValidation(treeId: string) {
     }
   }, [treeId, setPreviewData, setShowPreview]);
 
-  const runValidation = useCallback(async () => {
-    console.log(`[@hook:useValidation] Starting validation for tree: ${treeId}`);
+  const runValidation = useCallback(async (skippedEdges?: Array<{ from: string; to: string }>) => {
+    console.log(`[@hook:useValidation] Starting validation for tree: ${treeId}`, skippedEdges ? `with ${skippedEdges.length} skipped edges` : '');
     
     setValidating(true);
     setShowPreview(false);
@@ -69,8 +69,8 @@ export function useValidation(treeId: string) {
         setProgress(progressData);
       });
       
-      // Run actual validation with real-time progress updates
-      const results = await validationService.runValidation(treeId);
+      // Run actual validation with real-time progress updates and optional skipped edges
+      const results = await validationService.runValidation(treeId, skippedEdges);
       setResults(results);
       
       // Hide progress and show results
