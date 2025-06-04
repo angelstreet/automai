@@ -248,15 +248,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           </Alert>
         )}
 
-        {/* Success Display */}
-        {executionMessage && (
-          <Alert severity="success" sx={{ mb: 1, fontSize: '0.875rem' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-              {executionMessage}
-            </Typography>
-          </Alert>
-        )}
-
         {/* Node Information */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
@@ -475,6 +466,15 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           <Box sx={{ mt: 1 }}>
             <LinearProgress />
           </Box>
+        )}
+        
+        {/* Success Display */}
+        {executionMessage && (
+          <Alert severity="success" sx={{ mt: 1, fontSize: '0.875rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+              {executionMessage}
+            </Typography>
+          </Alert>
         )}
       </Box>
     </Paper>
