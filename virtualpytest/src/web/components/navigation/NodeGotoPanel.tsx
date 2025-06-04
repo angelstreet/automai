@@ -410,20 +410,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                       <strong>Command:</strong> {verification.command || 'No command'}
                     </Typography>
                     
-                    {verification.description && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontSize: '0.8rem',
-                          color: 'text.secondary',
-                          fontStyle: 'italic'
-                        }}
-                      >
-                        {verification.description}
-                      </Typography>
-                    )}
-                    
-                    {verification.inputValue && (
+                    {(verification as any).inputValue && (
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -432,7 +419,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                           fontWeight: 'bold'
                         }}
                       >
-                        Input: {verification.inputValue}
+                        Input: {(verification as any).inputValue}
                       </Typography>
                     )}
                     
