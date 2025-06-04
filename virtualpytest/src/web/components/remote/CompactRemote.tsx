@@ -221,6 +221,7 @@ export function CompactRemote({
       connectionLoading={connectionLoading}
       onCommand={handleRemoteCommand}
       onDisconnect={handleDisconnect}
+      handleReleaseControl={handleReleaseControl}
       style="compact"
       sx={sx}
     />
