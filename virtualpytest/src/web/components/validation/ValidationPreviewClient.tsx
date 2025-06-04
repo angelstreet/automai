@@ -177,7 +177,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       <Divider />
       
       {/* Content */}
-      <DialogContent sx={{ bgcolor: 'background.paper', p: 3 }}>
+      <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 1 }}>
         {!previewData ? (
           <Box display="flex" justifyContent="center" alignItems="center" p={4}>
             <CircularProgress sx={{ mr: 2 }} />
@@ -187,7 +187,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
           <>
            
             
-            <Grid container spacing={3} mb={3}>
+            <Grid container spacing={3} mb={1}>
               <Grid item xs={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="primary" fontWeight="bold">
@@ -221,7 +221,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
             </Grid>
             
             {/* Details Section */}
-            <Box mt={2}>
+            <Box mt={1}>
               <Button
                 onClick={() => setShowDetails(!showDetails)}
                 startIcon={showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -338,9 +338,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                     </TableCell>
                                     <TableCell>{step.actions.length}</TableCell>
                                     <TableCell>
-                                      <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                                        {step.retryActions?.length || 0} for {step.to_node_label}
-                                      </Typography>
+                                      {step.retryActions?.length || 0}
                                     </TableCell>
                                   </TableRow>
 

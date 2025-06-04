@@ -118,6 +118,21 @@ def get_optimal_validation_path(tree_id):
         # Format the response to show the full execution sequence
         formatted_sequence = []
         for step in validation_sequence:
+            # Get target node information and its verifications
+            from navigation_graph import get_node_info
+            from navigation_cache import get_cached_graph
+            
+            # Get the cached graph to access node data
+            G = get_cached_graph(tree_id, team_id)
+            target_node_info = get_node_info(G, step['to_node_id']) if G else {}
+            
+            # Extract target node verifications (these validate that we reached the correct target)
+            target_verifications = target_node_info.get('verifications', []) if target_node_info else []
+            
+            # Also check for retryActions in target node (alternative storage location)
+            if not target_verifications:
+                target_verifications = target_node_info.get('retryActions', []) if target_node_info else []
+            
             step_info = {
                 'step_number': step['step_number'],
                 'validation_type': step.get('validation_type', 'edge'),
@@ -126,7 +141,7 @@ def get_optimal_validation_path(tree_id):
                 'from_node_label': step['from_node_label'],
                 'to_node_label': step['to_node_label'],
                 'actions': step.get('actions', []),
-                'retry_actions': step.get('retryActions', []),
+                'retryActions': target_verifications,  # Target node verifications, not edge retryActions
                 'description': step['description'],
                 'navigation_cost': step.get('navigation_cost', 0),
                 'optimization': step.get('optimization', 'unknown'),
