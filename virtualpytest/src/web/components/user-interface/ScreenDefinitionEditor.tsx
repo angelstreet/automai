@@ -641,10 +641,10 @@ export function ScreenDefinitionEditor({
     
     // Create layout config override for collapsed mode
     const layoutConfigOverride = !isExpanded ? {
-      minHeight: '250px', // Match collapsed container height
-      aspectRatio: '3/5', // Better ratio for collapsed mobile view (150px/250px)
+      minHeight: deviceModel === 'android_mobile' ? '300px' : '250px', // Match collapsed container height
+      aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5', // Better ratio for each model type
       objectFit: 'cover' as const,
-      isMobileModel: true,
+      isMobileModel: deviceModel === 'android_mobile', // Use actual device model, not always true
     } : undefined;
 
     // Show the appropriate component based on viewMode (no special handling for isCapturing)
@@ -796,7 +796,7 @@ export function ScreenDefinitionEditor({
         }}>
           {/* Main Screen Definition Editor Panel */}
           <Box sx={{
-            width: deviceModel === 'android_mobile' ? '350px' : '660px', // 200px wider for landscape models
+            width: deviceModel === 'android_mobile' ? '270px' : '660px', // 200px wider for landscape models
             height: '510px',
             bgcolor: '#1E1E1E',
             border: '2px solid #1E1E1E',
