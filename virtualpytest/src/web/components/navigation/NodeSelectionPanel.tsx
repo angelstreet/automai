@@ -204,9 +204,29 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       >
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
-              {selectedNode.data.label}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
+                {selectedNode.data.label}
+              </Typography>
+              {/* Show confidence percentage with color coding if available */}
+              {confidenceInfo.score !== null && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: confidenceInfo.score >= 0.7 ? '#4caf50' : // Green for 70%+
+                           confidenceInfo.score >= 0.5 ? '#ff9800' : // Orange for 50-70%
+                           '#f44336', // Red for <50%
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {confidenceInfo.text}
+                </Typography>
+              )}
+            </Box>
             <IconButton
               size="small"
               onClick={onClose}
@@ -224,17 +244,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             <Typography variant="caption" display="block">
               <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
             </Typography>
-            {/* Show verification count if available */}
-            {hasNodeVerifications && (
-              <>
-                <Typography variant="caption" display="block">
-                  <strong>Verifications:</strong> {selectedNode.data.verifications?.length || 0}
-                </Typography>
-                <Typography variant="caption" display="block">
-                  <strong>Confidence:</strong> {confidenceInfo.text}
-                </Typography>
-              </>
-            )}
+           
           </Box>
           
           <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
