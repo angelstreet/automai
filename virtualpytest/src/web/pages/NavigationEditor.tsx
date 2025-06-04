@@ -912,6 +912,7 @@ const NavigationEditorContent: React.FC = () => {
         isRemotePanelOpen={isRemotePanelOpen}
         devices={devices}
         devicesLoading={devicesLoading}
+        treeId={currentTreeId}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}

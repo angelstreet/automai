@@ -229,7 +229,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               {/* Validation Button */}
               <ValidationButtonClient 
                 treeId={treeId}
-                disabled={isLoading || !!error}
+                disabled={isLoading || !!error || !isControlActive || !selectedDevice}
               />
               
               <Button
