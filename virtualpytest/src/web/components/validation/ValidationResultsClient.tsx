@@ -293,36 +293,67 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     Actions Executed ({edge.actionResults.length}):
                                   </Typography>
-                                  {edge.actionResults.map((action, actionIndex) => (
-                                    <Alert
-                                      key={actionIndex}
-                                      severity={action.success ? 'success' : 'error'}
-                                      sx={{ 
-                                        mb: 1, 
-                                        fontSize: '0.875rem',
-                                        '&:hover': {
-                                          backgroundColor: 'transparent !important',
-                                        }
-                                      }}
-                                    >
-                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                        {action.actionIndex + 1}. {action.actionLabel}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        Command: <code>{action.actionCommand}</code>
-                                      </Typography>
-                                      {action.inputValue && (
+                                  {edge.actionResults.map((action, actionIndex) => {
+                                    // Debug logging for action data
+                                    console.log(`[@component:ValidationResultsClient] Action ${actionIndex}:`, {
+                                      success: action.success,
+                                      inputValue: action.inputValue,
+                                      actionLabel: action.actionLabel,
+                                      actionCommand: action.actionCommand,
+                                      error: action.error,
+                                      fullActionObject: action
+                                    });
+
+                                    // Check for alternative input field names for actions
+                                    const inputValue = action.inputValue || 
+                                                     (action as any).input || 
+                                                     (action as any).elementSelector || 
+                                                     (action as any).selector || 
+                                                     (action as any).value ||
+                                                     (action as any).expectedValue ||
+                                                     (action as any).targetElement;
+
+                                    return (
+                                      <Alert
+                                        key={actionIndex}
+                                        severity={action.success ? 'success' : 'error'}
+                                        sx={{ 
+                                          mb: 1, 
+                                          fontSize: '0.875rem',
+                                          '&:hover': {
+                                            backgroundColor: 'transparent !important',
+                                          }
+                                        }}
+                                      >
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                          {action.actionIndex + 1}. {action.actionLabel}
+                                        </Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                          Input: <strong>{action.inputValue}</strong>
+                                          Command: <code>{action.actionCommand}</code>
                                         </Typography>
-                                      )}
-                                      {action.error && (
-                                        <Typography variant="body2" color="error">
-                                          Error: {action.error}
-                                        </Typography>
-                                      )}
-                                    </Alert>
-                                  ))}
+                                        {inputValue && (
+                                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            Input: <strong>{inputValue}</strong>
+                                          </Typography>
+                                        )}
+                                        {!inputValue && !action.success && (
+                                          <Typography variant="body2" sx={{ mb: 0.5, color: 'warning.main' }}>
+                                            Input: <em>No input value provided</em>
+                                          </Typography>
+                                        )}
+                                        {action.error && (
+                                          <Typography variant="body2" color="error">
+                                            Error: {action.error}
+                                          </Typography>
+                                        )}
+                                        {process.env.NODE_ENV === 'development' && (
+                                          <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
+                                            Debug: Available fields: {Object.keys(action).join(', ')}
+                                          </Typography>
+                                        )}
+                                      </Alert>
+                                    );
+                                  })}
                                 </Box>
                               )}
 
@@ -332,36 +363,67 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     Verifications Executed ({edge.verificationResults.length}):
                                   </Typography>
-                                  {edge.verificationResults.map((verification, verificationIndex) => (
-                                    <Alert
-                                      key={verificationIndex}
-                                      severity={verification.success ? 'success' : 'error'}
-                                      sx={{ 
-                                        mb: 1, 
-                                        fontSize: '0.875rem',
-                                        '&:hover': {
-                                          backgroundColor: 'transparent !important',
-                                        }
-                                      }}
-                                    >
-                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                        {verification.verificationLabel}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        Command: <code>{verification.verificationCommand}</code>
-                                      </Typography>
-                                      {verification.inputValue && (
+                                  {edge.verificationResults.map((verification, verificationIndex) => {
+                                    // Debug logging for verification data
+                                    console.log(`[@component:ValidationResultsClient] Verification ${verificationIndex}:`, {
+                                      success: verification.success,
+                                      inputValue: verification.inputValue,
+                                      verificationLabel: verification.verificationLabel,
+                                      verificationCommand: verification.verificationCommand,
+                                      error: verification.error,
+                                      fullVerificationObject: verification
+                                    });
+
+                                    // Check for alternative input field names
+                                    const inputValue = verification.inputValue || 
+                                                     (verification as any).input || 
+                                                     (verification as any).elementSelector || 
+                                                     (verification as any).selector || 
+                                                     (verification as any).value ||
+                                                     (verification as any).expectedValue ||
+                                                     (verification as any).targetElement;
+
+                                    return (
+                                      <Alert
+                                        key={verificationIndex}
+                                        severity={verification.success ? 'success' : 'error'}
+                                        sx={{ 
+                                          mb: 1, 
+                                          fontSize: '0.875rem',
+                                          '&:hover': {
+                                            backgroundColor: 'transparent !important',
+                                          }
+                                        }}
+                                      >
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                          {verification.verificationLabel}
+                                        </Typography>
                                         <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                          Input: <strong>{verification.inputValue}</strong>
+                                          Command: <code>{verification.verificationCommand}</code>
                                         </Typography>
-                                      )}
-                                      {verification.error && (
-                                        <Typography variant="body2" color="error">
-                                          Error: {verification.error}
-                                        </Typography>
-                                      )}
-                                    </Alert>
-                                  ))}
+                                        {inputValue && (
+                                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            Input: <strong>{inputValue}</strong>
+                                          </Typography>
+                                        )}
+                                        {!inputValue && !verification.success && (
+                                          <Typography variant="body2" sx={{ mb: 0.5, color: 'warning.main' }}>
+                                            Input: <em>No input value provided</em>
+                                          </Typography>
+                                        )}
+                                        {verification.error && (
+                                          <Typography variant="body2" color="error">
+                                            Error: {verification.error}
+                                          </Typography>
+                                        )}
+                                        {process.env.NODE_ENV === 'development' && (
+                                          <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
+                                            Debug: Available fields: {Object.keys(verification).join(', ')}
+                                          </Typography>
+                                        )}
+                                      </Alert>
+                                    );
+                                  })}
                                 </Box>
                               ) : (
                                 <Box>

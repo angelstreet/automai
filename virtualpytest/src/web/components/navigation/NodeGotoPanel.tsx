@@ -397,17 +397,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                         mb: 0.25
                       }}
                     >
-                      <strong>Type:</strong> {verification.controller_type || 'Unknown'}
-                    </Typography>
-                    
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        fontSize: '0.8rem',
-                        color: 'text.secondary',
-                        mb: 0.25
-                      }}
-                    >
                       <strong>Command:</strong> {verification.command || 'No command'}
                     </Typography>
                     
@@ -470,7 +459,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         
         {/* Success Display */}
         {executionMessage && (
-          <Alert severity="success" sx={{ mt: 1, fontSize: '0.875rem' }}>
+          <Alert severity="success" sx={{ mt: 0.5, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
               {executionMessage}
             </Typography>
