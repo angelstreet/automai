@@ -195,7 +195,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           {runResult && (
             <Box sx={{ 
               p: 2, 
-              bgcolor: runResult.includes('❌') ? 'error.light' : 
+              bgcolor: runResult.includes('❌ OVERALL RESULT: FAILED') ? 'error.light' : 
+                       runResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
+                       runResult.includes('❌') && !runResult.includes('✅') ? 'error.light' : 
                        runResult.includes('⚠️') ? 'warning.light' : 'success.light', 
               borderRadius: 1,
               maxHeight: 200,

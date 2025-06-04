@@ -559,6 +559,8 @@ export async function executeEdgeActions(
       if (!executionStopped) {
         results.push('✅ Retry actions completed successfully!');
         console.log(`[@util:NavigationApi] All retry actions completed successfully`);
+        // Reset executionStopped since retry actions succeeded
+        executionStopped = false;
       } else {
         results.push('❌ Retry actions also failed.');
         console.log(`[@util:NavigationApi] Retry actions execution stopped due to failure`);
@@ -570,6 +572,17 @@ export async function executeEdgeActions(
       console.log(`[@util:NavigationApi] Final wait: ${finalWaitTime}ms`);
       await delay(finalWaitTime);
       results.push(`⏱️ Final wait: ${finalWaitTime}ms completed`);
+    }
+    
+    // Add final summary message
+    if (executionStopped) {
+      results.push('');
+      results.push('❌ OVERALL RESULT: FAILED - All actions failed');
+      console.log(`[@util:NavigationApi] OVERALL EXECUTION FAILED`);
+    } else {
+      results.push('');
+      results.push('✅ OVERALL RESULT: SUCCESS - Actions completed successfully');
+      console.log(`[@util:NavigationApi] OVERALL EXECUTION SUCCEEDED`);
     }
     
     if (executionStopped) {

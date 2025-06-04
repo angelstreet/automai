@@ -352,7 +352,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             <Box sx={{ 
               mt: 0.5,
               p: 0.5,
-              bgcolor: runResult.includes('❌') ? 'error.light' : 
+              bgcolor: runResult.includes('❌ OVERALL RESULT: FAILED') ? 'error.light' : 
+                       runResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
+                       runResult.includes('❌') && !runResult.includes('✅') ? 'error.light' : 
                        runResult.includes('⚠️') ? 'warning.light' : 'success.light',
               borderRadius: 0.5
             }}>
