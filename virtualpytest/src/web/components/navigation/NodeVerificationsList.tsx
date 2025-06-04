@@ -23,8 +23,8 @@ import {
 import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
 
 // Import extracted components
-import { VerificationItem } from './verification/VerificationItem';
-import { VerificationImageComparisonDialog } from './verification/VerificationImageComparisonDialog';
+import { VerificationItem } from '../verification/VerificationItem';
+import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';

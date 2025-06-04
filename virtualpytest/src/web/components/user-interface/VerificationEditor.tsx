@@ -646,8 +646,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           if (verificationsToExecute[index]?.controller_type === 'image' || verificationsToExecute[index]?.controller_type === 'text') {
             // Use threshold directly from response (already processed by backend for appear/disappear operations)
             if (res.threshold !== undefined && res.threshold !== null) {
-              threshold = res.threshold;
-              console.log(`[@component:VerificationEditor] Using threshold from response: ${threshold}`);
+              // Clamp confidence to minimum of 0.0 (no negative confidence values)
+              threshold = Math.max(0.0, res.threshold);
+              console.log(`[@component:VerificationEditor] Using threshold from response: ${res.threshold} (clamped to: ${threshold})`);
             } else {
               // Fallback to verification params if backend didn't provide threshold
               threshold = verificationsToExecute[index]?.params?.threshold || 0.0;
