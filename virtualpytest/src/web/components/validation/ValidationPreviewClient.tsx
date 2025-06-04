@@ -173,7 +173,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
           </Box>
         ) : (
           <>
-            <Typography variant="h6" gutterBottom>Test Scope</Typography>
+           
             
             <Grid container spacing={3} mb={3}>
               <Grid item xs={4}>
@@ -256,7 +256,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                       </Box>
 
                       {/* NetworkX Optimal Path Table */}
-                      <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
+                      <TableContainer component={Paper} variant="outlined">
                         <Table size="small" stickyHeader>
                           <TableHead>
                             <TableRow>
