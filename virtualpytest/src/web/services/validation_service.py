@@ -286,6 +286,10 @@ class ValidationService:
                         'steps_executed': result.get('steps_executed', 0),
                         'total_steps': result.get('total_steps', 0),
                         'execution_time': result.get('execution_time', 0),
+                        'actions_executed': result.get('actions_executed', 0),
+                        'total_actions': result.get('total_actions', 0),
+                        'action_results': result.get('action_results', []),
+                        'verification_results': result.get('verification_results', []),
                         'error': None
                     }
                 else:
@@ -299,6 +303,10 @@ class ValidationService:
                         'steps_executed': result.get('steps_executed', 0),
                         'total_steps': result.get('total_steps', 0),
                         'execution_time': result.get('execution_time', 0),
+                        'actions_executed': result.get('actions_executed', 0),
+                        'total_actions': result.get('total_actions', 0),
+                        'action_results': result.get('action_results', []),
+                        'verification_results': result.get('verification_results', []),
                         'error': result.get('error', 'Navigation failed')
                     }
             else:
@@ -312,6 +320,10 @@ class ValidationService:
                     'steps_executed': 0,
                     'total_steps': 0,
                     'execution_time': 0,
+                    'actions_executed': 0,
+                    'total_actions': 0,
+                    'action_results': [],
+                    'verification_results': [],
                     'error': f"HTTP {response.status_code}: {response.text}"
                 }
                 
@@ -326,6 +338,10 @@ class ValidationService:
                 'steps_executed': 0,
                 'total_steps': 0,
                 'execution_time': 0,
+                'actions_executed': 0,
+                'total_actions': 0,
+                'action_results': [],
+                'verification_results': [],
                 'error': f"Exception: {str(e)}"
             }
     
@@ -381,7 +397,7 @@ class ValidationService:
         """
         edge_results = []
         for path in path_results:
-            edge_results.append({
+            edge_result = {
                 'from': path['from_node'],
                 'to': path['to_node'],
                 'fromName': path['from_name'],
@@ -390,7 +406,22 @@ class ValidationService:
                 'skipped': path.get('skipped', False),
                 'retryAttempts': 0,  # TODO: implement retry attempts tracking
                 'errors': [path['error']] if path['error'] else []
-            })
+            }
+            
+            # Add detailed execution results if available
+            if 'actions_executed' in path:
+                edge_result['actionsExecuted'] = path['actions_executed']
+            if 'total_actions' in path:
+                edge_result['totalActions'] = path['total_actions']
+            if 'execution_time' in path:
+                edge_result['executionTime'] = path['execution_time']
+            if 'action_results' in path:
+                edge_result['actionResults'] = path['action_results']
+            if 'verification_results' in path:
+                edge_result['verificationResults'] = path['verification_results']
+                
+            edge_results.append(edge_result)
+            
         return edge_results
 
 # Create singleton instance

@@ -39,6 +39,27 @@ export interface ValidationResults {
     skipped: boolean;
     retryAttempts: number;
     errors: string[];
+    // Detailed execution results
+    actionsExecuted?: number;
+    totalActions?: number;
+    executionTime?: number;
+    actionResults?: Array<{
+      actionIndex: number;
+      actionLabel: string;
+      actionCommand: string;
+      success: boolean;
+      error?: string;
+      inputValue?: string;
+    }>;
+    verificationResults?: Array<{
+      verificationId: string;
+      verificationLabel: string;
+      verificationCommand: string;
+      success: boolean;
+      error?: string;
+      resultType?: 'PASS' | 'FAIL' | 'ERROR';
+      message?: string;
+    }>;
   }>;
 }
 
