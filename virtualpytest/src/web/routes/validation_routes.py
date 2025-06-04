@@ -88,6 +88,115 @@ def get_validation_preview(tree_id):
             'error_code': 'API_ERROR'
         }), 500
 
+@validation_bp.route('/optimal-path/<tree_id>', methods=['GET'])
+def get_optimal_validation_path(tree_id):
+    """API endpoint to get the full NetworkX optimized validation path without executing tests"""
+    try:
+        print(f"[@api:validation:optimal-path] Request for optimal path for tree {tree_id}")
+        
+        team_id = get_team_id()
+        
+        # Import the NetworkX pathfinding functions
+        from navigation_pathfinding import (
+            find_optimal_edge_validation_sequence,
+            analyze_validation_sequence_efficiency
+        )
+        
+        # Get the optimal validation sequence using NetworkX
+        validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
+        
+        if not validation_sequence:
+            return jsonify({
+                'success': False,
+                'error': 'Could not generate optimal path - tree not found or no edges',
+                'error_code': 'PATH_GENERATION_FAILED'
+            }), 404
+        
+        # Analyze the efficiency of the sequence
+        efficiency_analysis = analyze_validation_sequence_efficiency(validation_sequence)
+        
+        # Format the response to show the full execution sequence
+        formatted_sequence = []
+        for step in validation_sequence:
+            step_info = {
+                'step_number': step['step_number'],
+                'validation_type': step.get('validation_type', 'edge'),
+                'from_node_id': step['from_node_id'],
+                'to_node_id': step['to_node_id'],
+                'from_node_label': step['from_node_label'],
+                'to_node_label': step['to_node_label'],
+                'actions': step.get('actions', []),
+                'retry_actions': step.get('retryActions', []),
+                'description': step['description'],
+                'navigation_cost': step.get('navigation_cost', 0),
+                'optimization': step.get('optimization', 'unknown'),
+                'estimated_time': len(step.get('actions', [])) * 2.5 + step.get('navigation_cost', 0) * 1.5  # Estimate based on action count
+            }
+            formatted_sequence.append(step_info)
+        
+        # Create summary information
+        summary = {
+            'total_steps': len(validation_sequence),
+            'edge_validations': efficiency_analysis['edge_validations'],
+            'navigation_steps': efficiency_analysis['navigation_steps'],
+            'bidirectional_optimizations': efficiency_analysis['bidirectional_optimizations'],
+            'efficiency_ratio': efficiency_analysis['efficiency_ratio'],
+            'optimizations_used': efficiency_analysis['optimizations_used'],
+            'estimated_total_time': sum(step['estimated_time'] for step in formatted_sequence),
+            'analysis': efficiency_analysis['analysis']
+        }
+        
+        # Show bidirectional pairs explicitly
+        bidirectional_pairs = []
+        edge_lookup = {f"{step['from_node_id']}->{step['to_node_id']}": step for step in formatted_sequence if step['validation_type'] == 'edge'}
+        
+        for step in formatted_sequence:
+            if step['validation_type'] == 'edge':
+                reverse_key = f"{step['to_node_id']}->{step['from_node_id']}"
+                if reverse_key in edge_lookup:
+                    reverse_step = edge_lookup[reverse_key]
+                    if step['step_number'] < reverse_step['step_number']:  # Only add once
+                        bidirectional_pairs.append({
+                            'forward': {
+                                'step': step['step_number'],
+                                'path': f"{step['from_node_label']} → {step['to_node_label']}",
+                                'optimization': step['optimization']
+                            },
+                            'reverse': {
+                                'step': reverse_step['step_number'],
+                                'path': f"{reverse_step['from_node_label']} → {reverse_step['to_node_label']}",
+                                'optimization': reverse_step['optimization']
+                            },
+                            'consecutive': abs(step['step_number'] - reverse_step['step_number']) == 1
+                        })
+        
+        return jsonify({
+            'success': True,
+            'tree_id': tree_id,
+            'optimal_path': {
+                'sequence': formatted_sequence,
+                'summary': summary,
+                'bidirectional_pairs': bidirectional_pairs,
+                'networkx_algorithms_used': [
+                    'nx.is_eulerian() - Check if perfect traversal possible',
+                    'nx.eulerian_path() - Find optimal path visiting each edge once',
+                    'nx.shortest_path() - Navigate between disconnected components',
+                    'nx.has_path() - Verify reachability before navigation',
+                    'Custom bidirectional edge detection and grouping'
+                ]
+            }
+        })
+        
+    except Exception as e:
+        print(f"[@api:validation:optimal-path] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'API_ERROR'
+        }), 500
+
 # =====================================================
 # VALIDATION EXECUTION ROUTES
 # =====================================================
