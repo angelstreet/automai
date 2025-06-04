@@ -294,7 +294,13 @@ class ValidationService:
                     self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'success')
                 else:
                     print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED {from_name} -> {to_name}")
-                    # Report progress: Edge failed
+                    
+                    # Check if verification failed (minimal modification)
+                    verification_results = path_result.get('verification_results', [])
+                    if verification_results and any(not v.get('success', False) for v in verification_results):
+                        print(f"[@service:validation:run_comprehensive_validation] ⚠️ Node verification failed for {from_name} -> {to_name}")
+                    
+                    # Report progress: Edge failed  
                     self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'failed')
                 
                 # Small delay between tests to avoid overwhelming the device
