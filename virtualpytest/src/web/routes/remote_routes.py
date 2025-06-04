@@ -183,6 +183,34 @@ def send_android_tv_command():
                 'message': f'Sequence {"executed" if success else "failed"}'
             })
             
+        elif command == 'launch_app':
+            package = params.get('package')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Missing package parameter'
+                }), 400
+            
+            success = controller.launch_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"launched" if success else "failed"}'
+            })
+            
+        elif command == 'close_app':
+            package = params.get('package')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Missing package parameter'
+                }), 400
+            
+            success = controller.close_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"closed" if success else "failed"}'
+            })
+            
         else:
             return jsonify({
                 'success': False,
@@ -494,6 +522,16 @@ def execute_android_mobile_action():
                 }), 400
             success = app.android_mobile_controller.launch_app(package)
             message = f'App "{package}" {"launched" if success else "failed"}'
+            
+        elif command == 'close_app':
+            package = params.get('package', '')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Package parameter required for close_app command'
+                }), 400
+            success = app.android_mobile_controller.close_app(package)
+            message = f'App "{package}" {"closed" if success else "failed"}'
             
         elif command == 'input_text':
             text = params.get('text', '')
@@ -919,6 +957,16 @@ def get_android_mobile_actions():
                     'requiresInput': True,
                     'inputLabel': 'Package Name',
                     'inputPlaceholder': 'com.example.app'
+                },
+                {
+                    'id': 'close_app',
+                    'label': 'Close App',
+                    'command': 'close_app',
+                    'params': {'package': ''},
+                    'description': 'Close/stop a specific app by package name',
+                    'requiresInput': True,
+                    'inputLabel': 'Package Name',
+                    'inputPlaceholder': 'com.example.app'
                 }
             ],
             'input': [
@@ -1013,6 +1061,20 @@ def android_mobile_command():
             return jsonify({
                 'success': success,
                 'message': f'App "{package}" {"launched" if success else "failed"}'
+            })
+            
+        elif command == 'close_app':
+            package = params.get('package', '')
+            if not package:
+                return jsonify({
+                    'success': False,
+                    'error': 'Package parameter required for close_app command'
+                }), 400
+                
+            success = app.android_mobile_controller.close_app(package)
+            return jsonify({
+                'success': success,
+                'message': f'App "{package}" {"closed" if success else "failed"}'
             })
             
         elif command == 'input_text':

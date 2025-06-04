@@ -127,6 +127,37 @@ class RemoteControllerInterface(BaseController):
         """Rewind."""
         return self.press_key("REWIND")
     
+    # Optional app management methods
+    def launch_app(self, package_name: str) -> bool:
+        """
+        Launch an app by package name.
+        Default implementation - should be overridden by subclasses that support app management.
+        
+        Args:
+            package_name: App package name (e.g., "com.example.app")
+        """
+        raise NotImplementedError("App management not supported by this controller")
+    
+    def close_app(self, package_name: str) -> bool:
+        """
+        Close/stop an app by package name.
+        Default implementation - should be overridden by subclasses that support app management.
+        
+        Args:
+            package_name: App package name (e.g., "com.example.app")
+        """
+        raise NotImplementedError("App management not supported by this controller")
+    
+    def kill_app(self, package_name: str) -> bool:
+        """
+        Kill an app by package name (alias for close_app).
+        Default implementation calls close_app.
+        
+        Args:
+            package_name: App package name (e.g., "com.example.app")
+        """
+        return self.close_app(package_name)
+
 
 class AVControllerInterface(BaseController):
     """

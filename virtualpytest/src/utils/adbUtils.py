@@ -290,6 +290,47 @@ class ADBUtils:
             print(f"[@lib:adbUtils:launch_app] Error: {e}")
             return False
             
+    def close_app(self, device_id: str, package_name: str) -> bool:
+        """
+        Close/stop an app by package name.
+        
+        Args:
+            device_id: Android device ID
+            package_name: App package name to close
+            
+        Returns:
+            bool: True if close successful
+        """
+        try:
+            print(f"[@lib:adbUtils:close_app] Closing app {package_name} on device {device_id}")
+            
+            command = f"adb -s {device_id} shell am force-stop {package_name}"
+            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:close_app] Successfully closed {package_name}")
+                return True
+            else:
+                print(f"[@lib:adbUtils:close_app] App close failed: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"[@lib:adbUtils:close_app] Error: {e}")
+            return False
+            
+    def kill_app(self, device_id: str, package_name: str) -> bool:
+        """
+        Kill an app by package name (alias for close_app).
+        
+        Args:
+            device_id: Android device ID
+            package_name: App package name to kill
+            
+        Returns:
+            bool: True if kill successful
+        """
+        return self.close_app(device_id, package_name)
+            
     def dump_ui_elements(self, device_id: str) -> Tuple[bool, List[AndroidElement], str]:
         """
         Dump UI elements from Android device (similar to TypeScript version).

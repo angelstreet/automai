@@ -258,6 +258,8 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 x = params.get('x', 0)
                 y = params.get('y', 0)
                 success = self.tap_coordinates(x, y)
+            elif action == 'close_app':
+                success = self.close_app(params.get('package', ''))
             else:
                 print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
                 return False
@@ -311,6 +313,53 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
             return False
+            
+    def close_app(self, package_name: str) -> bool:
+        """
+        Close/stop an app by package name.
+        
+        Args:
+            package_name: Android package name (e.g., "com.netflix.ninja")
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            close_command = [
+                "adb", "-s", self.adb_device, "shell", "am", "force-stop", package_name
+            ]
+            print(f"Remote[{self.device_type.upper()}]: Closing app: {package_name}")
+            
+            result = subprocess.run(
+                close_command,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully closed {package_name}")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: App close failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: App close timeout")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: App close error: {e}")
+            return False
+            
+    def kill_app(self, package_name: str) -> bool:
+        """
+        Kill an app by package name (alias for close_app).
+        
+        Args:
+            package_name: Android package name (e.g., "com.netflix.ninja")
+        """
+        return self.close_app(package_name)
             
     def tap_coordinates(self, x: int, y: int) -> bool:
         """
@@ -435,7 +484,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             'supported_keys': list(ADBUtils.ADB_KEYS.keys()) if self.adb_utils else [],
             'capabilities': [
                 'ssh_connection', 'adb_control', 'navigation', 'text_input', 
-                'app_launch', 'coordinate_tap', 'media_control', 'volume_control', 'power_control'
+                'app_launch', 'app_close', 'coordinate_tap', 'media_control', 'volume_control', 'power_control'
             ]
         }
 

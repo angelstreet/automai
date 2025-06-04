@@ -313,18 +313,15 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Closing app: {package_name}")
             
-            # Use ADB force-stop command to close the app
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"adb -s {self.android_device_id} shell am force-stop {package_name}"
-            )
+            success = self.adb_utils.close_app(self.android_device_id, package_name)
             
-            if success and exit_code == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully closed {package_name}")
-                return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Failed to close {package_name}: {stderr}")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to close {package_name}")
                 
+            return success
+            
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: App close error: {e}")
             return False
