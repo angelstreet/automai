@@ -218,7 +218,7 @@ def get_cache_stats():
 
 @pathfinding_bp.route('/take-control/<tree_id>', methods=['POST'])
 def toggle_take_control(tree_id):
-    """API endpoint for activating/deactivating take control mode"""
+    """API endpoint for toggling take control mode"""
     if not NAVIGATION_AUTOMATION_AVAILABLE:
         return jsonify({
             'success': False,
@@ -229,15 +229,11 @@ def toggle_take_control(tree_id):
     try:
         print(f"[@api:pathfinding:take_control] Request to toggle take control for tree {tree_id}")
         
-        team_id = get_team_id()
         data = request.get_json() or {}
-        user_id = data.get('user_id', 'default_user')  # In production, get from auth
-        action = data.get('action', 'activate')  # activate or deactivate
+        team_id = data.get('team_id') or get_team_id()
+        enable = data.get('enable', True)
         
-        if action == 'activate':
-            result = navigation_service.activate_take_control(tree_id, team_id, user_id)
-        else:
-            result = navigation_service.deactivate_take_control(tree_id, team_id)
+        result = navigation_service.toggle_take_control(tree_id, team_id, enable)
         
         return jsonify(result)
         
@@ -251,7 +247,7 @@ def toggle_take_control(tree_id):
 
 @pathfinding_bp.route('/take-control/<tree_id>/status', methods=['GET'])
 def get_take_control_status(tree_id):
-    """API endpoint for checking take control mode status"""
+    """API endpoint for getting take control mode status"""
     if not NAVIGATION_AUTOMATION_AVAILABLE:
         return jsonify({
             'success': False,
@@ -263,14 +259,9 @@ def get_take_control_status(tree_id):
         print(f"[@api:pathfinding:take_control_status] Request for take control status for tree {tree_id}")
         
         team_id = get_team_id()
+        status = navigation_service.get_take_control_status(tree_id, team_id)
         
-        is_active = navigation_service.is_take_control_active(tree_id, team_id)
-        
-        return jsonify({
-            'success': True,
-            'tree_id': tree_id,
-            'take_control_active': is_active
-        })
+        return jsonify(status)
         
     except Exception as e:
         print(f"[@api:pathfinding:take_control_status] Error: {e}")
@@ -299,22 +290,20 @@ def get_alternative_paths(tree_id, node_id):
         
         team_id = get_team_id()
         current_node_id = request.args.get('current_node_id')
-        max_paths = int(request.args.get('max_paths', 3))
         
-        alternative_paths = navigation_service.find_alternative_paths(
+        alternatives = navigation_service.get_alternative_paths(
             tree_id=tree_id,
             target_node_id=node_id,
             team_id=team_id,
-            current_node_id=current_node_id,
-            max_paths=max_paths
+            current_node_id=current_node_id
         )
         
         return jsonify({
             'success': True,
             'tree_id': tree_id,
             'target_node_id': node_id,
-            'alternative_paths': alternative_paths,
-            'total_paths': len(alternative_paths)
+            'alternatives': alternatives,
+            'total_alternatives': len(alternatives)
         })
         
     except Exception as e:
