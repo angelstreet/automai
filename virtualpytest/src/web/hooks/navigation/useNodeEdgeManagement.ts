@@ -86,13 +86,15 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       verifications: state.nodeForm.verifications || state.selectedNode.data.verifications || [],
     };
     
-    // Update function for nodes
+    // Update function for nodes - IMPORTANT: Preserve position to prevent auto-reorganization
     const updateNodeFunction = (nds: UINavigationNode[]) => 
       nds.map((node) =>
         node.id === state.selectedNode!.id
           ? {
               ...node,
               type: state.nodeForm.type === 'menu' ? 'uiMenu' : 'uiScreen',
+              // Explicitly preserve the position to prevent React Flow from reorganizing
+              position: node.position,
               data: updatedNodeData,
             }
           : node
@@ -108,7 +110,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
     state.setIsNodeDialogOpen(false);
     state.setIsNewNode(false);
     
-    console.log('[@hook:useNodeEdgeManagement] Saved node changes for:', state.nodeForm.label);
+    console.log('[@hook:useNodeEdgeManagement] Saved node changes for:', state.nodeForm.label, 'with preserved position:', state.selectedNode.position);
   }, [state]);
 
   // Cancel node changes
@@ -279,6 +281,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
         console.log(`[@hook:useNodeEdgeManagement] Clearing parent/depth for node ${node.data.label}`);
         return {
           ...node,
+          // Explicitly preserve the position to prevent React Flow from reorganizing
+          position: node.position,
           data: {
             ...node.data,
             parent: [],
@@ -320,6 +324,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
             console.log(`[@hook:useNodeEdgeManagement] Resetting orphaned node: ${node.data.label}`);
             return {
               ...node,
+              // Explicitly preserve the position to prevent React Flow from reorganizing
+              position: node.position,
               data: {
                 ...node.data,
                 parent: [],
@@ -379,6 +385,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
               console.log(`[@hook:useNodeEdgeManagement] Resetting orphaned node in allNodes: ${node.data.label}`);
               return {
                 ...node,
+                // Explicitly preserve the position to prevent React Flow from reorganizing
+                position: node.position,
                 data: {
                   ...node.data,
                   parent: [],

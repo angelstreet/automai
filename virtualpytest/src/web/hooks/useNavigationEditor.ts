@@ -143,6 +143,9 @@ export const useNavigationEditor = () => {
   const customOnNodesChange = useCallback((changes: any[]) => {
     console.log('[@hook:useNavigationEditor] onNodesChange called with changes:', changes);
     
+    // Track position changes separately to update allNodes as well
+    const positionChanges = changes.filter(change => change.type === 'position');
+    
     // Filter out position changes that might be caused by auto-layout
     const filteredChanges = changes.filter(change => {
       // Allow user-initiated changes (drag, select, etc.)
@@ -153,7 +156,14 @@ export const useNavigationEditor = () => {
       // For position changes, only allow if they're user-initiated (dragging = true)
       if (change.type === 'position') {
         // Allow position changes when user is actively dragging
-        return change.dragging === true || change.dragging === undefined;
+        const isUserDrag = change.dragging === true || change.dragging === undefined;
+        if (isUserDrag) {
+          console.log('[@hook:useNavigationEditor] Allowing user-initiated position change for node:', change.id);
+          return true;
+        } else {
+          console.log('[@hook:useNavigationEditor] Filtered out automatic position change for node:', change.id);
+          return false;
+        }
       }
       
       // Allow dimension changes
@@ -161,15 +171,42 @@ export const useNavigationEditor = () => {
         return true;
       }
       
-      console.log('[@hook:useNavigationEditor] Filtered out automatic change:', change);
-      return true; // For now, allow all changes - remove this line if you want stricter filtering
+      // Allow other change types
+      return true;
     });
     
-    // Only apply changes if we have any after filtering
+    // Apply changes to the filtered nodes
     if (filteredChanges.length > 0) {
       navigationState.onNodesChange(filteredChanges);
     }
-  }, [navigationState.onNodesChange]);
+    
+    // Also apply position changes to allNodes to keep them in sync
+    if (positionChanges.length > 0) {
+      const userPositionChanges = positionChanges.filter(change => 
+        change.dragging === true || change.dragging === undefined
+      );
+      
+      if (userPositionChanges.length > 0) {
+        navigationState.setAllNodes(prevAllNodes => {
+          const updatedAllNodes = [...prevAllNodes];
+          userPositionChanges.forEach(change => {
+            const nodeIndex = updatedAllNodes.findIndex(node => node.id === change.id);
+            if (nodeIndex !== -1 && change.position) {
+              console.log('[@hook:useNavigationEditor] Updating position in allNodes for node:', change.id, 'to:', change.position);
+              updatedAllNodes[nodeIndex] = {
+                ...updatedAllNodes[nodeIndex],
+                position: change.position
+              };
+            }
+          });
+          return updatedAllNodes;
+        });
+        
+        // Mark as having unsaved changes when positions change
+        navigationState.setHasUnsavedChanges(true);
+      }
+    }
+  }, [navigationState.onNodesChange, navigationState.setAllNodes, navigationState.setHasUnsavedChanges]);
 
   // Override onEdgesChange to save to history and track changes
   const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
