@@ -50,7 +50,7 @@ export const getStreamViewerLayout = (model?: string): StreamViewerLayoutConfig 
     : {
         minHeight: '300px',
         aspectRatio: '16/9', // Landscape for non-mobile
-        objectFit: 'contain',
+        objectFit: 'cover',
         isMobileModel: false,
       };
 };
@@ -65,7 +65,7 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
   return mobile
     ? {
         width: 440,
-        height:510,
+        height: 510,
         captureHeight: 200,
         objectFit: 'fill',
         isMobileModel: true,

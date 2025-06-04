@@ -659,6 +659,7 @@ export function ScreenDefinitionEditor({
             onImageLoad={handleImageLoad}
             selectedArea={selectedArea}
             onAreaSelected={handleAreaSelected}
+            model={deviceModel}
             {...commonProps}
           />
         );

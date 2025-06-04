@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { DragSelectionOverlay } from './DragSelectionOverlay';
+import { getStreamViewerLayout } from '../../../config/layoutConfig';
 
 interface DragArea {
   x: number;
@@ -21,6 +22,7 @@ interface ScreenshotCaptureProps {
   onImageLoad?: (ref: React.RefObject<HTMLImageElement>, dimensions: {width: number, height: number}, sourcePath: string) => void;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
+  model?: string;
   sx?: any;
 }
 
@@ -32,9 +34,13 @@ export function ScreenshotCapture({
   onImageLoad,
   selectedArea,
   onAreaSelected,
+  model,
   sx = {}
 }: ScreenshotCaptureProps) {
   const imageRef = useRef<HTMLImageElement>(null);
+
+  // Get layout configuration based on model
+  const layoutConfig = getStreamViewerLayout(model);
 
   // Handle image load to pass ref and dimensions to parent
   const handleImageLoad = () => {
@@ -144,11 +150,11 @@ export function ScreenshotCapture({
           src={imageUrl}
           alt="Screenshot"
           style={{
-            maxWidth: 'auto',
+            maxWidth: layoutConfig.isMobileModel ? 'auto' : '100%',
             maxHeight: '100%',
-            width: 'auto',
+            width: layoutConfig.isMobileModel ? 'auto' : '100%',
             height: 'auto',
-            objectFit: 'contain',
+            objectFit: layoutConfig.objectFit,
             backgroundColor: 'transparent'
           }}
           draggable={false}

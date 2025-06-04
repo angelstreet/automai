@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { useCapture } from '../../hooks/useCapture';
 import { DragSelectionOverlay } from './DragSelectionOverlay';
+import { getStreamViewerLayout } from '../../../config/layoutConfig';
 
 interface DragArea {
   x: number;
@@ -67,6 +68,9 @@ export function VideoCapture({
     error,
     isCapturing
   } = useCapture(deviceModel, videoDevice);
+
+  // Get layout configuration based on device model
+  const layoutConfig = getStreamViewerLayout(deviceModel);
 
   // Auto-start capture when component mounts
   useEffect(() => {
@@ -259,11 +263,11 @@ export function VideoCapture({
             src={currentCapturedFrameUrl}
             alt="Live Capture"
             style={{
-              maxWidth: 'auto',
+              maxWidth: layoutConfig.isMobileModel ? 'auto' : '100%',
               maxHeight: '100%',
-              width: 'auto',
+              width: layoutConfig.isMobileModel ? 'auto' : '100%',
               height: 'auto',
-              objectFit: 'contain',
+              objectFit: layoutConfig.objectFit,
               backgroundColor: 'transparent'
             }}
             draggable={false}
@@ -283,11 +287,11 @@ export function VideoCapture({
               src={videoFrameUrl}
               alt={`Frame ${currentValue}`}
               style={{
-                maxWidth: 'auto',
+                maxWidth: layoutConfig.isMobileModel ? 'auto' : '100%',
                 maxHeight: '100%',
-                width: 'auto',
+                width: layoutConfig.isMobileModel ? 'auto' : '100%',
                 height: 'auto',
-                objectFit: 'contain',
+                objectFit: layoutConfig.objectFit,
                 backgroundColor: 'transparent'
               }}
               draggable={false}
