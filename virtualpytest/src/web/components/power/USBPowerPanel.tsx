@@ -9,8 +9,6 @@ import {
   Alert,
   Card,
   CardContent,
-  IconButton,
-  Tooltip,
   Chip,
 } from '@mui/material';
 import {
@@ -19,6 +17,7 @@ import {
   RestartAlt,
   Link,
   LinkOff,
+  FiberManualRecord,
 } from '@mui/icons-material';
 
 interface USBPowerPanelProps {
@@ -32,6 +31,12 @@ interface USBConnectionForm {
   host_username: string;
   host_password: string;
   usb_hub: string;
+}
+
+interface PowerStatus {
+  power_state: 'on' | 'off' | 'unknown';
+  connected: boolean;
+  error?: string;
 }
 
 export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
@@ -50,6 +55,12 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Power status state
+  const [powerStatus, setPowerStatus] = useState<PowerStatus>({
+    power_state: 'unknown',
+    connected: false
+  });
 
   // Fetch default values on mount
   useEffect(() => {
@@ -84,9 +95,32 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
       if (result.success && result.connected) {
         setIsConnected(true);
         console.log('[@component:USBPowerPanel] Found existing connection');
+        // Immediately check power status for existing connection
+        await checkPowerStatus();
       }
     } catch (error) {
       console.log('[@component:USBPowerPanel] Could not check connection status:', error);
+    }
+  };
+
+  const checkPowerStatus = async () => {
+    try {
+      console.log('[@component:USBPowerPanel] Checking power status...');
+      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/power-status');
+      const result = await response.json();
+      
+      if (result.success && result.power_status) {
+        setPowerStatus({
+          power_state: result.power_status.power_state,
+          connected: result.power_status.connected,
+          error: result.power_status.error
+        });
+        console.log('[@component:USBPowerPanel] Power status updated:', result.power_status.power_state);
+      } else {
+        console.log('[@component:USBPowerPanel] Could not get power status:', result.error);
+      }
+    } catch (error) {
+      console.log('[@component:USBPowerPanel] Could not check power status:', error);
     }
   };
 
@@ -125,6 +159,10 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
         setIsConnected(true);
         setSuccessMessage(result.message);
         console.log('[@component:USBPowerPanel] Connection successful:', result.message);
+        
+        // Immediately check power status after successful connection
+        console.log('[@component:USBPowerPanel] Getting initial power status...');
+        await checkPowerStatus();
       } else {
         setError(result.error || 'Connection failed');
         console.error('[@component:USBPowerPanel] Connection failed:', result.error);
@@ -154,6 +192,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
       if (result.success) {
         setIsConnected(false);
+        setPowerStatus({ power_state: 'unknown', connected: false });
         setSuccessMessage(result.message);
         console.log('[@component:USBPowerPanel] Disconnection successful:', result.message);
       } else {
@@ -168,9 +207,9 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     }
   };
 
-  const executeCommand = async (command: 'power-on' | 'power-off' | 'reboot') => {
+  const handleTogglePower = async () => {
     if (!isConnected) {
-      setError('Please connect first before executing commands');
+      setError('Please connect first before toggling power');
       return;
     }
 
@@ -179,7 +218,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/usb-power/${command}`, {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,21 +229,90 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
       if (result.success) {
         setSuccessMessage(result.message);
-        console.log(`[@component:USBPowerPanel] ${command} successful:`, result.message);
+        console.log('[@component:USBPowerPanel] Toggle successful:', result.message);
+        // Update power status immediately
+        setPowerStatus(prev => ({
+          ...prev,
+          power_state: result.new_state
+        }));
       } else {
-        setError(result.error || `${command} failed`);
-        console.error(`[@component:USBPowerPanel] ${command} failed:`, result.error);
+        setError(result.error || 'Toggle failed');
+        console.error('[@component:USBPowerPanel] Toggle failed:', result.error);
       }
     } catch (err: any) {
-      setError(`${command} request failed: ${err.message}`);
-      console.error(`[@component:USBPowerPanel] ${command} error:`, err);
+      setError(`Toggle request failed: ${err.message}`);
+      console.error('[@component:USBPowerPanel] Toggle error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleReboot = async () => {
+    if (!isConnected) {
+      setError('Please connect first before rebooting');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/reboot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccessMessage(result.message);
+        console.log('[@component:USBPowerPanel] Reboot successful:', result.message);
+        // After reboot, power should be on
+        setPowerStatus(prev => ({
+          ...prev,
+          power_state: 'on'
+        }));
+      } else {
+        setError(result.error || 'Reboot failed');
+        console.error('[@component:USBPowerPanel] Reboot failed:', result.error);
+      }
+    } catch (err: any) {
+      setError(`Reboot request failed: ${err.message}`);
+      console.error('[@component:USBPowerPanel] Reboot error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPowerLEDColor = (state: string) => {
+    switch (state) {
+      case 'on': return '#4caf50'; // Green
+      case 'off': return '#f44336'; // Red
+      default: return '#9e9e9e'; // Gray
+    }
+  };
+
+  const getToggleButtonText = () => {
+    if (powerStatus.power_state === 'on') return 'Power Off';
+    if (powerStatus.power_state === 'off') return 'Power On';
+    return 'Power On'; // Default for unknown state
+  };
+
+  const getToggleButtonIcon = () => {
+    if (powerStatus.power_state === 'on') return <PowerOff />;
+    return <PowerSettingsNew />;
+  };
+
+  const getToggleButtonColor = () => {
+    if (powerStatus.power_state === 'on') return 'error';
+    return 'success';
+  };
+
   return (
-    <Box sx={{ pl: 2,pr: 2, ...sx }}>
+    <Box sx={{ pl: 2, pr: 2, ...sx }}>
       {/* Connection Status */}
       <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="subtitle2">Status:</Typography>
@@ -302,52 +410,49 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
         </CardContent>
       </Card>
 
-      {/* Power Control Buttons */}
+      {/* Power Control - Simple 2 buttons with LED */}
       <Card>
         <CardContent>
           <Typography variant="subtitle2" gutterBottom>
-            Power Controls
+            Power Control
           </Typography>
           
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Tooltip title="Power On USB Hub">
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={isLoading ? <CircularProgress size={16} /> : <PowerSettingsNew />}
-                onClick={() => executeCommand('power-on')}
-                disabled={!isConnected || isLoading}
-                sx={{ minWidth: '120px' }}
-              >
-                Power On
-              </Button>
-            </Tooltip>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* LED Status */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FiberManualRecord 
+                sx={{ 
+                  color: getPowerLEDColor(powerStatus.power_state),
+                  fontSize: 16 
+                }} 
+              />
+              <Typography variant="body2" color="text.secondary">
+                {powerStatus.power_state.toUpperCase()}
+              </Typography>
+            </Box>
+            
+            {/* Control Buttons */}
+            <Button
+              variant="contained"
+              color={getToggleButtonColor() as any}
+              startIcon={isLoading ? <CircularProgress size={16} /> : getToggleButtonIcon()}
+              onClick={handleTogglePower}
+              disabled={!isConnected || isLoading}
+              sx={{ minWidth: '130px' }}
+            >
+              {getToggleButtonText()}
+            </Button>
 
-            <Tooltip title="Power Off USB Hub">
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={isLoading ? <CircularProgress size={16} /> : <PowerOff />}
-                onClick={() => executeCommand('power-off')}
-                disabled={!isConnected || isLoading}
-                sx={{ minWidth: '120px' }}
-              >
-                Power Off
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="Reboot USB Hub (Off then On)">
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={isLoading ? <CircularProgress size={16} /> : <RestartAlt />}
-                onClick={() => executeCommand('reboot')}
-                disabled={!isConnected || isLoading}
-                sx={{ minWidth: '120px' }}
-              >
-                Reboot
-              </Button>
-            </Tooltip>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={isLoading ? <CircularProgress size={16} /> : <RestartAlt />}
+              onClick={handleReboot}
+              disabled={!isConnected || isLoading}
+              sx={{ minWidth: '130px' }}
+            >
+              Reboot
+            </Button>
           </Box>
         </CardContent>
       </Card>

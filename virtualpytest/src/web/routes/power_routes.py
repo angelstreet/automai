@@ -136,6 +136,33 @@ def get_usb_power_status():
             'error': f'Status check error: {str(e)}'
         }), 500
 
+@power_bp.route('/api/virtualpytest/usb-power/power-status', methods=['GET'])
+def get_usb_power_state():
+    """Get current USB hub power state."""
+    try:
+        import app
+        
+        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active USB Power connection. Please connect first.'
+            }), 400
+        
+        print(f"[@api:usb-power:power-status] Checking power status")
+        
+        power_status = app.usb_power_controller.get_power_status()
+        
+        return jsonify({
+            'success': True,
+            'power_status': power_status
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Power status error: {str(e)}'
+        }), 500
+
 @power_bp.route('/api/virtualpytest/usb-power/power-on', methods=['POST'])
 def usb_power_on():
     """Turn USB power on using active session."""
@@ -145,7 +172,7 @@ def usb_power_on():
         if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please take control first.'
+                'error': 'No active USB Power connection. Please connect first.'
             }), 400
         
         print(f"[@api:usb-power:power-on] Executing power on")
@@ -178,7 +205,7 @@ def usb_power_off():
         if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please take control first.'
+                'error': 'No active USB Power connection. Please connect first.'
             }), 400
         
         print(f"[@api:usb-power:power-off] Executing power off")
@@ -211,7 +238,7 @@ def usb_power_reboot():
         if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please take control first.'
+                'error': 'No active USB Power connection. Please connect first.'
             }), 400
         
         print(f"[@api:usb-power:reboot] Executing reboot")
@@ -233,4 +260,62 @@ def usb_power_reboot():
         return jsonify({
             'success': False,
             'error': f'Reboot error: {str(e)}'
+        }), 500
+
+@power_bp.route('/api/virtualpytest/usb-power/toggle', methods=['POST'])
+def usb_power_toggle():
+    """Toggle USB power state (on->off or off->on)."""
+    try:
+        import app
+        
+        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active USB Power connection. Please connect first.'
+            }), 400
+        
+        print(f"[@api:usb-power:toggle] Checking current power state")
+        
+        # Get current power state
+        power_status = app.usb_power_controller.get_power_status()
+        current_state = power_status.get('power_state', 'unknown')
+        
+        print(f"[@api:usb-power:toggle] Current state: {current_state}")
+        
+        # Toggle based on current state
+        if current_state == 'on':
+            print(f"[@api:usb-power:toggle] Toggling to OFF")
+            success = app.usb_power_controller.power_off(timeout=5.0)
+            new_state = 'off' if success else current_state
+            message = 'USB hub powered off successfully' if success else 'Failed to power off USB hub'
+        elif current_state == 'off':
+            print(f"[@api:usb-power:toggle] Toggling to ON")
+            success = app.usb_power_controller.power_on(timeout=10.0)
+            new_state = 'on' if success else current_state
+            message = 'USB hub powered on successfully' if success else 'Failed to power on USB hub'
+        else:
+            # Unknown state, try to turn on
+            print(f"[@api:usb-power:toggle] Unknown state, attempting to power ON")
+            success = app.usb_power_controller.power_on(timeout=10.0)
+            new_state = 'on' if success else 'unknown'
+            message = 'USB hub powered on successfully' if success else 'Failed to power on USB hub'
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message,
+                'previous_state': current_state,
+                'new_state': new_state
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': message,
+                'current_state': current_state
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Toggle error: {str(e)}'
         }), 500 

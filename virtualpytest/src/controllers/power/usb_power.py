@@ -175,7 +175,7 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def get_power_status(self) -> Dict[str, Any]:
-        """Get current USB hub power status."""
+        """Get current USB hub power status using uhubctl."""
         if not self.is_connected or not self.ssh_connection:
             return {
                 'power_state': 'unknown',
@@ -184,18 +184,52 @@ class USBPowerController(PowerControllerInterface):
             }
             
         try:
+            print(f"Power[{self.power_type.upper()}]: Checking power status for USB hub {self.usb_hub}")
+            
             success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
                 f"sudo uhubctl -l {self.usb_hub}", timeout=10
             )
             
             if success and exit_code == 0:
+                # Parse uhubctl output to determine power state
+                # Look for "power" status in the output
+                power_state = 'unknown'
+                if stdout:
+                    lines = stdout.strip().split('\n')
+                    for line in lines:
+                        # Look for lines containing port information and power status
+                        if 'power' in line.lower():
+                            if 'off' in line.lower():
+                                power_state = 'off'
+                            elif 'on' in line.lower() or 'enable' in line.lower():
+                                power_state = 'on'
+                            break
+                    
+                    # If no explicit power status found, try to infer from port status
+                    if power_state == 'unknown':
+                        # Check if any ports are powered
+                        for line in lines:
+                            if 'port' in line.lower() and ('enable' in line.lower() or 'power' in line.lower()):
+                                if 'off' in line.lower() or 'disable' in line.lower():
+                                    power_state = 'off'
+                                else:
+                                    power_state = 'on'
+                                break
+                
+                # Update our internal state
+                if power_state != 'unknown':
+                    self.current_power_state = power_state
+                
+                print(f"Power[{self.power_type.upper()}]: Power status check result: {power_state}")
+                
                 return {
-                    'power_state': self.current_power_state,
+                    'power_state': power_state,
                     'usb_hub': self.usb_hub,
                     'connected': True,
                     'uhubctl_output': stdout
                 }
             else:
+                print(f"Power[{self.power_type.upper()}]: uhubctl command failed: {stderr}")
                 return {
                     'power_state': 'unknown',
                     'connected': True,
@@ -203,6 +237,7 @@ class USBPowerController(PowerControllerInterface):
                 }
                 
         except Exception as e:
+            print(f"Power[{self.power_type.upper()}]: Status check error: {e}")
             return {
                 'power_state': 'unknown',
                 'connected': self.is_connected,
