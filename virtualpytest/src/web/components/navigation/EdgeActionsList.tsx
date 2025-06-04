@@ -82,6 +82,20 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     onActionsChange(newActions);
   };
 
+  const moveActionUp = (index: number) => {
+    if (index === 0) return; // Can't move first item up
+    const newActions = [...actions];
+    [newActions[index - 1], newActions[index]] = [newActions[index], newActions[index - 1]];
+    onActionsChange(newActions);
+  };
+
+  const moveActionDown = (index: number) => {
+    if (index === actions.length - 1) return; // Can't move last item down
+    const newActions = [...actions];
+    [newActions[index], newActions[index + 1]] = [newActions[index + 1], newActions[index]];
+    onActionsChange(newActions);
+  };
+
   const allAvailableActions = getAllActions();
 
   return (
@@ -124,7 +138,11 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
               availableActions={allAvailableActions}
               onUpdate={(updates) => updateAction(index, updates)}
               onRemove={() => removeAction(index)}
-              showInput={true} // Show input fields for each action that needs them
+              onMoveUp={() => moveActionUp(index)}
+              onMoveDown={() => moveActionDown(index)}
+              showInput={true}
+              canMoveUp={index > 0}
+              canMoveDown={index < actions.length - 1}
             />
           ))}
         </Box>

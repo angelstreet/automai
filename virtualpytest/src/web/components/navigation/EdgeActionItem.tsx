@@ -8,6 +8,8 @@ import {
   IconButton,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 interface EdgeAction {
   id: string;
@@ -35,7 +37,11 @@ interface EdgeActionItemProps {
   availableActions: ControllerAction[];
   onUpdate: (updates: Partial<EdgeAction>) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   showInput: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }
 
 export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
@@ -43,7 +49,11 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
   availableActions,
   onUpdate,
   onRemove,
+  onMoveUp,
+  onMoveDown,
   showInput,
+  canMoveUp,
+  canMoveDown,
 }) => {
   const handleActionChange = (actionId: string) => {
     if (actionId === '') {
@@ -120,6 +130,24 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
           sx={{ width: 80 }}
           inputProps={{ min: 0, step: 100 }}
         />
+        
+        <IconButton 
+          size="small" 
+          onClick={onMoveUp} 
+          disabled={!canMoveUp}
+          sx={{ opacity: !canMoveUp ? 0.3 : 1 }}
+        >
+          <KeyboardArrowUpIcon fontSize="small" />
+        </IconButton>
+        
+        <IconButton 
+          size="small" 
+          onClick={onMoveDown} 
+          disabled={!canMoveDown}
+          sx={{ opacity: !canMoveDown ? 0.3 : 1 }}
+        >
+          <KeyboardArrowDownIcon fontSize="small" />
+        </IconButton>
         
         <IconButton size="small" onClick={onRemove} color="error">
           <CloseIcon fontSize="small" />
