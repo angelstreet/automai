@@ -25,6 +25,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Alert,
 } from '@mui/material';
 import { 
   PlayArrow as PlayArrowIcon,
@@ -67,6 +68,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
   const [selectedEdges, setSelectedEdges] = useState<Set<number>>(new Set());
   const [depthFilter, setDepthFilter] = useState<'all' | '1' | '2'>('all');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Load optimal path when preview opens
   useEffect(() => {
@@ -113,6 +115,16 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
 
   const handleDeselectAll = () => {
     setSelectedEdges(new Set());
+  };
+
+  const toggleRow = (stepNumber: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(stepNumber)) {
+      newExpanded.delete(stepNumber);
+    } else {
+      newExpanded.add(stepNumber);
+    }
+    setExpandedRows(newExpanded);
   };
 
   const getFilteredSteps = () => {
@@ -260,6 +272,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                         <Table size="small" stickyHeader>
                           <TableHead>
                             <TableRow>
+                              <TableCell width="40px"></TableCell>
                               <TableCell padding="checkbox">
                                 <Checkbox
                                   indeterminate={selectedEdges.size > 0 && selectedEdges.size < optimalPath.sequence.length}
@@ -275,43 +288,159 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {getFilteredSteps().map((step) => (
-                              <TableRow 
-                                key={step.step_number}
-                                sx={{
-                                  '&:hover': {
-                                    backgroundColor: 'transparent !important'
-                                  },
-                                  backgroundColor: step.validation_type === 'navigation' ? 'rgba(255, 193, 7, 0.1)' : 'transparent'
-                                }}
-                              >
-                                <TableCell padding="checkbox">
-                                  <Checkbox
-                                    checked={selectedEdges.has(step.step_number)}
-                                    onChange={() => handleEdgeToggle(step.step_number)}
-                                  />
-                                </TableCell>
-                                <TableCell>{step.step_number}</TableCell>
-                                <TableCell>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    {step.validation_type === 'edge' ? (
-                                      <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                                        EDGE
+                            {getFilteredSteps().map((step) => {
+                              const hasExpandableContent = (step.actions && step.actions.length > 0) || (step.retryActions && step.retryActions.length > 0);
+                              
+                              return (
+                                <>
+                                  <TableRow 
+                                    key={step.step_number}
+                                    sx={{
+                                      '&:hover': {
+                                        backgroundColor: 'transparent !important'
+                                      },
+                                      backgroundColor: step.validation_type === 'navigation' ? 'rgba(255, 193, 7, 0.1)' : 'transparent'
+                                    }}
+                                  >
+                                    <TableCell>
+                                      {hasExpandableContent && (
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => toggleRow(step.step_number)}
+                                          sx={{ p: 0.25 }}
+                                        >
+                                          {expandedRows.has(step.step_number) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                        </IconButton>
+                                      )}
+                                    </TableCell>
+                                    <TableCell padding="checkbox">
+                                      <Checkbox
+                                        checked={selectedEdges.has(step.step_number)}
+                                        onChange={() => handleEdgeToggle(step.step_number)}
+                                      />
+                                    </TableCell>
+                                    <TableCell>{step.step_number}</TableCell>
+                                    <TableCell>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {step.validation_type === 'edge' ? (
+                                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                                            EDGE
+                                          </Typography>
+                                        ) : (
+                                          <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                                            NAV
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                      {step.from_node_label} → <strong>{step.to_node_label}</strong>
+                                    </TableCell>
+                                    <TableCell>{step.actions.length}</TableCell>
+                                    <TableCell>
+                                      <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                        {step.retryActions?.length || 0} for {step.to_node_label}
                                       </Typography>
-                                    ) : (
-                                      <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
-                                        NAV
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  {step.from_node_label} → {step.to_node_label}
-                                </TableCell>
-                                <TableCell>{step.actions.length}</TableCell>
-                                <TableCell>{step.retryActions?.length || 0}</TableCell>
-                              </TableRow>
-                            ))}
+                                    </TableCell>
+                                  </TableRow>
+
+                                  {/* Detailed Actions/Verifications Row */}
+                                  {expandedRows.has(step.step_number) && hasExpandableContent && (
+                                    <TableRow
+                                      sx={{
+                                        '&:hover': {
+                                          backgroundColor: 'transparent !important',
+                                        },
+                                      }}
+                                    >
+                                      <TableCell colSpan={7} sx={{ p: 0, border: 'none' }}>
+                                        <Collapse in={expandedRows.has(step.step_number)}>
+                                          <Box sx={{ p: 2, bgcolor: 'transparent' }}>
+                                            {/* Actions to Execute */}
+                                            {step.actions && step.actions.length > 0 && (
+                                              <Box mb={2}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                                  Actions to Execute ({step.actions.length}):
+                                                </Typography>
+                                                {step.actions.map((action, actionIndex) => (
+                                                  <Alert
+                                                    key={actionIndex}
+                                                    severity="info"
+                                                    sx={{ 
+                                                      mb: 1, 
+                                                      fontSize: '0.875rem',
+                                                      '&:hover': {
+                                                        backgroundColor: 'transparent !important',
+                                                      }
+                                                    }}
+                                                  >
+                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                                      {actionIndex + 1}. {action.label || action.command}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                      Command: <code>{action.command}</code>
+                                                    </Typography>
+                                                    {action.params && Object.keys(action.params).length > 0 && (
+                                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                        Params: {JSON.stringify(action.params)}
+                                                      </Typography>
+                                                    )}
+                                                    {action.inputValue && (
+                                                      <Typography variant="body2">
+                                                        Input Value: <strong>{action.inputValue}</strong>
+                                                      </Typography>
+                                                    )}
+                                                  </Alert>
+                                                ))}
+                                              </Box>
+                                            )}
+
+                                            {/* Target Node Verifications */}
+                                            {step.retryActions && step.retryActions.length > 0 && (
+                                              <Box>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                                  Target Node Verifications ({step.retryActions.length}) for {step.to_node_label}:
+                                                </Typography>
+                                                {step.retryActions.map((verification, verificationIndex) => (
+                                                  <Alert
+                                                    key={verificationIndex}
+                                                    severity="success"
+                                                    sx={{ 
+                                                      mb: 1, 
+                                                      fontSize: '0.875rem',
+                                                      '&:hover': {
+                                                        backgroundColor: 'transparent !important',
+                                                      }
+                                                    }}
+                                                  >
+                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                                      {verification.label || verification.command}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                      Command: <code>{verification.command}</code>
+                                                    </Typography>
+                                                    {verification.params && Object.keys(verification.params).length > 0 && (
+                                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                        Params: {JSON.stringify(verification.params)}
+                                                      </Typography>
+                                                    )}
+                                                    {verification.inputValue && (
+                                                      <Typography variant="body2">
+                                                        Input Value: <strong>{verification.inputValue}</strong>
+                                                      </Typography>
+                                                    )}
+                                                  </Alert>
+                                                ))}
+                                              </Box>
+                                            )}
+                                          </Box>
+                                        </Collapse>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </TableContainer>
