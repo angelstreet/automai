@@ -186,8 +186,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         p: 2, 
         pb: 1,
         flexShrink: 0,
-        borderBottom: '1px solid',
-        borderColor: 'grey.200'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <RouteIcon color="primary" />
@@ -292,8 +290,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     mb: 0.75,
                     p: 0.75,
                     borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'grey.200',
+                   
                     '&:last-child': { mb: 0 }
                   }}
                 >
@@ -369,8 +366,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     mb: 0.75,
                     p: 0.75,
                     borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'grey.300',
+                    
                     '&:last-child': { mb: 0 }
                   }}
                 >
@@ -416,26 +412,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     
                     {verification.last_run_result && verification.last_run_result.length > 0 && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontSize: '0.75rem',
-                            color: 'text.secondary',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          Confidence: {(calculateConfidenceScore(verification.last_run_result) * 100).toFixed(0)}%
-                        </Typography>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontSize: '0.7rem',
-                            color: 'text.secondary',
-                            opacity: 0.8
-                          }}
-                        >
-                          ({verification.last_run_result.filter(r => r).length}/{verification.last_run_result.length} recent)
-                        </Typography>
+                      
+                      
                         
                         <Box
                           sx={{
@@ -465,8 +443,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 fontSize: '0.875rem',
                 p: 0.75,
                 borderRadius: 1,
-                border: '1px dashed',
-                borderColor: 'grey.300'
+                
               }}
             >
               No verifications configured for this node
