@@ -88,7 +88,13 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
   };
 
   return (
-    <Box>
+    <Box sx={{ 
+      border: 1, 
+      borderColor: 'divider', 
+      borderRadius: 1, 
+      p: 1.5,
+      mb: 1
+    }}>
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
