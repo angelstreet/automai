@@ -206,7 +206,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       <Box sx={{ 
         flex: 1,
         overflowY: 'auto',
-        p: 1.5,
+        p: 1,
         pt: 1,
         pb: 0.5,
         '&::-webkit-scrollbar': {
@@ -214,11 +214,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         },
         '&::-webkit-scrollbar-track': {
           background: 'rgba(0,0,0,0.1)',
-          borderRadius: '3px',
+
         },
         '&::-webkit-scrollbar-thumb': {
           background: 'rgba(0,0,0,0.3)',
-          borderRadius: '3px',
+
           '&:hover': {
             background: 'rgba(0,0,0,0.5)',
           }
@@ -288,8 +288,14 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Navigation Steps */}
-        <Box sx={{ mb: 0.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+        <Box sx={{ 
+          mb: 0.5,
+          border: '1px solid',
+          borderColor: 'grey.300',
+          borderRadius: 1,
+          p: 1
+        }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0 }}>
             Navigation Steps:
           </Typography>
           
@@ -301,10 +307,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 <Box 
                   key={index}
                   sx={{ 
-                    mb: 0.75,
-                    p: 0.75,
+                    mb: 0,
+                    p: 0.5,
                     borderRadius: 1,
-                    
                     '&:last-child': { mb: 0 }
                   }}
                 >
@@ -321,7 +326,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                           sx={{ 
                             fontSize: '0.8rem',
                             color: 'text.secondary',
-                            mb: 0.25,
+                            mb: 0,
                             '&:before': {
                               content: '"- "',
                               fontWeight: 'bold'
@@ -366,8 +371,13 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Node Verifications */}
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+        <Box sx={{
+          border: '1px solid',
+          borderColor: 'grey.300',
+          borderRadius: 1,
+          p: 1
+        }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0 }}>
             Verifications:
           </Typography>
           
@@ -377,10 +387,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 <Box 
                   key={verification.id || index}
                   sx={{ 
-                    mb: 0.75,
-                    p: 0.75,
-                    borderRadius: 1,
-                    
+                    mb: 0,
+                    p: 0.5,
+                
                     '&:last-child': { mb: 0 }
                   }}
                 >
@@ -435,8 +444,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 fontStyle: 'italic',
                 fontSize: '0.875rem',
                 p: 0.75,
-                borderRadius: 1,
-                
+               
               }}
             >
               No verifications configured for this node
@@ -448,10 +456,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       {/* Fixed Button at Bottom */}
       <Box sx={{ 
         flexShrink: 0, 
-        borderTop: '1px solid', 
-        borderColor: 'grey.200', 
-        p: 1.5,
-        bgcolor: 'background.paper'
+        p: 1,
+        
       }}>
         <Button
           variant="contained"
