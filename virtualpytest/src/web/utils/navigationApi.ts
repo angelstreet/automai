@@ -458,7 +458,8 @@ export async function executeEdgeActions(
     if (executionStopped && retryActions.length > 0) {
       results.push('');
       results.push('🔄 Main actions failed. Starting retry actions...');
-      console.log(`[@util:NavigationApi] Starting retry actions execution`);
+      results.push(`📋 Processing ${retryActions.length} retry action(s):`);
+      console.log(`[@util:NavigationApi] Starting retry actions execution - ${retryActions.length} actions to process`);
       
       // Reset execution state for retry
       executionStopped = false;
@@ -555,6 +556,8 @@ export async function executeEdgeActions(
           await delay(action.waitTime);
         }
       }
+      
+      console.log(`[@util:NavigationApi] Retry actions loop completed. Processed ${retryActions.length} actions. ExecutionStopped: ${executionStopped}`);
       
       if (!executionStopped) {
         results.push('✅ Retry actions completed successfully!');

@@ -865,3 +865,266 @@ class ADBUtils:
             error_msg = f"Element existence check failed: {e}"
             print(f"[@lib:adbUtils:check_element_exists] ERROR: {error_msg}")
             return False, None, error_msg 
+
+    def click_element_by_search_terms(self, device_id: str, search_terms: str, **options) -> Tuple[bool, str, str]:
+        """
+        Click on an element using pipe-separated search terms with fallback.
+        
+        Usage examples:
+            - click_element_by_search_terms(device_id, "OK")  # Single term
+            - click_element_by_search_terms(device_id, "OK|Accept|Confirm")  # Multiple fallbacks
+            - click_element_by_search_terms(device_id, "Login|Log in|Sign in")  # Try variations
+        
+        Args:
+            device_id: Android device ID
+            search_terms: Search terms separated by | (e.g., "text1|text2|text3")
+            **options: Additional options
+        
+        Returns:
+            Tuple of (success, matched_term, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:click_element_by_search_terms] Attempting to click using search terms: '{search_terms}'")
+            
+            # Split search terms by pipe
+            terms = [term.strip() for term in search_terms.split('|') if term.strip()]
+            
+            if not terms:
+                error_msg = "No valid search terms provided"
+                print(f"[@lib:adbUtils:click_element_by_search_terms] {error_msg}")
+                return False, "", error_msg
+            
+            print(f"[@lib:adbUtils:click_element_by_search_terms] Trying {len(terms)} search terms: {terms}")
+            
+            for i, term in enumerate(terms):
+                print(f"[@lib:adbUtils:click_element_by_search_terms] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
+                
+                # Check if element exists
+                exists, element, error = self.check_element_exists(device_id, term)
+                
+                if exists and element:
+                    print(f"[@lib:adbUtils:click_element_by_search_terms] Found element for term '{term}', attempting click")
+                    
+                    # Try to click the element
+                    click_success = self.click_element(device_id, element)
+                    
+                    if click_success:
+                        print(f"[@lib:adbUtils:click_element_by_search_terms] SUCCESS: Clicked element using term '{term}'")
+                        return True, term, ""
+                    else:
+                        print(f"[@lib:adbUtils:click_element_by_search_terms] Element found but click failed for term '{term}'")
+                else:
+                    print(f"[@lib:adbUtils:click_element_by_search_terms] No element found for term '{term}': {error}")
+            
+            # If we get here, all terms failed
+            error_msg = f"Failed to find/click any element using search terms: {search_terms}"
+            print(f"[@lib:adbUtils:click_element_by_search_terms] {error_msg}")
+            return False, "", error_msg
+            
+        except Exception as e:
+            error_msg = f"Error in click_element_by_search_terms: {e}"
+            print(f"[@lib:adbUtils:click_element_by_search_terms] {error_msg}")
+            return False, "", error_msg
+
+    def wait_for_element_to_appear_multi(self, device_id: str, search_terms: str, timeout: int = 30, check_interval: float = 1.0) -> Tuple[bool, str, str]:
+        """
+        Wait for any element matching pipe-separated search terms to appear.
+        
+        Args:
+            device_id: Android device ID
+            search_terms: Search terms separated by | (e.g., "text1|text2|text3")
+            timeout: Maximum time to wait in seconds
+            check_interval: Time between checks in seconds
+        
+        Returns:
+            Tuple of (success, matched_term, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] Waiting for element to appear using search terms: '{search_terms}'")
+            
+            # Split search terms by pipe
+            terms = [term.strip() for term in search_terms.split('|') if term.strip()]
+            
+            if not terms:
+                error_msg = "No valid search terms provided"
+                print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] {error_msg}")
+                return False, "", error_msg
+            
+            print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] Waiting for any of {len(terms)} terms: {terms}")
+            print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] Timeout: {timeout}s, Check interval: {check_interval}s")
+            
+            start_time = time.time()
+            check_count = 0
+            
+            while time.time() - start_time < timeout:
+                check_count += 1
+                print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] Check #{check_count} - Elapsed: {time.time() - start_time:.1f}s")
+                
+                # Try each search term
+                for term in terms:
+                    exists, element, error = self.check_element_exists(device_id, term)
+                    
+                    if exists and element:
+                        elapsed = time.time() - start_time
+                        print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] SUCCESS: Element appeared for term '{term}' after {elapsed:.1f}s")
+                        return True, term, ""
+                
+                # Wait before next check
+                time.sleep(check_interval)
+            
+            # Timeout reached
+            elapsed = time.time() - start_time
+            error_msg = f"Timeout after {elapsed:.1f}s waiting for any element matching: {search_terms}"
+            print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] {error_msg}")
+            return False, "", error_msg
+            
+        except Exception as e:
+            error_msg = f"Error in wait_for_element_to_appear_multi: {e}"
+            print(f"[@lib:adbUtils:wait_for_element_to_appear_multi] {error_msg}")
+            return False, "", error_msg
+
+    def wait_for_element_to_disappear_multi(self, device_id: str, search_terms: str, timeout: int = 30, check_interval: float = 1.0) -> Tuple[bool, str, str]:
+        """
+        Wait for all elements matching pipe-separated search terms to disappear.
+        
+        Args:
+            device_id: Android device ID
+            search_terms: Search terms separated by | (e.g., "text1|text2|text3")
+            timeout: Maximum time to wait in seconds
+            check_interval: Time between checks in seconds
+        
+        Returns:
+            Tuple of (success, last_found_term, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] Waiting for elements to disappear using search terms: '{search_terms}'")
+            
+            # Split search terms by pipe
+            terms = [term.strip() for term in search_terms.split('|') if term.strip()]
+            
+            if not terms:
+                error_msg = "No valid search terms provided"
+                print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] {error_msg}")
+                return False, "", error_msg
+            
+            print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] Waiting for ALL of {len(terms)} terms to disappear: {terms}")
+            print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] Timeout: {timeout}s, Check interval: {check_interval}s")
+            
+            start_time = time.time()
+            check_count = 0
+            last_found_term = ""
+            
+            while time.time() - start_time < timeout:
+                check_count += 1
+                print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] Check #{check_count} - Elapsed: {time.time() - start_time:.1f}s")
+                
+                found_any = False
+                
+                # Check if any search term still exists
+                for term in terms:
+                    exists, element, error = self.check_element_exists(device_id, term)
+                    
+                    if exists and element:
+                        found_any = True
+                        last_found_term = term
+                        print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] Still found element for term '{term}'")
+                        break  # No need to check other terms
+                
+                # If no elements found, all have disappeared
+                if not found_any:
+                    elapsed = time.time() - start_time
+                    print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] SUCCESS: All elements disappeared after {elapsed:.1f}s")
+                    return True, "", ""
+                
+                # Wait before next check
+                time.sleep(check_interval)
+            
+            # Timeout reached
+            elapsed = time.time() - start_time
+            error_msg = f"Timeout after {elapsed:.1f}s waiting for elements to disappear. Last found: '{last_found_term}'"
+            print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] {error_msg}")
+            return False, last_found_term, error_msg
+            
+        except Exception as e:
+            error_msg = f"Error in wait_for_element_to_disappear_multi: {e}"
+            print(f"[@lib:adbUtils:wait_for_element_to_disappear_multi] {error_msg}")
+            return False, "", error_msg
+
+    def input_text_with_fallback(self, device_id: str, search_terms: str, text_to_input: str, **options) -> Tuple[bool, str, str]:
+        """
+        Input text into an element found using pipe-separated search terms with fallback.
+        
+        Args:
+            device_id: Android device ID
+            search_terms: Search terms separated by | (e.g., "text1|text2|text3")
+            text_to_input: Text to input into the found element
+            **options: Additional options
+        
+        Returns:
+            Tuple of (success, matched_term, error_message)
+        """
+        try:
+            print(f"[@lib:adbUtils:input_text_with_fallback] Looking for input field using search terms: '{search_terms}'")
+            print(f"[@lib:adbUtils:input_text_with_fallback] Text to input: '{text_to_input}'")
+            
+            # Split search terms by pipe
+            terms = [term.strip() for term in search_terms.split('|') if term.strip()]
+            
+            if not terms:
+                error_msg = "No valid search terms provided"
+                print(f"[@lib:adbUtils:input_text_with_fallback] {error_msg}")
+                return False, "", error_msg
+            
+            print(f"[@lib:adbUtils:input_text_with_fallback] Trying {len(terms)} search terms: {terms}")
+            
+            for i, term in enumerate(terms):
+                print(f"[@lib:adbUtils:input_text_with_fallback] Attempt {i+1}/{len(terms)}: Searching for input field '{term}'")
+                
+                # Check if element exists
+                exists, element, error = self.check_element_exists(device_id, term)
+                
+                if exists and element:
+                    print(f"[@lib:adbUtils:input_text_with_fallback] Found input field for term '{term}', attempting to click and input text")
+                    
+                    # First click on the element to focus it
+                    click_success = self.click_element(device_id, element)
+                    
+                    if click_success:
+                        # Small delay after click
+                        time.sleep(0.5)
+                        
+                        # Clear existing text first
+                        clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_CTRL_A"
+                        self.ssh.execute_command(clear_command)
+                        time.sleep(0.2)
+                        
+                        clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_DEL"
+                        self.ssh.execute_command(clear_command)
+                        time.sleep(0.2)
+                        
+                        # Input the text
+                        # Escape special characters for shell
+                        escaped_text = text_to_input.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
+                        input_command = f"adb -s {device_id} shell input text \"{escaped_text}\""
+                        
+                        success, stdout, stderr, exit_code = self.ssh.execute_command(input_command)
+                        
+                        if success and exit_code == 0:
+                            print(f"[@lib:adbUtils:input_text_with_fallback] SUCCESS: Input text using term '{term}'")
+                            return True, term, ""
+                        else:
+                            print(f"[@lib:adbUtils:input_text_with_fallback] Text input failed for term '{term}': {stderr}")
+                    else:
+                        print(f"[@lib:adbUtils:input_text_with_fallback] Element found but click failed for term '{term}'")
+                else:
+                    print(f"[@lib:adbUtils:input_text_with_fallback] No input field found for term '{term}': {error}")
+            
+            # If we get here, all terms failed
+            error_msg = f"Failed to find/input text into any field using search terms: {search_terms}"
+            print(f"[@lib:adbUtils:input_text_with_fallback] {error_msg}")
+            return False, "", error_msg
+            
+        except Exception as e:
+            error_msg = f"Error in input_text_with_fallback: {e}"
+            print(f"[@lib:adbUtils:input_text_with_fallback] {error_msg}")
+            return False, "", error_msg 
