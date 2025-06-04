@@ -124,6 +124,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                         'waitTime': 1000
                     }]
             
+            # Get retry actions
+            retry_actions_list = edge_data.get('retryActions', [])
+            
             # Create navigation transition for entry edge
             transition = {
                 'transition_number': 1,
@@ -132,7 +135,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                 'from_node_label': from_node_info.get('label', '') if from_node_info else 'Entry',
                 'to_node_label': target_node_info.get('label', '') if target_node_info else '',
                 'actions': actions_list,
+                'retryActions': retry_actions_list,
                 'total_actions': len(actions_list),
+                'total_retry_actions': len(retry_actions_list),
                 'finalWaitTime': edge_data.get('finalWaitTime', 2000),
                 'description': f"Navigate from entry to '{target_node_info.get('label', target_node_id)}'"
             }
@@ -178,6 +183,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                         'waitTime': 1000
                     }]
             
+            # Get retry actions
+            retry_actions_list = edge_data.get('retryActions', [])
+            
             transition = {
                 'transition_number': i + 1,
                 'from_node_id': from_node,
@@ -185,7 +193,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                 'from_node_label': from_node_info.get('label', '') if from_node_info else '',
                 'to_node_label': to_node_info.get('label', '') if to_node_info else '',
                 'actions': actions_list,
+                'retryActions': retry_actions_list,
                 'total_actions': len(actions_list),
+                'total_retry_actions': len(retry_actions_list),
                 'finalWaitTime': edge_data.get('finalWaitTime', 2000),
                 'description': f"Navigate from '{from_node_info.get('label', from_node)}' to '{to_node_info.get('label', to_node)}'"
             }

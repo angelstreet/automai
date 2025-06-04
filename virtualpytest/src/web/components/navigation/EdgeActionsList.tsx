@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Button,
   TextField,
+  Collapse,
+  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { EdgeActionItem } from './EdgeActionItem';
 
 interface EdgeAction {
@@ -35,19 +39,26 @@ interface ControllerActions {
 
 interface EdgeActionsListProps {
   actions: EdgeAction[];
+  retryActions?: EdgeAction[];
   finalWaitTime: number;
   availableActions: ControllerActions;
   onActionsChange: (actions: EdgeAction[]) => void;
+  onRetryActionsChange?: (retryActions: EdgeAction[]) => void;
   onFinalWaitTimeChange: (waitTime: number) => void;
 }
 
 export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   actions,
+  retryActions = [],
   finalWaitTime,
   availableActions,
   onActionsChange,
+  onRetryActionsChange,
   onFinalWaitTimeChange,
 }) => {
+  const [isActionsExpanded, setIsActionsExpanded] = useState(true);
+  const [isRetryExpanded, setIsRetryExpanded] = useState(false);
+
   // Get all actions as flat list
   const getAllActions = (): ControllerAction[] => {
     const allActions: ControllerAction[] = [];
@@ -70,9 +81,31 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     onActionsChange([...actions, newAction]);
   };
 
+  const addRetryAction = () => {
+    if (!onRetryActionsChange) return;
+    
+    const newAction: EdgeAction = {
+      id: '',
+      label: '',
+      command: '',
+      params: {},
+      requiresInput: false,
+      inputValue: '',
+      waitTime: 2000,
+    };
+    onRetryActionsChange([...retryActions, newAction]);
+  };
+
   const removeAction = (index: number) => {
     const newActions = actions.filter((_, i) => i !== index);
     onActionsChange(newActions);
+  };
+
+  const removeRetryAction = (index: number) => {
+    if (!onRetryActionsChange) return;
+    
+    const newRetryActions = retryActions.filter((_, i) => i !== index);
+    onRetryActionsChange(newRetryActions);
   };
 
   const updateAction = (index: number, updates: Partial<EdgeAction>) => {
@@ -80,6 +113,15 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
       i === index ? { ...action, ...updates } : action
     );
     onActionsChange(newActions);
+  };
+
+  const updateRetryAction = (index: number, updates: Partial<EdgeAction>) => {
+    if (!onRetryActionsChange) return;
+    
+    const newRetryActions = retryActions.map((action, i) => 
+      i === index ? { ...action, ...updates } : action
+    );
+    onRetryActionsChange(newRetryActions);
   };
 
   const moveActionUp = (index: number) => {
@@ -96,59 +138,151 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     onActionsChange(newActions);
   };
 
+  const moveRetryActionUp = (index: number) => {
+    if (!onRetryActionsChange || index === 0) return; // Can't move first item up
+    const newRetryActions = [...retryActions];
+    [newRetryActions[index - 1], newRetryActions[index]] = [newRetryActions[index], newRetryActions[index - 1]];
+    onRetryActionsChange(newRetryActions);
+  };
+
+  const moveRetryActionDown = (index: number) => {
+    if (!onRetryActionsChange || index === retryActions.length - 1) return; // Can't move last item down
+    const newRetryActions = [...retryActions];
+    [newRetryActions[index], newRetryActions[index + 1]] = [newRetryActions[index + 1], newRetryActions[index]];
+    onRetryActionsChange(newRetryActions);
+  };
+
   const allAvailableActions = getAllActions();
 
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-          Actions
-        </Typography>
+  const renderActionSection = (
+    title: string,
+    actionsList: EdgeAction[],
+    isExpanded: boolean,
+    onToggleExpanded: () => void,
+    onAddAction: () => void,
+    onRemoveAction: (index: number) => void,
+    onUpdateAction: (index: number, updates: Partial<EdgeAction>) => void,
+    onMoveUp: (index: number) => void,
+    onMoveDown: (index: number) => void,
+    emptyMessage: string,
+    isRetrySection: boolean = false
+  ) => (
+    <Box sx={{ mb: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 0.5,
+        cursor: 'pointer',
+        '&:hover': {
+          backgroundColor: 'action.hover',
+        },
+        borderRadius: 1,
+        px: 1,
+        py: 0.5
+      }} onClick={onToggleExpanded}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton size="small" sx={{ mr: 0.5, p: 0 }}>
+            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+          <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+            {title}
+            {isRetrySection && (
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                (executes if main actions fail)
+              </Typography>
+            )}
+          </Typography>
+        </Box>
         <Button
           size="small"
           variant="outlined"
           startIcon={<AddIcon />}
-          onClick={addAction}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddAction();
+            if (!isExpanded) {
+              onToggleExpanded();
+            }
+          }}
           sx={{ minWidth: 'auto' }}
         >
           Add
         </Button>
       </Box>
 
-      {actions.length === 0 ? (
-        <Box sx={{ 
-          py: 3, 
-          px: 2, 
-          border: '1px dashed', 
-          borderColor: 'divider', 
-          borderRadius: 1,
-          textAlign: 'center',
-          mb: 1
-        }}>
-          <Typography variant="body2" color="text.secondary">
-            No actions added. Click "Add" to create your first action.
-          </Typography>
+      <Collapse in={isExpanded}>
+        <Box sx={{ pl: 4 }}>
+          {(!actionsList || actionsList.length === 0) ? (
+            <Box sx={{ 
+              py: 1, 
+              px: 2, 
+              border: '1px dashed', 
+              borderColor: 'divider', 
+              borderRadius: 1,
+              textAlign: 'center',
+              mb: 0.5
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                {emptyMessage}
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ mb: 1 }}>
+              {actionsList.map((action, index) => (
+                <EdgeActionItem
+                  key={index}
+                  action={action}
+                  availableActions={allAvailableActions}
+                  onUpdate={(updates) => onUpdateAction(index, updates)}
+                  onRemove={() => onRemoveAction(index)}
+                  onMoveUp={() => onMoveUp(index)}
+                  onMoveDown={() => onMoveDown(index)}
+                  showInput={true}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < actionsList.length - 1}
+                />
+              ))}
+            </Box>
+          )}
         </Box>
-      ) : (
-        <Box sx={{ mb: 2 }}>
-          {actions.map((action, index) => (
-            <EdgeActionItem
-              key={index}
-              action={action}
-              availableActions={allAvailableActions}
-              onUpdate={(updates) => updateAction(index, updates)}
-              onRemove={() => removeAction(index)}
-              onMoveUp={() => moveActionUp(index)}
-              onMoveDown={() => moveActionDown(index)}
-              showInput={true}
-              canMoveUp={index > 0}
-              canMoveDown={index < actions.length - 1}
-            />
-          ))}
-        </Box>
+      </Collapse>
+    </Box>
+  );
+
+  return (
+    <Box>
+      {/* Main Actions Section */}
+      {renderActionSection(
+        "Actions",
+        actions,
+        isActionsExpanded,
+        () => setIsActionsExpanded(!isActionsExpanded),
+        addAction,
+        removeAction,
+        updateAction,
+        moveActionUp,
+        moveActionDown,
+        'No actions added. Click "Add" to create your first action.'
       )}
 
-      <Box>
+      {/* Retry Actions Section - Only show if onRetryActionsChange is provided */}
+      {onRetryActionsChange && renderActionSection(
+        "Retry on Failure",
+        retryActions,
+        isRetryExpanded,
+        () => setIsRetryExpanded(!isRetryExpanded),
+        addRetryAction,
+        removeRetryAction,
+        updateRetryAction,
+        moveRetryActionUp,
+        moveRetryActionDown,
+        'No retry actions added. These will execute if main actions fail.',
+        true
+      )}
+
+      {/* Final Wait Time */}
+      <Box sx={{ mt: 2 }}>
         <TextField
           label="Final Wait Time (ms)"
           type="number"

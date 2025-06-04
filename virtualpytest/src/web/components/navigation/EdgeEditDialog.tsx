@@ -181,9 +181,11 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           
           <EdgeActionsList
             actions={edgeForm.actions}
+            retryActions={edgeForm.retryActions}
             finalWaitTime={edgeForm.finalWaitTime}
             availableActions={actions}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
+            onRetryActionsChange={(newRetryActions) => setEdgeForm({ ...edgeForm, retryActions: newRetryActions })}
             onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
           />
 

@@ -57,6 +57,7 @@ export const useNavigationState = () => {
   });
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({
     actions: [],
+    retryActions: [],
     finalWaitTime: 2000,
     description: ''
   });

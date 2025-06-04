@@ -91,6 +91,23 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                     }
                     actions_list.append(action_info)
         
+        # Handle retry actions format (new format)
+        retry_actions_list = []
+        if edge_data.get('retryActions') and isinstance(edge_data['retryActions'], list) and len(edge_data['retryActions']) > 0:
+            # New format: multiple retry actions
+            for action in edge_data['retryActions']:
+                if action and action.get('id'):  # Only include actions that have an ID
+                    action_info = {
+                        'id': action.get('id'),
+                        'label': action.get('label', action.get('id', 'Unknown Action')),
+                        'command': action.get('command', action.get('id')),
+                        'params': action.get('params', {}),
+                        'requiresInput': action.get('requiresInput', False),
+                        'inputValue': action.get('inputValue', ''),
+                        'waitTime': action.get('waitTime', 1000)
+                    }
+                    retry_actions_list.append(action_info)
+        
         # Handle legacy single action format (backward compatibility)
         elif edge_data.get('action'):
             legacy_action = edge_data['action']
@@ -128,6 +145,7 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         G.add_edge(source_id, target_id, **{
             'go_action': primary_action,  # Primary action for pathfinding
             'actions': actions_list,      # Full list of actions to execute
+            'retryActions': retry_actions_list,  # Full list of retry actions to execute on failure
             'comeback_action': edge_data.get('comeback_action'),
             'edge_type': edge_data.get('edge_type', 'navigation'),
             'description': edge_data.get('description', ''),

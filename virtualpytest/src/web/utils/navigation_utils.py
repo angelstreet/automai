@@ -272,7 +272,10 @@ def convert_nodes_and_edges_to_reactflow(nodes, edges):
                     'edgeType': edge.get('edge_type', 'navigation'),
                     'isBidirectional': edge.get('is_bidirectional', False),
                     'conditions': edge.get('conditions', {}),
-                    'metadata': edge.get('metadata', {})
+                    'metadata': edge.get('metadata', {}),
+                    'actions': edge.get('actions', []),
+                    'retryActions': edge.get('retryActions', []),
+                    'finalWaitTime': edge.get('finalWaitTime', 2000)
                 }
             }
             reactflow_edges.append(reactflow_edge)
@@ -331,7 +334,10 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
                 'description': edge_data.get('description'),
                 'is_bidirectional': edge_data.get('isBidirectional', False),
                 'conditions': edge_data.get('conditions', {}),
-                'metadata': edge_data.get('metadata', {})
+                'metadata': edge_data.get('metadata', {}),
+                'actions': edge_data.get('actions', []),
+                'retryActions': edge_data.get('retryActions', []),
+                'finalWaitTime': edge_data.get('finalWaitTime', 2000)
             }
             db_edges.append(db_edge)
         

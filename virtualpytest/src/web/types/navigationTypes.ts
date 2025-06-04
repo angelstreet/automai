@@ -58,6 +58,7 @@ export interface EdgeAction {
 // Use ReactFlow's Edge type directly with our custom data
 export type UINavigationEdge = Edge<{
   actions?: EdgeAction[]; // New: array of actions
+  retryActions?: EdgeAction[]; // New: array of retry actions for failure scenarios
   finalWaitTime?: number; // New: wait time after all actions
   description?: string;
   from?: string;        // Source node label
@@ -109,6 +110,7 @@ export interface NodeForm {
 // Updated EdgeForm interface for multiple actions
 export interface EdgeForm {
   actions: EdgeAction[];
+  retryActions: EdgeAction[];
   finalWaitTime: number;
   description: string;
 }

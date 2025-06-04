@@ -150,6 +150,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
               data: {
                 ...edge.data,
                 actions: state.edgeForm.actions,
+                retryActions: state.edgeForm.retryActions,
                 finalWaitTime: state.edgeForm.finalWaitTime,
                 description: state.edgeForm.description,
                 from: fromNodeName,

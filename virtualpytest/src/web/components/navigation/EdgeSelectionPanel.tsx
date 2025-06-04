@@ -68,7 +68,13 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     return [];
   };
 
+  // Get retry actions
+  const getRetryActions = (): EdgeAction[] => {
+    return selectedEdge.data?.retryActions || [];
+  };
+
   const actions = getActions();
+  const retryActions = getRetryActions();
   const hasActions = actions.length > 0;
   const canRunActions = isControlActive && selectedDevice && hasActions && !isRunning;
 
@@ -124,6 +130,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     setEdgeForm({
       description: selectedEdge.data?.description || '',
       actions: getActions(),
+      retryActions: getRetryActions(),
       finalWaitTime: selectedEdge.data?.finalWaitTime || 2000,
     });
     
