@@ -119,20 +119,23 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     
     setIsRunning(true);
     setRunResult(null);
-    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions`);
+    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm.retryActions.length} retry actions`);
     
     try {
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
         undefined, // No updateActionResults callback needed for dialog
-        edgeForm.finalWaitTime
+        edgeForm.finalWaitTime,
+        edgeForm.retryActions,
+        undefined // No updateRetryActionResults callback needed for dialog
       );
       
       // Update the edge form with the updated actions
       setEdgeForm(prev => ({
         ...prev,
-        actions: result.updatedActions
+        actions: result.updatedActions,
+        retryActions: result.updatedRetryActions || prev.retryActions
       }));
       
       setRunResult(result.results.join('\n'));

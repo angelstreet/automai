@@ -135,7 +135,7 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
           value={action.waitTime}
           onChange={(e) => onUpdate({ waitTime: parseInt(e.target.value) || 0 })}
           sx={{ 
-            width: 70,
+            width: 80,
             '& .MuiInputBase-input': {
               fontSize: '0.8rem',
               py: 0.5

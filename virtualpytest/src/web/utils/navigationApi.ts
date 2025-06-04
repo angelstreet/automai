@@ -306,22 +306,26 @@ export interface ActionExecutionResult {
   results: string[];
   executionStopped: boolean;
   updatedActions: any[];
+  updatedRetryActions?: any[];
 }
 
 /**
- * Utility function to execute edge actions with proper error handling and break logic
+ * Utility function to execute edge actions with proper error handling and retry logic
  */
 export async function executeEdgeActions(
   actions: any[],
   controllerTypes: string[],
   updateActionResults?: (index: number, success: boolean) => void,
-  finalWaitTime: number = 2000
+  finalWaitTime: number = 2000,
+  retryActions: any[] = [],
+  updateRetryActionResults?: (index: number, success: boolean) => void
 ): Promise<ActionExecutionResult> {
-  console.log(`[@util:NavigationApi] Starting execution of ${actions.length} actions`);
+  console.log(`[@util:NavigationApi] Starting execution of ${actions.length} actions with ${retryActions.length} retry actions`);
   
   const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
   let results: string[] = [];
-  const updatedActions = [...actions];
+  let updatedActions = [...actions];
+  let updatedRetryActions = [...retryActions];
   let executionStopped = false;
   
   // Utility function to update last run results (keeps last 10 results)
@@ -450,6 +454,117 @@ export async function executeEdgeActions(
     
     console.log(`[@util:NavigationApi] Action loop completed. ExecutionStopped: ${executionStopped}`);
     
+    // If main actions failed and we have retry actions, execute them
+    if (executionStopped && retryActions.length > 0) {
+      results.push('');
+      results.push('🔄 Main actions failed. Starting retry actions...');
+      console.log(`[@util:NavigationApi] Starting retry actions execution`);
+      
+      // Reset execution state for retry
+      executionStopped = false;
+      
+      for (let i = 0; i < retryActions.length; i++) {
+        const action = retryActions[i];
+        
+        if (!action.id) {
+          results.push(`❌ Retry Action ${i + 1}: No action selected`);
+          updatedRetryActions[i] = {
+            ...action,
+            last_run_result: updateLastRunResults(action.last_run_result || [], false)
+          };
+          results.push(`⏹️ Retry execution stopped due to failed action ${i + 1}`);
+          executionStopped = true;
+          console.log(`[@util:NavigationApi] STOPPING RETRY EXECUTION due to missing action ${i + 1}`);
+          break;
+        }
+        
+        console.log(`[@util:NavigationApi] Executing retry action ${i + 1}/${retryActions.length}: ${action.label}`);
+        
+        const actionToExecute = { ...action, params: { ...action.params } };
+        
+        if (action.requiresInput && action.inputValue) {
+          if (action.command === 'launch_app') {
+            actionToExecute.params.package = action.inputValue;
+          } else if (action.command === 'close_app') {
+            actionToExecute.params.package = action.inputValue;
+          } else if (action.command === 'input_text') {
+            actionToExecute.params.text = action.inputValue;
+          } else if (action.command === 'click_element') {
+            actionToExecute.params.element_id = action.inputValue;
+          } else if (action.command === 'coordinate_tap') {
+            const coords = action.inputValue.split(',').map((coord: string) => parseInt(coord.trim()));
+            if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+              actionToExecute.params.x = coords[0];
+              actionToExecute.params.y = coords[1];
+            }
+          }
+        }
+        
+        let actionSuccess = false;
+        
+        try {
+          const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: actionToExecute }),
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            results.push(`✅ Retry Action ${i + 1}: ${result.message || 'Success'}`);
+            actionSuccess = true;
+            console.log(`[@util:NavigationApi] Retry Action ${i + 1} SUCCESS`);
+          } else {
+            results.push(`❌ Retry Action ${i + 1}: ${result.error || result.message || 'Failed'}`);
+            actionSuccess = false;
+            console.log(`[@util:NavigationApi] Retry Action ${i + 1} FAILED`);
+          }
+        } catch (err: any) {
+          results.push(`❌ Retry Action ${i + 1}: ${err.message || 'Network error'}`);
+          actionSuccess = false;
+          console.log(`[@util:NavigationApi] Retry Action ${i + 1} NETWORK ERROR`);
+        }
+        
+        // Update retry action with result
+        const updatedLastRunResults = updateLastRunResults(action.last_run_result || [], actionSuccess);
+        const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
+        
+        updatedRetryActions[i] = {
+          ...action,
+          last_run_result: updatedLastRunResults
+        };
+        
+        results.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
+        
+        if (updateRetryActionResults) {
+          updateRetryActionResults(i, actionSuccess);
+        }
+        
+        // Stop execution if retry action failed
+        if (!actionSuccess) {
+          results.push(`⏹️ Retry execution stopped due to failed action ${i + 1}`);
+          executionStopped = true;
+          console.log(`[@util:NavigationApi] STOPPING RETRY EXECUTION due to failed action ${i + 1}`);
+          break;
+        }
+        
+        // Wait after retry action
+        if (action.waitTime > 0) {
+          console.log(`[@util:NavigationApi] Waiting ${action.waitTime}ms after retry action ${i + 1}`);
+          await delay(action.waitTime);
+        }
+      }
+      
+      if (!executionStopped) {
+        results.push('✅ Retry actions completed successfully!');
+        console.log(`[@util:NavigationApi] All retry actions completed successfully`);
+      } else {
+        results.push('❌ Retry actions also failed.');
+        console.log(`[@util:NavigationApi] Retry actions execution stopped due to failure`);
+      }
+    }
+    
     // Final wait only if execution wasn't stopped
     if (!executionStopped && finalWaitTime > 0) {
       console.log(`[@util:NavigationApi] Final wait: ${finalWaitTime}ms`);
@@ -472,6 +587,7 @@ export async function executeEdgeActions(
   return {
     results,
     executionStopped,
-    updatedActions
+    updatedActions,
+    updatedRetryActions
   };
 } 

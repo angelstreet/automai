@@ -162,6 +162,31 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     onUpdateEdge(selectedEdge.id, updatedEdgeData);
   };
 
+  const updateRetryActionResults = (actionIndex: number, success: boolean) => {
+    if (!onUpdateEdge) return;
+
+    const updatedRetryActions = [...retryActions];
+    const action = updatedRetryActions[actionIndex];
+    
+    // Update the last_run_result array
+    const currentResults = action.last_run_result || [];
+    const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
+    
+    updatedRetryActions[actionIndex] = {
+      ...action,
+      last_run_result: newResults
+    };
+
+    // Update the edge data
+    const updatedEdgeData = {
+      ...selectedEdge.data,
+      retryActions: updatedRetryActions
+    };
+
+    // Call the parent callback to update the edge
+    onUpdateEdge(selectedEdge.id, updatedEdgeData);
+  };
+
   // Execute all edge actions sequentially
   const handleRunActions = async () => {
     if (actions.length === 0) {
@@ -179,7 +204,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         actions,
         controllerTypes,
         updateActionResults, // Pass the callback to update edge data
-        finalWaitTime
+        finalWaitTime,
+        retryActions,
+        updateRetryActionResults // Pass the callback to update retry action data
       );
       
       setRunResult(result.results.join('\n'));
