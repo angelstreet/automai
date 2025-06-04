@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 import { NodeGotoPanel } from './NodeGotoPanel';
+import { calculateConfidenceScore } from '../../utils/confidenceUtils';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -160,6 +161,35 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                          selectedNode.id?.toLowerCase().includes('entry') ||
                          selectedNode.id?.toLowerCase().includes('home');
 
+  // Calculate overall confidence for node verifications
+  const getNodeConfidenceInfo = (): { score: number | null; text: string } => {
+    if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
+      return { score: null, text: 'unknown' };
+    }
+    
+    // Get all verifications with results
+    const verificationsWithResults = selectedNode.data.verifications.filter(v => 
+      v.last_run_result && v.last_run_result.length > 0
+    );
+    
+    if (verificationsWithResults.length === 0) {
+      return { score: null, text: 'unknown' };
+    }
+    
+    // Calculate average confidence across all verifications
+    const confidenceScores = verificationsWithResults.map(v => 
+      calculateConfidenceScore(v.last_run_result)
+    );
+    const averageConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
+    
+    return { 
+      score: averageConfidence, 
+      text: `${(averageConfidence * 100).toFixed(0)}%` 
+    };
+  };
+
+  const confidenceInfo = getNodeConfidenceInfo();
+
   return (
     <>
       <Paper
@@ -167,7 +197,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           position: 'absolute',
           top: 16,
           right: 16,
-          width: 200,
+          width: 240,
           p: 1.5,
           zIndex: 1000,
         }}
@@ -196,9 +226,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             </Typography>
             {/* Show verification count if available */}
             {hasNodeVerifications && (
-              <Typography variant="caption" display="block">
-                <strong>Verifications:</strong> {selectedNode.data.verifications?.length || 0}
-              </Typography>
+              <>
+                <Typography variant="caption" display="block">
+                  <strong>Verifications:</strong> {selectedNode.data.verifications?.length || 0}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  <strong>Confidence:</strong> {confidenceInfo.text}
+                </Typography>
+              </>
             )}
           </Box>
           
@@ -373,7 +408,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           )}
 
           {/* Show controller status */}
-          <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Box sx={{ mt: 2, p: 1, borderRadius: 1, border: '1px dashed', borderColor: 'grey.300' }}>
             <Typography variant="caption" display="block" color="text.secondary">
               Controller Status:
             </Typography>

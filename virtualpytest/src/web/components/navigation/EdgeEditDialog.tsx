@@ -56,6 +56,19 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
 
+  // Utility function to update last run results (keeps last 10 results)
+  const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
+    const updatedResults = [newResult, ...results];
+    return updatedResults.slice(0, 10); // Keep only last 10 results
+  };
+
+  // Calculate confidence score from last run results (0-1 scale)
+  const calculateConfidenceScore = (results?: boolean[]): number => {
+    if (!results || results.length === 0) return 0.5; // Default confidence for new actions
+    const successCount = results.filter(result => result).length;
+    return successCount / results.length;
+  };
+
   const canRunActions = isControlActive && selectedDevice && edgeForm.actions.length > 0 && !isRunning;
 
   useEffect(() => {
@@ -119,12 +132,18 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     try {
       const apiControllerType = controllerTypes[0].replace(/_/g, '-');
       let results: string[] = [];
+      const updatedActions = [...edgeForm.actions];
       
       for (let i = 0; i < edgeForm.actions.length; i++) {
         const action = edgeForm.actions[i];
         
         if (!action.id) {
           results.push(`❌ Action ${i + 1}: No action selected`);
+          // Update action with failed result
+          updatedActions[i] = {
+            ...action,
+            last_run_result: updateLastRunResults(action.last_run_result || [], false)
+          };
           continue;
         }
         
@@ -151,6 +170,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           }
         }
         
+        let actionSuccess = false;
+        
         try {
           const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
             method: 'POST',
@@ -166,12 +187,29 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           
           if (result.success) {
             results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
+            actionSuccess = true;
           } else {
             results.push(`❌ Action ${i + 1}: ${result.error || 'Failed'}`);
+            actionSuccess = false;
           }
         } catch (err: any) {
           results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
+          actionSuccess = false;
         }
+        
+        // Update action with result and confidence info
+        const updatedLastRunResults = updateLastRunResults(action.last_run_result || [], actionSuccess);
+        const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
+        
+        updatedActions[i] = {
+          ...action,
+          last_run_result: updatedLastRunResults
+        };
+        
+        // Add confidence info to results
+        results.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
+        
+        console.log(`[@component:EdgeEditDialog] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
         
         // Wait after action
         if (action.waitTime > 0) {
@@ -179,6 +217,12 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           await delay(action.waitTime);
         }
       }
+      
+      // Update the edge form with the updated actions
+      setEdgeForm(prev => ({
+        ...prev,
+        actions: updatedActions
+      }));
       
       // Final wait
       if (edgeForm.finalWaitTime > 0) {

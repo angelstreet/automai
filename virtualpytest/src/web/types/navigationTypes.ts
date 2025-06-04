@@ -15,6 +15,7 @@ export interface NodeVerification {
     area?: [number, number, number, number]; // [x, y, width, height]
   };
   description?: string;
+  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
 }
 
 // Define types locally since we're not using the service
@@ -51,6 +52,7 @@ export interface EdgeAction {
   requiresInput?: boolean;
   inputValue?: string;
   waitTime: number;
+  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
 }
 
 // Use ReactFlow's Edge type directly with our custom data

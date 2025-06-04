@@ -36,6 +36,7 @@ interface NodeVerification {
   inputLabel?: string;
   inputPlaceholder?: string;
   inputValue?: string;
+  last_run_result?: boolean[];
 }
 
 interface VerificationAction {
@@ -95,10 +96,28 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [isRunningVerifications, setIsRunningVerifications] = useState(false);
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
+  const [isRunningGoto, setIsRunningGoto] = useState(false);
+  const [gotoResult, setGotoResult] = useState<string | null>(null);
+
+  // Utility function to update last run results (keeps last 10 results)
+  const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
+    const updatedResults = [newResult, ...results];
+    return updatedResults.slice(0, 10); // Keep only last 10 results
+  };
+
+  // Calculate confidence score from last run results (0-1 scale)
+  const calculateConfidenceScore = (results?: boolean[]): number => {
+    if (!results || results.length === 0) return 0.5; // Default confidence for new verifications
+    const successCount = results.filter(result => result).length;
+    return successCount / results.length;
+  };
 
   // Use same logic as EdgeEditDialog
   const canRunVerifications = isControlActive && selectedDevice && 
     nodeForm.verifications && nodeForm.verifications.length > 0 && !isRunningVerifications;
+
+  // Can run goto if we have control and device, and not already running goto
+  const canRunGoto = isControlActive && selectedDevice && !isRunningGoto && !isRunningVerifications;
 
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -116,6 +135,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setVerificationResult(null);
+      setGotoResult(null);
     }
   }, [isOpen]);
 
@@ -169,12 +189,18 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     
     try {
       let results: string[] = [];
+      const updatedVerifications = [...nodeForm.verifications];
       
       for (let i = 0; i < nodeForm.verifications.length; i++) {
         const verification = nodeForm.verifications[i];
         
         if (!verification.id) {
           results.push(`❌ Verification ${i + 1}: No verification selected`);
+          // Update verification with failed result
+          updatedVerifications[i] = {
+            ...verification,
+            last_run_result: updateLastRunResults(verification.last_run_result || [], false)
+          };
           continue;
         }
         
@@ -184,6 +210,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           ...verification,
           params: { ...verification.params }
         };
+        
+        let verificationSuccess = false;
         
         try {
           const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
@@ -200,16 +228,39 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           
           if (result.success) {
             results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+            verificationSuccess = true;
           } else {
             results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+            verificationSuccess = false;
           }
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
+          verificationSuccess = false;
         }
+        
+        // Update verification with result and confidence info
+        const updatedLastRunResults = updateLastRunResults(verification.last_run_result || [], verificationSuccess);
+        const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
+        
+        updatedVerifications[i] = {
+          ...verification,
+          last_run_result: updatedLastRunResults
+        };
+        
+        // Add confidence info to results
+        results.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
+        
+        console.log(`[@component:NodeEditDialog] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
         
         // Small delay between verifications
         await delay(1000);
       }
+      
+      // Update the node form with the updated verifications
+      setNodeForm(prev => ({
+        ...prev,
+        verifications: updatedVerifications
+      }));
       
       setVerificationResult(results.join('\n'));
       console.log(`[@component:NodeEditDialog] All verifications completed`);
@@ -219,6 +270,164 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       setVerificationResult(`❌ ${err.message}`);
     } finally {
       setIsRunningVerifications(false);
+    }
+  };
+
+  const handleRunGoto = async () => {
+    setIsRunningGoto(true);
+    setGotoResult(null);
+    setVerificationResult(null);
+    
+    try {
+      let gotoResults: string[] = [];
+      let navigationSuccess = false;
+      
+      // Step 1: Execute Navigation Steps
+      gotoResults.push('🚀 Starting navigation to node...');
+      console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm.label}`);
+      
+      try {
+        // Execute navigation to this node
+        // This would typically involve calling the navigation API to reach this node
+        const navigationResponse = await fetch(`http://localhost:5009/api/virtualpytest/navigation/goto`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nodeId: nodeForm.label, // or appropriate node identifier
+            nodeType: nodeForm.type,
+            description: nodeForm.description
+          }),
+        });
+        
+        const navigationResult = await navigationResponse.json();
+        
+        if (navigationResult.success) {
+          gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm.label}`);
+          navigationSuccess = true;
+          console.log(`[@component:NodeEditDialog] Navigation successful`);
+        } else {
+          gotoResults.push(`❌ Navigation: ${navigationResult.error || 'Failed to reach node'}`);
+          console.error(`[@component:NodeEditDialog] Navigation failed:`, navigationResult.error);
+        }
+      } catch (err: any) {
+        gotoResults.push(`❌ Navigation: ${err.message || 'Network error'}`);
+        console.error('[@component:NodeEditDialog] Navigation error:', err);
+      }
+      
+      // Step 2: Execute Verifications (only if navigation succeeded)
+      let verificationSuccess = true;
+      
+      if (navigationSuccess && nodeForm.verifications && nodeForm.verifications.length > 0) {
+        gotoResults.push('\n🔍 Running node verifications...');
+        console.log(`[@component:NodeEditDialog] Starting verifications after successful navigation`);
+        
+        const updatedVerifications = [...nodeForm.verifications];
+        
+        // Small delay before verifications
+        await delay(1500);
+        
+        for (let i = 0; i < nodeForm.verifications.length; i++) {
+          const verification = nodeForm.verifications[i];
+          
+          if (!verification.id) {
+            gotoResults.push(`❌ Verification ${i + 1}: No verification selected`);
+            verificationSuccess = false;
+            // Update verification with failed result
+            updatedVerifications[i] = {
+              ...verification,
+              last_run_result: updateLastRunResults(verification.last_run_result || [], false)
+            };
+            continue;
+          }
+          
+          console.log(`[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.label}`);
+          
+          const verificationToExecute = {
+            ...verification,
+            params: { ...verification.params }
+          };
+          
+          let individualVerificationSuccess = false;
+          
+          try {
+            const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                verification: verificationToExecute
+              }),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+              individualVerificationSuccess = true;
+            } else {
+              gotoResults.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+              verificationSuccess = false;
+              individualVerificationSuccess = false;
+            }
+          } catch (err: any) {
+            gotoResults.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
+            verificationSuccess = false;
+            individualVerificationSuccess = false;
+          }
+          
+          // Update verification with result and confidence info
+          const updatedLastRunResults = updateLastRunResults(verification.last_run_result || [], individualVerificationSuccess);
+          const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
+          
+          updatedVerifications[i] = {
+            ...verification,
+            last_run_result: updatedLastRunResults
+          };
+          
+          // Add confidence info to goto results
+          gotoResults.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
+          
+          console.log(`[@component:NodeEditDialog] Goto verification ${i + 1} completed. Success: ${individualVerificationSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
+          
+          // Small delay between verifications
+          await delay(1000);
+        }
+        
+        // Update the node form with the updated verifications after goto
+        setNodeForm(prev => ({
+          ...prev,
+          verifications: updatedVerifications
+        }));
+        
+      } else if (navigationSuccess && (!nodeForm.verifications || nodeForm.verifications.length === 0)) {
+        gotoResults.push('ℹ️ No verifications configured for this node');
+      }
+      
+      // Step 3: Final Result Summary
+      const overallSuccess = navigationSuccess && verificationSuccess;
+      gotoResults.push('');
+      
+      if (overallSuccess) {
+        gotoResults.push('🎉 Goto operation completed successfully!');
+        gotoResults.push(`✅ Navigation: Success`);
+        gotoResults.push(`✅ Verifications: ${nodeForm.verifications?.length || 0} passed`);
+      } else {
+        gotoResults.push('⚠️ Goto operation completed with issues:');
+        gotoResults.push(`${navigationSuccess ? '✅' : '❌'} Navigation: ${navigationSuccess ? 'Success' : 'Failed'}`);
+        gotoResults.push(`${verificationSuccess ? '✅' : '❌'} Verifications: ${verificationSuccess ? 'Passed' : 'Failed'}`);
+      }
+      
+      setGotoResult(gotoResults.join('\n'));
+      console.log(`[@component:NodeEditDialog] Goto operation completed. Overall success: ${overallSuccess}`);
+      
+    } catch (err: any) {
+      console.error('[@component:NodeEditDialog] Error during goto operation:', err);
+      setGotoResult(`❌ Goto operation failed: ${err.message}`);
+    } finally {
+      setIsRunningGoto(false);
     }
   };
 
@@ -305,6 +514,21 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             error={verificationError}
           />
 
+          {gotoResult && (
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: gotoResult.includes('❌') || gotoResult.includes('⚠️') ? 'error.light' : 'success.light', 
+              borderRadius: 1,
+              maxHeight: 300,
+              overflow: 'auto',
+              mb: 1
+            }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+                {gotoResult}
+              </Typography>
+            </Box>
+          )}
+          
           {verificationResult && (
             <Box sx={{ 
               p: 2, 
@@ -352,6 +576,21 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           sx={{ opacity: !canRunVerifications ? 0.5 : 1 }}
         >
           {isRunningVerifications ? 'Running...' : 'Run'}
+        </Button>
+        <Button 
+          onClick={handleRunGoto} 
+          variant="contained"
+          color="primary"
+          disabled={!canRunGoto}
+          sx={{ 
+            opacity: !canRunGoto ? 0.5 : 1,
+            bgcolor: 'primary.main',
+            '&:hover': {
+              bgcolor: 'primary.dark',
+            }
+          }}
+        >
+          {isRunningGoto ? 'Going...' : 'Go To'}
         </Button>
       </DialogActions>
     </Dialog>

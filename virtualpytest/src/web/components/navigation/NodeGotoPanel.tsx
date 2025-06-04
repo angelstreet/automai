@@ -47,6 +47,13 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   const [executionResult, setExecutionResult] = useState<string | null>(null);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
 
+  // Calculate confidence score from last run results (0-1 scale)
+  const calculateConfidenceScore = (results?: boolean[]): number => {
+    if (!results || results.length === 0) return 0.5; // Default confidence for new verifications
+    const successCount = results.filter(result => result).length;
+    return successCount / results.length;
+  };
+
   // Helper function to get parent names from parent IDs
   const getParentNames = (parentIds: string[]): string => {
     if (!parentIds || parentIds.length === 0) return 'Root';
@@ -335,6 +342,158 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           {isLoadingPreview && (
             <Typography variant="body2" color="text.secondary">
               Loading navigation steps...
+            </Typography>
+          )}
+        </Box>
+
+        {/* Node Verifications */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            Verifications:
+          </Typography>
+          
+          {selectedNode.data.verifications && selectedNode.data.verifications.length > 0 ? (
+            <Box sx={{ 
+              maxHeight: 120, 
+              overflowY: 'auto',
+              scrollbarWidth: 'thin',
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(0,0,0,0.1)',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: 'rgba(0,0,0,0.5)',
+                }
+              }
+            }}>
+              {selectedNode.data.verifications.map((verification, index) => (
+                <Box 
+                  key={verification.id || index}
+                  sx={{ 
+                    mb: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'grey.300'
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}>
+                    {index + 1}. {verification.label || 'Unnamed Verification'}
+                  </Typography>
+                  
+                  <Box sx={{ ml: 1.5 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontSize: '0.8rem',
+                        color: 'text.secondary',
+                        mb: 0.25
+                      }}
+                    >
+                      <strong>Type:</strong> {verification.controller_type || 'Unknown'}
+                    </Typography>
+                    
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontSize: '0.8rem',
+                        color: 'text.secondary',
+                        mb: 0.25
+                      }}
+                    >
+                      <strong>Command:</strong> {verification.command || 'No command'}
+                    </Typography>
+                    
+                    {verification.description && (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontSize: '0.8rem',
+                          color: 'text.secondary',
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        {verification.description}
+                      </Typography>
+                    )}
+                    
+                    {verification.inputValue && (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontSize: '0.8rem',
+                          color: 'primary.main',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        Input: {verification.inputValue}
+                      </Typography>
+                    )}
+                    
+                    {/* Confidence Score Display */}
+                    {verification.last_run_result && verification.last_run_result.length > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.75rem',
+                            color: 'text.secondary',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Confidence: {(calculateConfidenceScore(verification.last_run_result) * 100).toFixed(0)}%
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.7rem',
+                            color: 'text.secondary',
+                            opacity: 0.8
+                          }}
+                        >
+                          ({verification.last_run_result.filter(r => r).length}/{verification.last_run_result.length} recent)
+                        </Typography>
+                        
+                        {/* Visual indicator for confidence level */}
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: (() => {
+                              const confidence = calculateConfidenceScore(verification.last_run_result);
+                              if (confidence >= 0.8) return 'success.main';
+                              if (confidence >= 0.6) return 'warning.main';
+                              return 'error.main';
+                            })()
+                          }}
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontStyle: 'italic',
+                fontSize: '0.875rem',
+                p: 1,
+                borderRadius: 1,
+                border: '1px dashed',
+                borderColor: 'grey.300'
+              }}
+            >
+              No verifications configured for this node
             </Typography>
           )}
         </Box>

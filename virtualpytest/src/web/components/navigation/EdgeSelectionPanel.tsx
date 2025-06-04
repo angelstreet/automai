@@ -11,6 +11,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { UINavigationEdge, EdgeForm } from '../../types/navigationTypes';
+import { calculateConfidenceScore } from '../../utils/confidenceUtils';
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;
@@ -58,6 +59,44 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
                          selectedEdge.source === 'entry-node' ||
                          selectedEdge.source?.toLowerCase().includes('entry') ||
                          selectedEdge.source?.toLowerCase().includes('home');
+
+  // Calculate overall confidence for edge actions
+  const getEdgeConfidenceInfo = (): { actionCount: number; score: number | null; text: string } => {
+    // Handle new format (multiple actions)
+    let actions = selectedEdge.data?.actions || [];
+    
+    // Handle legacy format (single action) - convert to array for consistent processing
+    if (actions.length === 0 && selectedEdge.data?.action && typeof selectedEdge.data.action === 'object') {
+      actions = [selectedEdge.data.action];
+    }
+    
+    if (actions.length === 0) {
+      return { actionCount: 0, score: null, text: 'no actions' };
+    }
+    
+    // Get all actions with results
+    const actionsWithResults = actions.filter(action => 
+      action.last_run_result && action.last_run_result.length > 0
+    );
+    
+    if (actionsWithResults.length === 0) {
+      return { actionCount: actions.length, score: null, text: 'unknown' };
+    }
+    
+    // Calculate average confidence across all actions
+    const confidenceScores = actionsWithResults.map(action => 
+      calculateConfidenceScore(action.last_run_result)
+    );
+    const averageConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
+    
+    return { 
+      actionCount: actions.length,
+      score: averageConfidence, 
+      text: `${(averageConfidence * 100).toFixed(0)}%` 
+    };
+  };
+
+  const confidenceInfo = getEdgeConfidenceInfo();
 
   const handleEdit = () => {
     // Convert old format to new format if needed
@@ -144,6 +183,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           }
         }
         
+        let actionSuccess = false;
+        
         try {
           const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
             method: 'POST',
@@ -159,11 +200,28 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           
           if (result.success) {
             results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
+            actionSuccess = true;
           } else {
             results.push(`❌ Action ${i + 1}: ${result.error || 'Failed'}`);
+            actionSuccess = false;
           }
         } catch (err: any) {
           results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
+          actionSuccess = false;
+        }
+        
+        // Update action result history for confidence calculation
+        // Note: This is for display purposes - the actual edge data would need to be updated in the parent component
+        if (action.last_run_result) {
+          const updatedResults = [actionSuccess, ...action.last_run_result].slice(0, 10);
+          const newConfidence = calculateConfidenceScore(updatedResults);
+          results.push(`   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${updatedResults.length} runs)`);
+          console.log(`[@component:EdgeSelectionPanel] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${newConfidence.toFixed(3)}`);
+        } else {
+          // First run for this action
+          const newConfidence = actionSuccess ? 1.0 : 0.0;
+          results.push(`   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (1 run)`);
+          console.log(`[@component:EdgeSelectionPanel] Action ${i + 1} completed. Success: ${actionSuccess}, Initial confidence: ${newConfidence.toFixed(3)}`);
         }
         
         // Wait after action
@@ -227,6 +285,14 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             To: {selectedEdge.data.to}
           </Typography>
         )}
+        
+        {/* Show action count and confidence */}
+        <Typography variant="caption" display="block" sx={{ mb: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+          <strong>Actions:</strong> {confidenceInfo.actionCount}
+        </Typography>
+        <Typography variant="caption" display="block" sx={{ mb: 1, fontSize: '0.75rem', color: 'text.secondary' }}>
+          <strong>Confidence:</strong> {confidenceInfo.text}
+        </Typography>
         
         {/* Show compact actions list */}
         {selectedEdge.data?.actions && selectedEdge.data.actions.length > 0 && (
@@ -320,9 +386,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
               p: 0.5,
               bgcolor: runResult.includes('❌') ? 'error.light' : 
                        runResult.includes('⚠️') ? 'warning.light' : 'success.light',
-              borderRadius: 0.5,
-              maxHeight: 100,
-              overflow: 'auto'
+              borderRadius: 0.5
             }}>
               <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
                 {runResult}
