@@ -417,6 +417,8 @@ const NavigationEditorContent: React.FC = () => {
     setReactFlowInstance,
     setAllNodes,
     setHasUnsavedChanges,
+    setEdges,
+    setSelectedEdge,
     
     // Configuration
     defaultEdgeOptions,
@@ -814,6 +816,55 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition]);
 
+  // Handle node updates - callback for NodeSelectionPanel
+  const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
+    console.log(`[@component:NavigationEditor] Updating node ${nodeId} with data:`, updatedData);
+    
+    // Create a function to update nodes consistently
+    const updateNodeFunction = (nodes: any[]) => 
+      nodes.map(node => 
+        node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
+      );
+    
+    // Update both filtered nodes and allNodes arrays
+    setNodes(updateNodeFunction);
+    setAllNodes(updateNodeFunction);
+    
+    // Update selected node if it's the one being updated
+    if (selectedNode && selectedNode.id === nodeId) {
+      const updatedNode = { ...selectedNode, data: { ...selectedNode.data, ...updatedData } };
+      setSelectedNode(updatedNode);
+    }
+    
+    // Mark tree as having unsaved changes
+    setHasUnsavedChanges(true);
+    
+    console.log(`[@component:NavigationEditor] Updated node ${nodeId} and marked tree as having unsaved changes`);
+  }, [setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges, selectedNode]);
+
+  // Handle edge updates - callback for EdgeSelectionPanel
+  const handleUpdateEdge = useCallback((edgeId: string, updatedData: any) => {
+    console.log(`[@component:NavigationEditor] Updating edge ${edgeId} with data:`, updatedData);
+    
+    // Update edges array
+    setEdges(prevEdges => 
+      prevEdges.map(edge => 
+        edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
+      )
+    );
+    
+    // Update selected edge if it's the one being updated
+    if (selectedEdge && selectedEdge.id === edgeId) {
+      const updatedEdge = { ...selectedEdge, data: { ...selectedEdge.data, ...updatedData } };
+      setSelectedEdge(updatedEdge);
+    }
+    
+    // Mark tree as having unsaved changes
+    setHasUnsavedChanges(true);
+    
+    console.log(`[@component:NavigationEditor] Updated edge ${edgeId} and marked tree as having unsaved changes`);
+  }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
+
   // Effect to initialize/release verification controllers when control state changes
   useEffect(() => {
     if (isControlActive && selectedDevice) {
@@ -1109,6 +1160,7 @@ const NavigationEditorContent: React.FC = () => {
                       onVerification={handleVerification}
                       isVerificationActive={isVerificationActive}
                       verificationControllerStatus={verificationControllerStatus}
+                      onUpdateNode={handleUpdateNode}
                     />
                   )}
                   
@@ -1123,6 +1175,7 @@ const NavigationEditorContent: React.FC = () => {
                       isControlActive={isControlActive}
                       selectedDevice={selectedDevice}
                       controllerTypes={userInterface?.models || []}
+                      onUpdateEdge={handleUpdateEdge}
                     />
                   )}
                 </>

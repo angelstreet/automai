@@ -100,6 +100,17 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   useEffect(() => {
     setVerificationResult(null);
     setLocalVerificationUpdates({});
+    
+    // Debug: Log verification data when node changes
+    console.log(`[@component:NodeSelectionPanel] Selected node changed: ${selectedNode.id}`);
+    if (selectedNode.data.verifications) {
+      console.log(`[@component:NodeSelectionPanel] Node has ${selectedNode.data.verifications.length} verifications`);
+      selectedNode.data.verifications.forEach((v, index) => {
+        console.log(`[@component:NodeSelectionPanel] Verification ${index}: ${v.label}, last_run_result:`, v.last_run_result);
+      });
+    } else {
+      console.log(`[@component:NodeSelectionPanel] Node has no verifications`);
+    }
   }, [selectedNode.id]);
 
   const handleEdit = () => {
@@ -140,7 +151,17 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
   // Update verification results in the actual node data
   const updateVerificationResults = (verificationIndex: number, success: boolean) => {
-    if (!onUpdateNode || !selectedNode.data.verifications) return;
+    if (!onUpdateNode) {
+      console.warn('[@component:NodeSelectionPanel] onUpdateNode callback not provided - verification results will not be saved!');
+      return;
+    }
+
+    if (!selectedNode.data.verifications) {
+      console.warn('[@component:NodeSelectionPanel] No verifications found on selectedNode.data');
+      return;
+    }
+
+    console.log(`[@component:NodeSelectionPanel] Updating verification ${verificationIndex} with result: ${success}`);
 
     const updatedVerifications = [...selectedNode.data.verifications];
     const verification = updatedVerifications[verificationIndex];
@@ -148,6 +169,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     // Update the last_run_result array
     const currentResults = verification.last_run_result || [];
     const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
+    
+    console.log(`[@component:NodeSelectionPanel] Previous results:`, currentResults);
+    console.log(`[@component:NodeSelectionPanel] New results:`, newResults);
     
     updatedVerifications[verificationIndex] = {
       ...verification,
@@ -159,6 +183,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       ...selectedNode.data,
       verifications: updatedVerifications
     };
+
+    console.log(`[@component:NodeSelectionPanel] Calling onUpdateNode with updated data for node: ${selectedNode.id}`);
+    console.log(`[@component:NodeSelectionPanel] Updated verification data:`, updatedVerifications[verificationIndex]);
 
     // Call the parent callback to update the node
     onUpdateNode(selectedNode.id, updatedNodeData);
