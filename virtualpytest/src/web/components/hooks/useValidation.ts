@@ -40,14 +40,6 @@ export function useValidation(treeId: string) {
   const simulateProgress = useCallback(async (reachableNodes: string[]) => {
     console.log(`[@hook:useValidation] Starting progress simulation for ${reachableNodes.length} nodes`);
     
-    // Track completed nodes throughout the process
-    let completedNodes: Array<{
-      nodeId: string;
-      nodeName: string;
-      isValid: boolean;
-      errors: string[];
-    }> = [];
-    
     // Initialize progress
     const initialProgress: ValidationProgress = {
       currentStep: 0,
@@ -61,7 +53,7 @@ export function useValidation(treeId: string) {
     setProgress(initialProgress);
     setShowProgress(true);
 
-    // Simulate testing each node with realistic timing
+    // Simulate testing each node with realistic timing but without fake results
     for (let i = 0; i < reachableNodes.length; i++) {
       const currentNode = reachableNodes[i];
       const currentNodeName = currentNode; // In real implementation, this would be the actual node name
@@ -73,39 +65,23 @@ export function useValidation(treeId: string) {
         currentNode,
         currentNodeName: `Testing ${currentNodeName}...`,
         status: 'running',
-        completedNodes: [...completedNodes]
+        completedNodes: [] // Don't show fake results, wait for real validation
       };
       
       setProgress(stepProgress);
       
       // Simulate processing time (1-3 seconds per node)
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // Simulate result (90% success rate)
-      const isValid = Math.random() > 0.1;
-      const nodeResult = {
-        nodeId: currentNode,
-        nodeName: currentNodeName,
-        isValid,
-        errors: isValid ? [] : ['Navigation path unreachable']
-      };
-      
-      // Add to completed nodes list
-      completedNodes = [...completedNodes, nodeResult];
-      
-      // Update progress with completed node
-      stepProgress.completedNodes = [...completedNodes];
-      setProgress({ ...stepProgress });
     }
     
-    // Mark as completed - use the final step progress
+    // Mark as completed
     const finalProgress: ValidationProgress = {
       currentStep: reachableNodes.length,
       totalSteps: reachableNodes.length,
       currentNode: '',
-      currentNodeName: 'Validation complete',
+      currentNodeName: 'Finishing validation...',
       status: 'completed',
-      completedNodes: [...completedNodes]
+      completedNodes: [] // Real results will come from backend
     };
     setProgress(finalProgress);
     

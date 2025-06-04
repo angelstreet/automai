@@ -20,7 +20,6 @@ import {
   IconButton,
 } from '@mui/material';
 import { 
-  Download as DownloadIcon, 
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon 
@@ -32,7 +31,7 @@ interface ValidationResultsClientProps {
 }
 
 export default function ValidationResultsClient({ treeId }: ValidationResultsClientProps) {
-  const { showResults, results, closeResults, exportReport } = useValidation(treeId);
+  const { showResults, results, closeResults } = useValidation(treeId);
 
   if (!showResults || !results) return null;
 
@@ -134,6 +133,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                     '&:nth-of-type(odd)': {
                       bgcolor: 'action.hover',
                     },
+                    '&:hover': {
+                      bgcolor: 'inherit',
+                    },
                   }}
                 >
                   <TableCell>
@@ -192,20 +194,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
       </DialogContent>
 
       <DialogActions sx={{ bgcolor: 'background.paper', p: 2, gap: 1 }}>
-        <Button 
-          startIcon={<DownloadIcon />}
-          onClick={() => exportReport('json')}
-          variant="outlined"
-        >
-          Export JSON
-        </Button>
-        <Button 
-          startIcon={<DownloadIcon />}
-          onClick={() => exportReport('csv')}
-          variant="outlined"
-        >
-          Export CSV
-        </Button>
         <Box sx={{ flexGrow: 1 }} />
         <Button onClick={closeResults} variant="contained">
           Close

@@ -100,7 +100,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               </Grid>
             </Grid>
             
-            {/* Details Section */}
+            {/* Dwe need toetails Section */}
             <Box mt={2}>
               <Button
                 onClick={() => setShowDetails(!showDetails)}
