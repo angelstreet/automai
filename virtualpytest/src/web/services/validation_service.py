@@ -22,7 +22,8 @@ from navigation_pathfinding import (
     get_reachable_nodes,
     find_shortest_path,
     get_navigation_transitions,
-    find_all_paths
+    find_all_paths,
+    find_optimal_edge_validation_sequence
 )
 
 # Import navigation cache
@@ -191,22 +192,50 @@ class ValidationService:
                             entry_nodes.add(node_id)
                             print(f"[@service:validation:run_comprehensive_validation] ✓ Found implicit ENTRY node: {node_id}")
             
-            # Get all edges to test, filtering out skipped edges
-            all_edges = list(G.edges(data=True))
-            testable_edges = []
-            
-            for edge in all_edges:
-                from_node, to_node, edge_data = edge
-                edge_tuple = (from_node, to_node)
+            # USE OPTIMAL EDGE VALIDATION SEQUENCE INSTEAD OF ARBITRARY ORDER
+            try:
+                # Get the optimal sequence of edges to test
+                optimal_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
+                print(f"[@service:validation:run_comprehensive_validation] ✅ Using NetworkX optimal sequence: {len(optimal_sequence)} steps")
                 
-                # Skip if this edge is in the skipped list
-                if edge_tuple in skipped_edge_set:
-                    print(f"[@service:validation:run_comprehensive_validation] ⏭️ Skipping edge {from_node} → {to_node} (user selected)")
-                    continue
+                # Convert optimal sequence to testable edges, filtering out skipped edges
+                testable_edges = []
+                for step in optimal_sequence:
+                    # Skip navigation steps - we only want edge validation steps
+                    if step.get('validation_type') != 'edge':
+                        continue
+                        
+                    from_node = step['from_node_id']
+                    to_node = step['to_node_id']
+                    edge_tuple = (from_node, to_node)
                     
-                testable_edges.append((from_node, to_node, edge_data))
+                    # Skip if this edge is in the skipped list
+                    if edge_tuple in skipped_edge_set:
+                        print(f"[@service:validation:run_comprehensive_validation] ⏭️ Skipping edge {from_node} → {to_node} (user selected)")
+                        continue
+                        
+                    # Get edge data from graph
+                    edge_data = G.get_edge_data(from_node, to_node, {})
+                    testable_edges.append((from_node, to_node, edge_data))
+                    
+            except Exception as e:
+                print(f"[@service:validation:run_comprehensive_validation] ⚠️ Failed to get optimal sequence, falling back to graph edges: {e}")
+                # Fallback to original method if optimal sequence fails
+                all_edges = list(G.edges(data=True))
+                testable_edges = []
+                
+                for edge in all_edges:
+                    from_node, to_node, edge_data = edge
+                    edge_tuple = (from_node, to_node)
+                    
+                    # Skip if this edge is in the skipped list
+                    if edge_tuple in skipped_edge_set:
+                        print(f"[@service:validation:run_comprehensive_validation] ⏭️ Skipping edge {from_node} → {to_node} (user selected)")
+                        continue
+                        
+                    testable_edges.append((from_node, to_node, edge_data))
             
-            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} edges (skipped {len(skipped_edge_set)}) with smart dependency logic")
+            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} edges (skipped {len(skipped_edge_set)}) with NetworkX optimal ordering")
             
             # Track which nodes are reachable (start with entry nodes as they are always reachable)
             reachable_nodes = set(entry_nodes)

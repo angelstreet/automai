@@ -487,8 +487,12 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
         print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Failed to get graph for tree {tree_id}")
         return []
     
-    # Get all edges that need to be validated
-    edges_to_validate = list(G.edges(data=True))
+    # Get all edges that need to be validated - SORT FOR DETERMINISTIC BEHAVIOR
+    edges_raw = list(G.edges(data=True))
+    
+    # Sort edges deterministically by (from_node, to_node) to ensure consistent order
+    edges_to_validate = sorted(edges_raw, key=lambda edge: (edge[0], edge[1]))
+    print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Sorted {len(edges_to_validate)} edges deterministically")
     
     if not edges_to_validate:
         print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] No edges found to validate")
@@ -676,8 +680,11 @@ def _find_best_next_edge_networkx(G: nx.DiGraph, current_position: str, remainin
                 print(f"[@navigation:pathfinding:_find_best_next_edge_networkx] Prioritizing edge with bidirectional counterpart: {edge}")
                 return edge
         
-        # Otherwise return first direct edge
-        return direct_edges[0]
+        # For deterministic behavior, sort edges by target node name consistently
+        # This ensures the same edge is always chosen when multiple options exist
+        direct_edges_sorted = sorted(direct_edges, key=lambda edge: edge[1])
+        print(f"[@navigation:pathfinding:_find_best_next_edge_networkx] Multiple direct edges available, choosing deterministically: {direct_edges_sorted[0]} from {direct_edges_sorted}")
+        return direct_edges_sorted[0]
     
     return None
 
