@@ -106,7 +106,7 @@ class ValidationService:
     
     def run_comprehensive_validation(self, tree_id: str, team_id: str) -> Dict[str, Any]:
         """
-        Run comprehensive validation by testing all navigation paths with real device actions
+        Run comprehensive validation by testing all navigation paths with smart dependency logic
         """
         print(f"[@service:validation:run_comprehensive_validation] Starting comprehensive validation for tree {tree_id}")
         start_time = time.time()
@@ -120,42 +120,96 @@ class ValidationService:
             # Get all edges to test (excluding entry node)
             all_edges = list(G.edges(data=True))
             testable_edges = []
+            entry_nodes = set()  # Track entry nodes that are artificially reachable
             
             for edge in all_edges:
                 from_node, to_node, edge_data = edge
                 from_info = get_node_info(G, from_node)
                 
-                # Skip edges from entry node (artificial)
+                # Track entry nodes but don't skip their edges - they make other nodes reachable
                 if from_info and from_info.get('type') == 'entry':
-                    continue
+                    entry_nodes.add(from_node)
+                    # Include entry edges as they establish initial reachability
                     
                 testable_edges.append((from_node, to_node, edge_data))
             
-            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} navigation paths")
+            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} navigation edges with smart dependency logic")
             
-            # Test each edge/path individually
+            # Track which nodes are reachable (start with entry nodes)
+            reachable_nodes = set(entry_nodes)
+            
+            # Test each edge/path individually with smart dependency checking
             path_results = []
             successful_paths = 0
+            skipped_paths = 0
             
             for i, (from_node, to_node, edge_data) in enumerate(testable_edges):
-                print(f"[@service:validation:run_comprehensive_validation] Testing path {i+1}/{len(testable_edges)}: {from_node} -> {to_node}")
+                # Get node names for progress display
+                from_info = get_node_info(G, from_node)
+                to_info = get_node_info(G, to_node)
+                from_name = from_info.get('label', from_node) if from_info else from_node
+                to_name = to_info.get('label', to_node) if to_info else to_node
                 
+                # Check if the source node is reachable
+                if from_node not in reachable_nodes:
+                    print(f"[@service:validation:run_comprehensive_validation] Skipping edge {i+1}/{len(testable_edges)}: {from_name} -> {to_name} (source node not reachable)")
+                    
+                    # Mark as skipped
+                    path_result = {
+                        'from_node': from_node,
+                        'to_node': to_node,
+                        'from_name': from_name,
+                        'to_name': to_name,
+                        'success': False,
+                        'skipped': True,
+                        'steps_executed': 0,
+                        'total_steps': 0,
+                        'execution_time': 0,
+                        'error': f"Skipped: Source node '{from_name}' is not reachable due to failed dependencies"
+                    }
+                    path_results.append(path_result)
+                    skipped_paths += 1
+                    continue
+                
+                print(f"[@service:validation:run_comprehensive_validation] Testing edge {i+1}/{len(testable_edges)}: {from_name} -> {to_name}")
+                
+                # Send progress update
+                progress_info = {
+                    'currentStep': i + 1,
+                    'totalSteps': len(testable_edges),
+                    'currentEdgeFrom': from_node,
+                    'currentEdgeTo': to_node,
+                    'currentEdgeFromName': from_name,
+                    'currentEdgeToName': to_name,
+                    'status': 'running'
+                }
+                print(f"[@service:validation:run_comprehensive_validation] Progress: {progress_info}")
+                
+                # Execute the navigation test
                 path_result = self._test_navigation_path(tree_id, from_node, to_node, G)
+                path_result['skipped'] = False  # Mark as not skipped since we executed it
                 path_results.append(path_result)
                 
+                # If successful, mark the target node as reachable for future edge tests
                 if path_result['success']:
                     successful_paths += 1
+                    reachable_nodes.add(to_node)
+                    print(f"[@service:validation:run_comprehensive_validation] Success: Node '{to_name}' is now reachable")
+                else:
+                    print(f"[@service:validation:run_comprehensive_validation] Failed: Node '{to_name}' remains unreachable")
                 
                 # Small delay between tests to avoid overwhelming the device
                 time.sleep(1)
             
-            # Calculate overall health based on path success rate
+            # Calculate overall health based on success rate (excluding skipped)
+            executed_paths = len(testable_edges) - skipped_paths
             total_paths = len(testable_edges)
-            if total_paths == 0:
+            
+            if executed_paths == 0:
                 health = 'poor'
                 success_rate = 0
             else:
-                success_rate = successful_paths / total_paths
+                success_rate = successful_paths / executed_paths
                 if success_rate == 1.0:
                     health = 'excellent'
                 elif success_rate >= 0.8:
@@ -170,20 +224,25 @@ class ValidationService:
             # Convert path results to node results format for compatibility
             node_results = self._convert_path_results_to_node_results(path_results, G)
             
+            # Convert path results to edge results format
+            edge_results = self._convert_path_results_to_edge_results(path_results)
+            
             results = {
                 'treeId': tree_id,
                 'summary': {
                     'totalNodes': len(set([r['from_node'] for r in path_results] + [r['to_node'] for r in path_results])),
+                    'totalEdges': len(testable_edges),
                     'validNodes': successful_paths,
-                    'errorNodes': total_paths - successful_paths,
+                    'errorNodes': executed_paths - successful_paths,
+                    'skippedEdges': skipped_paths,  # Add skipped count
                     'overallHealth': health,
                     'executionTime': round(execution_time, 2)
                 },
                 'nodeResults': node_results,
-                'pathResults': path_results  # Include detailed path results
+                'edgeResults': edge_results
             }
             
-            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {successful_paths}/{total_paths} paths successful, health: {health}")
+            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {successful_paths}/{executed_paths} edges successful, {skipped_paths} skipped, health: {health}")
             return results
             
         except Exception as e:
@@ -222,6 +281,7 @@ class ValidationService:
                         'from_name': from_name,
                         'to_name': to_name,
                         'success': True,
+                        'skipped': False,
                         'steps_executed': result.get('steps_executed', 0),
                         'total_steps': result.get('total_steps', 0),
                         'execution_time': result.get('execution_time', 0),
@@ -234,6 +294,7 @@ class ValidationService:
                         'from_name': from_name,
                         'to_name': to_name,
                         'success': False,
+                        'skipped': False,
                         'steps_executed': result.get('steps_executed', 0),
                         'total_steps': result.get('total_steps', 0),
                         'execution_time': result.get('execution_time', 0),
@@ -246,6 +307,7 @@ class ValidationService:
                     'from_name': from_name,
                     'to_name': to_name,
                     'success': False,
+                    'skipped': False,
                     'steps_executed': 0,
                     'total_steps': 0,
                     'execution_time': 0,
@@ -259,6 +321,7 @@ class ValidationService:
                 'from_name': from_name,
                 'to_name': to_name,
                 'success': False,
+                'skipped': False,
                 'steps_executed': 0,
                 'total_steps': 0,
                 'execution_time': 0,
@@ -310,6 +373,24 @@ class ValidationService:
             })
         
         return node_results
+
+    def _convert_path_results_to_edge_results(self, path_results: List[Dict]) -> List[Dict[str, Any]]:
+        """
+        Convert path results to edge results format for frontend
+        """
+        edge_results = []
+        for path in path_results:
+            edge_results.append({
+                'from': path['from_node'],
+                'to': path['to_node'],
+                'fromName': path['from_name'],
+                'toName': path['to_name'],
+                'success': path['success'],
+                'skipped': path.get('skipped', False),
+                'retryAttempts': 0,  # TODO: implement retry attempts tracking
+                'errors': [path['error']] if path['error'] else []
+            })
+        return edge_results
 
 # Create singleton instance
 validation_service = ValidationService() 

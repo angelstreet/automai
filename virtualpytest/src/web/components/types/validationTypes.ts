@@ -16,8 +16,10 @@ export interface ValidationResults {
   treeId: string;
   summary: {
     totalNodes: number;
+    totalEdges: number;
     validNodes: number;
     errorNodes: number;
+    skippedEdges: number;
     overallHealth: 'excellent' | 'good' | 'fair' | 'poor';
     executionTime: number;
   };
@@ -26,6 +28,16 @@ export interface ValidationResults {
     nodeName: string;
     isValid: boolean;
     pathLength: number;
+    errors: string[];
+  }>;
+  edgeResults: Array<{
+    from: string;
+    to: string;
+    fromName: string;
+    toName: string;
+    success: boolean;
+    skipped: boolean;
+    retryAttempts: number;
     errors: string[];
   }>;
 }
@@ -65,6 +77,9 @@ export interface ValidationProgress {
   totalSteps: number;
   currentNode: string;
   currentNodeName: string;
+  currentEdgeFrom: string;
+  currentEdgeTo: string;
+  retryAttempt: number;
   status: 'running' | 'completed' | 'error';
   completedNodes: Array<{
     nodeId: string;

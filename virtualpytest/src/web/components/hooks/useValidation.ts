@@ -37,15 +37,18 @@ export function useValidation(treeId: string) {
     }
   }, [treeId, setPreviewData, setShowPreview]);
 
-  const simulateProgress = useCallback(async (reachableNodes: string[]) => {
-    console.log(`[@hook:useValidation] Starting progress simulation for ${reachableNodes.length} nodes`);
+  const simulateProgress = useCallback(async (reachableEdges: Array<{from: string, to: string, fromName: string, toName: string}>) => {
+    console.log(`[@hook:useValidation] Starting progress simulation for ${reachableEdges.length} edges`);
     
     // Initialize progress
     const initialProgress: ValidationProgress = {
       currentStep: 0,
-      totalSteps: reachableNodes.length,
+      totalSteps: reachableEdges.length,
       currentNode: '',
       currentNodeName: 'Initializing...',
+      currentEdgeFrom: '',
+      currentEdgeTo: '',
+      retryAttempt: 0,
       status: 'running',
       completedNodes: []
     };
@@ -53,33 +56,38 @@ export function useValidation(treeId: string) {
     setProgress(initialProgress);
     setShowProgress(true);
 
-    // Simulate testing each node with realistic timing but without fake results
-    for (let i = 0; i < reachableNodes.length; i++) {
-      const currentNode = reachableNodes[i];
-      const currentNodeName = currentNode; // In real implementation, this would be the actual node name
+    // Simulate testing each edge with realistic timing but without fake results
+    for (let i = 0; i < reachableEdges.length; i++) {
+      const currentEdge = reachableEdges[i];
       
       // Update current step
       const stepProgress: ValidationProgress = {
         currentStep: i + 1,
-        totalSteps: reachableNodes.length,
-        currentNode,
-        currentNodeName: `Testing ${currentNodeName}...`,
+        totalSteps: reachableEdges.length,
+        currentNode: currentEdge.to,
+        currentNodeName: `Testing ${currentEdge.fromName} → ${currentEdge.toName}...`,
+        currentEdgeFrom: currentEdge.fromName,
+        currentEdgeTo: currentEdge.toName,
+        retryAttempt: 0,
         status: 'running',
         completedNodes: [] // Don't show fake results, wait for real validation
       };
       
       setProgress(stepProgress);
       
-      // Simulate processing time (1-3 seconds per node)
+      // Simulate processing time (1-3 seconds per edge)
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
     }
     
     // Mark as completed
     const finalProgress: ValidationProgress = {
-      currentStep: reachableNodes.length,
-      totalSteps: reachableNodes.length,
+      currentStep: reachableEdges.length,
+      totalSteps: reachableEdges.length,
       currentNode: '',
       currentNodeName: 'Finishing validation...',
+      currentEdgeFrom: '',
+      currentEdgeTo: '',
+      retryAttempt: 0,
       status: 'completed',
       completedNodes: [] // Real results will come from backend
     };
@@ -95,9 +103,9 @@ export function useValidation(treeId: string) {
     setShowPreview(false);
     
     try {
-      // Start progress simulation if we have preview data
-      if (previewData?.reachableNodes) {
-        await simulateProgress(previewData.reachableNodes);
+      // Start progress simulation if we have preview data with edges
+      if (previewData?.reachableEdges) {
+        await simulateProgress(previewData.reachableEdges);
       }
       
       // Run actual validation
