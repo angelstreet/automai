@@ -220,13 +220,53 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     }
   };
 
+  // Format result for compact display
+  const formatRunResult = (result: string): string => {
+    if (!result) return '';
+    
+    const lines = result.split('\n');
+    const formattedLines: string[] = [];
+    
+    for (const line of lines) {
+      // Skip verbose messages we don't want
+      if (line.includes('⏹️ Execution stopped due to failed action') ||
+          line.includes('📋 Processing') ||
+          line.includes('retry action(s)')) {
+        continue;
+      }
+      
+      // Format action lines to be more compact
+      if (line.includes('Action') && (line.includes('✅') || line.includes('❌'))) {
+        formattedLines.push(line);
+      }
+      // Format retry action lines to be more compact  
+      else if (line.includes('Retry Action') && (line.includes('✅') || line.includes('❌'))) {
+        formattedLines.push(line);
+      }
+      // Keep confidence lines
+      else if (line.includes('📊 Confidence:')) {
+        formattedLines.push(line);
+      }
+      // Keep overall result
+      else if (line.includes('OVERALL RESULT:')) {
+        formattedLines.push(line);
+      }
+      // Keep starting retry actions message but make it shorter
+      else if (line.includes('🔄 Main actions failed. Starting retry actions...')) {
+        formattedLines.push('🔄 Starting retry actions...');
+      }
+    }
+    
+    return formattedLines.join('\n');
+  };
+
   return (
     <Paper
       sx={{
         position: 'absolute',
         top: 16,
         right: 16,
-        width: 280,
+        width: 360,
         p: 1.5,
         zIndex: 1000,
       }}
@@ -347,7 +387,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
             <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
           )}
 
-          {/* Run result display */}
+          {/* Run result display - with scrolling */}
           {runResult && (
             <Box sx={{ 
               mt: 0.5,
@@ -356,10 +396,18 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
                        runResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
                        runResult.includes('❌') && !runResult.includes('✅') ? 'error.light' : 
                        runResult.includes('⚠️') ? 'warning.light' : 'success.light',
-              borderRadius: 0.5
+              borderRadius: 0.5,
+              maxHeight: '150px', // Limit height to enable scrolling
+              overflow: 'auto', // Enable scrolling
+              border: '1px solid rgba(0, 0, 0, 0.12)', // Add subtle border
             }}>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {runResult}
+              <Typography variant="caption" sx={{ 
+                fontFamily: 'monospace', 
+                whiteSpace: 'pre-line',
+                fontSize: '0.7rem', // Slightly smaller font for compactness
+                lineHeight: 1.2, // Tighter line spacing
+              }}>
+                {formatRunResult(runResult)}
               </Typography>
             </Box>
           )}

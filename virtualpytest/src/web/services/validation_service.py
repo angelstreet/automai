@@ -121,38 +121,38 @@ class ValidationService:
             entry_nodes = set()
             all_nodes = list(G.nodes(data=True))
             
-            print(f"[@service:validation:run_comprehensive_validation] Analyzing {len(all_nodes)} nodes for entry detection:")
+            print(f"[@service:validation:run_comprehensive_validation] Analyzing {len(all_nodes)} nodes for entry detection")
             for node_id, node_data in all_nodes:
-                print(f"[@service:validation:run_comprehensive_validation] Node {node_id}: data = {node_data}")
-                
                 # Check for entry node characteristics - improved detection
                 node_type = node_data.get('node_type') or node_data.get('type') or node_data.get('label', '').lower()
                 label = node_data.get('label', '')
                 
+                # STRICT ENTRY NODE DETECTION - only nodes explicitly marked as entry
                 is_entry = (
                     node_type == 'entry' or 
                     node_data.get('is_entry_point', False) or
-                    'ENTRY' in str(node_id).upper() or
-                    label.upper() == 'ENTRY' or
-                    'entry' in str(node_type).lower()
+                    label.upper() == 'ENTRY'
                 )
-                
-                print(f"[@service:validation:run_comprehensive_validation] Node {node_id}: type='{node_type}', label='{label}', is_entry={is_entry}")
                 
                 if is_entry:
                     entry_nodes.add(node_id)
-                    print(f"[@service:validation:run_comprehensive_validation] ✓ FOUND ENTRY node: {node_id} with label '{label}'")
+                    print(f"[@service:validation:run_comprehensive_validation] ✓ FOUND ENTRY node: {node_id} ({label})")
             
             # If no entry nodes found, find nodes with no incoming edges (could be implicit entry points)
+            # BUT BE CAREFUL: Don't auto-detect regular nodes as entry points
             if not entry_nodes:
                 print(f"[@service:validation:run_comprehensive_validation] No explicit ENTRY nodes found, checking for nodes with no incoming edges...")
                 for node_id in G.nodes():
                     incoming_edges = list(G.predecessors(node_id))
                     if not incoming_edges:
-                        entry_nodes.add(node_id)
                         node_info = get_node_info(G, node_id)
                         node_label = node_info.get('label', node_id) if node_info else node_id
-                        print(f"[@service:validation:run_comprehensive_validation] ✓ FOUND implicit ENTRY node (no incoming edges): {node_id} with label '{node_label}'")
+                        node_type = node_info.get('type', '') if node_info else ''
+                        
+                        # Only consider as entry if it's not a regular menu node
+                        if node_type != 'menu':
+                            entry_nodes.add(node_id)
+                            print(f"[@service:validation:run_comprehensive_validation] ✓ FOUND implicit ENTRY node: {node_id} ({node_label})")
             
             # Get all edges to test
             all_edges = list(G.edges(data=True))
@@ -162,12 +162,12 @@ class ValidationService:
                 from_node, to_node, edge_data = edge
                 testable_edges.append((from_node, to_node, edge_data))
             
-            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} navigation edges with smart dependency logic")
-            print(f"[@service:validation:run_comprehensive_validation] Found {len(entry_nodes)} entry nodes: {entry_nodes}")
+            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} edges with smart dependency logic")
+            print(f"[@service:validation:run_comprehensive_validation] Entry nodes: {len(entry_nodes)}")
             
             # Track which nodes are reachable (start with entry nodes as they are always reachable)
             reachable_nodes = set(entry_nodes)
-            print(f"[@service:validation:run_comprehensive_validation] Initial reachable nodes: {reachable_nodes}")
+            print(f"[@service:validation:run_comprehensive_validation] Initial reachable nodes: {len(reachable_nodes)}")
             
             # Test each edge/path individually with smart dependency checking
             path_results = []
@@ -181,16 +181,11 @@ class ValidationService:
                 from_name = from_info.get('label', from_node) if from_info else from_node
                 to_name = to_info.get('label', to_node) if to_info else to_node
                 
-                print(f"[@service:validation:run_comprehensive_validation] ===== EDGE {i+1}/{len(testable_edges)} =====")
-                print(f"[@service:validation:run_comprehensive_validation] Edge: {from_name} ({from_node}) -> {to_name} ({to_node})")
-                print(f"[@service:validation:run_comprehensive_validation] Current reachable_nodes: {reachable_nodes}")
-                print(f"[@service:validation:run_comprehensive_validation] Is source '{from_name}' ({from_node}) reachable? {from_node in reachable_nodes}")
-                
-                # Check if the source node is reachable
+                # Check if the source node is reachable - THIS IS THE CRITICAL CHECK
                 if from_node not in reachable_nodes:
-                    print(f"[@service:validation:run_comprehensive_validation] ❌ SKIPPING edge {i+1}/{len(testable_edges)}: {from_name} -> {to_name} (source node not reachable)")
+                    print(f"[@service:validation:run_comprehensive_validation] ❌ SKIPPING edge {i+1}/{len(testable_edges)}: {from_name} -> {to_name} (source not reachable)")
                     
-                    # Mark as skipped
+                    # Mark as skipped - DO NOT EXECUTE THE NAVIGATION
                     path_result = {
                         'from_node': from_node,
                         'to_node': to_node,
@@ -209,23 +204,11 @@ class ValidationService:
                     }
                     path_results.append(path_result)
                     skipped_paths += 1
-                    continue
+                    continue  # CRITICAL: Skip to next edge without any execution
                 
                 print(f"[@service:validation:run_comprehensive_validation] ✅ TESTING edge {i+1}/{len(testable_edges)}: {from_name} -> {to_name}")
                 
-                # Send progress update
-                progress_info = {
-                    'currentStep': i + 1,
-                    'totalSteps': len(testable_edges),
-                    'currentEdgeFrom': from_node,
-                    'currentEdgeTo': to_node,
-                    'currentEdgeFromName': from_name,
-                    'currentEdgeToName': to_name,
-                    'status': 'running'
-                }
-                print(f"[@service:validation:run_comprehensive_validation] Progress: {progress_info}")
-                
-                # Execute the navigation test
+                # Execute the navigation test ONLY if source node is reachable
                 path_result = self._test_navigation_path(tree_id, from_node, to_node, G)
                 path_result['skipped'] = False  # Mark as not skipped since we executed it
                 path_results.append(path_result)
@@ -234,11 +217,9 @@ class ValidationService:
                 if path_result['success']:
                     successful_paths += 1
                     reachable_nodes.add(to_node)
-                    print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS: Edge {from_name} -> {to_name} succeeded. Node '{to_name}' ({to_node}) is now reachable")
-                    print(f"[@service:validation:run_comprehensive_validation] Updated reachable_nodes: {reachable_nodes}")
+                    print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS: {from_name} -> {to_name}. Node '{to_name}' is now reachable")
                 else:
-                    print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED: Edge {from_name} -> {to_name} failed. Node '{to_name}' ({to_node}) remains unreachable")
-                    print(f"[@service:validation:run_comprehensive_validation] Reachable_nodes unchanged: {reachable_nodes}")
+                    print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED: {from_name} -> {to_name}. Node '{to_name}' remains unreachable")
                 
                 # Small delay between tests to avoid overwhelming the device
                 time.sleep(1)
@@ -284,7 +265,7 @@ class ValidationService:
                 'edgeResults': edge_results
             }
             
-            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {successful_paths}/{executed_paths} edges successful, {skipped_paths} skipped, health: {health}")
+            print(f"[@service:validation:run_comprehensive_validation] Completed: {successful_paths}/{executed_paths} successful, {skipped_paths} skipped, health: {health}")
             return results
             
         except Exception as e:
@@ -301,8 +282,6 @@ class ValidationService:
             to_info = get_node_info(graph, to_node)
             from_name = from_info.get('label', from_node) if from_info else from_node
             to_name = to_info.get('label', to_node) if to_info else to_node
-            
-            print(f"[@service:validation:_test_navigation_path] Testing: {from_name} -> {to_name}")
             
             # Execute navigation using the real navigation API
             response = requests.post(

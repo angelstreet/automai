@@ -136,7 +136,7 @@ class SmartValidationEngine:
                 return True
         
         return False
-    
+
     def validate_node_with_retry(self, node_id: str) -> Dict[str, Any]:
         """Validate a single node with retry logic"""
         if self.should_skip_node(node_id):
@@ -445,9 +445,9 @@ def execute_smart_validation(tree_data: Dict[str, Any], team_id: str) -> Dict[st
     
     return {
         'summary': {
-            'totalNodes': total_nodes,
-            'validNodes': valid_nodes,
-            'errorNodes': error_nodes,
+        'totalNodes': total_nodes,
+        'validNodes': valid_nodes,
+        'errorNodes': error_nodes,
             'skippedNodes': skipped_count,
             'overallHealth': health,
             'executionTime': 0,  # Will be calculated by caller
