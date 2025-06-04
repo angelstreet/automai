@@ -227,7 +227,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                 startIcon={showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 variant="outlined"
                 size="small"
-                sx={{ mb: 1 }}
+                sx={{ mb: 0 }}
               >
                 {showDetails ? 'Hide Details' : 'Show Details'}
               </Button>
