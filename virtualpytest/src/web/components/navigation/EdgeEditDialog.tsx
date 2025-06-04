@@ -133,6 +133,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const apiControllerType = controllerTypes[0].replace(/_/g, '-');
       let results: string[] = [];
       const updatedActions = [...edgeForm.actions];
+      let executionStopped = false;
       
       for (let i = 0; i < edgeForm.actions.length; i++) {
         const action = edgeForm.actions[i];
@@ -144,7 +145,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             ...action,
             last_run_result: updateLastRunResults(action.last_run_result || [], false)
           };
-          continue;
+          results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
+          executionStopped = true;
+          break;
         }
         
         console.log(`[@component:EdgeEditDialog] Executing action ${i + 1}/${edgeForm.actions.length}: ${action.label}`);
@@ -211,6 +214,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         
         console.log(`[@component:EdgeEditDialog] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
         
+        // Stop execution if action failed
+        if (!actionSuccess) {
+          results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
+          executionStopped = true;
+          break;
+        }
+        
         // Wait after action
         if (action.waitTime > 0) {
           console.log(`[@component:EdgeEditDialog] Waiting ${action.waitTime}ms after action ${i + 1}`);
@@ -224,15 +234,20 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         actions: updatedActions
       }));
       
-      // Final wait
-      if (edgeForm.finalWaitTime > 0) {
+      // Final wait only if execution wasn't stopped
+      if (!executionStopped && edgeForm.finalWaitTime > 0) {
         console.log(`[@component:EdgeEditDialog] Final wait: ${edgeForm.finalWaitTime}ms`);
         await delay(edgeForm.finalWaitTime);
         results.push(`⏱️ Final wait: ${edgeForm.finalWaitTime}ms completed`);
       }
       
       setRunResult(results.join('\n'));
-      console.log(`[@component:EdgeEditDialog] All actions completed`);
+      
+      if (executionStopped) {
+        console.log(`[@component:EdgeEditDialog] Execution stopped due to failure`);
+      } else {
+        console.log(`[@component:EdgeEditDialog] All actions completed successfully`);
+      }
       
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);
