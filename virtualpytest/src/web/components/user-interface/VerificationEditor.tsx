@@ -704,9 +704,17 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             searchedText: res.searched_text
           });
 
+          // Improve message for very low confidence scores (originally negative)
+          let displayMessage = res.message;
+          if (res.threshold !== undefined && res.threshold < 0 && threshold !== undefined) {
+            // Original confidence was negative, provide clearer message
+            const requiredThreshold = verificationsToExecute[index]?.params?.threshold || 0.8;
+            displayMessage = `Image not found. Images appear completely different (confidence: ${(threshold * 100).toFixed(1)}%, required: ${(requiredThreshold * 100).toFixed(0)}%)`;
+          }
+
           newTestResults.push({
             success: res.success,
-            message: res.message,
+            message: displayMessage,
             error: res.error,
             threshold,
             resultType: resultType,

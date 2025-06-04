@@ -20,6 +20,8 @@ interface RemoteCoreProps {
   onCommand: (command: string) => void;
   /** Function to handle disconnect */
   onDisconnect: () => void;
+  /** Function to release control */
+  handleReleaseControl?: () => Promise<void>;
   /** Layout style for positioning */
   style?: 'panel' | 'compact';
   /** Custom styling */
@@ -33,10 +35,28 @@ export function RemoteCore({
   connectionLoading,
   onCommand,
   onDisconnect,
+  handleReleaseControl,
   style = 'compact',
   sx = {}
 }: RemoteCoreProps) {
   const [showOverlays, setShowOverlays] = useState(false);
+
+  // Handle disconnect with proper control release
+  const handleDisconnect = async () => {
+    try {
+      // Release control if the function is provided
+      if (handleReleaseControl) {
+        console.log(`[@component:RemoteCore] Releasing control before disconnect for ${remoteType}`);
+        await handleReleaseControl();
+      }
+      // Call parent disconnect callback
+      onDisconnect();
+    } catch (error) {
+      console.error(`[@component:RemoteCore] Error during disconnect for ${remoteType}:`, error);
+      // Still call parent disconnect even if release control fails
+      onDisconnect();
+    }
+  };
 
   // Don't render if not connected
   if (!isConnected) {
@@ -135,7 +155,7 @@ export function RemoteCore({
         <Button 
           variant="contained" 
           color="error"
-          onClick={onDisconnect}
+          onClick={handleDisconnect}
           disabled={connectionLoading}
           size="small"
           fullWidth
@@ -207,7 +227,7 @@ export function RemoteCore({
         <Button 
           variant="contained" 
           color="error"
-          onClick={onDisconnect}
+          onClick={handleDisconnect}
           disabled={connectionLoading}
           size="small"
           fullWidth

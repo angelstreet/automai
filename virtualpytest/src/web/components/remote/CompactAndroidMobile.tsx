@@ -380,6 +380,7 @@ export function CompactAndroidMobile({
             handleRemoteCommand={handleRemoteCommand}
             handleOverlayElementClick={handleOverlayElementClick}
             onDisconnect={handleDisconnect}
+            handleReleaseControl={handleReleaseControl}
           />
         </Box>
       )}

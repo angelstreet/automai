@@ -30,6 +30,7 @@ interface AndroidMobileCoreProps {
   handleRemoteCommand: (command: string, params?: any) => void;
   handleOverlayElementClick: (element: AndroidElement) => void;
   onDisconnect: () => void;
+  handleReleaseControl?: () => Promise<void>;
 }
 
 export function AndroidMobileCore({
@@ -49,13 +50,26 @@ export function AndroidMobileCore({
   clearElements,
   handleRemoteCommand,
   handleOverlayElementClick,
-  onDisconnect
+  onDisconnect,
+  handleReleaseControl
 }: AndroidMobileCoreProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     setIsDisconnecting(true);
-    onDisconnect();
+    try {
+      // Release control if the function is provided
+      if (handleReleaseControl) {
+        console.log('[@component:AndroidMobileCore] Releasing control before disconnect');
+        await handleReleaseControl();
+      }
+      // Call parent disconnect callback
+      onDisconnect();
+    } catch (error) {
+      console.error('[@component:AndroidMobileCore] Error during disconnect:', error);
+      // Still call parent disconnect even if release control fails
+      onDisconnect();
+    }
   };
   
   // Reset disconnecting state when connection changes
