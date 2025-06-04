@@ -109,7 +109,7 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={action.id || ''}
+            value={availableActions.find(a => a.id === action.id) ? action.id : ''}
             onChange={(e) => handleActionChange(e.target.value)}
             displayEmpty
           >
