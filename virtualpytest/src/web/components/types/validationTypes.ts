@@ -79,6 +79,7 @@ export interface ValidationProgress {
   currentNodeName: string;
   currentEdgeFrom: string;
   currentEdgeTo: string;
+  currentEdgeStatus: 'testing' | 'success' | 'failed' | 'skipped' | 'completed';
   retryAttempt: number;
   status: 'running' | 'completed' | 'error';
   completedNodes: Array<{

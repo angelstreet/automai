@@ -5,7 +5,8 @@ import {
   LinearProgress, 
   Typography, 
   Paper, 
-  Fade
+  Fade,
+  Chip
 } from '@mui/material';
 import { useValidation } from '../hooks/useValidation';
 
@@ -21,6 +22,27 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
   const progressPercentage = progress 
     ? Math.round((progress.currentStep / progress.totalSteps) * 100)
     : 0;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': return 'success';
+      case 'failed': return 'error';
+      case 'skipped': return 'default';
+      case 'testing': return 'primary';
+      default: return 'default';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'success': return 'SUCCESS';
+      case 'failed': return 'FAILED';
+      case 'skipped': return 'SKIPPED';
+      case 'testing': return 'TESTING';
+      case 'completed': return 'COMPLETED';
+      default: return status.toUpperCase();
+    }
+  };
 
   return (
     <Fade in={isValidating && showProgress}>
@@ -64,9 +86,20 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
                 : progress.currentNodeName || 'Preparing...'}
             </Typography>
             
-            <Typography variant="caption" color="textSecondary" display="block" mb={1}>
-              Edge {progress.currentStep} of {progress.totalSteps}
-            </Typography>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+              <Typography variant="caption" color="textSecondary">
+                Edge {progress.currentStep} of {progress.totalSteps}
+              </Typography>
+              
+              {progress.currentEdgeStatus && progress.currentEdgeStatus !== 'completed' && (
+                <Chip 
+                  label={getStatusLabel(progress.currentEdgeStatus)}
+                  color={getStatusColor(progress.currentEdgeStatus)}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+            </Box>
 
             {progress.retryAttempt && progress.retryAttempt > 0 && (
               <Typography variant="caption" color="info.main" display="block" mb={1}>

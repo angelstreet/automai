@@ -48,6 +48,7 @@ export function useValidation(treeId: string) {
       currentNodeName: 'Initializing...',
       currentEdgeFrom: '',
       currentEdgeTo: '',
+      currentEdgeStatus: 'testing',
       retryAttempt: 0,
       status: 'running',
       completedNodes: []
@@ -56,27 +57,59 @@ export function useValidation(treeId: string) {
     setProgress(initialProgress);
     setShowProgress(true);
 
-    // Simulate testing each edge with realistic timing but without fake results
+    // Simulate testing each edge with realistic timing and status updates
     for (let i = 0; i < reachableEdges.length; i++) {
       const currentEdge = reachableEdges[i];
       
-      // Update current step
-      const stepProgress: ValidationProgress = {
+      // Show "testing" status
+      const testingProgress: ValidationProgress = {
         currentStep: i + 1,
         totalSteps: reachableEdges.length,
         currentNode: currentEdge.to,
         currentNodeName: `Testing ${currentEdge.fromName} → ${currentEdge.toName}...`,
         currentEdgeFrom: currentEdge.fromName,
         currentEdgeTo: currentEdge.toName,
+        currentEdgeStatus: 'testing',
         retryAttempt: 0,
         status: 'running',
-        completedNodes: [] // Don't show fake results, wait for real validation
+        completedNodes: []
       };
       
-      setProgress(stepProgress);
+      setProgress(testingProgress);
       
       // Simulate processing time (1-3 seconds per edge)
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // Simulate random result for demo (in real implementation, this would come from backend)
+      const randomResult = Math.random();
+      let edgeStatus: 'success' | 'failed' | 'skipped';
+      
+      if (i === 0) {
+        // First edge (entry) - simulate success/failure to determine if others are skipped
+        edgeStatus = randomResult > 0.3 ? 'success' : 'failed';
+      } else {
+        // Other edges might be skipped if first failed
+        edgeStatus = randomResult > 0.7 ? 'success' : randomResult > 0.4 ? 'failed' : 'skipped';
+      }
+      
+      // Show result status briefly
+      const resultProgress: ValidationProgress = {
+        currentStep: i + 1,
+        totalSteps: reachableEdges.length,
+        currentNode: currentEdge.to,
+        currentNodeName: `${currentEdge.fromName} → ${currentEdge.toName}: ${edgeStatus.toUpperCase()}`,
+        currentEdgeFrom: currentEdge.fromName,
+        currentEdgeTo: currentEdge.toName,
+        currentEdgeStatus: edgeStatus,
+        retryAttempt: 0,
+        status: 'running',
+        completedNodes: []
+      };
+      
+      setProgress(resultProgress);
+      
+      // Brief pause to show the result
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     // Mark as completed
@@ -87,9 +120,10 @@ export function useValidation(treeId: string) {
       currentNodeName: 'Finishing validation...',
       currentEdgeFrom: '',
       currentEdgeTo: '',
+      currentEdgeStatus: 'completed',
       retryAttempt: 0,
       status: 'completed',
-      completedNodes: [] // Real results will come from backend
+      completedNodes: []
     };
     setProgress(finalProgress);
     

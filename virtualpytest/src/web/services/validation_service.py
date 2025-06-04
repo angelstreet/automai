@@ -126,17 +126,18 @@ class ValidationService:
                 from_node, to_node, edge_data = edge
                 from_info = get_node_info(G, from_node)
                 
-                # Track entry nodes but don't skip their edges - they make other nodes reachable
+                # Track entry nodes - they are always reachable as starting points
                 if from_info and from_info.get('type') == 'entry':
                     entry_nodes.add(from_node)
-                    # Include entry edges as they establish initial reachability
                     
                 testable_edges.append((from_node, to_node, edge_data))
             
             print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} navigation edges with smart dependency logic")
+            print(f"[@service:validation:run_comprehensive_validation] Found {len(entry_nodes)} entry nodes: {entry_nodes}")
             
-            # Track which nodes are reachable (start with entry nodes)
+            # Track which nodes are reachable (start with entry nodes as they are always reachable)
             reachable_nodes = set(entry_nodes)
+            print(f"[@service:validation:run_comprehensive_validation] Initial reachable nodes: {reachable_nodes}")
             
             # Test each edge/path individually with smart dependency checking
             path_results = []
