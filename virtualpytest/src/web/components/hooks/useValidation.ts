@@ -2,18 +2,23 @@ import { useCallback } from 'react';
 import { useValidationStore } from '../store/validationStore';
 import { validationService } from '../services/validationService';
 import { ValidationEvents } from '../validation/ValidationEventListener';
+import { ValidationProgress } from '../types/validationTypes';
 
 export function useValidation(treeId: string) {
   const {
     isValidating,
     showPreview,
     showResults,
+    showProgress,
     previewData,
     results,
+    progress,
     setShowPreview,
     setShowResults,
+    setShowProgress,
     setPreviewData,
     setResults,
+    setProgress,
     setValidating,
   } = useValidationStore();
 
@@ -32,6 +37,81 @@ export function useValidation(treeId: string) {
     }
   }, [treeId, setPreviewData, setShowPreview]);
 
+  const simulateProgress = useCallback(async (reachableNodes: string[]) => {
+    console.log(`[@hook:useValidation] Starting progress simulation for ${reachableNodes.length} nodes`);
+    
+    // Track completed nodes throughout the process
+    let completedNodes: Array<{
+      nodeId: string;
+      nodeName: string;
+      isValid: boolean;
+      errors: string[];
+    }> = [];
+    
+    // Initialize progress
+    const initialProgress: ValidationProgress = {
+      currentStep: 0,
+      totalSteps: reachableNodes.length,
+      currentNode: '',
+      currentNodeName: 'Initializing...',
+      status: 'running',
+      completedNodes: []
+    };
+    
+    setProgress(initialProgress);
+    setShowProgress(true);
+
+    // Simulate testing each node with realistic timing
+    for (let i = 0; i < reachableNodes.length; i++) {
+      const currentNode = reachableNodes[i];
+      const currentNodeName = currentNode; // In real implementation, this would be the actual node name
+      
+      // Update current step
+      const stepProgress: ValidationProgress = {
+        currentStep: i + 1,
+        totalSteps: reachableNodes.length,
+        currentNode,
+        currentNodeName: `Testing ${currentNodeName}...`,
+        status: 'running',
+        completedNodes: [...completedNodes]
+      };
+      
+      setProgress(stepProgress);
+      
+      // Simulate processing time (1-3 seconds per node)
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // Simulate result (90% success rate)
+      const isValid = Math.random() > 0.1;
+      const nodeResult = {
+        nodeId: currentNode,
+        nodeName: currentNodeName,
+        isValid,
+        errors: isValid ? [] : ['Navigation path unreachable']
+      };
+      
+      // Add to completed nodes list
+      completedNodes = [...completedNodes, nodeResult];
+      
+      // Update progress with completed node
+      stepProgress.completedNodes = [...completedNodes];
+      setProgress({ ...stepProgress });
+    }
+    
+    // Mark as completed - use the final step progress
+    const finalProgress: ValidationProgress = {
+      currentStep: reachableNodes.length,
+      totalSteps: reachableNodes.length,
+      currentNode: '',
+      currentNodeName: 'Validation complete',
+      status: 'completed',
+      completedNodes: [...completedNodes]
+    };
+    setProgress(finalProgress);
+    
+    console.log(`[@hook:useValidation] Progress simulation completed`);
+  }, [setProgress, setShowProgress]);
+
   const runValidation = useCallback(async () => {
     console.log(`[@hook:useValidation] Starting validation for tree: ${treeId}`);
     
@@ -39,8 +119,17 @@ export function useValidation(treeId: string) {
     setShowPreview(false);
     
     try {
+      // Start progress simulation if we have preview data
+      if (previewData?.reachableNodes) {
+        await simulateProgress(previewData.reachableNodes);
+      }
+      
+      // Run actual validation
       const results = await validationService.runValidation(treeId);
       setResults(results);
+      
+      // Hide progress and show results
+      setShowProgress(false);
       setShowResults(true);
       
       // Dispatch completion event
@@ -49,11 +138,12 @@ export function useValidation(treeId: string) {
       console.log(`[@hook:useValidation] Validation completed successfully`);
     } catch (error) {
       console.error('[@hook:useValidation] Validation failed:', error);
+      setShowProgress(false);
       // Could add toast notification here
     } finally {
       setValidating(false);
     }
-  }, [treeId, setValidating, setShowPreview, setResults, setShowResults]);
+  }, [treeId, previewData, simulateProgress, setValidating, setShowPreview, setShowProgress, setResults, setShowResults]);
 
   const exportReport = useCallback(async (format: 'json' | 'csv' = 'json') => {
     console.log(`[@hook:useValidation] Exporting report for tree: ${treeId}, format: ${format}`);
@@ -85,8 +175,10 @@ export function useValidation(treeId: string) {
     isValidating,
     showPreview,
     showResults,
+    showProgress,
     previewData,
     results,
+    progress,
     
     // Actions
     openPreview,

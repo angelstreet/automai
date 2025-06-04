@@ -51,7 +51,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
     >
       {/* Header */}
       <DialogTitle sx={{ bgcolor: 'background.paper', pb: 0 }}>
-        <Typography variant="h6">Validation Preview</Typography>
+        Validation Preview
       </DialogTitle>
       
       <Divider />

@@ -37,6 +37,7 @@ class ValidationService {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({})
       });
       
       const data: ValidationRunResponse = await response.json();
