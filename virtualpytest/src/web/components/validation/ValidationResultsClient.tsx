@@ -230,7 +230,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">
+                        <Typography variant="caption">
                           <strong>{edge.fromName || edge.from}</strong>
                           {' → '}
                           <strong>{edge.toName || edge.to}</strong>
@@ -243,46 +243,18 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                       </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
-                          {(edge.totalActions && edge.totalActions > 0) ? (
-                            <>
-                              <Typography variant="body2">
-                                {edge.actionsExecuted || 0}/{edge.totalActions}
-                              </Typography>
-                              {edge.actionResults && edge.actionResults.length > 0 && (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => toggleRow(index)}
-                                  sx={{ p: 0.25 }}
-                                >
-                                  {expandedRows.has(index) ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                                </IconButton>
-                              )}
-                            </>
-                          ) : (
-                            <Typography variant="body2" color="textSecondary">
-                              No actions
+                          {(edge.totalActions && edge.totalActions > 0) && (
+                            <Typography variant="body2">
+                              {edge.actionsExecuted || 0}/{edge.totalActions}
                             </Typography>
                           )}
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
-                          {edge.verificationResults && edge.verificationResults.length > 0 ? (
-                            <>
-                              <Typography variant="body2">
-                                {edge.verificationResults.filter(v => v.success).length}/{edge.verificationResults.length}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => toggleRow(index)}
-                                sx={{ p: 0.25 }}
-                              >
-                                {expandedRows.has(index) ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                              </IconButton>
-                            </>
-                          ) : (
-                            <Typography variant="body2" color="textSecondary">
-                              No verifications
+                          {edge.verificationResults && edge.verificationResults.length > 0 && (
+                            <Typography variant="body2">
+                              {edge.verificationResults.filter(v => v.success).length}/{edge.verificationResults.length}
                             </Typography>
                           )}
                         </Box>
