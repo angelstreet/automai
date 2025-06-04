@@ -59,18 +59,41 @@ class ValidationService:
             # Get all reachable nodes using existing pathfinding
             reachable_nodes = get_reachable_nodes(tree_id, team_id)
             
+            # Get reachable edges with node names for display
+            reachable_edges = []
+            for edge in G.edges(data=True):
+                from_node, to_node, edge_data = edge
+                
+                # Get node names for display
+                from_info = get_node_info(G, from_node)
+                to_info = get_node_info(G, to_node)
+                from_name = from_info.get('label', from_node) if from_info else from_node
+                to_name = to_info.get('label', to_node) if to_info else to_node
+                
+                reachable_edges.append({
+                    'from': from_node,
+                    'to': to_node,
+                    'fromName': from_name,
+                    'toName': to_name
+                })
+            
+            # Exclude artificial entry node from counts (subtract 1 from both totals)
+            actual_total_nodes = max(0, total_nodes - 1)
+            actual_reachable_count = max(0, len(reachable_nodes) - 1)
+            
             # Estimate test time (assuming 2 seconds per node + 1 second per edge)
-            estimated_time = (len(reachable_nodes) * 2) + (total_edges * 1)
+            estimated_time = (actual_reachable_count * 2) + (total_edges * 1)
             
             preview = {
                 'treeId': tree_id,
-                'totalNodes': total_nodes,
+                'totalNodes': actual_total_nodes,
                 'totalEdges': total_edges,
                 'reachableNodes': reachable_nodes,
+                'reachableEdges': reachable_edges,
                 'estimatedTime': estimated_time
             }
             
-            print(f"[@service:validation:get_validation_preview] Preview generated: {total_nodes} nodes, {total_edges} edges, {len(reachable_nodes)} reachable")
+            print(f"[@service:validation:get_validation_preview] Preview generated: {actual_total_nodes} nodes (excluding entry), {total_edges} edges, {actual_reachable_count} reachable (excluding entry)")
             return preview
             
         except Exception as e:
@@ -118,10 +141,14 @@ class ValidationService:
             total_nodes = len(node_results)
             error_count = total_nodes - valid_count
             
-            if total_nodes == 0:
+            # Exclude artificial entry node from summary counts
+            actual_total_nodes = max(0, total_nodes - 1) if total_nodes > 0 else 0
+            actual_error_count = max(0, error_count - 1) if error_count > 0 and total_nodes > 0 else error_count
+            
+            if actual_total_nodes == 0:
                 health = 'poor'
             else:
-                success_rate = valid_count / total_nodes
+                success_rate = valid_count / actual_total_nodes
                 if success_rate == 1.0:
                     health = 'excellent'
                 elif success_rate >= 0.8:
@@ -136,16 +163,16 @@ class ValidationService:
             results = {
                 'treeId': tree_id,
                 'summary': {
-                    'totalNodes': total_nodes,
+                    'totalNodes': actual_total_nodes,
                     'validNodes': valid_count,
-                    'errorNodes': error_count,
+                    'errorNodes': actual_error_count,
                     'overallHealth': health,
                     'executionTime': round(execution_time, 2)
                 },
                 'nodeResults': node_results
             }
             
-            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {valid_count}/{total_nodes} nodes valid, health: {health}")
+            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {valid_count}/{actual_total_nodes} nodes valid (excluding entry), health: {health}")
             return results
             
         except Exception as e:

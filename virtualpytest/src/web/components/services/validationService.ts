@@ -7,7 +7,7 @@ import {
 } from '../types/validationTypes';
 
 class ValidationService {
-  private baseUrl = '/api/validation';
+  private baseUrl = 'http://localhost:5009/api/validation';
 
   async getPreview(treeId: string): Promise<ValidationPreview> {
     console.log(`[@service:validationService] Getting preview for tree: ${treeId}`);

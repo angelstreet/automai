@@ -10,10 +10,19 @@ import {
   Box,
   Grid,
   CircularProgress,
-  Card,
-  CardContent,
+  Divider,
+  Collapse,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
-import { PlayArrow as PlayArrowIcon } from '@mui/icons-material';
+import { 
+  PlayArrow as PlayArrowIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon 
+} from '@mui/icons-material';
+import { useState } from 'react';
 import { useValidation } from '../hooks/useValidation';
 
 interface ValidationPreviewClientProps {
@@ -22,6 +31,7 @@ interface ValidationPreviewClientProps {
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const { showPreview, previewData, closePreview, runValidation } = useValidation(treeId);
+  const [showDetails, setShowDetails] = useState(false);
 
   if (!showPreview) return null;
 
@@ -33,77 +43,123 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       fullWidth
       disableEscapeKeyDown
       sx={{ zIndex: 1400 }}
+      PaperProps={{
+        sx: {
+          bgcolor: 'background.paper',
+        }
+      }}
     >
-      <DialogTitle sx={{ bgcolor: 'background.paper' }}>
+      {/* Header */}
+      <DialogTitle sx={{ bgcolor: 'background.paper', pb: 0 }}>
         <Typography variant="h6">Validation Preview</Typography>
       </DialogTitle>
       
-      <DialogContent sx={{ bgcolor: 'background.default', p: 3 }}>
+      <Divider />
+      
+      {/* Content */}
+      <DialogContent sx={{ bgcolor: 'background.paper', p: 3 }}>
         {!previewData ? (
           <Box display="flex" justifyContent="center" alignItems="center" p={4}>
             <CircularProgress sx={{ mr: 2 }} />
             <Typography>Loading preview...</Typography>
           </Box>
         ) : (
-          <Card variant="outlined" sx={{ bgcolor: 'background.paper' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Test Scope</Typography>
-              
-              <Grid container spacing={3} mb={2}>
-                <Grid item xs={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h4" color="primary" fontWeight="bold">
-                      {previewData.totalNodes}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Total Nodes
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h4" color="primary" fontWeight="bold">
-                      {previewData.totalEdges}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Total Edges
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={4}>
-                  <Box textAlign="center">
-                    <Typography variant="h4" color="primary" fontWeight="bold">
-                      {previewData.reachableNodes.length}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Reachable Nodes
-                    </Typography>
-                  </Box>
-                </Grid>
+          <>
+            <Typography variant="h6" gutterBottom>Test Scope</Typography>
+            
+            <Grid container spacing={3} mb={3}>
+              <Grid item xs={4}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="primary" fontWeight="bold">
+                    {previewData.totalNodes}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Total Nodes
+                  </Typography>
+                </Box>
               </Grid>
-              
-              <Box 
-                mt={2} 
-                p={2} 
-                sx={{ 
-                  bgcolor: 'action.hover', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}
+              <Grid item xs={4}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="primary" fontWeight="bold">
+                    {previewData.totalEdges}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Total Edges
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="primary" fontWeight="bold">
+                    {previewData.reachableNodes.length}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Reachable Nodes
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            {/* Details Section */}
+            <Box mt={2}>
+              <Button
+                onClick={() => setShowDetails(!showDetails)}
+                startIcon={showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                variant="outlined"
+                size="small"
+                sx={{ mb: 1 }}
               >
-                <Typography variant="body2" color="textPrimary">
-                  <strong>Estimated Time:</strong> ~{previewData.estimatedTime} seconds
-                </Typography>
-                <Typography variant="body2" color="textSecondary" mt={0.5}>
-                  This validation will test pathfinding to all reachable nodes and verify navigation paths.
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+                {showDetails ? 'Hide Details' : 'Show Details'}
+              </Button>
+              
+              <Collapse in={showDetails}>
+                <Box mt={2}>
+                  {/* Reachable Nodes List */}
+                  <Typography variant="subtitle2" gutterBottom>
+                    Reachable Nodes ({previewData.reachableNodes.length})
+                  </Typography>
+                  <List dense>
+                    {previewData.reachableNodes?.map((node, index) => (
+                      <ListItem key={node.id || index} sx={{ py: 0, px: 1 }}>
+                        <ListItemText
+                          primary={node.name || `Node ${index + 1}`}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  
+                  {/* Reachable Edges List */}
+                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                    Navigation Paths ({previewData.totalEdges})
+                  </Typography>
+                  <List dense>
+                    {previewData.reachableEdges?.map((edge, index) => (
+                      <ListItem key={`${edge.from}-${edge.to}-${index}`} sx={{ py: 0, px: 1 }}>
+                        <ListItemText
+                          primary={`${edge.fromName || edge.from} → ${edge.toName || edge.to}`}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    )) || (
+                      <ListItem sx={{ py: 0, px: 1 }}>
+                        <ListItemText
+                          primary="Edge details not available"
+                          primaryTypographyProps={{ variant: 'body2', style: { fontStyle: 'italic' } }}
+                        />
+                      </ListItem>
+                    )}
+                  </List>
+                </Box>
+              </Collapse>
+            </Box>
+          </>
         )}
       </DialogContent>
       
+      <Divider />
+      
+      {/* Footer */}
       <DialogActions sx={{ bgcolor: 'background.paper', p: 2 }}>
         <Button onClick={closePreview} color="inherit">
           Cancel
