@@ -52,14 +52,9 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
     
     # Add edges with actions as attributes
     for edge in edges:
-        # DEBUG: Show what fields are available in each edge
-        print(f"[@navigation:graph:create_networkx_graph] Processing edge: {edge}")
-        
         # Handle both ReactFlow format (source/target) and database format (source_id/target_id)
         source_id = edge.get('source') or edge.get('source_id')
         target_id = edge.get('target') or edge.get('target_id')
-        
-        print(f"[@navigation:graph:create_networkx_graph] Edge connection: {source_id} -> {target_id}")
         
         if not source_id or not target_id:
             print(f"[@navigation:graph:create_networkx_graph] Warning: Edge without source/target found, skipping. Available keys: {list(edge.keys())}")
@@ -68,7 +63,6 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         # Check if nodes exist
         if source_id not in G.nodes or target_id not in G.nodes:
             print(f"[@navigation:graph:create_networkx_graph] Warning: Edge references non-existent nodes {source_id} -> {target_id}, skipping")
-            print(f"[@navigation:graph:create_networkx_graph] Available nodes: {list(G.nodes)}")
             continue
         
         # Get actions from edge data - handle both multiple actions and single action formats
@@ -156,9 +150,6 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             'weight': 1  # Default weight for pathfinding
         })
         
-        action_summary = f"{len(actions_list)} actions: {[a['command'] for a in actions_list]}" if actions_list else "no actions"
-        print(f"[@navigation:graph:create_networkx_graph] Added edge {source_id} -> {target_id} with {action_summary}")
-        
         # Add reverse edge if bidirectional
         if edge_data.get('is_bidirectional', False):
             comeback_action = edge_data.get('comeback_action') or primary_action
@@ -172,7 +163,6 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                 'metadata': edge_data.get('metadata', {}),
                 'weight': 1
             })
-            print(f"[@navigation:graph:create_networkx_graph] Added reverse edge {target_id} -> {source_id} with action: {comeback_action}")
     
     print(f"[@navigation:graph:create_networkx_graph] Successfully created graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
     return G

@@ -351,7 +351,7 @@ def convert_reactflow_to_nodes_and_edges(reactflow_data, tree_id):
 def get_navigation_nodes_and_edges(tree_id, team_id):
     """Get navigation nodes and edges from tree metadata (single tree architecture)"""
     try:
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}, team: {team_id}")
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Getting nodes and edges for tree: {tree_id}")
         
         # Get the tree with its metadata containing nodes and edges
         tree_info = get_navigation_tree(tree_id, team_id)
@@ -360,22 +360,13 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
             print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree not found: {tree_id}")
             return [], []
         
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree info retrieved: {tree_info}")
-        
         # Extract tree data from metadata field
         tree_data = tree_info.get('metadata', {})
-        
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Tree metadata: {tree_data}")
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Metadata type: {type(tree_data)}")
         
         # Handle both old format (metadata) and new format (tree_data)
         if isinstance(tree_data, dict):
             nodes = tree_data.get('nodes', [])
             edges = tree_data.get('edges', [])
-            
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Raw nodes from metadata: {nodes}")
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] Raw edges from metadata: {edges}")
-            
         else:
             print(f"[@utils:navigation:get_navigation_nodes_and_edges] Invalid tree_data format: {type(tree_data)}")
             nodes = []
@@ -383,19 +374,10 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
         
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges in tree metadata")
         
-        # Additional debugging for edges
-        if edges:
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] EDGE DETAILS FROM METADATA:")
-            for i, edge in enumerate(edges):
-                print(f"  Edge {i}: {edge}")
-        else:
-            print(f"[@utils:navigation:get_navigation_nodes_and_edges] NO EDGES FOUND IN METADATA")
-        
         return nodes, edges
         
     except Exception as e:
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error: {str(e)}")
-        print(f"[@utils:navigation:get_navigation_nodes_and_edges] Error details: Type={type(e)}, Traceback follows:")
         import traceback
         traceback.print_exc()
         return [], []

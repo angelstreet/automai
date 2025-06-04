@@ -26,38 +26,20 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     Returns:
         List of navigation steps or None if no path found
     """
-    print(f"[@navigation:pathfinding:find_shortest_path] Finding path to node {target_node_id} in tree {tree_id}")
+    print(f"[@navigation:pathfinding:find_shortest_path] Finding path to node {target_node_id}")
     
     # Get cached NetworkX graph
     from navigation_cache import get_cached_graph
     from navigation_graph import get_entry_points, get_node_info, get_edge_action
     
-    G = get_cached_graph(tree_id, team_id, force_rebuild=True)  # Force rebuild for debugging
+    G = get_cached_graph(tree_id, team_id)
     if not G:
         print(f"[@navigation:pathfinding:find_shortest_path] Failed to get graph for tree {tree_id}")
         return None
     
-    # DEBUGGING: Print detailed graph information
-    print(f"[@navigation:pathfinding:find_shortest_path] GRAPH DEBUG INFO:")
-    print(f"  - Total nodes: {len(G.nodes)}")
-    print(f"  - Total edges: {len(G.edges)}")
-    print(f"  - Node list: {list(G.nodes)}")
-    print(f"  - Edge list: {[(u, v) for u, v in G.edges]}")
-    
-    # Print node details
-    print(f"[@navigation:pathfinding:find_shortest_path] NODE DETAILS:")
-    for node_id, node_data in G.nodes(data=True):
-        print(f"  - Node {node_id}: '{node_data.get('label', 'No label')}' (type: {node_data.get('node_type', 'unknown')})")
-    
-    # Print edge details  
-    print(f"[@navigation:pathfinding:find_shortest_path] EDGE DETAILS:")
-    for from_node, to_node, edge_data in G.edges(data=True):
-        print(f"  - Edge {from_node} -> {to_node}: action='{edge_data.get('go_action', 'No action')}'")
-    
     # Determine starting node
     if not start_node_id:
         entry_points = get_entry_points(G)
-        print(f"[@navigation:pathfinding:find_shortest_path] Entry points found: {entry_points}")
         
         if not entry_points:
             print(f"[@navigation:pathfinding:find_shortest_path] No entry points found, using first node")
@@ -68,21 +50,15 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             start_node_id = nodes[0]
         else:
             start_node_id = entry_points[0]
-        print(f"[@navigation:pathfinding:find_shortest_path] Using entry point as start: {start_node_id}")
-    
-    print(f"[@navigation:pathfinding:find_shortest_path] Final start node: {start_node_id}")
-    print(f"[@navigation:pathfinding:find_shortest_path] Target node: {target_node_id}")
     
     # Check if start node exists
     if start_node_id not in G.nodes:
         print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Start node {start_node_id} not found in graph")
-        print(f"[@navigation:pathfinding:find_shortest_path] Available nodes: {list(G.nodes)}")
         return None
     
     # Check if target node exists
     if target_node_id not in G.nodes:
         print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {target_node_id} not found in graph")
-        print(f"[@navigation:pathfinding:find_shortest_path] Available nodes: {list(G.nodes)}")
         return None
     
     # SPECIAL CASE: If target is a root node (entry point), handle entry edge navigation
@@ -102,7 +78,6 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                     entry_edges.append((from_node, to_node, edge_data))
         
         if entry_edges:
-            print(f"[@navigation:pathfinding:find_shortest_path] Found {len(entry_edges)} entry edges to root node {target_node_id}")
             # Use the first entry edge as our path
             from_node, to_node, edge_data = entry_edges[0]
             
@@ -142,7 +117,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                 'description': f"Navigate from entry to '{target_node_info.get('label', target_node_id)}'"
             }
             
-            print(f"[@navigation:pathfinding:find_shortest_path] Created entry edge path to root node: {from_node} -> {to_node}")
+            print(f"[@navigation:pathfinding:find_shortest_path] Created entry edge path to root node")
             return [transition]
     
     # Check if we're already at the target
@@ -153,7 +128,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     try:
         # Use NetworkX shortest path algorithm
         path = nx.shortest_path(G, start_node_id, target_node_id)
-        print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes: {path}")
+        print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes")
         
         # Convert path to navigation transitions (grouped by from → to)
         navigation_transitions = []
