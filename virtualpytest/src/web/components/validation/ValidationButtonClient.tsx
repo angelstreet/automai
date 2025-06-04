@@ -1,7 +1,21 @@
 'use client';
 
-import { Button, CircularProgress } from '@mui/material';
-import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { 
+  Button, 
+  CircularProgress, 
+  Menu, 
+  MenuItem, 
+  ListItemIcon, 
+  ListItemText,
+  Box
+} from '@mui/material';
+import { 
+  CheckCircle as CheckCircleIcon,
+  ArrowDropDown as ArrowDropDownIcon,
+  PlayArrow as PlayArrowIcon,
+  History as HistoryIcon
+} from '@mui/icons-material';
+import { useState } from 'react';
 import { useValidation } from '../hooks/useValidation';
 
 interface ValidationButtonClientProps {
@@ -10,7 +24,9 @@ interface ValidationButtonClientProps {
 }
 
 export default function ValidationButtonClient({ treeId, disabled }: ValidationButtonClientProps) {
-  const { isValidating, results, openPreview } = useValidation(treeId);
+  const { isValidating, results, lastResult, openPreview, viewLastResult } = useValidation(treeId);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
   const getButtonColor = () => {
     if (!results) return 'primary';
@@ -27,26 +43,82 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
     }
   };
 
-  const handleClick = () => {
-    console.log(`[@component:ValidationButtonClient] Validation button clicked for tree: ${treeId}`);
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (lastResult && !isValidating) {
+      // If there's a cached result and not validating, show dropdown
+      setAnchorEl(event.currentTarget);
+    } else {
+      // Otherwise, just open preview directly
+      console.log(`[@component:ValidationButtonClient] Validation button clicked for tree: ${treeId}`);
+      openPreview();
+    }
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleRunValidation = () => {
+    console.log(`[@component:ValidationButtonClient] Run validation clicked for tree: ${treeId}`);
+    handleClose();
     openPreview();
   };
 
+  const handleViewLastResult = () => {
+    console.log(`[@component:ValidationButtonClient] View last result clicked for tree: ${treeId}`);
+    handleClose();
+    viewLastResult();
+  };
+
+  // If there's a cached result and not validating, show dropdown button
+  const showDropdown = lastResult && !isValidating;
+
   return (
-    <Button
-      startIcon={isValidating ? <CircularProgress size={16} /> : <CheckCircleIcon />}
-      onClick={handleClick}
-      size="small"
-      disabled={disabled || isValidating}
-      variant="outlined"
-      color={getButtonColor()}
-      sx={{ 
-        minWidth: 'auto',
-        whiteSpace: 'nowrap',
-        fontSize: '0.75rem'
-      }}
-    >
-      Validate
-    </Button>
+    <Box display="inline-flex">
+      <Button
+        startIcon={isValidating ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+        endIcon={showDropdown ? <ArrowDropDownIcon /> : undefined}
+        onClick={handleClick}
+        size="small"
+        disabled={disabled || isValidating}
+        variant="outlined"
+        color={getButtonColor()}
+        sx={{ 
+          minWidth: 'auto',
+          whiteSpace: 'nowrap',
+          fontSize: '0.75rem'
+        }}
+      >
+        Validate
+      </Button>
+
+      {/* Dropdown Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <MenuItem onClick={handleRunValidation}>
+          <ListItemIcon>
+            <PlayArrowIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Run Validation" />
+        </MenuItem>
+        <MenuItem onClick={handleViewLastResult}>
+          <ListItemIcon>
+            <HistoryIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Last Result" />
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 } 

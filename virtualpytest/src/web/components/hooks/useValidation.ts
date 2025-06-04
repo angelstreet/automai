@@ -12,6 +12,7 @@ export function useValidation(treeId: string) {
     showProgress,
     previewData,
     results,
+    lastResult,
     progress,
     setShowPreview,
     setShowResults,
@@ -20,6 +21,7 @@ export function useValidation(treeId: string) {
     setResults,
     setProgress,
     setValidating,
+    showLastResult,
   } = useValidationStore();
 
   const openPreview = useCallback(async () => {
@@ -48,16 +50,26 @@ export function useValidation(treeId: string) {
     setProgress({
       currentStep: 1,
       totalSteps: previewData?.totalEdges || 1,
+      currentNode: '',
+      currentNodeName: 'Starting validation...',
       currentEdgeFrom: 'ENTRY',
       currentEdgeTo: 'home',
       currentEdgeFromName: 'ENTRY',
       currentEdgeToName: 'home',
       currentEdgeStatus: 'testing',
-      retryAttempt: 0
+      retryAttempt: 0,
+      status: 'running',
+      completedNodes: []
     });
     
     try {
-      // Run actual validation - the backend will provide real progress updates
+      // Set up progress callback for real-time updates
+      validationService.setProgressCallback((progressData: ValidationProgress) => {
+        console.log(`[@hook:useValidation] Real-time progress update:`, progressData);
+        setProgress(progressData);
+      });
+      
+      // Run actual validation with real-time progress updates
       const results = await validationService.runValidation(treeId);
       setResults(results);
       
@@ -74,6 +86,8 @@ export function useValidation(treeId: string) {
       setShowProgress(false);
       // Could add toast notification here
     } finally {
+      // Clear progress callback
+      validationService.setProgressCallback(null);
       setValidating(false);
     }
   }, [treeId, setValidating, setShowPreview, setShowProgress, setProgress, setResults, setShowResults, previewData]);
@@ -103,6 +117,11 @@ export function useValidation(treeId: string) {
     setShowResults(false);
   }, [setShowResults]);
 
+  const viewLastResult = useCallback(() => {
+    console.log(`[@hook:useValidation] Viewing last result`);
+    showLastResult();
+  }, [showLastResult]);
+
   return {
     // State
     isValidating,
@@ -111,6 +130,7 @@ export function useValidation(treeId: string) {
     showProgress,
     previewData,
     results,
+    lastResult,
     progress,
     
     // Actions
@@ -119,5 +139,6 @@ export function useValidation(treeId: string) {
     exportReport,
     closePreview,
     closeResults,
+    viewLastResult,
   };
 } 

@@ -36,6 +36,31 @@ class ValidationService:
     
     def __init__(self):
         self.navigation_api_base = 'http://localhost:5009/api/navigation'
+        self.progress_callback = None  # Callback function for progress updates
+    
+    def set_progress_callback(self, callback_func):
+        """Set the progress callback function for real-time updates"""
+        self.progress_callback = callback_func
+    
+    def _report_progress(self, current_step: int, total_steps: int, edge_from: str, edge_to: str, 
+                        edge_from_name: str, edge_to_name: str, status: str, retry_attempt: int = 0):
+        """Report progress to the callback function if one is set"""
+        if self.progress_callback:
+            progress_data = {
+                'currentStep': current_step,
+                'totalSteps': total_steps,
+                'currentEdgeFrom': edge_from,
+                'currentEdgeTo': edge_to,
+                'currentEdgeFromName': edge_from_name,
+                'currentEdgeToName': edge_to_name,
+                'currentEdgeStatus': status,
+                'retryAttempt': retry_attempt,
+                'progressPercentage': round((current_step / total_steps) * 100, 1) if total_steps > 0 else 0
+            }
+            try:
+                self.progress_callback(progress_data)
+            except Exception as e:
+                print(f"[@service:validation:_report_progress] Error in progress callback: {e}")
     
     def get_validation_preview(self, tree_id: str, team_id: str) -> Dict[str, Any]:
         """
@@ -169,11 +194,17 @@ class ValidationService:
             skipped_paths = 0
             
             for i, (from_node, to_node, edge_data) in enumerate(testable_edges):
+                current_step = i + 1
+                total_steps = len(testable_edges)
+                
                 # Get node names for progress display
                 from_info = get_node_info(G, from_node)
                 to_info = get_node_info(G, to_node)
                 from_name = from_info.get('label', from_node) if from_info else from_node
                 to_name = to_info.get('label', to_node) if to_info else to_node
+                
+                # Report progress: Starting to test this edge
+                self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'testing')
                 
                 # Check if the source node is reachable - THIS IS THE CRITICAL CHECK
                 if from_node not in reachable_nodes:
@@ -199,6 +230,9 @@ class ValidationService:
                     
                     skip_message = f"Skipped: Source node '{from_name}' is not reachable (dependency: {failed_dependency_info})"
                     print(f"[@service:validation:run_comprehensive_validation] ❌ SKIPPING {from_name} -> {to_name}")
+                    
+                    # Report progress: Edge skipped
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped')
                     
                     # Mark as skipped - DO NOT EXECUTE THE NAVIGATION
                     path_result = {
@@ -233,8 +267,12 @@ class ValidationService:
                     successful_paths += 1
                     reachable_nodes.add(to_node)
                     print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS {from_name} -> {to_name}")
+                    # Report progress: Edge succeeded
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'success')
                 else:
                     print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED {from_name} -> {to_name}")
+                    # Report progress: Edge failed
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'failed')
                 
                 # Small delay between tests to avoid overwhelming the device
                 time.sleep(1)
@@ -281,6 +319,10 @@ class ValidationService:
             }
             
             print(f"[@service:validation:run_comprehensive_validation] Completed: {successful_paths}/{executed_paths} successful, {skipped_paths} skipped, health: {health}")
+            
+            # Report final progress: Validation completed
+            self._report_progress(len(testable_edges), len(testable_edges), '', '', '', '', 'completed')
+            
             return results
             
         except Exception as e:
@@ -290,6 +332,7 @@ class ValidationService:
     def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph) -> Dict[str, Any]:
         """
         Test a specific navigation path by actually executing it on the device
+        AND execute target node verifications if present
         """
         try:
             # Get node names for display
@@ -308,59 +351,62 @@ class ValidationService:
                 timeout=30  # 30 second timeout
             )
             
+            navigation_success = False
+            navigation_result = {}
+            
             if response.status_code == 200:
-                result = response.json()
-                if result.get('success', False):
-                    return {
-                        'from_node': from_node,
-                        'to_node': to_node,
-                        'from_name': from_name,
-                        'to_name': to_name,
-                        'success': True,
-                        'skipped': False,
-                        'steps_executed': result.get('steps_executed', 0),
-                        'total_steps': result.get('total_steps', 0),
-                        'execution_time': result.get('execution_time', 0),
-                        'actions_executed': result.get('actions_executed', 0),
-                        'total_actions': result.get('total_actions', 0),
-                        'action_results': result.get('action_results', []),
-                        'verification_results': result.get('verification_results', []),
-                        'error': None
-                    }
-                else:
-                    return {
-                        'from_node': from_node,
-                        'to_node': to_node,
-                        'from_name': from_name,
-                        'to_name': to_name,
-                        'success': False,
-                        'skipped': False,
-                        'steps_executed': result.get('steps_executed', 0),
-                        'total_steps': result.get('total_steps', 0),
-                        'execution_time': result.get('execution_time', 0),
-                        'actions_executed': result.get('actions_executed', 0),
-                        'total_actions': result.get('total_actions', 0),
-                        'action_results': result.get('action_results', []),
-                        'verification_results': result.get('verification_results', []),
-                        'error': result.get('error', 'Navigation failed')
-                    }
+                navigation_result = response.json()
+                navigation_success = navigation_result.get('success', False)
             else:
-                return {
-                    'from_node': from_node,
-                    'to_node': to_node,
-                    'from_name': from_name,
-                    'to_name': to_name,
+                navigation_result = {
                     'success': False,
-                    'skipped': False,
+                    'error': f"HTTP {response.status_code}: {response.text}",
                     'steps_executed': 0,
                     'total_steps': 0,
                     'execution_time': 0,
                     'actions_executed': 0,
                     'total_actions': 0,
                     'action_results': [],
-                    'verification_results': [],
-                    'error': f"HTTP {response.status_code}: {response.text}"
+                    'verification_results': []
                 }
+            
+            # If navigation succeeded, execute target node verifications
+            verification_results = []
+            if navigation_success:
+                verification_results = self._execute_target_node_verifications(tree_id, to_node, to_info)
+            
+            # Combine navigation and verification results
+            combined_success = navigation_success and (
+                len(verification_results) == 0 or  # No verifications to run
+                all(v.get('success', False) for v in verification_results)  # All verifications passed
+            )
+            
+            # Build final result
+            result = {
+                'from_node': from_node,
+                'to_node': to_node,
+                'from_name': from_name,
+                'to_name': to_name,
+                'success': combined_success,
+                'skipped': False,
+                'steps_executed': navigation_result.get('steps_executed', 0),
+                'total_steps': navigation_result.get('total_steps', 0),
+                'execution_time': navigation_result.get('execution_time', 0),
+                'actions_executed': navigation_result.get('actions_executed', 0),
+                'total_actions': navigation_result.get('total_actions', 0),
+                'action_results': navigation_result.get('action_results', []),
+                'verification_results': verification_results,  # Include target node verifications
+                'error': None if combined_success else (
+                    navigation_result.get('error', 'Navigation failed') if not navigation_success
+                    else 'Target node verifications failed'
+                )
+            }
+            
+            print(f"[@service:validation:_test_navigation_path] Navigation: {'✓' if navigation_success else '✗'}, "
+                  f"Verifications: {len(verification_results)} executed, "
+                  f"Overall: {'✓' if combined_success else '✗'}")
+            
+            return result
                 
         except Exception as e:
             return {
@@ -379,6 +425,92 @@ class ValidationService:
                 'verification_results': [],
                 'error': f"Exception: {str(e)}"
             }
+    
+    def _execute_target_node_verifications(self, tree_id: str, node_id: str, node_info: Dict) -> List[Dict[str, Any]]:
+        """
+        Execute verifications for the target node after successful navigation
+        
+        Args:
+            tree_id: Navigation tree ID
+            node_id: Target node ID
+            node_info: Node information from graph
+            
+        Returns:
+            List of verification results
+        """
+        if not node_info:
+            return []
+        
+        # Get verifications from node metadata
+        verifications = node_info.get('verifications', [])
+        if not verifications:
+            print(f"[@service:validation:_execute_target_node_verifications] No verifications found for node {node_id}")
+            return []
+        
+        print(f"[@service:validation:_execute_target_node_verifications] Executing {len(verifications)} verifications for node {node_id}")
+        
+        verification_results = []
+        
+        try:
+            # Call verification API to execute all node verifications
+            verification_response = requests.post(
+                'http://localhost:5009/api/virtualpytest/verification/execute-batch',
+                json={
+                    'verifications': verifications,
+                    'node_id': node_id,
+                    'tree_id': tree_id
+                },
+                timeout=30
+            )
+            
+            if verification_response.status_code == 200:
+                verification_data = verification_response.json()
+                if verification_data.get('success', False):
+                    # Extract individual verification results
+                    verification_results = verification_data.get('results', [])
+                    print(f"[@service:validation:_execute_target_node_verifications] ✓ Executed {len(verification_results)} verifications for node {node_id}")
+                else:
+                    print(f"[@service:validation:_execute_target_node_verifications] ✗ Verification batch failed: {verification_data.get('error', 'Unknown error')}")
+                    # Create failed results for all verifications
+                    for i, verification in enumerate(verifications):
+                        verification_results.append({
+                            'verificationId': verification.get('id', f'verification_{i}'),
+                            'verificationLabel': verification.get('label', f'Verification {i+1}'),
+                            'verificationCommand': verification.get('command', 'unknown'),
+                            'success': False,
+                            'error': verification_data.get('error', 'Batch verification failed'),
+                            'resultType': 'FAIL',
+                            'message': None
+                        })
+            else:
+                print(f"[@service:validation:_execute_target_node_verifications] ✗ HTTP {verification_response.status_code}: {verification_response.text}")
+                # Create failed results for all verifications
+                for i, verification in enumerate(verifications):
+                    verification_results.append({
+                        'verificationId': verification.get('id', f'verification_{i}'),
+                        'verificationLabel': verification.get('label', f'Verification {i+1}'),
+                        'verificationCommand': verification.get('command', 'unknown'),
+                        'success': False,
+                        'error': f"HTTP {verification_response.status_code}",
+                        'resultType': 'ERROR',
+                        'message': None
+                    })
+                    
+        except Exception as e:
+            print(f"[@service:validation:_execute_target_node_verifications] ✗ Exception: {e}")
+            # Create failed results for all verifications
+            for i, verification in enumerate(verifications):
+                verification_results.append({
+                    'verificationId': verification.get('id', f'verification_{i}'),
+                    'verificationLabel': verification.get('label', f'Verification {i+1}'),
+                    'verificationCommand': verification.get('command', 'unknown'),
+                    'success': False,
+                    'error': f"Exception: {str(e)}",
+                    'resultType': 'ERROR',
+                    'message': None
+                })
+        
+        return verification_results
     
     def _convert_path_results_to_node_results(self, path_results: List[Dict], graph) -> List[Dict[str, Any]]:
         """

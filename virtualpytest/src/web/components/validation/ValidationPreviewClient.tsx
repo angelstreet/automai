@@ -20,7 +20,8 @@ import {
 import { 
   PlayArrow as PlayArrowIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon 
+  ExpandLess as ExpandLessIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useValidation } from '../hooks/useValidation';
@@ -30,7 +31,7 @@ interface ValidationPreviewClientProps {
 }
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
-  const { showPreview, previewData, closePreview, runValidation } = useValidation(treeId);
+  const { showPreview, previewData, lastResult, closePreview, runValidation, viewLastResult } = useValidation(treeId);
   const [showDetails, setShowDetails] = useState(false);
 
   if (!showPreview) return null;
@@ -100,7 +101,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               </Grid>
             </Grid>
             
-            {/* Dwe need toetails Section */}
+            {/* Details Section */}
             <Box mt={2}>
               <Button
                 onClick={() => setShowDetails(!showDetails)}
@@ -149,6 +150,20 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
         <Button onClick={closePreview} color="inherit">
           Cancel
         </Button>
+        
+        {/* Last Result Button - Show if there's a cached result */}
+        {lastResult && (
+          <Button 
+            variant="outlined" 
+            onClick={viewLastResult}
+            startIcon={<HistoryIcon />}
+            color="info"
+            sx={{ mr: 1 }}
+          >
+            Last Result
+          </Button>
+        )}
+        
         <Button 
           variant="contained" 
           onClick={runValidation}

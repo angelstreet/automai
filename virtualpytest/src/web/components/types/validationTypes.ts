@@ -70,6 +70,7 @@ export interface ValidationState {
   showProgress: boolean;
   previewData: ValidationPreview | null;
   results: ValidationResults | null;
+  lastResult: ValidationResults | null;
   progress: ValidationProgress | null;
 }
 
@@ -100,6 +101,8 @@ export interface ValidationProgress {
   currentNodeName: string;
   currentEdgeFrom: string;
   currentEdgeTo: string;
+  currentEdgeFromName: string;
+  currentEdgeToName: string;
   currentEdgeStatus: 'testing' | 'success' | 'failed' | 'skipped' | 'completed';
   retryAttempt: number;
   status: 'running' | 'completed' | 'error';

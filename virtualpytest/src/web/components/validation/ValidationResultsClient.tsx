@@ -27,6 +27,7 @@ import {
   Error as ErrorIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useValidation } from '../hooks/useValidation';
@@ -36,10 +37,13 @@ interface ValidationResultsClientProps {
 }
 
 export default function ValidationResultsClient({ treeId }: ValidationResultsClientProps) {
-  const { showResults, results, closeResults } = useValidation(treeId);
+  const { showResults, results, lastResult, closeResults } = useValidation(treeId);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   if (!showResults || !results) return null;
+
+  // Check if current results are from cache (comparing with lastResult)
+  const isFromCache = lastResult && results === lastResult;
 
   const toggleRow = (index: number) => {
     const newExpanded = new Set(expandedRows);
@@ -51,16 +55,31 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
     setExpandedRows(newExpanded);
   };
 
-  const healthColor = results.summary.overallHealth === 'excellent' ? 'success' :
-                     results.summary.overallHealth === 'poor' ? 'error' : 
-                     results.summary.overallHealth === 'fair' ? 'warning' : 'info';
-
   // Calculate success rate based on edge results (excluding skipped)
   const totalEdges = results.edgeResults?.length || 0;
   const successfulEdges = results.edgeResults?.filter(edge => edge.success).length || 0;
-  const skippedEdges = results.edgeResults?.filter(edge => edge.skipped).length || 0;
-  const executedEdges = totalEdges - skippedEdges;
+  const skippedEdges = results.edgeResults?.filter(edge => edge.skipped).length || 0;  const executedEdges = totalEdges - skippedEdges;
   const edgeSuccessRate = executedEdges > 0 ? (successfulEdges / executedEdges) * 100 : 0;
+
+  // Improved health color calculation based on success rate percentage
+  const getHealthColor = (successRate: number) => {
+    if (successRate >= 70) return 'success'; // Green for 70% and above
+    if (successRate >= 50) return 'warning'; // Orange/yellow for 50-69%
+    return 'error'; // Red for below 50%
+  };
+
+  const healthColor = getHealthColor(edgeSuccessRate);
+
+  // Get display color for overall health status
+  const getOverallHealthColor = (health: string) => {
+    switch (health) {
+      case 'excellent': return 'success';
+      case 'good': return 'success'; 
+      case 'fair': return 'warning';
+      case 'poor': return 'error';
+      default: return 'default';
+    }
+  };
 
   return (
     <Dialog 
@@ -75,9 +94,17 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="h6">Validation Results</Typography>
+            {isFromCache && (
+              <Chip 
+                label="CACHED"
+                color="info"
+                size="small"
+                variant="outlined"
+              />
+            )}
             <Chip 
               label={results.summary.overallHealth.toUpperCase()}
-              color={healthColor}
+              color={getOverallHealthColor(results.summary.overallHealth)}
               size="small"
             />
           </Box>
@@ -88,9 +115,16 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
       </DialogTitle>
 
       <DialogContent sx={{ bgcolor: 'background.default', p: 1  }}>
+        {isFromCache && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            These are cached results from your last validation run. Results are stored temporarily during your session.
+          </Alert>
+        )}
+
         {/* Summary Section */}
         <Box mb={1}>
           <Typography variant="h6" gutterBottom>Summary</Typography>
+          
           
           <Box display="flex" alignItems="center" gap={2} mb={2}>
             <LinearProgress 
@@ -108,7 +142,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
               {Math.round(edgeSuccessRate)}%
             </Typography>
           </Box>
-          
+
           <Typography variant="body2" color="textSecondary" mb={1}>
             {successfulEdges} of {executedEdges} navigation edges validated successfully
           </Typography>
@@ -152,189 +186,228 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
               </TableRow>
             </TableHead>
             <TableBody>
-              {results.edgeResults?.map((edge, index) => (
-                <>
-                  <TableRow 
-                    key={`${edge.from}-${edge.to}-${index}`}
-                    sx={{
-                      '&:nth-of-type(odd)': {
-                        bgcolor: 'action.hover',
-                      },
-                      '&:hover': {
-                        bgcolor: 'inherit !important',
-                      },
-                      '&:nth-of-type(odd):hover': {
-                        bgcolor: 'action.hover !important',
-                      },
-                    }}
-                  >
-                    <TableCell>
-                      {(edge.actionResults && edge.actionResults.length > 0) || 
-                       (edge.verificationResults && edge.verificationResults.length > 0) ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => toggleRow(index)}
-                          sx={{ p: 0.25 }}
-                        >
-                          {expandedRows.has(index) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                        </IconButton>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {edge.success ? (
-                          <CheckCircleIcon color="success" fontSize="small" />
-                        ) : edge.skipped ? (
-                          <ErrorIcon color="disabled" fontSize="small" />
-                        ) : (
-                          <ErrorIcon color="error" fontSize="small" />
+              {results.edgeResults?.map((edge, index) => {
+                // Check if edge has expandable content
+                const hasExpandableContent = (
+                  (edge.actionResults && edge.actionResults.length > 0) || 
+                  (edge.verificationResults && edge.verificationResults.length > 0)
+                );
+
+                return (
+                  <>
+                    <TableRow 
+                      key={`${edge.from}-${edge.to}-${index}`}
+                      sx={{
+                        '&:nth-of-type(odd)': {
+                          bgcolor: 'action.hover',
+                        },
+                        '&:hover': {
+                          bgcolor: 'inherit !important',
+                        },
+                        '&:nth-of-type(odd):hover': {
+                          bgcolor: 'action.hover !important',
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        {hasExpandableContent && (
+                          <IconButton
+                            size="small"
+                            onClick={() => toggleRow(index)}
+                            sx={{ p: 0.25 }}
+                          >
+                            {expandedRows.has(index) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          </IconButton>
                         )}
-                        <Chip 
-                          label={edge.success ? 'Success' : edge.skipped ? 'Skipped' : 'Failed'}
-                          color={edge.success ? 'success' : edge.skipped ? 'default' : 'error'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        <strong>{edge.fromName || edge.from}</strong>
-                        {' → '}
-                        <strong>{edge.toName || edge.to}</strong>
-                      </Typography>
-                      {edge.executionTime && (
-                        <Typography variant="caption" color="textSecondary" display="block">
-                          {edge.executionTime.toFixed(2)}s
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {(edge.totalActions && edge.totalActions > 0) ? (
-                        <Typography variant="body2">
-                          {edge.actionsExecuted || 0}/{edge.totalActions}
-                        </Typography>
-                      ) : (
-                        <Typography variant="body2" color="textSecondary">
-                          No actions
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {edge.verificationResults && edge.verificationResults.length > 0 ? (
-                        <Typography variant="body2">
-                          {edge.verificationResults.filter(v => v.success).length}/{edge.verificationResults.length}
-                        </Typography>
-                      ) : (
-                        <Typography variant="body2" color="textSecondary">
-                          No verifications
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {edge.errors.length > 0 ? (
-                        <Box>
-                          {edge.errors.map((error, errorIndex) => (
-                            <Typography 
-                              key={errorIndex} 
-                              variant="caption" 
-                              color="error" 
-                              display="block"
-                            >
-                              {error}
-                            </Typography>
-                          ))}
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {edge.success ? (
+                            <CheckCircleIcon color="success" fontSize="small" />
+                          ) : edge.skipped ? (
+                            <WarningIcon color="disabled" fontSize="small" />
+                          ) : (
+                            <ErrorIcon color="error" fontSize="small" />
+                          )}
+                          <Chip 
+                            label={edge.success ? 'Success' : edge.skipped ? 'Skipped' : 'Failed'}
+                            color={edge.success ? 'success' : edge.skipped ? 'default' : 'error'}
+                            size="small"
+                            variant="outlined"
+                          />
                         </Box>
-                      ) : edge.skipped ? (
-                        <Typography variant="body2" color="textSecondary">
-                          Skipped due to parent edge failure
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          <strong>{edge.fromName || edge.from}</strong>
+                          {' → '}
+                          <strong>{edge.toName || edge.to}</strong>
                         </Typography>
-                      ) : (
-                        <Typography variant="body2" color="textSecondary">
-                          No errors
-                        </Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Detailed Results Row */}
-                  {expandedRows.has(index) && (
-                    <TableRow>
-                      <TableCell colSpan={6} sx={{ p: 0, border: 'none' }}>
-                        <Collapse in={expandedRows.has(index)}>
-                          <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
-                            {/* Action Results */}
-                            {edge.actionResults && edge.actionResults.length > 0 && (
-                              <Box mb={2}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                  Action Results:
-                                </Typography>
-                                {edge.actionResults.map((action, actionIndex) => (
-                                  <Alert
-                                    key={actionIndex}
-                                    severity={action.success ? 'success' : 'error'}
-                                    sx={{ mb: 1, fontSize: '0.875rem' }}
-                                  >
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                      {action.actionIndex + 1}. {action.actionLabel}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                      Command: {action.actionCommand}
-                                    </Typography>
-                                    {action.inputValue && (
-                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        Input: {action.inputValue}
-                                      </Typography>
-                                    )}
-                                    {action.error && (
-                                      <Typography variant="body2" color="error">
-                                        Error: {action.error}
-                                      </Typography>
-                                    )}
-                                  </Alert>
-                                ))}
-                              </Box>
-                            )}
-
-                            {/* Verification Results */}
-                            {edge.verificationResults && edge.verificationResults.length > 0 && (
-                              <Box>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                  Verification Results:
-                                </Typography>
-                                {edge.verificationResults.map((verification, verificationIndex) => (
-                                  <Alert
-                                    key={verificationIndex}
-                                    severity={verification.success ? 'success' : 'error'}
-                                    sx={{ mb: 1, fontSize: '0.875rem' }}
-                                  >
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                      {verification.verificationLabel}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                      Command: {verification.verificationCommand}
-                                    </Typography>
-                                    {verification.message && (
-                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        {verification.message}
-                                      </Typography>
-                                    )}
-                                    {verification.error && (
-                                      <Typography variant="body2" color="error">
-                                        Error: {verification.error}
-                                      </Typography>
-                                    )}
-                                  </Alert>
-                                ))}
-                              </Box>
-                            )}
+                        {edge.executionTime && (
+                          <Typography variant="caption" color="textSecondary" display="block">
+                            {edge.executionTime.toFixed(2)}s
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {(edge.totalActions && edge.totalActions > 0) ? (
+                            <>
+                              <Typography variant="body2">
+                                {edge.actionsExecuted || 0}/{edge.totalActions}
+                              </Typography>
+                              {hasExpandableContent && edge.actionResults && edge.actionResults.length > 0 && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => toggleRow(index)}
+                                  sx={{ p: 0.25 }}
+                                >
+                                  {expandedRows.has(index) ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                                </IconButton>
+                              )}
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="textSecondary">
+                              No actions
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {edge.verificationResults && edge.verificationResults.length > 0 ? (
+                            <>
+                              <Typography variant="body2">
+                                {edge.verificationResults.filter(v => v.success).length}/{edge.verificationResults.length}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => toggleRow(index)}
+                                sx={{ p: 0.25 }}
+                              >
+                                {expandedRows.has(index) ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                              </IconButton>
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="textSecondary">
+                              No verifications
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {edge.errors.length > 0 ? (
+                          <Box>
+                            {edge.errors.map((error, errorIndex) => (
+                              <Typography 
+                                key={errorIndex} 
+                                variant="caption" 
+                                color="error" 
+                                display="block"
+                              >
+                                {error}
+                              </Typography>
+                            ))}
                           </Box>
-                        </Collapse>
+                        ) : edge.skipped ? (
+                          <Typography variant="body2" color="textSecondary">
+                            Skipped due to parent edge failure
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary">
+                            No errors
+                          </Typography>
+                        )}
                       </TableCell>
                     </TableRow>
-                  )}
-                </>
-              )) || (
+
+                    {/* Detailed Results Row */}
+                    {expandedRows.has(index) && hasExpandableContent && (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ p: 0, border: 'none' }}>
+                          <Collapse in={expandedRows.has(index)}>
+                            <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
+                              {/* Action Results */}
+                              {edge.actionResults && edge.actionResults.length > 0 && (
+                                <Box mb={2}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    Actions Executed ({edge.actionResults.length}):
+                                  </Typography>
+                                  {edge.actionResults.map((action, actionIndex) => (
+                                    <Alert
+                                      key={actionIndex}
+                                      severity={action.success ? 'success' : 'error'}
+                                      sx={{ mb: 1, fontSize: '0.875rem' }}
+                                    >
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                        {action.actionIndex + 1}. {action.actionLabel}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                        Command: <code>{action.actionCommand}</code>
+                                      </Typography>
+                                      {action.inputValue && (
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                          Input: <strong>{action.inputValue}</strong>
+                                        </Typography>
+                                      )}
+                                      {action.error && (
+                                        <Typography variant="body2" color="error">
+                                          Error: {action.error}
+                                        </Typography>
+                                      )}
+                                    </Alert>
+                                  ))}
+                                </Box>
+                              )}
+
+                              {/* Verification Results */}
+                              {edge.verificationResults && edge.verificationResults.length > 0 && (
+                                <Box>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    Verifications Executed ({edge.verificationResults.length}):
+                                  </Typography>
+                                  {edge.verificationResults.map((verification, verificationIndex) => (
+                                    <Alert
+                                      key={verificationIndex}
+                                      severity={verification.success ? 'success' : 'error'}
+                                      sx={{ mb: 1, fontSize: '0.875rem' }}
+                                    >
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                        {verification.verificationLabel}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                        Command: <code>{verification.verificationCommand}</code>
+                                      </Typography>
+                                      {verification.message && (
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                          Result: {verification.message}
+                                        </Typography>
+                                      )}
+                                      {verification.error && (
+                                        <Typography variant="body2" color="error">
+                                          Error: {verification.error}
+                                        </Typography>
+                                      )}
+                                    </Alert>
+                                  ))}
+                                </Box>
+                              )}
+
+                              {/* Show message when no detailed results are available */}
+                              {(!edge.actionResults || edge.actionResults.length === 0) && 
+                               (!edge.verificationResults || edge.verificationResults.length === 0) && (
+                                <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                  No detailed execution results available for this edge.
+                                </Typography>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                );
+              }) || (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
                     <Typography variant="body2" color="textSecondary">

@@ -82,7 +82,7 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
           <>
             <Typography variant="caption" color="textSecondary" display="block" mb={1}>
               Testing edge: {progress.currentEdgeFrom && progress.currentEdgeTo 
-                ? `${progress.currentEdgeFrom} → ${progress.currentEdgeTo}` 
+                ? `${progress.currentEdgeFromName || progress.currentEdgeFrom} → ${progress.currentEdgeToName || progress.currentEdgeTo}` 
                 : progress.currentNodeName || 'Preparing...'}
             </Typography>
             
