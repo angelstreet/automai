@@ -298,4 +298,180 @@ export class NavigationApi {
       };
     }
   }
+}
+
+// Shared Action Execution Utilities
+
+export interface ActionExecutionResult {
+  results: string[];
+  executionStopped: boolean;
+  updatedActions: any[];
+}
+
+/**
+ * Utility function to execute edge actions with proper error handling and break logic
+ */
+export async function executeEdgeActions(
+  actions: any[],
+  controllerTypes: string[],
+  updateActionResults?: (index: number, success: boolean) => void,
+  finalWaitTime: number = 2000
+): Promise<ActionExecutionResult> {
+  console.log(`[@util:NavigationApi] Starting execution of ${actions.length} actions`);
+  
+  const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
+  let results: string[] = [];
+  const updatedActions = [...actions];
+  let executionStopped = false;
+  
+  // Utility function to update last run results (keeps last 10 results)
+  const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
+    const updatedResults = [newResult, ...results];
+    return updatedResults.slice(0, 10); // Keep only last 10 results
+  };
+
+  // Calculate confidence score from last run results (0-1 scale)
+  const calculateConfidenceScore = (results?: boolean[]): number => {
+    if (!results || results.length === 0) return 0.5; // Default confidence for new actions
+    const successCount = results.filter(result => result).length;
+    return successCount / results.length;
+  };
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  try {
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      
+      if (!action.id) {
+        results.push(`❌ Action ${i + 1}: No action selected`);
+        // Update action with failed result
+        updatedActions[i] = {
+          ...action,
+          last_run_result: updateLastRunResults(action.last_run_result || [], false)
+        };
+        results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
+        executionStopped = true;
+        console.log(`[@util:NavigationApi] STOPPING EXECUTION due to missing action ${i + 1}. Breaking out of loop.`);
+        break;
+      }
+      
+      console.log(`[@util:NavigationApi] Executing action ${i + 1}/${actions.length}: ${action.label}`);
+      
+      const actionToExecute = {
+        ...action,
+        params: { ...action.params }
+      };
+      
+      if (action.requiresInput && action.inputValue) {
+        if (action.command === 'launch_app') {
+          actionToExecute.params.package = action.inputValue;
+        } else if (action.command === 'close_app') {
+          actionToExecute.params.package = action.inputValue;
+        } else if (action.command === 'input_text') {
+          actionToExecute.params.text = action.inputValue;
+        } else if (action.command === 'click_element') {
+          actionToExecute.params.element_id = action.inputValue;
+        } else if (action.command === 'coordinate_tap') {
+          const coords = action.inputValue.split(',').map((coord: string) => parseInt(coord.trim()));
+          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            actionToExecute.params.x = coords[0];
+            actionToExecute.params.y = coords[1];
+          }
+        }
+      }
+      
+      console.log(`[@util:NavigationApi] Action ${i + 1} (${action.command}): requiresInput=${action.requiresInput}, inputValue="${action.inputValue}", final params:`, actionToExecute.params);
+      
+      let actionSuccess = false;
+      
+      try {
+        const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: actionToExecute
+          }),
+        });
+        
+        const result = await response.json();
+        
+        // Check both HTTP status and result.success
+        if (response.ok && result.success) {
+          results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
+          actionSuccess = true;
+          console.log(`[@util:NavigationApi] Action ${i + 1} SUCCESS: ${result.message || 'Success'}`);
+        } else {
+          results.push(`❌ Action ${i + 1}: ${result.error || result.message || 'Failed'}`);
+          actionSuccess = false;
+          console.log(`[@util:NavigationApi] Action ${i + 1} FAILED: HTTP ${response.status}, Error: ${result.error || result.message || 'Failed'}`);
+        }
+      } catch (err: any) {
+        results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
+        actionSuccess = false;
+        console.log(`[@util:NavigationApi] Action ${i + 1} NETWORK ERROR: ${err.message || 'Network error'}`);
+      }
+      
+      // Update action with result and confidence info
+      const updatedLastRunResults = updateLastRunResults(action.last_run_result || [], actionSuccess);
+      const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
+      
+      updatedActions[i] = {
+        ...action,
+        last_run_result: updatedLastRunResults
+      };
+      
+      // Add confidence info to results
+      results.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
+      
+      console.log(`[@util:NavigationApi] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
+      
+      // Update action results callback if provided
+      if (updateActionResults) {
+        updateActionResults(i, actionSuccess);
+      }
+      
+      // Stop execution if action failed
+      if (!actionSuccess) {
+        results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
+        executionStopped = true;
+        console.log(`[@util:NavigationApi] STOPPING EXECUTION due to failed action ${i + 1}. Breaking out of loop.`);
+        break;
+      }
+      
+      // Wait after action
+      if (action.waitTime > 0) {
+        console.log(`[@util:NavigationApi] Waiting ${action.waitTime}ms after action ${i + 1}`);
+        await delay(action.waitTime);
+      }
+    }
+    
+    console.log(`[@util:NavigationApi] Action loop completed. ExecutionStopped: ${executionStopped}`);
+    
+    // Final wait only if execution wasn't stopped
+    if (!executionStopped && finalWaitTime > 0) {
+      console.log(`[@util:NavigationApi] Final wait: ${finalWaitTime}ms`);
+      await delay(finalWaitTime);
+      results.push(`⏱️ Final wait: ${finalWaitTime}ms completed`);
+    }
+    
+    if (executionStopped) {
+      console.log(`[@util:NavigationApi] Execution stopped due to failure`);
+    } else {
+      console.log(`[@util:NavigationApi] All actions completed successfully`);
+    }
+    
+  } catch (err: any) {
+    console.error('[@util:NavigationApi] Error executing actions:', err);
+    results.push(`❌ ${err.message}`);
+    executionStopped = true;
+  }
+  
+  return {
+    results,
+    executionStopped,
+    updatedActions
+  };
 } 

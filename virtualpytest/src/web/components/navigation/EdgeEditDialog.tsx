@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
 import { EdgeActionsList } from './EdgeActionsList';
+import { executeEdgeActions } from '../../utils/navigationApi';
 
 interface ControllerAction {
   id: string;
@@ -55,19 +56,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
-
-  // Utility function to update last run results (keeps last 10 results)
-  const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
-    const updatedResults = [newResult, ...results];
-    return updatedResults.slice(0, 10); // Keep only last 10 results
-  };
-
-  // Calculate confidence score from last run results (0-1 scale)
-  const calculateConfidenceScore = (results?: boolean[]): number => {
-    if (!results || results.length === 0) return 0.5; // Default confidence for new actions
-    const successCount = results.filter(result => result).length;
-    return successCount / results.length;
-  };
 
   const canRunActions = isControlActive && selectedDevice && edgeForm.actions.length > 0 && !isRunning;
 
@@ -121,135 +109,33 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     );
   };
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
   const handleRunActions = async () => {
     if (edgeForm.actions.length === 0) return;
     
+    if (isRunning) {
+      console.log('[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request');
+      return;
+    }
+    
     setIsRunning(true);
     setRunResult(null);
+    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions`);
     
     try {
-      const apiControllerType = controllerTypes[0].replace(/_/g, '-');
-      let results: string[] = [];
-      const updatedActions = [...edgeForm.actions];
-      let executionStopped = false;
-      
-      for (let i = 0; i < edgeForm.actions.length; i++) {
-        const action = edgeForm.actions[i];
-        
-        if (!action.id) {
-          results.push(`❌ Action ${i + 1}: No action selected`);
-          // Update action with failed result
-          updatedActions[i] = {
-            ...action,
-            last_run_result: updateLastRunResults(action.last_run_result || [], false)
-          };
-          results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
-          executionStopped = true;
-          break;
-        }
-        
-        console.log(`[@component:EdgeEditDialog] Executing action ${i + 1}/${edgeForm.actions.length}: ${action.label}`);
-        
-        const actionToExecute = {
-          ...action,
-          params: { ...action.params }
-        };
-        
-        if (action.requiresInput && action.inputValue) {
-          if (action.command === 'launch_app') {
-            actionToExecute.params.package = action.inputValue;
-          } else if (action.command === 'close_app') {
-            actionToExecute.params.package = action.inputValue;
-          } else if (action.command === 'input_text') {
-            actionToExecute.params.text = action.inputValue;
-          } else if (action.command === 'click_element') {
-            actionToExecute.params.element_id = action.inputValue;
-          } else if (action.command === 'coordinate_tap') {
-            const coords = action.inputValue.split(',').map(coord => parseInt(coord.trim()));
-            if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-              actionToExecute.params.x = coords[0];
-              actionToExecute.params.y = coords[1];
-            }
-          }
-        }
-        
-        let actionSuccess = false;
-        
-        try {
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              action: actionToExecute
-            }),
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
-            actionSuccess = true;
-          } else {
-            results.push(`❌ Action ${i + 1}: ${result.error || 'Failed'}`);
-            actionSuccess = false;
-          }
-        } catch (err: any) {
-          results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
-          actionSuccess = false;
-        }
-        
-        // Update action with result and confidence info
-        const updatedLastRunResults = updateLastRunResults(action.last_run_result || [], actionSuccess);
-        const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
-        
-        updatedActions[i] = {
-          ...action,
-          last_run_result: updatedLastRunResults
-        };
-        
-        // Add confidence info to results
-        results.push(`   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`);
-        
-        console.log(`[@component:EdgeEditDialog] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
-        
-        // Stop execution if action failed
-        if (!actionSuccess) {
-          results.push(`⏹️ Execution stopped due to failed action ${i + 1}`);
-          executionStopped = true;
-          break;
-        }
-        
-        // Wait after action
-        if (action.waitTime > 0) {
-          console.log(`[@component:EdgeEditDialog] Waiting ${action.waitTime}ms after action ${i + 1}`);
-          await delay(action.waitTime);
-        }
-      }
+      const result = await executeEdgeActions(
+        edgeForm.actions,
+        controllerTypes,
+        undefined, // No updateActionResults callback needed for dialog
+        edgeForm.finalWaitTime
+      );
       
       // Update the edge form with the updated actions
       setEdgeForm(prev => ({
         ...prev,
-        actions: updatedActions
+        actions: result.updatedActions
       }));
       
-      // Final wait only if execution wasn't stopped
-      if (!executionStopped && edgeForm.finalWaitTime > 0) {
-        console.log(`[@component:EdgeEditDialog] Final wait: ${edgeForm.finalWaitTime}ms`);
-        await delay(edgeForm.finalWaitTime);
-        results.push(`⏱️ Final wait: ${edgeForm.finalWaitTime}ms completed`);
-      }
-      
-      setRunResult(results.join('\n'));
-      
-      if (executionStopped) {
-        console.log(`[@component:EdgeEditDialog] Execution stopped due to failure`);
-      } else {
-        console.log(`[@component:EdgeEditDialog] All actions completed successfully`);
-      }
+      setRunResult(result.results.join('\n'));
       
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);

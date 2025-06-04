@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
 import { calculateConfidenceScore } from '../../utils/confidenceUtils';
+import { executeEdgeActions } from '../../utils/navigationApi';
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;
@@ -117,20 +118,18 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const confidenceInfo = getEdgeConfidenceInfo();
 
   const handleEdit = () => {
-    // Convert old format to new format if needed
-    let finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
+    console.log('[@component:EdgeSelectionPanel] Opening edit dialog for edge');
     
+    // Populate the form with current edge data
     setEdgeForm({
-      actions: actions,
-      finalWaitTime: finalWaitTime,
       description: selectedEdge.data?.description || '',
+      actions: getActions(),
+      finalWaitTime: selectedEdge.data?.finalWaitTime || 2000,
     });
+    
     setIsEdgeDialogOpen(true);
   };
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Update action results in the actual edge data
   const updateActionResults = (actionIndex: number, success: boolean) => {
     if (!onUpdateEdge) return;
 
@@ -167,95 +166,17 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     setRunResult(null);
     
     try {
-      const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
-      let results: string[] = [];
-      
-      for (let i = 0; i < actions.length; i++) {
-        const action = actions[i];
-        
-        if (!action.id) {
-          results.push(`❌ Action ${i + 1}: No action selected`);
-          continue;
-        }
-        
-        console.log(`[@component:EdgeSelectionPanel] Executing action ${i + 1}/${actions.length}: ${action.label}`);
-        
-        const actionToExecute = {
-          ...action,
-          params: { ...action.params }
-        };
-        
-        // Update params with input values for actions that require them
-        if (action.requiresInput && action.inputValue) {
-          if (action.command === 'launch_app') {
-            actionToExecute.params.package = action.inputValue;
-          } else if (action.command === 'input_text') {
-            actionToExecute.params.text = action.inputValue;
-          } else if (action.command === 'click_element') {
-            actionToExecute.params.element_id = action.inputValue;
-          } else if (action.command === 'coordinate_tap') {
-            const coords = action.inputValue.split(',').map((coord: string) => parseInt(coord.trim()));
-            if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-              actionToExecute.params.x = coords[0];
-              actionToExecute.params.y = coords[1];
-            }
-          }
-        }
-        
-        let actionSuccess = false;
-        
-        try {
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              action: actionToExecute
-            }),
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
-            actionSuccess = true;
-          } else {
-            results.push(`❌ Action ${i + 1}: ${result.error || 'Failed'}`);
-            actionSuccess = false;
-          }
-        } catch (err: any) {
-          results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
-          actionSuccess = false;
-        }
-        
-        // Update action result in the actual edge data
-        updateActionResults(i, actionSuccess);
-        
-        // Calculate and display confidence
-        const currentResults = action.last_run_result || [];
-        const newResults = [actionSuccess, ...currentResults].slice(0, 10);
-        const newConfidence = calculateConfidenceScore(newResults);
-        results.push(`   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`);
-        console.log(`[@component:EdgeSelectionPanel] Action ${i + 1} completed. Success: ${actionSuccess}, New confidence: ${newConfidence.toFixed(3)}`);
-        
-        // Wait after action
-        if (action.waitTime > 0) {
-          console.log(`[@component:EdgeSelectionPanel] Waiting ${action.waitTime}ms after action ${i + 1}`);
-          await delay(action.waitTime);
-        }
-      }
-      
-      // Final wait
       const finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
-      if (finalWaitTime > 0) {
-        console.log(`[@component:EdgeSelectionPanel] Final wait: ${finalWaitTime}ms`);
-        await delay(finalWaitTime);
-        results.push(`⏱️ Final wait: ${finalWaitTime}ms completed`);
-      }
       
-      setRunResult(results.join('\n'));
-      console.log(`[@component:EdgeSelectionPanel] All actions completed`);
+      const result = await executeEdgeActions(
+        actions,
+        controllerTypes,
+        updateActionResults, // Pass the callback to update edge data
+        finalWaitTime
+      );
+      
+      setRunResult(result.results.join('\n'));
+      console.log(`[@component:EdgeSelectionPanel] Action execution completed. Stopped: ${result.executionStopped}`);
       
     } catch (err: any) {
       console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
