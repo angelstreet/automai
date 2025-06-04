@@ -160,6 +160,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         if (action.requiresInput && action.inputValue) {
           if (action.command === 'launch_app') {
             actionToExecute.params.package = action.inputValue;
+          } else if (action.command === 'close_app') {
+            actionToExecute.params.package = action.inputValue;
           } else if (action.command === 'input_text') {
             actionToExecute.params.text = action.inputValue;
           } else if (action.command === 'click_element') {

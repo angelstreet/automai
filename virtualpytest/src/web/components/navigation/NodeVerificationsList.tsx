@@ -384,6 +384,21 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
   return (
     <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+          Verifications
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={addVerification}
+          sx={{ minWidth: 'auto' }}
+        >
+          Add
+        </Button>
+      </Box>
+
       <Box sx={{ mb: 1 }}>
         {verifications.map((verification, index) => (
           <VerificationItem
@@ -429,15 +444,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           </Select>
         </FormControl>
         
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={addVerification}
-          sx={{ minWidth: 'auto' }}
-        >
-          Add
-        </Button>
         {onTest && (
           <Button
             size="small"
@@ -446,7 +452,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onTest();
+              onTest?.();
             }}
             disabled={!areVerificationsValid()}
             sx={{
