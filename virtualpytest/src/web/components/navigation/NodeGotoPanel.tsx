@@ -226,11 +226,25 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       }}>
         {/* Error Display */}
         {error && (
-          <Alert severity="error" sx={{ mb: 1.5, fontSize: '0.875rem' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+          <Alert 
+            severity="error" 
+            icon={<ErrorIcon />}
+            sx={{ 
+              mb: 1.5, 
+              fontSize: '0.875rem',
+              color: 'error.main',
+              backgroundColor: 'error.light',
+              '& .MuiAlert-icon': {
+                color: 'error.main'
+              }
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: 'error.main' }}>
               Navigation Failed
             </Typography>
-            {error}
+            <Typography variant="body2" sx={{ color: 'error.main' }}>
+              {error}
+            </Typography>
           </Alert>
         )}
 
