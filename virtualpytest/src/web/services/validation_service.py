@@ -462,61 +462,110 @@ class ValidationService:
             print(f"[@service:validation:_execute_target_node_verifications] No node_info provided for node {node_id}")
             return []
         
+        # Debug: Log the complete structure we received to understand the data format
+        print(f"[@service:validation:_execute_target_node_verifications] DEBUGGING Node {node_id}:")
+        print(f"[@service:validation:_execute_target_node_verifications] Full node_info structure: {node_info}")
+        print(f"[@service:validation:_execute_target_node_verifications] Node {node_id} structure keys: {list(node_info.keys())}")
+        
         # Try to get verifications from multiple possible locations in the node data
         verifications = []
         
-        # Option 1: Direct verifications field (standard location)
+        # Option 1: Direct verifications field (standard location from NetworkX graph)
         if 'verifications' in node_info:
             verifications = node_info.get('verifications', [])
-            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in node_info.verifications")
+            print(f"[@service:validation:_execute_target_node_verifications] ✓ Found {len(verifications)} verifications in node_info.verifications")
+            if verifications:
+                print(f"[@service:validation:_execute_target_node_verifications] First verification structure: {verifications[0] if verifications else 'None'}")
         
         # Option 2: Nested in data object (React Flow format: node.data.verifications)
         elif 'data' in node_info and isinstance(node_info['data'], dict):
             verifications = node_info['data'].get('verifications', [])
-            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in node_info.data.verifications")
+            print(f"[@service:validation:_execute_target_node_verifications] ✓ Found {len(verifications)} verifications in node_info.data.verifications")
+            print(f"[@service:validation:_execute_target_node_verifications] Node data keys: {list(node_info['data'].keys())}")
+            if verifications:
+                print(f"[@service:validation:_execute_target_node_verifications] First verification structure: {verifications[0] if verifications else 'None'}")
         
         # Option 3: Check if the entire node_info IS the data object
         elif 'label' in node_info and 'type' in node_info:
             # This suggests node_info is already the data portion
             verifications = node_info.get('verifications', [])
-            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in flattened node_info")
+            print(f"[@service:validation:_execute_target_node_verifications] ✓ Found {len(verifications)} verifications in flattened node_info")
+            if verifications:
+                print(f"[@service:validation:_execute_target_node_verifications] First verification structure: {verifications[0] if verifications else 'None'}")
         
-        # Debug: Log the structure we received
-        print(f"[@service:validation:_execute_target_node_verifications] Node {node_id} structure keys: {list(node_info.keys())}")
+        # Additional debug: Check if data is nested deeper
         if 'data' in node_info:
-            print(f"[@service:validation:_execute_target_node_verifications] Node data keys: {list(node_info['data'].keys()) if isinstance(node_info['data'], dict) else 'data is not dict'}")
+            data_content = node_info['data']
+            print(f"[@service:validation:_execute_target_node_verifications] Node data content type: {type(data_content)}")
+            if isinstance(data_content, dict):
+                print(f"[@service:validation:_execute_target_node_verifications] Node data keys: {list(data_content.keys())}")
+                # Look for verifications in nested structures
+                for key, value in data_content.items():
+                    if 'verification' in key.lower():
+                        print(f"[@service:validation:_execute_target_node_verifications] Found verification-related key: {key} = {value}")
+            else:
+                print(f"[@service:validation:_execute_target_node_verifications] Node data is not dict: {data_content}")
         
         if not verifications:
-            print(f"[@service:validation:_execute_target_node_verifications] No verifications found for node {node_id} after checking all possible locations")
+            print(f"[@service:validation:_execute_target_node_verifications] ❌ No verifications found for node {node_id} after checking all possible locations")
+            print(f"[@service:validation:_execute_target_node_verifications] Available node_info keys for debugging: {list(node_info.keys())}")
             return []
         
-        print(f"[@service:validation:_execute_target_node_verifications] Executing {len(verifications)} verifications for node {node_id}")
+        # Validate verification structure
+        valid_verifications = []
+        for i, verification in enumerate(verifications):
+            if not isinstance(verification, dict):
+                print(f"[@service:validation:_execute_target_node_verifications] ⚠️ Verification {i} is not a dict: {verification}")
+                continue
+            
+            # Check required fields
+            if not verification.get('command') and not verification.get('id'):
+                print(f"[@service:validation:_execute_target_node_verifications] ⚠️ Verification {i} missing required fields: {verification}")
+                continue
+                
+            valid_verifications.append(verification)
+            print(f"[@service:validation:_execute_target_node_verifications] ✓ Valid verification {i}: {verification.get('label', verification.get('id', 'Unknown'))}")
+        
+        if not valid_verifications:
+            print(f"[@service:validation:_execute_target_node_verifications] ❌ No valid verifications found for node {node_id}")
+            return []
+        
+        print(f"[@service:validation:_execute_target_node_verifications] Executing {len(valid_verifications)} valid verifications for node {node_id}")
         
         verification_results = []
         
         try:
             # Call verification API to execute all node verifications
+            api_payload = {
+                'verifications': valid_verifications,
+                'node_id': node_id,
+                'tree_id': tree_id,
+                'model': 'android_mobile'  # Required parameter for verification API
+            }
+            
+            print(f"[@service:validation:_execute_target_node_verifications] Sending API request with payload: {api_payload}")
+            
             verification_response = requests.post(
                 'http://localhost:5009/api/virtualpytest/verification/execute-batch',
-                json={
-                    'verifications': verifications,
-                    'node_id': node_id,
-                    'tree_id': tree_id,
-                    'model': 'android_mobile'  # Required parameter for verification API
-                },
+                json=api_payload,
                 timeout=30
             )
             
+            print(f"[@service:validation:_execute_target_node_verifications] API Response Status: {verification_response.status_code}")
+            print(f"[@service:validation:_execute_target_node_verifications] API Response Text: {verification_response.text[:500]}...")
+            
             if verification_response.status_code == 200:
                 verification_data = verification_response.json()
+                print(f"[@service:validation:_execute_target_node_verifications] API Response Data: {verification_data}")
+                
                 if verification_data.get('success', False):
                     # Extract individual verification results and map to frontend format
                     api_results = verification_data.get('results', [])
                     print(f"[@service:validation:_execute_target_node_verifications] ✓ Executed {len(api_results)} verifications for node {node_id}")
                     
                     # Map API response format to frontend format
-                    for i, (api_result, original_verification) in enumerate(zip(api_results, verifications)):
-                        verification_results.append({
+                    for i, (api_result, original_verification) in enumerate(zip(api_results, valid_verifications)):
+                        mapped_result = {
                             'verificationId': api_result.get('verification_id', original_verification.get('id', f'verification_{i}')),
                             'verificationLabel': original_verification.get('label', f'Verification {i+1}'),
                             'verificationCommand': original_verification.get('command', 'unknown'),
@@ -524,11 +573,13 @@ class ValidationService:
                             'error': api_result.get('error'),
                             'resultType': api_result.get('resultType', 'FAIL' if not api_result.get('success', False) else 'PASS'),
                             'message': api_result.get('message')
-                        })
+                        }
+                        verification_results.append(mapped_result)
+                        print(f"[@service:validation:_execute_target_node_verifications] Mapped result {i}: {mapped_result}")
                 else:
                     print(f"[@service:validation:_execute_target_node_verifications] ✗ Verification batch failed: {verification_data.get('error', 'Unknown error')}")
                     # Create failed results for all verifications
-                    for i, verification in enumerate(verifications):
+                    for i, verification in enumerate(valid_verifications):
                         verification_results.append({
                             'verificationId': verification.get('id', f'verification_{i}'),
                             'verificationLabel': verification.get('label', f'Verification {i+1}'),
@@ -541,7 +592,7 @@ class ValidationService:
             else:
                 print(f"[@service:validation:_execute_target_node_verifications] ✗ HTTP {verification_response.status_code}: {verification_response.text}")
                 # Create failed results for all verifications
-                for i, verification in enumerate(verifications):
+                for i, verification in enumerate(valid_verifications):
                     verification_results.append({
                         'verificationId': verification.get('id', f'verification_{i}'),
                         'verificationLabel': verification.get('label', f'Verification {i+1}'),
@@ -554,8 +605,10 @@ class ValidationService:
                     
         except Exception as e:
             print(f"[@service:validation:_execute_target_node_verifications] ✗ Exception: {e}")
+            import traceback
+            print(f"[@service:validation:_execute_target_node_verifications] ✗ Full traceback: {traceback.format_exc()}")
             # Create failed results for all verifications
-            for i, verification in enumerate(verifications):
+            for i, verification in enumerate(valid_verifications):
                 verification_results.append({
                     'verificationId': verification.get('id', f'verification_{i}'),
                     'verificationLabel': verification.get('label', f'Verification {i+1}'),
@@ -566,6 +619,7 @@ class ValidationService:
                     'message': None
                 })
         
+        print(f"[@service:validation:_execute_target_node_verifications] Final verification_results: {verification_results}")
         return verification_results
     
     def _convert_path_results_to_node_results(self, path_results: List[Dict], graph) -> List[Dict[str, Any]]:
