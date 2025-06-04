@@ -1,0 +1,87 @@
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+
+interface VerificationImageComparisonThumbnailsProps {
+  sourceUrl: string;
+  referenceUrl: string;
+  resultType: 'PASS' | 'FAIL' | 'ERROR';
+  userThreshold?: number;
+  matchingResult?: number;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  onImageClick: (sourceUrl: string, referenceUrl: string, userThreshold?: number, matchingResult?: number, resultType?: 'PASS' | 'FAIL' | 'ERROR', imageFilter?: 'none' | 'greyscale' | 'binary') => void;
+}
+
+export const VerificationImageComparisonThumbnails: React.FC<VerificationImageComparisonThumbnailsProps> = ({
+  sourceUrl,
+  referenceUrl,
+  resultType,
+  userThreshold,
+  matchingResult,
+  imageFilter,
+  onImageClick
+}) => {
+  const handleImageClick = () => {
+    onImageClick(
+      `http://localhost:5009${sourceUrl}`,
+      `http://localhost:5009${referenceUrl}`,
+      userThreshold,
+      matchingResult,
+      resultType,
+      imageFilter
+    );
+  };
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      gap: 0.5, 
+      alignItems: 'center',
+      padding: '4px',
+      border: `1px solid ${
+        resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
+      }`,
+      borderRadius: 1,
+      backgroundColor: 'rgba(0,0,0,0.1)',
+      width: '100%'
+    }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+        <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
+          Source
+        </Typography>
+        <img
+          src={`http://localhost:5009${sourceUrl}`}
+          alt="Source"
+          style={{
+            width: '100%',
+            maxWidth: '200px',
+            height: '150px',
+            objectFit: 'contain',
+            border: '1px solid #666',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onClick={handleImageClick}
+        />
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+        <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
+          Reference
+        </Typography>
+        <img
+          src={`http://localhost:5009${referenceUrl}`}
+          alt="Reference"
+          style={{
+            width: '100%',
+            maxWidth: '200px',
+            height: '150px',
+            objectFit: 'contain',
+            border: '1px solid #666',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onClick={handleImageClick}
+        />
+      </Box>
+    </Box>
+  );
+}; 
