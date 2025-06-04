@@ -47,6 +47,7 @@ interface OptimalPathStep {
   from_node_label: string;
   to_node_label: string;
   actions: any[];
+  retryActions?: any[];
   estimated_time: number;
 }
 
@@ -270,6 +271,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                               <TableCell>Type</TableCell>
                               <TableCell>Path</TableCell>
                               <TableCell>Actions</TableCell>
+                              <TableCell>Verifications</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -307,6 +309,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                   {step.from_node_label} → {step.to_node_label}
                                 </TableCell>
                                 <TableCell>{step.actions.length}</TableCell>
+                                <TableCell>{step.retryActions?.length || 0}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
