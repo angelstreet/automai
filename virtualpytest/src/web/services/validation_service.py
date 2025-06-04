@@ -10,6 +10,7 @@ import os
 from typing import Dict, List, Any, Optional
 import time
 import json
+import requests
 
 # Add paths for imports
 web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -33,67 +34,70 @@ from navigation_graph import get_node_info, get_entry_points
 class ValidationService:
     """Service for comprehensive navigation tree validation"""
     
+    def __init__(self):
+        self.navigation_api_base = 'http://localhost:5009/api/navigation'
+    
     def get_validation_preview(self, tree_id: str, team_id: str) -> Dict[str, Any]:
         """
-        Get preview of what will be validated
-        
-        Args:
-            tree_id: Navigation tree ID
-            team_id: Team ID for security
-            
-        Returns:
-            Dictionary with preview data
+        Get validation preview showing what will be tested
         """
         print(f"[@service:validation:get_validation_preview] Getting preview for tree {tree_id}")
         
         try:
-            # Get cached graph to analyze structure
+            # Get graph to analyze structure
             G = get_cached_graph(tree_id, team_id)
             if not G:
                 raise Exception(f"Failed to load graph for tree {tree_id}")
             
-            # Get basic metrics
-            total_nodes = len(G.nodes())
-            total_edges = len(G.edges())
+            # Get all edges (navigation paths) to test
+            all_edges = list(G.edges(data=True))
+            print(f"[@service:validation:get_validation_preview] Found {len(all_edges)} total edges")
             
-            # Get all reachable nodes using existing pathfinding
-            reachable_nodes = get_reachable_nodes(tree_id, team_id)
+            # Filter out entry node edges since entry is artificial
+            testable_edges = []
+            edge_details = []
             
-            # Get reachable edges with node names for display
-            reachable_edges = []
-            for edge in G.edges(data=True):
+            for edge in all_edges:
                 from_node, to_node, edge_data = edge
-                
-                # Get node names for display
                 from_info = get_node_info(G, from_node)
                 to_info = get_node_info(G, to_node)
+                
+                # Skip edges from entry node (artificial)
+                if from_info and from_info.get('type') == 'entry':
+                    continue
+                
                 from_name = from_info.get('label', from_node) if from_info else from_node
                 to_name = to_info.get('label', to_node) if to_info else to_node
                 
-                reachable_edges.append({
+                testable_edges.append((from_node, to_node))
+                edge_details.append({
                     'from': from_node,
                     'to': to_node,
                     'fromName': from_name,
                     'toName': to_name
                 })
             
-            # Exclude artificial entry node from counts (subtract 1 from both totals)
-            actual_total_nodes = max(0, total_nodes - 1)
-            actual_reachable_count = max(0, len(reachable_nodes) - 1)
+            # Get all non-entry nodes
+            all_nodes = list(G.nodes(data=True))
+            testable_nodes = []
             
-            # Estimate test time (assuming 2 seconds per node + 1 second per edge)
-            estimated_time = (actual_reachable_count * 2) + (total_edges * 1)
+            for node_id, node_data in all_nodes:
+                if node_data.get('type') != 'entry':
+                    testable_nodes.append(node_id)
+            
+            # Calculate estimated time (3-5 seconds per edge test)
+            estimated_time = len(testable_edges) * 4
             
             preview = {
                 'treeId': tree_id,
-                'totalNodes': actual_total_nodes,
-                'totalEdges': total_edges,
-                'reachableNodes': reachable_nodes,
-                'reachableEdges': reachable_edges,
+                'totalNodes': len(testable_nodes),
+                'totalEdges': len(testable_edges),
+                'reachableNodes': testable_nodes,
+                'reachableEdges': edge_details,
                 'estimatedTime': estimated_time
             }
             
-            print(f"[@service:validation:get_validation_preview] Preview generated: {actual_total_nodes} nodes (excluding entry), {total_edges} edges, {actual_reachable_count} reachable (excluding entry)")
+            print(f"[@service:validation:get_validation_preview] Preview: {len(testable_nodes)} nodes, {len(testable_edges)} edges to test")
             return preview
             
         except Exception as e:
@@ -102,53 +106,60 @@ class ValidationService:
     
     def run_comprehensive_validation(self, tree_id: str, team_id: str) -> Dict[str, Any]:
         """
-        Run comprehensive validation of the navigation tree
-        
-        Args:
-            tree_id: Navigation tree ID
-            team_id: Team ID for security
-            
-        Returns:
-            Dictionary with validation results
+        Run comprehensive validation by testing all navigation paths with real device actions
         """
-        print(f"[@service:validation:run_comprehensive_validation] Starting validation for tree {tree_id}")
+        print(f"[@service:validation:run_comprehensive_validation] Starting comprehensive validation for tree {tree_id}")
         start_time = time.time()
         
         try:
-            # Get reachable nodes to validate
-            reachable_nodes = get_reachable_nodes(tree_id, team_id)
-            print(f"[@service:validation:run_comprehensive_validation] Found {len(reachable_nodes)} reachable nodes")
+            # First check if take control is active
+            if not self._check_take_control_active(tree_id):
+                raise Exception("Take control must be active to run validation with real device actions")
             
-            # Get graph for node information
+            # Get graph to analyze all edges
             G = get_cached_graph(tree_id, team_id)
             if not G:
                 raise Exception(f"Failed to load graph for tree {tree_id}")
             
-            # Validate each reachable node
-            node_results = []
-            valid_count = 0
+            # Get all edges to test (excluding entry node)
+            all_edges = list(G.edges(data=True))
+            testable_edges = []
             
-            for node_id in reachable_nodes:
-                print(f"[@service:validation:run_comprehensive_validation] Validating node: {node_id}")
+            for edge in all_edges:
+                from_node, to_node, edge_data = edge
+                from_info = get_node_info(G, from_node)
                 
-                node_result = self._validate_single_node(tree_id, node_id, team_id, G)
-                node_results.append(node_result)
+                # Skip edges from entry node (artificial)
+                if from_info and from_info.get('type') == 'entry':
+                    continue
+                    
+                testable_edges.append((from_node, to_node, edge_data))
+            
+            print(f"[@service:validation:run_comprehensive_validation] Testing {len(testable_edges)} navigation paths")
+            
+            # Test each edge/path individually
+            path_results = []
+            successful_paths = 0
+            
+            for i, (from_node, to_node, edge_data) in enumerate(testable_edges):
+                print(f"[@service:validation:run_comprehensive_validation] Testing path {i+1}/{len(testable_edges)}: {from_node} -> {to_node}")
                 
-                if node_result['isValid']:
-                    valid_count += 1
+                path_result = self._test_navigation_path(tree_id, from_node, to_node, G)
+                path_results.append(path_result)
+                
+                if path_result['success']:
+                    successful_paths += 1
+                
+                # Small delay between tests to avoid overwhelming the device
+                time.sleep(1)
             
-            # Calculate overall health
-            total_nodes = len(node_results)
-            error_count = total_nodes - valid_count
-            
-            # Exclude artificial entry node from summary counts
-            actual_total_nodes = max(0, total_nodes - 1) if total_nodes > 0 else 0
-            actual_error_count = max(0, error_count - 1) if error_count > 0 and total_nodes > 0 else error_count
-            
-            if actual_total_nodes == 0:
+            # Calculate overall health based on path success rate
+            total_paths = len(testable_edges)
+            if total_paths == 0:
                 health = 'poor'
+                success_rate = 0
             else:
-                success_rate = valid_count / actual_total_nodes
+                success_rate = successful_paths / total_paths
                 if success_rate == 1.0:
                     health = 'excellent'
                 elif success_rate >= 0.8:
@@ -160,129 +171,161 @@ class ValidationService:
             
             execution_time = time.time() - start_time
             
+            # Convert path results to node results format for compatibility
+            node_results = self._convert_path_results_to_node_results(path_results, G)
+            
             results = {
                 'treeId': tree_id,
                 'summary': {
-                    'totalNodes': actual_total_nodes,
-                    'validNodes': valid_count,
-                    'errorNodes': actual_error_count,
+                    'totalNodes': len(set([r['from_node'] for r in path_results] + [r['to_node'] for r in path_results])),
+                    'validNodes': successful_paths,
+                    'errorNodes': total_paths - successful_paths,
                     'overallHealth': health,
                     'executionTime': round(execution_time, 2)
                 },
-                'nodeResults': node_results
+                'nodeResults': node_results,
+                'pathResults': path_results  # Include detailed path results
             }
             
-            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {valid_count}/{actual_total_nodes} nodes valid (excluding entry), health: {health}")
+            print(f"[@service:validation:run_comprehensive_validation] Validation completed: {successful_paths}/{total_paths} paths successful, health: {health}")
             return results
             
         except Exception as e:
             print(f"[@service:validation:run_comprehensive_validation] Error: {e}")
             raise
     
-    def _validate_single_node(self, tree_id: str, node_id: str, team_id: str, graph) -> Dict[str, Any]:
+    def _check_take_control_active(self, tree_id: str) -> bool:
+        """Check if take control is active for this tree"""
+        try:
+            response = requests.get(f"{self.navigation_api_base}/take-control/{tree_id}/status")
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('success', False) and data.get('take_control_active', False)
+            return False
+        except Exception as e:
+            print(f"[@service:validation:_check_take_control_active] Error: {e}")
+            return False
+    
+    def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph) -> Dict[str, Any]:
         """
-        Validate a single node using existing pathfinding
-        
-        Args:
-            tree_id: Navigation tree ID
-            node_id: Node to validate
-            team_id: Team ID for security
-            graph: NetworkX graph object
-            
-        Returns:
-            Dictionary with node validation result
+        Test a specific navigation path by actually executing it on the device
         """
         try:
-            # Get node information
+            # Get node names for display
+            from_info = get_node_info(graph, from_node)
+            to_info = get_node_info(graph, to_node)
+            from_name = from_info.get('label', from_node) if from_info else from_node
+            to_name = to_info.get('label', to_node) if to_info else to_node
+            
+            print(f"[@service:validation:_test_navigation_path] Testing: {from_name} -> {to_name}")
+            
+            # Execute navigation using the real navigation API
+            response = requests.post(
+                f"{self.navigation_api_base}/navigate/{tree_id}/{to_node}",
+                json={
+                    'current_node_id': from_node,
+                    'execute': True
+                },
+                timeout=30  # 30 second timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('success', False):
+                    return {
+                        'from_node': from_node,
+                        'to_node': to_node,
+                        'from_name': from_name,
+                        'to_name': to_name,
+                        'success': True,
+                        'steps_executed': result.get('steps_executed', 0),
+                        'total_steps': result.get('total_steps', 0),
+                        'execution_time': result.get('execution_time', 0),
+                        'error': None
+                    }
+                else:
+                    return {
+                        'from_node': from_node,
+                        'to_node': to_node,
+                        'from_name': from_name,
+                        'to_name': to_name,
+                        'success': False,
+                        'steps_executed': result.get('steps_executed', 0),
+                        'total_steps': result.get('total_steps', 0),
+                        'execution_time': result.get('execution_time', 0),
+                        'error': result.get('error', 'Navigation failed')
+                    }
+            else:
+                return {
+                    'from_node': from_node,
+                    'to_node': to_node,
+                    'from_name': from_name,
+                    'to_name': to_name,
+                    'success': False,
+                    'steps_executed': 0,
+                    'total_steps': 0,
+                    'execution_time': 0,
+                    'error': f"HTTP {response.status_code}: {response.text}"
+                }
+                
+        except Exception as e:
+            return {
+                'from_node': from_node,
+                'to_node': to_node,
+                'from_name': from_name,
+                'to_name': to_name,
+                'success': False,
+                'steps_executed': 0,
+                'total_steps': 0,
+                'execution_time': 0,
+                'error': f"Exception: {str(e)}"
+            }
+    
+    def _convert_path_results_to_node_results(self, path_results: List[Dict], graph) -> List[Dict[str, Any]]:
+        """
+        Convert path results to node results format for compatibility with existing UI
+        """
+        # Group paths by target node
+        node_groups = {}
+        for path in path_results:
+            to_node = path['to_node']
+            if to_node not in node_groups:
+                node_groups[to_node] = []
+            node_groups[to_node].append(path)
+        
+        node_results = []
+        for node_id, paths in node_groups.items():
             node_info = get_node_info(graph, node_id)
             node_name = node_info.get('label', node_id) if node_info else node_id
             
-            # Test pathfinding to this node using existing infrastructure
-            path_result = find_shortest_path(tree_id, node_id, team_id)
+            # A node is valid if at least one path to it works
+            successful_paths = [p for p in paths if p['success']]
+            is_valid = len(successful_paths) > 0
             
-            is_valid = path_result is not None and len(path_result) > 0
-            path_length = len(path_result) if path_result else 0
+            # Calculate average path length from successful paths
+            if successful_paths:
+                avg_path_length = sum(p['total_steps'] for p in successful_paths) / len(successful_paths)
+            else:
+                avg_path_length = 0
             
+            # Collect errors from failed paths
             errors = []
-            if not is_valid:
-                errors.append(f"No valid path found to node {node_id}")
+            failed_paths = [p for p in paths if not p['success']]
+            for failed_path in failed_paths:
+                if failed_path['error']:
+                    errors.append(f"Path from {failed_path['from_name']}: {failed_path['error']}")
             
-            return {
+            node_results.append({
                 'nodeId': node_id,
                 'nodeName': node_name,
                 'isValid': is_valid,
-                'pathLength': path_length,
-                'errors': errors
-            }
-            
-        except Exception as e:
-            return {
-                'nodeId': node_id,
-                'nodeName': node_id,
-                'isValid': False,
-                'pathLength': 0,
-                'errors': [f"Validation failed: {str(e)}"]
-            }
-    
-    def export_validation_report(self, tree_id: str, team_id: str, format_type: str = 'json') -> Any:
-        """
-        Export validation report in specified format
+                'pathLength': int(avg_path_length),
+                'errors': errors,
+                'successfulPaths': len(successful_paths),
+                'totalPaths': len(paths)
+            })
         
-        Args:
-            tree_id: Navigation tree ID
-            team_id: Team ID for security
-            format_type: Export format ('json' or 'csv')
-            
-        Returns:
-            Report data in requested format
-        """
-        print(f"[@service:validation:export_validation_report] Exporting report for tree {tree_id} in {format_type} format")
-        
-        try:
-            # Run fresh validation for export
-            results = self.run_comprehensive_validation(tree_id, team_id)
-            
-            if format_type == 'csv':
-                return self._format_as_csv(results)
-            else:
-                return results
-                
-        except Exception as e:
-            print(f"[@service:validation:export_validation_report] Error: {e}")
-            raise
-    
-    def _format_as_csv(self, results: Dict[str, Any]) -> str:
-        """
-        Format validation results as CSV
-        
-        Args:
-            results: Validation results dictionary
-            
-        Returns:
-            CSV formatted string
-        """
-        import csv
-        from io import StringIO
-        
-        output = StringIO()
-        writer = csv.writer(output)
-        
-        # Write header
-        writer.writerow(['Node ID', 'Node Name', 'Status', 'Path Length', 'Errors'])
-        
-        # Write data rows
-        for node in results['nodeResults']:
-            status = 'Valid' if node['isValid'] else 'Error'
-            errors = '; '.join(node['errors']) if node['errors'] else ''
-            writer.writerow([
-                node['nodeId'],
-                node['nodeName'],
-                status,
-                node['pathLength'],
-                errors
-            ])
-        
-        return output.getvalue()
+        return node_results
 
 # Create singleton instance
 validation_service = ValidationService() 

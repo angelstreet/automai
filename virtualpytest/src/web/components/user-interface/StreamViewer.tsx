@@ -231,7 +231,8 @@ export function StreamViewer({
     <Box
       sx={{
         position: 'relative',
-        width: '100%',
+        width: finalLayoutConfig.isMobileModel ? '100%' : 'calc(100% + 200px)',
+        maxWidth: finalLayoutConfig.isMobileModel ? 'none' : 'none',
         height: '100%',
         minHeight: finalLayoutConfig.minHeight,
         aspectRatio: finalLayoutConfig.aspectRatio,
@@ -245,8 +246,12 @@ export function StreamViewer({
         MozUserSelect: 'none',
         msUserSelect: 'none',
         ...(finalLayoutConfig.isMobileModel && {
-          maxHeight: 'none', // Remove max height constraint for mobile
-          flexGrow: 1, // Allow it to grow to fill available space
+          maxHeight: 'none',
+          flexGrow: 1,
+        }),
+        ...(!finalLayoutConfig.isMobileModel && {
+          margin: '0 auto',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         }),
         ...sx,
       }}

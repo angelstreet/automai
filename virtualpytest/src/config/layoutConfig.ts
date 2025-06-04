@@ -65,7 +65,7 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
   return mobile
     ? {
         width: 440,
-        height: 520,
+        height:510,
         captureHeight: 200,
         objectFit: 'fill',
         isMobileModel: true,

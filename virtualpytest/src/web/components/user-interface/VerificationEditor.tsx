@@ -485,7 +485,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          av_controller_type: 'android_mobile' // Use the model as controller type
+          av_controller_type: model // Use the dynamic model instead of hardcoded 'android_mobile'
         }),
       });
 
@@ -864,7 +864,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   if (!model || model.trim() === '') {
     return (
       <Box sx={{ 
-        width: finalLayoutConfig.width, 
+        width: finalLayoutConfig.isMobileModel ? finalLayoutConfig.width : '350px', // Fixed larger width for landscape models
         height: finalLayoutConfig.height, 
         p: 1, 
         display: 'flex', 

@@ -796,8 +796,8 @@ export function ScreenDefinitionEditor({
         }}>
           {/* Main Screen Definition Editor Panel */}
           <Box sx={{
-            width: '350px',
-            height: '520px',
+            width: deviceModel === 'android_mobile' ? '350px' : '660px', // 200px wider for landscape models
+            height: '510px',
             bgcolor: '#1E1E1E',
             border: '2px solid #1E1E1E',
             borderRadius: '1px 0 0 1px',
