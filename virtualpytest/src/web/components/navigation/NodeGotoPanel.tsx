@@ -171,7 +171,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         top: 16,
         right: 16,
         width: 360,
-        height: 'calc(100vh - 120px)',
+        height: 'calc(100vh - 180px)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 1000,
@@ -208,8 +208,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       <Box sx={{ 
         flex: 1,
         overflowY: 'auto',
-        p: 2,
+        p: 1.5,
         pt: 1,
+        pb: 0.5,
         '&::-webkit-scrollbar': {
           width: '6px',
         },
@@ -227,7 +228,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       }}>
         {/* Error Display */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
+          <Alert severity="error" sx={{ mb: 1.5, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
               Navigation Failed
             </Typography>
@@ -237,7 +238,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
         {/* Success Display */}
         {executionMessage && (
-          <Alert severity="success" sx={{ mb: 2, fontSize: '0.875rem' }}>
+          <Alert severity="success" sx={{ mb: 1.5, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
               {executionMessage}
             </Typography>
@@ -275,7 +276,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Navigation Steps */}
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Navigation Steps:
           </Typography>
@@ -288,8 +289,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 <Box 
                   key={index}
                   sx={{ 
-                    mb: 1,
-                    p: 1,
+                    mb: 0.75,
+                    p: 0.75,
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'grey.200',
@@ -354,7 +355,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Node Verifications */}
-        <Box sx={{ mb: 1 }}>
+        <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Verifications:
           </Typography>
@@ -365,8 +366,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                 <Box 
                   key={verification.id || index}
                   sx={{ 
-                    mb: 1,
-                    p: 1,
+                    mb: 0.75,
+                    p: 0.75,
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'grey.300',
@@ -462,7 +463,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
               sx={{ 
                 fontStyle: 'italic',
                 fontSize: '0.875rem',
-                p: 1,
+                p: 0.75,
                 borderRadius: 1,
                 border: '1px dashed',
                 borderColor: 'grey.300'
@@ -479,8 +480,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         flexShrink: 0, 
         borderTop: '1px solid', 
         borderColor: 'grey.200', 
-        p: 2,
-        pt: 1,
+        p: 1.5,
         bgcolor: 'background.paper'
       }}>
         <Button
