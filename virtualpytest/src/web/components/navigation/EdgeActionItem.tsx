@@ -176,8 +176,8 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
             placeholder={
               action.command === 'launch_app' ? 'com.example.app' :
               action.command === 'input_text' ? 'Enter text' :
-              action.command === 'click_element' ? 'Element text|fallback (e.g., "OK|Accept|Confirm")' :
-              action.command === 'coordinate_tap' ? 'x,y' : 'Element text|fallback (e.g., "text1|text2")'
+              action.command === 'click_element' ? 'Element text (e.g., "OK|Accept")' :
+              action.command === 'coordinate_tap' ? 'x,y' : 'Element text (e.g., "text1|text2")'
             }
             fullWidth
             sx={{
