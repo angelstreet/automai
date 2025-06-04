@@ -189,6 +189,11 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                   <>
                     <TableRow 
                       key={`${edge.from}-${edge.to}-${index}`}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'transparent !important',
+                        },
+                      }}
                     >
                       <TableCell>
                         {hasExpandableContent && (
