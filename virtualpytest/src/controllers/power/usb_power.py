@@ -191,29 +191,58 @@ class USBPowerController(PowerControllerInterface):
             )
             
             if success and exit_code == 0:
+                # Log the actual output for debugging
+                print(f"Power[{self.power_type.upper()}]: uhubctl output:")
+                print(f"--- START OUTPUT ---")
+                print(stdout)
+                print(f"--- END OUTPUT ---")
+                
                 # Parse uhubctl output to determine power state
-                # Look for "power" status in the output
                 power_state = 'unknown'
                 if stdout:
                     lines = stdout.strip().split('\n')
                     for line in lines:
-                        # Look for lines containing port information and power status
-                        if 'power' in line.lower():
-                            if 'off' in line.lower():
-                                power_state = 'off'
-                            elif 'on' in line.lower() or 'enable' in line.lower():
+                        line_lower = line.lower().strip()
+                        print(f"Power[{self.power_type.upper()}]: Parsing line: {line}")
+                        
+                        # Look for different uhubctl output patterns
+                        # Pattern 1: "Current status for hub X [device:port]:"
+                        # Pattern 2: "Port X: 0503 power"
+                        # Pattern 3: "Port X: 0100 off"
+                        
+                        if 'port' in line_lower:
+                            if 'power' in line_lower or '0503' in line_lower:
                                 power_state = 'on'
-                            break
+                                print(f"Power[{self.power_type.upper()}]: Detected ON state from line: {line}")
+                                break
+                            elif 'off' in line_lower or '0100' in line_lower:
+                                power_state = 'off' 
+                                print(f"Power[{self.power_type.upper()}]: Detected OFF state from line: {line}")
+                                break
+                        
+                        # Alternative patterns for different uhubctl versions
+                        elif 'power' in line_lower:
+                            if 'on' in line_lower or 'enable' in line_lower:
+                                power_state = 'on'
+                                print(f"Power[{self.power_type.upper()}]: Detected ON state from power line: {line}")
+                                break
+                            elif 'off' in line_lower or 'disable' in line_lower:
+                                power_state = 'off'
+                                print(f"Power[{self.power_type.upper()}]: Detected OFF state from power line: {line}")
+                                break
                     
-                    # If no explicit power status found, try to infer from port status
+                    # If still unknown, try to infer from any status codes
                     if power_state == 'unknown':
-                        # Check if any ports are powered
                         for line in lines:
-                            if 'port' in line.lower() and ('enable' in line.lower() or 'power' in line.lower()):
-                                if 'off' in line.lower() or 'disable' in line.lower():
-                                    power_state = 'off'
-                                else:
-                                    power_state = 'on'
+                            line_lower = line.lower().strip()
+                            # Look for status codes that indicate power state
+                            if '0503' in line or '0507' in line:  # Common "powered" status codes
+                                power_state = 'on'
+                                print(f"Power[{self.power_type.upper()}]: Detected ON from status code in: {line}")
+                                break
+                            elif '0100' in line or '0000' in line:  # Common "off" status codes  
+                                power_state = 'off'
+                                print(f"Power[{self.power_type.upper()}]: Detected OFF from status code in: {line}")
                                 break
                 
                 # Update our internal state
