@@ -34,11 +34,20 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         node_data = node.get('data', {})
         label = node.get('label') or node_data.get('label', '')
         
+        # Enhanced entry point detection
+        is_entry_point = (
+            node.get('is_entry_point', False) or 
+            node_data.get('is_entry_point', False) or
+            node_data.get('is_root', False) or
+            node_data.get('node_type') == 'entry' or
+            node.get('node_type') == 'entry'
+        )
+        
         G.add_node(node_id, **{
             'label': label,
-            'node_type': node.get('node_type') or node_data.get('type', 'screen'),
+            'node_type': node.get('node_type') or node_data.get('node_type', node_data.get('type', 'screen')),
             'description': node.get('description') or node_data.get('description', ''),
-            'is_entry_point': node.get('is_entry_point') or node_data.get('is_root', False),
+            'is_entry_point': is_entry_point,
             'is_exit_point': node.get('is_exit_point', False),
             'has_children': node.get('has_children', False),
             'child_tree_id': node.get('child_tree_id'),
