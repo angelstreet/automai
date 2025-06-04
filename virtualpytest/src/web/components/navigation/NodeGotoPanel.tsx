@@ -230,7 +230,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             severity="error" 
             icon={<ErrorIcon />}
             sx={{ 
-              mb: 1.5, 
+              mb: 1, 
               fontSize: '0.875rem',
               color: 'error.main',
               backgroundColor: 'error.light',
@@ -250,7 +250,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
         {/* Success Display */}
         {executionMessage && (
-          <Alert severity="success" sx={{ mb: 1.5, fontSize: '0.875rem' }}>
+          <Alert severity="success" sx={{ mb: 1, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
               {executionMessage}
             </Typography>
@@ -269,7 +269,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           />
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 2, mb: 1, fontSize: '0.875rem', color: 'text.secondary' }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 0.5, fontSize: '0.875rem', color: 'text.secondary' }}>
           <Typography variant="body2">
             <strong>Depth:</strong> {selectedNode.data.depth || 0}
           </Typography>
@@ -281,14 +281,14 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         <Divider sx={{ my: 1 }} />
 
         {/* Navigation Path */}
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 0.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Path: {getFullPath()}
           </Typography>
         </Box>
 
         {/* Navigation Steps */}
-        <Box sx={{ mb: 1.5 }}>
+        <Box sx={{ mb: 0.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Navigation Steps:
           </Typography>
@@ -304,7 +304,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     mb: 0.75,
                     p: 0.75,
                     borderRadius: 1,
-                   
+                    
                     '&:last-child': { mb: 0 }
                   }}
                 >
@@ -422,27 +422,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                       >
                         Input: {(verification as any).inputValue}
                       </Typography>
-                    )}
-                    
-                    {verification.last_run_result && verification.last_run_result.length > 0 && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                      
-                      
-                        
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: (() => {
-                              const confidence = calculateConfidenceScore(verification.last_run_result);
-                              if (confidence >= 0.8) return 'success.main';
-                              if (confidence >= 0.6) return 'warning.main';
-                              return 'error.main';
-                            })()
-                          }}
-                        />
-                      </Box>
                     )}
                   </Box>
                 </Box>
