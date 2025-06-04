@@ -112,10 +112,6 @@ class ValidationService:
         start_time = time.time()
         
         try:
-            # First check if take control is active
-            if not self._check_take_control_active(tree_id):
-                raise Exception("Take control must be active to run validation with real device actions")
-            
             # Get graph to analyze all edges
             G = get_cached_graph(tree_id, team_id)
             if not G:
@@ -193,18 +189,6 @@ class ValidationService:
         except Exception as e:
             print(f"[@service:validation:run_comprehensive_validation] Error: {e}")
             raise
-    
-    def _check_take_control_active(self, tree_id: str) -> bool:
-        """Check if take control is active for this tree"""
-        try:
-            response = requests.get(f"{self.navigation_api_base}/take-control/{tree_id}/status")
-            if response.status_code == 200:
-                data = response.json()
-                return data.get('success', False) and data.get('take_control_active', False)
-            return False
-        except Exception as e:
-            print(f"[@service:validation:_check_take_control_active] Error: {e}")
-            return False
     
     def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph) -> Dict[str, Any]:
         """
