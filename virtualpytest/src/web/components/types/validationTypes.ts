@@ -59,6 +59,7 @@ export interface ValidationResults {
       error?: string;
       resultType?: 'PASS' | 'FAIL' | 'ERROR';
       message?: string;
+      inputValue?: string;
     }>;
   }>;
 }

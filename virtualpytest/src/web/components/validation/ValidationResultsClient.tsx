@@ -190,15 +190,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                     <TableRow 
                       key={`${edge.from}-${edge.to}-${index}`}
                       sx={{
-                        '&:nth-of-type(odd)': {
-                          bgcolor: 'action.hover',
-                        },
-                        '&:hover': {
-                          bgcolor: 'inherit !important',
-                        },
-                        '&:nth-of-type(odd):hover': {
-                          bgcolor: 'action.hover !important',
-                        },
+                       
                       }}
                     >
                       <TableCell>
@@ -342,9 +334,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                       <Typography variant="body2" sx={{ mb: 0.5 }}>
                                         Command: <code>{verification.verificationCommand}</code>
                                       </Typography>
-                                      {verification.message && (
+                                      {verification.inputValue && (
                                         <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                          Result: {verification.message}
+                                          Input: <strong>{verification.inputValue}</strong>
                                         </Typography>
                                       )}
                                       {verification.error && (

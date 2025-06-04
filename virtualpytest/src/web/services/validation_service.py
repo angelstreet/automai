@@ -572,7 +572,8 @@ class ValidationService:
                             'success': api_result.get('success', False),
                             'error': api_result.get('error'),
                             'resultType': api_result.get('resultType', 'FAIL' if not api_result.get('success', False) else 'PASS'),
-                            'message': api_result.get('message')
+                            'message': api_result.get('message'),
+                            'inputValue': original_verification.get('inputValue')
                         }
                         verification_results.append(mapped_result)
                         print(f"[@service:validation:_execute_target_node_verifications] Mapped result {i}: {mapped_result}")
@@ -587,7 +588,8 @@ class ValidationService:
                             'success': False,
                             'error': verification_data.get('error', 'Batch verification failed'),
                             'resultType': 'FAIL',
-                            'message': None
+                            'message': None,
+                            'inputValue': None
                         })
             else:
                 print(f"[@service:validation:_execute_target_node_verifications] ✗ HTTP {verification_response.status_code}: {verification_response.text}")
@@ -600,7 +602,8 @@ class ValidationService:
                         'success': False,
                         'error': f"HTTP {verification_response.status_code}",
                         'resultType': 'ERROR',
-                        'message': None
+                        'message': None,
+                        'inputValue': None
                     })
                     
         except Exception as e:
@@ -616,7 +619,8 @@ class ValidationService:
                     'success': False,
                     'error': f"Exception: {str(e)}",
                     'resultType': 'ERROR',
-                    'message': None
+                    'message': None,
+                    'inputValue': None
                 })
         
         print(f"[@service:validation:_execute_target_node_verifications] Final verification_results: {verification_results}")
