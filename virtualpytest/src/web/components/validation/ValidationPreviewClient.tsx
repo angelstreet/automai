@@ -243,7 +243,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                   ) : optimalPath ? (
                     <>
                       {/* Selection and Filter Controls */}
-                      <Box mb={2} display="flex" gap={2} alignItems="center" flexWrap="wrap">
+                      <Box mb={1} display="flex" gap={2} alignItems="center" flexWrap="wrap">
                         <Button size="small" onClick={handleSelectAll} variant="outlined">
                           Select All
                         </Button>
@@ -307,7 +307,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                         <IconButton
                                           size="small"
                                           onClick={() => toggleRow(step.step_number)}
-                                          sx={{ p: 0.25 }}
+                                          sx={{ p: 0 }}
                                         >
                                           {expandedRows.has(step.step_number) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                         </IconButton>
