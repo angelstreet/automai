@@ -1007,8 +1007,8 @@ export function ScreenDefinitionEditor({
       ) : (
         // Compact view - exact same layout as before
         <Box sx={{ 
-          width: '150px',
-          height: '250px',
+          width: deviceModel === 'android_mobile' ? '180px' : '400px', // Wider for landscape models
+          height: deviceModel === 'android_mobile' ? '300px' : '250',
           bgcolor: '#1E1E1E',
           border: '2px solid #1E1E1E',
           borderRadius: 1,
