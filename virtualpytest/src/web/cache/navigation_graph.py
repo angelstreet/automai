@@ -47,7 +47,8 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             'position_y': node.get('position_y', 0),
             'width': node.get('width', 200),
             'height': node.get('height', 120),
-            'metadata': node.get('metadata', {})
+            'metadata': node.get('metadata', {}),
+            'verifications': node.get('verifications') or node_data.get('verifications', [])
         })
     
     # Add edges with actions as attributes

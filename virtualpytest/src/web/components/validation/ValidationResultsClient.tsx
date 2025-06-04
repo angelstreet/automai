@@ -163,6 +163,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                 <TableCell width="40px"></TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>From → To</TableCell>
+                <TableCell width="100px">Duration</TableCell>
                 <TableCell>Actions</TableCell>
                 <TableCell>Verifications</TableCell>
                 <TableCell>Errors</TableCell>
@@ -233,11 +234,11 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                           <strong>{edge.fromName || edge.from}</strong>
                           {' → '}
                           <strong>{edge.toName || edge.to}</strong>
-                          {edge.executionTime && (
-                            <Typography variant="caption" color="textSecondary" component="span" sx={{ ml: 1 }}>
-                              ({edge.executionTime.toFixed(2)}s)
-                            </Typography>
-                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="textSecondary">
+                          {edge.executionTime ? `${edge.executionTime.toFixed(2)}s` : '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -315,9 +316,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                     {/* Detailed Results Row */}
                     {expandedRows.has(index) && hasExpandableContent && (
                       <TableRow>
-                        <TableCell colSpan={6} sx={{ p: 0, border: 'none' }}>
+                        <TableCell colSpan={7} sx={{ p: 0, border: 'none' }}>
                           <Collapse in={expandedRows.has(index)}>
-                            <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
+                            <Box sx={{ p: 2, bgcolor: 'transparent' }}>
                               {/* Action Results */}
                               {edge.actionResults && edge.actionResults.length > 0 && (
                                 <Box mb={2}>
@@ -352,7 +353,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                               )}
 
                               {/* Verification Results */}
-                              {edge.verificationResults && edge.verificationResults.length > 0 && (
+                              {edge.verificationResults && edge.verificationResults.length > 0 ? (
                                 <Box>
                                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     Verifications Executed ({edge.verificationResults.length}):
@@ -382,6 +383,18 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                                     </Alert>
                                   ))}
                                 </Box>
+                              ) : (
+                                <Box>
+                                  <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                    No verifications found for {edge.toName || edge.to}. 
+                                    Target node might not have verifications defined.
+                                  </Typography>
+                                  {/* Debug information */}
+                                  <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                                    Debug: Edge data available: actionResults={edge.actionResults?.length || 0}, 
+                                    verificationResults={edge.verificationResults?.length || 0}
+                                  </Typography>
+                                </Box>
                               )}
 
                               {/* Show message when no detailed results are available */}
@@ -400,7 +413,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                 );
               }) || (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center">
                     <Typography variant="body2" color="textSecondary">
                       No edge results available
                     </Typography>
