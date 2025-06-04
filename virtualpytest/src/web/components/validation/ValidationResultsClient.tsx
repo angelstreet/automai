@@ -189,9 +189,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                   <>
                     <TableRow 
                       key={`${edge.from}-${edge.to}-${index}`}
-                      sx={{
-                       
-                      }}
                     >
                       <TableCell>
                         {hasExpandableContent && (
@@ -269,11 +266,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                           <Typography variant="body2" color="textSecondary">
                             Skipped due to parent edge failure
                           </Typography>
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">
-                            No errors
-                          </Typography>
-                        )}
+                        ) : null}
                       </TableCell>
                     </TableRow>
 
