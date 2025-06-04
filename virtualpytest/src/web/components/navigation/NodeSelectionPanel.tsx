@@ -96,6 +96,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       depth: selectedNode.data.depth || 0,
       parent: selectedNode.data.parent || [],
       menu_type: selectedNode.data.menu_type,
+      verifications: selectedNode.data.verifications || [],
     });
     setIsNodeDialogOpen(true);
   };

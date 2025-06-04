@@ -52,7 +52,8 @@ export const useNavigationState = () => {
   const [nodeForm, setNodeForm] = useState<NodeForm>({
     label: '',
     type: 'screen',
-    description: ''
+    description: '',
+    verifications: [],
   });
   const [edgeForm, setEdgeForm] = useState<EdgeForm>({
     actions: [],

@@ -38,6 +38,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
         parent: [],
         depth: 0,
         is_root: false,
+        verifications: [],
       },
     };
 
@@ -54,6 +55,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       description: newNode.data.description || '',
       screenshot: newNode.data.screenshot,
       menu_type: newNode.data.menu_type,
+      verifications: [],
     });
     state.setIsNodeDialogOpen(true);
     state.setIsNewNode(true);
@@ -80,6 +82,8 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
       depth: state.nodeForm.depth || 0,
       menu_type: state.nodeForm.menu_type || (state.nodeForm.type === 'menu' ? 'main' : undefined),
       is_root: state.selectedNode.data.is_root,
+      // Add verifications field to preserve verifications when saving node changes
+      verifications: state.nodeForm.verifications || state.selectedNode.data.verifications || [],
     };
     
     // Update function for nodes

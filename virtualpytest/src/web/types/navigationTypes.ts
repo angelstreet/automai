@@ -99,6 +99,9 @@ export interface NodeForm {
   depth?: number;
   parent?: string[];
   menu_type?: 'main' | 'submenu' | 'leaf';
+  
+  // Add verifications field to preserve during editing
+  verifications?: NodeVerification[];
 }
 
 // Updated EdgeForm interface for multiple actions
