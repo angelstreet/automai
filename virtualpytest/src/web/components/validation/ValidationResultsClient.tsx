@@ -42,9 +42,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
 
   if (!showResults || !results) return null;
 
-  // Check if current results are from cache (comparing with lastResult)
-  const isFromCache = lastResult && results === lastResult;
-
   const toggleRow = (index: number) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(index)) {
@@ -58,7 +55,8 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
   // Calculate success rate based on edge results (excluding skipped)
   const totalEdges = results.edgeResults?.length || 0;
   const successfulEdges = results.edgeResults?.filter(edge => edge.success).length || 0;
-  const skippedEdges = results.edgeResults?.filter(edge => edge.skipped).length || 0;  const executedEdges = totalEdges - skippedEdges;
+  const skippedEdges = results.edgeResults?.filter(edge => edge.skipped).length || 0;
+  const executedEdges = totalEdges - skippedEdges;
   const edgeSuccessRate = executedEdges > 0 ? (successfulEdges / executedEdges) * 100 : 0;
 
   // Improved health color calculation based on success rate percentage
@@ -94,14 +92,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="h6">Validation Results</Typography>
-            {isFromCache && (
-              <Chip 
-                label="CACHED"
-                color="info"
-                size="small"
-                variant="outlined"
-              />
-            )}
             <Chip 
               label={results.summary.overallHealth.toUpperCase()}
               color={getOverallHealthColor(results.summary.overallHealth)}
@@ -115,16 +105,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
       </DialogTitle>
 
       <DialogContent sx={{ bgcolor: 'background.default', p: 1  }}>
-        {isFromCache && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            These are cached results from your last validation run. Results are stored temporarily during your session.
-          </Alert>
-        )}
-
         {/* Summary Section */}
         <Box mb={1}>
           <Typography variant="h6" gutterBottom>Summary</Typography>
-          
           
           <Box display="flex" alignItems="center" gap={2} mb={2}>
             <LinearProgress 
@@ -193,6 +176,14 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                   (edge.verificationResults && edge.verificationResults.length > 0)
                 );
 
+                console.log(`[@component:ValidationResultsClient] Edge ${index}: ${edge.fromName} → ${edge.toName}`, {
+                  hasActionResults: edge.actionResults?.length || 0,
+                  hasVerificationResults: edge.verificationResults?.length || 0,
+                  hasExpandableContent,
+                  actionResults: edge.actionResults,
+                  verificationResults: edge.verificationResults
+                });
+
                 return (
                   <>
                     <TableRow 
@@ -242,12 +233,12 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                           <strong>{edge.fromName || edge.from}</strong>
                           {' → '}
                           <strong>{edge.toName || edge.to}</strong>
+                          {edge.executionTime && (
+                            <Typography variant="caption" color="textSecondary" component="span" sx={{ ml: 1 }}>
+                              ({edge.executionTime.toFixed(2)}s)
+                            </Typography>
+                          )}
                         </Typography>
-                        {edge.executionTime && (
-                          <Typography variant="caption" color="textSecondary" display="block">
-                            {edge.executionTime.toFixed(2)}s
-                          </Typography>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
@@ -256,7 +247,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                               <Typography variant="body2">
                                 {edge.actionsExecuted || 0}/{edge.totalActions}
                               </Typography>
-                              {hasExpandableContent && edge.actionResults && edge.actionResults.length > 0 && (
+                              {edge.actionResults && edge.actionResults.length > 0 && (
                                 <IconButton
                                   size="small"
                                   onClick={() => toggleRow(index)}

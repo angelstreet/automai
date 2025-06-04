@@ -357,18 +357,37 @@ class ValidationService:
             if response.status_code == 200:
                 navigation_result = response.json()
                 navigation_success = navigation_result.get('success', False)
+                print(f"[@service:validation:_test_navigation_path] Navigation API response: {navigation_result}")
             else:
                 navigation_result = {
                     'success': False,
                     'error': f"HTTP {response.status_code}: {response.text}",
-                    'steps_executed': 0,
-                    'total_steps': 0,
+                    'transitions_executed': 0,
+                    'total_transitions': 0,
                     'execution_time': 0,
                     'actions_executed': 0,
                     'total_actions': 0,
-                    'action_results': [],
-                    'verification_results': []
+                    'transitions_details': []
                 }
+            
+            # Extract action results from transitions_details (CORRECT FIELD NAME)
+            action_results = []
+            if navigation_success and 'transitions_details' in navigation_result:
+                for i, transition in enumerate(navigation_result['transitions_details']):
+                    # Extract individual actions from this transition
+                    for j, action in enumerate(transition.get('actions', [])):
+                        action_results.append({
+                            'actionIndex': len(action_results),  # Global action index
+                            'transitionIndex': i,  # Which transition this action belongs to
+                            'actionInTransition': j,  # Action index within the transition
+                            'actionId': action.get('id', f'action_{len(action_results)}'),
+                            'actionLabel': action.get('label', f'Action {len(action_results) + 1}'),
+                            'actionCommand': action.get('command', 'unknown'),
+                            'inputValue': action.get('inputValue', ''),
+                            'success': transition.get('success', False),  # Transition success applies to all its actions
+                            'error': None if transition.get('success', False) else transition.get('error', 'Action failed'),
+                            'executionTime': transition.get('execution_time', 0) / len(transition.get('actions', [1])) if transition.get('actions') else 0
+                        })
             
             # If navigation succeeded, execute target node verifications
             verification_results = []
@@ -381,7 +400,7 @@ class ValidationService:
                 all(v.get('success', False) for v in verification_results)  # All verifications passed
             )
             
-            # Build final result
+            # Build final result with CORRECT field mapping
             result = {
                 'from_node': from_node,
                 'to_node': to_node,
@@ -389,20 +408,21 @@ class ValidationService:
                 'to_name': to_name,
                 'success': combined_success,
                 'skipped': False,
-                'steps_executed': navigation_result.get('steps_executed', 0),
-                'total_steps': navigation_result.get('total_steps', 0),
+                'steps_executed': navigation_result.get('transitions_executed', 0),  # CORRECT: transitions_executed
+                'total_steps': navigation_result.get('total_transitions', 0),      # CORRECT: total_transitions
                 'execution_time': navigation_result.get('execution_time', 0),
                 'actions_executed': navigation_result.get('actions_executed', 0),
                 'total_actions': navigation_result.get('total_actions', 0),
-                'action_results': navigation_result.get('action_results', []),
+                'action_results': action_results,  # ✅ NOW CORRECTLY EXTRACTED from transitions_details
                 'verification_results': verification_results,  # Include target node verifications
                 'error': None if combined_success else (
-                    navigation_result.get('error', 'Navigation failed') if not navigation_success
+                    navigation_result.get('error_message', navigation_result.get('error', 'Navigation failed')) if not navigation_success
                     else 'Target node verifications failed'
                 )
             }
             
             print(f"[@service:validation:_test_navigation_path] Navigation: {'✓' if navigation_success else '✗'}, "
+                  f"Actions: {len(action_results)} extracted, "
                   f"Verifications: {len(verification_results)} executed, "
                   f"Overall: {'✓' if combined_success else '✗'}")
             
@@ -439,12 +459,35 @@ class ValidationService:
             List of verification results
         """
         if not node_info:
+            print(f"[@service:validation:_execute_target_node_verifications] No node_info provided for node {node_id}")
             return []
         
-        # Get verifications from node metadata
-        verifications = node_info.get('verifications', [])
+        # Try to get verifications from multiple possible locations in the node data
+        verifications = []
+        
+        # Option 1: Direct verifications field (standard location)
+        if 'verifications' in node_info:
+            verifications = node_info.get('verifications', [])
+            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in node_info.verifications")
+        
+        # Option 2: Nested in data object (React Flow format: node.data.verifications)
+        elif 'data' in node_info and isinstance(node_info['data'], dict):
+            verifications = node_info['data'].get('verifications', [])
+            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in node_info.data.verifications")
+        
+        # Option 3: Check if the entire node_info IS the data object
+        elif 'label' in node_info and 'type' in node_info:
+            # This suggests node_info is already the data portion
+            verifications = node_info.get('verifications', [])
+            print(f"[@service:validation:_execute_target_node_verifications] Found {len(verifications)} verifications in flattened node_info")
+        
+        # Debug: Log the structure we received
+        print(f"[@service:validation:_execute_target_node_verifications] Node {node_id} structure keys: {list(node_info.keys())}")
+        if 'data' in node_info:
+            print(f"[@service:validation:_execute_target_node_verifications] Node data keys: {list(node_info['data'].keys()) if isinstance(node_info['data'], dict) else 'data is not dict'}")
+        
         if not verifications:
-            print(f"[@service:validation:_execute_target_node_verifications] No verifications found for node {node_id}")
+            print(f"[@service:validation:_execute_target_node_verifications] No verifications found for node {node_id} after checking all possible locations")
             return []
         
         print(f"[@service:validation:_execute_target_node_verifications] Executing {len(verifications)} verifications for node {node_id}")
@@ -458,7 +501,8 @@ class ValidationService:
                 json={
                     'verifications': verifications,
                     'node_id': node_id,
-                    'tree_id': tree_id
+                    'tree_id': tree_id,
+                    'model': 'android_mobile'  # Required parameter for verification API
                 },
                 timeout=30
             )
@@ -466,9 +510,21 @@ class ValidationService:
             if verification_response.status_code == 200:
                 verification_data = verification_response.json()
                 if verification_data.get('success', False):
-                    # Extract individual verification results
-                    verification_results = verification_data.get('results', [])
-                    print(f"[@service:validation:_execute_target_node_verifications] ✓ Executed {len(verification_results)} verifications for node {node_id}")
+                    # Extract individual verification results and map to frontend format
+                    api_results = verification_data.get('results', [])
+                    print(f"[@service:validation:_execute_target_node_verifications] ✓ Executed {len(api_results)} verifications for node {node_id}")
+                    
+                    # Map API response format to frontend format
+                    for i, (api_result, original_verification) in enumerate(zip(api_results, verifications)):
+                        verification_results.append({
+                            'verificationId': api_result.get('verification_id', original_verification.get('id', f'verification_{i}')),
+                            'verificationLabel': original_verification.get('label', f'Verification {i+1}'),
+                            'verificationCommand': original_verification.get('command', 'unknown'),
+                            'success': api_result.get('success', False),
+                            'error': api_result.get('error'),
+                            'resultType': api_result.get('resultType', 'FAIL' if not api_result.get('success', False) else 'PASS'),
+                            'message': api_result.get('message')
+                        })
                 else:
                     print(f"[@service:validation:_execute_target_node_verifications] ✗ Verification batch failed: {verification_data.get('error', 'Unknown error')}")
                     # Create failed results for all verifications
