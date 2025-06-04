@@ -389,12 +389,12 @@ export function CompactAndroidMobile({
       {showOverlay && androidElements.length > 0 && (
         <div style={{ 
           position: 'fixed',
-          left: '83px',
-          top: '170px',
+          left: '43px',
+          top: '180px',
           zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
           transformOrigin: 'top left',
-          transform: 'scale(0.2, 0.2)', // Separate scaleX and scaleY values
+          transform: 'scale(0.2, 0.1915)', // Separate scaleX and scaleY values
           
           background: 'rgba(0,0,0,0.01)' // Add a barely visible background to help with layer creation
         }}>
