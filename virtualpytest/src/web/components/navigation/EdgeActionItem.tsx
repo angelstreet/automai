@@ -103,10 +103,10 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       borderColor: 'divider', 
       borderRadius: 1, 
       px: 1.5,
-      py: 1,
+      py: 0.5,
       mb: 0.5
     }}>
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
             value={availableActions.find(a => a.id === action.id) ? action.id : ''}
