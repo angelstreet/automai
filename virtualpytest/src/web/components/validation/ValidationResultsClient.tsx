@@ -140,6 +140,12 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                     '&:nth-of-type(odd)': {
                       bgcolor: 'action.hover',
                     },
+                    '&:hover': {
+                      bgcolor: 'inherit !important',
+                    },
+                    '&:nth-of-type(odd):hover': {
+                      bgcolor: 'action.hover !important',
+                    },
                   }}
                 >
                   <TableCell>
