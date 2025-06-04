@@ -114,21 +114,6 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               
               <Collapse in={showDetails}>
                 <Box mt={2}>
-                  {/* Reachable Nodes List */}
-                  <Typography variant="subtitle2" gutterBottom>
-                    Reachable Nodes ({previewData.reachableNodes.length})
-                  </Typography>
-                  <List dense>
-                    {previewData.reachableNodes?.map((node, index) => (
-                      <ListItem key={node.id || index} sx={{ py: 0, px: 1 }}>
-                        <ListItemText
-                          primary={node.name || `Node ${index + 1}`}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
                   {/* Reachable Edges List */}
                   <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
                     Navigation Paths ({previewData.totalEdges})
