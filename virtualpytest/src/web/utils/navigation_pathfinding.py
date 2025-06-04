@@ -598,6 +598,12 @@ def _create_greedy_edge_validation_sequence(G: nx.DiGraph, edges_to_validate: Li
                 
                 # Try again to find edge from new position
                 best_edge = _find_best_next_edge_networkx(G, current_position, remaining_edges)
+            else:
+                # No valid navigation path found using NetworkX
+                # This means the remaining edges are not reachable from current position
+                print(f"[@navigation:pathfinding:_create_greedy_edge_validation_sequence] No valid navigation path from {current_position} to any remaining edge")
+                print(f"[@navigation:pathfinding:_create_greedy_edge_validation_sequence] Remaining edges may require different entry point or are unreachable")
+                break
         
         if best_edge:
             from_node, to_node = best_edge
