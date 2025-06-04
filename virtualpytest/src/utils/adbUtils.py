@@ -308,7 +308,11 @@ class ADBUtils:
             success, stdout, stderr, exit_code = self.ssh.execute_command(dump_command)
             
             if not success or exit_code != 0:
-                error_msg = f"Failed to dump UI: {stderr}"
+                # Make infrastructure errors more explicit
+                if 'timeout' in stderr.lower() or 'connection' in stderr.lower() or 'ssh' in stderr.lower():
+                    error_msg = f"Infrastructure failure - Failed to dump UI: {stderr}"
+                else:
+                    error_msg = f"Failed to dump UI: {stderr}"
                 print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
                 return False, [], error_msg
                 
@@ -319,7 +323,11 @@ class ADBUtils:
             success, stdout, stderr, exit_code = self.ssh.execute_command(read_command)
             
             if not success or exit_code != 0:
-                error_msg = f"Failed to read UI dump: {stderr}"
+                # Make infrastructure errors more explicit
+                if 'timeout' in stderr.lower() or 'connection' in stderr.lower() or 'ssh' in stderr.lower():
+                    error_msg = f"Infrastructure failure - Failed to read UI dump: {stderr}"
+                else:
+                    error_msg = f"Failed to read UI dump: {stderr}"
                 print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
                 return False, [], error_msg
                 
@@ -682,7 +690,11 @@ class ADBUtils:
             dump_success, elements, dump_error = self.dump_ui_elements(device_id)
             
             if not dump_success:
-                error_msg = f"Failed to dump UI elements: {dump_error}"
+                # Make infrastructure failures more explicit in smart search
+                if 'infrastructure failure' in dump_error.lower() or 'timeout' in dump_error.lower() or 'connection' in dump_error.lower():
+                    error_msg = f"Infrastructure failure - Cannot search elements: {dump_error}"
+                else:
+                    error_msg = f"Failed to dump UI elements: {dump_error}"
                 print(f"[@lib:adbUtils:smart_element_search] {error_msg}")
                 return False, [], error_msg
             

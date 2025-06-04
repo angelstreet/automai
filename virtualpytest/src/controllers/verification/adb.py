@@ -165,13 +165,43 @@ class ADBVerificationController:
             print(f"[@controller:ADBVerification:waitForElementToAppear] Waiting for '{search_term}' (timeout: {timeout}s)")
             
             start_time = time.time()
+            consecutive_infrastructure_failures = 0
+            max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
             while time.time() - start_time < timeout:
                 success, matches, error = self.adb_utils.smart_element_search(self.device_id, search_term)
                 
                 if error:
                     print(f"[@controller:ADBVerification:waitForElementToAppear] Search failed: {error}")
-                    # Continue checking even if one check fails
+                    
+                    # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
+                    if any(infrastructure_error in error.lower() for infrastructure_error in [
+                        'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
+                        'adb connect failed', 'device not found', 'no devices', 'offline'
+                    ]):
+                        consecutive_infrastructure_failures += 1
+                        print(f"[@controller:ADBVerification:waitForElementToAppear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
+                        
+                        if consecutive_infrastructure_failures >= max_consecutive_failures:
+                            elapsed = time.time() - start_time
+                            error_message = f"Infrastructure failure: {error}"
+                            print(f"[@controller:ADBVerification:waitForElementToAppear] ERROR: Too many consecutive infrastructure failures")
+                            
+                            result_data = {
+                                'search_term': search_term,
+                                'wait_time': elapsed,
+                                'infrastructure_error': True,
+                                'error_details': error,
+                                'consecutive_failures': consecutive_infrastructure_failures
+                            }
+                            
+                            return False, error_message, result_data
+                    else:
+                        # Reset counter for non-infrastructure errors
+                        consecutive_infrastructure_failures = 0
+                else:
+                    # Reset counter on successful search
+                    consecutive_infrastructure_failures = 0
                 
                 if success and matches:
                     elapsed = time.time() - start_time
@@ -218,7 +248,14 @@ class ADBVerificationController:
         except Exception as e:
             error_msg = f"Wait for element appear error: {e}"
             print(f"[@controller:ADBVerification:waitForElementToAppear] ERROR: {error_msg}")
-            return False, error_msg, {}
+            
+            result_data = {
+                'search_term': search_term,
+                'infrastructure_error': True,
+                'error_details': str(e)
+            }
+            
+            return False, error_msg, result_data
 
     def waitForElementToDisappear(self, search_term: str, timeout: float = 10.0, check_interval: float = 1.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
@@ -236,13 +273,43 @@ class ADBVerificationController:
             print(f"[@controller:ADBVerification:waitForElementToDisappear] Waiting for '{search_term}' to disappear (timeout: {timeout}s)")
             
             start_time = time.time()
+            consecutive_infrastructure_failures = 0
+            max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
             while time.time() - start_time < timeout:
                 success, matches, error = self.adb_utils.smart_element_search(self.device_id, search_term)
                 
                 if error:
                     print(f"[@controller:ADBVerification:waitForElementToDisappear] Search failed: {error}")
-                    # Continue checking even if one check fails
+                    
+                    # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
+                    if any(infrastructure_error in error.lower() for infrastructure_error in [
+                        'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
+                        'adb connect failed', 'device not found', 'no devices', 'offline'
+                    ]):
+                        consecutive_infrastructure_failures += 1
+                        print(f"[@controller:ADBVerification:waitForElementToDisappear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
+                        
+                        if consecutive_infrastructure_failures >= max_consecutive_failures:
+                            elapsed = time.time() - start_time
+                            error_message = f"Infrastructure failure: {error}"
+                            print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: Too many consecutive infrastructure failures")
+                            
+                            result_data = {
+                                'search_term': search_term,
+                                'wait_time': elapsed,
+                                'infrastructure_error': True,
+                                'error_details': error,
+                                'consecutive_failures': consecutive_infrastructure_failures
+                            }
+                            
+                            return False, error_message, result_data
+                    else:
+                        # Reset counter for non-infrastructure errors
+                        consecutive_infrastructure_failures = 0
+                else:
+                    # Reset counter on successful search
+                    consecutive_infrastructure_failures = 0
                 
                 if not success or not matches:
                     elapsed = time.time() - start_time
@@ -297,5 +364,12 @@ class ADBVerificationController:
         except Exception as e:
             error_msg = f"Wait for element disappear error: {e}"
             print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: {error_msg}")
-            return False, error_msg, {}
+            
+            result_data = {
+                'search_term': search_term,
+                'infrastructure_error': True,
+                'error_details': str(e)
+            }
+            
+            return False, error_msg, result_data
     

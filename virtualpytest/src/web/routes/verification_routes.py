@@ -569,8 +569,16 @@ def execute_verification():
         result['message'] = message
         
         # Add resultType for consistent frontend handling
+        # Check if this is an infrastructure error (for ADB verifications)
+        is_infrastructure_error = False
+        if controller_type == 'adb' and additional_data:
+            is_infrastructure_error = additional_data.get('infrastructure_error', False)
+        
         if success:
             result['resultType'] = 'PASS'
+        elif is_infrastructure_error or 'Infrastructure failure:' in message:
+            result['resultType'] = 'ERROR'
+            result['error'] = message  # Set error field for infrastructure failures
         elif result.get('error'):
             result['resultType'] = 'ERROR'  
         else:
@@ -929,8 +937,16 @@ def execute_batch_verification():
                 result['message'] = message
                 
                 # Add resultType for consistent frontend handling
+                # Check if this is an infrastructure error (for ADB verifications)
+                is_infrastructure_error = False
+                if controller_type == 'adb' and additional_data:
+                    is_infrastructure_error = additional_data.get('infrastructure_error', False)
+                
                 if success:
                     result['resultType'] = 'PASS'
+                elif is_infrastructure_error or 'Infrastructure failure:' in message:
+                    result['resultType'] = 'ERROR'
+                    result['error'] = message  # Set error field for infrastructure failures
                 elif result.get('error'):
                     result['resultType'] = 'ERROR'  
                 else:
