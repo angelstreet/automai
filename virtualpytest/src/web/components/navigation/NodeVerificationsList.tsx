@@ -181,6 +181,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     onVerificationsChange(newVerifications);
   };
 
+  const moveVerificationUp = (index: number) => {
+    if (index === 0) return; // Can't move first item up
+    const newVerifications = [...verifications];
+    [newVerifications[index - 1], newVerifications[index]] = [newVerifications[index], newVerifications[index - 1]];
+    onVerificationsChange(newVerifications);
+  };
+
+  const moveVerificationDown = (index: number) => {
+    if (index === verifications.length - 1) return; // Can't move last item down
+    const newVerifications = [...verifications];
+    [newVerifications[index], newVerifications[index + 1]] = [newVerifications[index + 1], newVerifications[index]];
+    onVerificationsChange(newVerifications);
+  };
+
   const handleVerificationSelect = (index: number, actionId: string) => {
     // Find the selected action from available actions
     let selectedAction: VerificationAction | undefined = undefined;
@@ -388,6 +402,10 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             onRemoveVerification={removeVerification}
             onImageClick={handleImageClick}
             onSourceImageClick={handleSourceImageClick}
+            onMoveUp={moveVerificationUp}
+            onMoveDown={moveVerificationDown}
+            canMoveUp={index > 0}
+            canMoveDown={index < verifications.length - 1}
           />
         ))}
       </Box>

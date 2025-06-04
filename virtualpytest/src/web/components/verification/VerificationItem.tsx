@@ -13,7 +13,7 @@ import {
   RadioGroup,
   Radio,
 } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Close as CloseIcon, KeyboardArrowUp as KeyboardArrowUpIcon, KeyboardArrowDown as KeyboardArrowDownIcon } from '@mui/icons-material';
 import { VerificationControls } from './VerificationControls';
 import { VerificationTestResults } from './VerificationTestResults';
 
@@ -117,8 +117,12 @@ interface VerificationItemProps {
   onTextFilterChange: (index: number, filter: 'none' | 'greyscale' | 'binary') => void;
   onUpdateVerification: (index: number, updates: Partial<NodeVerification>) => void;
   onRemoveVerification: (index: number) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
   onImageClick: (sourceUrl: string, referenceUrl: string, userThreshold?: number, matchingResult?: number, resultType?: 'PASS' | 'FAIL' | 'ERROR', imageFilter?: 'none' | 'greyscale' | 'binary') => void;
   onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }
 
 export const VerificationItem: React.FC<VerificationItemProps> = ({
@@ -134,8 +138,12 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
   onTextFilterChange,
   onUpdateVerification,
   onRemoveVerification,
+  onMoveUp,
+  onMoveDown,
   onImageClick,
-  onSourceImageClick
+  onSourceImageClick,
+  canMoveUp,
+  canMoveDown,
 }) => {
   return (
     <Box sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -194,8 +202,26 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
           </Select>
         </FormControl>
         
+        <IconButton 
+          size="small" 
+          onClick={() => onMoveUp(index)} 
+          disabled={!canMoveUp}
+          sx={{ opacity: !canMoveUp ? 0.3 : 1 }}
+        >
+          <KeyboardArrowUpIcon fontSize="small" />
+        </IconButton>
+        
+        <IconButton 
+          size="small" 
+          onClick={() => onMoveDown(index)} 
+          disabled={!canMoveDown}
+          sx={{ opacity: !canMoveDown ? 0.3 : 1 }}
+        >
+          <KeyboardArrowDownIcon fontSize="small" />
+        </IconButton>
+        
         <IconButton size="small" onClick={() => onRemoveVerification(index)} color="error">
-          <DeleteIcon fontSize="small" />
+          <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
       

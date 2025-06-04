@@ -190,6 +190,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     try {
       let results: string[] = [];
       const updatedVerifications = [...nodeForm.verifications];
+      let executionStopped = false;
       
       for (let i = 0; i < nodeForm.verifications.length; i++) {
         const verification = nodeForm.verifications[i];
@@ -201,7 +202,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             ...verification,
             last_run_result: updateLastRunResults(verification.last_run_result || [], false)
           };
-          continue;
+          results.push(`⏹️ Execution stopped due to failed verification ${i + 1}`);
+          executionStopped = true;
+          break;
         }
         
         console.log(`[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.label}`);
@@ -252,6 +255,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         
         console.log(`[@component:NodeEditDialog] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${confidenceScore.toFixed(3)}`);
         
+        // Stop execution if verification failed
+        if (!verificationSuccess) {
+          results.push(`⏹️ Execution stopped due to failed verification ${i + 1}`);
+          executionStopped = true;
+          break;
+        }
+        
         // Small delay between verifications
         await delay(1000);
       }
@@ -263,7 +273,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       }));
       
       setVerificationResult(results.join('\n'));
-      console.log(`[@component:NodeEditDialog] All verifications completed`);
+      
+      if (executionStopped) {
+        console.log(`[@component:NodeEditDialog] Verification execution stopped due to failure`);
+      } else {
+        console.log(`[@component:NodeEditDialog] All verifications completed successfully`);
+      }
       
     } catch (err: any) {
       console.error('[@component:NodeEditDialog] Error executing verifications:', err);
