@@ -104,7 +104,7 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       borderRadius: 1, 
       px: 1.5,
       py: 0.5,
-      mb: 0.5
+      mb: 0.25
     }}>
       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
@@ -112,10 +112,17 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
             value={availableActions.find(a => a.id === action.id) ? action.id : ''}
             onChange={(e) => handleActionChange(e.target.value)}
             displayEmpty
+            sx={{ 
+              fontSize: '0.8rem',
+              '& .MuiSelect-select': {
+                py: 0.5,
+                fontSize: '0.8rem'
+              }
+            }}
           >
-            <MenuItem value="">Select Action</MenuItem>
+            <MenuItem value="" sx={{ fontSize: '0.8rem' }}>Select Action</MenuItem>
             {availableActions.map((availableAction) => (
-              <MenuItem key={availableAction.id} value={availableAction.id}>
+              <MenuItem key={availableAction.id} value={availableAction.id} sx={{ fontSize: '0.8rem' }}>
                 {availableAction.label}
               </MenuItem>
             ))}
@@ -127,7 +134,13 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
           type="number"
           value={action.waitTime}
           onChange={(e) => onUpdate({ waitTime: parseInt(e.target.value) || 0 })}
-          sx={{ width: 80 }}
+          sx={{ 
+            width: 70,
+            '& .MuiInputBase-input': {
+              fontSize: '0.8rem',
+              py: 0.5
+            }
+          }}
           inputProps={{ min: 0, step: 100 }}
         />
         
@@ -167,6 +180,12 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
               action.command === 'coordinate_tap' ? 'x,y' : 'Input value'
             }
             fullWidth
+            sx={{
+              '& .MuiInputBase-input': {
+                fontSize: '0.8rem',
+                py: 0.5
+              }
+            }}
           />
         </Box>
       )}
