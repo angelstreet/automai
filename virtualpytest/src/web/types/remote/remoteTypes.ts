@@ -1,5 +1,7 @@
+import { AndroidElement } from './types';
+
 // Base remote configuration type
-export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
+export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth' | 'usb-power';
 
 // Base connection configuration interface (shared across Android remotes)
 export interface BaseConnectionConfig {

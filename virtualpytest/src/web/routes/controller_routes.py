@@ -80,9 +80,7 @@ def get_controller_types():
                 'ai': {'name': 'AI Verification', 'description': 'AI-based verification', 'status': 'placeholder'},
             },
             'power': {
-                'mock': {'name': 'Mock Power', 'description': 'Simulated power management', 'status': 'available'},
-                'smart_plug': {'name': 'Smart Plug', 'description': 'Smart plug power control', 'status': 'placeholder'},
-                'ipmi': {'name': 'IPMI Power', 'description': 'IPMI power management', 'status': 'placeholder'},
+                'usb': {'name': 'USB Power Control', 'description': 'USB hub power control via SSH + uhubctl', 'status': 'available'},
             }
         }
         

@@ -1,15 +1,12 @@
 """
-Power Controllers Package
+Power Controller Implementations
 
-This package contains all power management implementations.
-Each controller provides different methods for controlling device power states.
-
-Available Controllers:
-- MockPowerController: Mock implementation for testing
+This module contains controller implementations for power management:
+- USBPowerController: USB hub power control via SSH + uhubctl
 """
 
-from .mock import MockPowerController
+from .usb_power import USBPowerController
 
 __all__ = [
-    'MockPowerController'
+    'USBPowerController'
 ]

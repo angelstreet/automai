@@ -112,12 +112,43 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   ]
 };
 
+// USB Power configuration
+export const USB_POWER_CONFIG: RemoteDeviceConfig = {
+  type: 'usb-power',
+  name: 'USB Power Control',
+  icon: 'Power',
+  hasScreenshot: false,
+  hasOverlay: false,
+  defaultPorts: {
+    host: '22',
+    device: ''
+  },
+  apiEndpoints: {
+    defaults: '/api/virtualpytest/usb-power/defaults',
+    connect: '',
+    disconnect: '',
+    command: '',
+    // USB Power specific endpoints
+    powerOn: '/api/virtualpytest/usb-power/power-on',
+    powerOff: '/api/virtualpytest/usb-power/power-off',
+    reboot: '/api/virtualpytest/usb-power/reboot'
+  },
+  connectionFields: [
+    { name: 'host_ip', label: 'Host IP', required: true },
+    { name: 'host_port', label: 'Host Port', default: '22' },
+    { name: 'host_username', label: 'Username', required: true },
+    { name: 'host_password', label: 'Password', type: 'password', required: true },
+    { name: 'usb_hub', label: 'USB Hub', default: '1' }
+  ]
+};
+
 // Configuration registry
 export const REMOTE_CONFIGS = {
   'android-tv': ANDROID_TV_CONFIG,
   'android-mobile': ANDROID_MOBILE_CONFIG,
   'ir': IR_CONFIG,
   'bluetooth': BLUETOOTH_CONFIG,
+  'usb-power': USB_POWER_CONFIG,
 } as const;
 
 // Helper function to get config by type

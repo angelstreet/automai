@@ -19,13 +19,15 @@ from .base_controllers import (
 
 # Import mock implementations
 from .audiovideo.hdmi_stream import HDMIStreamController
-from .power.mock import MockPowerController
 
 # Import real implementations
 from .remote.android_tv import AndroidTVRemoteController
 from .remote.android_mobile import AndroidMobileRemoteController
 from .remote.infrared import IRRemoteController
 from .remote.bluetooth import BluetoothRemoteController
+
+# Import power implementations
+from .power.usb_power import USBPowerController
 
 # Import verification implementations
 from .verification.image import ImageVerificationController
@@ -50,9 +52,7 @@ CONTROLLER_REGISTRY = {
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {
-        'mock': MockPowerController,
-        'smart_plug': MockPowerController,   # Can be replaced with real smart plug implementation
-        'ipmi': MockPowerController,         # Can be replaced with IPMI implementation
+        'usb': USBPowerController,           # USB hub power control via SSH + uhubctl
     }
 }
 
@@ -138,7 +138,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_power_controller(
-        power_type: str = "mock",
+        power_type: str = "usb",
         device_name: str = "Unknown Device",
         **kwargs
     ) -> PowerControllerInterface:
@@ -300,7 +300,7 @@ def create_device_controllers(
             'remote_type': 'android_tv',  # SSH+ADB Android TV controller
             'av_type': 'adb',
             'verification_type': 'ocr',
-            'power_type': 'smart_plug',  # Changed from 'adb' to 'smart_plug'
+            'power_type': 'usb',  # USB hub power control via SSH + uhubctl
             # Required parameters for SSH+ADB connection:
             # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
@@ -308,7 +308,7 @@ def create_device_controllers(
             'remote_type': 'real_android_mobile',  # SSH+ADB Android mobile controller
             'av_type': 'adb',
             'verification_type': 'ocr',
-            'power_type': 'smart_plug',  # Changed from 'adb' to 'smart_plug'
+            'power_type': 'usb',  # USB hub power control via SSH + uhubctl
             # Required parameters for SSH+ADB connection:
             # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
@@ -316,13 +316,13 @@ def create_device_controllers(
             'remote_type': 'ir_remote',
             'av_type': 'hdmi',
             'verification_type': 'image',
-            'power_type': 'smart_plug'
+            'power_type': 'usb'
         },
         'bluetooth_device': {
             'remote_type': 'bluetooth_remote',
             'av_type': 'hdmi_stream',
             'verification_type': 'ocr',
-            'power_type': 'smart_plug'  # Changed from 'network' to 'smart_plug'
+            'power_type': 'usb'  # USB hub power control via SSH + uhubctl
         }
     }
     

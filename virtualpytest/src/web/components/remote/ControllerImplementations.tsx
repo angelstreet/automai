@@ -13,6 +13,10 @@ import {
   AccordionSummary,
   AccordionDetails,
   Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from '@mui/material';
 import {
   ExpandMore,
@@ -24,12 +28,14 @@ import {
   Visibility as VerificationIcon,
   Power as PowerIcon,
   Memory as ProcessorIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 
 import { ControllerTypes, ControllerType } from '../../types/remote/types';
 import { RemoteModal } from '../modals/remote/RemoteModal';
 import { AndroidMobileModal } from '../modals/remote/AndroidMobileModal';
 import { HDMIStreamModal } from '../modals/remote/HDMIStreamModal';
+import { USBPowerPanel } from '../power/USBPowerPanel';
 
 interface ControllerImplementationsProps {
   controllerTypes: ControllerTypes | null;
@@ -44,6 +50,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
   const [irRemoteModalOpen, setIrRemoteModalOpen] = useState(false);
   const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
   const [hdmiStreamModalOpen, setHdmiStreamModalOpen] = useState(false);
+  const [usbPowerModalOpen, setUsbPowerModalOpen] = useState(false);
 
   const getControllerIcon = (type: string) => {
     switch (type) {
@@ -75,6 +82,8 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       setBluetoothModalOpen(true);
     } else if (category === 'av' && controller.id === 'hdmi_stream') {
       setHdmiStreamModalOpen(true);
+    } else if (category === 'power' && controller.id === 'usb') {
+      setUsbPowerModalOpen(true);
     }
   };
 
@@ -167,6 +176,28 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
         open={hdmiStreamModalOpen} 
         onClose={() => setHdmiStreamModalOpen(false)} 
       />
+      
+      {/* USB Power Control Modal */}
+      <Dialog 
+        open={usbPowerModalOpen} 
+        onClose={() => setUsbPowerModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          USB Power Control
+          <IconButton
+            aria-label="close"
+            onClick={() => setUsbPowerModalOpen(false)}
+            sx={{ color: (theme) => theme.palette.grey[500] }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <USBPowerPanel />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }; 
