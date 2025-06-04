@@ -676,7 +676,7 @@ def _find_best_next_edge_networkx(G: nx.DiGraph, current_position: str, remainin
     return None
 
 def _find_shortest_path_to_any_edge_networkx(G: nx.DiGraph, current_position: str, remaining_edges: set) -> Optional[List[Dict]]:
-    """Use NetworkX to find shortest path to any remaining edge"""
+    """Use NetworkX to find shortest path to any remaining edge - ONLY using edges that actually exist"""
     from navigation_graph import get_node_info
     
     # Find all source nodes of remaining edges
@@ -704,26 +704,44 @@ def _find_shortest_path_to_any_edge_networkx(G: nx.DiGraph, current_position: st
     if not shortest_path or len(shortest_path) < 2:
         return None
     
-    # Convert NetworkX path to navigation steps
+    # CRITICAL FIX: Validate that ALL edges in the path actually exist
+    # If any edge doesn't exist, reject the entire path
+    for i in range(len(shortest_path) - 1):
+        from_node = shortest_path[i]
+        to_node = shortest_path[i + 1]
+        
+        if not G.has_edge(from_node, to_node):
+            print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] ERROR: Path contains non-existent edge {from_node} → {to_node}")
+            print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] Rejecting entire path to {best_target}")
+            return None
+    
+    # Convert NetworkX path to navigation steps - ONLY for valid edges
     navigation_steps = []
     for i in range(len(shortest_path) - 1):
         from_node = shortest_path[i]
         to_node = shortest_path[i + 1]
         
-        edge_data = G.edges[from_node, to_node] if G.has_edge(from_node, to_node) else {}
+        # We already validated this edge exists above
+        edge_data = G.edges[from_node, to_node]
         from_info = get_node_info(G, from_node)
         to_info = get_node_info(G, to_node)
         
-        navigation_steps.append({
-            'from_node_id': from_node,
-            'to_node_id': to_node,
-            'from_node_label': from_info.get('label', from_node) if from_info else from_node,
-            'to_node_label': to_info.get('label', to_node) if to_info else to_node,
-            'actions': edge_data.get('actions', []),
-            'description': f"Navigate: {from_info.get('label', from_node) if from_info else from_node} → {to_info.get('label', to_node) if to_info else to_node}"
-        })
+        # Only create navigation step if edge has actions (is navigable)
+        if edge_data.get('actions'):
+            navigation_steps.append({
+                'from_node_id': from_node,
+                'to_node_id': to_node,
+                'from_node_label': from_info.get('label', from_node) if from_info else from_node,
+                'to_node_label': to_info.get('label', to_node) if to_info else to_node,
+                'actions': edge_data.get('actions', []),
+                'description': f"Navigate: {from_info.get('label', from_node) if from_info else from_node} → {to_info.get('label', to_node) if to_info else to_node}"
+            })
+        else:
+            print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] ERROR: Edge {from_node} → {to_node} exists but has no actions")
+            print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] Rejecting entire path to {best_target}")
+            return None
     
-    print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] Found path of length {shortest_length} to {best_target}")
+    print(f"[@navigation:pathfinding:_find_shortest_path_to_any_edge_networkx] Found valid path of length {shortest_length} to {best_target}")
     return navigation_steps
 
 def _create_simple_edge_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
