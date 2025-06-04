@@ -250,7 +250,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                 <MenuItem value="popup">Popup</MenuItem>
                 <MenuItem value="overlay">Overlay</MenuItem>
                 <MenuItem value="menu">Menu</MenuItem>
-                <MenuItem value="entry">Entry Point</MenuItem>
               </Select>
             </FormControl>
           </Box>

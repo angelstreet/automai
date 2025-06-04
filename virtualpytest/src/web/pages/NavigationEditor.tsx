@@ -971,6 +971,22 @@ const NavigationEditorContent: React.FC = () => {
                   deleteKeyCode="Delete"
                   multiSelectionKeyCode="Shift"
                   style={{ width: '100%', height: '100%' }}
+                  fitView={false}
+                  nodesDraggable={true}
+                  nodesConnectable={true}
+                  elementsSelectable={true}
+                  preventScrolling={false}
+                  panOnDrag={true}
+                  panOnScroll={false}
+                  zoomOnScroll={true}
+                  zoomOnPinch={true}
+                  zoomOnDoubleClick={false}
+                  minZoom={0.1}
+                  maxZoom={4}
+                  // Disable React Flow's auto-positioning features
+                  proOptions={{ hideAttribution: true }}
+                  // Prevent automatic layout algorithms
+                  nodeOrigin={[0, 0]}
                 >
                   <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                   <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />

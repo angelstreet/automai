@@ -139,23 +139,37 @@ export const useNavigationEditor = () => {
   // Additional state that might need local management
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
 
-  // Override onNodesChange to save to history and track changes
-  const onNodesChangeWithHistory = useCallback((changes: any[]) => {
-    navigationState.onNodesChange(changes);
-    // Only save to history for meaningful changes (not just selection)
-    const hasMeaningfulChange = changes.some(change => 
-      change.type === 'add' || 
-      change.type === 'remove' || 
-      (change.type === 'position' && change.dragging === false)
-    );
+  // Override onNodesChange to prevent automatic position changes
+  const customOnNodesChange = useCallback((changes: any[]) => {
+    console.log('[@hook:useNavigationEditor] onNodesChange called with changes:', changes);
     
-    if (hasMeaningfulChange) {
-      setTimeout(() => {
-        historyHook.saveToHistory();
-        navigationState.setHasUnsavedChanges(true);
-      }, 0);
+    // Filter out position changes that might be caused by auto-layout
+    const filteredChanges = changes.filter(change => {
+      // Allow user-initiated changes (drag, select, etc.)
+      if (change.type === 'select' || change.type === 'remove') {
+        return true;
+      }
+      
+      // For position changes, only allow if they're user-initiated (dragging = true)
+      if (change.type === 'position') {
+        // Allow position changes when user is actively dragging
+        return change.dragging === true || change.dragging === undefined;
+      }
+      
+      // Allow dimension changes
+      if (change.type === 'dimensions') {
+        return true;
+      }
+      
+      console.log('[@hook:useNavigationEditor] Filtered out automatic change:', change);
+      return true; // For now, allow all changes - remove this line if you want stricter filtering
+    });
+    
+    // Only apply changes if we have any after filtering
+    if (filteredChanges.length > 0) {
+      navigationState.onNodesChange(filteredChanges);
     }
-  }, [navigationState.onNodesChange, historyHook.saveToHistory, navigationState.setHasUnsavedChanges]);
+  }, [navigationState.onNodesChange]);
 
   // Override onEdgesChange to save to history and track changes
   const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
@@ -231,6 +245,8 @@ export const useNavigationEditor = () => {
           console.log(`[@component:NavigationEditor] Updating source node ${sourceNode.data.label}:`, connectionResult.sourceNodeUpdates);
           return {
             ...node,
+            // Explicitly preserve position to prevent auto-reorganization
+            position: node.position,
             data: {
               ...node.data,
               ...connectionResult.sourceNodeUpdates
@@ -241,6 +257,8 @@ export const useNavigationEditor = () => {
           console.log(`[@component:NavigationEditor] Updating target node ${targetNode.data.label}:`, connectionResult.targetNodeUpdates);
           return {
             ...node,
+            // Explicitly preserve position to prevent auto-reorganization
+            position: node.position,
             data: {
               ...node.data,
               ...connectionResult.targetNodeUpdates
@@ -504,6 +522,9 @@ export const useNavigationEditor = () => {
   const filteredNodes = useMemo(() => {
     console.log(`[@hook:useNavigationEditor] Filtering nodes - focusNodeId: ${navigationState.focusNodeId}, maxDisplayDepth: ${navigationState.maxDisplayDepth}, total nodes: ${navigationState.allNodes.length}`);
     
+    // Preserve previous filtered nodes for reference equality check
+    const prevFilteredNodes = navigationState.nodes;
+    
     if (!navigationState.focusNodeId) {
       // No focus node selected (All option) - apply depth filtering to all nodes
       console.log(`[@hook:useNavigationEditor] No focus node - applying depth filter (max depth: ${navigationState.maxDisplayDepth}) to all ${navigationState.allNodes.length} nodes`);
@@ -514,6 +535,17 @@ export const useNavigationEditor = () => {
         return shouldInclude;
       });
       console.log(`[@hook:useNavigationEditor] Depth filtering complete - showing ${depthFiltered.length} of ${navigationState.allNodes.length} nodes`);
+      
+      // Preserve object references if the filtered set is the same
+      const prevIds = new Set(prevFilteredNodes.map(n => n.id));
+      const newIds = new Set(depthFiltered.map(n => n.id));
+      if (prevFilteredNodes.length === depthFiltered.length && 
+          [...newIds].every(id => prevIds.has(id))) {
+        // Same set of nodes, return previous array to maintain reference equality
+        console.log(`[@hook:useNavigationEditor] Filtered nodes unchanged, preserving references`);
+        return prevFilteredNodes;
+      }
+      
       return depthFiltered;
     }
 
@@ -521,6 +553,16 @@ export const useNavigationEditor = () => {
     const focusNode = navigationState.allNodes.find(n => n.id === navigationState.focusNodeId);
     if (!focusNode) {
       console.log(`[@hook:useNavigationEditor] Focus node ${navigationState.focusNodeId} not found, showing all nodes`);
+      
+      // Check if we can preserve previous references
+      const prevIds = new Set(prevFilteredNodes.map(n => n.id));
+      const allIds = new Set(navigationState.allNodes.map(n => n.id));
+      if (prevFilteredNodes.length === navigationState.allNodes.length && 
+          [...allIds].every(id => prevIds.has(id))) {
+        console.log(`[@hook:useNavigationEditor] All nodes unchanged, preserving references`);
+        return prevFilteredNodes;
+      }
+      
       return navigationState.allNodes;
     }
 
@@ -565,17 +607,43 @@ export const useNavigationEditor = () => {
     });
     
     console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes (depths ${focusDepth} to ${maxAbsoluteDepth})`);
+    
+    // Preserve object references if the filtered set is the same
+    const prevIds = new Set(prevFilteredNodes.map(n => n.id));
+    const newIds = new Set(filtered.map(n => n.id));
+    if (prevFilteredNodes.length === filtered.length && 
+        [...newIds].every(id => prevIds.has(id))) {
+      // Same set of nodes, return previous array to maintain reference equality
+      console.log(`[@hook:useNavigationEditor] Focus filtered nodes unchanged, preserving references`);
+      return prevFilteredNodes;
+    }
+    
     return filtered;
-  }, [navigationState.allNodes, navigationState.focusNodeId, navigationState.maxDisplayDepth, isNodeDescendantOf]);
+  }, [navigationState.allNodes, navigationState.focusNodeId, navigationState.maxDisplayDepth, navigationState.nodes, isNodeDescendantOf]);
 
   // Get filtered edges (only between visible nodes)
   const filteredEdges = useMemo(() => {
     const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
     
-    return navigationState.allEdges.filter(edge => 
+    // Preserve previous filtered edges for reference equality check
+    const prevFilteredEdges = navigationState.edges;
+    
+    const newFilteredEdges = navigationState.allEdges.filter(edge => 
       visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
     );
-  }, [navigationState.allEdges, filteredNodes]);
+    
+    // Preserve object references if the filtered set is the same
+    const prevIds = new Set(prevFilteredEdges.map(e => e.id));
+    const newIds = new Set(newFilteredEdges.map(e => e.id));
+    if (prevFilteredEdges.length === newFilteredEdges.length && 
+        [...newIds].every(id => prevIds.has(id))) {
+      // Same set of edges, return previous array to maintain reference equality
+      console.log(`[@hook:useNavigationEditor] Filtered edges unchanged, preserving references`);
+      return prevFilteredEdges;
+    }
+    
+    return newFilteredEdges;
+  }, [navigationState.allEdges, filteredNodes, navigationState.edges]);
 
   // Keep the getFilteredNodes and getFilteredEdges functions for backward compatibility
   const getFilteredNodes = useCallback(() => filteredNodes, [filteredNodes]);
@@ -598,11 +666,22 @@ export const useNavigationEditor = () => {
       return;
     }
     
-    navigationState.setNodes(filteredNodes);
-    navigationState.setEdges(filteredEdges);
+    // Only update if the arrays have actually changed (reference equality check)
+    if (navigationState.nodes !== filteredNodes) {
+      console.log(`[@hook:useNavigationEditor] Updating ReactFlow nodes - ${filteredNodes.length} nodes`);
+      navigationState.setNodes(filteredNodes);
+    }
     
-    console.log(`[@hook:useNavigationEditor] Applied filter - showing ${filteredNodes.length} nodes, ${filteredEdges.length} edges`);
-  }, [filteredNodes, filteredEdges, navigationState.setNodes, navigationState.setEdges, navigationState.isLoading, navigationState.isSaving]);
+    if (navigationState.edges !== filteredEdges) {
+      console.log(`[@hook:useNavigationEditor] Updating ReactFlow edges - ${filteredEdges.length} edges`);
+      navigationState.setEdges(filteredEdges);
+    }
+    
+    // Only log if something actually changed
+    if (navigationState.nodes !== filteredNodes || navigationState.edges !== filteredEdges) {
+      console.log(`[@hook:useNavigationEditor] Applied filter - showing ${filteredNodes.length} nodes, ${filteredEdges.length} edges`);
+    }
+  }, [filteredNodes, filteredEdges, navigationState.setNodes, navigationState.setEdges, navigationState.isLoading, navigationState.isSaving, navigationState.nodes, navigationState.edges]);
 
   // Progressive loading function for TV menus
   const loadChildrenAtDepth = useCallback(async (nodeId: string, targetDepth: number) => {
@@ -816,7 +895,7 @@ export const useNavigationEditor = () => {
     setIsDiscardDialogOpen: navigationState.setIsDiscardDialogOpen,
     
     // Event handlers
-    onNodesChange: onNodesChangeWithHistory,
+    onNodesChange: customOnNodesChange,
     onEdgesChange: onEdgesChangeWithHistory,
     onConnect: onConnectHistory,
     onNodeClick,
