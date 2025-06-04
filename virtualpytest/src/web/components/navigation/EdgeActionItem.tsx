@@ -92,10 +92,11 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       border: 1, 
       borderColor: 'divider', 
       borderRadius: 1, 
-      p: 1.5,
-      mb: 1
+      px: 1.5,
+      py: 1,
+      mb: 0.5
     }}>
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
             value={action.id || ''}
@@ -126,7 +127,7 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       </Box>
       
       {showInput && action.requiresInput && action.id && (
-        <Box sx={{ ml: 1, mb: 1 }}>
+        <Box sx={{ mb: 0 }}>
           <TextField
             size="small"
             value={action.inputValue || ''}

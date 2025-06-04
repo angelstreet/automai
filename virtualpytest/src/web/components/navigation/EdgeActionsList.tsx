@@ -109,14 +109,14 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
           borderColor: 'divider', 
           borderRadius: 1,
           textAlign: 'center',
-          mb: 2
+          mb: 1
         }}>
           <Typography variant="body2" color="text.secondary">
             No actions added. Click "Add" to create your first action.
           </Typography>
         </Box>
       ) : (
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 2 }}>
           {actions.map((action, index) => (
             <EdgeActionItem
               key={index}
