@@ -42,7 +42,7 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
         }}
       >
         <Typography variant="body2" gutterBottom fontWeight="medium">
-          Validating Navigation Tree... ({progressPercentage}%)
+          Validating Navigation Paths... ({progressPercentage}%)
         </Typography>
         
         <LinearProgress 
@@ -59,11 +59,11 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
         {progress && (
           <>
             <Typography variant="caption" color="textSecondary" display="block" mb={1}>
-              Testing node: {progress.currentNodeName || progress.currentNode}
+              Testing path: {progress.currentNodeName || progress.currentNode}
             </Typography>
             
             <Typography variant="caption" color="textSecondary" display="block" mb={1}>
-              Step {progress.currentStep} of {progress.totalSteps}
+              Edge {progress.currentStep} of {progress.totalSteps}
             </Typography>
           </>
         )}

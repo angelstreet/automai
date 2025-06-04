@@ -41,8 +41,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   const [navigationSteps, setNavigationSteps] = useState<NavigationStep[]>([]);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [isTakeControlActive, setIsTakeControlActive] = useState<boolean>(false);
-  const [isCheckingTakeControl, setIsCheckingTakeControl] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [executionResult, setExecutionResult] = useState<string | null>(null);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
@@ -84,7 +82,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     setExecutionMessage(null);
     
     loadNavigationPreview();
-    checkTakeControlStatus();
   }, [treeId, selectedNode.id, currentNodeId]);
 
   const loadNavigationPreview = async () => {
@@ -110,29 +107,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
       setError(`Failed to load navigation preview: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsLoadingPreview(false);
-    }
-  };
-
-  const checkTakeControlStatus = async () => {
-    setIsCheckingTakeControl(true);
-
-    try {
-      console.log(`[@component:NodeGotoPanel] Checking take control status for tree: ${treeId}`);
-      
-      const response = await NavigationApi.getTakeControlStatus(treeId);
-
-      if (response.success) {
-        setIsTakeControlActive(response.take_control_active);
-        console.log(`[@component:NodeGotoPanel] Take control status: ${response.take_control_active ? 'ACTIVE' : 'INACTIVE'}`);
-      } else {
-        console.warn(`[@component:NodeGotoPanel] Failed to check take control status: ${response.error}`);
-        setIsTakeControlActive(false);
-      }
-    } catch (err) {
-      console.warn(`[@component:NodeGotoPanel] Error checking take control status: ${err}`);
-      setIsTakeControlActive(false);
-    } finally {
-      setIsCheckingTakeControl(false);
     }
   };
 
@@ -197,29 +171,80 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         top: 16,
         right: 16,
         width: 360,
-        p: 2,
+        height: 'calc(100vh - 120px)',
+        display: 'flex',
+        flexDirection: 'column',
         zIndex: 1000,
+        overflow: 'hidden',
       }}
     >
-      <Box>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <RouteIcon color="primary" />
-            <Typography variant="h6" sx={{ margin: 0, fontSize: '1.1rem' }}>
-              Go To Node
-            </Typography>
-          </Box>
-          <IconButton
-            size="small"
-            onClick={onClose}
-            sx={{ p: 0.25 }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+      {/* Header - Fixed at top */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        p: 2, 
+        pb: 1,
+        flexShrink: 0,
+        borderBottom: '1px solid',
+        borderColor: 'grey.200'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RouteIcon color="primary" />
+          <Typography variant="h6" sx={{ margin: 0, fontSize: '1.1rem' }}>
+            Go To Node
+          </Typography>
         </Box>
+        <IconButton
+          size="small"
+          onClick={onClose}
+          sx={{ p: 0.25 }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
 
-        {/* Node Information - Simplified and more compact */}
+      {/* Single Scrollable Content Area */}
+      <Box sx={{ 
+        flex: 1,
+        overflowY: 'auto',
+        p: 2,
+        pt: 1,
+        '&::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'rgba(0,0,0,0.1)',
+          borderRadius: '3px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: '3px',
+          '&:hover': {
+            background: 'rgba(0,0,0,0.5)',
+          }
+        }
+      }}>
+        {/* Error Display */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+              Navigation Failed
+            </Typography>
+            {error}
+          </Alert>
+        )}
+
+        {/* Success Display */}
+        {executionMessage && (
+          <Alert severity="success" sx={{ mb: 2, fontSize: '0.875rem' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+              {executionMessage}
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Node Information */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
             Target: {selectedNode.data.label}
@@ -242,7 +267,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
         <Divider sx={{ my: 1 }} />
 
-        {/* Navigation Path - More compact */}
+        {/* Navigation Path */}
         <Box sx={{ mb: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Path: {getFullPath()}
@@ -250,87 +275,69 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Navigation Steps */}
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            Navigation Steps:
+          </Typography>
+          
           {!isLoadingPreview && navigationSteps.length > 0 && (
-            <>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                Navigation Steps:
-              </Typography>
-              <Box sx={{ maxHeight: 180, overflowY: 'auto', 
-                scrollbarWidth: 'thin',
-                '&::-webkit-scrollbar': {
-                  width: '6px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'rgba(0,0,0,0.1)',
-                  borderRadius: '3px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: 'rgba(0,0,0,0.3)',
-                  borderRadius: '3px',
-                  '&:hover': {
-                    background: 'rgba(0,0,0,0.5)',
-                  }
-                }
-              }}>
-                {navigationSteps.map((transition, index) => {
-                  const transitionData = transition as any; // Type assertion for new transition format
-                  return (
-                  <Box 
-                    key={index}
-                    sx={{ 
-                      mb: 1,
-                      p: 1,
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: 'grey.200'
-                    }}
-                  >
-                    {/* Transition header: "1. ENTRY → home" */}
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}>
-                      {transitionData.transition_number || index + 1}. {transitionData.from_node_label || 'Start'} → {transitionData.to_node_label || 'Target'}
+            <Box>
+              {navigationSteps.map((transition, index) => {
+                const transitionData = transition as any;
+                return (
+                <Box 
+                  key={index}
+                  sx={{ 
+                    mb: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    '&:last-child': { mb: 0 }
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}>
+                    {transitionData.transition_number || index + 1}. {transitionData.from_node_label || 'Start'} → {transitionData.to_node_label || 'Target'}
+                  </Typography>
+                  
+                  {transitionData.actions && transitionData.actions.length > 0 ? (
+                    <Box sx={{ ml: 1.5 }}>
+                      {transitionData.actions.map((action: any, actionIndex: number) => (
+                        <Typography 
+                          key={actionIndex}
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.8rem',
+                            color: 'text.secondary',
+                            mb: 0.25,
+                            '&:before': {
+                              content: '"- "',
+                              fontWeight: 'bold'
+                            }
+                          }}
+                        >
+                          {action.label || action.command || 'Unknown Action'}
+                          {action.inputValue && ` - ${action.inputValue}`}
+                        </Typography>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontSize: '0.8rem',
+                        color: 'text.secondary',
+                        ml: 1.5,
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      No actions defined
                     </Typography>
-                    
-                    {/* Actions for this transition */}
-                    {transitionData.actions && transitionData.actions.length > 0 ? (
-                      <Box sx={{ ml: 1.5 }}>
-                        {transitionData.actions.map((action: any, actionIndex: number) => (
-                          <Typography 
-                            key={actionIndex}
-                            variant="body2" 
-                            sx={{ 
-                              fontSize: '0.8rem',
-                              color: 'text.secondary',
-                              mb: 0.25,
-                              '&:before': {
-                                content: '"- "',
-                                fontWeight: 'bold'
-                              }
-                            }}
-                          >
-                            {action.label || action.command || 'Unknown Action'}
-                            {action.inputValue && ` - ${action.inputValue}`}
-                          </Typography>
-                        ))}
-                      </Box>
-                    ) : (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontSize: '0.8rem',
-                          color: 'text.secondary',
-                          ml: 1.5,
-                          fontStyle: 'italic'
-                        }}
-                      >
-                        No actions defined
-                      </Typography>
-                    )}
-                  </Box>
-                  );
-                })}
-              </Box>
-            </>
+                  )}
+                </Box>
+                );
+              })}
+            </Box>
           )}
           
           {!isLoadingPreview && navigationSteps.length === 0 && (
@@ -347,31 +354,13 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
 
         {/* Node Verifications */}
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
             Verifications:
           </Typography>
           
           {selectedNode.data.verifications && selectedNode.data.verifications.length > 0 ? (
-            <Box sx={{ 
-              maxHeight: 120, 
-              overflowY: 'auto',
-              scrollbarWidth: 'thin',
-              '&::-webkit-scrollbar': {
-                width: '6px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: 'rgba(0,0,0,0.1)',
-                borderRadius: '3px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: '3px',
-                '&:hover': {
-                  background: 'rgba(0,0,0,0.5)',
-                }
-              }
-            }}>
+            <Box>
               {selectedNode.data.verifications.map((verification, index) => (
                 <Box 
                   key={verification.id || index}
@@ -380,7 +369,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     p: 1,
                     borderRadius: 1,
                     border: '1px solid',
-                    borderColor: 'grey.300'
+                    borderColor: 'grey.300',
+                    '&:last-child': { mb: 0 }
                   }}
                 >
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}>
@@ -423,7 +413,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                       </Typography>
                     )}
                     
-                    {/* Confidence Score Display */}
                     {verification.last_run_result && verification.last_run_result.length > 0 && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                         <Typography 
@@ -447,7 +436,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                           ({verification.last_run_result.filter(r => r).length}/{verification.last_run_result.length} recent)
                         </Typography>
                         
-                        {/* Visual indicator for confidence level */}
                         <Box
                           sx={{
                             width: 8,
@@ -484,46 +472,33 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             </Typography>
           )}
         </Box>
+      </Box>
 
-        {/* Action Button */}
-        <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-            onClick={executeNavigation}
-            disabled={!isTakeControlActive || isExecuting}
-            fullWidth
-            sx={{ fontSize: '0.875rem' }}
-          >
-            {isExecuting ? 'Executing...' : 'Run'}
-          </Button>
-          
-          {/* Execution Progress */}
-          {isExecuting && (
-            <Box sx={{ mt: 1 }}>
-             
-              <LinearProgress />
-            </Box>
-          )}
-        </Box>
-         {/* Error Display - Show prominently at the top if there's an error */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, fontSize: '0.875rem' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-              Navigation Failed
-            </Typography>
-            {error}
-          </Alert>
-        )}
-
-        {/* Success Display */}
-        {executionMessage && (
-          <Alert severity="success" sx={{ mb: 2, fontSize: '0.875rem' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-              {executionMessage}
-            </Typography>
-          </Alert>
+      {/* Fixed Button at Bottom */}
+      <Box sx={{ 
+        flexShrink: 0, 
+        borderTop: '1px solid', 
+        borderColor: 'grey.200', 
+        p: 2,
+        pt: 1,
+        bgcolor: 'background.paper'
+      }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={isExecuting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+          onClick={executeNavigation}
+          disabled={isExecuting}
+          fullWidth
+          sx={{ fontSize: '0.875rem' }}
+        >
+          {isExecuting ? 'Executing...' : 'Run'}
+        </Button>
+        
+        {isExecuting && (
+          <Box sx={{ mt: 1 }}>
+            <LinearProgress />
+          </Box>
         )}
       </Box>
     </Paper>

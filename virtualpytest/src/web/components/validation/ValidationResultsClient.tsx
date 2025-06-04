@@ -39,9 +39,10 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                      results.summary.overallHealth === 'poor' ? 'error' : 
                      results.summary.overallHealth === 'fair' ? 'warning' : 'info';
 
-  const successRate = results.summary.totalNodes > 0 
-    ? (results.summary.validNodes / results.summary.totalNodes) * 100 
-    : 0;
+  // Calculate success rate based on path results if available, otherwise use nodes
+  const totalPaths = results.pathResults?.length || 0;
+  const successfulPaths = results.pathResults?.filter(path => path.success).length || results.summary.validNodes;
+  const pathSuccessRate = totalPaths > 0 ? (successfulPaths / totalPaths) * 100 : 0;
 
   return (
     <Dialog 
@@ -76,7 +77,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
           <Box display="flex" alignItems="center" gap={2} mb={2}>
             <LinearProgress 
               variant="determinate" 
-              value={successRate}
+              value={pathSuccessRate}
               sx={{ 
                 flexGrow: 1, 
                 height: 10, 
@@ -86,12 +87,12 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
               color={healthColor}
             />
             <Typography variant="body2" fontWeight="bold" minWidth="50px">
-              {Math.round(successRate)}%
+              {Math.round(pathSuccessRate)}%
             </Typography>
           </Box>
           
           <Typography variant="body2" color="textSecondary" mb={1}>
-            {results.summary.validNodes} of {results.summary.totalNodes} nodes validated successfully
+            {successfulPaths} of {totalPaths} navigation paths validated successfully
           </Typography>
           
           <Typography variant="body2" color="textSecondary">
@@ -100,7 +101,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
         </Box>
 
         {/* Node Results Table */}
-        <Typography variant="h6" gutterBottom>Node Details</Typography>
+        <Typography variant="h6" gutterBottom>Path Results by Target Node</Typography>
         
         <TableContainer 
           component={Paper} 
@@ -120,8 +121,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
             <TableHead>
               <TableRow>
                 <TableCell>Status</TableCell>
-                <TableCell>Node Name</TableCell>
-                <TableCell align="center">Path Length</TableCell>
+                <TableCell>Target Node</TableCell>
+                <TableCell align="center">Successful Paths</TableCell>
+                <TableCell align="center">Total Paths</TableCell>
                 <TableCell>Errors</TableCell>
               </TableRow>
             </TableHead>
@@ -134,7 +136,10 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                       bgcolor: 'action.hover',
                     },
                     '&:hover': {
-                      bgcolor: 'inherit',
+                      bgcolor: 'primary.light',
+                      '& .MuiTableCell-root': {
+                        color: 'primary.contrastText',
+                      },
                     },
                   }}
                 >
@@ -162,8 +167,13 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
+                    <Typography variant="body2" fontWeight="medium">
+                      {node.successfulPaths || 0}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
                     <Typography variant="body2">
-                      {node.pathLength} {node.pathLength === 1 ? 'step' : 'steps'}
+                      {node.totalPaths || 0}
                     </Typography>
                   </TableCell>
                   <TableCell>
