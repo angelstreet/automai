@@ -785,12 +785,7 @@ export function ScreenDefinitionEditor({
                 isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
                 isCapturing={isCapturing}
                 model={deviceModel}
-                layoutConfig={!isExpanded ? {
-                  minHeight: deviceModel === 'android_mobile' ? '300px' : '250px',
-                  aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5',
-                  objectFit: 'cover' as const,
-                  isMobileModel: deviceModel === 'android_mobile',
-                } : undefined}
+                layoutConfig={!isExpanded ? compactLayoutConfig : undefined}
                 enableClick={true}
                 deviceResolution={deviceResolution}
                 deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}

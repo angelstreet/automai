@@ -136,7 +136,7 @@ export function VideoCapture({
       return;
     }
     
-    console.log(`[@component:VideoCapture] Generating ${totalFrames} frame URLs with host: ${hostIp}:${hostPort}`);
+    console.log(`[@component:VideoCapture] Generating ${totalFrames} frame URLs with host: ${hostIp}:444 (using fixed port 444)`);
     
     // Use the passed-in capture start time if available
     if (captureStartTime) {

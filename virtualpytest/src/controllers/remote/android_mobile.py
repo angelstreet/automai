@@ -545,31 +545,25 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         Returns:
             bool: True if tap successful
         """
-        if not self.is_connected or not self.adb_utils:
+        if not self.is_connected or not self.ssh_connection:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            tap_command = ["adb", "-s", self.android_device_id, "shell", "input", "tap", str(x), str(y)]
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
-            result = subprocess.run(
-                tap_command,
-                capture_output=True,
-                text=True,
-                timeout=5
+            # Use SSH connection to execute ADB command
+            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
+                f"adb -s {self.android_device_id} shell input tap {x} {y}"
             )
             
-            if result.returncode == 0:
+            if success and exit_code == 0:
                 print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Tap failed: {result.stderr}")
+                print(f"Remote[{self.device_type.upper()}]: Tap failed: {stderr}")
                 return False
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: Tap timeout")
-            return False
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
             return False
