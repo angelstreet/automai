@@ -196,9 +196,9 @@ export function ScreenDefinitionEditor({
         
         const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
         if (!response.ok) {
-          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, attempting restart...');
-          // Try to restart stream if status check fails
-          await restartStream();
+          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, assuming stream is running...');
+          // Assume stream is running instead of trying to restart it
+          setStreamStatus('running');
           return;
         }
         
@@ -207,22 +207,26 @@ export function ScreenDefinitionEditor({
           if (data.is_active) {
             setStreamStatus('running');
           } else {
-            setStreamStatus('stopped');
-            // Automatically attempt to restart if stream is stopped
-            console.log('[@component:ScreenDefinitionEditor] Stream is stopped, attempting automatic restart...');
-            setTimeout(() => restartStream(), 1000);
+            // Check if SSH is active before attempting restart
+            if (data.ssh_active === false) {
+              console.log('[@component:ScreenDefinitionEditor] Stream is stopped but SSH is not active. Marking stream as running without restart.');
+              setStreamStatus('running');
+            } else {
+              setStreamStatus('stopped');
+              // Automatically attempt to restart if stream is stopped and SSH is active
+              console.log('[@component:ScreenDefinitionEditor] Stream is stopped, attempting automatic restart...');
+              setTimeout(() => restartStream(), 1000);
+            }
           }
         } else {
-          // Default to stopped and try restart
-          setStreamStatus('stopped');
-          console.log('[@component:ScreenDefinitionEditor] Stream status unknown, attempting restart...');
-          setTimeout(() => restartStream(), 1000);
+          // If we can't determine status, assume stream is running instead of trying to restart
+          console.log('[@component:ScreenDefinitionEditor] Stream status unknown, assuming stream is running...');
+          setStreamStatus('running');
         }
       } catch (error) {
-        // Just set a default status and attempt restart
-        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, attempting restart...');
-        setStreamStatus('stopped');
-        setTimeout(() => restartStream(), 1000);
+        // Just set status to running and don't attempt restart
+        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, assuming stream is running...');
+        setStreamStatus('running');
       }
     };
 
@@ -407,6 +411,9 @@ export function ScreenDefinitionEditor({
     if (!isConnected) return;
     
     try {
+      // Store previous stream status to restore it later if needed
+      const wasStreamRunning = streamStatus === 'running';
+      
       // Set loading state
       setIsScreenshotLoading(true);
       // Switch to screenshot view immediately to remove highlight from other icons
@@ -414,50 +421,77 @@ export function ScreenDefinitionEditor({
       
       // First stop the stream
       console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
-      await stopStream();
+      try {
+        await stopStream();
+      } catch (error) {
+        console.log('[@component:ScreenDefinitionEditor] Failed to stop stream, continuing with screenshot anyway');
+        // Continue with screenshot even if stopping stream fails
+      }
       
       // Now take the screenshot
       console.log('[@component:ScreenDefinitionEditor] Taking screenshot...');
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          device_model: deviceModel,
-          video_device: avConfig?.video_device || '/dev/video0'
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[@component:ScreenDefinitionEditor] Screenshot API error:', errorText);
-        return;
-      }
-      
-      const data: ScreenshotResponse = await response.json();
-      
-      if (data.success) {
-        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', data.screenshot_path);
-        setLastScreenshotPath(data.screenshot_path);
-        // View mode already set to screenshot above
+      try {
+        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            device_model: deviceModel,
+            video_device: avConfig?.video_device || '/dev/video0'
+          })
+        });
         
-        // Update resolution info
-        if (data.device_resolution) {
-          setResolutionInfo(prev => ({
-            ...prev,
-            device: data.device_resolution!,
-            capture: data.capture_resolution || null,
-            stream: data.stream_resolution || null,
-          }));
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[@component:ScreenDefinitionEditor] Screenshot API error:', errorText);
+          
+          // If screenshot fails and stream was running, restart it
+          if (wasStreamRunning) {
+            console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
+            setTimeout(() => restartStream(), 500);
+          }
+          return;
         }
         
-        // Ensure stream status is set to stopped to enable the restart button
-        setStreamStatus('stopped');
-      } else {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', data.error);
+        const data: ScreenshotResponse = await response.json();
+        
+        if (data.success) {
+          console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', data.screenshot_path);
+          setLastScreenshotPath(data.screenshot_path);
+          // View mode already set to screenshot above
+          
+          // Update resolution info
+          if (data.device_resolution) {
+            setResolutionInfo(prev => ({
+              ...prev,
+              device: data.device_resolution!,
+              capture: data.capture_resolution || null,
+              stream: data.stream_resolution || null,
+            }));
+          }
+          
+          // Ensure stream status is set to stopped to enable the restart button
+          setStreamStatus('stopped');
+        } else {
+          console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', data.error);
+          
+          // If screenshot fails and stream was running, restart it
+          if (wasStreamRunning) {
+            console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
+            setTimeout(() => restartStream(), 500);
+          }
+        }
+      } catch (error) {
+        console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
+        
+        // If screenshot fails and stream was running, restart it
+        if (wasStreamRunning) {
+          console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
+          setTimeout(() => restartStream(), 500);
+        }
       }
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
+      console.error('[@component:ScreenDefinitionEditor] Screenshot operation failed:', error);
     } finally {
       // Always clear loading state
       setIsScreenshotLoading(false);
@@ -478,10 +512,36 @@ export function ScreenDefinitionEditor({
         if (data.success) {
           setStreamStatus('stopped');
           console.log('[@component:ScreenDefinitionEditor] Stream stopped successfully');
+        } else {
+          // Check if it's an SSH error
+          const errorMsg = data.error || 'Unknown error';
+          if (errorMsg.includes('SSH session not active') || errorMsg.includes('Failed to stop stream service')) {
+            console.log('[@component:ScreenDefinitionEditor] SSH not active, cannot stop stream service but updating UI');
+            setStreamStatus('stopped');
+          } else {
+            console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', errorMsg);
+          }
+        }
+      } else {
+        const responseText = await response.text();
+        let errorData;
+        try {
+          errorData = responseText ? JSON.parse(responseText) : { error: 'Unknown error' };
+        } catch (e) {
+          // If not valid JSON, use the text directly
+          errorData = { error: responseText || 'Unknown error' };
+        }
+        
+        if (responseText.includes('SSH session not active') || responseText.includes('Failed to stop stream service')) {
+          console.log('[@component:ScreenDefinitionEditor] SSH not active, cannot stop stream service but updating UI');
+          setStreamStatus('stopped');
+        } else {
+          console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', response.status, errorData);
         }
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', error);
+      // Don't throw the error, let the caller continue
     }
   };
 
@@ -490,6 +550,7 @@ export function ScreenDefinitionEditor({
     try {
       console.log('[@component:ScreenDefinitionEditor] Restarting stream...');
       
+      // First attempt to restart via API
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/restart', {
         method: 'POST'
       });
@@ -510,13 +571,47 @@ export function ScreenDefinitionEditor({
             console.error('[@component:ScreenDefinitionEditor] No stream URL available in config');
           }
         } else {
-          console.error('[@component:ScreenDefinitionEditor] Stream restart API returned failure:', data);
+          // Handle API success response with failed operation
+          const errorMsg = data.error || 'Unknown error';
+          
+          // If it's an SSH/ADB issue, we should still show the stream without restarting it
+          if (errorMsg.includes('SSH session not active') || errorMsg.includes('Failed to restart stream service')) {
+            console.log('[@component:ScreenDefinitionEditor] SSH/ADB not active, continuing with stream display anyway');
+            // Set stream as running, but don't attempt to restart the service
+            setStreamStatus('running');
+            setViewMode('stream');
+            setLastScreenshotPath(undefined);
+          } else {
+            console.error('[@component:ScreenDefinitionEditor] Stream restart API returned failure:', errorMsg);
+          }
         }
       } else {
-        console.error('[@component:ScreenDefinitionEditor] Stream restart API HTTP error:', response.status, await response.text());
+        // Handle HTTP error responses
+        const responseText = await response.text();
+        let errorData;
+        try {
+          errorData = responseText ? JSON.parse(responseText) : { error: 'Unknown error' };
+        } catch (e) {
+          // If not valid JSON, use the text directly
+          errorData = { error: responseText || 'Unknown error' };
+        }
+        
+        // If it's an SSH/ADB issue, we should still show the stream without restarting it
+        if (responseText.includes('SSH session not active') || responseText.includes('Failed to restart stream service')) {
+          console.log('[@component:ScreenDefinitionEditor] SSH/ADB not active, continuing with stream display anyway');
+          // Set stream as running, but don't attempt to restart the service
+          setStreamStatus('running');
+          setViewMode('stream');
+          setLastScreenshotPath(undefined);
+        } else {
+          console.error('[@component:ScreenDefinitionEditor] Stream restart API HTTP error:', response.status, errorData);
+        }
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', error);
+      // Even if restart fails, still show the stream
+      setStreamStatus('running');
+      setViewMode('stream');
     }
   };
 
@@ -691,6 +786,7 @@ export function ScreenDefinitionEditor({
             <StreamViewer
               streamUrl={streamUrl}
               isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
+              isCapturing={isCapturing}
               model={deviceModel}
               layoutConfig={layoutConfigOverride}
               {...commonProps}

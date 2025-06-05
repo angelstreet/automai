@@ -182,8 +182,20 @@ export function StreamViewer({
   // Handle stream errors with retry logic
   const handleStreamError = useCallback(() => {
     if (retryCount >= maxRetries) {
-      setStreamError('Maximum retry attempts reached. Please check the stream source.');
-      return;
+      console.warn(`[@component:StreamViewer] Maximum retry attempts (${maxRetries}) reached, but will continue to retry less frequently`);
+      // Still show an error but don't give up completely
+      setStreamError('Stream connection issues. Retrying...');
+      
+      // Keep retrying but less frequently
+      const timeout = setTimeout(() => {
+        if (isStreamActive && streamUrl) {
+          console.log(`[@component:StreamViewer] Continuing to retry stream connection after max retries...`);
+          setRetryCount(0); // Reset retry count to start a new cycle
+          initializeStream();
+        }
+      }, retryDelay * 2); // Longer delay after max retries
+      
+      return () => clearTimeout(timeout);
     }
 
     setRetryCount((prev) => prev + 1);
@@ -196,7 +208,7 @@ export function StreamViewer({
     }, retryDelay);
 
     return () => clearTimeout(timeout);
-  }, [retryCount, isStreamActive, streamUrl, initializeStream]);
+  }, [retryCount, isStreamActive, streamUrl, initializeStream, maxRetries, retryDelay]);
 
   // Handle tab visibility changes
   useEffect(() => {
@@ -218,7 +230,8 @@ export function StreamViewer({
     if (streamUrl && isStreamActive && videoRef.current) {
       console.log('[@component:StreamViewer] Stream URL or status changed, initializing:', streamUrl);
       initializeStream();
-    } else {
+    } else if (!isStreamActive && videoRef.current) {
+      // Stream inactive, clean up resources
       cleanupStream();
     }
 
@@ -325,15 +338,24 @@ export function StreamViewer({
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'transparent',
+            flexDirection: 'column',
+            padding: 2,
+            gap: 1,
           }}
         >
-          <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
+          <Typography variant="caption" sx={{ color: '#999999', textAlign: 'center' }}>
             {streamError
               ? retryCount < maxRetries
                 ? `Reconnecting... (${retryCount + 1}/${maxRetries})`
-                : streamError
+                : `${streamError} Continue waiting or try restarting.`
               : 'Loading stream...'}
           </Typography>
+          
+          {streamError && (
+            <Typography variant="caption" sx={{ color: '#777777', textAlign: 'center', fontSize: '0.65rem', maxWidth: '80%' }}>
+              The stream will automatically reconnect. Make sure ffmpeg is running on the device.
+            </Typography>
+          )}
         </Box>
       )}
 
@@ -359,7 +381,7 @@ export function StreamViewer({
                 Stream Offline
               </Typography>
               <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
-                Start the stream service to view live video
+                Stream service is not running. Press the refresh button to try again.
               </Typography>
             </>
           ) : (
@@ -368,7 +390,7 @@ export function StreamViewer({
                 No Stream URL
               </Typography>
               <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
-                Stream URL not configured
+                Stream URL not configured in device settings.
               </Typography>
             </>
           )}
