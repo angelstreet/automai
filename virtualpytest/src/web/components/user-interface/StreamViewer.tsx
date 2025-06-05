@@ -511,6 +511,7 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
          prevProps.enableClick === nextProps.enableClick &&
          prevProps.deviceId === nextProps.deviceId &&
          prevProps.layoutConfig === nextProps.layoutConfig &&
+         prevProps.onTap === nextProps.onTap &&
          JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
          JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution);
   
@@ -523,6 +524,7 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
       enableClick: prevProps.enableClick !== nextProps.enableClick ? { prev: prevProps.enableClick, next: nextProps.enableClick } : 'same',
       deviceId: prevProps.deviceId !== nextProps.deviceId ? { prev: prevProps.deviceId, next: nextProps.deviceId } : 'same',
       layoutConfig: prevProps.layoutConfig !== nextProps.layoutConfig ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig } : 'same',
+      onTap: prevProps.onTap !== nextProps.onTap ? { prev: 'function', next: 'function' } : 'same',
       sx: JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx) ? { prev: prevProps.sx, next: nextProps.sx } : 'same',
       deviceResolution: JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution) ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution } : 'same',
     });

@@ -530,9 +530,49 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             'capabilities': [
                 'navigation', 'text_input', 'app_launch', 'app_close', 'ui_dumping',
                 'element_clicking', 'element_finding', 'element_verification',
-                'media_control', 'volume_control', 'power_control'
+                'coordinate_tap', 'media_control', 'volume_control', 'power_control'
             ]
         }
+
+    def tap_coordinates(self, x: int, y: int) -> bool:
+        """
+        Tap at specific screen coordinates.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            
+        Returns:
+            bool: True if tap successful
+        """
+        if not self.is_connected or not self.adb_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            tap_command = ["adb", "-s", self.android_device_id, "shell", "input", "tap", str(x), str(y)]
+            print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
+            
+            result = subprocess.run(
+                tap_command,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Tap failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"Remote[{self.device_type.upper()}]: Tap timeout")
+            return False
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
+            return False
 
 
 # Backward compatibility alias

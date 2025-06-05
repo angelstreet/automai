@@ -114,8 +114,8 @@ export function VideoCapture({
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      // Use HTTP instead of HTTPS to avoid SSL protocol errors
-      const imageUrl = `http://${hostIp}:${hostPort}/stream/captures/capture_${frameTimestamp}.jpg`;
+      // Always use port 444, matching ScreenDefinitionEditor's URL construction
+      const imageUrl = `https://${hostIp}:444/stream/captures/capture_${frameTimestamp}.jpg`;
       imageUrls.push(imageUrl);
       
       console.log(`[@component:VideoCapture] Frame ${i + 1}: ${frameTimestamp} -> ${imageUrl}`);
@@ -127,25 +127,30 @@ export function VideoCapture({
   // Generate frame URLs when we have the required data
   useEffect(() => {
     if (totalFrames === 0 || !hostIp || !hostPort) {
-      console.log('[@component:VideoCapture] No frames to load or missing host info');
+      console.log('[@component:VideoCapture] No frames to load or missing host info', {
+        totalFrames,
+        hostIp,
+        hostPort
+      });
       setCapturedImages([]);
       return;
     }
     
-    console.log(`[@component:VideoCapture] Generating ${totalFrames} frame URLs...`);
+    console.log(`[@component:VideoCapture] Generating ${totalFrames} frame URLs with host: ${hostIp}:${hostPort}`);
     
     // Use the passed-in capture start time if available
     if (captureStartTime) {
       console.log('[@component:VideoCapture] Using passed capture start time:', captureStartTime);
       const frameUrls = generateCaptureFrameUrls(captureStartTime, totalFrames);
       setCapturedImages(frameUrls);
-      console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs`);
+      console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs:`, frameUrls.slice(0, 3)); // Log first 3 URLs
     } else {
       console.warn('[@component:VideoCapture] No capture start time provided, using current time as fallback');
       // Fallback: use current time minus totalFrames seconds as start time
       const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
       const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
       setCapturedImages(frameUrls);
+      console.log(`[@component:VideoCapture] Generated ${frameUrls.length} fallback frame URLs:`, frameUrls.slice(0, 3)); // Log first 3 URLs
     }
   }, [totalFrames, hostIp, hostPort, captureStartTime]);
 
@@ -195,21 +200,73 @@ export function VideoCapture({
     }
   };
 
-  // Get current image URL (same logic as ScreenshotCapture)
+  // Get current image URL (exact same logic as ScreenshotCapture)
   const currentImageUrl = useMemo(() => {
     if (capturedImages.length === 0) return '';
     
-    const imageUrl = capturedImages[currentValue] || capturedImages[0];
+    const screenshotPath = capturedImages[currentValue] || capturedImages[0];
+    if (!screenshotPath) return '';
+    
+    console.log(`[@component:VideoCapture] Processing image path: ${screenshotPath}`);
     
     // Handle host-based capture URLs (both HTTP and HTTPS with /stream/captures/ path)
-    if ((imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) && imageUrl.includes('/stream/captures/')) {
+    if ((screenshotPath.startsWith('https://') || screenshotPath.startsWith('http://')) && screenshotPath.includes('/stream/captures/')) {
       console.log('[@component:VideoCapture] Using host-based capture URL directly');
-      return imageUrl;
+      return screenshotPath;
     }
     
-    // Add cache busting parameter for other URLs
-    const separator = imageUrl.includes('?') ? '&' : '?';
-    return `${imageUrl}${separator}t=${Date.now()}`;
+    // Handle data URLs (base64 from remote system) - return as is
+    if (screenshotPath.startsWith('data:')) {
+      console.log('[@component:VideoCapture] Using data URL from remote system');
+      return screenshotPath;
+    }
+    
+    // Generate a cache-busting timestamp for file-based screenshots
+    const timestamp = new Date().getTime();
+    
+    // For FFmpeg screenshots stored locally in /tmp/screenshots/ (full path)
+    if (screenshotPath.includes('/tmp/screenshots/')) {
+      const filename = screenshotPath.split('/').pop()?.split('?')[0];
+      console.log(`[@component:VideoCapture] Using FFmpeg screenshot: ${filename}`);
+      
+      if (!filename) {
+        console.error(`[@component:VideoCapture] Failed to extract filename from path: ${screenshotPath}`);
+        return '';
+      }
+      
+      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      console.log(`[@component:VideoCapture] Generated image URL: ${finalUrl}`);
+      return finalUrl;
+    }
+    
+    // For just a filename (like android_mobile.jpg) - assume it's in /tmp/screenshots/
+    if (!screenshotPath.includes('/') && screenshotPath.endsWith('.jpg')) {
+      const filename = screenshotPath.split('?')[0];
+      console.log(`[@component:VideoCapture] Using filename screenshot: ${filename}`);
+      
+      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      console.log(`[@component:VideoCapture] Generated image URL from filename: ${finalUrl}`);
+      return finalUrl;
+    }
+    
+    // If it's already a full URL (but without timestamp)
+    if (screenshotPath.startsWith('http') && !screenshotPath.includes('?t=')) {
+      const finalUrl = `${screenshotPath}?t=${timestamp}`;
+      console.log(`[@component:VideoCapture] Added timestamp to URL: ${finalUrl}`);
+      return finalUrl;
+    }
+    
+    // If it's already a full URL with timestamp, return as is
+    if (screenshotPath.startsWith('http') && screenshotPath.includes('?t=')) {
+      console.log('[@component:VideoCapture] Using existing URL with timestamp: ${screenshotPath}');
+      return screenshotPath;
+    }
+    
+    // Default case - convert to API endpoint URL
+    const cleanPath = screenshotPath.split('?')[0];
+    const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+    console.log(`[@component:VideoCapture] Generated default URL: ${finalUrl}`);
+    return finalUrl;
   }, [capturedImages, currentValue]);
 
   // Determine if drag selection should be enabled
@@ -310,9 +367,22 @@ export function VideoCapture({
             draggable={false}
             onLoad={handleImageLoad}
             onError={(e) => {
-              console.error(`[@component:VideoCapture] Failed to load image: ${(e.target as HTMLImageElement).src}`);
-              // Same error handling as ScreenshotCapture
+              const imgSrc = (e.target as HTMLImageElement).src;
+              console.error(`[@component:VideoCapture] Failed to load image: ${imgSrc}`);
+              
+              // Set a transparent fallback image
               (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+              
+              // Add placeholder styling
+              const img = e.target as HTMLImageElement;
+              img.style.backgroundColor = 'transparent';
+              img.style.border = '1px solid #E0E0E0';
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.width = 'auto';
+              img.style.height = 'auto';
+              img.style.objectFit = 'contain';
+              img.style.padding = '4px';
             }}
           />
         )}

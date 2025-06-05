@@ -68,9 +68,14 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          command: 'tap_coordinates',
-          x: x,
-          y: y
+          action: {
+            id: 'coordinate_tap',
+            command: 'coordinate_tap',
+            params: {
+              x: x,
+              y: y
+            }
+          }
         })
       });
       
@@ -151,11 +156,11 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   }, []);
 
   const handleMouseEnter = useCallback(() => {
-    console.log('[@component:StreamClickOverlay] 🎯 Mouse entered overlay area');
+    // Mouse enter - no logging needed to avoid console spam
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    console.log('[@component:StreamClickOverlay] Mouse left overlay area');
+    // Mouse leave - no logging needed to avoid console spam
   }, []);
 
   return (

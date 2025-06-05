@@ -125,6 +125,24 @@ export function ScreenDefinitionEditor({
   onDisconnectComplete,
   sx = {}
 }: ScreenDefinitionEditorProps) {
+  // Debug parent component re-renders
+  useEffect(() => {
+    console.log('[@component:ScreenDefinitionEditor] Component mounted/re-rendered with props:', {
+      deviceModel,
+      autoConnect,
+      hasDeviceConfig: !!deviceConfig,
+      hasOnDisconnectComplete: !!onDisconnectComplete
+    });
+  });
+
+  // Memoize layout configs to prevent new object references
+  const compactLayoutConfig = useMemo(() => ({
+    minHeight: deviceModel === 'android_mobile' ? '300px' : '250px',
+    aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5',
+    objectFit: 'cover' as const,
+    isMobileModel: deviceModel === 'android_mobile',
+  }), [deviceModel]);
+
   // Connection state - simplified
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -135,6 +153,21 @@ export function ScreenDefinitionEditor({
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [viewMode, setViewMode] = useState<'stream' | 'screenshot' | 'capture'>('stream');
+  
+  // Memoize sx props to prevent new object references
+  const streamViewerSx = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    display: viewMode === 'stream' ? 'block' : 'none'
+  }), [viewMode]);
+  
+  // Memoize deviceResolution to prevent new object references
+  const deviceResolution = useMemo(() => ({ width: 1080, height: 2340 }), []);
+  
+  // Memoize onTap callback to prevent new function references
+  const handleTap = useCallback((x: number, y: number) => {
+    console.log(`🎯 [TEST] Tapped at device coordinates: ${x}, ${y}`);
+  }, []);
   
   // Stream status state - without polling
   const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
@@ -159,6 +192,19 @@ export function ScreenDefinitionEditor({
   
   // UI state
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Debug key state changes that might cause re-renders
+  useEffect(() => {
+    console.log('[@component:ScreenDefinitionEditor] viewMode changed:', viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    console.log('[@component:ScreenDefinitionEditor] isExpanded changed:', isExpanded);
+  }, [isExpanded]);
+
+  useEffect(() => {
+    console.log('[@component:ScreenDefinitionEditor] isCapturing changed:', isCapturing);
+  }, [isCapturing]);
   
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
@@ -555,142 +601,6 @@ export function ScreenDefinitionEditor({
     setSelectedArea(null);
   }, []);
 
-  // Memoize commonProps to prevent unnecessary re-renders
-  const commonProps = useMemo(() => ({
-    sx: { width: '100%', height: '100%' }
-  }), []);
-
-  // Use the computed stream URL in the render function
-  const renderViewComponent = () => {
-    // Get the proper stream URL
-    const streamUrl = getStreamUrl();
-    
-    // Memoize layout config override for collapsed mode to prevent unnecessary re-renders
-    const layoutConfigOverride = useMemo(() => {
-      return !isExpanded ? {
-        minHeight: deviceModel === 'android_mobile' ? '300px' : '250px', // Match collapsed container height
-        aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5', // Better ratio for each model type
-        objectFit: 'cover' as const,
-        isMobileModel: deviceModel === 'android_mobile', // Use actual device model, not always true
-      } : undefined;
-    }, [isExpanded, deviceModel]);
-
-    // Show the appropriate component based on viewMode (no special handling for isCapturing)
-    switch (viewMode) {
-      case 'screenshot':
-        return (
-          <ScreenshotCapture
-            screenshotPath={lastScreenshotPath}
-            resolutionInfo={resolutionInfo}
-            isCapturing={false}
-            isSaving={isSaving || isScreenshotLoading}
-            onImageLoad={handleImageLoad}
-            selectedArea={selectedArea}
-            onAreaSelected={handleAreaSelected}
-            model={deviceModel}
-            {...commonProps}
-          />
-        );
-      
-      case 'capture':
-        return (
-          <VideoCapture
-            deviceModel={deviceModel}
-            videoDevice={avConfig?.video_device}
-            hostIp={avConfig?.host_ip}
-            hostPort={avConfig?.host_port}
-            videoFramesPath={videoFramesPath}
-            currentFrame={currentFrame}
-            totalFrames={totalFrames}
-            onFrameChange={handleFrameChange}
-            onBackToStream={handleBackToStream}
-            isSaving={isSaving}
-            savedFrameCount={savedFrameCount}
-            onImageLoad={handleImageLoad}
-            selectedArea={selectedArea}
-            onAreaSelected={handleAreaSelected}
-            captureStartTime={captureStartTime}
-            captureEndTime={captureEndTime}
-            isCapturing={isCapturing}
-            {...commonProps}
-          />
-        );
-      
-      case 'stream':
-      default:
-        return (
-          <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-            {/* Stream viewer - always visible */}
-            <StreamViewer
-              streamUrl={streamUrl}
-              isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
-              isCapturing={isCapturing}
-              model={deviceModel}
-              layoutConfig={layoutConfigOverride}
-              // Enable click functionality for testing
-              enableClick={true}
-              deviceResolution={{ width: 1080, height: 2340 }}
-              deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
-              onTap={(x, y) => console.log(`🎯 [TEST] Tapped at device coordinates: ${x}, ${y}`)}
-              {...commonProps}
-            />
-            
-            {/* Screenshot loading overlay */}
-            {isScreenshotLoading && (
-              <Box sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                zIndex: 20
-              }}>
-                <CircularProgress size={40} sx={{ color: '#ffffff', mb: 2 }} />
-                <Typography variant="body2" sx={{ color: '#ffffff' }}>
-                  Taking screenshot...
-                </Typography>
-              </Box>
-            )}
-            
-            {/* Recording overlay - only show red dot when capturing, no saving state */}
-            {isCapturing && (
-              <Box sx={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                borderRadius: 1,
-                padding: '4px 8px',
-                zIndex: 10
-              }}>
-                {/* Blinking red dot for recording */}
-                <Box sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: '#f44336',
-                  animation: 'recordBlink 1s infinite',
-                  '@keyframes recordBlink': {
-                    '0%, 50%': { opacity: 1 },
-                    '51%, 100%': { opacity: 0.3 }
-                  }
-                }} />
-                <RecordingTimer isCapturing={isCapturing} />
-              </Box>
-            )}
-          </Box>
-        );
-    }
-  };
-
   // Clear drag selection when view mode changes away from screenshot/capture
   useEffect(() => {
     if (viewMode === 'stream') {
@@ -868,7 +778,128 @@ export function ScreenDefinitionEditor({
               overflow: 'hidden',
               height: 'calc(100% - 48px)'
             }}>
-              {renderViewComponent()}
+              {/* Stream viewer - always rendered at top level to prevent unmount/remount */}
+              <StreamViewer
+                key="main-stream-viewer"
+                streamUrl={getStreamUrl()}
+                isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
+                isCapturing={isCapturing}
+                model={deviceModel}
+                layoutConfig={!isExpanded ? {
+                  minHeight: deviceModel === 'android_mobile' ? '300px' : '250px',
+                  aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5',
+                  objectFit: 'cover' as const,
+                  isMobileModel: deviceModel === 'android_mobile',
+                } : undefined}
+                enableClick={true}
+                deviceResolution={deviceResolution}
+                deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
+                onTap={handleTap}
+                sx={streamViewerSx}
+              />
+              
+              {/* Other components rendered on top when needed */}
+              {viewMode === 'screenshot' && (
+                <ScreenshotCapture
+                  screenshotPath={lastScreenshotPath}
+                  resolutionInfo={resolutionInfo}
+                  isCapturing={false}
+                  isSaving={isSaving || isScreenshotLoading}
+                  onImageLoad={handleImageLoad}
+                  selectedArea={selectedArea}
+                  onAreaSelected={handleAreaSelected}
+                  model={deviceModel}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 5
+                  }}
+                />
+              )}
+              
+              {viewMode === 'capture' && (
+                <VideoCapture
+                  deviceModel={deviceModel}
+                  videoDevice={avConfig?.video_device}
+                  hostIp={avConfig?.host_ip}
+                  hostPort={avConfig?.host_port}
+                  videoFramesPath={videoFramesPath}
+                  currentFrame={currentFrame}
+                  totalFrames={totalFrames}
+                  onFrameChange={handleFrameChange}
+                  onBackToStream={handleBackToStream}
+                  isSaving={isSaving}
+                  savedFrameCount={savedFrameCount}
+                  onImageLoad={handleImageLoad}
+                  selectedArea={selectedArea}
+                  onAreaSelected={handleAreaSelected}
+                  captureStartTime={captureStartTime}
+                  captureEndTime={captureEndTime}
+                  isCapturing={isCapturing}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 5
+                  }}
+                />
+              )}
+              
+              {/* Screenshot loading overlay */}
+              {isScreenshotLoading && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  zIndex: 20
+                }}>
+                  <CircularProgress size={40} sx={{ color: '#ffffff', mb: 2 }} />
+                  <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                    Taking screenshot...
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Recording overlay - only show red dot when capturing */}
+              {isCapturing && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 8,
+                  left: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  borderRadius: 1,
+                  padding: '4px 8px',
+                  zIndex: 10
+                }}>
+                  <Box sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: '#f44336',
+                    animation: 'recordBlink 1s infinite',
+                    '@keyframes recordBlink': {
+                      '0%, 50%': { opacity: 1 },
+                      '51%, 100%': { opacity: 0.3 }
+                    }
+                  }} />
+                  <RecordingTimer isCapturing={isCapturing} />
+                </Box>
+              )}
             </Box>
           </Box>
 
@@ -945,8 +976,72 @@ export function ScreenDefinitionEditor({
           position: 'relative',
           boxShadow: 2,
         }}>
-          {/* View component in compact mode */}
-          {renderViewComponent()}
+          {/* Stream viewer - always rendered to prevent unmount/remount */}
+          <StreamViewer
+            key="compact-stream-viewer"
+            streamUrl={getStreamUrl()}
+            isStreamActive={streamStatus === 'running' && !isScreenshotLoading}
+            isCapturing={isCapturing}
+            model={deviceModel}
+            layoutConfig={compactLayoutConfig}
+            enableClick={true}
+            deviceResolution={deviceResolution}
+            deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
+            onTap={handleTap}
+            sx={streamViewerSx}
+          />
+          
+          {/* Other components rendered on top when needed */}
+          {viewMode === 'screenshot' && (
+            <ScreenshotCapture
+              screenshotPath={lastScreenshotPath}
+              resolutionInfo={resolutionInfo}
+              isCapturing={false}
+              isSaving={isSaving || isScreenshotLoading}
+              onImageLoad={handleImageLoad}
+              selectedArea={selectedArea}
+              onAreaSelected={handleAreaSelected}
+              model={deviceModel}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 5
+              }}
+            />
+          )}
+          
+          {viewMode === 'capture' && (
+            <VideoCapture
+              deviceModel={deviceModel}
+              videoDevice={avConfig?.video_device}
+              hostIp={avConfig?.host_ip}
+              hostPort={avConfig?.host_port}
+              videoFramesPath={videoFramesPath}
+              currentFrame={currentFrame}
+              totalFrames={totalFrames}
+              onFrameChange={handleFrameChange}
+              onBackToStream={handleBackToStream}
+              isSaving={isSaving}
+              savedFrameCount={savedFrameCount}
+              onImageLoad={handleImageLoad}
+              selectedArea={selectedArea}
+              onAreaSelected={handleAreaSelected}
+              captureStartTime={captureStartTime}
+              captureEndTime={captureEndTime}
+              isCapturing={isCapturing}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 5
+              }}
+            />
+          )}
 
           {/* Mode indicator dot */}
           <Box sx={{ 
