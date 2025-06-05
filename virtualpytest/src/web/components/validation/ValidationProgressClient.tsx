@@ -8,7 +8,10 @@ import {
   Fade,
   Chip
 } from '@mui/material';
+import { useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
+import { useValidationStore } from '../store/validationStore';
+import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationProgressClientProps {
   treeId: string;
@@ -16,6 +19,96 @@ interface ValidationProgressClientProps {
 
 export default function ValidationProgressClient({ treeId }: ValidationProgressClientProps) {
   const { isValidating, progress, showProgress } = useValidation(treeId);
+  const { 
+    setCurrentTestingNode, 
+    setCurrentTestingEdge,
+    setNodeValidationStatus,
+    setEdgeValidationStatus 
+  } = useValidationStore();
+
+  // Update current testing indicators based on progress
+  useEffect(() => {
+    if (progress && isValidating) {
+      console.log('[@component:ValidationProgressClient] Updating testing indicators', {
+        currentEdgeFrom: progress.currentEdgeFrom,
+        currentEdgeTo: progress.currentEdgeTo,
+        currentNodeName: progress.currentNodeName
+      });
+
+      // Set current testing node
+      if (progress.currentEdgeTo) {
+        setCurrentTestingNode(progress.currentEdgeTo);
+      }
+
+      // Set current testing edge
+      if (progress.currentEdgeFrom && progress.currentEdgeTo) {
+        const edgeId = `${progress.currentEdgeFrom}-${progress.currentEdgeTo}`;
+        setCurrentTestingEdge(edgeId);
+      }
+
+      // Update validation status based on edge status
+      if (progress.currentEdgeStatus && progress.currentEdgeStatus !== 'testing') {
+        const edgeId = `${progress.currentEdgeFrom}-${progress.currentEdgeTo}`;
+        
+        // Determine validation status from edge status
+        let validationStatus: 'high' | 'medium' | 'low' | 'untested' = 'untested';
+        let confidence = 0;
+
+        switch (progress.currentEdgeStatus) {
+          case 'success':
+            // For successful edges, we'll assume high confidence unless we have actual data
+            validationStatus = 'high';
+            confidence = 0.8;
+            break;
+          case 'failed':
+            validationStatus = 'low';
+            confidence = 0;
+            break;
+          case 'skipped':
+            validationStatus = 'untested';
+            confidence = 0;
+            break;
+          case 'completed':
+            // Use medium confidence for completed without explicit success/failure
+            validationStatus = 'medium';
+            confidence = 0.6;
+            break;
+        }
+
+        if (progress.currentEdgeFrom && progress.currentEdgeTo) {
+          // Update edge status
+          setEdgeValidationStatus(edgeId, {
+            status: validationStatus,
+            confidence,
+            lastTested: new Date()
+          });
+
+          // Update target node status
+          setNodeValidationStatus(progress.currentEdgeTo, {
+            status: validationStatus,
+            confidence,
+            lastTested: new Date()
+          });
+
+          console.log('[@component:ValidationProgressClient] Updated validation status', {
+            edgeId,
+            nodeId: progress.currentEdgeTo,
+            status: validationStatus,
+            confidence
+          });
+        }
+      }
+    }
+  }, [progress, isValidating, setCurrentTestingNode, setCurrentTestingEdge, setNodeValidationStatus, setEdgeValidationStatus]);
+
+  // Clear testing indicators when validation stops
+  useEffect(() => {
+    if (!isValidating) {
+      console.log('[@component:ValidationProgressClient] Clearing testing indicators');
+      setCurrentTestingNode(null);
+      setCurrentTestingEdge(null);
+    }
+  }, [isValidating, setCurrentTestingNode, setCurrentTestingEdge]);
 
   if (!showProgress || !isValidating) return null;
 

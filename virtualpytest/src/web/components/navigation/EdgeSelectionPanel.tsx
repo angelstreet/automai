@@ -131,7 +131,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       description: selectedEdge.data?.description || '',
       actions: getActions(),
       retryActions: getRetryActions(),
-      finalWaitTime: selectedEdge.data?.finalWaitTime || 2000,
+      finalWaitTime: selectedEdge.data?.finalWaitTime ?? 2000,
     });
     
     setIsEdgeDialogOpen(true);

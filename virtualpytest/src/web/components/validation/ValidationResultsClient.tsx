@@ -29,8 +29,10 @@ import {
   ExpandLess as ExpandLessIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
+import { useValidationStore } from '../store/validationStore';
+import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationResultsClientProps {
   treeId: string;
@@ -38,7 +40,76 @@ interface ValidationResultsClientProps {
 
 export default function ValidationResultsClient({ treeId }: ValidationResultsClientProps) {
   const { showResults, results, lastResult, closeResults } = useValidation(treeId);
+  const { 
+    setNodeValidationStatus,
+    setEdgeValidationStatus,
+    setCurrentTestingNode,
+    setCurrentTestingEdge 
+  } = useValidationStore();
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Process validation results and update colors when results are available
+  useEffect(() => {
+    if (results?.edgeResults) {
+      console.log('[@component:ValidationResultsClient] Processing validation results for color updates');
+      
+      // Clear testing indicators
+      setCurrentTestingNode(null);
+      setCurrentTestingEdge(null);
+
+      // Process each edge result
+      results.edgeResults.forEach((edge: any) => {
+        const edgeId = `${edge.from}-${edge.to}`;
+        
+        // Calculate confidence based on action and verification success rates
+        let confidence = 0;
+        if (edge.success) {
+          const actionSuccessRate = edge.actionResults?.length > 0 
+            ? edge.actionResults.filter((a: any) => a.success).length / edge.actionResults.length 
+            : 1;
+            
+          const verificationSuccessRate = edge.verificationResults?.length > 0
+            ? edge.verificationResults.filter((v: any) => v.success).length / edge.verificationResults.length
+            : 1;
+            
+          confidence = (actionSuccessRate + verificationSuccessRate) / 2;
+        }
+        
+        // Determine validation status
+        const validationStatus = edge.success 
+          ? getValidationStatusFromConfidence(confidence) 
+          : 'low';
+        
+        // Update edge validation status
+        setEdgeValidationStatus(edgeId, {
+          status: validationStatus,
+          confidence: edge.success ? confidence : 0,
+          lastTested: new Date()
+        });
+
+        // Update target node validation status
+        setNodeValidationStatus(edge.to, {
+          status: validationStatus,
+          confidence: edge.success ? confidence : 0,
+          lastTested: new Date()
+        });
+
+        console.log('[@component:ValidationResultsClient] Updated final validation status', {
+          edgeId,
+          nodeId: edge.to,
+          status: validationStatus,
+          confidence,
+          success: edge.success
+        });
+      });
+    }
+  }, [results, setNodeValidationStatus, setEdgeValidationStatus, setCurrentTestingNode, setCurrentTestingEdge]);
+
+  // Handle dialog close - maintain colors after closing
+  const handleClose = () => {
+    console.log('[@component:ValidationResultsClient] Closing results dialog, maintaining validation colors');
+    closeResults();
+  };
 
   if (!showResults || !results) return null;
 
@@ -82,7 +153,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
   return (
     <Dialog 
       open={showResults} 
-      onClose={closeResults} 
+      onClose={handleClose} 
       maxWidth="lg" 
       fullWidth
       disableEscapeKeyDown
@@ -98,7 +169,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
               size="small"
             />
           </Box>
-          <IconButton onClick={closeResults} size="small" sx={{ ml: 1 }}>
+          <IconButton onClick={handleClose} size="small" sx={{ ml: 1 }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -457,7 +528,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
 
       <DialogActions sx={{ bgcolor: 'background.paper', p: 0.5, gap: 0 }}>
         <Box sx={{ flexGrow: 1 }} />
-        <Button onClick={closeResults} variant="contained">
+        <Button onClick={handleClose} variant="contained">
           Close
         </Button>
       </DialogActions>

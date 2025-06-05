@@ -135,11 +135,27 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
   const saveEdgeChanges = useCallback(() => {
     if (!state.selectedEdge) return;
     
+    console.log('[@hook:useNodeEdgeManagement] Saving edge changes');
+    console.log('[@hook:useNodeEdgeManagement] Current edgeForm:', state.edgeForm);
+    console.log('[@hook:useNodeEdgeManagement] finalWaitTime being saved:', state.edgeForm.finalWaitTime);
+    
     // Get source and target node names for the edge
     const sourceNode = state.nodes.find(node => node.id === state.selectedEdge!.source);
     const targetNode = state.nodes.find(node => node.id === state.selectedEdge!.target);
     const fromNodeName = sourceNode?.data?.label || state.selectedEdge!.source;
     const toNodeName = targetNode?.data?.label || state.selectedEdge!.target;
+    
+    const updatedEdgeData = {
+      ...state.selectedEdge.data,
+      actions: state.edgeForm.actions,
+      retryActions: state.edgeForm.retryActions,
+      finalWaitTime: state.edgeForm.finalWaitTime,
+      description: state.edgeForm.description,
+      from: fromNodeName,
+      to: toNodeName
+    };
+    
+    console.log('[@hook:useNodeEdgeManagement] Updated edge data:', updatedEdgeData);
     
     // Update function for edges
     const updateEdgeFunction = (eds: UINavigationEdge[]) =>
@@ -147,15 +163,7 @@ export const useNodeEdgeManagement = (state: NodeEdgeState) => {
         edge.id === state.selectedEdge!.id
           ? {
               ...edge,
-              data: {
-                ...edge.data,
-                actions: state.edgeForm.actions,
-                retryActions: state.edgeForm.retryActions,
-                finalWaitTime: state.edgeForm.finalWaitTime,
-                description: state.edgeForm.description,
-                from: fromNodeName,
-                to: toNodeName
-              },
+              data: updatedEdgeData,
             }
           : edge
       );

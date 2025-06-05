@@ -1,0 +1,124 @@
+/* Validation Animation Styles */
+
+@keyframes testing-pulse {
+  0% {
+    box-shadow: 0 0 5px var(--glow-color, rgba(33, 150, 243, 0.6));
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--glow-color, rgba(33, 150, 243, 0.6));
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 5px var(--glow-color, rgba(33, 150, 243, 0.6));
+    transform: scale(1);
+  }
+}
+
+@keyframes edge-pulse {
+  0% {
+    opacity: 0.8;
+    stroke-width: var(--base-width, 2);
+  }
+  50% {
+    opacity: 1;
+    stroke-width: calc(var(--base-width, 2) + 1);
+  }
+  100% {
+    opacity: 0.8;
+    stroke-width: var(--base-width, 2);
+  }
+}
+
+@keyframes handle-glow {
+  0% {
+    box-shadow: 0 0 3px var(--handle-color, rgba(33, 150, 243, 0.6));
+  }
+  50% {
+    box-shadow: 0 0 12px var(--handle-color, rgba(33, 150, 243, 0.6));
+  }
+  100% {
+    box-shadow: 0 0 3px var(--handle-color, rgba(33, 150, 243, 0.6));
+  }
+}
+
+/* Node testing animation */
+.node-testing {
+  animation: testing-pulse 2s ease-in-out infinite;
+  --glow-color: rgba(33, 150, 243, 0.6);
+}
+
+/* Edge testing animation */
+.edge-testing {
+  animation: edge-pulse 1.5s ease-in-out infinite;
+  --base-width: 2;
+}
+
+/* Handle testing animation */
+.handle-testing {
+  animation: handle-glow 2s ease-in-out infinite;
+  --handle-color: rgba(33, 150, 243, 0.6);
+}
+
+/* Validation status indicators */
+.validation-status-high {
+  --glow-color: rgba(76, 175, 80, 0.4);
+}
+
+.validation-status-medium {
+  --glow-color: rgba(255, 152, 0, 0.4);
+}
+
+.validation-status-low {
+  --glow-color: rgba(244, 67, 54, 0.4);
+}
+
+.validation-status-untested {
+  --glow-color: rgba(158, 158, 158, 0.3);
+}
+
+/* Smooth transitions for color changes */
+.react-flow__node {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.react-flow__edge path {
+  transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
+}
+
+.react-flow__handle {
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Entry point specific styling */
+.entry-edge {
+  stroke-dasharray: 8,4;
+  animation: none !important;
+}
+
+/* Root node specific styling */
+.root-node {
+  position: relative;
+}
+
+.root-node::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, transparent, rgba(211, 47, 47, 0.3), transparent);
+  z-index: -1;
+  animation: root-glow 3s ease-in-out infinite;
+}
+
+@keyframes root-glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+} 

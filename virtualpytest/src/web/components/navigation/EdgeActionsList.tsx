@@ -282,7 +282,11 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
           type="number"
           size="small"
           value={finalWaitTime}
-          onChange={(e) => onFinalWaitTimeChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const newValue = parseInt(e.target.value) || 0;
+            console.log('[@component:EdgeActionsList] finalWaitTime changed from', finalWaitTime, 'to', newValue);
+            onFinalWaitTimeChange(newValue);
+          }}
           inputProps={{ min: 0, step: 100 }}
           sx={{ width: 160 }}
         />

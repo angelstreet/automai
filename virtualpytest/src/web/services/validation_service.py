@@ -240,6 +240,9 @@ class ValidationService:
             # Track which nodes are reachable (start with entry nodes as they are always reachable)
             reachable_nodes = set(entry_nodes)
             
+            # ✅ CASCADING SKIP: Track edges to skip due to failed dependencies
+            edges_to_skip = set()
+            
             # Test each edge/path individually with smart dependency checking
             path_results = []
             successful_paths = 0
@@ -257,6 +260,35 @@ class ValidationService:
                 
                 # Report progress: Starting to test this edge
                 self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'testing')
+                
+                # ✅ CASCADING SKIP: Check if this edge was marked to skip due to failed dependency
+                if (from_node, to_node) in edges_to_skip:
+                    skip_message = f"Skipped: Source node '{from_name}' is unreachable due to cascading dependency failure"
+                    print(f"[@service:validation:run_comprehensive_validation] ⏭️ CASCADING SKIP: {from_name} -> {to_name}")
+                    
+                    # Report progress: Edge skipped
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped')
+                    
+                    # Mark as skipped - DO NOT EXECUTE THE NAVIGATION
+                    path_result = {
+                        'from_node': from_node,
+                        'to_node': to_node,
+                        'from_name': from_name,
+                        'to_name': to_name,
+                        'success': False,
+                        'skipped': True,
+                        'steps_executed': 0,
+                        'total_steps': 0,
+                        'execution_time': 0,
+                        'actions_executed': 0,
+                        'total_actions': 0,
+                        'action_results': [],
+                        'verification_results': [],
+                        'error': skip_message
+                    }
+                    path_results.append(path_result)
+                    skipped_paths += 1  # Count this cascading skip
+                    continue  # CRITICAL: Skip to next edge without any execution
                 
                 # Check if the source node is reachable - THIS IS THE CRITICAL CHECK
                 if from_node not in reachable_nodes:
@@ -318,11 +350,52 @@ class ValidationService:
                 if path_result['success']:
                     successful_paths += 1
                     reachable_nodes.add(to_node)
-                    print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS {from_name} -> {to_name}")
+                    print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS {from_name} -> {to_node}")
                     # Report progress: Edge succeeded
                     self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'success')
                 else:
                     print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED {from_name} -> {to_name}")
+                    
+                    # ✅ ENHANCED CASCADING SKIP: When an edge fails, mark both nodes as potentially unreachable
+                    # and skip all dependent edges
+                    dependent_edges_count = 0
+                    
+                    # The target node (to_node) is definitely unreachable since we failed to reach it
+                    unreachable_nodes = {to_node}
+                    
+                    # CONSERVATIVE MODE (current): Only mark source as unreachable if no other paths exist
+                    # If this was the only way to reach the source node (from_node), it also becomes unreachable
+                    # Check if there are other successful paths to the source node
+                    other_paths_to_source = False
+                    for prev_result in path_results:
+                        if prev_result.get('success', False) and prev_result.get('to_node') == from_node:
+                            other_paths_to_source = True
+                            break
+                    
+                    # If no other successful paths exist to the source node, it's also unreachable for future edges
+                    if not other_paths_to_source and from_node not in entry_nodes:
+                        unreachable_nodes.add(from_node)
+                        print(f"[@service:validation:run_comprehensive_validation] ⚠️ Source node '{from_name}' also becomes unreachable")
+                    
+                    # ✅ AGGRESSIVE MODE: Enable immediate abort for any failed edge
+                    unreachable_nodes.add(from_node)  # This makes tvguide_livetv → tvguide skip after tvguide_livetv → live fails
+                    
+                    # Mark all remaining edges that depend on any unreachable nodes
+                    for j in range(i+1, len(testable_edges)):
+                        dep_from, dep_to, dep_edge_data = testable_edges[j]
+                        if dep_from in unreachable_nodes:
+                            edges_to_skip.add((dep_from, dep_to))
+                            dependent_edges_count += 1
+                            
+                            # Get names for logging
+                            dep_from_info = get_node_info(G, dep_from)
+                            dep_to_info = get_node_info(G, dep_to)
+                            dep_from_name = dep_from_info.get('label', dep_from) if dep_from_info else dep_from
+                            dep_to_name = dep_to_info.get('label', dep_to) if dep_to_info else dep_to
+                            print(f"[@service:validation:run_comprehensive_validation] ⏭️ Will skip: {dep_from_name} -> {dep_to_name} (depends on unreachable node)")
+                    
+                    if dependent_edges_count > 0:
+                        print(f"[@service:validation:run_comprehensive_validation] ⏭️ Marked {dependent_edges_count} dependent edges for cascading skip")
                     
                     # Check if verification failed (minimal modification)
                     verification_results = path_result.get('verification_results', [])
