@@ -94,6 +94,14 @@ def get_optimal_validation_path(tree_id):
     try:
         print(f"[@api:validation:optimal-path] Request for optimal path for tree {tree_id}")
         
+        # Check if tree ID is valid
+        if not tree_id or len(tree_id) < 10:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid tree ID format',
+                'error_code': 'INVALID_TREE_ID'
+            }), 400
+        
         team_id = get_team_id()
         
         # Import the NetworkX pathfinding functions
@@ -101,6 +109,25 @@ def get_optimal_validation_path(tree_id):
             find_optimal_edge_validation_sequence,
             analyze_validation_sequence_efficiency
         )
+        
+        # First check if the tree exists
+        from navigation_cache import get_cached_graph
+        graph = get_cached_graph(tree_id, team_id)
+        
+        if not graph:
+            return jsonify({
+                'success': False,
+                'error': 'Tree not found or could not be loaded',
+                'error_code': 'TREE_NOT_FOUND'
+            }), 404
+            
+        # Check if the graph has any edges
+        if len(list(graph.edges())) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'The navigation tree has no edges to validate',
+                'error_code': 'EMPTY_TREE'
+            }), 404
         
         # Get the optimal validation sequence using NetworkX
         validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
@@ -120,7 +147,6 @@ def get_optimal_validation_path(tree_id):
         for step in validation_sequence:
             # Get target node information and its verifications
             from navigation_graph import get_node_info
-            from navigation_cache import get_cached_graph
             
             # Get the cached graph to access node data
             G = get_cached_graph(tree_id, team_id)

@@ -480,39 +480,49 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
     """
     print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Finding optimal edge validation for tree {tree_id}")
     
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_entry_points, get_node_info
-    
-    G = get_cached_graph(tree_id, team_id)
-    if not G:
-        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Failed to get graph for tree {tree_id}")
+    try:
+        from navigation_cache import get_cached_graph
+        from navigation_graph import get_entry_points, get_node_info
+        
+        G = get_cached_graph(tree_id, team_id)
+        if not G:
+            print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Failed to get graph for tree {tree_id}")
+            return []
+        
+        # Get all edges that need to be validated - SORT FOR DETERMINISTIC BEHAVIOR
+        edges_raw = list(G.edges(data=True))
+        if not edges_raw:
+            print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] No edges found in graph for tree {tree_id}")
+            return []
+            
+        edges_to_validate = sorted(edges_raw, key=lambda edge: (edge[0], edge[1]))
+        
+        if not edges_to_validate:
+            print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] No edges found to validate")
+            return []
+        
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Found {len(edges_to_validate)} edges to validate")
+        
+        # Use simple NetworkX-based algorithm
+        validation_sequence = _create_simple_networkx_validation_sequence(G, edges_to_validate)
+        
+        # Analyze the final sequence
+        efficiency_report = analyze_validation_sequence_efficiency(validation_sequence)
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Validation sequence efficiency report:")
+        print(f"  - Total steps: {efficiency_report['total_steps']}")
+        print(f"  - Edge validations: {efficiency_report['edge_validations']}")
+        print(f"  - Navigation steps: {efficiency_report['navigation_steps']}")
+        print(f"  - Bidirectional optimizations: {efficiency_report['bidirectional_optimizations']}")
+        print(f"  - Efficiency ratio: {efficiency_report['efficiency_ratio']:.2f}")
+        print(f"  - Bidirectional efficiency: {efficiency_report['bidirectional_efficiency']:.2f}")
+        print(f"  - Overall efficiency rating: {efficiency_report['efficiency_rating']}")
+        
+        return validation_sequence
+    except Exception as e:
+        import traceback
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Error generating path: {e}")
+        traceback.print_exc()
         return []
-    
-    # Get all edges that need to be validated - SORT FOR DETERMINISTIC BEHAVIOR
-    edges_raw = list(G.edges(data=True))
-    edges_to_validate = sorted(edges_raw, key=lambda edge: (edge[0], edge[1]))
-    
-    if not edges_to_validate:
-        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] No edges found to validate")
-        return []
-    
-    print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Found {len(edges_to_validate)} edges to validate")
-    
-    # Use simple NetworkX-based algorithm
-    validation_sequence = _create_simple_networkx_validation_sequence(G, edges_to_validate)
-    
-    # Analyze the final sequence
-    efficiency_report = analyze_validation_sequence_efficiency(validation_sequence)
-    print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Validation sequence efficiency report:")
-    print(f"  - Total steps: {efficiency_report['total_steps']}")
-    print(f"  - Edge validations: {efficiency_report['edge_validations']}")
-    print(f"  - Navigation steps: {efficiency_report['navigation_steps']}")
-    print(f"  - Bidirectional optimizations: {efficiency_report['bidirectional_optimizations']}")
-    print(f"  - Efficiency ratio: {efficiency_report['efficiency_ratio']:.2f}")
-    print(f"  - Bidirectional efficiency: {efficiency_report['bidirectional_efficiency']:.2f}")
-    print(f"  - Overall efficiency rating: {efficiency_report['efficiency_rating']}")
-    
-    return validation_sequence
 
 def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> Dict:
     """
