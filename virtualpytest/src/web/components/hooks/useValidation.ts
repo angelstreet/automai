@@ -22,6 +22,7 @@ export function useValidation(treeId: string) {
     setProgress,
     setValidating,
     showLastResult,
+    resetValidationColors,
   } = useValidationStore();
 
   const openPreview = useCallback(async () => {
@@ -41,6 +42,10 @@ export function useValidation(treeId: string) {
 
   const runValidation = useCallback(async (skippedEdges?: Array<{ from: string; to: string }>) => {
     console.log(`[@hook:useValidation] Starting validation for tree: ${treeId}`, skippedEdges ? `with ${skippedEdges.length} skipped edges` : '');
+    
+    // Reset all validation colors to grey (untested) before starting validation
+    console.log(`[@hook:useValidation] Resetting all validation colors to grey (untested) before starting validation`);
+    resetValidationColors();
     
     setValidating(true);
     setShowPreview(false);
@@ -90,7 +95,7 @@ export function useValidation(treeId: string) {
       validationService.setProgressCallback(null);
       setValidating(false);
     }
-  }, [treeId, setValidating, setShowPreview, setShowProgress, setProgress, setResults, setShowResults, previewData]);
+  }, [treeId, setValidating, setShowPreview, setShowProgress, setProgress, setResults, setShowResults, previewData, resetValidationColors]);
 
   const exportReport = useCallback(async (format: 'json' | 'csv' = 'json') => {
     console.log(`[@hook:useValidation] Exporting report for tree: ${treeId}, format: ${format}`);

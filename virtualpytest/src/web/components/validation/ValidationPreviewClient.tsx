@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
+import { useValidationColors } from '../../hooks/useValidationColors';
 import React from 'react';
 
 interface ValidationPreviewClientProps {
@@ -64,6 +65,7 @@ interface OptimalPathData {
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const { showPreview, previewData, lastResult, closePreview, runValidation, viewLastResult } = useValidation(treeId);
+  const { resetForNewValidation } = useValidationColors(treeId);
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
@@ -147,6 +149,11 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   };
 
   const handleRunValidation = () => {
+    console.log('[@component:ValidationPreviewClient] Starting validation - resetting all colors to grey (untested)');
+    
+    // Reset all validation colors to grey (untested) before starting validation
+    resetForNewValidation();
+    
     const skippedEdges = optimalPath?.sequence
       .filter((step: OptimalPathStep) => !selectedEdges.has(step.step_number))
       .map((step: OptimalPathStep) => ({ from: step.from_node_id, to: step.to_node_id })) || [];
