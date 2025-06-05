@@ -134,25 +134,35 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // First, try to find edges connected to this specific handle
     let handleValidationStatus: ValidationStatus = 'untested';
     
-    if (handleId) {
+    if (handleId && edges) {
       // Look for edges connected to this specific handle
       const connectedEdges = [...edgeValidationStatus.entries()].filter(([edgeId, _]) => {
         // Get the actual edge data to check source/target handles
         const edgeData = edges?.find(edge => edge.id === edgeId);
-        if (!edgeData) return false;
+        if (!edgeData) {
+          return false;
+        }
         
         // For source handles, check if this node is the source and handle matches
-        if (handleId.includes('source') && 
-            edgeData.source === nodeId && 
-            edgeData.sourceHandle === handleId) {
-          return true;
+        if (handleId.includes('source') && edgeData.source === nodeId) {
+          // If edge has sourceHandle, match exactly, otherwise assume it matches
+          if (edgeData.sourceHandle) {
+            return edgeData.sourceHandle === handleId;
+          } else {
+            // Assume match if no sourceHandle specified (for edges loaded from database)
+            return true;
+          }
         }
         
         // For target handles, check if this node is the target and handle matches
-        if (handleId.includes('target') && 
-            edgeData.target === nodeId && 
-            edgeData.targetHandle === handleId) {
-          return true;
+        if (handleId.includes('target') && edgeData.target === nodeId) {
+          // If edge has targetHandle, match exactly, otherwise assume it matches
+          if (edgeData.targetHandle) {
+            return edgeData.targetHandle === handleId;
+          } else {
+            // Assume match if no targetHandle specified (for edges loaded from database)
+            return true;
+          }
         }
         
         return false;
@@ -176,8 +186,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         }
         
         console.log(`[@hook:useValidationColors] Handle ${handleId} on node ${nodeId} has ${connectedEdges.length} connected edges with status: ${handleValidationStatus}`);
-      } else {
-        console.log(`[@hook:useValidationColors] Handle ${handleId} on node ${nodeId} has no connected edges, using node status`);
       }
     }
     
@@ -259,6 +267,81 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     hasResults: !!results
   }), [isValidating, currentTestingNode, currentTestingEdge, results]);
 
+  // Initialize validation colors from last results
+  const initializeFromLastResults = useCallback(() => {
+    const store = useValidationStore.getState();
+    const { lastResult } = store;
+    
+    if (lastResult && lastResult.nodeResults && lastResult.edgeResults) {
+      console.log('[@hook:useValidationColors] Initializing colors from last validation results');
+      console.log('[@hook:useValidationColors] Last result structure:', {
+        nodeResults: lastResult.nodeResults.length,
+        edgeResults: lastResult.edgeResults.length,
+        summary: lastResult.summary
+      });
+      
+      // Initialize node validation status from array
+      lastResult.nodeResults.forEach((nodeResult) => {
+        if (nodeResult.nodeId) {
+          // Calculate confidence based on node validity
+          const confidence = nodeResult.isValid ? 0.8 : 0.2; // Simple confidence calculation
+          const status = getValidationStatusFromConfidence(confidence);
+          
+          console.log(`[@hook:useValidationColors] Setting node ${nodeResult.nodeId} status: ${status} (confidence: ${confidence})`);
+          store.setNodeValidationStatus(nodeResult.nodeId, {
+            status,
+            confidence,
+            lastTested: new Date() // Use current date since we don't have timestamp
+          });
+        }
+      });
+      
+      // Initialize edge validation status from array
+      lastResult.edgeResults.forEach((edgeResult) => {
+        if (edgeResult.from && edgeResult.to) {
+          // Calculate confidence based on edge success and detailed results
+          let confidence = 0;
+          if (edgeResult.success) {
+            // Calculate confidence from action and verification results
+            const actionSuccessRate = edgeResult.actionResults?.length > 0 
+              ? edgeResult.actionResults.filter(a => a.success).length / edgeResult.actionResults.length 
+              : 1;
+              
+            const verificationSuccessRate = edgeResult.verificationResults?.length > 0
+              ? edgeResult.verificationResults.filter(v => v.success).length / edgeResult.verificationResults.length
+              : 1;
+              
+            confidence = (actionSuccessRate + verificationSuccessRate) / 2;
+          } else {
+            confidence = 0.1; // Low confidence for failed edges
+          }
+          
+          const status = getValidationStatusFromConfidence(confidence);
+          const edgeId = `${edgeResult.from}-${edgeResult.to}`;
+          
+          console.log(`[@hook:useValidationColors] Setting edge ${edgeId} status: ${status} (confidence: ${confidence})`);
+          store.setEdgeValidationStatus(edgeId, {
+            status,
+            confidence,
+            lastTested: new Date() // Use current date since we don't have timestamp
+          });
+        }
+      });
+      
+      console.log('[@hook:useValidationColors] Initialized validation colors from last results');
+    } else {
+      console.log('[@hook:useValidationColors] No last validation results found to initialize colors');
+      if (lastResult) {
+        console.log('[@hook:useValidationColors] Last result exists but missing nodeResults or edgeResults:', {
+          hasNodeResults: !!lastResult.nodeResults,
+          hasEdgeResults: !!lastResult.edgeResults,
+          nodeResultsLength: lastResult.nodeResults?.length,
+          edgeResultsLength: lastResult.edgeResults?.length
+        });
+      }
+    }
+  }, []);
+
   return {
     // Color getters
     getNodeColors,
@@ -275,6 +358,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     resetValidationColors,
     
     // State
-    validationState
+    validationState,
+    
+    // Initialize from last results
+    initializeFromLastResults
   };
 } 

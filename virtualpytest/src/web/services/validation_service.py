@@ -266,6 +266,30 @@ class ValidationService:
                     skip_message = f"Skipped: Source node '{from_name}' is unreachable due to cascading dependency failure"
                     print(f"[@service:validation:run_comprehensive_validation] ⏭️ CASCADING SKIP: {from_name} -> {to_name}")
                     
+                    # ✅ ENHANCED: When we skip an edge, the target node also becomes unreachable
+                    # because we cannot verify we can reach it
+                    if to_node in reachable_nodes:
+                        reachable_nodes.remove(to_node)
+                        print(f"[@service:validation:run_comprehensive_validation] ⚠️ Target node '{to_name}' also becomes unreachable due to skipped edge")
+                        
+                        # Mark additional edges that depend on this newly unreachable target node
+                        additional_skips = 0
+                        for k in range(i+1, len(testable_edges)):
+                            additional_from, additional_to, additional_edge_data = testable_edges[k]
+                            if additional_from == to_node and (additional_from, additional_to) not in edges_to_skip:
+                                edges_to_skip.add((additional_from, additional_to))
+                                additional_skips += 1
+                                
+                                # Get names for logging
+                                additional_from_info = get_node_info(G, additional_from)
+                                additional_to_info = get_node_info(G, additional_to)
+                                additional_from_name = additional_from_info.get('label', additional_from) if additional_from_info else additional_from
+                                additional_to_name = additional_to_info.get('label', additional_to) if additional_to_info else additional_to
+                                print(f"[@service:validation:run_comprehensive_validation] ⏭️ Additional skip: {additional_from_name} -> {additional_to_name} (source node became unreachable)")
+                        
+                        if additional_skips > 0:
+                            print(f"[@service:validation:run_comprehensive_validation] ⏭️ Marked {additional_skips} additional edges for skip due to newly unreachable target node")
+                    
                     # Report progress: Edge skipped
                     self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped')
                     

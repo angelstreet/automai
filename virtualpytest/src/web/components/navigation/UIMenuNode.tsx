@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
-import { UIMenuNode as UIMenuNodeType } from '../../types/navigationTypes';
+import { UINavigationNode } from '../../types/navigationTypes';
 import { useValidationColors } from '../../hooks/useValidationColors';
 
-export const UIMenuNode: React.FC<NodeProps<UIMenuNodeType['data']>> = ({ 
+export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
   data, 
   selected,
   id
@@ -11,7 +11,7 @@ export const UIMenuNode: React.FC<NodeProps<UIMenuNodeType['data']>> = ({
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
-  const { getNodeColors, getHandleColors } = useValidationColors(data.treeId || 'default', currentEdges);
+  const { getNodeColors, getHandleColors } = useValidationColors(data.tree_id || 'default', currentEdges);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);

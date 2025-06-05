@@ -1,35 +1,34 @@
 import React, { useEffect } from 'react';
 import { getAnimationCSS } from '../../../config/validationColors';
+import { useValidationColors } from '../../hooks/useValidationColors';
 
-interface ValidationAnimationsProviderProps {
-  children: React.ReactNode;
-}
+export const ValidationAnimationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { initializeFromLastResults } = useValidationColors('default');
 
-export const ValidationAnimationsProvider: React.FC<ValidationAnimationsProviderProps> = ({ children }) => {
   useEffect(() => {
-    console.log('[@component:ValidationAnimationsProvider] Injecting validation animation styles');
-    
-    // Create or update the style element for validation animations
-    let styleElement = document.getElementById('validation-animations-styles');
+    // Inject CSS animations
+    const styleId = 'validation-animations';
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
     
     if (!styleElement) {
       styleElement = document.createElement('style');
-      styleElement.id = 'validation-animations-styles';
+      styleElement.id = styleId;
       document.head.appendChild(styleElement);
     }
     
-    // Inject the CSS
     styleElement.textContent = getAnimationCSS();
     
-    // Cleanup function
+    // Initialize validation colors from last results
+    initializeFromLastResults();
+    
     return () => {
-      console.log('[@component:ValidationAnimationsProvider] Cleaning up validation animation styles');
-      const element = document.getElementById('validation-animations-styles');
+      // Clean up on unmount
+      const element = document.getElementById(styleId);
       if (element) {
         element.remove();
       }
     };
-  }, []);
+  }, [initializeFromLastResults]);
 
   return <>{children}</>;
 }; 
