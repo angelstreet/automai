@@ -45,10 +45,6 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
       return { success: false, error: 'User profile not found' };
     }
 
-    // Query all workspaces that match criteria:
-    // - Private workspaces owned by the user
-    // - Team workspaces from the user's active team
-
     // Start with a simple select query
     console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] Starting workspace query`);
 
@@ -71,17 +67,58 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
     }
 
     let teamWorkspaces: any[] = [];
-    // If user has an active team, query team workspaces
-    if (userProfile.active_team) {
+
+    // Get ALL teams the user is a member of (not just active_team)
+    console.log(`[@db:workspaceDb:getWorkspacesForCurrentUser] Getting user's team memberships`);
+    const { data: userTeams, error: teamsError } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('profile_id', userData.user.id);
+
+    if (teamsError) {
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] Querying team workspaces for team: ${userProfile.active_team}`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting user teams: ${teamsError.message}`,
+      );
+    } else if (userTeams && userTeams.length > 0) {
+      const teamIds = userTeams.map(t => t.team_id);
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] User is member of ${teamIds.length} teams: ${teamIds.join(', ')}`,
+      );
+
+      // If active_team is null or not in the user's teams, set it to the first available team
+      let activeTeamToUse = userProfile.active_team;
+      if (!activeTeamToUse || !teamIds.includes(activeTeamToUse)) {
+        activeTeamToUse = teamIds[0];
+        console.log(
+          `[@db:workspaceDb:getWorkspacesForCurrentUser] Active team ${userProfile.active_team || 'null'} is invalid, using fallback: ${activeTeamToUse}`,
+        );
+
+        // Update the user's profile with the valid active_team
+        try {
+          await supabase
+            .from('profiles')
+            .update({ active_team: activeTeamToUse })
+            .eq('id', userData.user.id);
+          console.log(
+            `[@db:workspaceDb:getWorkspacesForCurrentUser] Updated user's active_team to: ${activeTeamToUse}`,
+          );
+        } catch (updateError) {
+          console.log(
+            `[@db:workspaceDb:getWorkspacesForCurrentUser] Warning: Could not update active_team: ${updateError}`,
+          );
+        }
+      }
+
+      // Query team workspaces for ALL teams the user belongs to
+      console.log(
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] Querying team workspaces for teams: ${teamIds.join(', ')}`,
       );
 
       const { data: teamWorkspacesData, error: teamError } = await supabase
         .from('workspaces')
         .select('*')
         .eq('workspace_type', 'team')
-        .eq('team_id', userProfile.active_team);
+        .in('team_id', teamIds); // Query ALL teams, not just active_team
 
       if (teamError) {
         console.log(
@@ -90,12 +127,12 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
       } else {
         teamWorkspaces = teamWorkspacesData || [];
         console.log(
-          `[@db:workspaceDb:getWorkspacesForCurrentUser] Found ${teamWorkspaces.length} team workspaces`,
+          `[@db:workspaceDb:getWorkspacesForCurrentUser] Found ${teamWorkspaces.length} team workspaces across ${teamIds.length} teams`,
         );
       }
     } else {
       console.log(
-        `[@db:workspaceDb:getWorkspacesForCurrentUser] No active team selected, skipping team workspaces`,
+        `[@db:workspaceDb:getWorkspacesForCurrentUser] User is not a member of any teams, skipping team workspaces`,
       );
     }
 
@@ -105,7 +142,7 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
     );
 
     console.log(
-      `[@db:workspaceDb:getWorkspacesForCurrentUser] Successfully retrieved ${allWorkspaces.length} workspaces total`,
+      `[@db:workspaceDb:getWorkspacesForCurrentUser] Successfully retrieved ${allWorkspaces.length} workspaces total (${privateWorkspaces.length} private, ${teamWorkspaces.length} team)`,
     );
 
     return { success: true, data: allWorkspaces };
