@@ -27,12 +27,14 @@ kill_existing_processes
 CAPTURE_DIR="/var/www/html/stream/captures"
 VIDEO_DEVICE="/dev/video0"
 
-# Optimized FFMPEG command for low latency streaming
-FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 5 -video_size 1920x1080 -i $VIDEO_DEVICE \
-  -fflags nobuffer \
+# Optimized FFMPEG command for low latency streaming (Option 1: 2-4s latency)
+FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 10 -video_size 1920x1080 -i $VIDEO_DEVICE \
+  -fflags nobuffer+flush_packets \
+  -avioflags direct \
   -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=5[captureout] \
-  -map [streamout] -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 600k -g 15 -flags low_delay -threads 2 -an \
-    -f hls -hls_time 3 -hls_list_size 4 -hls_flags delete_segments+discont_start+split_by_time -hls_segment_type mpegts -hls_init_time 1 \
+  -map [streamout] -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 200k -g 5 -keyint_min 5 -sc_threshold 0 -flags low_delay+global_header -threads 2 -an \
+    -f hls -hls_time 1 -hls_list_size 3 -hls_flags delete_segments+discont_start+split_by_time+independent_segments -hls_segment_type mpegts -hls_init_time 0.5 \
+    -hls_allow_cache 0 -hls_segment_filename /var/www/html/stream/segment_%03d.ts \
     /var/www/html/stream/output.m3u8 \
   -map [captureout] -c:v mjpeg -q:v 4 -r 4 -f image2 \
     /var/www/html/stream/captures/test_capture_%06d.jpg"
