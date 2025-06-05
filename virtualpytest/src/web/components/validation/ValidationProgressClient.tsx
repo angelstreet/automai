@@ -43,13 +43,17 @@ export default function ValidationProgressClient({
       return;
     }
 
-    // Update using the same pattern as EdgeSelectionPanel
-    // This will append the validation result to the first action's last_run_result array
-    // The parent update function will handle merging with existing edge data
+    // Create a minimal action with validation result that can be merged by the parent
+    // The parent update function will handle this as a simple object spread
     const validationUpdate = {
-      actions: [{
-        last_run_result: [success] // Add validation result as most recent
-      }]
+      // Add a special field that indicates this is a validation update
+      _validation_update: true,
+      // Store the validation result in a way that can be processed
+      _validation_result: {
+        success,
+        timestamp: new Date().toISOString(),
+        type: 'validation'
+      }
     };
 
     console.log(`[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`);
@@ -63,13 +67,17 @@ export default function ValidationProgressClient({
       return;
     }
 
-    // Update using the same pattern as NodeSelectionPanel
-    // This will append the validation result to the first verification's last_run_result array
-    // The parent update function will handle merging with existing node data
+    // Create a minimal verification with validation result that can be merged by the parent
+    // The parent update function will handle this as a simple object spread
     const validationUpdate = {
-      verifications: [{
-        last_run_result: [success] // Add validation result as most recent
-      }]
+      // Add a special field that indicates this is a validation update
+      _validation_update: true,
+      // Store the validation result in a way that can be processed
+      _validation_result: {
+        success,
+        timestamp: new Date().toISOString(),
+        type: 'validation'
+      }
     };
 
     console.log(`[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`);

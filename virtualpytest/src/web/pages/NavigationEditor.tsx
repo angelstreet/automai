@@ -823,20 +823,81 @@ const NavigationEditorContent: React.FC = () => {
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
     console.log(`[@component:NavigationEditor] Updating node ${nodeId} with data:`, updatedData);
     
-    // Create a function to update nodes consistently
-    const updateNodeFunction = (nodes: any[]) => 
-      nodes.map(node => 
-        node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
-      );
-    
-    // Update both filtered nodes and allNodes arrays
-    setNodes(updateNodeFunction);
-    setAllNodes(updateNodeFunction);
-    
-    // Update selected node if it's the one being updated
-    if (selectedNode && selectedNode.id === nodeId) {
-      const updatedNode = { ...selectedNode, data: { ...selectedNode.data, ...updatedData } };
-      setSelectedNode(updatedNode);
+    // Check if this is a validation update that needs special handling
+    if (updatedData._validation_update && updatedData._validation_result) {
+      const validationResult = updatedData._validation_result.success;
+      
+      // Create a function to update nodes with validation results
+      const updateNodeFunction = (nodes: any[]) => 
+        nodes.map(node => {
+          if (node.id === nodeId) {
+            const existingData = node.data || {};
+            const existingVerifications = existingData.verifications || [];
+            
+            // Update verifications with validation result
+            let updatedVerifications;
+            if (existingVerifications.length > 0) {
+              // Update the first verification's last_run_result
+              updatedVerifications = existingVerifications.map((verification, index) => {
+                if (index === 0) {
+                  const existingResults = verification.last_run_result || [];
+                  const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
+                  return {
+                    ...verification,
+                    last_run_result: updatedResults
+                  };
+                }
+                return verification;
+              });
+            } else {
+              // Create a default verification with the validation result
+              updatedVerifications = [{
+                type: 'validation',
+                last_run_result: [validationResult]
+              }];
+            }
+            
+            return {
+              ...node,
+              data: {
+                ...existingData,
+                verifications: updatedVerifications,
+                last_validation_timestamp: updatedData._validation_result.timestamp
+              }
+            };
+          }
+          return node;
+        });
+      
+      // Update both filtered nodes and allNodes arrays
+      setNodes(updateNodeFunction);
+      setAllNodes(updateNodeFunction);
+      
+      // Update selected node if it's the one being updated
+      if (selectedNode && selectedNode.id === nodeId) {
+        const updatedNodeData = updateNodeFunction([selectedNode])[0];
+        setSelectedNode(updatedNodeData);
+      }
+      
+      console.log(`[@component:NavigationEditor] Updated node ${nodeId} with validation result: ${validationResult}`);
+    } else {
+      // Regular update - use simple object spread
+      const updateNodeFunction = (nodes: any[]) => 
+        nodes.map(node => 
+          node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
+        );
+      
+      // Update both filtered nodes and allNodes arrays
+      setNodes(updateNodeFunction);
+      setAllNodes(updateNodeFunction);
+      
+      // Update selected node if it's the one being updated
+      if (selectedNode && selectedNode.id === nodeId) {
+        const updatedNode = { ...selectedNode, data: { ...selectedNode.data, ...updatedData } };
+        setSelectedNode(updatedNode);
+      }
+      
+      console.log(`[@component:NavigationEditor] Updated node ${nodeId} with regular data`);
     }
     
     // Mark tree as having unsaved changes
@@ -849,17 +910,108 @@ const NavigationEditorContent: React.FC = () => {
   const handleUpdateEdge = useCallback((edgeId: string, updatedData: any) => {
     console.log(`[@component:NavigationEditor] Updating edge ${edgeId} with data:`, updatedData);
     
-    // Update edges array
-    setEdges(prevEdges => 
-      prevEdges.map(edge => 
-        edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
-      )
-    );
-    
-    // Update selected edge if it's the one being updated
-    if (selectedEdge && selectedEdge.id === edgeId) {
-      const updatedEdge = { ...selectedEdge, data: { ...selectedEdge.data, ...updatedData } };
-      setSelectedEdge(updatedEdge);
+    // Check if this is a validation update that needs special handling
+    if (updatedData._validation_update && updatedData._validation_result) {
+      const validationResult = updatedData._validation_result.success;
+      
+      // Update edges array with validation results
+      setEdges(prevEdges => 
+        prevEdges.map(edge => {
+          if (edge.id === edgeId) {
+            const existingData = edge.data || {};
+            const existingActions = existingData.actions || [];
+            
+            // Update actions with validation result
+            let updatedActions;
+            if (existingActions.length > 0) {
+              // Update the first action's last_run_result
+              updatedActions = existingActions.map((action, index) => {
+                if (index === 0) {
+                  const existingResults = action.last_run_result || [];
+                  const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
+                  return {
+                    ...action,
+                    last_run_result: updatedResults
+                  };
+                }
+                return action;
+              });
+            } else {
+              // Create a default action with the validation result
+              updatedActions = [{
+                type: 'validation',
+                last_run_result: [validationResult]
+              }];
+            }
+            
+            return {
+              ...edge,
+              data: {
+                ...existingData,
+                actions: updatedActions,
+                last_validation_timestamp: updatedData._validation_result.timestamp
+              }
+            };
+          }
+          return edge;
+        })
+      );
+      
+      // Update selected edge if it's the one being updated
+      if (selectedEdge && selectedEdge.id === edgeId) {
+        setSelectedEdge(prevEdge => {
+          if (!prevEdge || prevEdge.id !== edgeId) return prevEdge;
+          
+          const existingData = prevEdge.data || {};
+          const existingActions = existingData.actions || [];
+          
+          let updatedActions;
+          if (existingActions.length > 0) {
+            updatedActions = existingActions.map((action, index) => {
+              if (index === 0) {
+                const existingResults = action.last_run_result || [];
+                const updatedResults = [validationResult, ...existingResults].slice(0, 10);
+                return {
+                  ...action,
+                  last_run_result: updatedResults
+                };
+              }
+              return action;
+            });
+          } else {
+            updatedActions = [{
+              type: 'validation',
+              last_run_result: [validationResult]
+            }];
+          }
+          
+          return {
+            ...prevEdge,
+            data: {
+              ...existingData,
+              actions: updatedActions,
+              last_validation_timestamp: updatedData._validation_result.timestamp
+            }
+          };
+        });
+      }
+      
+      console.log(`[@component:NavigationEditor] Updated edge ${edgeId} with validation result: ${validationResult}`);
+    } else {
+      // Regular update - use simple object spread
+      setEdges(prevEdges => 
+        prevEdges.map(edge => 
+          edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
+        )
+      );
+      
+      // Update selected edge if it's the one being updated
+      if (selectedEdge && selectedEdge.id === edgeId) {
+        const updatedEdge = { ...selectedEdge, data: { ...selectedEdge.data, ...updatedData } };
+        setSelectedEdge(updatedEdge);
+      }
+      
+      console.log(`[@component:NavigationEditor] Updated edge ${edgeId} with regular data`);
     }
     
     // Mark tree as having unsaved changes
