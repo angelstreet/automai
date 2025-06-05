@@ -348,6 +348,9 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
             
             # Execute all actions in this transition
             transition_success = True
+            actions_executed = 0
+            
+            # Execute main actions
             for j, action in enumerate(current_transition_info['actions']):
                 action_start_time = time.time()
                 
@@ -359,6 +362,7 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
                 action_execution_time = time.time() - action_start_time
                 
                 if action_success:
+                    actions_executed += 1
                     current_transition_info['actions_executed'] += 1
                     result['actions_executed'] += 1
                     print(f"[@navigation:executor:execute_navigation_with_verification]   ✓ Action {j+1} completed successfully in {action_execution_time:.2f}s")
@@ -372,6 +376,50 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
                     print(f"[@navigation:executor:execute_navigation_with_verification]   ✗ Action {j+1} failed after {action_execution_time:.2f}s")
                     transition_success = False
                     break
+            
+            # If main actions failed and we have retry actions, execute them
+            retry_actions = transition.get('retryActions', [])
+            if not transition_success and retry_actions:
+                print(f"[@navigation:executor:execute_navigation_with_verification] 🔄 Main actions failed. Starting retry actions...")
+                print(f"[@navigation:executor:execute_navigation_with_verification] 📋 Processing {len(retry_actions)} retry action(s):")
+                
+                # Reset transition success for retry attempt
+                retry_success = True
+                retry_actions_executed = 0
+                
+                for j, retry_action in enumerate(retry_actions):
+                    action_start_time = time.time()
+                    
+                    print(f"[@navigation:executor:execute_navigation_with_verification]   Retry Action {j+1}/{len(retry_actions)}: {retry_action.get('label', retry_action.get('command', 'Unknown'))}")
+                    
+                    # Execute the retry action
+                    action_success = execute_action_object(retry_action)
+                    
+                    action_execution_time = time.time() - action_start_time
+                    
+                    if action_success:
+                        retry_actions_executed += 1
+                        print(f"[@navigation:executor:execute_navigation_with_verification]   ✓ Retry Action {j+1} completed successfully in {action_execution_time:.2f}s")
+                        
+                        # Wait after retry action if specified
+                        if retry_action.get('waitTime', 0) > 0:
+                            wait_time_seconds = retry_action.get('waitTime', 0) / 1000.0
+                            print(f"[@navigation:executor:execute_navigation_with_verification]   Waiting {wait_time_seconds}s after retry action")
+                            time.sleep(wait_time_seconds)
+                    else:
+                        print(f"[@navigation:executor:execute_navigation_with_verification]   ✗ Retry Action {j+1} failed after {action_execution_time:.2f}s")
+                        retry_success = False
+                        break
+                
+                if retry_success and retry_actions_executed == len(retry_actions):
+                    print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Retry actions completed successfully!")
+                    transition_success = True
+                    # Update counters to reflect successful retry
+                    current_transition_info['actions_executed'] = len(current_transition_info['actions']) + retry_actions_executed
+                    result['actions_executed'] += retry_actions_executed
+                else:
+                    print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Retry actions also failed.")
+                    transition_success = False
             
             # Final wait for transition if specified
             if transition_success and transition.get('finalWaitTime', 0) > 0:
@@ -394,11 +442,14 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
                 'from_node_label': transition.get('from_node_label', ''),
                 'to_node_label': transition.get('to_node_label', ''),
                 'actions': transition.get('actions', []),
+                'retryActions': transition.get('retryActions', []),  # Include retry actions in result
                 'actions_executed': current_transition_info['actions_executed'],
                 'total_actions': current_transition_info['total_actions'],
                 'success': transition_success,
                 'execution_time': transition_execution_time,
-                'description': transition['description']
+                'description': transition['description'],
+                'retry_attempted': not transition_success and len(transition.get('retryActions', [])) > 0,  # Flag if retry was attempted
+                'retry_successful': transition_success and len(transition.get('retryActions', [])) > 0  # Flag if retry was successful
             }
             
             result['transitions_details'].append(transition_detail)

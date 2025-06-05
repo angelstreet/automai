@@ -8,7 +8,7 @@ import {
   Fade,
   Chip
 } from '@mui/material';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useValidation } from '../hooks/useValidation';
 import { useValidationStore } from '../store/validationStore';
 import { useValidationColors } from '../../hooks/useValidationColors';
@@ -35,6 +35,11 @@ export default function ValidationProgressClient({
     setNodeValidationStatus,
     setEdgeValidationStatus 
   } = useValidationStore();
+
+  // Track if auto-save has been triggered for this validation session
+  const autoSaveTriggeredRef = useRef(false);
+  // Track previous validation state to detect completion
+  const prevIsValidatingRef = useRef(false);
 
   // Helper function to update edge confidence with validation results
   const updateEdgeConfidence = (edgeId: string, success: boolean) => {
@@ -83,6 +88,14 @@ export default function ValidationProgressClient({
     console.log(`[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`);
     onUpdateNode(nodeId, validationUpdate);
   };
+
+  // Reset auto-save flag when validation starts
+  useEffect(() => {
+    if (isValidating) {
+      console.log('[@component:ValidationProgressClient] Validation starting - resetting auto-save flag');
+      autoSaveTriggeredRef.current = false;
+    }
+  }, [isValidating]);
 
   // Reset all colors when validation starts
   useEffect(() => {
@@ -153,6 +166,15 @@ export default function ValidationProgressClient({
         }
 
         if (progress.currentEdgeFrom && progress.currentEdgeTo) {
+          console.log('[@component:ValidationProgressClient] BEFORE updating validation status:', {
+            edgeId,
+            nodeId: progress.currentEdgeTo,
+            currentEdgeStatus: progress.currentEdgeStatus,
+            validationStatus,
+            confidence,
+            success
+          });
+
           // Update edge confidence in the actual navigation tree data
           updateEdgeConfidence(edgeId, success);
 
@@ -172,12 +194,13 @@ export default function ValidationProgressClient({
             lastTested: new Date()
           });
 
-          console.log('[@component:ValidationProgressClient] Updated validation status and confidence', {
+          console.log('[@component:ValidationProgressClient] AFTER updating validation status - status should now be preserved:', {
             edgeId,
             nodeId: progress.currentEdgeTo,
             status: validationStatus,
             confidence,
-            success
+            success,
+            message: 'This edge/node should now show as ' + (success ? 'GREEN' : 'RED') + ' and stay that color during validation'
           });
         }
       }
@@ -193,21 +216,28 @@ export default function ValidationProgressClient({
     }
   }, [isValidating, setCurrentTestingNode, setCurrentTestingEdge]);
 
-  // Auto-save when validation completes
+  // Auto-save when validation completes - ONLY ONCE per validation session
   useEffect(() => {
-    // Check if validation just completed (was validating, now not validating, and we have progress data)
-    if (!isValidating && progress && onSaveToDatabase) {
-      console.log('[@component:ValidationProgressClient] Validation completed - auto-saving confidence updates to database');
+    // Detect transition from validating to not validating (validation just completed)
+    const wasValidating = prevIsValidatingRef.current;
+    const isNowValidating = isValidating;
+    
+    // Update the ref for next time
+    prevIsValidatingRef.current = isValidating;
+    
+    // Check if validation just completed (was validating, now not validating)
+    // AND we haven't already triggered auto-save for this session
+    if (wasValidating && !isNowValidating && onSaveToDatabase && !autoSaveTriggeredRef.current) {
+      console.log('[@component:ValidationProgressClient] Validation just completed - auto-saving confidence updates to database (ONCE)');
       
-      // Add a small delay to ensure all state updates are processed
-      const saveTimeout = setTimeout(() => {
-        onSaveToDatabase();
-        console.log('[@component:ValidationProgressClient] Auto-save triggered after validation completion');
-      }, 1000);
-
-      return () => clearTimeout(saveTimeout);
+      // Mark that we've triggered auto-save for this session
+      autoSaveTriggeredRef.current = true;
+      
+      // Trigger save immediately - no delay to prevent session cleanup issues
+      onSaveToDatabase();
+      console.log('[@component:ValidationProgressClient] Auto-save triggered immediately after validation completion');
     }
-  }, [isValidating, progress, onSaveToDatabase]);
+  }, [isValidating, onSaveToDatabase]);
 
   if (!showProgress || !isValidating) return null;
 

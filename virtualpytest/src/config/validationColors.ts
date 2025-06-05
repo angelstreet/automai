@@ -268,7 +268,7 @@ export const VALIDATION_ANIMATIONS = {
 // Confidence level thresholds
 export const CONFIDENCE_THRESHOLDS = {
   HIGH: 0.7,
-  MEDIUM: 0.5
+  MEDIUM: 0.49
 } as const;
 
 // Type definitions for validation status

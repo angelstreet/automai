@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UINavigationNode } from '../../types/navigationTypes';
 import { useValidationColors } from '../../hooks/useValidationColors';
-import { UI_BADGE_COLORS } from '../../../config/validationColors';
+import { UI_BADGE_COLORS, NODE_TYPE_COLORS } from '../../../config/validationColors';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
   data, 
@@ -22,6 +22,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target', 'menu');
   const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target', 'menu');
   const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source', 'menu');
+  const leftHandle = getHandleColors(id, 'leftTop', 'left-target', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -150,17 +151,18 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           isConnectableStart={false}
           isConnectableEnd={true}
           style={{ 
-            background: '#fff',
+            background: leftHandle.background,
             width: '14px', 
             height: '14px',
-            border: '2px solid #4caf50',
+            border: '2px solid #fff',
             borderRadius: '50%',
             left: -7,
             top: '50%',
             transform: 'translateY(-50%)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+            boxShadow: leftHandle.boxShadow || '0 2px 8px rgba(255, 193, 7, 0.4)',
             opacity: 1,
           }}
+          className={leftHandle.className}
         />
       )}
 

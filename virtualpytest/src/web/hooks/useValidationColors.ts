@@ -50,19 +50,28 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
   const getNodeValidationStatus = useCallback((nodeId: string): ValidationStatus => {
     // During validation, show testing status for current node
     if (isValidating && currentTestingNode === nodeId) {
+      console.log(`[@hook:useValidationColors] Node ${nodeId} is currently being tested - showing 'testing' status`);
       return 'testing';
     }
 
     // Check if we have validation results for this node
     const status = nodeValidationStatus.get(nodeId);
+    if (status) {
+      // During validation, preserve the existing status for already-tested nodes
+      console.log(`[@hook:useValidationColors] Node ${nodeId} has existing status: ${status.status} (preserving during validation)`);
+      return status.status;
+    }
+    
     // If no validation results exist, default to 'untested' (grey)
-    return status?.status || 'untested';
+    console.log(`[@hook:useValidationColors] Node ${nodeId} has no validation status - defaulting to 'untested'`);
+    return 'untested';
   }, [nodeValidationStatus, currentTestingNode, isValidating]);
 
   // Get validation status for a specific edge
   const getEdgeValidationStatus = useCallback((edgeId: string): ValidationStatus => {
     // During validation, show testing status for current edge
     if (isValidating && currentTestingEdge === edgeId) {
+      console.log(`[@hook:useValidationColors] Edge ${edgeId} is currently being tested - showing 'testing' status`);
       return 'testing';
     }
 
@@ -73,8 +82,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // Check if we have validation results for this edge ID directly
     let status = edgeValidationStatus.get(edgeId);
     if (status) {
-      console.log(`[@hook:useValidationColors] Found direct match for edge ${edgeId}: ${status.status}`);
-      return status.status || 'untested';
+      console.log(`[@hook:useValidationColors] Found direct match for edge ${edgeId}: ${status.status} (preserving during validation)`);
+      // During validation, preserve the existing status for already-tested edges
+      return status.status;
     }
 
     // If not found by direct ID, try to find by source-target format
@@ -86,8 +96,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         console.log(`[@hook:useValidationColors] Trying source-target ID: ${sourceTargetId} for edge: ${edgeId}`);
         status = edgeValidationStatus.get(sourceTargetId);
         if (status) {
-          console.log(`[@hook:useValidationColors] Found edge validation by source-target ID: ${sourceTargetId} for edge: ${edgeId}, status: ${status.status}`);
-          return status.status || 'untested';
+          console.log(`[@hook:useValidationColors] Found edge validation by source-target ID: ${sourceTargetId} for edge: ${edgeId}, status: ${status.status} (preserving during validation)`);
+          // During validation, preserve the existing status for already-tested edges
+          return status.status;
         } else {
           console.log(`[@hook:useValidationColors] No validation found for source-target ID: ${sourceTargetId}`);
         }
@@ -198,6 +209,22 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
           : `0 1px 2px rgba(0,0,0,0.3)`,
         className: validationStatus === 'testing' ? 'handle-testing' : undefined
       };
+    }
+
+    // For root menu nodes' left handles, use yellow like entry nodes
+    if (nodeType === 'menu' && handleId === 'left-target') {
+      // Check if this is a root node by looking at the edges to see if it has incoming connections
+      const hasIncomingEdges = edges?.some(edge => edge.target === nodeId);
+      if (!hasIncomingEdges) {
+        const validationStatus = getNodeValidationStatus(nodeId);
+        return {
+          background: '#ffc107', // Always yellow for root menu left handles
+          boxShadow: validationStatus === 'testing' 
+            ? `0 0 12px rgba(255, 193, 7, 0.6)`
+            : `0 2px 8px rgba(255, 193, 7, 0.4)`,
+          className: validationStatus === 'testing' ? 'handle-testing' : undefined
+        };
+      }
     }
 
     // For non-entry nodes, proceed with normal validation-based coloring
@@ -396,8 +423,18 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
               confidence = 0.85;
             }
           } else {
-            // Node is invalid, low confidence
-            confidence = 0.15;
+            // For invalid nodes, check if we have detailed validation results to calculate actual confidence
+            if (nodeResult.validationResults && nodeResult.validationResults.length > 0) {
+              // Calculate actual confidence from validation results even for invalid nodes
+              const successfulValidations = nodeResult.validationResults.filter(v => v.success).length;
+              confidence = successfulValidations / nodeResult.validationResults.length;
+            } else if (nodeResult.confidence !== undefined) {
+              // Use stored confidence if available
+              confidence = nodeResult.confidence;
+            } else {
+              // Only default to low confidence if we have no other information
+              confidence = 0.15;
+            }
           }
           
           const status = getValidationStatusFromConfidence(confidence);
