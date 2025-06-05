@@ -499,7 +499,109 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
     print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Found {len(edges_to_validate)} edges to validate")
     
     # Use simple NetworkX-based algorithm
-    return _create_simple_networkx_validation_sequence(G, edges_to_validate)
+    validation_sequence = _create_simple_networkx_validation_sequence(G, edges_to_validate)
+    
+    # Analyze the final sequence
+    efficiency_report = analyze_validation_sequence_efficiency(validation_sequence)
+    print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Validation sequence efficiency report:")
+    print(f"  - Total steps: {efficiency_report['total_steps']}")
+    print(f"  - Edge validations: {efficiency_report['edge_validations']}")
+    print(f"  - Navigation steps: {efficiency_report['navigation_steps']}")
+    print(f"  - Bidirectional optimizations: {efficiency_report['bidirectional_optimizations']}")
+    print(f"  - Efficiency ratio: {efficiency_report['efficiency_ratio']:.2f}")
+    print(f"  - Bidirectional efficiency: {efficiency_report['bidirectional_efficiency']:.2f}")
+    print(f"  - Overall efficiency rating: {efficiency_report['efficiency_rating']}")
+    
+    return validation_sequence
+
+def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> Dict:
+    """
+    Analyze the efficiency of a validation sequence and provide detailed metrics.
+    
+    Args:
+        validation_sequence: The validation sequence to analyze
+        
+    Returns:
+        Dictionary with efficiency metrics
+    """
+    # Basic counts
+    total_steps = len(validation_sequence)
+    edge_validations = sum(1 for step in validation_sequence if step.get('validation_type') == 'edge')
+    navigation_steps = sum(1 for step in validation_sequence if step.get('validation_type') == 'navigation')
+    
+    # Optimization metrics
+    bidirectional_optimizations = sum(1 for step in validation_sequence if step.get('optimization') == 'bidirectional_immediate')
+    
+    # Safe handling of optimization types
+    optimization_types = set()
+    for step in validation_sequence:
+        opt = step.get('optimization')
+        if opt is not None:
+            optimization_types.add(opt)
+        else:
+            optimization_types.add('none')
+    
+    optimizations_used = list(str(opt) for opt in optimization_types)
+    
+    optimization_counts = {}
+    for opt in optimization_types:
+        optimization_counts[opt] = sum(1 for step in validation_sequence if step.get('optimization') == opt)
+    
+    # Navigation cost analysis
+    total_navigation_cost = sum(step.get('navigation_cost', 0) for step in validation_sequence)
+    
+    # Efficiency ratios
+    efficiency_ratio = edge_validations / total_steps if total_steps > 0 else 0
+    
+    # Bidirectional edge analysis
+    bidirectional_pairs = bidirectional_optimizations / 2
+    bidirectional_efficiency = bidirectional_pairs / (edge_validations / 2) if edge_validations > 0 else 0
+    
+    # Position changes
+    position_changes = 0
+    current_position = None
+    for step in validation_sequence:
+        if current_position is None:
+            current_position = step['to_node_id']
+        elif current_position != step['from_node_id']:
+            position_changes += 1
+            current_position = step['from_node_id']
+        current_position = step['to_node_id']
+    
+    # Overall efficiency rating
+    if efficiency_ratio > 0.8 and bidirectional_efficiency > 0.5:
+        efficiency_rating = "Excellent"
+    elif efficiency_ratio > 0.7:
+        efficiency_rating = "Good"
+    elif efficiency_ratio > 0.5:
+        efficiency_rating = "Average"
+    else:
+        efficiency_rating = "Needs improvement"
+    
+    # Add analysis section for backward compatibility
+    analysis = {
+        'very_efficient': efficiency_ratio > 0.8 and total_navigation_cost < edge_validations * 0.2,
+        'efficient': efficiency_ratio > 0.6,
+        'needs_improvement': efficiency_ratio < 0.4 or total_navigation_cost > edge_validations
+    }
+    
+    # Use only primitive types in the returned dictionary
+    return {
+        'total_steps': total_steps,
+        'edge_validations': edge_validations,
+        'navigation_steps': navigation_steps,
+        'bidirectional_optimizations': bidirectional_optimizations,
+        'bidirectional_pairs': bidirectional_pairs,
+        'optimization_types': list(str(opt) for opt in optimization_types),  # Convert to strings
+        'optimizations_used': optimizations_used,  # For backward compatibility
+        'optimization_counts': {str(k): v for k, v in optimization_counts.items()},  # Ensure keys are strings
+        'total_navigation_cost': total_navigation_cost,
+        'efficiency_ratio': efficiency_ratio,
+        'bidirectional_efficiency': bidirectional_efficiency,
+        'position_changes': position_changes,
+        'efficiency_rating': efficiency_rating,
+        'analysis': analysis  # For backward compatibility
+    }
 
 def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
     """
@@ -616,12 +718,175 @@ def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate
     
     print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Created sequence with {len(validation_sequence)} steps")
     
+    # Post-process the sequence to remove redundant navigation steps
+    optimized_sequence = _post_process_validation_sequence(validation_sequence)
+    
+    # Re-number steps after post-processing
+    for i, step in enumerate(optimized_sequence):
+        step['step_number'] = i + 1
+    
     # Analyze efficiency
-    edge_validations = sum(1 for step in validation_sequence if step.get('validation_type') == 'edge')
-    navigation_steps = sum(1 for step in validation_sequence if step.get('validation_type') == 'navigation')
+    edge_validations = sum(1 for step in optimized_sequence if step.get('validation_type') == 'edge')
+    navigation_steps = sum(1 for step in optimized_sequence if step.get('validation_type') == 'navigation')
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Final optimized sequence: {len(optimized_sequence)} steps")
     print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Efficiency: {edge_validations} validations, {navigation_steps} navigation steps")
     
-    return validation_sequence
+    return optimized_sequence
+
+def _post_process_validation_sequence(sequence: List[Dict]) -> List[Dict]:
+    """
+    Post-process the validation sequence to remove redundant navigation steps.
+    
+    Optimizations applied:
+    1. Remove navigation steps that aren't needed because we're already at the target
+    2. Remove navigation steps that immediately follow a step with the same target
+    3. Group bidirectional edges more aggressively
+    4. Optimize navigation paths between validations
+    """
+    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Post-processing sequence with {len(sequence)} steps")
+    
+    # Initialize optimized sequence
+    optimized_sequence = []
+    current_position = None
+    
+    # Collect all bidirectional pairs for better grouping
+    bidirectional_pairs = {}
+    for i, step in enumerate(sequence):
+        if step.get('validation_type') != 'navigation':
+            for j in range(i+1, len(sequence)):
+                next_step = sequence[j]
+                if (next_step.get('validation_type') != 'navigation' and
+                    next_step['from_node_id'] == step['to_node_id'] and
+                    next_step['to_node_id'] == step['from_node_id']):
+                    # Found a bidirectional pair
+                    key = tuple(sorted([step['from_node_id'], step['to_node_id']]))
+                    if key not in bidirectional_pairs:
+                        bidirectional_pairs[key] = []
+                    # Store indices instead of the actual step dictionaries
+                    bidirectional_pairs[key].append((i, j))
+                    break
+    
+    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Found {len(bidirectional_pairs)} bidirectional pairs")
+    
+    # Track processed steps by index
+    processed_indices = set()
+    
+    # Track position through the sequence
+    for i, step in enumerate(sequence):
+        # Skip if already processed
+        if i in processed_indices:
+            continue
+            
+        # First step - just add it and set position
+        if current_position is None:
+            optimized_sequence.append(step)
+            current_position = step['to_node_id']
+            processed_indices.add(i)
+            continue
+        
+        # Check if this step starts from where we actually are
+        if step['from_node_id'] != current_position:
+            print(f"[@navigation:pathfinding:_post_process_validation_sequence] Warning: Position mismatch - current position is {current_position} but step starts from {step['from_node_id']}")
+            # Skip this step as it's invalid - position tracking is critical
+            continue
+        
+        # For navigation steps, check if they're redundant
+        if step.get('validation_type') == 'navigation':
+            # Check if we're already at the target
+            if step['from_node_id'] == step['to_node_id']:
+                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Removing redundant self-navigation: {step['from_node_label']} → {step['to_node_label']}")
+                continue
+            
+            # Check if we just came from this target
+            if optimized_sequence and optimized_sequence[-1]['from_node_id'] == step['to_node_id'] and optimized_sequence[-1]['to_node_id'] == step['from_node_id']:
+                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Removing redundant back-and-forth navigation: {step['from_node_label']} → {step['to_node_label']}")
+                continue
+            
+            # Check if this navigation leads to an already validated bidirectional edge
+            is_redundant_navigation = False
+            for key in bidirectional_pairs:
+                if step['to_node_id'] in key:
+                    # Check if all pairs involving this node have been processed
+                    all_processed = True
+                    for pair_indices in bidirectional_pairs[key]:
+                        if not all(idx in processed_indices for idx in pair_indices):
+                            all_processed = False
+                            break
+                    
+                    if all_processed:
+                        is_redundant_navigation = True
+                        break
+            
+            if is_redundant_navigation:
+                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Skipping navigation to completed bidirectional node: {step['from_node_label']} → {step['to_node_label']}")
+                continue
+        
+        # Process bidirectional edges more efficiently
+        elif step.get('validation_type') != 'navigation':
+            # Check if this step is part of a bidirectional pair
+            key = tuple(sorted([step['from_node_id'], step['to_node_id']]))
+            if key in bidirectional_pairs:
+                for pair_indices in bidirectional_pairs[key]:
+                    first_idx, second_idx = pair_indices
+                    
+                    # If this is the first part of a pair and we're at the right position
+                    if first_idx == i:
+                        # Mark as processed
+                        processed_indices.add(first_idx)
+                        processed_indices.add(second_idx)
+                        
+                        # Get both steps
+                        forward_step = sequence[first_idx]
+                        reverse_step = sequence[second_idx]
+                        
+                        # Add both steps with proper optimization flags
+                        forward_step = forward_step.copy()  # Create a copy to avoid modifying the original
+                        forward_step['optimization'] = 'bidirectional_immediate'
+                        optimized_sequence.append(forward_step)
+                        
+                        # Make sure the reverse step comes next
+                        reverse_step = reverse_step.copy()  # Create a copy to avoid modifying the original
+                        reverse_step['optimization'] = 'bidirectional_immediate'
+                        reverse_step['from_node_id'] = forward_step['to_node_id']  # Ensure position is correct
+                        optimized_sequence.append(reverse_step)
+                        
+                        # Update position after both steps
+                        current_position = reverse_step['to_node_id']
+                        
+                        print(f"[@navigation:pathfinding:_post_process_validation_sequence] Processed bidirectional pair: {forward_step['from_node_label']} ↔ {forward_step['to_node_label']}")
+                        
+                        # Skip the regular step addition since we handled it specially
+                        break
+                else:
+                    # No pair found or processed - add as normal
+                    optimized_sequence.append(step)
+                    current_position = step['to_node_id']
+                    processed_indices.add(i)
+                continue
+        
+        # This step is valid, add it and update position
+        optimized_sequence.append(step)
+        current_position = step['to_node_id']
+        processed_indices.add(i)
+    
+    # Re-number steps
+    for i, step in enumerate(optimized_sequence):
+        step['step_number'] = i + 1
+    
+    # Log optimization results
+    initial_edge_validations = sum(1 for step in sequence if step.get('validation_type') == 'edge')
+    initial_navigation_steps = sum(1 for step in sequence if step.get('validation_type') == 'navigation')
+    
+    final_edge_validations = sum(1 for step in optimized_sequence if step.get('validation_type') == 'edge')
+    final_navigation_steps = sum(1 for step in optimized_sequence if step.get('validation_type') == 'navigation')
+    
+    bidirectional_optimizations = sum(1 for step in optimized_sequence if step.get('optimization') == 'bidirectional_immediate')
+    
+    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Initial sequence: {len(sequence)} steps ({initial_edge_validations} validations, {initial_navigation_steps} navigation)")
+    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Optimized sequence: {len(optimized_sequence)} steps ({final_edge_validations} validations, {final_navigation_steps} navigation)")
+    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Bidirectional optimizations: {bidirectional_optimizations}")
+    
+    return optimized_sequence
 
 def _find_best_edge_from_position(current_position: str, remaining_edges: set) -> Optional[Tuple]:
     """Find the best edge to process from current position"""
@@ -717,33 +982,6 @@ def _create_validation_step(G: nx.DiGraph, from_node: str, to_node: str, edge_da
         'description': f"Validate edge: {from_info.get('label', from_node)} → {to_info.get('label', to_node)}",
         'navigation_cost': 0,
         'optimization': optimization
-    }
-
-def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> Dict:
-    """Analyze the efficiency of a validation sequence"""
-    total_steps = len(validation_sequence)
-    edge_validations = sum(1 for step in validation_sequence if step.get('validation_type') == 'edge')
-    navigation_steps = sum(1 for step in validation_sequence if step.get('validation_type') == 'navigation')
-    total_navigation_cost = sum(step.get('navigation_cost', 0) for step in validation_sequence)
-    
-    optimizations_used = set(step.get('optimization', 'unknown') for step in validation_sequence)
-    bidirectional_optimizations = sum(1 for step in validation_sequence if step.get('optimization') == 'bidirectional_immediate')
-    
-    efficiency_ratio = edge_validations / total_steps if total_steps > 0 else 0
-    
-    return {
-        'total_steps': total_steps,
-        'edge_validations': edge_validations,
-        'navigation_steps': navigation_steps,
-        'total_navigation_cost': total_navigation_cost,
-        'efficiency_ratio': efficiency_ratio,
-        'bidirectional_optimizations': bidirectional_optimizations,
-        'optimizations_used': list(optimizations_used),
-        'analysis': {
-            'very_efficient': efficiency_ratio > 0.8 and total_navigation_cost < edge_validations * 0.2,
-            'efficient': efficiency_ratio > 0.6,
-            'needs_improvement': efficiency_ratio < 0.4 or total_navigation_cost > edge_validations
-        }
     }
 
 def _create_simple_edge_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
