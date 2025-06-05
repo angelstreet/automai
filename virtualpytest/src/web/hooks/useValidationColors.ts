@@ -107,7 +107,7 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
 
   // Get edge colors including validation status
   const getEdgeColors = useCallback((edgeId: string, isEntryEdge: boolean = false): EdgeColorResult => {
-    // Entry edges have special styling
+    // Entry edges always use special styling regardless of validation status
     if (isEntryEdge) {
       return {
         stroke: EDGE_COLORS.entry.stroke,
