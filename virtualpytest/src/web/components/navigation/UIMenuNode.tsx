@@ -71,49 +71,77 @@ export const UIMenuNode: React.FC<NodeProps<UIMenuNodeType['data']>> = ({
         MENU
       </div>
 
-      {/* Top Handles for Menu Navigation */}
-      {/* Top-left: SOURCE for menu connections */}
-      <Handle 
-        type="source" 
-        position={Position.Top} 
-        id="top-left-menu-source"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{ 
-          background: topLeftHandle.background,
-          width: '14px', 
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          left: '30%',
-          top: -5,
-          boxShadow: topLeftHandle.boxShadow || '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
-        }}
-        className={topLeftHandle.className}
-      />
-      
-      {/* Top-right: TARGET for menu connections */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
-        id="top-right-menu-target"
-        isConnectable={true}
-        isConnectableStart={false}
-        isConnectableEnd={true}
-        style={{ 
-          background: topRightHandle.background,
-          width: '14px', 
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          left: '70%',
-          top: -5,
-          boxShadow: topRightHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
-          opacity: 0.8,
-        }}
-        className={topRightHandle.className}
-      />
+      {/* Top Handles for Menu Navigation - Only show for non-root nodes */}
+      {!data.is_root && (
+        <>
+          {/* Top-left: SOURCE for menu connections */}
+          <Handle 
+            type="source" 
+            position={Position.Top} 
+            id="top-left-menu-source"
+            isConnectable={true}
+            isConnectableStart={true}
+            isConnectableEnd={false}
+            style={{ 
+              background: topLeftHandle.background,
+              width: '14px', 
+              height: '14px',
+              border: '2px solid #fff',
+              borderRadius: '50%',
+              left: '30%',
+              top: -5,
+              boxShadow: topLeftHandle.boxShadow || '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
+            }}
+            className={topLeftHandle.className}
+          />
+          
+          {/* Top-right: TARGET for menu connections */}
+          <Handle 
+            type="target" 
+            position={Position.Top} 
+            id="top-right-menu-target"
+            isConnectable={true}
+            isConnectableStart={false}
+            isConnectableEnd={true}
+            style={{ 
+              background: topRightHandle.background,
+              width: '14px', 
+              height: '14px',
+              border: '2px solid #fff',
+              borderRadius: '50%',
+              left: '70%',
+              top: -5,
+              boxShadow: topRightHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+              opacity: 0.8,
+            }}
+            className={topRightHandle.className}
+          />
+        </>
+      )}
+
+      {/* Left Handle - Only for root nodes */}
+      {data.is_root && (
+        <Handle 
+          type="target" 
+          position={Position.Left} 
+          id="left-target"
+          isConnectable={true}
+          isConnectableStart={false}
+          isConnectableEnd={true}
+          style={{ 
+            background: '#fff',
+            width: '14px', 
+            height: '14px',
+            border: '2px solid #4caf50',
+            borderRadius: '50%',
+            left: -7,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+            opacity: 1,
+          }}
+        />
+      )}
 
       {/* Bottom Handles for Menu Navigation */}
       {/* Bottom-left: TARGET for menu connections */}
