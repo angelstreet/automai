@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -115,6 +115,9 @@ export function ScreenDefinitionEditor({
   const [isCapturing, setIsCapturing] = useState(false);
   const [isStoppingCapture, setIsStoppingCapture] = useState(false);
   
+  // Recording timer state
+  const [recordingTime, setRecordingTime] = useState(0);
+  
   // Remove obsolete capture stats and polling
   const [captureStats, setCaptureStats] = useState<any>(null);
   
@@ -213,6 +216,27 @@ export function ScreenDefinitionEditor({
       checkInitialStatus();
     }
   }, [isConnected]);
+  
+  // Recording timer effect - increments every second when capturing
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCapturing) {
+      console.log('[@component:ScreenDefinitionEditor] Starting recording timer');
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000); // Increment every second
+    } else {
+      console.log('[@component:ScreenDefinitionEditor] Stopping recording timer, resetting to 0');
+      setRecordingTime(0); // Reset timer when not capturing
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isCapturing]);
   
   // Start video capture - new simple logic: just record timestamp and show LED
   const handleStartCapture = async () => {
@@ -516,22 +540,32 @@ export function ScreenDefinitionEditor({
     setSelectedArea(null);
   }, []);
 
+  // Format recording time as MM:SS
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Memoize commonProps to prevent unnecessary re-renders
+  const commonProps = useMemo(() => ({
+    sx: { width: '100%', height: '100%' }
+  }), []);
+
   // Use the computed stream URL in the render function
   const renderViewComponent = () => {
-    const commonProps = {
-      sx: { width: '100%', height: '100%' }
-    };
-    
     // Get the proper stream URL
     const streamUrl = getStreamUrl();
     
-    // Create layout config override for collapsed mode
-    const layoutConfigOverride = !isExpanded ? {
-      minHeight: deviceModel === 'android_mobile' ? '300px' : '250px', // Match collapsed container height
-      aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5', // Better ratio for each model type
-      objectFit: 'cover' as const,
-      isMobileModel: deviceModel === 'android_mobile', // Use actual device model, not always true
-    } : undefined;
+    // Memoize layout config override for collapsed mode to prevent unnecessary re-renders
+    const layoutConfigOverride = useMemo(() => {
+      return !isExpanded ? {
+        minHeight: deviceModel === 'android_mobile' ? '300px' : '250px', // Match collapsed container height
+        aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5', // Better ratio for each model type
+        objectFit: 'cover' as const,
+        isMobileModel: deviceModel === 'android_mobile', // Use actual device model, not always true
+      } : undefined;
+    }, [isExpanded, deviceModel]);
 
     // Show the appropriate component based on viewMode (no special handling for isCapturing)
     switch (viewMode) {
@@ -569,6 +603,7 @@ export function ScreenDefinitionEditor({
             onAreaSelected={handleAreaSelected}
             captureStartTime={captureStartTime}
             captureEndTime={captureEndTime}
+            isCapturing={isCapturing}
             {...commonProps}
           />
         );
@@ -640,7 +675,7 @@ export function ScreenDefinitionEditor({
                   fontSize: '0.7rem', 
                   fontWeight: 'bold'
                 }}>
-                  REC {savedFrameCount}
+                  REC {formatRecordingTime(recordingTime)}
                 </Typography>
               </Box>
             )}
@@ -945,3 +980,4 @@ export function ScreenDefinitionEditor({
     </Box>
   );
 }
+

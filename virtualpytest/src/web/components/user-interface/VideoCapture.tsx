@@ -83,7 +83,7 @@ export function VideoCapture({
         setRecordingTime((prev) => prev + 1);
       }, 1000); // Increment every second
     } else {
-      console.log('[@component:VideoCapture] Stopping recording timer');
+      console.log('[@component:VideoCapture] Stopping recording timer, resetting to 0');
       setRecordingTime(0); // Reset timer when not capturing
     }
     
@@ -334,18 +334,29 @@ export function VideoCapture({
             backgroundColor: 'rgba(0,0,0,0.7)',
             zIndex: 10
           }}>
+            {/* Large recording timer display */}
+            <Typography variant="h4" sx={{ 
+              color: '#ff4444', 
+              fontWeight: 'bold',
+              mb: 2,
+              fontFamily: 'monospace'
+            }}>
+              {formatRecordingTime(recordingTime)}
+            </Typography>
+            
             {/* Simple carousel-style loading */}
             <Box sx={{
               display: 'flex',
               gap: 1,
-              alignItems: 'center'
+              alignItems: 'center',
+              mb: 2
             }}>
               {[0, 1, 2].map((index) => (
                 <Box
                   key={index}
                   sx={{
-                    width: 8,
-                    height: 8,
+                    width: 12,
+                    height: 12,
                     borderRadius: '50%',
                     backgroundColor: '#ff4444',
                     animation: 'pulse 1.4s ease-in-out infinite both',
@@ -364,8 +375,8 @@ export function VideoCapture({
                 />
               ))}
             </Box>
-            <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
-              Recording in progress... {formatRecordingTime(recordingTime)}
+            <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center' }}>
+              Recording in progress...
             </Typography>
           </Box>
         )}

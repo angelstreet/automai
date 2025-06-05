@@ -313,6 +313,21 @@ export function StreamViewer({
     };
   }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
 
+  // Log click overlay status
+  useEffect(() => {
+    if (enableClick) {
+      const overlayEnabled = streamLoaded && !requiresUserInteraction && deviceResolution && videoRef.current;
+      console.log('[@component:StreamViewer] Click overlay status:', {
+        enabled: overlayEnabled,
+        streamLoaded,
+        requiresUserInteraction,
+        hasDeviceResolution: !!deviceResolution,
+        hasVideoRef: !!videoRef.current,
+        deviceResolution
+      });
+    }
+  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution, videoRef.current]);
+
   return (
     <Box
       sx={{
@@ -416,6 +431,20 @@ export function StreamViewer({
         </Box>
       )}
 
+      {/* Stream Click Overlay - only show when click is enabled and stream is loaded */}
+      {enableClick && 
+       streamLoaded && 
+       !requiresUserInteraction && 
+       deviceResolution && 
+       videoRef.current && (
+        <StreamClickOverlay
+          videoRef={videoRef}
+          deviceResolution={deviceResolution}
+          deviceId={deviceId}
+          onTap={onTap}
+        />
+      )}
+
       {(!streamUrl || !isStreamActive) && (
         <Box
           sx={{
@@ -453,28 +482,35 @@ export function StreamViewer({
           )}
         </Box>
       )}
-
-      {/* Stream Click Overlay - only show when click is enabled and stream is loaded */}
-      {enableClick && 
-       streamLoaded && 
-       !requiresUserInteraction && 
-       deviceResolution && 
-       videoRef.current && (
-        <StreamClickOverlay
-          videoRef={videoRef}
-          deviceResolution={deviceResolution}
-          deviceId={deviceId}
-          onTap={onTap}
-        />
-      )}
     </Box>
   );
 }
 
 export default React.memo(StreamViewer, (prevProps, nextProps) => {
-  return prevProps.streamUrl === nextProps.streamUrl && 
+  // Compare all props that could cause stream reinitialization
+  const isEqual = prevProps.streamUrl === nextProps.streamUrl && 
          prevProps.isStreamActive === nextProps.isStreamActive &&
+         prevProps.isCapturing === nextProps.isCapturing &&
+         prevProps.model === nextProps.model &&
          prevProps.enableClick === nextProps.enableClick &&
          prevProps.deviceId === nextProps.deviceId &&
+         prevProps.layoutConfig === nextProps.layoutConfig &&
+         JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
          JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution);
+  
+  if (!isEqual) {
+    console.log('[@component:StreamViewer] Props changed, component will re-render:', {
+      streamUrl: prevProps.streamUrl !== nextProps.streamUrl ? { prev: prevProps.streamUrl, next: nextProps.streamUrl } : 'same',
+      isStreamActive: prevProps.isStreamActive !== nextProps.isStreamActive ? { prev: prevProps.isStreamActive, next: nextProps.isStreamActive } : 'same',
+      isCapturing: prevProps.isCapturing !== nextProps.isCapturing ? { prev: prevProps.isCapturing, next: nextProps.isCapturing } : 'same',
+      model: prevProps.model !== nextProps.model ? { prev: prevProps.model, next: nextProps.model } : 'same',
+      enableClick: prevProps.enableClick !== nextProps.enableClick ? { prev: prevProps.enableClick, next: nextProps.enableClick } : 'same',
+      deviceId: prevProps.deviceId !== nextProps.deviceId ? { prev: prevProps.deviceId, next: nextProps.deviceId } : 'same',
+      layoutConfig: prevProps.layoutConfig !== nextProps.layoutConfig ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig } : 'same',
+      sx: JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx) ? { prev: prevProps.sx, next: nextProps.sx } : 'same',
+      deviceResolution: JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution) ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution } : 'same',
+    });
+  }
+  
+  return isEqual;
 });

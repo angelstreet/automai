@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 
 interface StreamClickOverlayProps {
@@ -17,6 +17,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   sx = {}
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(null);
 
   const getVideoBounds = useCallback(() => {
     if (!videoRef.current || !overlayRef.current) {
@@ -76,13 +77,23 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       const result = await response.json();
       
       if (result.success) {
-        console.log(`[@component:StreamClickOverlay] Tap successful at (${x}, ${y})`);
+        console.log(`[@component:StreamClickOverlay] ✅ Tap successful at (${x}, ${y})`);
       } else {
-        console.error(`[@component:StreamClickOverlay] Tap failed: ${result.error}`);
+        console.error(`[@component:StreamClickOverlay] ❌ Tap failed: ${result.error}`);
       }
     } catch (error) {
-      console.error(`[@component:StreamClickOverlay] Tap request failed:`, error);
+      console.error(`[@component:StreamClickOverlay] ❌ Tap request failed:`, error);
     }
+  }, []);
+
+  const showClickAnimation = useCallback((x: number, y: number) => {
+    const animationId = Date.now();
+    setClickAnimation({ x, y, id: animationId });
+    
+    // Remove animation after 500ms
+    setTimeout(() => {
+      setClickAnimation(prev => prev?.id === animationId ? null : prev);
+    }, 500);
   }, []);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -103,7 +114,10 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       const deviceX = Math.round((x - bounds.left) * bounds.scaleX);
       const deviceY = Math.round((y - bounds.top) * bounds.scaleY);
       
-      console.log(`[@component:StreamClickOverlay] Click at display (${Math.round(x - bounds.left)}, ${Math.round(y - bounds.top)}) -> device (${deviceX}, ${deviceY})`);
+      console.log(`[@component:StreamClickOverlay] 🎯 Click at display (${Math.round(x - bounds.left)}, ${Math.round(y - bounds.top)}) -> device (${deviceX}, ${deviceY})`);
+      
+      // Show click animation at click position
+      showClickAnimation(x, y);
       
       // Send ADB tap command
       sendTapCommand(deviceX, deviceY);
@@ -116,7 +130,33 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       e.preventDefault();
       e.stopPropagation();
     }
-  }, [videoRef, getVideoBounds, sendTapCommand, onTap]);
+  }, [videoRef, getVideoBounds, sendTapCommand, onTap, showClickAnimation]);
+
+  // Log when overlay is mounted
+  React.useEffect(() => {
+    console.log('[@component:StreamClickOverlay] 🎯 Click overlay mounted and ready! Device resolution:', deviceResolution);
+    console.log('[@component:StreamClickOverlay] Video ref current:', !!videoRef.current);
+    console.log('[@component:StreamClickOverlay] Overlay ref current:', !!overlayRef.current);
+    return () => {
+      console.log('[@component:StreamClickOverlay] Click overlay unmounted');
+    };
+  }, [deviceResolution]);
+
+  // Add mouse event logging for debugging
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Only log occasionally to avoid spam
+    if (Math.random() < 0.01) { // 1% chance
+      console.log('[@component:StreamClickOverlay] Mouse move detected');
+    }
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    console.log('[@component:StreamClickOverlay] 🎯 Mouse entered overlay area');
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    console.log('[@component:StreamClickOverlay] Mouse left overlay area');
+  }, []);
 
   return (
     <Box
@@ -131,10 +171,65 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         userSelect: 'none',
         pointerEvents: 'auto',
         zIndex: 5,
+        // Add subtle visual indication that overlay is active
+        '&:hover': {
+          backgroundColor: 'rgba(255, 255, 255, 0.02)',
+        },
         ...sx
       }}
       onClick={handleClick}
-    />
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Click animation */}
+      {clickAnimation && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: clickAnimation.x - 15,
+            top: clickAnimation.y - 15,
+            width: 30,
+            height: 30,
+            borderRadius: '50%',
+            border: '2px solid #00ff00',
+            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+            pointerEvents: 'none',
+            animation: 'clickPulse 0.5s ease-out',
+            '@keyframes clickPulse': {
+              '0%': {
+                transform: 'scale(0.5)',
+                opacity: 1,
+              },
+              '100%': {
+                transform: 'scale(2)',
+                opacity: 0,
+              },
+            },
+          }}
+        />
+      )}
+      
+      {/* Corner indicator to show overlay is active */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 4,
+          right: 4,
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: '#00ff00',
+          opacity: 0.6,
+          pointerEvents: 'none',
+          animation: 'breathe 2s ease-in-out infinite',
+          '@keyframes breathe': {
+            '0%, 100%': { opacity: 0.3 },
+            '50%': { opacity: 0.8 },
+          },
+        }}
+      />
+    </Box>
   );
 };
 
