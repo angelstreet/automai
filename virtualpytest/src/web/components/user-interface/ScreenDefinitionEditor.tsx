@@ -414,11 +414,24 @@ export function ScreenDefinitionEditor({
       setIsScreenshotLoading(true);
       setViewMode('screenshot');
       
-      console.log('[@component:ScreenDefinitionEditor] Getting timestamp for host screenshot...');
+      console.log('[@component:ScreenDefinitionEditor] Generating Zurich timezone timestamp for screenshot...');
       
-      // NEW: Get current timestamp and build host URL directly
+      // Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
       const now = new Date();
-      const timestamp = now.toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '_');
+      const zurichTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Zurich"}));
+      
+      // Format: YYYYMMDDHHMMSS (no separators)
+      const year = zurichTime.getFullYear();
+      const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
+      const day = String(zurichTime.getDate()).padStart(2, '0');
+      const hours = String(zurichTime.getHours()).padStart(2, '0');
+      const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
+      const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
+      
+      const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
+      
+      console.log('[@component:ScreenDefinitionEditor] Using Zurich timestamp:', timestamp);
+      
       const hostUrl = `https://${avConfig?.host_ip}:444/stream/captures/capture_${timestamp}.jpg`;
       
       console.log('[@component:ScreenDefinitionEditor] Built host screenshot URL:', hostUrl);
