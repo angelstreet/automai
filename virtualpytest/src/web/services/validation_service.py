@@ -427,10 +427,23 @@ class ValidationService:
                     'total_actions': 0,
                     'transitions_details': []
                 }
+                # ✅ ENHANCED: Try to extract partial response data even on HTTP errors
+                try:
+                    if response.text:
+                        partial_data = response.json()
+                        # If we got partial data, merge it with our error result
+                        if isinstance(partial_data, dict):
+                            navigation_result.update({k: v for k, v in partial_data.items() 
+                                                    if k in ['transitions_details', 'transitions_executed', 'total_transitions', 
+                                                           'actions_executed', 'total_actions', 'execution_time']})
+                            print(f"[@service:validation:_test_navigation_path] Extracted partial data from failed response: {len(navigation_result.get('transitions_details', []))} transitions")
+                except:
+                    # If JSON parsing fails, keep the original error result
+                    pass
             
             # Extract action results from transitions_details (CORRECT FIELD NAME)
             action_results = []
-            if navigation_success and 'transitions_details' in navigation_result:
+            if 'transitions_details' in navigation_result:
                 for i, transition in enumerate(navigation_result['transitions_details']):
                     # Extract individual actions from this transition
                     for j, action in enumerate(transition.get('actions', [])):
@@ -450,6 +463,11 @@ class ValidationService:
             # If navigation succeeded, execute target node verifications
             verification_results = []
             if navigation_success:
+                verification_results = self._execute_target_node_verifications(tree_id, to_node, to_info)
+            elif navigation_result.get('transitions_executed', 0) > 0:
+                # If we executed some transitions but failed, still try verifications
+                # This helps capture verification failures as additional context
+                print(f"[@service:validation:_test_navigation_path] Navigation failed but {navigation_result.get('transitions_executed', 0)} transitions executed, attempting verifications for context")
                 verification_results = self._execute_target_node_verifications(tree_id, to_node, to_info)
             
             # Combine navigation and verification results
@@ -478,6 +496,34 @@ class ValidationService:
                     else 'Target node verifications failed'
                 )
             }
+            
+            # ✅ ENHANCED: Provide more detailed error information
+            if not combined_success:
+                error_details = []
+                
+                if not navigation_success:
+                    # Navigation failed - provide action-level details
+                    failed_actions = [a for a in action_results if not a.get('success', False)]
+                    if failed_actions:
+                        error_details.append(f"Navigation failed: {len(failed_actions)} action(s) failed")
+                        # Add details about the first failed action
+                        first_failed = failed_actions[0]
+                        error_details.append(f"First failure: {first_failed.get('actionLabel', 'Unknown action')} - {first_failed.get('error', 'Unknown error')}")
+                    else:
+                        error_details.append(navigation_result.get('error_message', navigation_result.get('error', 'Navigation failed')))
+                
+                if navigation_success and verification_results:
+                    # Navigation succeeded but verifications failed
+                    failed_verifications = [v for v in verification_results if not v.get('success', False)]
+                    if failed_verifications:
+                        error_details.append(f"Verification failed: {len(failed_verifications)}/{len(verification_results)} verification(s) failed")
+                        # Add details about the first failed verification
+                        first_failed_verification = failed_verifications[0]
+                        error_details.append(f"First verification failure: {first_failed_verification.get('verificationLabel', 'Unknown verification')} - {first_failed_verification.get('error', 'Unknown error')}")
+                
+                # Combine error details into a comprehensive error message
+                if error_details:
+                    result['error'] = '; '.join(error_details)
             
             print(f"[@service:validation:_test_navigation_path] Navigation: {'✓' if navigation_success else '✗'}, "
                   f"Actions: {len(action_results)} extracted, "
