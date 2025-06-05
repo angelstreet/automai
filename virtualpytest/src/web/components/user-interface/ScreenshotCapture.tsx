@@ -234,7 +234,7 @@ export function ScreenshotCapture({
             ))}
           </Box>
           <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
-            {isSaving ? 'Loading screenshot...' : 'Capturing frames...Press stop to stop capturing'}
+            {isSaving ? 'Taking screenshot...' : 'Capturing frames...Press stop to stop capturing'}
           </Typography>
         </Box>
       )}

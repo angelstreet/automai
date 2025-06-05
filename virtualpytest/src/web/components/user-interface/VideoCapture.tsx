@@ -162,8 +162,10 @@ export function VideoCapture({
         setCurrentValue((prev) => {
           const next = prev + 1;
           if (next >= capturedImages.length) {
-            // Loop back to start
-            return 0;
+            // Stop playing when reaching the last frame
+            console.log('[@component:VideoCapture] Reached last frame, stopping playback');
+            setIsPlaying(false);
+            return capturedImages.length - 1; // Stay on last frame
           }
           return next;
         });
