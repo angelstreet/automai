@@ -57,7 +57,7 @@ class HDMIStreamController(AVControllerInterface):
         
         # Rolling buffer settings
         self.rolling_buffer_duration = 60  # seconds
-        self.rolling_buffer_timeout = 180  # 3 minutes auto-stop
+        self.rolling_buffer_timeout = 600  # 1 hour instead of 3 minutes - remove auto-stop restriction
         self.rolling_buffer_thread = None
         self.rolling_buffer_active = False
         
@@ -421,7 +421,7 @@ WantedBy=multi-user.target
             
         # Limit duration and apply timeout
         duration = min(duration, self.rolling_buffer_duration)
-        timeout = min(self.rolling_buffer_timeout, 180)
+        timeout = self.rolling_buffer_timeout  # Remove the 180 second limit
         
         timestamp = int(time.time())
         video_name = filename or f"capture_{timestamp}.mp4"

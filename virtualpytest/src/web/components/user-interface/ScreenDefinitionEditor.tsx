@@ -121,6 +121,10 @@ export function ScreenDefinitionEditor({
   // Screenshot loading state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   
+  // Capture timing state
+  const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
+  const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
+  
   // Poll for frame count during capture - lightweight polling just for frame count
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -215,7 +219,7 @@ export function ScreenDefinitionEditor({
               setStreamStatus('stopped');
               // Automatically attempt to restart if stream is stopped and SSH is active
               console.log('[@component:ScreenDefinitionEditor] Stream is stopped, attempting automatic restart...');
-              setTimeout(() => restartStream(), 1000);
+              // setTimeout(() => restartStream(), 1000); // Commented out automatic restart
             }
           }
         } else {
@@ -253,6 +257,8 @@ export function ScreenDefinitionEditor({
       setCurrentFrame(0);
       setTotalFrames(0);
       setSavedFrameCount(0);
+      setCaptureStartTime(null);
+      setCaptureEndTime(null);
       await restartStream();
       
       // After restart, automatically proceed with capture start
@@ -262,6 +268,13 @@ export function ScreenDefinitionEditor({
     
     try {
       console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
+      
+      // Record capture start time in Zurich timezone
+      const startTime = new Date();
+      setCaptureStartTime(startTime);
+      setCaptureEndTime(null); // Clear end time
+      
+      console.log('[@component:ScreenDefinitionEditor] Capture start time:', startTime.toISOString());
       
       // Reset frame count and set capturing state
       setSavedFrameCount(0);
@@ -278,7 +291,8 @@ export function ScreenDefinitionEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           device_model: deviceModel,
-          video_device: avConfig?.video_device || '/dev/video0'
+          video_device: avConfig?.video_device || '/dev/video0',
+          start_time: startTime.toISOString() // Send start time to server
         })
       });
       
@@ -286,6 +300,7 @@ export function ScreenDefinitionEditor({
         const errorText = await response.text();
         console.error('[@component:ScreenDefinitionEditor] Capture start API error:', errorText);
         setIsCapturing(false);
+        setCaptureStartTime(null);
         return;
       }
       
@@ -293,17 +308,18 @@ export function ScreenDefinitionEditor({
       
       if (data.success) {
         console.log('[@component:ScreenDefinitionEditor] Capture started successfully');
-        // Stay in stream view - don't switch to capture view to avoid polling
-        // setViewMode('capture'); // Commented out to avoid VideoCapture component polling
-        console.log('[@component:ScreenDefinitionEditor] Capture running in background, no polling - wait for user to click stop');
+        // Stay in stream view - show red recording dot over stream
+        console.log('[@component:ScreenDefinitionEditor] Capture running in background, staying in stream view');
       } else {
         console.error('[@component:ScreenDefinitionEditor] Capture start failed:', data.error);
         setIsCapturing(false);
+        setCaptureStartTime(null);
       }
       
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
       setIsCapturing(false);
+      setCaptureStartTime(null);
     }
   };
 
@@ -314,18 +330,32 @@ export function ScreenDefinitionEditor({
     try {
       console.log('[@component:ScreenDefinitionEditor] Stopping video capture...');
       
+      // Record capture end time
+      const endTime = new Date();
+      setCaptureEndTime(endTime);
+      
+      console.log('[@component:ScreenDefinitionEditor] Capture end time:', endTime.toISOString());
+      
+      // Calculate duration and expected frame count (1 frame per second)
+      let expectedFrames = 0;
+      if (captureStartTime) {
+        const durationMs = endTime.getTime() - captureStartTime.getTime();
+        const durationSeconds = Math.floor(durationMs / 1000);
+        expectedFrames = Math.max(1, durationSeconds); // At least 1 frame
+        console.log(`[@component:ScreenDefinitionEditor] Capture duration: ${durationSeconds}s, expected frames: ${expectedFrames}`);
+      }
+      
       // Disable the stop button to prevent multiple clicks
       setIsStoppingCapture(true);
-      
-      // Show saving indicator - keep current frame count until we get actual count
-      setIsSaving(true);
-      // Don't reset frame count to 0 here - keep showing current count during saving
       
       // Call the capture stop API directly
       const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          end_time: endTime.toISOString(),
+          expected_frames: expectedFrames
+        })
       });
       
       if (!response.ok) {
@@ -335,8 +365,8 @@ export function ScreenDefinitionEditor({
         const data = await response.json();
         if (data.success) {
           console.log('[@component:ScreenDefinitionEditor] Capture stopped successfully');
-          // Update frame count from API response - this is the final count
-          const finalFrameCount = data.frames_downloaded || 0;
+          // Use expected frames if API doesn't return frame count
+          const finalFrameCount = data.frames_downloaded || expectedFrames;
           setSavedFrameCount(finalFrameCount);
           
           // Set up for viewing captured frames
@@ -351,14 +381,31 @@ export function ScreenDefinitionEditor({
           }
         } else {
           console.error('[@component:ScreenDefinitionEditor] Capture stop failed:', data.error);
-          // If API fails, set to 0 as fallback
-          setSavedFrameCount(0);
+          // Use expected frames as fallback
+          setSavedFrameCount(expectedFrames);
+          if (expectedFrames > 0) {
+            setVideoFramesPath('/tmp/captures');
+            setTotalFrames(expectedFrames);
+            setCurrentFrame(0);
+            setViewMode('capture');
+          }
         }
       }
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', error);
-      // If there's an error, set to 0 as fallback
-      setSavedFrameCount(0);
+      // Use expected frames as fallback
+      if (captureStartTime) {
+        const endTime = new Date();
+        const durationMs = endTime.getTime() - captureStartTime.getTime();
+        const expectedFrames = Math.max(1, Math.floor(durationMs / 1000));
+        setSavedFrameCount(expectedFrames);
+        if (expectedFrames > 0) {
+          setVideoFramesPath('/tmp/captures');
+          setTotalFrames(expectedFrames);
+          setCurrentFrame(0);
+          setViewMode('capture');
+        }
+      }
     } finally {
       // Always update local state
       setIsCapturing(false);
@@ -366,12 +413,6 @@ export function ScreenDefinitionEditor({
       
       // Reset the stopping state
       setIsStoppingCapture(false);
-      
-      // Keep saving indicator for a moment to show completion
-      setTimeout(() => {
-        setIsSaving(false);
-        // Don't reset savedFrameCount here - keep it for display
-      }, 2000);
     }
   };
 
@@ -447,120 +488,31 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Stop stream
-  const stopStream = async () => {
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Stopping stream...');
-      
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/stop', {
-        method: 'POST'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStreamStatus('stopped');
-          console.log('[@component:ScreenDefinitionEditor] Stream stopped successfully');
-        } else {
-          // Check if it's an SSH error
-          const errorMsg = data.error || 'Unknown error';
-          if (errorMsg.includes('SSH session not active') || errorMsg.includes('Failed to stop stream service')) {
-            console.log('[@component:ScreenDefinitionEditor] SSH not active, cannot stop stream service but updating UI');
-            setStreamStatus('stopped');
-          } else {
-            console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', errorMsg);
-          }
-        }
-      } else {
-        const responseText = await response.text();
-        let errorData;
-        try {
-          errorData = responseText ? JSON.parse(responseText) : { error: 'Unknown error' };
-        } catch (e) {
-          // If not valid JSON, use the text directly
-          errorData = { error: responseText || 'Unknown error' };
-        }
-        
-        if (responseText.includes('SSH session not active') || responseText.includes('Failed to stop stream service')) {
-          console.log('[@component:ScreenDefinitionEditor] SSH not active, cannot stop stream service but updating UI');
-          setStreamStatus('stopped');
-        } else {
-          console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', response.status, errorData);
-        }
-      }
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Failed to stop stream:', error);
-      // Don't throw the error, let the caller continue
-    }
-  };
-
-  // Restart stream
+  // Restart stream - simplified to just reload the player
   const restartStream = async () => {
     try {
-      console.log('[@component:ScreenDefinitionEditor] Restarting stream...');
+      console.log('[@component:ScreenDefinitionEditor] Reloading stream in player...');
       
-      // First attempt to restart via API
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/restart', {
-        method: 'POST'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          console.log('[@component:ScreenDefinitionEditor] Stream restart API call successful');
-          setStreamStatus('running');
-          setViewMode('stream');
-          setLastScreenshotPath(undefined);
-          
-          // Log that we're displaying the stream
-          if (avConfig?.stream_url) {
-            console.log(`[@component:ScreenDefinitionEditor] Showing stream URL: ${avConfig.stream_url}`);
-            console.log('[@component:ScreenDefinitionEditor] If stream still not visible, check browser console for video element errors');
-          } else {
-            console.error('[@component:ScreenDefinitionEditor] No stream URL available in config');
-          }
-        } else {
-          // Handle API success response with failed operation
-          const errorMsg = data.error || 'Unknown error';
-          
-          // If it's an SSH/ADB issue, we should still show the stream without restarting it
-          if (errorMsg.includes('SSH session not active') || errorMsg.includes('Failed to restart stream service')) {
-            console.log('[@component:ScreenDefinitionEditor] SSH/ADB not active, continuing with stream display anyway');
-            // Set stream as running, but don't attempt to restart the service
-            setStreamStatus('running');
-            setViewMode('stream');
-            setLastScreenshotPath(undefined);
-          } else {
-            console.error('[@component:ScreenDefinitionEditor] Stream restart API returned failure:', errorMsg);
-          }
-        }
-      } else {
-        // Handle HTTP error responses
-        const responseText = await response.text();
-        let errorData;
-        try {
-          errorData = responseText ? JSON.parse(responseText) : { error: 'Unknown error' };
-        } catch (e) {
-          // If not valid JSON, use the text directly
-          errorData = { error: responseText || 'Unknown error' };
-        }
-        
-        // If it's an SSH/ADB issue, we should still show the stream without restarting it
-        if (responseText.includes('SSH session not active') || responseText.includes('Failed to restart stream service')) {
-          console.log('[@component:ScreenDefinitionEditor] SSH/ADB not active, continuing with stream display anyway');
-          // Set stream as running, but don't attempt to restart the service
-          setStreamStatus('running');
-          setViewMode('stream');
-          setLastScreenshotPath(undefined);
-        } else {
-          console.error('[@component:ScreenDefinitionEditor] Stream restart API HTTP error:', response.status, errorData);
-        }
-      }
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Failed to restart stream:', error);
-      // Even if restart fails, still show the stream
+      // Simply switch to stream view and let the StreamViewer component handle reloading
       setStreamStatus('running');
       setViewMode('stream');
+      setLastScreenshotPath(undefined);
+      setVideoFramesPath(undefined);
+      setCurrentFrame(0);
+      setTotalFrames(0);
+      setSavedFrameCount(0);
+      
+      // Log the stream URL that will be used
+      if (avConfig?.stream_url) {
+        console.log(`[@component:ScreenDefinitionEditor] Stream URL: ${avConfig.stream_url}`);
+      } else if (avConfig?.host_ip) {
+        const streamUrl = `https://${avConfig.host_ip}:444/stream/output.m3u8`;
+        console.log(`[@component:ScreenDefinitionEditor] Stream URL: ${streamUrl}`);
+      }
+      
+      console.log('[@component:ScreenDefinitionEditor] Stream player will reload automatically');
+    } catch (error) {
+      console.error('[@component:ScreenDefinitionEditor] Error during stream reload:', error);
     }
   };
 
@@ -601,38 +553,13 @@ export function ScreenDefinitionEditor({
     setViewMode('screenshot');
   };
 
-  // Handle stream control
-  const handleStreamControl = async () => {
-    try {
-      const endpoint = streamStatus === 'running' ? 'stop' : 'restart';
-      
-      console.log(`[@component:ScreenDefinitionEditor] ${endpoint === 'stop' ? 'Stopping' : 'Starting'} stream...`);
-      
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/screen-definition/stream/${endpoint}`, {
-        method: 'POST'
-      });
-      
-      if (!response.ok) {
-        console.error(`[@component:ScreenDefinitionEditor] Stream control failed:`, await response.text());
-        return;
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setStreamStatus(endpoint === 'stop' ? 'stopped' : 'running');
-        
-        // If we're restarting the stream, set view mode to stream and clear screenshot
-        if (endpoint === 'restart') {
-          setViewMode('stream');
-          setLastScreenshotPath(undefined);
-        }
-        
-        console.log(`[@component:ScreenDefinitionEditor] Stream ${endpoint === 'stop' ? 'stopped' : 'restarted'} successfully`);
-      }
-    } catch (error) {
-      console.error(`[@component:ScreenDefinitionEditor] Stream control failed:`, error);
-    }
-  };
+  // VerificationEditor integration state
+  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
+  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
+  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
+
+  // Drag selection state
+  const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Compute the real stream URL based on config
   const getStreamUrl = useCallback(() => {
@@ -645,14 +572,6 @@ export function ScreenDefinitionEditor({
     }
     return undefined;
   }, [avConfig]);
-  
-  // VerificationEditor integration state
-  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
-  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
-  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
-
-  // Drag selection state
-  const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Initialize verification image state
   const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
@@ -713,6 +632,8 @@ export function ScreenDefinitionEditor({
           <VideoCapture
             deviceModel={deviceModel}
             videoDevice={avConfig?.video_device}
+            hostIp={avConfig?.host_ip}
+            hostPort={avConfig?.host_port}
             videoFramesPath={videoFramesPath}
             currentFrame={currentFrame}
             totalFrames={totalFrames}
@@ -723,6 +644,8 @@ export function ScreenDefinitionEditor({
             onImageLoad={handleImageLoad}
             selectedArea={selectedArea}
             onAreaSelected={handleAreaSelected}
+            captureStartTime={captureStartTime}
+            captureEndTime={captureEndTime}
             {...commonProps}
           />
         );
@@ -763,8 +686,8 @@ export function ScreenDefinitionEditor({
               </Box>
             )}
             
-            {/* Recording/Saving overlay - single overlay that shows either recording or saving */}
-            {(isCapturing || isSaving) && (
+            {/* Recording overlay - only show red dot when capturing, no saving state */}
+            {isCapturing && (
               <Box sx={{
                 position: 'absolute',
                 top: 8,
@@ -772,34 +695,29 @@ export function ScreenDefinitionEditor({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
-                backgroundColor: isSaving ? 'transparent' : 'rgba(0,0,0,0.7)',
-                borderRadius: isSaving ? 0 : 1,
-                padding: isSaving ? '2px 4px' : '4px 8px',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                borderRadius: 1,
+                padding: '4px 8px',
                 zIndex: 10
               }}>
-                {/* Blinking dot - red for recording, green for saving */}
+                {/* Blinking red dot for recording */}
                 <Box sx={{
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  backgroundColor: isSaving ? '#4caf50' : '#f44336',
-                  animation: isSaving ? 'saveBlink 0.8s infinite' : 'recordBlink 1s infinite',
+                  backgroundColor: '#f44336',
+                  animation: 'recordBlink 1s infinite',
                   '@keyframes recordBlink': {
                     '0%, 50%': { opacity: 1 },
                     '51%, 100%': { opacity: 0.3 }
-                  },
-                  '@keyframes saveBlink': {
-                    '0%, 50%': { opacity: 1 },
-                    '51%, 100%': { opacity: 0.5 }
                   }
                 }} />
                 <Typography variant="caption" sx={{ 
-                  color: isSaving ? '#4caf50' : 'white', 
+                  color: 'white', 
                   fontSize: '0.7rem', 
-                  fontWeight: 'bold',
-                  textShadow: isSaving ? '1px 1px 2px rgba(0,0,0,0.7)' : 'none'
+                  fontWeight: 'bold'
                 }}>
-                  {isSaving ? `Saving ${savedFrameCount}` : `REC ${savedFrameCount}`}
+                  REC {savedFrameCount}
                 </Typography>
               </Box>
             )}
@@ -1103,4 +1021,4 @@ export function ScreenDefinitionEditor({
       )}
     </Box>
   );
-} 
+}

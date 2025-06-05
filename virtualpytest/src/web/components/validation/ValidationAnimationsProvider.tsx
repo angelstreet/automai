@@ -1,10 +1,7 @@
 import React, { useEffect } from 'react';
 import { getAnimationCSS } from '../../../config/validationColors';
-import { useValidationColors } from '../../hooks/useValidationColors';
 
 export const ValidationAnimationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { initializeFromLastResults } = useValidationColors('default');
-
   useEffect(() => {
     // Inject CSS animations
     const styleId = 'validation-animations';
@@ -18,9 +15,6 @@ export const ValidationAnimationsProvider: React.FC<{ children: React.ReactNode 
     
     styleElement.textContent = getAnimationCSS();
     
-    // Initialize validation colors from last results
-    initializeFromLastResults();
-    
     return () => {
       // Clean up on unmount
       const element = document.getElementById(styleId);
@@ -28,7 +22,7 @@ export const ValidationAnimationsProvider: React.FC<{ children: React.ReactNode 
         element.remove();
       }
     };
-  }, [initializeFromLastResults]);
+  }, []);
 
   return <>{children}</>;
 }; 

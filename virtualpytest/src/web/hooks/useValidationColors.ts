@@ -392,116 +392,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     hasResults: !!results
   }), [isValidating, currentTestingNode, currentTestingEdge, results]);
 
-  // Initialize validation colors from last results
-  const initializeFromLastResults = useCallback(() => {
-    const store = useValidationStore.getState();
-    const { lastResult } = store;
-    
-    if (lastResult && lastResult.nodeResults && lastResult.edgeResults) {
-      console.log('[@hook:useValidationColors] Initializing colors from last validation results');
-      console.log('[@hook:useValidationColors] Last result structure:', {
-        nodeResults: lastResult.nodeResults.length,
-        edgeResults: lastResult.edgeResults.length,
-        summary: lastResult.summary
-      });
-      
-      // Initialize node validation status from array
-      lastResult.nodeResults.forEach((nodeResult) => {
-        if (nodeResult.nodeId) {
-          // Calculate confidence based on node validation details
-          let confidence = 0;
-          
-          if (nodeResult.isValid) {
-            // If node is valid, calculate confidence based on validation details
-            // Check if we have detailed validation results
-            if (nodeResult.validationResults && nodeResult.validationResults.length > 0) {
-              // Calculate confidence from validation results
-              const successfulValidations = nodeResult.validationResults.filter(v => v.success).length;
-              confidence = successfulValidations / nodeResult.validationResults.length;
-            } else {
-              // Default high confidence for valid nodes without detailed results
-              confidence = 0.85;
-            }
-          } else {
-            // For invalid nodes, check if we have detailed validation results to calculate actual confidence
-            if (nodeResult.validationResults && nodeResult.validationResults.length > 0) {
-              // Calculate actual confidence from validation results even for invalid nodes
-              const successfulValidations = nodeResult.validationResults.filter(v => v.success).length;
-              confidence = successfulValidations / nodeResult.validationResults.length;
-            } else if (nodeResult.confidence !== undefined) {
-              // Use stored confidence if available
-              confidence = nodeResult.confidence;
-            } else {
-              // Only default to low confidence if we have no other information
-              confidence = 0.15;
-            }
-          }
-          
-          const status = getValidationStatusFromConfidence(confidence);
-          
-          console.log(`[@hook:useValidationColors] Setting node ${nodeResult.nodeId} status: ${status} (confidence: ${confidence}, isValid: ${nodeResult.isValid})`);
-          store.setNodeValidationStatus(nodeResult.nodeId, {
-            status,
-            confidence,
-            lastTested: new Date() // Use current date since we don't have timestamp
-          });
-        }
-      });
-      
-      // Initialize edge validation status from array
-      lastResult.edgeResults.forEach((edgeResult) => {
-        if (edgeResult.from && edgeResult.to) {
-          // Calculate confidence based on edge success and detailed results
-          let confidence = 0;
-          let status: ValidationStatus = 'untested';
-          
-          if (edgeResult.skipped) {
-            // Skipped edges remain untested (grey)
-            confidence = 0;
-            status = 'untested';
-          } else if (edgeResult.success) {
-            // Calculate confidence from action and verification results
-            const actionSuccessRate = edgeResult.actionResults?.length > 0 
-              ? edgeResult.actionResults.filter(a => a.success).length / edgeResult.actionResults.length 
-              : 1;
-              
-            const verificationSuccessRate = edgeResult.verificationResults?.length > 0
-              ? edgeResult.verificationResults.filter(v => v.success).length / edgeResult.verificationResults.length
-              : 1;
-              
-            confidence = (actionSuccessRate + verificationSuccessRate) / 2;
-            status = getValidationStatusFromConfidence(confidence);
-          } else {
-            // Failed edges get low confidence (red)
-            confidence = 0.1;
-            status = 'low';
-          }
-          
-          const edgeId = `${edgeResult.from}-${edgeResult.to}`;
-          
-          console.log(`[@hook:useValidationColors] Setting edge ${edgeId} status: ${status} (confidence: ${confidence}, success: ${edgeResult.success}, skipped: ${edgeResult.skipped})`);
-          store.setEdgeValidationStatus(edgeId, {
-            status,
-            confidence,
-            lastTested: new Date() // Use current date since we don't have timestamp
-          });
-        }
-      });
-      
-      console.log('[@hook:useValidationColors] Initialized validation colors from last results');
-    } else {
-      console.log('[@hook:useValidationColors] No last validation results found to initialize colors');
-      if (lastResult) {
-        console.log('[@hook:useValidationColors] Last result exists but missing nodeResults or edgeResults:', {
-          hasNodeResults: !!lastResult.nodeResults,
-          hasEdgeResults: !!lastResult.edgeResults,
-          nodeResultsLength: lastResult.nodeResults?.length,
-          edgeResultsLength: lastResult.edgeResults?.length
-        });
-      }
-    }
-  }, []);
-
   return {
     // Color getters
     getNodeColors,
@@ -519,9 +409,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     
     // State
     validationState,
-    
-    // Initialize from last results
-    initializeFromLastResults,
     
     // Reset for new validation
     resetForNewValidation

@@ -85,6 +85,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       setDragStart({ x, y });
       setCurrentDrag(null);
       e.preventDefault();
+      e.stopPropagation();
     }
   }, [imageRef, getImageBounds]);
 
@@ -162,9 +163,9 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        cursor: 'crosshair',
+        cursor: isDragging ? 'crosshair' : 'default',
         userSelect: 'none',
-        pointerEvents: 'auto',
+        pointerEvents: isDragging ? 'auto' : 'none', // Only capture events when dragging
         zIndex: 5,
         ...sx
       }}
@@ -172,6 +173,23 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+      {/* Invisible dragging area - only active when not dragging to allow initial click */}
+      {!isDragging && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'auto',
+            cursor: 'crosshair',
+            zIndex: 1
+          }}
+          onMouseDown={handleMouseDown}
+        />
+      )}
+      
       {/* Selection rectangle */}
       {displayArea && getImageBounds() && (
         <Box
@@ -184,7 +202,8 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
             border: '2px solid white',
             backgroundColor: 'transparent',
             pointerEvents: 'none',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            zIndex: 2
           }}
         />
       )}
@@ -202,7 +221,8 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
             borderRadius: '4px',
             fontSize: '0.7rem',
             pointerEvents: 'none',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            zIndex: 2
           }}
         >
           {selectedArea ? 

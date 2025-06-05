@@ -49,7 +49,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
   } = useValidationStore();
   
   // Import validation colors functions
-  const { initializeFromLastResults, resetValidationColors } = useValidationColors(treeId);
+  const { resetValidationColors } = useValidationColors(treeId);
   
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -121,20 +121,9 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
     }
   }, [results, setNodeValidationStatus, setEdgeValidationStatus, setCurrentTestingNode, setCurrentTestingEdge]);
 
-  // Handle dialog close - reload colors from storage with fallback
+  // Handle dialog close
   const handleClose = () => {
-    console.log('[@component:ValidationResultsClient] Closing results dialog, reloading validation colors from storage');
-    
-    try {
-      // Try to reload colors from stored validation results
-      initializeFromLastResults();
-      console.log('[@component:ValidationResultsClient] Successfully reloaded validation colors from storage');
-    } catch (error) {
-      console.error('[@component:ValidationResultsClient] Error reloading colors from storage, resetting to grey:', error);
-      // Fallback: reset all colors to grey if there's an issue with storage
-      resetValidationColors();
-    }
-    
+    console.log('[@component:ValidationResultsClient] Closing results dialog');
     closeResults();
   };
 

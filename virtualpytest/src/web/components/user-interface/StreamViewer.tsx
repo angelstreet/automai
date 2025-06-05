@@ -287,7 +287,13 @@ export function StreamViewer({
       // Reset state for new stream
       setUseNativePlayer(false);
       setRetryCount(0);
-      initializeStream();
+      setStreamLoaded(false); // Force reload by resetting loaded state
+      setStreamError(null);
+      
+      // Add a small delay to ensure clean state reset
+      setTimeout(() => {
+        initializeStream();
+      }, 100);
     } else if (!isStreamActive && videoRef.current) {
       cleanupStream();
     }
@@ -348,25 +354,6 @@ export function StreamViewer({
         preload="none"
         crossOrigin="anonymous"
       />
-
-      {/* Red blinking dot during capture */}
-      {isCapturing && (
-        <Box sx={{
-          position: 'absolute',
-          top: 8,
-          left: 8,
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: '#ff4444',
-          zIndex: 10,
-          animation: 'captureBlink 1s infinite',
-          '@keyframes captureBlink': {
-            '0%, 50%': { opacity: 1 },
-            '51%, 100%': { opacity: 0.3 }
-          }
-        }} />
-      )}
 
       {streamLoaded && requiresUserInteraction && (
         <Box
