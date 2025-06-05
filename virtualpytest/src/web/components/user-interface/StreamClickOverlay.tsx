@@ -64,7 +64,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     try {
       console.log(`[@component:StreamClickOverlay] Sending tap command: ${x}, ${y}`);
       
-      const response = await fetch('/api/virtualpytest/android-mobile/execute-action', {
+      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/execute-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         cursor: 'crosshair',
         userSelect: 'none',
         pointerEvents: 'auto',
-        zIndex: 2,
+        zIndex: 1,
         // Invisible overlay - no borders or background
         '&:hover': {
           backgroundColor: 'rgba(255, 255, 255, 0.02)',
