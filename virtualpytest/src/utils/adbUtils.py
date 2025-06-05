@@ -177,18 +177,23 @@ class ADBUtils:
         
         Args:
             device_id: Android device ID
-            key: Key name (e.g., 'UP', 'DOWN', 'HOME', 'DPAD_RIGHT')
+            key: Key name (e.g., 'UP', 'DOWN', 'HOME', 'DPAD_RIGHT', 'KEYCODE_BACK')
             
         Returns:
             bool: True if command successful
         """
         try:
-            print(f"[@lib:adbUtils:execute_key_command] Attempting to execute key: '{key}' (normalized: '{key.upper()}')")
+            # Normalize the key - remove 'KEYCODE_' prefix if present
+            normalized_key = key.upper()
+            if normalized_key.startswith('KEYCODE_'):
+                normalized_key = normalized_key.replace('KEYCODE_', '')
             
-            keycode = self.ADB_KEYS.get(key.upper())
+            print(f"[@lib:adbUtils:execute_key_command] Attempting to execute key: '{key}' (normalized: '{normalized_key}')")
+            
+            keycode = self.ADB_KEYS.get(normalized_key)
             if not keycode:
                 available_keys = list(self.ADB_KEYS.keys())
-                print(f"[@lib:adbUtils:execute_key_command] Invalid key: '{key}'")
+                print(f"[@lib:adbUtils:execute_key_command] Invalid key: '{key}' (normalized: '{normalized_key}')")
                 print(f"[@lib:adbUtils:execute_key_command] Available keys: {', '.join(available_keys[:10])}...")
                 print(f"[@lib:adbUtils:execute_key_command] Total available keys: {len(available_keys)}")
                 return False

@@ -50,6 +50,21 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
 
   return (
     <g className={edgeColors.className}>
+      {/* Invisible thick overlay for better selectability */}
+      <path
+        id={`${id}-selectable`}
+        style={{
+          stroke: 'transparent',
+          strokeWidth: 12, // Much thicker for easier selection
+          fill: 'none',
+          cursor: 'pointer',
+          pointerEvents: 'stroke', // Only respond to clicks on the stroke area
+        }}
+        className="react-flow__edge-interaction"
+        d={edgePath}
+      />
+      
+      {/* Visible edge path */}
       <path
         id={id}
         style={{
@@ -59,10 +74,13 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
           opacity: edgeColors.opacity,
           fill: 'none',
           transition: 'all 0.3s ease',
+          pointerEvents: 'none', // Let the thick overlay handle interactions
         }}
         className="react-flow__edge-path"
         d={edgePath}
       />
+      
+      {/* Selection indicator */}
       {selected && (
         <path
           d={edgePath}
@@ -71,6 +89,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
             strokeWidth: edgeColors.strokeWidth + 2,
             fill: 'none',
             opacity: 0.3,
+            pointerEvents: 'none',
           }}
         />
       )}
