@@ -79,6 +79,45 @@ interface ScreenshotResponse {
   stream_was_active?: boolean;
 }
 
+// Separate component for recording timer to avoid parent re-renders
+const RecordingTimer: React.FC<{ isCapturing: boolean }> = ({ isCapturing }) => {
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCapturing) {
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingTime(0);
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isCapturing]);
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <Typography variant="caption" sx={{ 
+      color: 'white', 
+      fontSize: '0.7rem', 
+      fontWeight: 'bold'
+    }}>
+      REC {formatRecordingTime(recordingTime)}
+    </Typography>
+  );
+};
+
 export function ScreenDefinitionEditor({
   deviceConfig,
   deviceModel,
@@ -114,9 +153,6 @@ export function ScreenDefinitionEditor({
   // Capture state
   const [isCapturing, setIsCapturing] = useState(false);
   const [isStoppingCapture, setIsStoppingCapture] = useState(false);
-  
-  // Recording timer state
-  const [recordingTime, setRecordingTime] = useState(0);
   
   // Remove obsolete capture stats and polling
   const [captureStats, setCaptureStats] = useState<any>(null);
@@ -216,27 +252,6 @@ export function ScreenDefinitionEditor({
       checkInitialStatus();
     }
   }, [isConnected]);
-  
-  // Recording timer effect - increments every second when capturing
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isCapturing) {
-      console.log('[@component:ScreenDefinitionEditor] Starting recording timer');
-      interval = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000); // Increment every second
-    } else {
-      console.log('[@component:ScreenDefinitionEditor] Stopping recording timer, resetting to 0');
-      setRecordingTime(0); // Reset timer when not capturing
-    }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isCapturing]);
   
   // Start video capture - new simple logic: just record timestamp and show LED
   const handleStartCapture = async () => {
@@ -540,13 +555,6 @@ export function ScreenDefinitionEditor({
     setSelectedArea(null);
   }, []);
 
-  // Format recording time as MM:SS
-  const formatRecordingTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // Memoize commonProps to prevent unnecessary re-renders
   const commonProps = useMemo(() => ({
     sx: { width: '100%', height: '100%' }
@@ -619,6 +627,11 @@ export function ScreenDefinitionEditor({
               isCapturing={isCapturing}
               model={deviceModel}
               layoutConfig={layoutConfigOverride}
+              // Enable click functionality for testing
+              enableClick={true}
+              deviceResolution={{ width: 1080, height: 2340 }}
+              deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
+              onTap={(x, y) => console.log(`🎯 [TEST] Tapped at device coordinates: ${x}, ${y}`)}
               {...commonProps}
             />
             
@@ -670,13 +683,7 @@ export function ScreenDefinitionEditor({
                     '51%, 100%': { opacity: 0.3 }
                   }
                 }} />
-                <Typography variant="caption" sx={{ 
-                  color: 'white', 
-                  fontSize: '0.7rem', 
-                  fontWeight: 'bold'
-                }}>
-                  REC {formatRecordingTime(recordingTime)}
-                </Typography>
+                <RecordingTimer isCapturing={isCapturing} />
               </Box>
             )}
           </Box>

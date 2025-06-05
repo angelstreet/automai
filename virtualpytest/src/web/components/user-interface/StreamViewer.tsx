@@ -44,6 +44,22 @@ export function StreamViewer({
   const retryDelay = 2000; // Reduced from 3000
   const lastInitTime = useRef<number>(0);
 
+  // Debug component lifecycle
+  useEffect(() => {
+    console.log('[@component:StreamViewer] Component mounted with props:', {
+      streamUrl,
+      isStreamActive,
+      isCapturing,
+      model,
+      layoutConfig,
+      hasVideoRef: !!videoRef.current
+    });
+    
+    return () => {
+      console.log('[@component:StreamViewer] Component unmounting');
+    };
+  }, []); // Empty dependency array - only runs on mount/unmount
+
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = layoutConfig || getStreamViewerLayout(model);
 

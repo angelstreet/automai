@@ -170,8 +170,8 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         cursor: 'crosshair',
         userSelect: 'none',
         pointerEvents: 'auto',
-        zIndex: 5,
-        // Add subtle visual indication that overlay is active
+        zIndex: 2,
+        // Invisible overlay - no borders or background
         '&:hover': {
           backgroundColor: 'rgba(255, 255, 255, 0.02)',
         },
@@ -182,27 +182,28 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Click animation */}
+      {/* Click animation - make it more visible */}
       {clickAnimation && (
         <Box
           sx={{
             position: 'absolute',
-            left: clickAnimation.x - 15,
-            top: clickAnimation.y - 15,
-            width: 30,
-            height: 30,
+            left: clickAnimation.x - 20,
+            top: clickAnimation.y - 20,
+            width: 40,
+            height: 40,
             borderRadius: '50%',
-            border: '2px solid #00ff00',
-            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+            border: '3px solid #00ff00',
+            backgroundColor: 'rgba(0, 255, 0, 0.3)',
             pointerEvents: 'none',
-            animation: 'clickPulse 0.5s ease-out',
+            zIndex: 10,
+            animation: 'clickPulse 0.6s ease-out',
             '@keyframes clickPulse': {
               '0%': {
-                transform: 'scale(0.5)',
+                transform: 'scale(0.3)',
                 opacity: 1,
               },
               '100%': {
-                transform: 'scale(2)',
+                transform: 'scale(2.5)',
                 opacity: 0,
               },
             },
@@ -210,18 +211,19 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         />
       )}
       
-      {/* Corner indicator to show overlay is active */}
+      {/* LED indicator moved to top-left */}
       <Box
         sx={{
           position: 'absolute',
           top: 4,
-          right: 4,
+          left: 4,
           width: 8,
           height: 8,
           borderRadius: '50%',
           backgroundColor: '#00ff00',
           opacity: 0.6,
           pointerEvents: 'none',
+          zIndex: 10,
           animation: 'breathe 2s ease-in-out infinite',
           '@keyframes breathe': {
             '0%, 100%': { opacity: 0.3 },
