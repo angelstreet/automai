@@ -186,59 +186,6 @@ export function ScreenshotCapture({
         />
       )}
 
-      {/* Loading state when capturing or saving */}
-      {(isCapturing || isSaving) && (
-        <Box sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          zIndex: 10
-        }}>
-          {/* Simple carousel-style loading */}
-          <Box sx={{
-            display: 'flex',
-            gap: 1,
-            alignItems: 'center'
-          }}>
-            {[0, 1, 2].map((index) => (
-              <Box
-                key={index}
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: isSaving ? '#4caf50' : '#ffffff',
-                  animation: 'pulse 1.4s ease-in-out infinite both',
-                  animationDelay: `${index * 0.16}s`,
-                  '@keyframes pulse': {
-                    '0%, 80%, 100%': {
-                      transform: 'scale(0)',
-                      opacity: 0.5,
-                    },
-                    '40%': {
-                      transform: 'scale(1)',
-                      opacity: 1,
-                    },
-                  },
-                }}
-              />
-            ))}
-          </Box>
-          <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
-            {isSaving ? 'Taking screenshot...' : 'Capturing frames...Press stop to stop capturing'}
-          </Typography>
-        </Box>
-      )}
-
       {/* Placeholder when no screenshot and not capturing */}
       {!screenshotPath && !isCapturing && (
         <Box sx={{
