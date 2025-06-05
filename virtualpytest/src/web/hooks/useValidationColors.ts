@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useValidationStore } from '../components/store/validationStore';
 import { UINavigationEdge } from '../types/navigationTypes';
 import {
@@ -57,8 +57,8 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // Check if we have validation results for this node
     const status = nodeValidationStatus.get(nodeId);
     if (status) {
-      // During validation, preserve the existing status for already-tested nodes
-      console.log(`[@hook:useValidationColors] Node ${nodeId} has existing status: ${status.status} (preserving during validation)`);
+      const context = isValidating ? 'during active validation' : 'from persisted results';
+      console.log(`[@hook:useValidationColors] Node ${nodeId} has existing status: ${status.status} (${context})`);
       return status.status;
     }
     
@@ -78,12 +78,14 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // Debug: Log what we're looking for
     console.log(`[@hook:useValidationColors] Looking up validation status for edge: ${edgeId}`);
     console.log(`[@hook:useValidationColors] Available validation statuses:`, Array.from(edgeValidationStatus.keys()));
+    console.log(`[@hook:useValidationColors] Validation context: ${isValidating ? 'active validation' : 'using persisted results'}`);
 
     // Check if we have validation results for this edge ID directly
     let status = edgeValidationStatus.get(edgeId);
     if (status) {
-      console.log(`[@hook:useValidationColors] Found direct match for edge ${edgeId}: ${status.status} (preserving during validation)`);
-      // During validation, preserve the existing status for already-tested edges
+      const context = isValidating ? 'during active validation' : 'from persisted results';
+      console.log(`[@hook:useValidationColors] Found direct match for edge ${edgeId}: ${status.status} (${context})`);
+      console.log(`[@hook:useValidationColors] Edge ${edgeId} confidence: ${status.confidence}, lastTested: ${status.lastTested}`);
       return status.status;
     }
 
@@ -96,8 +98,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         console.log(`[@hook:useValidationColors] Trying source-target ID: ${sourceTargetId} for edge: ${edgeId}`);
         status = edgeValidationStatus.get(sourceTargetId);
         if (status) {
-          console.log(`[@hook:useValidationColors] Found edge validation by source-target ID: ${sourceTargetId} for edge: ${edgeId}, status: ${status.status} (preserving during validation)`);
-          // During validation, preserve the existing status for already-tested edges
+          const context = isValidating ? 'during active validation' : 'from persisted results';
+          console.log(`[@hook:useValidationColors] Found edge validation by source-target ID: ${sourceTargetId} for edge: ${edgeId}, status: ${status.status} (${context})`);
+          console.log(`[@hook:useValidationColors] Edge ${sourceTargetId} confidence: ${status.confidence}, lastTested: ${status.lastTested}`);
           return status.status;
         } else {
           console.log(`[@hook:useValidationColors] No validation found for source-target ID: ${sourceTargetId}`);
@@ -376,6 +379,54 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     edgeValidationStatus.clear();
   }, [nodeValidationStatus, edgeValidationStatus]);
 
+  // Clear stale validation results (when all edges are untested but nodes have status)
+  const clearStaleValidationResults = useCallback(() => {
+    const nodeCount = nodeValidationStatus.size;
+    const edgeCount = edgeValidationStatus.size;
+    
+    console.log('[@hook:useValidationColors] Checking for stale validation results:', {
+      nodeCount,
+      edgeCount,
+      nodeStatuses: Array.from(nodeValidationStatus.entries()).map(([id, status]) => ({ id, status: status.status, confidence: status.confidence })),
+      edgeStatuses: Array.from(edgeValidationStatus.entries()).map(([id, status]) => ({ id, status: status.status, confidence: status.confidence }))
+    });
+    
+    if (nodeCount > 0 && edgeCount > 0) {
+      // Check if all edges are untested
+      const allEdgesUntested = Array.from(edgeValidationStatus.values()).every(
+        status => status.status === 'untested'
+      );
+      
+      // Check if nodes have actual validation status (not untested)
+      const nodesHaveValidationStatus = Array.from(nodeValidationStatus.values()).some(
+        status => status.status !== 'untested'
+      );
+      
+      console.log('[@hook:useValidationColors] Stale validation check results:', {
+        allEdgesUntested,
+        nodesHaveValidationStatus,
+        shouldClear: allEdgesUntested && nodesHaveValidationStatus
+      });
+      
+      if (allEdgesUntested && nodesHaveValidationStatus) {
+        console.log('[@hook:useValidationColors] Detected stale validation results - all edges untested but nodes have status');
+        console.log('[@hook:useValidationColors] This indicates a failed/incomplete validation run - clearing all results');
+        
+        // Clear all validation results
+        nodeValidationStatus.clear();
+        edgeValidationStatus.clear();
+        
+        // Also clear from the validation store
+        const store = useValidationStore.getState();
+        store.resetValidationColors();
+        
+        return true;
+      }
+    }
+    
+    return false;
+  }, [nodeValidationStatus, edgeValidationStatus]);
+
   // Reset validation colors when validation starts
   const resetForNewValidation = useCallback(() => {
     console.log('[@hook:useValidationColors] Starting new validation - resetting all colors to grey');
@@ -391,6 +442,11 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     currentTestingEdge,
     hasResults: !!results
   }), [isValidating, currentTestingNode, currentTestingEdge, results]);
+
+  // Effect to automatically detect and clear stale validation results when the hook is first used
+  useEffect(() => {
+    clearStaleValidationResults();
+  }, [clearStaleValidationResults]);
 
   return {
     // Color getters
@@ -411,6 +467,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     validationState,
     
     // Reset for new validation
-    resetForNewValidation
+    resetForNewValidation,
+    
+    // Clear stale validation results
+    clearStaleValidationResults
   };
 } 

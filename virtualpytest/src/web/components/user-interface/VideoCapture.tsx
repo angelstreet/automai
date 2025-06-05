@@ -110,49 +110,27 @@ export function VideoCapture({
       setIsLoadingImages(true);
       
       try {
-        // Get capture timing information from the server
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/timing');
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.start_time) {
-            console.log('[@component:VideoCapture] Got capture timing from server:', data);
-            
-            const startTime = new Date(data.start_time);
-            setCaptureStartTime(startTime);
-            
-            if (data.end_time) {
-              setCaptureEndTime(new Date(data.end_time));
-            }
-            
-            // Generate frame URLs based on actual start time and frame count
-            const frameUrls = generateCaptureFrameUrls(startTime, totalFrames);
-            setCapturedImages(frameUrls);
-            
-            console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs`);
-          } else {
-            console.warn('[@component:VideoCapture] No timing info from server, using current time as fallback');
-            // Fallback: use current time minus totalFrames seconds as start time
-            const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
-            setCaptureStartTime(fallbackStartTime);
-            
-            const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
-            setCapturedImages(frameUrls);
-          }
+        // Use the passed-in capture start time if available
+        if (captureStartTime) {
+          console.log('[@component:VideoCapture] Using passed capture start time:', captureStartTime);
+          
+          // Generate frame URLs based on actual start time and frame count
+          const frameUrls = generateCaptureFrameUrls(captureStartTime, totalFrames);
+          setCapturedImages(frameUrls);
+          
+          console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs`);
         } else {
-          console.warn('[@component:VideoCapture] Failed to get timing info, using current time as fallback');
+          console.warn('[@component:VideoCapture] No capture start time provided, using current time as fallback');
           // Fallback: use current time minus totalFrames seconds as start time
           const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
-          setCaptureStartTime(fallbackStartTime);
           
           const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
           setCapturedImages(frameUrls);
         }
       } catch (error) {
-        console.error('[@component:VideoCapture] Error getting capture timing:', error);
+        console.error('[@component:VideoCapture] Error generating frame URLs:', error);
         // Fallback: use current time minus totalFrames seconds as start time
         const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
-        setCaptureStartTime(fallbackStartTime);
         
         const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
         setCapturedImages(frameUrls);
@@ -162,7 +140,7 @@ export function VideoCapture({
     };
 
     loadCapturedImages();
-  }, [totalFrames, hostIp, hostPort]);
+  }, [totalFrames, hostIp, hostPort, captureStartTime]);
 
   // Handle frame playback for captured images
   useEffect(() => {
