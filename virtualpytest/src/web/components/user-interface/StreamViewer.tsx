@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import Hls from 'hls.js';
 import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
 
 interface StreamViewerProps {
@@ -24,14 +23,15 @@ export function StreamViewer({
   layoutConfig,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  const hlsRef = useRef<any>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamLoaded, setStreamLoaded] = useState(false);
   const [currentStreamUrl, setCurrentStreamUrl] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
-  const maxRetries = 5;
-  const retryDelay = 3000;
+  const [useNativePlayer, setUseNativePlayer] = useState(false);
+  const maxRetries = 3; // Reduced from 5
+  const retryDelay = 2000; // Reduced from 3000
   const lastInitTime = useRef<number>(0);
 
   // Use the provided layout config or get it from the model type
@@ -47,7 +47,11 @@ export function StreamViewer({
   // Clean up stream resources
   const cleanupStream = useCallback(() => {
     if (hlsRef.current) {
-      hlsRef.current.destroy();
+      try {
+        hlsRef.current.destroy();
+      } catch (error) {
+        console.warn('[@component:StreamViewer] Error destroying HLS instance:', error);
+      }
       hlsRef.current = null;
     }
 
@@ -68,14 +72,11 @@ export function StreamViewer({
     const playPromise = videoRef.current.play();
     if (playPromise !== undefined) {
       playPromise.catch((err) => {
-        console.error('[@component:StreamViewer] Autoplay failed:', err);
-        if (
-          err.name === 'AbortError' &&
-          err.message.includes('background media was paused to save power')
-        ) {
+        console.warn('[@component:StreamViewer] Autoplay failed:', err.message);
+        if (err.name === 'NotAllowedError' || err.message.includes('user interaction')) {
           setRequiresUserInteraction(true);
         } else {
-          setStreamError('Playback failed: ' + err.message);
+          console.warn('[@component:StreamViewer] Play failed, but continuing:', err.message);
         }
       });
     }
@@ -87,11 +88,60 @@ export function StreamViewer({
     attemptPlay();
   }, [attemptPlay]);
 
-  // Initialize or reinitialize stream
+  // Try native HTML5 video as fallback
+  const tryNativePlayback = useCallback(async () => {
+    if (!streamUrl || !videoRef.current) return false;
+
+    console.log('[@component:StreamViewer] Trying native HTML5 playback');
+    setUseNativePlayer(true);
+    
+    try {
+      // Clean up any existing HLS
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+
+      const video = videoRef.current;
+      
+      // Set up event listeners for native playback
+      const handleLoadedMetadata = () => {
+        console.log('[@component:StreamViewer] Native playback loaded successfully');
+        setStreamLoaded(true);
+        setStreamError(null);
+        setRetryCount(0);
+        attemptPlay();
+      };
+
+      const handleError = (e: any) => {
+        console.warn('[@component:StreamViewer] Native playback error:', e);
+        setStreamError('Stream connection issues. Retrying...');
+      };
+
+      const handleCanPlay = () => {
+        setStreamLoaded(true);
+        setStreamError(null);
+      };
+
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      video.addEventListener('error', handleError);
+      video.addEventListener('canplay', handleCanPlay);
+
+      // Try direct URL first, then with cache busting
+      video.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+      video.load();
+
+      return true;
+    } catch (error) {
+      console.error('[@component:StreamViewer] Native playback setup failed:', error);
+      return false;
+    }
+  }, [streamUrl, attemptPlay]);
+
+  // Initialize or reinitialize stream with simplified approach
   const initializeStream = useCallback(async () => {
     const now = Date.now();
-    if (now - lastInitTime.current < 3000) {
-      console.log('[@component:StreamViewer] Skipping stream initialization due to debounce');
+    if (now - lastInitTime.current < 1000) { // Reduced debounce
       return;
     }
     lastInitTime.current = now;
@@ -105,8 +155,14 @@ export function StreamViewer({
     setStreamLoaded(false);
     setRequiresUserInteraction(false);
 
+    // If we've had too many failures, try native playback first
+    if (retryCount >= 2 || useNativePlayer) {
+      const nativeSuccess = await tryNativePlayback();
+      if (nativeSuccess) return;
+    }
+
     try {
-      console.log('[@component:StreamViewer] Initializing stream:', streamUrl);
+      console.log('[@component:StreamViewer] Initializing HLS stream:', streamUrl);
 
       if (currentStreamUrl !== streamUrl || hlsRef.current) {
         cleanupStream();
@@ -114,44 +170,40 @@ export function StreamViewer({
 
       setCurrentStreamUrl(streamUrl);
 
+      // Dynamic import of HLS.js
       const HLSModule = await import('hls.js');
       const HLS = HLSModule.default;
 
+      // Check if HLS is supported
       if (!HLS.isSupported()) {
-        console.log('[@component:StreamViewer] HLS.js not supported, trying native playback');
-        if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current.src = streamUrl;
-          videoRef.current.addEventListener('loadedmetadata', () => {
-            setStreamLoaded(true);
-            setRetryCount(0);
-            attemptPlay();
-          });
-
-          videoRef.current.addEventListener('error', () => {
-            setStreamError('Stream error - Unable to play the stream');
-            handleStreamError();
-          });
-        } else {
-          throw new Error('HLS is not supported in this browser');
-        }
+        console.log('[@component:StreamViewer] HLS.js not supported, using native playback');
+        await tryNativePlayback();
         return;
       }
 
+      // Create HLS instance with simplified, robust config
       const hls = new HLS({
-        enableWorker: true,
-        lowLatencyMode: true,
-        liveSyncDuration: 1,
-        liveMaxLatencyDuration: 5,
-        liveDurationInfinity: true,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 20,
-        backBufferLength: 0,
+        // Simplified config - more like VLC's approach
+        enableWorker: false, // Disable worker to avoid parsing issues
+        lowLatencyMode: false, // Disable low latency for stability
+        liveSyncDuration: 3, // Increased for stability
+        liveMaxLatencyDuration: 10, // Increased for stability
+        maxBufferLength: 30, // Increased buffer
+        maxMaxBufferLength: 60, // Increased max buffer
+        backBufferLength: 10, // Keep some back buffer
+        maxBufferSize: 60 * 1000 * 1000, // 60MB buffer
+        maxBufferHole: 0.5, // Allow small holes
+        // Error recovery
+        fragLoadingTimeOut: 20000, // 20 second timeout
+        manifestLoadingTimeOut: 10000, // 10 second timeout
+        levelLoadingTimeOut: 10000, // 10 second timeout
       });
 
       hlsRef.current = hls;
 
+      // Simplified event handling
       hls.on(HLS.Events.MANIFEST_PARSED, () => {
-        console.log('[@component:StreamViewer] Stream manifest parsed successfully');
+        console.log('[@component:StreamViewer] HLS manifest parsed successfully');
         setStreamLoaded(true);
         setRetryCount(0);
         attemptPlay();
@@ -159,47 +211,52 @@ export function StreamViewer({
 
       hls.on(HLS.Events.ERROR, (_: any, data: any) => {
         console.warn('[@component:StreamViewer] HLS error:', data.type, data.details);
+        
         if (data.fatal) {
-          console.error('[@component:StreamViewer] Fatal HLS error:', data.type, data.details);
-          setStreamError(`Stream error: ${data.details || data.type}`);
-          handleStreamError();
-        } else if (data.details === 'bufferStalledError' || data.details === 'bufferNudgeOnStall') {
-          console.log('[@component:StreamViewer] Buffer issue detected, attempting recovery');
-          setStreamError('Buffering...');
-          setTimeout(() => setStreamError(null), 2000);
+          console.error('[@component:StreamViewer] Fatal HLS error, trying native playback');
+          // Don't retry HLS, switch to native immediately
+          setUseNativePlayer(true);
+          setTimeout(() => tryNativePlayback(), 500);
+        } else {
+          // Non-fatal errors - try to recover
+          if (data.details === 'fragParsingError' || data.details === 'fragLoadError') {
+            console.log('[@component:StreamViewer] Fragment error, attempting HLS recovery');
+            try {
+              if (data.details === 'fragParsingError') {
+                hls.recoverMediaError();
+              } else {
+                hls.startLoad();
+              }
+            } catch (recoveryError) {
+              console.warn('[@component:StreamViewer] HLS recovery failed, switching to native');
+              setUseNativePlayer(true);
+              setTimeout(() => tryNativePlayback(), 500);
+            }
+          }
         }
       });
 
+      // Load the stream
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
-    } catch (error: any) {
-      console.error('[@component:StreamViewer] Stream initialization failed:', error);
-      setStreamError(error.message || 'Failed to initialize stream');
-      handleStreamError();
-    }
-  }, [streamUrl, currentStreamUrl, cleanupStream, attemptPlay]);
 
-  // Handle stream errors with retry logic
+    } catch (error: any) {
+      console.error('[@component:StreamViewer] HLS initialization failed, trying native:', error);
+      await tryNativePlayback();
+    }
+  }, [streamUrl, currentStreamUrl, cleanupStream, attemptPlay, retryCount, useNativePlayer, tryNativePlayback]);
+
+  // Handle stream errors with simplified retry logic
   const handleStreamError = useCallback(() => {
     if (retryCount >= maxRetries) {
-      console.warn(`[@component:StreamViewer] Maximum retry attempts (${maxRetries}) reached, but will continue to retry less frequently`);
-      // Still show an error but don't give up completely
-      setStreamError('Stream connection issues. Retrying...');
-      
-      // Keep retrying but less frequently
-      const timeout = setTimeout(() => {
-        if (isStreamActive && streamUrl) {
-          console.log(`[@component:StreamViewer] Continuing to retry stream connection after max retries...`);
-          setRetryCount(0); // Reset retry count to start a new cycle
-          initializeStream();
-        }
-      }, retryDelay * 2); // Longer delay after max retries
-      
-      return () => clearTimeout(timeout);
+      console.warn('[@component:StreamViewer] Max retries reached, switching to native playback');
+      setUseNativePlayer(true);
+      setTimeout(() => tryNativePlayback(), 1000);
+      return;
     }
 
     setRetryCount((prev) => prev + 1);
-    console.log(`[@component:StreamViewer] Attempting to reconnect (${retryCount + 1}/${maxRetries})...`);
+    console.log(`[@component:StreamViewer] Retrying stream (${retryCount + 1}/${maxRetries})`);
 
     const timeout = setTimeout(() => {
       if (isStreamActive && streamUrl) {
@@ -208,17 +265,15 @@ export function StreamViewer({
     }, retryDelay);
 
     return () => clearTimeout(timeout);
-  }, [retryCount, isStreamActive, streamUrl, initializeStream, maxRetries, retryDelay]);
+  }, [retryCount, isStreamActive, streamUrl, initializeStream, maxRetries, retryDelay, tryNativePlayback]);
 
-  // Handle tab visibility changes
+  // Handle tab visibility changes - simplified
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (hlsRef.current) {
-          hlsRef.current.stopLoad();
-        }
-      } else if (isStreamActive && streamUrl) {
-        initializeStream();
+      if (document.visibilityState === 'visible' && isStreamActive && streamUrl) {
+        // Reset retry count when tab becomes visible
+        setRetryCount(0);
+        setTimeout(() => initializeStream(), 1000);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -228,10 +283,12 @@ export function StreamViewer({
   // Initialize stream when URL is available and active
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
-      console.log('[@component:StreamViewer] Stream URL or status changed, initializing:', streamUrl);
+      console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
+      // Reset state for new stream
+      setUseNativePlayer(false);
+      setRetryCount(0);
       initializeStream();
     } else if (!isStreamActive && videoRef.current) {
-      // Stream inactive, clean up resources
       cleanupStream();
     }
 
@@ -287,6 +344,9 @@ export function StreamViewer({
         playsInline
         muted
         draggable={false}
+        // Add some native video attributes for better compatibility
+        preload="none"
+        crossOrigin="anonymous"
       />
 
       {/* Red blinking dot during capture */}
@@ -346,14 +406,14 @@ export function StreamViewer({
           <Typography variant="caption" sx={{ color: '#999999', textAlign: 'center' }}>
             {streamError
               ? retryCount < maxRetries
-                ? `Reconnecting... (${retryCount + 1}/${maxRetries})`
-                : `${streamError} Continue waiting or try restarting.`
+                ? `Connecting... (${retryCount + 1}/${maxRetries})`
+                : 'Connecting with fallback player...'
               : 'Loading stream...'}
           </Typography>
           
           {streamError && (
             <Typography variant="caption" sx={{ color: '#777777', textAlign: 'center', fontSize: '0.65rem', maxWidth: '80%' }}>
-              The stream will automatically reconnect. Make sure ffmpeg is running on the device.
+              {useNativePlayer ? 'Using native player for better compatibility' : 'Stream will auto-reconnect'}
             </Typography>
           )}
         </Box>

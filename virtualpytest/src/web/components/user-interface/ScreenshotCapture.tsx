@@ -54,11 +54,17 @@ export function ScreenshotCapture({
     }
   };
 
-  // Memoize the image URL to prevent multiple re-calculations (same logic as original)
+  // Memoize the image URL to prevent multiple re-calculations
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
     
     console.log(`[@component:ScreenshotCapture] Processing image path: ${screenshotPath}`);
+    
+    // NEW: Handle host-based capture URLs (HTTPS with /stream/captures/ path)
+    if (screenshotPath.startsWith('https://') && screenshotPath.includes('/stream/captures/')) {
+      console.log('[@component:ScreenshotCapture] Using host-based capture URL directly');
+      return screenshotPath;
+    }
     
     // Handle data URLs (base64 from remote system) - return as is
     if (screenshotPath.startsWith('data:')) {

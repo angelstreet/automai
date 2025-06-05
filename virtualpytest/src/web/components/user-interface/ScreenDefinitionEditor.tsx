@@ -406,94 +406,30 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Take screenshot using the screenshot API
+  // Take screenshot using direct host URL construction
   const handleTakeScreenshot = async () => {
     if (!isConnected) return;
     
     try {
-      // Store previous stream status to restore it later if needed
-      const wasStreamRunning = streamStatus === 'running';
-      
-      // Set loading state
       setIsScreenshotLoading(true);
-      // Switch to screenshot view immediately to remove highlight from other icons
       setViewMode('screenshot');
       
-      // First stop the stream
-      console.log('[@component:ScreenDefinitionEditor] Stopping stream before taking screenshot...');
-      try {
-        await stopStream();
-      } catch (error) {
-        console.log('[@component:ScreenDefinitionEditor] Failed to stop stream, continuing with screenshot anyway');
-        // Continue with screenshot even if stopping stream fails
-      }
+      console.log('[@component:ScreenDefinitionEditor] Getting timestamp for host screenshot...');
       
-      // Now take the screenshot
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot...');
+      // NEW: Get current timestamp and build host URL directly
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '_');
+      const hostUrl = `https://${avConfig?.host_ip}:444/stream/captures/capture_${timestamp}.jpg`;
       
-      try {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            device_model: deviceModel,
-            video_device: avConfig?.video_device || '/dev/video0'
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[@component:ScreenDefinitionEditor] Screenshot API error:', errorText);
-          
-          // If screenshot fails and stream was running, restart it
-          if (wasStreamRunning) {
-            console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
-            setTimeout(() => restartStream(), 500);
-          }
-          return;
-        }
-        
-        const data: ScreenshotResponse = await response.json();
-        
-        if (data.success) {
-          console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', data.screenshot_path);
-          setLastScreenshotPath(data.screenshot_path);
-          // View mode already set to screenshot above
-          
-          // Update resolution info
-          if (data.device_resolution) {
-            setResolutionInfo(prev => ({
-              ...prev,
-              device: data.device_resolution!,
-              capture: data.capture_resolution || null,
-              stream: data.stream_resolution || null,
-            }));
-          }
-          
-          // Ensure stream status is set to stopped to enable the restart button
-          setStreamStatus('stopped');
-        } else {
-          console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', data.error);
-          
-          // If screenshot fails and stream was running, restart it
-          if (wasStreamRunning) {
-            console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
-            setTimeout(() => restartStream(), 500);
-          }
-        }
-      } catch (error) {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot request failed:', error);
-        
-        // If screenshot fails and stream was running, restart it
-        if (wasStreamRunning) {
-          console.log('[@component:ScreenDefinitionEditor] Screenshot failed, restarting stream');
-          setTimeout(() => restartStream(), 500);
-        }
-      }
+      console.log('[@component:ScreenDefinitionEditor] Built host screenshot URL:', hostUrl);
+      
+      // Set the host URL directly - no file transfer needed
+      setLastScreenshotPath(hostUrl);
+      setStreamStatus('stopped');
+      
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Screenshot operation failed:', error);
     } finally {
-      // Always clear loading state
       setIsScreenshotLoading(false);
     }
   };
