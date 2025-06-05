@@ -55,6 +55,7 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
 
     // Check if we have validation results for this node
     const status = nodeValidationStatus.get(nodeId);
+    // If no validation results exist, default to 'untested' (grey)
     return status?.status || 'untested';
   }, [nodeValidationStatus, currentTestingNode, isValidating]);
 
@@ -67,6 +68,7 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
 
     // Check if we have validation results for this edge
     const status = edgeValidationStatus.get(edgeId);
+    // If no validation results exist, default to 'untested' (grey)
     return status?.status || 'untested';
   }, [edgeValidationStatus, currentTestingEdge, isValidating]);
 
@@ -209,8 +211,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         } else {
           handleValidationStatus = 'untested';
         }
-        
-        console.log(`[@hook:useValidationColors] Handle ${handleId} on node ${nodeId} has ${connectedEdges.length} connected edges with status: ${handleValidationStatus}`);
       }
     }
     
@@ -291,9 +291,18 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
 
   // Reset all validation colors to untested state
   const resetValidationColors = useCallback(() => {
+    console.log('[@hook:useValidationColors] Resetting all validation colors to untested (grey)');
     nodeValidationStatus.clear();
     edgeValidationStatus.clear();
   }, [nodeValidationStatus, edgeValidationStatus]);
+
+  // Reset validation colors when validation starts
+  const resetForNewValidation = useCallback(() => {
+    console.log('[@hook:useValidationColors] Starting new validation - resetting all colors to grey');
+    // Use the store's reset function for consistency
+    const store = useValidationStore.getState();
+    store.resetValidationColors();
+  }, []);
 
   // Memoized values for performance
   const validationState = useMemo(() => ({
@@ -319,11 +328,28 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
       // Initialize node validation status from array
       lastResult.nodeResults.forEach((nodeResult) => {
         if (nodeResult.nodeId) {
-          // Calculate confidence based on node validity
-          const confidence = nodeResult.isValid ? 0.8 : 0.2; // Simple confidence calculation
+          // Calculate confidence based on node validation details
+          let confidence = 0;
+          
+          if (nodeResult.isValid) {
+            // If node is valid, calculate confidence based on validation details
+            // Check if we have detailed validation results
+            if (nodeResult.validationResults && nodeResult.validationResults.length > 0) {
+              // Calculate confidence from validation results
+              const successfulValidations = nodeResult.validationResults.filter(v => v.success).length;
+              confidence = successfulValidations / nodeResult.validationResults.length;
+            } else {
+              // Default high confidence for valid nodes without detailed results
+              confidence = 0.85;
+            }
+          } else {
+            // Node is invalid, low confidence
+            confidence = 0.15;
+          }
+          
           const status = getValidationStatusFromConfidence(confidence);
           
-          console.log(`[@hook:useValidationColors] Setting node ${nodeResult.nodeId} status: ${status} (confidence: ${confidence})`);
+          console.log(`[@hook:useValidationColors] Setting node ${nodeResult.nodeId} status: ${status} (confidence: ${confidence}, isValid: ${nodeResult.isValid})`);
           store.setNodeValidationStatus(nodeResult.nodeId, {
             status,
             confidence,
@@ -397,6 +423,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     validationState,
     
     // Initialize from last results
-    initializeFromLastResults
+    initializeFromLastResults,
+    
+    // Reset for new validation
+    resetForNewValidation
   };
 } 

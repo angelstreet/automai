@@ -928,6 +928,8 @@ const NavigationEditorContent: React.FC = () => {
         onToggleRemotePanel={handleToggleRemotePanel}
         onDeviceSelect={handleDeviceSelect}
         onTakeControl={handleTakeControl}
+        onUpdateNode={handleUpdateNode}
+        onUpdateEdge={handleUpdateEdge}
       />
 
       {/* Main Container with side-by-side layout */}

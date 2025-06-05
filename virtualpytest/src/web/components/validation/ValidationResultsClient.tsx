@@ -53,17 +53,17 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
     if (results?.edgeResults) {
       console.log('[@component:ValidationResultsClient] Processing validation results for color updates');
       
-      // Clear testing indicators
+      // Clear testing indicators first
       setCurrentTestingNode(null);
       setCurrentTestingEdge(null);
 
-      // Process each edge result
+      // Process each edge result and set final validation colors
       results.edgeResults.forEach((edge: any) => {
         const edgeId = `${edge.from}-${edge.to}`;
         
         // Calculate confidence based on action and verification success rates
         let confidence = 0;
-        if (edge.success) {
+        if (edge.success && !edge.skipped) {
           const actionSuccessRate = edge.actionResults?.length > 0 
             ? edge.actionResults.filter((a: any) => a.success).length / edge.actionResults.length 
             : 1;
@@ -73,35 +73,46 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
             : 1;
             
           confidence = (actionSuccessRate + verificationSuccessRate) / 2;
+        } else if (edge.skipped) {
+          // Skipped edges remain untested (grey)
+          confidence = 0;
+        } else {
+          // Failed edges get low confidence
+          confidence = 0.1;
         }
         
         // Determine validation status
-        const validationStatus = edge.success 
-          ? getValidationStatusFromConfidence(confidence) 
-          : 'low';
+        const validationStatus = edge.skipped 
+          ? 'untested'  // Skipped edges stay grey
+          : edge.success 
+            ? getValidationStatusFromConfidence(confidence) 
+            : 'low';  // Failed edges are red
+        
+        console.log('[@component:ValidationResultsClient] Setting final validation status', {
+          edgeId,
+          nodeId: edge.to,
+          status: validationStatus,
+          confidence,
+          success: edge.success,
+          skipped: edge.skipped
+        });
         
         // Update edge validation status
         setEdgeValidationStatus(edgeId, {
           status: validationStatus,
-          confidence: edge.success ? confidence : 0,
+          confidence,
           lastTested: new Date()
         });
 
         // Update target node validation status
         setNodeValidationStatus(edge.to, {
           status: validationStatus,
-          confidence: edge.success ? confidence : 0,
+          confidence,
           lastTested: new Date()
         });
-
-        console.log('[@component:ValidationResultsClient] Updated final validation status', {
-          edgeId,
-          nodeId: edge.to,
-          status: validationStatus,
-          confidence,
-          success: edge.success
-        });
       });
+      
+      console.log('[@component:ValidationResultsClient] Finished processing all validation results');
     }
   }, [results, setNodeValidationStatus, setEdgeValidationStatus, setCurrentTestingNode, setCurrentTestingEdge]);
 

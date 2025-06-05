@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
+import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
-import { useValidationColors } from '../../hooks/useValidationColors';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
   data, 
-  selected,
-  id
+  selected 
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
-  const { getEdges } = useReactFlow();
-  const currentEdges = getEdges();
-  const { getNodeColors, getHandleColors } = useValidationColors(data.treeId || 'default', currentEdges);
 
   // Check if this node is a root node (should only be true for actual root nodes)
   const isRootNode = data.is_root === true;
@@ -20,27 +15,24 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   
   // Entry node styling - small circular point
   if (isEntryNode) {
-    const entryColors = getNodeColors(id, 'entry', false);
-    
     return (
       <div
         style={{
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          background: entryColors.background,
-          border: `3px solid ${entryColors.border}`,
-          boxShadow: entryColors.boxShadow || '0 2px 8px rgba(211, 47, 47, 0.4)',
+          background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
+          border: '3px solid #fff',
+          boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.6)' : '0 2px 8px rgba(211, 47, 47, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: entryColors.textColor,
+          color: 'white',
           fontSize: '16px',
           fontWeight: 'bold',
           position: 'relative',
           cursor: 'pointer',
         }}
-        className={entryColors.className}
         title="Entry Point - Click to edit entry method"
       >
         ⚡
@@ -50,38 +42,55 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           type="source" 
           position={Position.Right} 
           id="entry-source"
-          isConnectable={true}
-          isConnectableStart={true}
+          isConnectable={false}
+          isConnectableStart={false}
           isConnectableEnd={false}
           style={{ 
             background: '#fff',
             width: '12px', 
             height: '12px',
-            border: `2px solid ${entryColors.border}`,
+            border: '2px solid #d32f2f',
             borderRadius: '50%',
             right: -6,
             top: '50%',
             transform: 'translateY(-50%)',
-            opacity: 1,
-            cursor: 'pointer',
+            opacity: 0.5,
+            cursor: 'not-allowed',
           }} 
         />
       </div>
     );
   }
   
-  // Get dynamic colors based on validation status
-  const nodeColors = getNodeColors(id, data.type as any, isRootNode);
+  // Root node styling - more prominent than normal nodes
+  const rootNodeStyle = {
+    background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+    border: '2px solid #d32f2f',
+    boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)'
+  };
   
-  // Get handle colors for different positions
-  const leftTopHandle = getHandleColors(id, 'leftTop', 'left-top-target');
-  const leftBottomHandle = getHandleColors(id, 'leftBottom', 'left-bottom-source');
-  const rightTopHandle = getHandleColors(id, 'rightTop', 'right-top-source');
-  const rightBottomHandle = getHandleColors(id, 'rightBottom', 'right-bottom-target');
-  const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source');
-  const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target');
-  const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target');
-  const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source');
+  // Normal node styling - based on node type
+  const getNodeColor = (type: string) => {
+    switch (type) {
+      case 'screen': return '#e3f2fd';
+      case 'dialog': return '#f3e5f5';
+      case 'popup': return '#fff3e0';
+      case 'overlay': return '#e8f5e8';
+      case 'menu': return '#fff8e1';
+      default: return '#f5f5f5';
+    }
+  };
+
+  const getNodeBorderColor = (type: string) => {
+    switch (type) {
+      case 'screen': return '#2196f3';
+      case 'dialog': return '#9c27b0';
+      case 'popup': return '#ff9800';
+      case 'overlay': return '#4caf50';
+      case 'menu': return '#ffc107';
+      default: return '#757575';
+    }
+  };
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
@@ -97,8 +106,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   return (
     <div
       style={{
-        background: nodeColors.background,
-        border: `${isRootNode ? '2px' : '1px'} solid ${nodeColors.border}`,
+        background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
+        border: isRootNode ? rootNodeStyle.border : `1px solid ${getNodeBorderColor(data.type)}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -106,13 +115,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: nodeColors.boxShadow,
+        boxShadow: isRootNode ? rootNodeStyle.boxShadow : (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}
-      className={`${nodeColors.className || ''} ${isRootNode ? 'root-node' : ''}`}
     >
       {/* Root Node Indicator */}
       {isRootNode && (
@@ -121,7 +129,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             position: 'absolute',
             top: '4px',
             right: '4px',
-            backgroundColor: nodeColors.badgeColor,
+            backgroundColor: '#d32f2f',
             color: 'white',
             fontSize: '10px',
             fontWeight: 'bold',
@@ -144,17 +152,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: leftTopHandle.background,
+          background: 'linear-gradient(135deg, #90caf9, #64b5f6)', // Muted blue gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -5,
           top: '30%',
-          boxShadow: leftTopHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }}
-        className={leftTopHandle.className}
+        }} 
       />
       
       {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
@@ -166,16 +173,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: leftBottomHandle.background,
+          background: 'linear-gradient(135deg, #ff5722, #ff8a65)', // Bright red gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -5,
           top: '70%',
-          boxShadow: leftBottomHandle.boxShadow || '0 3px 8px rgba(255, 87, 34, 0.4), 0 0 12px rgba(255, 87, 34, 0.3)',
-        }}
-        className={leftBottomHandle.className}
+          boxShadow: '0 3px 8px rgba(255, 87, 34, 0.4), 0 0 12px rgba(255, 87, 34, 0.3)',
+        }} 
       />
       
       {/* Right Handles */}
@@ -188,16 +194,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: rightTopHandle.background,
+          background: 'linear-gradient(135deg, #1976d2, #42a5f5)', // Bright blue gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -5,
           top: '30%',
-          boxShadow: rightTopHandle.boxShadow || '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
-        }}
-        className={rightTopHandle.className}
+          boxShadow: '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
+        }} 
       />
 
       {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
@@ -209,17 +214,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: rightBottomHandle.background,
+          background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -5,
           top: '70%',
-          boxShadow: rightBottomHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }}
-        className={rightBottomHandle.className}
+        }} 
       />
 
       {/* NEW MENU NAVIGATION HANDLES */}
@@ -233,16 +237,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: topLeftHandle.background,
+          background: 'linear-gradient(135deg, #9c27b0, #ba68c8)', // Bright purple gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '30%',
           top: -5,
-          boxShadow: topLeftHandle.boxShadow || '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
-        }}
-        className={topLeftHandle.className}
+          boxShadow: '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
+        }} 
       />
       
       {/* Top-right: Green - TARGET for menu connections */}
@@ -254,17 +257,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: topRightHandle.background,
+          background: 'linear-gradient(135deg, #a5d6a7, #81c784)', // Muted green gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           top: -5,
-          boxShadow: topRightHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }}
-        className={topRightHandle.className}
+        }} 
       />
 
       {/* Bottom Handles for Menu Navigation */}
@@ -277,17 +279,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{ 
-          background: bottomLeftHandle.background,
+          background: 'linear-gradient(135deg, #ce93d8, #ba68c8)', // Muted purple gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '30%',
           bottom: -5,
-          boxShadow: bottomLeftHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }}
-        className={bottomLeftHandle.className}
+        }} 
       />
       
       {/* Bottom-right: Green - SOURCE for menu connections */}
@@ -299,23 +300,22 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{ 
-          background: bottomRightHandle.background,
+          background: 'linear-gradient(135deg, #4caf50, #66bb6a)', // Bright green gradient
           width: '14px', 
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           bottom: -5,
-          boxShadow: bottomRightHandle.boxShadow || '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
-        }}
-        className={bottomRightHandle.className}
+          boxShadow: '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
+        }} 
       />
 
       {/* Header with node name and type */}
       <div
         style={{
           padding: '4px',
-          borderBottom: isRootNode ? `1px solid ${nodeColors.border}` : '1px solid #eee',
+          borderBottom: isRootNode ? '1px solid #ef5350' : '1px solid #eee',
           minHeight: '10px',
           display: 'flex',
           flexDirection: 'column',
@@ -330,7 +330,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: nodeColors.textColor,
+            color: isRootNode ? '#d32f2f' : 'black',
             marginBottom: '0px',
             fontSize: '18px',
           }}
@@ -341,7 +341,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             textAlign: 'center',
             fontSize: '10px',
-            color: nodeColors.textColor,
+            color: isRootNode ? '#ef5350' : '#666',
             textTransform: 'uppercase',
           }}
         >

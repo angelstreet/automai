@@ -87,6 +87,10 @@ interface NavigationEditorHeaderProps {
   onToggleRemotePanel: () => void;
   onDeviceSelect: (device: string | null) => void;
   onTakeControl: () => void;
+  
+  // Update handlers for validation confidence tracking
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
 }
 
 export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
@@ -125,6 +129,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onToggleRemotePanel,
   onDeviceSelect,
   onTakeControl,
+  onUpdateNode,
+  onUpdateEdge,
 }) => {
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
@@ -364,7 +370,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
         <>
           <ValidationPreviewClient treeId={treeId} />
           <ValidationResultsClient treeId={treeId} />
-          <ValidationProgressClient treeId={treeId} />
+          <ValidationProgressClient treeId={treeId} onUpdateNode={onUpdateNode} onUpdateEdge={onUpdateEdge} />
         </>
       )}
     </>

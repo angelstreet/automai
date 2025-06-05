@@ -11,6 +11,7 @@ import {
 import { useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
 import { useValidationStore } from '../store/validationStore';
+import { useValidationColors } from '../../hooks/useValidationColors';
 import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationProgressClientProps {
@@ -23,8 +24,11 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
     setCurrentTestingNode, 
     setCurrentTestingEdge,
     setNodeValidationStatus,
-    setEdgeValidationStatus 
+    setEdgeValidationStatus
   } = useValidationStore();
+  
+  // Import the reset function from useValidationColors
+  const { resetForNewValidation } = useValidationColors(treeId);
 
   // Update current testing indicators based on progress
   useEffect(() => {
@@ -109,6 +113,22 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
       setCurrentTestingEdge(null);
     }
   }, [isValidating, setCurrentTestingNode, setCurrentTestingEdge]);
+
+  // Reset all colors when validation starts
+  useEffect(() => {
+    if (isValidating && progress?.currentStep === 1) {
+      console.log('[@component:ValidationProgressClient] Validation starting - resetting all colors to grey');
+      resetForNewValidation();
+    }
+  }, [isValidating, progress?.currentStep, resetForNewValidation]);
+
+  // Also reset when validation first becomes true (backup detection)
+  useEffect(() => {
+    if (isValidating && !progress) {
+      console.log('[@component:ValidationProgressClient] Validation started (no progress yet) - resetting all colors to grey');
+      resetForNewValidation();
+    }
+  }, [isValidating, progress, resetForNewValidation]);
 
   if (!showProgress || !isValidating) return null;
 

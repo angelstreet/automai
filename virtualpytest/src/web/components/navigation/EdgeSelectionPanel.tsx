@@ -42,6 +42,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
+  // Add local state for immediate confidence updates (similar to nodes)
+  const [localActionUpdates, setLocalActionUpdates] = useState<{[index: number]: boolean[]}>({});
+  const [localRetryActionUpdates, setLocalRetryActionUpdates] = useState<{[index: number]: boolean[]}>({});
 
   // Get actions in consistent format (handle both new and legacy formats)
   const getActions = (): EdgeAction[] => {
@@ -78,9 +81,11 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const hasActions = actions.length > 0;
   const canRunActions = isControlActive && selectedDevice && hasActions && !isRunning;
 
-  // Clear run results when edge selection changes
+  // Clear run results and local updates when edge selection changes
   useEffect(() => {
     setRunResult(null);
+    setLocalActionUpdates({});
+    setLocalRetryActionUpdates({});
   }, [selectedEdge.id]);
 
   // Check if edge can be deleted (protect edges from entry points and home nodes)
@@ -93,25 +98,29 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
                          selectedEdge.source?.toLowerCase().includes('entry') ||
                          selectedEdge.source?.toLowerCase().includes('home');
 
-  // Calculate overall confidence for edge actions
+  // Calculate overall confidence for edge actions (updated to use local state)
   const getEdgeConfidenceInfo = (): { actionCount: number; score: number | null; text: string } => {
     if (actions.length === 0) {
       return { actionCount: 0, score: null, text: 'no actions' };
     }
     
-    // Get all actions with results
-    const actionsWithResults = actions.filter(action => 
-      action.last_run_result && action.last_run_result.length > 0
-    );
+    // Get all actions with results (use local updates if available)
+    const actionsWithResults = actions.filter((action, index) => {
+      const localResults = localActionUpdates[index];
+      const results = localResults || action.last_run_result;
+      return results && results.length > 0;
+    });
     
     if (actionsWithResults.length === 0) {
       return { actionCount: actions.length, score: null, text: 'unknown' };
     }
     
-    // Calculate average confidence across all actions
-    const confidenceScores = actionsWithResults.map(action => 
-      calculateConfidenceScore(action.last_run_result)
-    );
+    // Calculate average confidence across all actions (use local updates if available)
+    const confidenceScores = actionsWithResults.map((action, index) => {
+      const localResults = localActionUpdates[index];
+      const results = localResults || action.last_run_result;
+      return calculateConfidenceScore(results);
+    });
     const averageConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
     
     return { 
@@ -160,6 +169,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
 
     // Call the parent callback to update the edge
     onUpdateEdge(selectedEdge.id, updatedEdgeData);
+
+    // Also store locally for immediate confidence display
+    setLocalActionUpdates(prev => ({
+      ...prev,
+      [actionIndex]: newResults
+    }));
   };
 
   const updateRetryActionResults = (actionIndex: number, success: boolean) => {
@@ -185,6 +200,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
 
     // Call the parent callback to update the edge
     onUpdateEdge(selectedEdge.id, updatedEdgeData);
+
+    // Also store locally for immediate confidence display
+    setLocalRetryActionUpdates(prev => ({
+      ...prev,
+      [actionIndex]: newResults
+    }));
   };
 
   // Execute all edge actions sequentially
