@@ -489,6 +489,17 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
             print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Failed to get graph for tree {tree_id}")
             return []
         
+        # DEBUG: Print all nodes and edges in the graph
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] DEBUG: Graph has {len(G.nodes)} nodes and {len(G.edges)} edges")
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] DEBUG: Nodes: {list(G.nodes)}")
+        print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] DEBUG: Edges:")
+        for i, (from_node, to_node, edge_data) in enumerate(G.edges(data=True), 1):
+            from_info = get_node_info(G, from_node) or {}
+            to_info = get_node_info(G, to_node) or {}
+            from_label = from_info.get('label', from_node)
+            to_label = to_info.get('label', to_node)
+            print(f"  {i:2d}. {from_label} → {to_label} ({from_node} → {to_node})")
+        
         # Get all edges that need to be validated - SORT FOR DETERMINISTIC BEHAVIOR
         edges_raw = list(G.edges(data=True))
         if not edges_raw:
@@ -615,361 +626,211 @@ def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> D
 
 def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
     """
-    Simple NetworkX-based validation sequence.
-    Focus on: hub start, bidirectional grouping, minimal navigation.
+    Simple NetworkX-based validation sequence using depth-first traversal.
+    Focus on: finding ALL edges and using depth-first exploration for optimal ordering.
     """
     from navigation_graph import get_entry_points, get_node_info
     
-    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Creating simple NetworkX validation sequence")
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Creating depth-first validation sequence")
     
-    # Find the hub node (highest degree) to start from
+    # CRITICAL FIX: Get ALL edges from the graph, not just the provided list
+    all_edges_in_graph = list(G.edges(data=True))
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Found {len(all_edges_in_graph)} edges in graph")
+    
+    # Use ALL edges from the graph, not just the parameter
+    edges_to_validate = all_edges_in_graph
+    
+    if not edges_to_validate:
+        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] No edges found to validate")
+        return []
+    
+    # Find the hub node (highest degree) and entry points
     degrees = dict(G.degree())
     hub_node = max(degrees.keys(), key=lambda n: degrees[n]) if degrees else None
-    
-    # Start from entry point if available, otherwise use hub
     entry_points = get_entry_points(G)
     start_node = entry_points[0] if entry_points else hub_node
     
-    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Starting from: {start_node} (hub: {hub_node})")
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Hub node: {hub_node}, Start node: {start_node}")
     
-    # Create edge sets for tracking
-    remaining_edges = set((u, v) for u, v, _ in edges_to_validate)
-    processed_edges = set()
+    # Create edge mapping for quick lookup
+    edge_map = {}
+    for u, v, data in edges_to_validate:
+        edge_map[(u, v)] = data
+    
+    # PRIORITY: Find and separate ENTRY edges first
+    entry_edges = []
+    regular_edges = set()
+    
+    for edge in edge_map.keys():
+        from_node = edge[0]
+        from_info = get_node_info(G, from_node) or {}
+        from_label = from_info.get('label', from_node)
+        
+        if 'ENTRY' in from_label.upper() and from_label.upper() != 'HOME':
+            entry_edges.append(edge)
+            print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Found ENTRY edge: {from_label}")
+        else:
+            regular_edges.add(edge)
+    
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Found {len(entry_edges)} entry edges and {len(regular_edges)} regular edges")
+    
+    # DEPTH-FIRST TRAVERSAL ALGORITHM
     validation_sequence = []
-    current_position = start_node
+    visited_edges = set()
     step_number = 1
     
-    # Process edges using simple greedy approach with NetworkX
-    while remaining_edges:
-        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Current position: {current_position}, Remaining edges: {len(remaining_edges)}")
-        
-        # Find best edge from current position
-        best_edge = _find_best_edge_from_position(current_position, remaining_edges)
-        
-        if best_edge:
-            # Process the edge
-            from_node, to_node = best_edge
-            edge_data = G.edges[from_node, to_node]
-            
-            print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Processing edge from current position: {from_node} → {to_node}")
-            
-            # Add validation step
+    # Step 1: Process ENTRY edges first
+    for edge in entry_edges:
+        if edge not in visited_edges:
             validation_step = _create_validation_step(
-                G, from_node, to_node, edge_data, step_number, 'direct_from_position'
+                G, edge[0], edge[1], edge_map[edge], step_number, 'entry_edge'
             )
             validation_sequence.append(validation_step)
-            processed_edges.add(best_edge)
-            remaining_edges.remove(best_edge)
+            visited_edges.add(edge)
             step_number += 1
-            current_position = to_node
+    
+    # Step 2: Optimal traversal algorithm following the exact pattern
+    def optimal_traversal(start_node):
+        nonlocal step_number
+        
+        # Build adjacency list
+        adjacency = {}
+        reverse_adjacency = {}
+        for edge in regular_edges:
+            from_node, to_node = edge
+            if from_node not in adjacency:
+                adjacency[from_node] = []
+            adjacency[from_node].append(to_node)
             
-            # Check for immediate bidirectional edge
-            reverse_edge = (to_node, from_node)
-            if reverse_edge in remaining_edges:
-                print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Processing bidirectional edge: {to_node} → {from_node}")
-                reverse_edge_data = G.edges[to_node, from_node]
+            if to_node not in reverse_adjacency:
+                reverse_adjacency[to_node] = []
+            reverse_adjacency[to_node].append(from_node)
+        
+        # Sort for consistent ordering
+        for node in adjacency:
+            adjacency[node].sort()
+        
+        def process_branch_completely(current_node, parent_node):
+            """Process all edges in a branch completely before returning"""
+            nonlocal step_number
+            
+            if current_node not in adjacency:
+                return
+            
+            # Process all children of current node
+            for child_node in adjacency[current_node]:
+                forward_edge = (current_node, child_node)
                 
-                reverse_validation_step = _create_validation_step(
-                    G, to_node, from_node, reverse_edge_data, step_number, 'bidirectional_immediate'
+                # Skip if already visited or if it's the parent (we'll handle return separately)
+                if forward_edge in visited_edges or child_node == parent_node:
+                    continue
+                
+                # Add forward edge
+                validation_step = _create_validation_step(
+                    G, current_node, child_node, edge_map[forward_edge], step_number, 'deep_forward'
                 )
-                validation_sequence.append(reverse_validation_step)
-                processed_edges.add(reverse_edge)
-                remaining_edges.remove(reverse_edge)
+                validation_sequence.append(validation_step)
+                visited_edges.add(forward_edge)
                 step_number += 1
-                current_position = from_node
-        else:
-            # No direct edge from current position, need to navigate
-            # Use NetworkX to find shortest path to any remaining edge
-            next_edge = _find_closest_edge_networkx(G, current_position, remaining_edges)
-            
-            if not next_edge:
-                print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] No reachable edges remaining")
-                break
-            
-            target_from_node, target_to_node = next_edge
-            print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Need to navigate from {current_position} to {target_from_node} for edge {target_from_node} → {target_to_node}")
-            
-            # Navigate to the source of the next edge if needed
-            if current_position != target_from_node:
-                try:
-                    if nx.has_path(G, current_position, target_from_node):
-                        nav_path = nx.shortest_path(G, current_position, target_from_node)
-                        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Navigation path: {' → '.join(nav_path)}")
-                        
-                        # Add navigation steps (but avoid redundant navigation)
-                        for i in range(len(nav_path) - 1):
-                            nav_from = nav_path[i]
-                            nav_to = nav_path[i + 1]
-                            
-                            # Always add navigation steps - don't skip based on processed_edges
-                            # Navigation and validation are different purposes
-                            if G.has_edge(nav_from, nav_to):
-                                nav_edge_data = G.edges[nav_from, nav_to]
-                                nav_step = _create_validation_step(
-                                    G, nav_from, nav_to, nav_edge_data, step_number, 'navigation'
-                                )
-                                nav_step['validation_type'] = 'navigation'
-                                nav_step['navigation_cost'] = 1
-                                validation_sequence.append(nav_step)
-                                step_number += 1
-                                print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Added navigation step: {nav_from} → {nav_to}")
-                        
-                        current_position = target_from_node
-                        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Navigation complete, now at: {current_position}")
-                    else:
-                        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] No path to {target_from_node}")
-                        break
-                except nx.NetworkXNoPath:
-                    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] NetworkX no path to {target_from_node}")
-                    break
-            
-            # After navigation, continue the loop to process the edge from the new position
-            # Don't process the edge here, let the next iteration handle it
-    
-    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Created sequence with {len(validation_sequence)} steps")
-    
-    # Post-process the sequence to remove redundant navigation steps
-    optimized_sequence = _post_process_validation_sequence(validation_sequence)
-    
-    # Re-number steps after post-processing
-    for i, step in enumerate(optimized_sequence):
-        step['step_number'] = i + 1
-    
-    # Analyze efficiency
-    edge_validations = sum(1 for step in optimized_sequence if step.get('validation_type') == 'edge')
-    navigation_steps = sum(1 for step in optimized_sequence if step.get('validation_type') == 'navigation')
-    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Final optimized sequence: {len(optimized_sequence)} steps")
-    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Efficiency: {edge_validations} validations, {navigation_steps} navigation steps")
-    
-    return optimized_sequence
-
-def _post_process_validation_sequence(sequence: List[Dict]) -> List[Dict]:
-    """
-    Post-process the validation sequence to remove redundant navigation steps.
-    
-    Optimizations applied:
-    1. Remove navigation steps that aren't needed because we're already at the target
-    2. Remove navigation steps that immediately follow a step with the same target
-    3. Group bidirectional edges more aggressively
-    4. Optimize navigation paths between validations
-    """
-    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Post-processing sequence with {len(sequence)} steps")
-    
-    # Initialize optimized sequence
-    optimized_sequence = []
-    current_position = None
-    
-    # Collect all bidirectional pairs for better grouping
-    bidirectional_pairs = {}
-    for i, step in enumerate(sequence):
-        if step.get('validation_type') != 'navigation':
-            for j in range(i+1, len(sequence)):
-                next_step = sequence[j]
-                if (next_step.get('validation_type') != 'navigation' and
-                    next_step['from_node_id'] == step['to_node_id'] and
-                    next_step['to_node_id'] == step['from_node_id']):
-                    # Found a bidirectional pair
-                    key = tuple(sorted([step['from_node_id'], step['to_node_id']]))
-                    if key not in bidirectional_pairs:
-                        bidirectional_pairs[key] = []
-                    # Store indices instead of the actual step dictionaries
-                    bidirectional_pairs[key].append((i, j))
-                    break
-    
-    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Found {len(bidirectional_pairs)} bidirectional pairs")
-    
-    # Track processed steps by index
-    processed_indices = set()
-    
-    # Track position through the sequence
-    for i, step in enumerate(sequence):
-        # Skip if already processed
-        if i in processed_indices:
-            continue
-            
-        # First step - just add it and set position
-        if current_position is None:
-            optimized_sequence.append(step)
-            current_position = step['to_node_id']
-            processed_indices.add(i)
-            continue
-        
-        # Check if this step starts from where we actually are
-        if step['from_node_id'] != current_position:
-            print(f"[@navigation:pathfinding:_post_process_validation_sequence] Warning: Position mismatch - current position is {current_position} but step starts from {step['from_node_id']}")
-            # Skip this step as it's invalid - position tracking is critical
-            continue
-        
-        # For navigation steps, check if they're redundant
-        if step.get('validation_type') == 'navigation':
-            # Check if we're already at the target
-            if step['from_node_id'] == step['to_node_id']:
-                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Removing redundant self-navigation: {step['from_node_label']} → {step['to_node_label']}")
-                continue
-            
-            # Check if we just came from this target
-            if optimized_sequence and optimized_sequence[-1]['from_node_id'] == step['to_node_id'] and optimized_sequence[-1]['to_node_id'] == step['from_node_id']:
-                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Removing redundant back-and-forth navigation: {step['from_node_label']} → {step['to_node_label']}")
-                continue
-            
-            # Check if this navigation leads to an already validated bidirectional edge
-            is_redundant_navigation = False
-            for key in bidirectional_pairs:
-                if step['to_node_id'] in key:
-                    # Check if all pairs involving this node have been processed
-                    all_processed = True
-                    for pair_indices in bidirectional_pairs[key]:
-                        if not all(idx in processed_indices for idx in pair_indices):
-                            all_processed = False
-                            break
-                    
-                    if all_processed:
-                        is_redundant_navigation = True
-                        break
-            
-            if is_redundant_navigation:
-                print(f"[@navigation:pathfinding:_post_process_validation_sequence] Skipping navigation to completed bidirectional node: {step['from_node_label']} → {step['to_node_label']}")
-                continue
-        
-        # Process bidirectional edges more efficiently
-        elif step.get('validation_type') != 'navigation':
-            # Check if this step is part of a bidirectional pair
-            key = tuple(sorted([step['from_node_id'], step['to_node_id']]))
-            if key in bidirectional_pairs:
-                for pair_indices in bidirectional_pairs[key]:
-                    first_idx, second_idx = pair_indices
-                    
-                    # If this is the first part of a pair and we're at the right position
-                    if first_idx == i:
-                        # Mark as processed
-                        processed_indices.add(first_idx)
-                        processed_indices.add(second_idx)
-                        
-                        # Get both steps
-                        forward_step = sequence[first_idx]
-                        reverse_step = sequence[second_idx]
-                        
-                        # Add both steps with proper optimization flags
-                        forward_step = forward_step.copy()  # Create a copy to avoid modifying the original
-                        forward_step['optimization'] = 'bidirectional_immediate'
-                        optimized_sequence.append(forward_step)
-                        
-                        # Make sure the reverse step comes next
-                        reverse_step = reverse_step.copy()  # Create a copy to avoid modifying the original
-                        reverse_step['optimization'] = 'bidirectional_immediate'
-                        reverse_step['from_node_id'] = forward_step['to_node_id']  # Ensure position is correct
-                        optimized_sequence.append(reverse_step)
-                        
-                        # Update position after both steps
-                        current_position = reverse_step['to_node_id']
-                        
-                        print(f"[@navigation:pathfinding:_post_process_validation_sequence] Processed bidirectional pair: {forward_step['from_node_label']} ↔ {forward_step['to_node_label']}")
-                        
-                        # Skip the regular step addition since we handled it specially
-                        break
-                else:
-                    # No pair found or processed - add as normal
-                    optimized_sequence.append(step)
-                    current_position = step['to_node_id']
-                    processed_indices.add(i)
-                continue
-        
-        # This step is valid, add it and update position
-        optimized_sequence.append(step)
-        current_position = step['to_node_id']
-        processed_indices.add(i)
-    
-    # Re-number steps
-    for i, step in enumerate(optimized_sequence):
-        step['step_number'] = i + 1
-    
-    # Log optimization results
-    initial_edge_validations = sum(1 for step in sequence if step.get('validation_type') == 'edge')
-    initial_navigation_steps = sum(1 for step in sequence if step.get('validation_type') == 'navigation')
-    
-    final_edge_validations = sum(1 for step in optimized_sequence if step.get('validation_type') == 'edge')
-    final_navigation_steps = sum(1 for step in optimized_sequence if step.get('validation_type') == 'navigation')
-    
-    bidirectional_optimizations = sum(1 for step in optimized_sequence if step.get('optimization') == 'bidirectional_immediate')
-    
-    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Initial sequence: {len(sequence)} steps ({initial_edge_validations} validations, {initial_navigation_steps} navigation)")
-    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Optimized sequence: {len(optimized_sequence)} steps ({final_edge_validations} validations, {final_navigation_steps} navigation)")
-    print(f"[@navigation:pathfinding:_post_process_validation_sequence] Bidirectional optimizations: {bidirectional_optimizations}")
-    
-    return optimized_sequence
-
-def _find_best_edge_from_position(current_position: str, remaining_edges: set) -> Optional[Tuple]:
-    """Find the best edge to process from current position"""
-    # First priority: direct edges from current position
-    direct_edges = [edge for edge in remaining_edges if edge[0] == current_position]
-    
-    if direct_edges:
-        # Check if we have multiple edges from this position
-        if len(direct_edges) > 1:
-            # If we have multiple edges, prefer ones that DON'T have bidirectional counterparts
-            # This way we process all forward edges first, then come back for reverse edges
-            non_bidirectional_edges = []
-            bidirectional_edges = []
-            
-            for edge in direct_edges:
-                reverse_edge = (edge[1], edge[0])
-                if reverse_edge in remaining_edges:
-                    bidirectional_edges.append(edge)
-                else:
-                    non_bidirectional_edges.append(edge)
-            
-            # Prefer non-bidirectional edges first (to avoid getting stranded)
-            if non_bidirectional_edges:
-                return sorted(non_bidirectional_edges)[0]
-            else:
-                # If all edges are bidirectional, choose the one that leads to a node with more remaining edges
-                # This helps us stay in areas with more work to do
-                best_edge = None
-                max_remaining_edges_from_target = -1
                 
-                for edge in bidirectional_edges:
-                    target_node = edge[1]
-                    edges_from_target = len([e for e in remaining_edges if e[0] == target_node])
-                    if edges_from_target > max_remaining_edges_from_target:
-                        max_remaining_edges_from_target = edges_from_target
-                        best_edge = edge
+                # Recursively process this child's branch
+                process_branch_completely(child_node, current_node)
                 
-                return best_edge or sorted(bidirectional_edges)[0]
-        else:
-            # Only one edge available, take it
-            return direct_edges[0]
-    
-    return None
-
-def _find_closest_edge_networkx(G: nx.DiGraph, current_position: str, remaining_edges: set) -> Optional[Tuple]:
-    """Use NetworkX to find the closest remaining edge"""
-    # Get all source nodes of remaining edges
-    source_nodes = set(edge[0] for edge in remaining_edges)
-    
-    # Find shortest path to any source node
-    shortest_distance = float('inf')
-    closest_edge = None
-    
-    for source_node in source_nodes:
-        if source_node == current_position:
-            # We're already at a source node, find an edge from here
-            edges_from_here = [edge for edge in remaining_edges if edge[0] == source_node]
-            if edges_from_here:
-                return sorted(edges_from_here)[0]  # Deterministic choice
+                # Add return edge after processing child completely
+                return_edge = (child_node, current_node)
+                if return_edge in regular_edges and return_edge not in visited_edges:
+                    validation_step = _create_validation_step(
+                        G, child_node, current_node, edge_map[return_edge], step_number, 'deep_return'
+                    )
+                    validation_sequence.append(validation_step)
+                    visited_edges.add(return_edge)
+                    step_number += 1
         
-        try:
-            if nx.has_path(G, current_position, source_node):
-                distance = nx.shortest_path_length(G, current_position, source_node)
-                if distance < shortest_distance:
-                    shortest_distance = distance
-                    # Find an edge from this source node
-                    edges_from_source = [edge for edge in remaining_edges if edge[0] == source_node]
-                    if edges_from_source:
-                        closest_edge = sorted(edges_from_source)[0]  # Deterministic choice
-        except nx.NetworkXNoPath:
-            continue
+        # Step 2.1: Process all leaf nodes from start_node first
+        if start_node in adjacency:
+            for target_node in adjacency[start_node]:
+                forward_edge = (start_node, target_node)
+                
+                # Skip if this edge is already visited
+                if forward_edge in visited_edges:
+                    continue
+                
+                # Check if target_node is a leaf (has no outgoing edges or only back to start)
+                target_children = adjacency.get(target_node, [])
+                is_leaf = len(target_children) == 0 or (len(target_children) == 1 and target_children[0] == start_node)
+                
+                if is_leaf:
+                    # Add forward edge
+                    validation_step = _create_validation_step(
+                        G, start_node, target_node, edge_map[forward_edge], step_number, 'leaf_forward'
+                    )
+                    validation_sequence.append(validation_step)
+                    visited_edges.add(forward_edge)
+                    step_number += 1
+                    
+                    # Add return edge immediately for leaf nodes
+                    return_edge = (target_node, start_node)
+                    if return_edge in regular_edges and return_edge not in visited_edges:
+                        validation_step = _create_validation_step(
+                            G, target_node, start_node, edge_map[return_edge], step_number, 'leaf_return'
+                        )
+                        validation_sequence.append(validation_step)
+                        visited_edges.add(return_edge)
+                        step_number += 1
+        
+        # Step 2.2: Process deeper branches (non-leaf nodes)
+        if start_node in adjacency:
+            for target_node in adjacency[start_node]:
+                forward_edge = (start_node, target_node)
+                
+                # Skip if already visited
+                if forward_edge in visited_edges:
+                    continue
+                
+                # Check if this is a deeper branch (has children other than back to start)
+                target_children = adjacency.get(target_node, [])
+                has_deeper_children = any(child != start_node for child in target_children)
+                
+                if has_deeper_children:
+                    # Add forward edge to deeper branch
+                    validation_step = _create_validation_step(
+                        G, start_node, target_node, edge_map[forward_edge], step_number, 'branch_forward'
+                    )
+                    validation_sequence.append(validation_step)
+                    visited_edges.add(forward_edge)
+                    step_number += 1
+                    
+                    # Recursively process this branch completely
+                    process_branch_completely(target_node, start_node)
+                    
+                    # After processing branch completely, add return edge
+                    return_edge = (target_node, start_node)
+                    if return_edge in regular_edges and return_edge not in visited_edges:
+                        validation_step = _create_validation_step(
+                            G, target_node, start_node, edge_map[return_edge], step_number, 'branch_return'
+                        )
+                        validation_sequence.append(validation_step)
+                        visited_edges.add(return_edge)
+                        step_number += 1
     
-    return closest_edge
+    # Start optimal traversal from hub node
+    optimal_traversal(start_node)
+    
+    # Step 3: Add any remaining unvisited edges (shouldn't happen with proper traversal)
+    remaining_edges = [edge for edge in regular_edges if edge not in visited_edges]
+    for edge in remaining_edges:
+        validation_step = _create_validation_step(
+            G, edge[0], edge[1], edge_map[edge], step_number, 'remaining_edge'
+        )
+        validation_sequence.append(validation_step)
+        visited_edges.add(edge)
+        step_number += 1
+        print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Added remaining edge: {edge}")
+    
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Optimal traversal complete: {len(validation_sequence)} steps")
+    print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Visited {len(visited_edges)} edges out of {len(edge_map)} total")
+    
+    return validation_sequence
 
 def _create_validation_step(G: nx.DiGraph, from_node: str, to_node: str, edge_data: Dict, step_number: int, optimization: str) -> Dict:
     """

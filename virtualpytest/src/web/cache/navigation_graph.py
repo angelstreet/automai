@@ -43,24 +43,26 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             node.get('node_type') == 'entry'
         )
         
+        print(f"[@navigation:graph:create_networkx_graph] Adding node: {label} ({node_id})")
+        
         G.add_node(node_id, **{
             'label': label,
-            'node_type': node.get('node_type') or node_data.get('node_type', node_data.get('type', 'screen')),
+            'node_type': node.get('node_type') or node_data.get('type', 'screen'),
             'description': node.get('description') or node_data.get('description', ''),
-            'is_entry_point': is_entry_point,
-            'is_exit_point': node.get('is_exit_point', False),
-            'has_children': node.get('has_children', False),
-            'child_tree_id': node.get('child_tree_id'),
             'screenshot_url': node.get('screenshot_url') or node_data.get('screenshot'),
-            'position_x': node.get('position_x', 0),
-            'position_y': node.get('position_y', 0),
-            'width': node.get('width', 200),
-            'height': node.get('height', 120),
-            'metadata': node.get('metadata', {}),
+            'is_entry_point': is_entry_point,
+            'is_exit_point': node.get('is_exit_point', False) or node_data.get('is_exit_point', False),
+            'has_children': node.get('has_children', False) or node_data.get('has_children', False),
+            'child_tree_id': node.get('child_tree_id') or node_data.get('child_tree_id'),
+            'metadata': node.get('metadata', {}) or node_data.get('metadata', {}),
             'verifications': node.get('verifications') or node_data.get('verifications', [])
         })
     
+    print(f"[@navigation:graph:create_networkx_graph] Added {len(G.nodes)} nodes to graph")
+    
     # Add edges with actions as attributes
+    edges_added = 0
+    edges_skipped = 0
     for edge in edges:
         # Handle both ReactFlow format (source/target) and database format (source_id/target_id)
         source_id = edge.get('source') or edge.get('source_id')
@@ -68,11 +70,15 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         
         if not source_id or not target_id:
             print(f"[@navigation:graph:create_networkx_graph] Warning: Edge without source/target found, skipping. Available keys: {list(edge.keys())}")
+            edges_skipped += 1
             continue
             
         # Check if nodes exist
         if source_id not in G.nodes or target_id not in G.nodes:
             print(f"[@navigation:graph:create_networkx_graph] Warning: Edge references non-existent nodes {source_id} -> {target_id}, skipping")
+            print(f"[@navigation:graph:create_networkx_graph] DEBUG: Available nodes: {list(G.nodes)}")
+            print(f"[@navigation:graph:create_networkx_graph] DEBUG: Source exists: {source_id in G.nodes}, Target exists: {target_id in G.nodes}")
+            edges_skipped += 1
             continue
         
         # Get actions from edge data - handle both multiple actions and single action formats
@@ -173,8 +179,11 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                 'metadata': edge_data.get('metadata', {}),
                 'weight': 1
             })
+        
+        edges_added += 1
     
     print(f"[@navigation:graph:create_networkx_graph] Successfully created graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
+    print(f"[@navigation:graph:create_networkx_graph] Edge processing summary: {edges_added} added, {edges_skipped} skipped")
     return G
 
 def get_node_info(graph: nx.DiGraph, node_id: str) -> Optional[Dict]:

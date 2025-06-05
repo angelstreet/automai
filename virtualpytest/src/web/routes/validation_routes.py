@@ -132,6 +132,10 @@ def get_optimal_validation_path(tree_id):
         # Get the optimal validation sequence using NetworkX
         validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
         
+        print(f"[@api:validation:optimal-path] DEBUG: Got validation sequence with {len(validation_sequence)} steps")
+        for i, step in enumerate(validation_sequence):
+            print(f"  {i+1:2d}. {step.get('from_node_label', 'NO_FROM')} → {step.get('to_node_label', 'NO_TO')} ({step.get('from_node_id', 'NO_FROM_ID')} → {step.get('to_node_id', 'NO_TO_ID')})")
+        
         if not validation_sequence:
             return jsonify({
                 'success': False,

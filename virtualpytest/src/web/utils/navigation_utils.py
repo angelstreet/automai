@@ -374,6 +374,23 @@ def get_navigation_nodes_and_edges(tree_id, team_id):
         
         print(f"[@utils:navigation:get_navigation_nodes_and_edges] Found {len(nodes)} nodes and {len(edges)} edges in tree metadata")
         
+        # DEBUG: Print node and edge details
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Node IDs:")
+        for i, node in enumerate(nodes):
+            node_id = node.get('id', 'NO_ID')
+            node_data = node.get('data', {})
+            label = node_data.get('label', 'NO_LABEL')
+            print(f"  {i+1:2d}. {label} ({node_id})")
+        
+        print(f"[@utils:navigation:get_navigation_nodes_and_edges] DEBUG: Edge details:")
+        for i, edge in enumerate(edges):
+            source = edge.get('source', 'NO_SOURCE')
+            target = edge.get('target', 'NO_TARGET')
+            edge_data = edge.get('data', {})
+            from_label = edge_data.get('from', 'NO_FROM')
+            to_label = edge_data.get('to', 'NO_TO')
+            print(f"  {i+1:2d}. {from_label} → {to_label} ({source} → {target})")
+        
         return nodes, edges
         
     except Exception as e:

@@ -34,6 +34,9 @@ def get_cached_graph(tree_id: str, team_id: str, force_rebuild: bool = False) ->
     """
     cache_key = f"{tree_id}_{team_id}"
     
+    # TEMPORARY: Force rebuild to debug the issue
+    force_rebuild = True
+    
     # Check if we need to rebuild
     if force_rebuild or cache_key not in _navigation_graphs_cache:
         print(f"[@navigation:cache:get_cached_graph] Building NetworkX graph for tree: {tree_id}")

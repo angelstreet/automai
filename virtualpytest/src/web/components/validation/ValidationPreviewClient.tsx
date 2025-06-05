@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
+import React from 'react';
 
 interface ValidationPreviewClientProps {
   treeId: string;
@@ -292,9 +293,8 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                               const hasExpandableContent = (step.actions && step.actions.length > 0) || (step.retryActions && step.retryActions.length > 0);
                               
                               return (
-                                <>
+                                <React.Fragment key={`step-${step.step_number}`}>
                                   <TableRow 
-                                    key={step.step_number}
                                     sx={{
                                       '&:hover': {
                                         backgroundColor: 'transparent !important'
@@ -362,7 +362,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                                 </Typography>
                                                 {step.actions.map((action, actionIndex) => (
                                                   <Alert
-                                                    key={actionIndex}
+                                                    key={`action-${actionIndex}`}
                                                     severity="info"
                                                     sx={{ 
                                                       mb: 1, 
@@ -401,7 +401,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                                 </Typography>
                                                 {step.retryActions.map((verification, verificationIndex) => (
                                                   <Alert
-                                                    key={verificationIndex}
+                                                    key={`verification-${verificationIndex}`}
                                                     severity="success"
                                                     sx={{ 
                                                       mb: 1, 
@@ -436,7 +436,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                       </TableCell>
                                     </TableRow>
                                   )}
-                                </>
+                                </React.Fragment>
                               );
                             })}
                           </TableBody>
