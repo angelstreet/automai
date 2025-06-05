@@ -551,48 +551,72 @@ def execute_android_mobile_action():
                     'error': 'Element ID parameter required for click_element command'
                 }), 400
             
-            # Try to click element directly by text, content description, or resource ID
-            # First try to find element from last UI dump if available
-            target_element = None
-            if hasattr(app.android_mobile_controller, 'last_ui_elements') and app.android_mobile_controller.last_ui_elements:
-                for element in app.android_mobile_controller.last_ui_elements:
-                    if element.id == element_id:
-                        target_element = element
-                        break
+            print(f"[@route:execute_android_mobile_action] Attempting to click element: '{element_id}'")
             
-            # If not found in last dump, try to find by text/content/resource ID
-            if not target_element:
-                # Do a fresh UI dump first
-                print(f"[@route:execute_android_mobile_action] Element not found in cache, doing fresh UI dump")
-                dump_success, elements, dump_error = app.android_mobile_controller.dump_ui_elements()
-                
-                if dump_success:
-                    # Try to find element by various methods
-                    target_element = app.android_mobile_controller.find_element_by_text(element_id)
-                    if not target_element:
-                        target_element = app.android_mobile_controller.find_element_by_content_desc(element_id)
-                    if not target_element:
-                        target_element = app.android_mobile_controller.find_element_by_resource_id(element_id)
-                else:
-                    print(f"[@route:execute_android_mobile_action] UI dump failed: {dump_error}")
-            
-            if target_element:
-                # Click the found element
-                success = app.android_mobile_controller.click_element(target_element)
+            # Check if element_id contains pipe-separated terms
+            if '|' in element_id:
+                print(f"[@route:execute_android_mobile_action] Detected pipe-separated terms in element_id: '{element_id}'")
+                # Use the advanced click_element_by_search method that supports pipe-separated terms
+                success = app.android_mobile_controller.adb_utils.click_element_by_search(
+                    app.android_mobile_controller.android_device_id, 
+                    element_id
+                )
                 if success:
-                    message = f'Element "{element_id}" click successful'
+                    message = f'Element "{element_id}" click successful using smart search'
                 else:
-                    # Check if we might already be on the target screen
-                    # by checking if the element exists and is visible
-                    if target_element.text or target_element.content_desc:
-                        # Element exists but click failed - might already be on target screen
-                        message = f'Element "{element_id}" found but click not needed (already on target screen)'
-                        success = True  # Consider this a success case
-                    else:
-                        message = f'Element "{element_id}" found but click failed'
+                    message = f'Element "{element_id}" not found by smart search with any fallback terms'
             else:
-                success = False
-                message = f'Element "{element_id}" not found by text, content description, or resource ID'
+                # Original logic for single terms
+                # Try to click element directly by text, content description, or resource ID
+                # First try to find element from last UI dump if available
+                target_element = None
+                if hasattr(app.android_mobile_controller, 'last_ui_elements') and app.android_mobile_controller.last_ui_elements:
+                    for element in app.android_mobile_controller.last_ui_elements:
+                        if element.id == element_id:
+                            target_element = element
+                            break
+                
+                # If not found in last dump, try to find by text/content/resource ID
+                if not target_element:
+                    # Do a fresh UI dump first
+                    print(f"[@route:execute_android_mobile_action] Element not found in cache, doing fresh UI dump")
+                    dump_success, elements, dump_error = app.android_mobile_controller.dump_ui_elements()
+                    
+                    if dump_success:
+                        # Try to find element by various methods
+                        target_element = app.android_mobile_controller.find_element_by_text(element_id)
+                        if not target_element:
+                            target_element = app.android_mobile_controller.find_element_by_content_desc(element_id)
+                        if not target_element:
+                            target_element = app.android_mobile_controller.find_element_by_resource_id(element_id)
+                    else:
+                        print(f"[@route:execute_android_mobile_action] UI dump failed: {dump_error}")
+                
+                if target_element:
+                    # Click the found element
+                    success = app.android_mobile_controller.click_element(target_element)
+                    if success:
+                        message = f'Element "{element_id}" click successful'
+                    else:
+                        # Check if we might already be on the target screen
+                        # by checking if the element exists and is visible
+                        if target_element.text or target_element.content_desc:
+                            # Element exists but click failed - might already be on target screen
+                            message = f'Element "{element_id}" found but click not needed (already on target screen)'
+                            success = True  # Consider this a success case
+                        else:
+                            message = f'Element "{element_id}" found but click failed'
+                else:
+                    # Fallback: try using smart search even for single terms
+                    print(f"[@route:execute_android_mobile_action] Element not found with basic search, trying smart search")
+                    success = app.android_mobile_controller.adb_utils.click_element_by_search(
+                        app.android_mobile_controller.android_device_id, 
+                        element_id
+                    )
+                    if success:
+                        message = f'Element "{element_id}" click successful using smart search fallback'
+                    else:
+                        message = f'Element "{element_id}" not found by text, content description, or resource ID'
             
         elif command == 'coordinate_tap':
             x = params.get('x')

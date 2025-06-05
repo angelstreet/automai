@@ -61,10 +61,11 @@ class ADBVerificationController:
 
     def getElementListsWithSmartSearch(self, search_term: str = None) -> Tuple[bool, Dict[str, Any], str]:
         """
-        Get enhanced element listing with optional smart search capabilities.
+        Get enhanced element listing with optional smart search capabilities. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
         Args:
             search_term: Optional search term for filtering elements (case-insensitive)
+                        Can use pipe-separated terms: "text1|text2|text3"
             
         Returns:
             Tuple of (success, enhanced_element_data, error_message)
@@ -107,23 +108,72 @@ class ADBVerificationController:
             
             # Add smart search results if search term provided
             if search_term and search_term.strip():
-                print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Performing smart search for '{search_term}'")
+                search_term_clean = search_term.strip()
+                print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Performing smart search for '{search_term_clean}'")
                 
-                search_success, matches, search_error = self.adb_utils.smart_element_search(self.device_id, search_term.strip())
-                
-                enhanced_data["search_results"] = {
-                    "search_term": search_term.strip(),
-                    "search_performed": True,
-                    "search_success": search_success,
-                    "total_matches": len(matches) if search_success else 0,
-                    "matches": matches if search_success else [],
-                    "search_error": search_error if not search_success else None,
-                    "search_details": {
-                        "case_sensitive": False,
-                        "search_method": "contains_any_attribute",
-                        "searched_attributes": ["text", "content_desc", "resource_id", "class_name"]
+                # Check if we have pipe-separated terms
+                if '|' in search_term_clean:
+                    terms = [term.strip() for term in search_term_clean.split('|') if term.strip()]
+                    print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Using fallback strategy with {len(terms)} terms: {terms}")
+                    
+                    # Try each term until one succeeds
+                    search_success = False
+                    matches = []
+                    search_error = None
+                    successful_term = None
+                    
+                    for i, term in enumerate(terms):
+                        print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
+                        
+                        term_success, term_matches, term_error = self.adb_utils.smart_element_search(self.device_id, term)
+                        
+                        if term_success and term_matches:
+                            search_success = True
+                            matches = term_matches
+                            successful_term = term
+                            print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] SUCCESS: Found matches using term '{term}'")
+                            break
+                        elif term_error:
+                            search_error = term_error
+                            print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Search failed for term '{term}': {term_error}")
+                    
+                    enhanced_data["search_results"] = {
+                        "search_term": search_term_clean,
+                        "attempted_terms": terms,
+                        "successful_term": successful_term,
+                        "search_performed": True,
+                        "search_success": search_success,
+                        "total_matches": len(matches) if search_success else 0,
+                        "matches": matches if search_success else [],
+                        "search_error": search_error if not search_success else None,
+                        "search_details": {
+                            "case_sensitive": False,
+                            "search_method": "contains_any_attribute",
+                            "searched_attributes": ["text", "content_desc", "resource_id", "class_name"],
+                            "fallback_strategy": True
+                        }
                     }
-                }
+                else:
+                    # Single term - original logic
+                    terms = [search_term_clean]
+                    search_success, matches, search_error = self.adb_utils.smart_element_search(self.device_id, search_term_clean)
+                    
+                    enhanced_data["search_results"] = {
+                        "search_term": search_term_clean,
+                        "attempted_terms": terms,
+                        "successful_term": search_term_clean if search_success else None,
+                        "search_performed": True,
+                        "search_success": search_success,
+                        "total_matches": len(matches) if search_success else 0,
+                        "matches": matches if search_success else [],
+                        "search_error": search_error if not search_success else None,
+                        "search_details": {
+                            "case_sensitive": False,
+                            "search_method": "contains_any_attribute",
+                            "searched_attributes": ["text", "content_desc", "resource_id", "class_name"],
+                            "fallback_strategy": False
+                        }
+                    }
                 
                 if search_success and matches:
                     print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Smart search found {len(matches)} matches")
@@ -149,10 +199,11 @@ class ADBVerificationController:
 
     def waitForElementToAppear(self, search_term: str, timeout: float = 10.0, check_interval: float = 1.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
-        Wait for an element matching search_term to appear.
+        Wait for an element matching search_term to appear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
         Args:
             search_term: The term to search for (case-insensitive, searches all attributes)
+                        Can use pipe-separated terms: "text1|text2|text3"
             timeout: Maximum time to wait in seconds (default: 10.0)
             check_interval: Time between checks in seconds (default: 1.0)
         
@@ -164,64 +215,97 @@ class ADBVerificationController:
         try:
             print(f"[@controller:ADBVerification:waitForElementToAppear] Waiting for '{search_term}' (timeout: {timeout}s)")
             
+            # Check if we have pipe-separated terms
+            if '|' in search_term:
+                terms = [term.strip() for term in search_term.split('|') if term.strip()]
+                print(f"[@controller:ADBVerification:waitForElementToAppear] Using fallback strategy with {len(terms)} terms: {terms}")
+            else:
+                terms = [search_term]
+                print(f"[@controller:ADBVerification:waitForElementToAppear] Using single search term: '{search_term}'")
+            
             start_time = time.time()
             consecutive_infrastructure_failures = 0
             max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
             while time.time() - start_time < timeout:
-                success, matches, error = self.adb_utils.smart_element_search(self.device_id, search_term)
+                # Try each term in sequence until one succeeds
+                found_match = False
+                successful_term = None
+                final_matches = []
+                final_error = None
                 
-                if error:
-                    print(f"[@controller:ADBVerification:waitForElementToAppear] Search failed: {error}")
+                for i, term in enumerate(terms):
+                    if len(terms) > 1:
+                        print(f"[@controller:ADBVerification:waitForElementToAppear] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
                     
-                    # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
-                    if any(infrastructure_error in error.lower() for infrastructure_error in [
-                        'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
-                        'adb connect failed', 'device not found', 'no devices', 'offline'
-                    ]):
-                        consecutive_infrastructure_failures += 1
-                        print(f"[@controller:ADBVerification:waitForElementToAppear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
+                    success, matches, error = self.adb_utils.smart_element_search(self.device_id, term)
+                    
+                    if error:
+                        print(f"[@controller:ADBVerification:waitForElementToAppear] Search failed for term '{term}': {error}")
+                        final_error = error
                         
-                        if consecutive_infrastructure_failures >= max_consecutive_failures:
-                            elapsed = time.time() - start_time
-                            error_message = f"Infrastructure failure: {error}"
-                            print(f"[@controller:ADBVerification:waitForElementToAppear] ERROR: Too many consecutive infrastructure failures")
+                        # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
+                        if any(infrastructure_error in error.lower() for infrastructure_error in [
+                            'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
+                            'adb connect failed', 'device not found', 'no devices', 'offline'
+                        ]):
+                            consecutive_infrastructure_failures += 1
+                            print(f"[@controller:ADBVerification:waitForElementToAppear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
                             
-                            result_data = {
-                                'search_term': search_term,
-                                'wait_time': elapsed,
-                                'infrastructure_error': True,
-                                'error_details': error,
-                                'consecutive_failures': consecutive_infrastructure_failures
-                            }
+                            if consecutive_infrastructure_failures >= max_consecutive_failures:
+                                elapsed = time.time() - start_time
+                                error_message = f"Infrastructure failure: {error}"
+                                print(f"[@controller:ADBVerification:waitForElementToAppear] ERROR: Too many consecutive infrastructure failures")
+                                
+                                result_data = {
+                                    'search_term': search_term,
+                                    'wait_time': elapsed,
+                                    'infrastructure_error': True,
+                                    'error_details': error,
+                                    'consecutive_failures': consecutive_infrastructure_failures,
+                                    'attempted_terms': terms
+                                }
+                                
+                                return False, error_message, result_data
                             
-                            return False, error_message, result_data
+                            # Break out of term loop on infrastructure failure to retry all terms
+                            break
+                        else:
+                            # Reset counter for non-infrastructure errors and continue with next term
+                            consecutive_infrastructure_failures = 0
                     else:
-                        # Reset counter for non-infrastructure errors
+                        # Reset counter on successful search
                         consecutive_infrastructure_failures = 0
-                else:
-                    # Reset counter on successful search
-                    consecutive_infrastructure_failures = 0
+                        
+                        if success and matches:
+                            found_match = True
+                            successful_term = term
+                            final_matches = matches
+                            print(f"[@controller:ADBVerification:waitForElementToAppear] SUCCESS: Found element using term '{term}'")
+                            break  # Found a match, no need to try other terms
                 
-                if success and matches:
+                if found_match:
                     elapsed = time.time() - start_time
-                    message = f"Element found after {elapsed:.1f}s"
+                    message = f"Element found after {elapsed:.1f}s using term '{successful_term}'"
                     print(f"[@controller:ADBVerification:waitForElementToAppear] SUCCESS: {message}")
                     
                     result_data = {
                         'search_term': search_term,
+                        'successful_term': successful_term,
+                        'attempted_terms': terms,
                         'wait_time': elapsed,
-                        'total_matches': len(matches),
-                        'matches': matches,
+                        'total_matches': len(final_matches),
+                        'matches': final_matches,
                         'search_details': {
                             'case_sensitive': False,
                             'search_method': 'contains_any_attribute',
-                            'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name']
+                            'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name'],
+                            'fallback_strategy': len(terms) > 1
                         }
                     }
                     
-                    print(f"[@controller:ADBVerification:waitForElementToAppear] Found {len(matches)} matching elements:")
-                    for i, match in enumerate(matches, 1):
+                    print(f"[@controller:ADBVerification:waitForElementToAppear] Found {len(final_matches)} matching elements:")
+                    for i, match in enumerate(final_matches, 1):
                         print(f"[@controller:ADBVerification:waitForElementToAppear]   {i}. Element {match['element_id']}: {match['match_reason']}")
                     
                     return True, message, result_data
@@ -234,13 +318,16 @@ class ADBVerificationController:
             
             result_data = {
                 'search_term': search_term,
+                'attempted_terms': terms,
                 'wait_time': elapsed,
                 'timeout_reached': True,
                 'search_details': {
                     'case_sensitive': False,
                     'search_method': 'contains_any_attribute',
-                    'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name']
-                }
+                    'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name'],
+                    'fallback_strategy': len(terms) > 1
+                },
+                'last_error': final_error
             }
             
             return False, message, result_data
@@ -259,10 +346,11 @@ class ADBVerificationController:
 
     def waitForElementToDisappear(self, search_term: str, timeout: float = 10.0, check_interval: float = 1.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
-        Wait for an element matching search_term to disappear.
+        Wait for an element matching search_term to disappear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
         Args:
             search_term: The term to search for (case-insensitive, searches all attributes)
+                        Can use pipe-separated terms: "text1|text2|text3"
             timeout: Maximum time to wait in seconds (default: 10.0)
             check_interval: Time between checks in seconds (default: 1.0)
         
@@ -272,57 +360,90 @@ class ADBVerificationController:
         try:
             print(f"[@controller:ADBVerification:waitForElementToDisappear] Waiting for '{search_term}' to disappear (timeout: {timeout}s)")
             
+            # Check if we have pipe-separated terms
+            if '|' in search_term:
+                terms = [term.strip() for term in search_term.split('|') if term.strip()]
+                print(f"[@controller:ADBVerification:waitForElementToDisappear] Using fallback strategy with {len(terms)} terms: {terms}")
+            else:
+                terms = [search_term]
+                print(f"[@controller:ADBVerification:waitForElementToDisappear] Using single search term: '{search_term}'")
+            
             start_time = time.time()
             consecutive_infrastructure_failures = 0
             max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
             while time.time() - start_time < timeout:
-                success, matches, error = self.adb_utils.smart_element_search(self.device_id, search_term)
+                # Check if ANY of the terms still exist (element disappears when NONE are found)
+                any_term_found = False
+                successful_term = None
+                final_matches = []
+                final_error = None
                 
-                if error:
-                    print(f"[@controller:ADBVerification:waitForElementToDisappear] Search failed: {error}")
+                for i, term in enumerate(terms):
+                    if len(terms) > 1:
+                        print(f"[@controller:ADBVerification:waitForElementToDisappear] Checking {i+1}/{len(terms)}: Searching for '{term}'")
                     
-                    # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
-                    if any(infrastructure_error in error.lower() for infrastructure_error in [
-                        'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
-                        'adb connect failed', 'device not found', 'no devices', 'offline'
-                    ]):
-                        consecutive_infrastructure_failures += 1
-                        print(f"[@controller:ADBVerification:waitForElementToDisappear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
+                    success, matches, error = self.adb_utils.smart_element_search(self.device_id, term)
+                    
+                    if error:
+                        print(f"[@controller:ADBVerification:waitForElementToDisappear] Search failed for term '{term}': {error}")
+                        final_error = error
                         
-                        if consecutive_infrastructure_failures >= max_consecutive_failures:
-                            elapsed = time.time() - start_time
-                            error_message = f"Infrastructure failure: {error}"
-                            print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: Too many consecutive infrastructure failures")
+                        # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
+                        if any(infrastructure_error in error.lower() for infrastructure_error in [
+                            'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
+                            'adb connect failed', 'device not found', 'no devices', 'offline'
+                        ]):
+                            consecutive_infrastructure_failures += 1
+                            print(f"[@controller:ADBVerification:waitForElementToDisappear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
                             
-                            result_data = {
-                                'search_term': search_term,
-                                'wait_time': elapsed,
-                                'infrastructure_error': True,
-                                'error_details': error,
-                                'consecutive_failures': consecutive_infrastructure_failures
-                            }
+                            if consecutive_infrastructure_failures >= max_consecutive_failures:
+                                elapsed = time.time() - start_time
+                                error_message = f"Infrastructure failure: {error}"
+                                print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: Too many consecutive infrastructure failures")
+                                
+                                result_data = {
+                                    'search_term': search_term,
+                                    'wait_time': elapsed,
+                                    'infrastructure_error': True,
+                                    'error_details': error,
+                                    'consecutive_failures': consecutive_infrastructure_failures,
+                                    'attempted_terms': terms
+                                }
+                                
+                                return False, error_message, result_data
                             
-                            return False, error_message, result_data
+                            # Break out of term loop on infrastructure failure to retry all terms
+                            break
+                        else:
+                            # Reset counter for non-infrastructure errors and continue with next term
+                            consecutive_infrastructure_failures = 0
                     else:
-                        # Reset counter for non-infrastructure errors
+                        # Reset counter on successful search
                         consecutive_infrastructure_failures = 0
-                else:
-                    # Reset counter on successful search
-                    consecutive_infrastructure_failures = 0
+                        
+                        if success and matches:
+                            any_term_found = True
+                            successful_term = term
+                            final_matches.extend(matches)  # Collect all matches from all terms
+                            print(f"[@controller:ADBVerification:waitForElementToDisappear] Element still present using term '{term}'")
+                            # Continue checking other terms to get complete picture
                 
-                if not success or not matches:
+                # Element has disappeared if NO terms were found
+                if not any_term_found:
                     elapsed = time.time() - start_time
                     message = f"Element '{search_term}' disappeared after {elapsed:.1f}s"
                     print(f"[@controller:ADBVerification:waitForElementToDisappear] SUCCESS: {message}")
                     
                     result_data = {
                         'search_term': search_term,
+                        'attempted_terms': terms,
                         'wait_time': elapsed,
                         'search_details': {
                             'case_sensitive': False,
                             'search_method': 'contains_any_attribute',
-                            'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name']
+                            'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name'],
+                            'fallback_strategy': len(terms) > 1
                         }
                     }
                     
@@ -337,23 +458,26 @@ class ADBVerificationController:
             # Include details of still present elements in failure response
             result_data = {
                 'search_term': search_term,
+                'attempted_terms': terms,
                 'wait_time': elapsed,
                 'timeout_reached': True,
                 'element_still_present': True,
                 'search_details': {
                     'case_sensitive': False,
                     'search_method': 'contains_any_attribute',
-                    'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name']
-                }
+                    'searched_attributes': ['text', 'content_desc', 'resource_id', 'class_name'],
+                    'fallback_strategy': len(terms) > 1
+                },
+                'last_error': final_error
             }
             
             # Get final check to include element details in failure
             try:
-                final_success, final_matches, _ = self.adb_utils.smart_element_search(self.device_id, search_term)
-                if final_success and final_matches:
+                if successful_term and final_matches:
                     result_data['still_present_elements'] = final_matches
                     result_data['total_still_present'] = len(final_matches)
-                    print(f"[@controller:ADBVerification:waitForElementToDisappear] {len(final_matches)} elements still present")
+                    result_data['successful_term'] = successful_term
+                    print(f"[@controller:ADBVerification:waitForElementToDisappear] {len(final_matches)} elements still present using term '{successful_term}'")
                     for match in final_matches:
                         print(f"[@controller:ADBVerification:waitForElementToDisappear] Still present: Element {match['element_id']} - {match['match_reason']}")
             except:

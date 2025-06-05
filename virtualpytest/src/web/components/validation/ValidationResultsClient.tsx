@@ -32,6 +32,7 @@ import {
 import { useState, useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
 import { useValidationStore } from '../store/validationStore';
+import { useValidationColors } from '../../hooks/useValidationColors';
 import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationResultsClientProps {
@@ -46,6 +47,10 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
     setCurrentTestingNode,
     setCurrentTestingEdge 
   } = useValidationStore();
+  
+  // Import validation colors functions
+  const { initializeFromLastResults, resetValidationColors } = useValidationColors(treeId);
+  
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Process validation results and update colors when results are available
@@ -116,9 +121,20 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
     }
   }, [results, setNodeValidationStatus, setEdgeValidationStatus, setCurrentTestingNode, setCurrentTestingEdge]);
 
-  // Handle dialog close - maintain colors after closing
+  // Handle dialog close - reload colors from storage with fallback
   const handleClose = () => {
-    console.log('[@component:ValidationResultsClient] Closing results dialog, maintaining validation colors');
+    console.log('[@component:ValidationResultsClient] Closing results dialog, reloading validation colors from storage');
+    
+    try {
+      // Try to reload colors from stored validation results
+      initializeFromLastResults();
+      console.log('[@component:ValidationResultsClient] Successfully reloaded validation colors from storage');
+    } catch (error) {
+      console.error('[@component:ValidationResultsClient] Error reloading colors from storage, resetting to grey:', error);
+      // Fallback: reset all colors to grey if there's an issue with storage
+      resetValidationColors();
+    }
+    
     closeResults();
   };
 

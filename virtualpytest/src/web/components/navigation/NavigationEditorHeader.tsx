@@ -370,7 +370,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
         <>
           <ValidationPreviewClient treeId={treeId} />
           <ValidationResultsClient treeId={treeId} />
-          <ValidationProgressClient treeId={treeId} onUpdateNode={onUpdateNode} onUpdateEdge={onUpdateEdge} />
+          <ValidationProgressClient treeId={treeId} onUpdateNode={onUpdateNode} onUpdateEdge={onUpdateEdge} onSaveToDatabase={onSaveToDatabase} />
         </>
       )}
     </>

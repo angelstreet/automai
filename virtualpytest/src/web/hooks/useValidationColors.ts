@@ -66,11 +66,42 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
       return 'testing';
     }
 
-    // Check if we have validation results for this edge
-    const status = edgeValidationStatus.get(edgeId);
+    // Debug: Log what we're looking for
+    console.log(`[@hook:useValidationColors] Looking up validation status for edge: ${edgeId}`);
+    console.log(`[@hook:useValidationColors] Available validation statuses:`, Array.from(edgeValidationStatus.keys()));
+
+    // Check if we have validation results for this edge ID directly
+    let status = edgeValidationStatus.get(edgeId);
+    if (status) {
+      console.log(`[@hook:useValidationColors] Found direct match for edge ${edgeId}: ${status.status}`);
+      return status.status || 'untested';
+    }
+
+    // If not found by direct ID, try to find by source-target format
+    // Get the edge data to construct source-target ID
+    if (edges) {
+      const edgeData = edges.find(edge => edge.id === edgeId);
+      if (edgeData) {
+        const sourceTargetId = `${edgeData.source}-${edgeData.target}`;
+        console.log(`[@hook:useValidationColors] Trying source-target ID: ${sourceTargetId} for edge: ${edgeId}`);
+        status = edgeValidationStatus.get(sourceTargetId);
+        if (status) {
+          console.log(`[@hook:useValidationColors] Found edge validation by source-target ID: ${sourceTargetId} for edge: ${edgeId}, status: ${status.status}`);
+          return status.status || 'untested';
+        } else {
+          console.log(`[@hook:useValidationColors] No validation found for source-target ID: ${sourceTargetId}`);
+        }
+      } else {
+        console.log(`[@hook:useValidationColors] Could not find edge data for ID: ${edgeId}`);
+      }
+    } else {
+      console.log(`[@hook:useValidationColors] No edges array available for lookup`);
+    }
+
     // If no validation results exist, default to 'untested' (grey)
-    return status?.status || 'untested';
-  }, [edgeValidationStatus, currentTestingEdge, isValidating]);
+    console.log(`[@hook:useValidationColors] No validation status found for edge ${edgeId}, defaulting to untested`);
+    return 'untested';
+  }, [edgeValidationStatus, currentTestingEdge, isValidating, edges]);
 
   // Get complete node colors including validation status
   const getNodeColors = useCallback((nodeId: string, nodeType: NodeType, isRootNode: boolean = false): NodeColorResult => {
@@ -363,7 +394,13 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         if (edgeResult.from && edgeResult.to) {
           // Calculate confidence based on edge success and detailed results
           let confidence = 0;
-          if (edgeResult.success) {
+          let status: ValidationStatus = 'untested';
+          
+          if (edgeResult.skipped) {
+            // Skipped edges remain untested (grey)
+            confidence = 0;
+            status = 'untested';
+          } else if (edgeResult.success) {
             // Calculate confidence from action and verification results
             const actionSuccessRate = edgeResult.actionResults?.length > 0 
               ? edgeResult.actionResults.filter(a => a.success).length / edgeResult.actionResults.length 
@@ -374,14 +411,16 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
               : 1;
               
             confidence = (actionSuccessRate + verificationSuccessRate) / 2;
+            status = getValidationStatusFromConfidence(confidence);
           } else {
-            confidence = 0.1; // Low confidence for failed edges
+            // Failed edges get low confidence (red)
+            confidence = 0.1;
+            status = 'low';
           }
           
-          const status = getValidationStatusFromConfidence(confidence);
           const edgeId = `${edgeResult.from}-${edgeResult.to}`;
           
-          console.log(`[@hook:useValidationColors] Setting edge ${edgeId} status: ${status} (confidence: ${confidence})`);
+          console.log(`[@hook:useValidationColors] Setting edge ${edgeId} status: ${status} (confidence: ${confidence}, success: ${edgeResult.success}, skipped: ${edgeResult.skipped})`);
           store.setEdgeValidationStatus(edgeId, {
             status,
             confidence,

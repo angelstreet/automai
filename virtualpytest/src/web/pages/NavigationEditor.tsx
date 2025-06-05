@@ -80,6 +80,9 @@ import { deviceApi, Device } from '../services/deviceService';
 // Import the hook to access SSH session state
 import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
 
+// Import the useValidationColors hook
+import { useValidationColors } from '../hooks/useValidationColors';
+
 // Local interface for verification test results including ADB fields
 interface VerificationTestResult {
   success: boolean;
@@ -881,6 +884,24 @@ const NavigationEditorContent: React.FC = () => {
       setLastVerifiedNodeId(null);
     }
   }, [selectedNode?.id, lastVerifiedNodeId]);
+
+  // Initialize validation colors from storage when component mounts or treeId changes
+  const { initializeFromLastResults } = useValidationColors(currentTreeId || '', edges);
+  
+  useEffect(() => {
+    // Only initialize validation colors after edges are loaded and we have a tree ID
+    if (currentTreeId && edges && edges.length > 0) {
+      console.log(`[@component:NavigationEditor] Initializing validation colors for tree: ${currentTreeId} with ${edges.length} edges`);
+      try {
+        initializeFromLastResults();
+      } catch (error) {
+        console.error(`[@component:NavigationEditor] Error initializing validation colors:`, error);
+      }
+    } else if (currentTreeId && edges && edges.length === 0) {
+      // If we have a tree ID but no edges yet, wait for edges to load
+      console.log(`[@component:NavigationEditor] Waiting for edges to load before initializing validation colors`);
+    }
+  }, [currentTreeId, edges, initializeFromLastResults]);
 
   return (
     <Box sx={{ 

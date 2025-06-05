@@ -16,19 +16,81 @@ import { getValidationStatusFromConfidence } from '../../../config/validationCol
 
 interface ValidationProgressClientProps {
   treeId: string;
+  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+  onSaveToDatabase?: () => void; // Add callback to trigger auto-save
 }
 
-export default function ValidationProgressClient({ treeId }: ValidationProgressClientProps) {
+export default function ValidationProgressClient({ 
+  treeId, 
+  onUpdateEdge, 
+  onUpdateNode,
+  onSaveToDatabase 
+}: ValidationProgressClientProps) {
   const { isValidating, progress, showProgress } = useValidation(treeId);
+  const { resetForNewValidation } = useValidationColors(treeId);
   const { 
     setCurrentTestingNode, 
     setCurrentTestingEdge,
     setNodeValidationStatus,
-    setEdgeValidationStatus
+    setEdgeValidationStatus 
   } = useValidationStore();
-  
-  // Import the reset function from useValidationColors
-  const { resetForNewValidation } = useValidationColors(treeId);
+
+  // Helper function to update edge confidence with validation results
+  const updateEdgeConfidence = (edgeId: string, success: boolean) => {
+    if (!onUpdateEdge) {
+      console.warn('[@component:ValidationProgressClient] onUpdateEdge callback not provided - confidence will not be persisted!');
+      return;
+    }
+
+    // Update using the same pattern as EdgeSelectionPanel
+    // This will append the validation result to the first action's last_run_result array
+    // The parent update function will handle merging with existing edge data
+    const validationUpdate = {
+      actions: [{
+        last_run_result: [success] // Add validation result as most recent
+      }]
+    };
+
+    console.log(`[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`);
+    onUpdateEdge(edgeId, validationUpdate);
+  };
+
+  // Helper function to update node confidence with validation results
+  const updateNodeConfidence = (nodeId: string, success: boolean) => {
+    if (!onUpdateNode) {
+      console.warn('[@component:ValidationProgressClient] onUpdateNode callback not provided - confidence will not be persisted!');
+      return;
+    }
+
+    // Update using the same pattern as NodeSelectionPanel
+    // This will append the validation result to the first verification's last_run_result array
+    // The parent update function will handle merging with existing node data
+    const validationUpdate = {
+      verifications: [{
+        last_run_result: [success] // Add validation result as most recent
+      }]
+    };
+
+    console.log(`[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`);
+    onUpdateNode(nodeId, validationUpdate);
+  };
+
+  // Reset all colors when validation starts
+  useEffect(() => {
+    if (isValidating && progress?.currentStep === 1) {
+      console.log('[@component:ValidationProgressClient] Validation starting - resetting all colors to grey');
+      resetForNewValidation();
+    }
+  }, [isValidating, progress?.currentStep, resetForNewValidation]);
+
+  // Also reset when validation first becomes true (backup detection)
+  useEffect(() => {
+    if (isValidating && !progress) {
+      console.log('[@component:ValidationProgressClient] Validation started (no progress yet) - resetting all colors to grey');
+      resetForNewValidation();
+    }
+  }, [isValidating, progress, resetForNewValidation]);
 
   // Update current testing indicators based on progress
   useEffect(() => {
@@ -54,56 +116,65 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
       if (progress.currentEdgeStatus && progress.currentEdgeStatus !== 'testing') {
         const edgeId = `${progress.currentEdgeFrom}-${progress.currentEdgeTo}`;
         
-        // Determine validation status from edge status
+        // Determine validation status and calculate real confidence
         let validationStatus: 'high' | 'medium' | 'low' | 'untested' = 'untested';
         let confidence = 0;
+        let success = false;
 
         switch (progress.currentEdgeStatus) {
           case 'success':
-            // For successful edges, we'll assume high confidence unless we have actual data
             validationStatus = 'high';
-            confidence = 0.8;
+            confidence = 0.9; // High confidence for successful validation
+            success = true;
             break;
           case 'failed':
             validationStatus = 'low';
-            confidence = 0;
+            confidence = 0.1; // Low confidence for failed validation
+            success = false;
             break;
           case 'skipped':
             validationStatus = 'untested';
-            confidence = 0;
+            confidence = 0.5; // Neutral confidence for skipped
+            success = false;
             break;
           case 'completed':
-            // Use medium confidence for completed without explicit success/failure
             validationStatus = 'medium';
-            confidence = 0.6;
+            confidence = 0.7; // Medium confidence for completed
+            success = true;
             break;
         }
 
         if (progress.currentEdgeFrom && progress.currentEdgeTo) {
-          // Update edge status
+          // Update edge confidence in the actual navigation tree data
+          updateEdgeConfidence(edgeId, success);
+
+          // Update target node confidence in the actual navigation tree data
+          updateNodeConfidence(progress.currentEdgeTo, success);
+
+          // Update validation store for UI indicators
           setEdgeValidationStatus(edgeId, {
             status: validationStatus,
             confidence,
             lastTested: new Date()
           });
 
-          // Update target node status
           setNodeValidationStatus(progress.currentEdgeTo, {
             status: validationStatus,
             confidence,
             lastTested: new Date()
           });
 
-          console.log('[@component:ValidationProgressClient] Updated validation status', {
+          console.log('[@component:ValidationProgressClient] Updated validation status and confidence', {
             edgeId,
             nodeId: progress.currentEdgeTo,
             status: validationStatus,
-            confidence
+            confidence,
+            success
           });
         }
       }
     }
-  }, [progress, isValidating, setCurrentTestingNode, setCurrentTestingEdge, setNodeValidationStatus, setEdgeValidationStatus]);
+  }, [progress, isValidating, setCurrentTestingNode, setCurrentTestingEdge, setNodeValidationStatus, setEdgeValidationStatus, onUpdateEdge, onUpdateNode]);
 
   // Clear testing indicators when validation stops
   useEffect(() => {
@@ -114,21 +185,21 @@ export default function ValidationProgressClient({ treeId }: ValidationProgressC
     }
   }, [isValidating, setCurrentTestingNode, setCurrentTestingEdge]);
 
-  // Reset all colors when validation starts
+  // Auto-save when validation completes
   useEffect(() => {
-    if (isValidating && progress?.currentStep === 1) {
-      console.log('[@component:ValidationProgressClient] Validation starting - resetting all colors to grey');
-      resetForNewValidation();
-    }
-  }, [isValidating, progress?.currentStep, resetForNewValidation]);
+    // Check if validation just completed (was validating, now not validating, and we have progress data)
+    if (!isValidating && progress && onSaveToDatabase) {
+      console.log('[@component:ValidationProgressClient] Validation completed - auto-saving confidence updates to database');
+      
+      // Add a small delay to ensure all state updates are processed
+      const saveTimeout = setTimeout(() => {
+        onSaveToDatabase();
+        console.log('[@component:ValidationProgressClient] Auto-save triggered after validation completion');
+      }, 1000);
 
-  // Also reset when validation first becomes true (backup detection)
-  useEffect(() => {
-    if (isValidating && !progress) {
-      console.log('[@component:ValidationProgressClient] Validation started (no progress yet) - resetting all colors to grey');
-      resetForNewValidation();
+      return () => clearTimeout(saveTimeout);
     }
-  }, [isValidating, progress, resetForNewValidation]);
+  }, [isValidating, progress, onSaveToDatabase]);
 
   if (!showProgress || !isValidating) return null;
 
