@@ -25,8 +25,8 @@ import {
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  KeyboardArrowRight as KeyboardArrowRightIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
@@ -273,7 +273,7 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
                             onClick={() => toggleRow(index)}
                             sx={{ p: 0.25 }}
                           >
-                            {expandedRows.has(index) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            {expandedRows.has(index) ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
                           </IconButton>
                         )}
                       </TableCell>

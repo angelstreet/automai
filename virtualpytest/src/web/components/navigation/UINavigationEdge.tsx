@@ -32,8 +32,12 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
     return null;
   }
 
+  // Check if this is an entry edge
+  const isSourceEntryNode = sourceNode?.data?.type === 'entry' || sourceNode?.data?.node_type === 'entry';
+  const isEntryEdge = data?.isEntryEdge || sourceHandle === 'entry-source' || isSourceEntryNode;
+
   // Get edge colors based on validation status
-  const edgeColors = getEdgeColors(id);
+  const edgeColors = getEdgeColors(id, isEntryEdge);
 
   const [edgePath] = getBezierPath({
     sourceX,
@@ -44,9 +48,6 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
     targetPosition,
   });
 
-  // Check if this is an entry edge
-  const isEntryEdge = data?.isEntryEdge || sourceHandle === 'entry-source';
-
   return (
     <g className={edgeColors.className}>
       <path
@@ -54,7 +55,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
         style={{
           stroke: edgeColors.stroke,
           strokeWidth: edgeColors.strokeWidth,
-          strokeDasharray: isEntryEdge ? '8,4' : edgeColors.strokeDasharray,
+          strokeDasharray: edgeColors.strokeDasharray,
           opacity: edgeColors.opacity,
           fill: 'none',
           transition: 'all 0.3s ease',

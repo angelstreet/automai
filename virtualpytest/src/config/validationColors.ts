@@ -7,9 +7,9 @@
 export const NODE_TYPE_COLORS = {
   entry: {
     background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
-    border: '#d32f2f',
+    border: '#ffc107',
     textColor: '#ffffff',
-    badgeColor: '#d32f2f'
+    badgeColor: '#ffc107'
   },
   menu: {
     background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
@@ -117,9 +117,9 @@ export const EDGE_COLORS = {
     opacity: 1
   },
   entry: {
-    stroke: '#d32f2f',
+    stroke: '#ffc107',
     strokeWidth: 3,
-    strokeDasharray: '8,4',
+    strokeDasharray: '',
     opacity: 1
   }
 } as const;

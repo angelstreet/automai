@@ -76,6 +76,20 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     const validationStatus = getNodeValidationStatus(nodeId);
     const statusColors = VALIDATION_STATUS_COLORS[validationStatus];
 
+    // For entry nodes, always use yellow border regardless of validation status
+    if (nodeType === 'entry') {
+      return {
+        background: baseColors.background,
+        border: '#ffc107', // Always yellow for entry nodes
+        textColor: baseColors.textColor,
+        badgeColor: '#ffc107', // Always yellow for entry nodes
+        boxShadow: validationStatus === 'testing' 
+          ? `0 4px 12px rgba(255, 193, 7, 0.6), 0 0 20px rgba(255, 193, 7, 0.6)`
+          : `0 2px 8px rgba(255, 193, 7, 0.4)`,
+        className: validationStatus === 'testing' ? 'node-testing' : undefined
+      };
+    }
+
     // For root nodes, use enhanced styling
     if (isRootNode) {
       return {
@@ -133,6 +147,7 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
   const getHandleColors = useCallback((nodeId: string, handlePosition: HandlePosition, handleId?: string): HandleColorResult => {
     // First, try to find edges connected to this specific handle
     let handleValidationStatus: ValidationStatus = 'untested';
+    let isConnectedToEntryEdge = false;
     
     if (handleId && edges) {
       // Look for edges connected to this specific handle
@@ -141,6 +156,16 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         const edgeData = edges?.find(edge => edge.id === edgeId);
         if (!edgeData) {
           return false;
+        }
+        
+        // Check if this edge is an entry edge
+        const sourceNode = edges?.find(e => e.source === edgeData.source);
+        const isEntryEdge = edgeData.sourceHandle === 'entry-source' || 
+                           sourceNode?.data?.type === 'entry' ||
+                           edgeData.data?.isEntryEdge;
+        
+        if (isEntryEdge) {
+          isConnectedToEntryEdge = true;
         }
         
         // For source handles, check if this node is the source and handle matches
@@ -192,6 +217,17 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // If no specific edge status found, fall back to node validation status
     if (handleValidationStatus === 'untested') {
       handleValidationStatus = getNodeValidationStatus(nodeId);
+    }
+    
+    // Special handling for entry node handles or handles connected to entry edges
+    if (handleId === 'entry-source' || isConnectedToEntryEdge) {
+      return {
+        background: '#ffc107', // Always yellow for entry-related handles
+        boxShadow: handleValidationStatus === 'testing' 
+          ? `0 0 12px rgba(255, 193, 7, 0.6)`
+          : `0 1px 2px rgba(0,0,0,0.3)`,
+        className: handleValidationStatus === 'testing' ? 'handle-testing' : undefined
+      };
     }
     
     const handleColors = HANDLE_COLORS[handlePosition];
