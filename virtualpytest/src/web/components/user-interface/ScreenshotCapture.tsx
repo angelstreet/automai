@@ -60,8 +60,8 @@ export function ScreenshotCapture({
     
     console.log(`[@component:ScreenshotCapture] Processing image path: ${screenshotPath}`);
     
-    // NEW: Handle host-based capture URLs (HTTPS with /stream/captures/ path)
-    if (screenshotPath.startsWith('https://') && screenshotPath.includes('/stream/captures/')) {
+    // Handle host-based capture URLs (both HTTP and HTTPS with /stream/captures/ path)
+    if ((screenshotPath.startsWith('https://') || screenshotPath.startsWith('http://')) && screenshotPath.includes('/stream/captures/')) {
       console.log('[@component:ScreenshotCapture] Using host-based capture URL directly');
       return screenshotPath;
     }
@@ -234,7 +234,7 @@ export function ScreenshotCapture({
             ))}
           </Box>
           <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
-            {isSaving ? 'Saving screenshot...' : 'Capturing frames...Press stop to stop capturing'}
+            {isSaving ? 'Loading screenshot...' : 'Capturing frames...Press stop to stop capturing'}
           </Typography>
         </Box>
       )}

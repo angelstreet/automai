@@ -36,6 +36,7 @@ interface VideoCaptureProps {
   onAreaSelected?: (area: DragArea) => void;
   captureStartTime?: Date | null;
   captureEndTime?: Date | null;
+  isCapturing?: boolean;
   sx?: any;
 }
 
@@ -56,6 +57,7 @@ export function VideoCapture({
   onAreaSelected,
   captureStartTime,
   captureEndTime,
+  isCapturing = false,
   sx = {}
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -64,10 +66,33 @@ export function VideoCapture({
   
   // State for timestamped capture images
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
-  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  
+  // State for recording timer
+  const [recordingTime, setRecordingTime] = useState(0);
 
   // Get layout configuration based on device model
   const layoutConfig = getStreamViewerLayout(deviceModel);
+
+  // Recording timer effect - increments every second when capturing
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCapturing) {
+      console.log('[@component:VideoCapture] Starting recording timer');
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000); // Increment every second
+    } else {
+      console.log('[@component:VideoCapture] Stopping recording timer');
+      setRecordingTime(0); // Reset timer when not capturing
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isCapturing]);
 
   // Generate timestamped frame URLs based on capture duration (1 frame per second)
   const generateCaptureFrameUrls = (startTime: Date, frameCount: number) => {
@@ -89,7 +114,8 @@ export function VideoCapture({
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      const imageUrl = `https://${hostIp}:${hostPort}/stream/captures/capture_${frameTimestamp}.jpg`;
+      // Use HTTP instead of HTTPS to avoid SSL protocol errors
+      const imageUrl = `http://${hostIp}:${hostPort}/stream/captures/capture_${frameTimestamp}.jpg`;
       imageUrls.push(imageUrl);
       
       console.log(`[@component:VideoCapture] Frame ${i + 1}: ${frameTimestamp} -> ${imageUrl}`);
@@ -98,48 +124,29 @@ export function VideoCapture({
     return imageUrls;
   };
 
-  // Load captured images when totalFrames is set (after capture is stopped)
+  // Generate frame URLs when we have the required data
   useEffect(() => {
-    const loadCapturedImages = async () => {
-      if (totalFrames === 0 || !hostIp || !hostPort) {
-        console.log('[@component:VideoCapture] No frames to load or missing host info');
-        return;
-      }
-      
-      console.log(`[@component:VideoCapture] Loading ${totalFrames} captured frames...`);
-      setIsLoadingImages(true);
-      
-      try {
-        // Use the passed-in capture start time if available
-        if (captureStartTime) {
-          console.log('[@component:VideoCapture] Using passed capture start time:', captureStartTime);
-          
-          // Generate frame URLs based on actual start time and frame count
-          const frameUrls = generateCaptureFrameUrls(captureStartTime, totalFrames);
-          setCapturedImages(frameUrls);
-          
-          console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs`);
-        } else {
-          console.warn('[@component:VideoCapture] No capture start time provided, using current time as fallback');
-          // Fallback: use current time minus totalFrames seconds as start time
-          const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
-          
-          const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
-          setCapturedImages(frameUrls);
-        }
-      } catch (error) {
-        console.error('[@component:VideoCapture] Error generating frame URLs:', error);
-        // Fallback: use current time minus totalFrames seconds as start time
-        const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
-        
-        const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
-        setCapturedImages(frameUrls);
-      } finally {
-        setIsLoadingImages(false);
-      }
-    };
-
-    loadCapturedImages();
+    if (totalFrames === 0 || !hostIp || !hostPort) {
+      console.log('[@component:VideoCapture] No frames to load or missing host info');
+      setCapturedImages([]);
+      return;
+    }
+    
+    console.log(`[@component:VideoCapture] Generating ${totalFrames} frame URLs...`);
+    
+    // Use the passed-in capture start time if available
+    if (captureStartTime) {
+      console.log('[@component:VideoCapture] Using passed capture start time:', captureStartTime);
+      const frameUrls = generateCaptureFrameUrls(captureStartTime, totalFrames);
+      setCapturedImages(frameUrls);
+      console.log(`[@component:VideoCapture] Generated ${frameUrls.length} frame URLs`);
+    } else {
+      console.warn('[@component:VideoCapture] No capture start time provided, using current time as fallback');
+      // Fallback: use current time minus totalFrames seconds as start time
+      const fallbackStartTime = new Date(Date.now() - (totalFrames * 1000));
+      const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
+      setCapturedImages(frameUrls);
+    }
   }, [totalFrames, hostIp, hostPort, captureStartTime]);
 
   // Handle frame playback for captured images
@@ -188,18 +195,32 @@ export function VideoCapture({
     }
   };
 
-  // Get current image URL
+  // Get current image URL (same logic as ScreenshotCapture)
   const currentImageUrl = useMemo(() => {
     if (capturedImages.length === 0) return '';
     
     const imageUrl = capturedImages[currentValue] || capturedImages[0];
-    // Add cache busting parameter
+    
+    // Handle host-based capture URLs (both HTTP and HTTPS with /stream/captures/ path)
+    if ((imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) && imageUrl.includes('/stream/captures/')) {
+      console.log('[@component:VideoCapture] Using host-based capture URL directly');
+      return imageUrl;
+    }
+    
+    // Add cache busting parameter for other URLs
     const separator = imageUrl.includes('?') ? '&' : '?';
     return `${imageUrl}${separator}t=${Date.now()}`;
   }, [capturedImages, currentValue]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = capturedImages.length > 0 && onAreaSelected && imageRef.current;
+
+  // Format recording time as MM:SS
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <Box sx={{ 
@@ -214,8 +235,8 @@ export function VideoCapture({
       msUserSelect: 'none',
       ...sx 
     }}>
-      {/* Header with capture info - only show when we have frames */}
-      {capturedImages.length > 0 && (
+      {/* Header with capture info - show when recording or when we have frames */}
+      {(isCapturing || capturedImages.length > 0) && (
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
@@ -224,22 +245,30 @@ export function VideoCapture({
           borderBottom: '1px solid #333'
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {/* Status indicator */}
+            {/* Status indicator - blinking red when recording, green when showing captured frames */}
             <Box sx={{
               width: 8,
               height: 8,
               borderRadius: '50%',
-              backgroundColor: '#4caf50',
-              marginRight: 1
+              backgroundColor: isCapturing ? '#ff4444' : '#4caf50',
+              marginRight: 1,
+              // Add blinking animation when recording
+              ...(isCapturing && {
+                animation: 'blink 1s infinite',
+                '@keyframes blink': {
+                  '0%, 50%': { opacity: 1 },
+                  '51%, 100%': { opacity: 0.3 },
+                },
+              }),
             }} />
             <Typography variant="caption" sx={{ color: '#ffffff', fontSize: '10px' }}>
-              CAPTURED FRAMES
+              {isCapturing ? 'RECORDING' : 'CAPTURED FRAMES'}
             </Typography>
           </Box>
           
-          {/* Frame count */}
+          {/* Timer when recording, frame count when showing captured frames */}
           <Typography variant="caption" sx={{ color: '#cccccc', fontSize: '10px' }}>
-            {capturedImages.length} frames
+            {isCapturing ? formatRecordingTime(recordingTime) : `${capturedImages.length} frames`}
           </Typography>
         </Box>
       )}
@@ -264,8 +293,8 @@ export function VideoCapture({
           />
         )}
 
-        {/* Captured images display */}
-        {capturedImages.length > 0 && currentImageUrl && (
+        {/* Captured images display - same logic as ScreenshotCapture */}
+        {capturedImages.length > 0 && currentImageUrl && !isCapturing && (
           <img 
             ref={imageRef}
             src={currentImageUrl}
@@ -282,39 +311,46 @@ export function VideoCapture({
             onLoad={handleImageLoad}
             onError={(e) => {
               console.error(`[@component:VideoCapture] Failed to load image: ${(e.target as HTMLImageElement).src}`);
-              // Keep the current image instead of showing an error placeholder
+              // Same error handling as ScreenshotCapture
+              (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
             }}
           />
         )}
 
-        {/* Loading state */}
-        {isLoadingImages && (
+        {/* Loading state when recording */}
+        {isCapturing && (
           <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             width: '100%',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'transparent',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            zIndex: 10
           }}>
+            {/* Simple carousel-style loading */}
             <Box sx={{
               display: 'flex',
               gap: 1,
-              alignItems: 'center',
-              mb: 2
+              alignItems: 'center'
             }}>
               {[0, 1, 2].map((index) => (
                 <Box
                   key={index}
                   sx={{
-                    width: 12,
-                    height: 12,
+                    width: 8,
+                    height: 8,
                     borderRadius: '50%',
-                    backgroundColor: '#4caf50',
-                    animation: 'loadPulse 1.4s ease-in-out infinite both',
+                    backgroundColor: '#ff4444',
+                    animation: 'pulse 1.4s ease-in-out infinite both',
                     animationDelay: `${index * 0.16}s`,
-                    '@keyframes loadPulse': {
+                    '@keyframes pulse': {
                       '0%, 80%, 100%': {
                         transform: 'scale(0)',
                         opacity: 0.5,
@@ -328,14 +364,14 @@ export function VideoCapture({
                 />
               ))}
             </Box>
-            <Typography variant="body2" sx={{ color: '#ffffff', textAlign: 'center' }}>
-              Loading captured frames...
+            <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center', mt: 2 }}>
+              Recording in progress... {formatRecordingTime(recordingTime)}
             </Typography>
           </Box>
         )}
 
-        {/* Placeholder when no frames available */}
-        {!isLoadingImages && capturedImages.length === 0 && (
+        {/* Placeholder when no frames available and not recording */}
+        {capturedImages.length === 0 && !isCapturing && (
           <Box sx={{
             width: '100%',
             height: '100%',
@@ -353,7 +389,7 @@ export function VideoCapture({
       </Box>
 
       {/* Playback controls - only show when we have captured frames - higher z-index */}
-      {capturedImages.length > 0 && !isLoadingImages && (
+      {capturedImages.length > 0 && (
         <Box sx={{ 
           position: 'absolute',
           bottom: 0,

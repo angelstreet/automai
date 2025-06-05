@@ -90,17 +90,6 @@ export function ScreenDefinitionEditor({
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
-  // Capture state
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [captureStats, setCaptureStats] = useState<CaptureStats | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  // Extract AV config for easier access
-  const avConfig = deviceConfig?.av?.parameters;
-  
-  // Add state to track stop button click
-  const [isStoppingCapture, setIsStoppingCapture] = useState(false);
-  
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | undefined>(undefined);
   const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
@@ -111,46 +100,32 @@ export function ScreenDefinitionEditor({
   // Stream status state - without polling
   const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
   
-  // Video capture state
+  // Video capture state - simplified for new timestamp-only logic
   const [captureFrames, setCaptureFrames] = useState<string[]>([]);
+  
+  // Capture timing state - core of new simple logic
+  const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
+  const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
   
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
   const [savedFrameCount, setSavedFrameCount] = useState(0);
   
+  // Capture state
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isStoppingCapture, setIsStoppingCapture] = useState(false);
+  
+  // Remove obsolete capture stats and polling
+  const [captureStats, setCaptureStats] = useState<any>(null);
+  
+  // UI state
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Extract AV config for easier access
+  const avConfig = deviceConfig?.av?.parameters;
+  
   // Screenshot loading state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
-  
-  // Capture timing state
-  const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
-  const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
-  
-  // Poll for frame count during capture - lightweight polling just for frame count
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isCapturing && !isSaving) {
-      interval = setInterval(async () => {
-        try {
-          const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/status');
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.current_frame !== undefined) {
-              setSavedFrameCount(data.current_frame);
-            }
-          }
-        } catch (error) {
-          // Silently ignore polling errors during capture
-        }
-      }, 1000); // Check every second
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isCapturing, isSaving]);
   
   const [resolutionInfo, setResolutionInfo] = useState<{
     device: { width: number; height: number } | null;
@@ -239,7 +214,7 @@ export function ScreenDefinitionEditor({
     }
   }, [isConnected]);
   
-  // Start video capture - simplified for new architecture
+  // Start video capture - new simple logic: just record timestamp and show LED
   const handleStartCapture = async () => {
     console.log(`[@component:ScreenDefinitionEditor] handleStartCapture called - viewMode: ${viewMode}, isConnected: ${isConnected}, isCapturing: ${isCapturing}`);
     
@@ -263,11 +238,10 @@ export function ScreenDefinitionEditor({
       
       // After restart, automatically proceed with capture start
       console.log('[@component:ScreenDefinitionEditor] Stream restarted, now starting capture...');
-      // Don't return here, continue with the capture logic below
     }
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Starting video capture...');
+      console.log('[@component:ScreenDefinitionEditor] Starting video capture (timestamp tracking only)...');
       
       // Record capture start time in Zurich timezone
       const startTime = new Date();
@@ -276,7 +250,7 @@ export function ScreenDefinitionEditor({
       
       console.log('[@component:ScreenDefinitionEditor] Capture start time:', startTime.toISOString());
       
-      // Reset frame count and set capturing state
+      // Reset frame count and set capturing state (just for UI)
       setSavedFrameCount(0);
       setIsCapturing(true);
       
@@ -285,36 +259,9 @@ export function ScreenDefinitionEditor({
         await restartStream();
       }
       
-      // Call the capture start API directly
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          device_model: deviceModel,
-          video_device: avConfig?.video_device || '/dev/video0',
-          start_time: startTime.toISOString() // Send start time to server
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[@component:ScreenDefinitionEditor] Capture start API error:', errorText);
-        setIsCapturing(false);
-        setCaptureStartTime(null);
-        return;
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('[@component:ScreenDefinitionEditor] Capture started successfully');
-        // Stay in stream view - show red recording dot over stream
-        console.log('[@component:ScreenDefinitionEditor] Capture running in background, staying in stream view');
-      } else {
-        console.error('[@component:ScreenDefinitionEditor] Capture start failed:', data.error);
-        setIsCapturing(false);
-        setCaptureStartTime(null);
-      }
+      // No backend API calls - host handles capture automatically
+      console.log('[@component:ScreenDefinitionEditor] Capture started - host will handle frame capture automatically');
+      console.log('[@component:ScreenDefinitionEditor] Showing red LED, staying in stream view');
       
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
@@ -323,12 +270,12 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Stop video capture - simplified for new architecture
+  // Stop video capture - new simple logic: calculate duration and switch to video view
   const handleStopCapture = async () => {
     if (!isCapturing || isStoppingCapture) return;
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Stopping video capture...');
+      console.log('[@component:ScreenDefinitionEditor] Stopping video capture (timestamp tracking only)...');
       
       // Record capture end time
       const endTime = new Date();
@@ -348,49 +295,21 @@ export function ScreenDefinitionEditor({
       // Disable the stop button to prevent multiple clicks
       setIsStoppingCapture(true);
       
-      // Call the capture stop API directly
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/capture/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          end_time: endTime.toISOString(),
-          expected_frames: expectedFrames
-        })
-      });
+      // No backend API calls - just local state management
+      console.log('[@component:ScreenDefinitionEditor] Capture stopped - no backend calls needed');
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[@component:ScreenDefinitionEditor] Capture stop API error:', errorText);
+      // Set up for viewing captured frames
+      if (expectedFrames > 0) {
+        setSavedFrameCount(expectedFrames);
+        setVideoFramesPath('/tmp/captures'); // Not used, but kept for compatibility
+        setTotalFrames(expectedFrames);
+        setCurrentFrame(0); // Start with first frame
+        setViewMode('capture'); // Switch to capture view
+        console.log(`[@component:ScreenDefinitionEditor] Switching to capture view with ${expectedFrames} frames`);
       } else {
-        const data = await response.json();
-        if (data.success) {
-          console.log('[@component:ScreenDefinitionEditor] Capture stopped successfully');
-          // Use expected frames if API doesn't return frame count
-          const finalFrameCount = data.frames_downloaded || expectedFrames;
-          setSavedFrameCount(finalFrameCount);
-          
-          // Set up for viewing captured frames
-          if (finalFrameCount > 0) {
-            setVideoFramesPath('/tmp/captures'); // Path where capture frames are stored
-            setTotalFrames(finalFrameCount);
-            setCurrentFrame(0); // Start with first frame
-            setViewMode('capture'); // Switch to capture view
-            console.log(`[@component:ScreenDefinitionEditor] Switching to capture view with ${finalFrameCount} frames`);
-          } else {
-            console.log('[@component:ScreenDefinitionEditor] No frames captured, staying in stream view');
-          }
-        } else {
-          console.error('[@component:ScreenDefinitionEditor] Capture stop failed:', data.error);
-          // Use expected frames as fallback
-          setSavedFrameCount(expectedFrames);
-          if (expectedFrames > 0) {
-            setVideoFramesPath('/tmp/captures');
-            setTotalFrames(expectedFrames);
-            setCurrentFrame(0);
-            setViewMode('capture');
-          }
-        }
+        console.log('[@component:ScreenDefinitionEditor] No frames expected (duration too short), staying in stream view');
       }
+      
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', error);
       // Use expected frames as fallback
@@ -476,6 +395,10 @@ export function ScreenDefinitionEditor({
       const hostUrl = `https://${avConfig?.host_ip}:444/stream/captures/capture_${timestamp}.jpg`;
       
       console.log('[@component:ScreenDefinitionEditor] Built host screenshot URL:', hostUrl);
+      
+      // Add 300ms delay before displaying the screenshot to account for real-time stream capture
+      console.log('[@component:ScreenDefinitionEditor] Adding 600ms delay before displaying screenshot...');
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       // Set the host URL directly - no file transfer needed
       setLastScreenshotPath(hostUrl);

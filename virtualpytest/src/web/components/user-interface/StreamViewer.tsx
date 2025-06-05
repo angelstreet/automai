@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
+import { StreamClickOverlay } from './StreamClickOverlay';
 
 interface StreamViewerProps {
   streamUrl?: string;
@@ -11,6 +12,11 @@ interface StreamViewerProps {
   videoElementRef?: React.RefObject<HTMLVideoElement>;
   model?: string;
   layoutConfig?: StreamViewerLayoutConfig; // Allow direct override if needed
+  // New props for click functionality
+  enableClick?: boolean;
+  deviceResolution?: { width: number; height: number };
+  deviceId?: string;
+  onTap?: (x: number, y: number) => void;
 }
 
 export function StreamViewer({
@@ -21,6 +27,10 @@ export function StreamViewer({
   videoElementRef,
   model,
   layoutConfig,
+  enableClick,
+  deviceResolution,
+  deviceId,
+  onTap,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -443,10 +453,28 @@ export function StreamViewer({
           )}
         </Box>
       )}
+
+      {/* Stream Click Overlay - only show when click is enabled and stream is loaded */}
+      {enableClick && 
+       streamLoaded && 
+       !requiresUserInteraction && 
+       deviceResolution && 
+       videoRef.current && (
+        <StreamClickOverlay
+          videoRef={videoRef}
+          deviceResolution={deviceResolution}
+          deviceId={deviceId}
+          onTap={onTap}
+        />
+      )}
     </Box>
   );
 }
 
 export default React.memo(StreamViewer, (prevProps, nextProps) => {
-  return prevProps.streamUrl === nextProps.streamUrl && prevProps.isStreamActive === nextProps.isStreamActive;
+  return prevProps.streamUrl === nextProps.streamUrl && 
+         prevProps.isStreamActive === nextProps.isStreamActive &&
+         prevProps.enableClick === nextProps.enableClick &&
+         prevProps.deviceId === nextProps.deviceId &&
+         JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution);
 });
