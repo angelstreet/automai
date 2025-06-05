@@ -187,51 +187,9 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
   }, [getEdgeValidationStatus]);
 
   // Get handle colors for specific position and validation status
-  const getHandleColors = useCallback((nodeId: string, handlePosition: HandlePosition, handleId?: string): HandleColorResult => {
-    // First, check if this node itself is an entry node by looking it up in the edges/nodes
-    let isEntryNode = false;
-    if (edges) {
-      // Find the node in the edges array to get its type
-      const nodeData = edges.find(edge => edge.source === nodeId || edge.target === nodeId);
-      if (nodeData) {
-        // Check source node
-        const sourceNodeInEdges = edges.find(e => e.source === nodeId);
-        if (sourceNodeInEdges) {
-          const sourceNode = edges.find(e => e.id === sourceNodeInEdges.source);
-          if (sourceNode?.data?.type === 'entry') {
-            isEntryNode = true;
-          }
-        }
-        // Check target node  
-        const targetNodeInEdges = edges.find(e => e.target === nodeId);
-        if (targetNodeInEdges) {
-          const targetNode = edges.find(e => e.id === targetNodeInEdges.target);
-          if (targetNode?.data?.type === 'entry') {
-            isEntryNode = true;
-          }
-        }
-      }
-      
-      // Alternative approach: look for nodes directly in the edges array
-      // This is a bit hacky but works with the current data structure
-      const allNodeIds = new Set([...edges.map(e => e.source), ...edges.map(e => e.target)]);
-      if (allNodeIds.has(nodeId)) {
-        // Check if any edge has this node as source with entry type
-        const hasEntrySource = edges.some(edge => 
-          edge.source === nodeId && (
-            edge.sourceHandle === 'entry-source' || 
-            edge.data?.isEntryEdge ||
-            edge.data?.type === 'entry'
-          )
-        );
-        if (hasEntrySource) {
-          isEntryNode = true;
-        }
-      }
-    }
-
+  const getHandleColors = useCallback((nodeId: string, handlePosition: HandlePosition, handleId?: string, nodeType?: NodeType): HandleColorResult => {
     // For entry nodes, ALL handles should be yellow regardless of validation status
-    if (isEntryNode || handleId === 'entry-source') {
+    if (nodeType === 'entry' || handleId === 'entry-source') {
       const validationStatus = getNodeValidationStatus(nodeId);
       return {
         background: '#ffc107', // Always yellow for entry node handles

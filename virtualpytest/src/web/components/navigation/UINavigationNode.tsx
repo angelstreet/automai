@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
+import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../../config/validationColors';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
   data, 
@@ -15,19 +16,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   
   // Entry node styling - small circular point
   if (isEntryNode) {
+    const entryColors = NODE_TYPE_COLORS.entry;
     return (
       <div
         style={{
           width: '40px',
           height: '40px',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
-          border: '3px solid #fff',
+          background: entryColors.background,
+          border: `3px solid ${entryColors.border}`,
           boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.6)' : '0 2px 8px rgba(211, 47, 47, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white',
+          color: entryColors.textColor,
           fontSize: '16px',
           fontWeight: 'bold',
           position: 'relative',
@@ -46,15 +48,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           isConnectableStart={false}
           isConnectableEnd={false}
           style={{ 
-            background: '#fff',
+            background: entryColors.border,
             width: '12px', 
             height: '12px',
-            border: '2px solid #d32f2f',
+            border: '2px solid #fff',
             borderRadius: '50%',
             right: -6,
             top: '50%',
             transform: 'translateY(-50%)',
-            opacity: 0.5,
+            opacity: 1,
             cursor: 'not-allowed',
           }} 
         />
@@ -129,8 +131,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             position: 'absolute',
             top: '4px',
             right: '4px',
-            backgroundColor: '#d32f2f',
-            color: 'white',
+            backgroundColor: UI_BADGE_COLORS.root.background,
+            color: UI_BADGE_COLORS.root.textColor,
             fontSize: '10px',
             fontWeight: 'bold',
             padding: '2px 6px',

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UINavigationNode } from '../../types/navigationTypes';
 import { useValidationColors } from '../../hooks/useValidationColors';
+import { UI_BADGE_COLORS } from '../../../config/validationColors';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
   data, 
@@ -17,10 +18,10 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const nodeColors = getNodeColors(id, 'menu', false);
   
   // Get handle colors for different positions
-  const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source');
-  const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target');
-  const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target');
-  const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source');
+  const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source', 'menu');
+  const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target', 'menu');
+  const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target', 'menu');
+  const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,8 +60,8 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           position: 'absolute',
           top: '4px',
           right: '4px',
-          backgroundColor: nodeColors.badgeColor,
-          color: 'white',
+          backgroundColor: UI_BADGE_COLORS.menu.background,
+          color: UI_BADGE_COLORS.menu.textColor,
           fontSize: '10px',
           fontWeight: 'bold',
           padding: '2px 6px',
@@ -70,6 +71,26 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       >
         MENU
       </div>
+
+      {/* Root Node Indicator */}
+      {data.is_root && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '4px',
+            backgroundColor: UI_BADGE_COLORS.root.background,
+            color: UI_BADGE_COLORS.root.textColor,
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 10,
+          }}
+        >
+          ROOT
+        </div>
+      )}
 
       {/* Top Handles for Menu Navigation - Only show for non-root nodes */}
       {!data.is_root && (

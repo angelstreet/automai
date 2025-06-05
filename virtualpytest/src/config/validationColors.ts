@@ -43,6 +43,22 @@ export const NODE_TYPE_COLORS = {
   }
 } as const;
 
+// UI Badge colors for different badge types
+export const UI_BADGE_COLORS = {
+  root: {
+    background: '#d32f2f',
+    textColor: '#ffffff'
+  },
+  menu: {
+    background: '#ff8f00',
+    textColor: '#ffffff'
+  },
+  entry: {
+    background: '#ffc107',
+    textColor: '#ffffff'
+  }
+} as const;
+
 // Status colors based on validation confidence levels
 export const VALIDATION_STATUS_COLORS = {
   untested: {
