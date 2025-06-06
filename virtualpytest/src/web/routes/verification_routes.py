@@ -1225,10 +1225,14 @@ def process_area_reference():
                 processed_area = host_result.get('processed_area')
                 print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
                 
+                # Build the correct URL using the hardcoded host IP and port 444
+                image_url = f'https://77.56.53.130:444{cropped_path}'
+                print(f"[@route:process_area_reference] Built image URL: {image_url}")
+                
                 return jsonify({
                     'success': True,
                     'message': f'Reference image processed on host: {reference_name}',
-                    'image_url': cropped_path,
+                    'image_url': image_url,
                     'processed_area': processed_area
                 })
             else:
