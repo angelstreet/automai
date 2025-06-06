@@ -233,11 +233,11 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       />
       
       {/* Line 3: Reference Image Selector or Manual Input - exclude ADB verifications */}
-      {verification.requiresInput && verification.id && verification.controller_type !== 'adb' && (
+      {verification.id && (verification.controller_type === 'image' || verification.controller_type === 'text') && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {/* First Row: Reference selection and test result status */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {verification.requiresInput && verification.id && modelReferences.length > 0 ? (
+            {verification.id && modelReferences.length > 0 ? (
               <>
                 {/* Reference Dropdown - shows both image and text references */}
                 <FormControl size="small" sx={{ width: 250 }}>
@@ -290,12 +290,12 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                   </Select>
                 </FormControl>
               </>
-            ) : verification.requiresInput && verification.id ? (
+            ) : verification.id ? (
               /* Manual input for text/image when no references available */
               <TextField
                 size="small"
-                label={verification.inputLabel || 'Input Value'}
-                placeholder={verification.inputPlaceholder || 'Enter value...'}
+                label={verification.inputLabel || (verification.controller_type === 'image' ? 'Image Path' : 'Text to Find')}
+                placeholder={verification.inputPlaceholder || (verification.controller_type === 'image' ? 'Enter image path...' : 'Enter text or regex pattern...')}
                 value={verification.inputValue || ''}
                 onChange={(e) => onUpdateVerification(index, { inputValue: e.target.value })}
                 sx={{ width: 250 }}

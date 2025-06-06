@@ -76,6 +76,8 @@ interface NodeEditDialogProps {
   selectedDevice?: string | null;
   // Add isControlActive like EdgeEditDialog
   isControlActive?: boolean;
+  // Add model prop for verification references
+  model?: string;
 }
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -90,6 +92,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isVerificationActive = false,
   selectedDevice = null,
   isControlActive = false,
+  model,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
@@ -173,9 +176,33 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   const isFormValid = () => {
     const basicFormValid = nodeForm.label.trim();
-    const verificationsValid = !nodeForm.verifications || nodeForm.verifications.every(verification => 
-      !verification.id || !verification.requiresInput || (verification.inputValue && verification.inputValue.trim())
-    );
+    const verificationsValid = !nodeForm.verifications || nodeForm.verifications.every(verification => {
+      // Skip verifications that don't have an id (not configured yet)
+      if (!verification.id) return true;
+      
+      if (verification.controller_type === 'image') {
+        // Image verifications need a reference image
+        const hasImagePath = verification.params?.full_path || 
+                            verification.params?.reference_path || 
+                            verification.inputValue;
+        return Boolean(hasImagePath);
+      } else if (verification.controller_type === 'text') {
+        // Text verifications need text to search for
+        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        return Boolean(hasText);
+      } else if (verification.controller_type === 'adb') {
+        // ADB verifications need search criteria
+        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+        return Boolean(hasSearchTerm);
+      }
+      
+      // For other types, check if requiresInput is set and if so, validate accordingly
+      if (verification.requiresInput) {
+        return Boolean(verification.inputValue && verification.inputValue.trim() !== '');
+      }
+      
+      return true;
+    });
     return basicFormValid && verificationsValid;
   };
 
@@ -525,6 +552,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             }
             loading={loadingVerifications}
             error={verificationError}
+            model={model}
           />
 
           {gotoResult && (

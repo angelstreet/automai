@@ -340,8 +340,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     if (verifications.length === 0) return false;
     
     return verifications.every(verification => {
-      // Skip verifications that don't require input
-      if (!verification.requiresInput || !verification.id) return true;
+      // Skip verifications that don't have an id (not configured yet)
+      if (!verification.id) return true;
       
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
@@ -357,6 +357,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         // ADB verifications need search criteria
         const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
         return Boolean(hasSearchTerm);
+      }
+      
+      // For other types, check if requiresInput is set and if so, validate accordingly
+      if (verification.requiresInput) {
+        return Boolean(verification.inputValue && verification.inputValue.trim() !== '');
       }
       
       return true;

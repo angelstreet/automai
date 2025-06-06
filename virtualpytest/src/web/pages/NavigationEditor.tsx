@@ -1470,6 +1470,7 @@ const NavigationEditorContent: React.FC = () => {
         isVerificationActive={isVerificationActive}
         selectedDevice={selectedDevice}
         isControlActive={isControlActive}
+        model={userInterface?.models?.[0] || 'android_mobile'}
       />
 
       {/* Edge Edit Dialog */}
