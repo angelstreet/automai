@@ -20,6 +20,13 @@ export interface VerificationEditorLayoutConfig {
   isMobileModel: boolean;
 }
 
+// Layout configuration for Remote components
+export interface RemoteLayoutConfig {
+  containerWidth: number;
+  fallbackImageWidth: number;
+  fallbackImageHeight: number;
+}
+
 /**
  * Determines if a model name refers to a mobile device
  * @param model The model name string
@@ -65,7 +72,7 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
   return mobile
     ? {
         width: 300,
-        height: 570,
+        height: 510,
         captureHeight: 200,
         objectFit: 'fill',
         isMobileModel: true,
@@ -77,4 +84,39 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
         objectFit: 'contain',
         isMobileModel: false,
       };
+};
+
+/**
+ * Get the appropriate Remote layout configuration based on remote type
+ * @param remoteType The remote type string (e.g., 'android-mobile', 'android-tv', 'ir', 'bluetooth')
+ * @returns RemoteLayoutConfig with the appropriate settings
+ */
+export const getRemoteLayout = (remoteType?: string): RemoteLayoutConfig => {
+  switch (remoteType) {
+    case 'android-mobile':
+      return {
+        containerWidth: 300,
+        fallbackImageWidth: 300,
+        fallbackImageHeight: 400,
+      };
+    case 'android-tv':
+      return {
+        containerWidth: 400,
+        fallbackImageWidth: 400,
+        fallbackImageHeight: 200,
+      };
+    case 'ir':
+    case 'bluetooth':
+      return {
+        containerWidth: 350,
+        fallbackImageWidth: 350,
+        fallbackImageHeight: 250,
+      };
+    default:
+      return {
+        containerWidth: 350,
+        fallbackImageWidth: 350,
+        fallbackImageHeight: 250,
+      };
+  }
 };
