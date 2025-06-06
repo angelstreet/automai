@@ -21,7 +21,6 @@ from .devicemodel_routes import devicemodel_bp
 from .screen_definition_routes import screen_definition_blueprint
 from .pathfinding_routes import pathfinding_bp
 from .validation_routes import validation_bp
-from .verification_routes import verification_bp
 from .verification_server_routes import verification_server_bp
 from .verification_host_routes import verification_host_bp
 from .power_routes import power_bp
@@ -45,7 +44,6 @@ def register_routes(app: Flask):
     app.register_blueprint(testcase_bp)
     app.register_blueprint(userinterface_bp)
     app.register_blueprint(devicemodel_bp)
-    app.register_blueprint(verification_bp)
     app.register_blueprint(verification_server_bp)
     app.register_blueprint(verification_host_bp)
     app.register_blueprint(screen_definition_blueprint, url_prefix='/api/virtualpytest/screen-definition')

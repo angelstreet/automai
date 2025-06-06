@@ -408,7 +408,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       });
 
       if (referenceType === 'image') {
-        // Save image reference
+        // Save image reference using new endpoint
         const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
@@ -418,17 +418,23 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             reference_name: referenceName,
             model_name: model,
             area: selectedArea,
+            reference_type: 'reference_image',
+            source_path: captureSourcePath  // Add source path to help build cropped filename
           }),
         });
 
-        if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
-          setSuccessMessage(`Image reference "${referenceName}" saved successfully!`);
+          const publicUrl = result.public_url;
+          setSuccessMessage(`Image reference "${referenceName}" saved successfully! Available at: ${publicUrl}`);
           setTempReferenceUrl('');
           setReferenceSaveCounter(prev => prev + 1);
           onReferenceSaved?.(referenceName);
         } else {
-          console.error('[@component:VerificationEditor] Failed to save image reference:', response.status);
+          console.error('[@component:VerificationEditor] Failed to save image reference:', result.error);
+          setSuccessMessage(`Failed to save image reference: ${result.error}`);
         }
       } else if (referenceType === 'text') {
         // Save text reference
