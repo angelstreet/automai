@@ -429,4 +429,204 @@ def save_reference():
         return jsonify({
             'success': False,
             'error': f'Reference save error: {str(e)}'
-        }), 500 
+        }), 500
+
+# =====================================================
+# SERVER-SIDE VERIFICATION EXECUTION (FORWARDS TO HOST)
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/verification/execute', methods=['POST'])
+def execute_verification():
+    """Forward single verification execution to host and return results with nginx URLs."""
+    try:
+        data = request.get_json()
+        verification = data.get('verification')
+        model = data.get('model', 'default')
+        verification_index = data.get('verification_index', 0)
+        source_path = data.get('source_path')  # Optional source image path
+        
+        print(f"[@route:execute_verification] Forwarding verification execution to host")
+        print(f"[@route:execute_verification] Verification: {verification.get('command') if verification else 'None'}")
+        print(f"[@route:execute_verification] Model: {model}")
+        
+        # Validate required parameters
+        if not verification:
+            return jsonify({
+                'success': False,
+                'error': 'verification is required'
+            }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
+        # Extract filename from source_path if provided
+        source_filename = None
+        if source_path:
+            parsed_url = urllib.parse.urlparse(source_path)
+            source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+            print(f"[@route:execute_verification] Using source filename: {source_filename}")
+        
+        # Forward verification execution to host
+        host_execute_url = f'http://{host_ip}:{host_port}/stream/execute-verification'
+        
+        execute_payload = {
+            'verification': verification,
+            'model': model,
+            'verification_index': verification_index,
+            'source_filename': source_filename
+        }
+        
+        print(f"[@route:execute_verification] Sending request to {host_execute_url}")
+        
+        try:
+            host_response = requests.post(host_execute_url, json=execute_payload, timeout=60, verify=False)
+            host_result = host_response.json()
+            
+            if host_result.get('success') is not None:  # Handle both success and failure cases
+                # Convert host paths to nginx-exposed URLs
+                if 'source_image_url' in host_result:
+                    host_result['source_image_url'] = f'https://77.56.53.130:444{host_result["source_image_url"]}'
+                if 'reference_image_url' in host_result:
+                    host_result['reference_image_url'] = f'https://77.56.53.130:444{host_result["reference_image_url"]}'
+                if 'result_overlay_url' in host_result:
+                    host_result['result_overlay_url'] = f'https://77.56.53.130:444{host_result["result_overlay_url"]}'
+                
+                print(f"[@route:execute_verification] Host execution completed: {host_result.get('success')}")
+                return jsonify(host_result)
+            else:
+                error_msg = host_result.get('error', 'Host verification execution failed')
+                print(f"[@route:execute_verification] Host execution failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host execution failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:execute_verification] Failed to connect to host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to host for verification execution: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:execute_verification] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Verification execution error: {str(e)}'
+        }), 500
+
+@verification_server_bp.route('/api/virtualpytest/verification/execute-batch', methods=['POST'])
+def execute_batch_verification():
+    """Forward batch verification execution to host and return consolidated results."""
+    try:
+        data = request.get_json()
+        verifications = data.get('verifications', [])
+        model = data.get('model', 'default')
+        node_id = data.get('node_id', 'unknown')
+        tree_id = data.get('tree_id', 'unknown')
+        
+        print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node: {node_id}")
+        print(f"[@route:execute_batch_verification] Model: {model}")
+        
+        # Validate required parameters
+        if not verifications:
+            return jsonify({
+                'success': False,
+                'error': 'verifications list is required'
+            }), 400
+        
+        # Execute verifications one by one on host
+        results = []
+        passed_count = 0
+        
+        for i, verification in enumerate(verifications):
+            print(f"[@route:execute_batch_verification] Executing verification {i+1}/{len(verifications)}: {verification.get('command')}")
+            
+            try:
+                # Call single verification endpoint
+                single_result = execute_single_verification_on_host(verification, model, i)
+                
+                if single_result.get('success'):
+                    passed_count += 1
+                
+                # Add verification metadata
+                single_result['verification_id'] = verification.get('id', f'verification_{i}')
+                single_result['verification_index'] = i
+                single_result['verification_command'] = verification.get('command')
+                
+                results.append(single_result)
+                
+            except Exception as e:
+                print(f"[@route:execute_batch_verification] Error executing verification {i+1}: {str(e)}")
+                results.append({
+                    'success': False,
+                    'error': f'Execution error: {str(e)}',
+                    'verification_id': verification.get('id', f'verification_{i}'),
+                    'verification_index': i,
+                    'verification_command': verification.get('command')
+                })
+        
+        # Calculate overall success
+        overall_success = passed_count > 0  # At least one verification passed
+        
+        print(f"[@route:execute_batch_verification] Batch completed: {passed_count}/{len(verifications)} passed")
+        
+        return jsonify({
+            'success': overall_success,
+            'results': results,
+            'passed_count': passed_count,
+            'total_verifications': len(verifications),
+            'node_id': node_id,
+            'tree_id': tree_id,
+            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed'
+        })
+        
+    except Exception as e:
+        print(f"[@route:execute_batch_verification] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Batch verification error: {str(e)}'
+        }), 500
+
+def execute_single_verification_on_host(verification, model, verification_index):
+    """Helper function to execute a single verification on host."""
+    try:
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
+        # Forward verification execution to host
+        host_execute_url = f'http://{host_ip}:{host_port}/stream/execute-verification'
+        
+        execute_payload = {
+            'verification': verification,
+            'model': model,
+            'verification_index': verification_index,
+            'source_filename': None  # Let host use latest capture
+        }
+        
+        host_response = requests.post(host_execute_url, json=execute_payload, timeout=60, verify=False)
+        host_result = host_response.json()
+        
+        # Convert host paths to nginx-exposed URLs
+        if host_result.get('success') is not None:
+            if 'source_image_url' in host_result:
+                host_result['source_image_url'] = f'https://77.56.53.130:444{host_result["source_image_url"]}'
+            if 'reference_image_url' in host_result:
+                host_result['reference_image_url'] = f'https://77.56.53.130:444{host_result["reference_image_url"]}'
+            if 'result_overlay_url' in host_result:
+                host_result['result_overlay_url'] = f'https://77.56.53.130:444{host_result["result_overlay_url"]}'
+        
+        return host_result
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Failed to connect to host: {str(e)}'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Execution error: {str(e)}'
+        } 

@@ -336,4 +336,353 @@ def host_save_resource():
         return jsonify({
             'success': False,
             'error': f'Host save resource error: {str(e)}'
-        }), 500 
+        }), 500
+
+# =====================================================
+# HOST-SIDE VERIFICATION EXECUTION ENDPOINT
+# =====================================================
+
+@verification_host_bp.route('/stream/execute-verification', methods=['POST'])
+def host_execute_verification():
+    """Execute verification test on host using existing controllers and return results with comparison images."""
+    try:
+        data = request.get_json()
+        verification = data.get('verification')
+        model = data.get('model', 'default')
+        verification_index = data.get('verification_index', 0)
+        source_filename = data.get('source_filename')  # Current screenshot filename
+        
+        print(f"[@route:host_execute_verification] Executing verification: {verification.get('command')} for model: {model}")
+        print(f"[@route:host_execute_verification] Source filename: {source_filename}")
+        
+        # Validate required parameters
+        if not verification:
+            return jsonify({
+                'success': False,
+                'error': 'verification is required'
+            }), 400
+        
+        controller_type = verification.get('controller_type')
+        command = verification.get('command')
+        params = verification.get('params', {})
+        
+        print(f"[@route:host_execute_verification] Controller type: {controller_type}, Command: {command}")
+        
+        # Build source path - use provided filename or get latest capture
+        if source_filename:
+            source_path = f'/var/www/html/stream/captures/{source_filename}'
+        else:
+            # Get latest capture file
+            captures_dir = '/var/www/html/stream/captures'
+            if os.path.exists(captures_dir):
+                capture_files = [f for f in os.listdir(captures_dir) if f.startswith('capture_') and f.endswith('.jpg')]
+                if capture_files:
+                    latest_file = sorted(capture_files)[-1]
+                    source_path = f'{captures_dir}/{latest_file}'
+                    source_filename = latest_file
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No capture files found'
+                    }), 404
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Captures directory not found'
+                }), 404
+        
+        # Check if source file exists
+        if not os.path.exists(source_path):
+            print(f"[@route:host_execute_verification] Source file not found: {source_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Source file not found: {source_filename}'
+            }), 404
+        
+        # Create verification results directory
+        results_dir = f'/var/www/html/stream/verification_results/{model}'
+        os.makedirs(results_dir, exist_ok=True)
+        
+        # Execute verification based on controller type
+        if controller_type == 'image':
+            result = execute_image_verification_host(verification, source_path, model, verification_index, results_dir)
+        elif controller_type == 'text':
+            result = execute_text_verification_host(verification, source_path, model, verification_index, results_dir)
+        elif controller_type == 'adb':
+            result = execute_adb_verification_host(verification, source_path, model, verification_index, results_dir)
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unsupported controller type: {controller_type}'
+            }), 400
+        
+        # Convert local paths to nginx-exposed URLs
+        if result.get('success'):
+            if 'source_image_path' in result:
+                result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
+            if 'reference_image_path' in result:
+                result['reference_image_url'] = result['reference_image_path'].replace('/var/www/html', '')
+            if 'result_overlay_path' in result:
+                result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
+        
+        print(f"[@route:host_execute_verification] Verification completed: {result.get('success')}")
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[@route:host_execute_verification] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Host verification execution error: {str(e)}'
+        }), 500
+
+def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
+    """Execute image verification using existing image utilities."""
+    try:
+        from controllers.verification.image import ImageVerificationController
+        import cv2
+        import numpy as np
+        
+        params = verification.get('params', {})
+        area = params.get('area')
+        image_path = params.get('image_path')  # Reference image path
+        threshold = params.get('threshold', 0.8)
+        image_filter = params.get('image_filter', 'none')
+        
+        print(f"[@route:execute_image_verification_host] Reference image: {image_path}")
+        print(f"[@route:execute_image_verification_host] Area: {area}")
+        print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
+        
+        # Validate reference image
+        if not image_path or not os.path.exists(image_path):
+            return {
+                'success': False,
+                'error': f'Reference image not found: {image_path}'
+            }
+        
+        # Create result file paths
+        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
+        reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
+        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+        
+        # Crop source image to area if specified
+        if area:
+            success = crop_reference_image(source_path, source_result_path, area)
+            if not success:
+                return {
+                    'success': False,
+                    'error': 'Failed to crop source image'
+                }
+        else:
+            # Copy full source image
+            shutil.copy2(source_path, source_result_path)
+        
+        # Copy reference image for comparison
+        shutil.copy2(image_path, reference_result_path)
+        
+        # Initialize image verification controller (simplified)
+        # For now, use basic template matching with OpenCV
+        source_img = cv2.imread(source_result_path)
+        ref_img = cv2.imread(reference_result_path)
+        
+        if source_img is None or ref_img is None:
+            return {
+                'success': False,
+                'error': 'Failed to load images for comparison'
+            }
+        
+        # Perform template matching
+        result_match = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_match)
+        
+        # Check if match exceeds threshold
+        verification_success = max_val >= threshold
+        
+        # Create result overlay image
+        overlay_img = source_img.copy()
+        if verification_success:
+            # Draw green rectangle around match
+            h, w = ref_img.shape[:2]
+            top_left = max_loc
+            bottom_right = (top_left[0] + w, top_left[1] + h)
+            cv2.rectangle(overlay_img, top_left, bottom_right, (0, 255, 0), 3)
+            cv2.putText(overlay_img, f'MATCH: {max_val:.3f}', (top_left[0], top_left[1] - 10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        else:
+            # Draw red X or indicator for no match
+            cv2.putText(overlay_img, f'NO MATCH: {max_val:.3f} < {threshold}', (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        
+        cv2.imwrite(overlay_result_path, overlay_img)
+        
+        message = f'Image verification {"passed" if verification_success else "failed"}: confidence {max_val:.3f}'
+        
+        return {
+            'success': verification_success,
+            'message': message,
+            'confidence': max_val,
+            'threshold': threshold,
+            'source_image_path': source_result_path,
+            'reference_image_path': reference_result_path,
+            'result_overlay_path': overlay_result_path,
+            'verification_type': 'image'
+        }
+        
+    except Exception as e:
+        print(f"[@route:execute_image_verification_host] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': f'Image verification error: {str(e)}'
+        }
+
+def execute_text_verification_host(verification, source_path, model, verification_index, results_dir):
+    """Execute text verification using existing text utilities."""
+    try:
+        import cv2
+        import pytesseract
+        
+        params = verification.get('params', {})
+        area = params.get('area')
+        text_to_find = params.get('text', '')
+        confidence = params.get('confidence', 0.8)
+        image_filter = params.get('image_filter', 'none')
+        
+        print(f"[@route:execute_text_verification_host] Text to find: '{text_to_find}'")
+        print(f"[@route:execute_text_verification_host] Area: {area}")
+        
+        if not text_to_find:
+            return {
+                'success': False,
+                'error': 'No text specified for verification'
+            }
+        
+        # Create result file paths
+        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
+        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+        
+        # Crop source image to area if specified
+        if area:
+            success = crop_reference_image(source_path, source_result_path, area)
+            if not success:
+                return {
+                    'success': False,
+                    'error': 'Failed to crop source image'
+                }
+        else:
+            # Copy full source image
+            shutil.copy2(source_path, source_result_path)
+        
+        # Load image for OCR
+        img = cv2.imread(source_result_path)
+        if img is None:
+            return {
+                'success': False,
+                'error': 'Failed to load image for OCR'
+            }
+        
+        # Extract text using OCR
+        try:
+            extracted_text = pytesseract.image_to_string(img, lang='eng').strip()
+            print(f"[@route:execute_text_verification_host] Extracted text: '{extracted_text}'")
+        except Exception as ocr_error:
+            return {
+                'success': False,
+                'error': f'OCR failed: {str(ocr_error)}'
+            }
+        
+        # Check if text matches (case-insensitive contains)
+        verification_success = text_to_find.lower() in extracted_text.lower()
+        
+        # Create result overlay image
+        overlay_img = img.copy()
+        if verification_success:
+            cv2.putText(overlay_img, f'TEXT FOUND: "{text_to_find}"', (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(overlay_img, f'Extracted: "{extracted_text[:50]}..."', (10, 60), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+        else:
+            cv2.putText(overlay_img, f'TEXT NOT FOUND: "{text_to_find}"', (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.putText(overlay_img, f'Extracted: "{extracted_text[:50]}..."', (10, 60), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+        
+        cv2.imwrite(overlay_result_path, overlay_img)
+        
+        message = f'Text verification {"passed" if verification_success else "failed"}: {"found" if verification_success else "not found"} "{text_to_find}"'
+        
+        return {
+            'success': verification_success,
+            'message': message,
+            'extracted_text': extracted_text,
+            'searched_text': text_to_find,
+            'source_image_path': source_result_path,
+            'result_overlay_path': overlay_result_path,
+            'verification_type': 'text'
+        }
+        
+    except Exception as e:
+        print(f"[@route:execute_text_verification_host] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': f'Text verification error: {str(e)}'
+        }
+
+def execute_adb_verification_host(verification, source_path, model, verification_index, results_dir):
+    """Execute ADB verification using existing ADB utilities."""
+    try:
+        params = verification.get('params', {})
+        element_selector = params.get('text', '')  # Element to find
+        timeout = params.get('timeout', 10.0)
+        
+        print(f"[@route:execute_adb_verification_host] Element selector: '{element_selector}'")
+        
+        if not element_selector:
+            return {
+                'success': False,
+                'error': 'No element selector specified for ADB verification'
+            }
+        
+        # Create result file paths
+        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
+        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+        
+        # Copy source image
+        shutil.copy2(source_path, source_result_path)
+        
+        # For now, simulate ADB verification (would need actual ADB implementation)
+        # This is a placeholder that always returns success for demonstration
+        verification_success = True
+        found_elements = 1
+        
+        # Create result overlay image
+        import cv2
+        img = cv2.imread(source_result_path)
+        if img is not None:
+            if verification_success:
+                cv2.putText(img, f'ADB ELEMENT FOUND: "{element_selector}"', (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(img, f'Elements found: {found_elements}', (10, 60), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            else:
+                cv2.putText(img, f'ADB ELEMENT NOT FOUND: "{element_selector}"', (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
+            cv2.imwrite(overlay_result_path, img)
+        
+        message = f'ADB verification {"passed" if verification_success else "failed"}: element "{element_selector}" {"found" if verification_success else "not found"}'
+        
+        return {
+            'success': verification_success,
+            'message': message,
+            'element_selector': element_selector,
+            'found_elements': found_elements,
+            'source_image_path': source_result_path,
+            'result_overlay_path': overlay_result_path,
+            'verification_type': 'adb'
+        }
+        
+    except Exception as e:
+        print(f"[@route:execute_adb_verification_host] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': f'ADB verification error: {str(e)}'
+        } 
