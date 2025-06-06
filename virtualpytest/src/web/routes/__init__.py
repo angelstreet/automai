@@ -21,8 +21,18 @@ from .devicemodel_routes import devicemodel_bp
 from .screen_definition_routes import screen_definition_blueprint
 from .pathfinding_routes import pathfinding_bp
 from .validation_routes import validation_bp
-from .verification_server_routes import verification_server_bp
-from .verification_host_routes import verification_host_bp
+
+# Import separated verification blueprints
+from .verification_common_routes import verification_common_bp
+from .verification_image_host_routes import verification_image_host_bp
+from .verification_text_host_routes import verification_text_host_bp
+from .verification_adb_host_routes import verification_adb_host_bp
+from .verification_image_server_routes import verification_image_server_bp
+from .verification_text_server_routes import verification_text_server_bp
+from .verification_adb_server_routes import verification_adb_server_bp
+from .verification_execution_host_routes import verification_execution_host_bp
+from .verification_execution_server_routes import verification_execution_server_bp
+
 from .power_routes import power_bp
 from .system_routes import system_bp
 
@@ -44,8 +54,18 @@ def register_routes(app: Flask):
     app.register_blueprint(testcase_bp)
     app.register_blueprint(userinterface_bp)
     app.register_blueprint(devicemodel_bp)
-    app.register_blueprint(verification_server_bp)
-    app.register_blueprint(verification_host_bp)
+    
+    # Register separated verification blueprints
+    app.register_blueprint(verification_common_bp)
+    app.register_blueprint(verification_image_host_bp)
+    app.register_blueprint(verification_text_host_bp)
+    app.register_blueprint(verification_adb_host_bp)
+    app.register_blueprint(verification_image_server_bp)
+    app.register_blueprint(verification_text_server_bp)
+    app.register_blueprint(verification_adb_server_bp)
+    app.register_blueprint(verification_execution_host_bp)
+    app.register_blueprint(verification_execution_server_bp)
+    
     app.register_blueprint(screen_definition_blueprint, url_prefix='/api/virtualpytest/screen-definition')
     app.register_blueprint(power_bp)
     app.register_blueprint(system_bp) 
