@@ -14,6 +14,8 @@ import sys
 import re
 import json
 from datetime import datetime
+import urllib.parse
+import requests
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1092,50 +1094,70 @@ def execute_batch_verification():
 
 @verification_bp.route('/api/virtualpytest/reference/capture', methods=['POST'])
 def capture_reference_image():
-    """Crop and save a reference image from a source screenshot or frame."""
+    """Forward crop request to host instead of processing locally."""
     try:
         data = request.get_json()
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
-        model = data.get('model')  # Remove 'default' fallback
+        model = data.get('model')
         
-        print(f"[@route:capture_reference_image] Capturing reference image from {source_path} with area: {area}")
+        print(f"[@route:capture_reference_image] Forwarding crop request to host from {source_path} with area: {area}")
         
-        # Validate required parameters including model
+        # Validate required parameters
         if not area or not source_path or not reference_name or not model:
             return jsonify({
                 'success': False,
                 'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "192.168.1.103"  # Host IP
+        server_ip = "192.168.1.67"  # Server IP
+        
+        # Extract filename from source_path URL
+        parsed_url = urllib.parse.urlparse(source_path)
+        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+        
+        print(f"[@route:capture_reference_image] Using hardcoded host: {host_ip}, filename: {source_filename}")
+        
+        # Forward crop request to host
+        host_crop_url = f'http://{host_ip}:5119/stream/crop-area'
+        
+        crop_payload = {
+            'source_filename': source_filename,
+            'area': area,
+            'reference_name': reference_name
+        }
+        
+        print(f"[@route:capture_reference_image] Sending request to {host_crop_url} with payload: {crop_payload}")
+        
+        try:
+            host_response = requests.post(host_crop_url, json=crop_payload, timeout=30, verify=False)
+            host_result = host_response.json()
             
-        # Create tmp directory structure for preview: /tmp/{model}/
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', model)
-        os.makedirs(target_dir, exist_ok=True)
-        
-        # Define target path in tmp directory for preview
-        target_path = os.path.join(target_dir, f"{reference_name}.png")
-        
-        # Import the crop function from image controller
-        from controllers.verification.image import crop_reference_image
-        
-        # Crop and save reference image (this will automatically create filtered versions)
-        success = crop_reference_image(source_path, target_path, area)
-        
-        if success:
-            # Return success with image info for preview
-            relative_path = f"/api/virtualpytest/capture/image/{model}/{reference_name}.png"
-            return jsonify({
-                'success': True,
-                'message': f'Reference image saved with filtered versions: {reference_name}',
-                'image_path': target_path,
-                'image_url': relative_path
-            })
-        else:
+            if host_result.get('success'):
+                cropped_path = host_result.get('cropped_path')
+                print(f"[@route:capture_reference_image] Host cropping successful: {cropped_path}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Reference image cropped on host: {reference_name}',
+                    'image_url': cropped_path
+                })
+            else:
+                error_msg = host_result.get('error', 'Host cropping failed')
+                print(f"[@route:capture_reference_image] Host cropping failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host cropping failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:capture_reference_image] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to crop and save reference image'
+                'error': f'Failed to connect to host for cropping: {str(e)}'
             }), 500
             
     except Exception as e:
@@ -1147,72 +1169,79 @@ def capture_reference_image():
 
 @verification_bp.route('/api/virtualpytest/reference/process-area', methods=['POST'])
 def process_area_reference():
-    """Crop, process (autocrop/remove background), and save a reference image."""
+    """Forward process request to host instead of processing locally."""
     try:
         data = request.get_json()
         area = data.get('area')
         source_path = data.get('source_path')
         reference_name = data.get('reference_name')
-        model = data.get('model')  # Remove 'default' fallback
+        model = data.get('model')
         autocrop = data.get('autocrop', False)
         remove_background = data.get('remove_background', False)
         
-        print(f"[@route:process_area_reference] Processing area from {source_path} with area: {area}")
+        print(f"[@route:process_area_reference] Forwarding process request to host from {source_path} with area: {area}")
         print(f"[@route:process_area_reference] Processing options: autocrop={autocrop}, remove_background={remove_background}")
         
-        # Validate required parameters including model
+        # Validate required parameters
         if not area or not source_path or not reference_name or not model:
             return jsonify({
                 'success': False,
                 'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "192.168.1.103"  # Host IP
+        server_ip = "192.168.1.67"  # Server IP
+        
+        # Extract filename from source_path URL
+        parsed_url = urllib.parse.urlparse(source_path)
+        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+        
+        print(f"[@route:process_area_reference] Using hardcoded host: {host_ip}, filename: {source_filename}")
+        
+        # Forward process request to host
+        host_process_url = f'http://{host_ip}:5119/stream/process-area'
+        
+        process_payload = {
+            'source_filename': source_filename,
+            'area': area,
+            'reference_name': reference_name,
+            'autocrop': autocrop,
+            'remove_background': remove_background
+        }
+        
+        print(f"[@route:process_area_reference] Sending request to {host_process_url} with payload: {process_payload}")
+        
+        try:
+            host_response = requests.post(host_process_url, json=process_payload, timeout=30, verify=False)
+            host_result = host_response.json()
             
-        # Create flat directory structure: /tmp/{model}/
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        target_dir = os.path.join(base_dir, 'tmp', model)
-        os.makedirs(target_dir, exist_ok=True)
-        
-        # Define target path with consistent naming
-        target_path = os.path.join(target_dir, f"{reference_name}.png")
-        
-        # Import processing functions
-        from controllers.verification.image import crop_reference_image, process_reference_image
-        
-        # First crop the image normally
-        crop_success = crop_reference_image(source_path, target_path, area)
-        
-        if not crop_success:
+            if host_result.get('success'):
+                cropped_path = host_result.get('cropped_path')
+                processed_area = host_result.get('processed_area')
+                print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Reference image processed on host: {reference_name}',
+                    'image_url': cropped_path,
+                    'processed_area': processed_area
+                })
+            else:
+                error_msg = host_result.get('error', 'Host processing failed')
+                print(f"[@route:process_area_reference] Host processing failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host processing failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:process_area_reference] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': 'Failed to crop reference image'
+                'error': f'Failed to connect to host for processing: {str(e)}'
             }), 500
-        
-        # Process the cropped image if options are enabled
-        processed_area = area  # Default to original area
-        if autocrop or remove_background:
-            try:
-                processed_area = process_reference_image(target_path, autocrop, remove_background)
-                print(f"[@route:process_area_reference] Processing complete, new area: {processed_area}")
-            except Exception as e:
-                print(f"[@route:process_area_reference] Processing failed: {e}")
-                # Continue with unprocessed image if processing fails
-                processed_area = area
-        
-        # Return success with processed area info
-        relative_path = f"/api/virtualpytest/capture/image/{model}/{reference_name}.png"
-        return jsonify({
-            'success': True,
-            'message': f'Reference image processed and saved: {reference_name}',
-            'image_path': target_path,
-            'image_url': relative_path,
-            'processed_area': {
-                'x': processed_area['x'],
-                'y': processed_area['y'], 
-                'width': processed_area['width'],
-                'height': processed_area['height']
-            } if processed_area != area else None
-        })
-        
+            
     except Exception as e:
         print(f"[@route:process_area_reference] Error: {str(e)}")
         return jsonify({
@@ -1998,3 +2027,164 @@ def adb_wait_for_element_to_disappear():
             'success': False,
             'error': f'Failed to wait for element disappear: {str(e)}'
         }), 500 
+
+# =====================================================
+# HOST-SIDE CROPPING ENDPOINTS
+# =====================================================
+
+@verification_bp.route('/stream/crop-area', methods=['POST'])
+def host_crop_area():
+    """Host-side endpoint to crop images locally using existing utilities."""
+    try:
+        data = request.get_json()
+        source_filename = data.get('source_filename')
+        area = data.get('area')
+        reference_name = data.get('reference_name', 'cropped')
+        
+        print(f"[@route:host_crop_area] Host cropping request: {source_filename} with area: {area}")
+        
+        # Validate required parameters
+        if not source_filename or not area:
+            return jsonify({
+                'success': False,
+                'error': 'source_filename and area are required'
+            }), 400
+        
+        # Build source path - assume images are in /var/www/html/stream/captures/
+        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        
+        # Build target path for cropped image
+        target_path = f'/var/www/html/stream/captures/cropped_{reference_name}_{source_filename}'
+        
+        print(f"[@route:host_crop_area] Cropping from {source_path} to {target_path}")
+        
+        # Check if source file exists
+        if not os.path.exists(source_path):
+            print(f"[@route:host_crop_area] Source file not found: {source_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Source file not found: {source_filename}'
+            }), 404
+        
+        # Import and use existing cropping function
+        try:
+            from controllers.verification.image import crop_reference_image
+            
+            # Crop the image
+            success = crop_reference_image(source_path, target_path, area)
+            
+            if success:
+                # Return URL path for the cropped image
+                cropped_url = f'/stream/captures/cropped_{reference_name}_{source_filename}'
+                print(f"[@route:host_crop_area] Cropping successful: {cropped_url}")
+                
+                return jsonify({
+                    'success': True,
+                    'cropped_path': cropped_url,
+                    'message': f'Image cropped successfully: {reference_name}'
+                })
+            else:
+                print(f"[@route:host_crop_area] Cropping failed")
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to crop image'
+                }), 500
+                
+        except ImportError as e:
+            print(f"[@route:host_crop_area] Import error: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Cropping utilities not available'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:host_crop_area] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Host cropping error: {str(e)}'
+        }), 500
+
+@verification_bp.route('/stream/process-area', methods=['POST'])
+def host_process_area():
+    """Host-side endpoint to process images with autocrop and background removal."""
+    try:
+        data = request.get_json()
+        source_filename = data.get('source_filename')
+        area = data.get('area')
+        reference_name = data.get('reference_name', 'processed')
+        autocrop = data.get('autocrop', False)
+        remove_background = data.get('remove_background', False)
+        
+        print(f"[@route:host_process_area] Host processing request: {source_filename} with area: {area}")
+        print(f"[@route:host_process_area] Processing options: autocrop={autocrop}, remove_background={remove_background}")
+        
+        # Validate required parameters
+        if not source_filename or not area:
+            return jsonify({
+                'success': False,
+                'error': 'source_filename and area are required'
+            }), 400
+        
+        # Build source path - assume images are in /var/www/html/stream/captures/
+        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        
+        # Build target path for processed image
+        target_path = f'/var/www/html/stream/captures/processed_{reference_name}_{source_filename}'
+        
+        print(f"[@route:host_process_area] Processing from {source_path} to {target_path}")
+        
+        # Check if source file exists
+        if not os.path.exists(source_path):
+            print(f"[@route:host_process_area] Source file not found: {source_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Source file not found: {source_filename}'
+            }), 404
+        
+        # Import and use existing processing functions
+        try:
+            from controllers.verification.image import crop_reference_image, process_reference_image
+            
+            # First crop the image
+            success = crop_reference_image(source_path, target_path, area)
+            
+            if not success:
+                print(f"[@route:host_process_area] Initial cropping failed")
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to crop image'
+                }), 500
+            
+            # Then apply processing if requested
+            processed_area = area  # Default to original area
+            
+            if autocrop or remove_background:
+                processed_area = process_reference_image(target_path, autocrop, remove_background)
+                if not processed_area:
+                    print(f"[@route:host_process_area] Processing failed, using original area")
+                    processed_area = area
+            
+            # Return URL path for the processed image
+            processed_url = f'/stream/captures/processed_{reference_name}_{source_filename}'
+            print(f"[@route:host_process_area] Processing successful: {processed_url}")
+            
+            return jsonify({
+                'success': True,
+                'cropped_path': processed_url,
+                'processed_area': processed_area,
+                'message': f'Image processed successfully: {reference_name}'
+            })
+            
+        except ImportError as e:
+            print(f"[@route:host_process_area] Import error: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Processing utilities not available'
+            }), 500
+        
+    except Exception as e:
+        print(f"[@route:host_process_area] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Host processing error: {str(e)}'
+        }), 500
