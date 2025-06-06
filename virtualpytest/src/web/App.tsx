@@ -24,6 +24,7 @@ import NavigationEditor from './pages/NavigationEditor';
 // Import navigation components
 import NavigationBar from './components/Navigation/NavigationBar';
 import ThemeToggle from './components/ThemeToggle';
+import Footer from './components/Footer';
 
 const App: React.FC = () => {
   return (
@@ -83,6 +84,7 @@ const App: React.FC = () => {
 
           </Routes>
         </Container>
+        <Footer />
       </Router>
     </Box>
   );
