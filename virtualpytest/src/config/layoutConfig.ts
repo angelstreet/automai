@@ -72,7 +72,7 @@ export const getVerificationEditorLayout = (model?: string): VerificationEditorL
       }
     : {
         width: 640,
-        height: 480,
+        height: 510,
         captureHeight: 140,
         objectFit: 'contain',
         isMobileModel: false,

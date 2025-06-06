@@ -213,6 +213,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = layoutConfig || getVerificationEditorLayout(model);
 
+  // Debug logging for selected reference image changes
+  useEffect(() => {
+    if (selectedReferenceImage) {
+      console.log('[@component:VerificationEditor] Selected reference image state updated:', selectedReferenceImage);
+    }
+  }, [selectedReferenceImage]);
+
   useEffect(() => {
     if (isVisible) {
       fetchVerificationActions();
@@ -258,27 +265,63 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   // NEW: Handle reference selection to update preview
-  const handleReferenceSelected = (referenceName: string, referenceData: any) => {
+  const handleReferenceSelected = async (referenceName: string, referenceData: any) => {
     console.log('[@component:VerificationEditor] Reference selected:', referenceName, referenceData);
+    console.log('[@component:VerificationEditor] Reference data details:', {
+      type: referenceData?.type,
+      path: referenceData?.path,
+      full_path: referenceData?.full_path,
+      name: referenceData?.name
+    });
     
-    if (referenceData && referenceData.type === 'image' && referenceData.full_path) {
-      // Build the complete URL for the reference image
-      const referenceUrl = referenceData.full_path.startsWith('http://') || referenceData.full_path.startsWith('https://') 
-        ? referenceData.full_path
-        : `https://77.56.53.130:444${referenceData.full_path}`;
-      
-      console.log('[@component:VerificationEditor] Setting reference image preview:', referenceUrl);
-      setSelectedReferenceImage(referenceUrl);
-      setSelectedReferenceInfo({
-        name: referenceName,
-        type: 'image'
-      });
-      
-      // Clear any captured reference since we're now showing a selected reference
-      setCapturedReferenceImage(null);
-      setHasCaptured(false);
+    if (referenceData && referenceData.type === 'image') {
+      try {
+        // Use existing server route to ensure the reference is available in stream directory
+        const ensureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/ensure-stream-availability', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reference_name: referenceName,
+            model: model
+          }),
+        });
+        
+        if (ensureResponse.ok) {
+          const ensureResult = await ensureResponse.json();
+          if (ensureResult.success && ensureResult.image_url) {
+            console.log('[@component:VerificationEditor] Reference available at:', ensureResult.image_url);
+            setSelectedReferenceImage(ensureResult.image_url);
+            setSelectedReferenceInfo({
+              name: referenceName,
+              type: 'image'
+            });
+          } else {
+            console.error('[@component:VerificationEditor] Failed to ensure stream availability:', ensureResult.error);
+            setSelectedReferenceImage(null);
+            setSelectedReferenceInfo(null);
+          }
+        } else {
+          console.error('[@component:VerificationEditor] Ensure stream availability request failed:', ensureResponse.status);
+          setSelectedReferenceImage(null);
+          setSelectedReferenceInfo(null);
+        }
+        
+        // Clear any captured reference since we're now showing a selected reference
+        setCapturedReferenceImage(null);
+        setHasCaptured(false);
+        
+      } catch (error) {
+        console.error('[@component:VerificationEditor] Error ensuring reference availability:', error);
+        setSelectedReferenceImage(null);
+        setSelectedReferenceInfo(null);
+        setCapturedReferenceImage(null);
+        setHasCaptured(false);
+      }
     } else if (referenceData && referenceData.type === 'text') {
       // For text references, clear the image preview
+      console.log('[@component:VerificationEditor] Text reference selected, clearing image preview');
       setSelectedReferenceImage(null);
       setSelectedReferenceInfo({
         name: referenceName,
@@ -290,6 +333,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       setHasCaptured(false);
     } else {
       // Clear preview if no valid reference
+      console.log('[@component:VerificationEditor] Invalid or unknown reference type, clearing preview');
       setSelectedReferenceImage(null);
       setSelectedReferenceInfo(null);
     }
@@ -889,6 +933,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                         objectFit: 'contain',
                         maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%'
                       }}
+                      onLoad={() => console.log('[@component:VerificationEditor] Selected reference image loaded successfully')}
+                      onError={(e) => console.error('[@component:VerificationEditor] Selected reference image failed to load:', e)}
                     />
                     {/* Reference info overlay */}
                     <Box sx={{

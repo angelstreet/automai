@@ -423,6 +423,66 @@ def host_save_resource():
         }), 500
 
 # =====================================================
+# HOST-SIDE REFERENCE STREAM AVAILABILITY ENDPOINT
+# =====================================================
+
+@verification_host_bp.route('/stream/ensure-reference-availability', methods=['POST'])
+def host_ensure_reference_availability():
+    """Ensure reference image is available in stream directory for preview."""
+    try:
+        data = request.get_json()
+        reference_name = data.get('reference_name')
+        model = data.get('model')
+        
+        print(f"[@route:host_ensure_reference_availability] Ensuring availability for: {reference_name} (model: {model})")
+        
+        # Validate required parameters
+        if not reference_name or not model:
+            return jsonify({
+                'success': False,
+                'error': 'reference_name and model are required'
+            }), 400
+        
+        # Simple paths with dynamic model folder structure
+        stream_target_path = f'/var/www/html/stream/resources/{model}/{reference_name}.png'
+        repo_source_path = f'../resources/{model}/{reference_name}.png'
+        
+        # Check if already exists in stream directory
+        if os.path.exists(stream_target_path):
+            print(f"[@route:host_ensure_reference_availability] Already exists in stream directory")
+            return jsonify({
+                'success': True,
+                'image_url': f'https://77.56.53.130:444/stream/resources/{model}/{reference_name}.png'
+            })
+        
+        # Check if exists in git repository and copy it
+        if os.path.exists(repo_source_path):
+            # Create stream directory if needed
+            os.makedirs(f'/var/www/html/stream/resources/{model}', exist_ok=True)
+            
+            # Copy from git repo to stream directory
+            shutil.copy2(repo_source_path, stream_target_path)
+            print(f"[@route:host_ensure_reference_availability] Copied from git repo to stream directory")
+            
+            return jsonify({
+                'success': True,
+                'image_url': f'https://77.56.53.130:444/stream/resources/{model}/{reference_name}.png'
+            })
+        
+        # File not found anywhere
+        return jsonify({
+            'success': False,
+            'error': f'Reference image not found: {reference_name}'
+        }), 404
+            
+    except Exception as e:
+        print(f"[@route:host_ensure_reference_availability] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Error ensuring reference availability: {str(e)}'
+        }), 500
+
+# =====================================================
 # HOST-SIDE VERIFICATION EXECUTION ENDPOINT
 # =====================================================
 

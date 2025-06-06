@@ -12,8 +12,6 @@ import urllib.parse
 import requests
 import os
 import json
-import time
-import git
 
 # Create blueprint
 verification_server_bp = Blueprint('verification_server', __name__)
@@ -405,22 +403,6 @@ def save_reference():
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
-                # Host has completed its git operations (pull, add, commit, push)
-                # Now pull the updates to get the latest resource.json
-                print(f"[@route:save_reference] Host git operations completed, pulling updates...")
-                
-                # Pull git updates to get the updated resource.json
-                try:
-                    # Use simple relative path to git repository root
-                    repo_path = "../../../"
-                    print(f"[@route:save_reference] Pulling git updates from: {repo_path}")
-                    repo = git.Repo(repo_path)
-                    origin = repo.remotes.origin
-                    origin.pull()
-                    print(f"[@route:save_reference] Git pull successful - resource.json updated")
-                except Exception as git_error:
-                    print(f"[@route:save_reference] Git pull failed: {str(git_error)} - continuing anyway")
-                
                 # Build full URL with nginx-exposed URL
                 full_public_url = f'https://77.56.53.130:444{public_url}'
                 
@@ -582,25 +564,13 @@ def execute_batch_verification():
             if host_result.get('success') is not None:  # Host responded with valid result
                 print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('passed_count', 0)}/{host_result.get('total_count', 0)} passed")
                 
-                # Convert host URLs to nginx-exposed URLs for each result
-                results = host_result.get('results', [])
-                for result in results:
-                    if 'sourceImageUrl' in result:
-                        result['sourceImageUrl'] = f'https://77.56.53.130:444{result["sourceImageUrl"]}'
-                    if 'referenceImageUrl' in result:
-                        result['referenceImageUrl'] = f'https://77.56.53.130:444{result["referenceImageUrl"]}'
-                    if 'resultOverlayUrl' in result:
-                        result['resultOverlayUrl'] = f'https://77.56.53.130:444{result["resultOverlayUrl"]}'
-                
-                print(f"[@route:execute_batch_verification] Converted URLs to nginx-exposed format for {len(results)} results")
-                
                 # Return host result with additional server metadata
                 return jsonify({
                     'success': host_result.get('success'),
                     'message': host_result.get('message'),
                     'passed_count': host_result.get('passed_count', 0),
                     'total_count': host_result.get('total_count', 0),
-                    'results': results,  # Use the URL-converted results
+                    'results': host_result.get('results', []),
                     'node_id': node_id,
                     'tree_id': tree_id,
                     'model': model,

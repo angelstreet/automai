@@ -611,8 +611,8 @@ export function ScreenDefinitionEditor({
   return (
     <Box sx={{ 
       position: 'fixed',
-      bottom: 16,
-      left: 16,
+      bottom: 0,
+      left: 0,
       display: 'flex',
       zIndex: 1000,
       userSelect: 'none',
