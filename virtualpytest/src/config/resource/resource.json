@@ -49,13 +49,13 @@
       "name": "default_capture",
       "model": "android_mobile",
       "path": "resources/android_mobile/default_capture.png",
-      "created_at": "2025-06-06T17:10:22.402418",
+      "created_at": "2025-06-06T17:52:28.005879",
       "type": "reference_image",
       "area": {
-        "x": 712.3975231564403,
-        "y": 148.56148610613582,
-        "width": 398.5220817767771,
-        "height": 214.58881326441838
+        "x": 731.2624737730924,
+        "y": 167.42643672278797,
+        "width": 431.5357453559184,
+        "height": 285.332378076864
       }
     }
   ]
