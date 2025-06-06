@@ -529,9 +529,28 @@ def execute_batch_verification():
         tree_id = data.get('tree_id', 'unknown')
         capture_filename = data.get('capture_filename')  # NEW: Optional specific capture
         
+        print(f"[@route:execute_batch_verification] === BATCH VERIFICATION DEBUG ===")
         print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node: {node_id}")
         print(f"[@route:execute_batch_verification] Model: {model}")
         print(f"[@route:execute_batch_verification] Capture filename: {capture_filename}")
+        
+        # Log each verification with area details
+        for i, verification in enumerate(verifications):
+            print(f"[@route:execute_batch_verification] Verification {i}:")
+            print(f"  ID: {verification.get('id')}")
+            print(f"  Label: {verification.get('label')}")
+            print(f"  Command: {verification.get('command')}")
+            print(f"  Controller type: {verification.get('controller_type')}")
+            print(f"  Input value: {verification.get('inputValue')}")
+            
+            params = verification.get('params', {})
+            print(f"  Params: {params}")
+            
+            if 'area' in params:
+                area = params['area']
+                print(f"  Area details: x={area.get('x')}, y={area.get('y')}, width={area.get('width')}, height={area.get('height')}")
+            else:
+                print(f"  No area specified")
         
         # Validate required parameters
         if not verifications:
@@ -555,7 +574,7 @@ def execute_batch_verification():
         }
         
         print(f"[@route:execute_batch_verification] Sending batch request to {host_batch_url}")
-        print(f"[@route:execute_batch_verification] Payload: {len(verifications)} verifications, model: {model}")
+        print(f"[@route:execute_batch_verification] Payload summary: {len(verifications)} verifications, model: {model}")
         
         try:
             host_response = requests.post(host_batch_url, json=batch_payload, timeout=60, verify=False)
@@ -564,13 +583,37 @@ def execute_batch_verification():
             if host_result.get('success') is not None:  # Host responded with valid result
                 print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('passed_count', 0)}/{host_result.get('total_count', 0)} passed")
                 
+                # Convert host URLs to nginx-exposed URLs for each result
+                results = host_result.get('results', [])
+                print(f"[@route:execute_batch_verification] Converting {len(results)} result URLs")
+                
+                for i, result in enumerate(results):
+                    print(f"[@route:execute_batch_verification] Result {i} before URL conversion:")
+                    print(f"  Success: {result.get('success')}")
+                    print(f"  Message: {result.get('message')}")
+                    print(f"  Source URL: {result.get('sourceImageUrl')}")
+                    print(f"  Reference URL: {result.get('referenceImageUrl')}")
+                    print(f"  Overlay URL: {result.get('resultOverlayUrl')}")
+                    
+                    if 'sourceImageUrl' in result:
+                        result['sourceImageUrl'] = f'https://77.56.53.130:444{result["sourceImageUrl"]}'
+                    if 'referenceImageUrl' in result:
+                        result['referenceImageUrl'] = f'https://77.56.53.130:444{result["referenceImageUrl"]}'
+                    if 'resultOverlayUrl' in result:
+                        result['resultOverlayUrl'] = f'https://77.56.53.130:444{result["resultOverlayUrl"]}'
+                    
+                    print(f"[@route:execute_batch_verification] Result {i} after URL conversion:")
+                    print(f"  Source URL: {result.get('sourceImageUrl')}")
+                    print(f"  Reference URL: {result.get('referenceImageUrl')}")
+                    print(f"  Overlay URL: {result.get('resultOverlayUrl')}")
+                
                 # Return host result with additional server metadata
                 return jsonify({
                     'success': host_result.get('success'),
                     'message': host_result.get('message'),
                     'passed_count': host_result.get('passed_count', 0),
                     'total_count': host_result.get('total_count', 0),
-                    'results': host_result.get('results', []),
+                    'results': results,  # Use the URL-converted results
                     'node_id': node_id,
                     'tree_id': tree_id,
                     'model': model,

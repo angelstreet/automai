@@ -32,6 +32,14 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
   };
 
   const handleImageClick = () => {
+    console.log('[@component:VerificationImageComparisonThumbnails] Image clicked:', {
+      sourceUrl: buildImageUrl(sourceUrl),
+      referenceUrl: buildImageUrl(referenceUrl),
+      resultType,
+      userThreshold,
+      matchingResult
+    });
+    
     onImageClick(
       buildImageUrl(sourceUrl),
       buildImageUrl(referenceUrl),
@@ -46,7 +54,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
     <Box sx={{ 
       display: 'flex', 
       gap: 0.5, 
-      alignItems: 'center',
+      alignItems: 'flex-start',
       padding: '4px',
       border: `1px solid ${
         resultType === 'PASS' ? '#4caf50' : resultType === 'ERROR' ? '#ff9800' : '#f44336'
@@ -59,39 +67,77 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
         <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
           Source
         </Typography>
-        <img
-          src={buildImageUrl(sourceUrl)}
-          alt="Source"
-          style={{
-            width: '100%',
-            maxWidth: '200px',
-            height: '150px',
-            objectFit: 'contain',
-            border: '1px solid #666',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-          onClick={handleImageClick}
-        />
+        <Box sx={{ 
+          width: '100%', 
+          maxWidth: '200px',
+          position: 'relative',
+          border: '1px solid #666',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          backgroundColor: '#000'
+        }}>
+          <img
+            src={buildImageUrl(sourceUrl)}
+            alt="Source"
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: '200px',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+            onClick={handleImageClick}
+            onLoad={(e) => {
+              const img = e.target as HTMLImageElement;
+              console.log('[@component:VerificationImageComparisonThumbnails] Source image loaded:', {
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight,
+                displayWidth: img.width,
+                displayHeight: img.height,
+                aspectRatio: img.naturalWidth / img.naturalHeight
+              });
+            }}
+          />
+        </Box>
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
         <Typography variant="caption" sx={{ fontSize: '0.6rem', mb: 0.5 }}>
           Reference
         </Typography>
-        <img
-          src={buildImageUrl(referenceUrl)}
-          alt="Reference"
-          style={{
-            width: '100%',
-            maxWidth: '200px',
-            height: '150px',
-            objectFit: 'contain',
-            border: '1px solid #666',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-          onClick={handleImageClick}
-        />
+        <Box sx={{ 
+          width: '100%', 
+          maxWidth: '200px',
+          position: 'relative',
+          border: '1px solid #666',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          backgroundColor: '#000'
+        }}>
+          <img
+            src={buildImageUrl(referenceUrl)}
+            alt="Reference"
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: '200px',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+            onClick={handleImageClick}
+            onLoad={(e) => {
+              const img = e.target as HTMLImageElement;
+              console.log('[@component:VerificationImageComparisonThumbnails] Reference image loaded:', {
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight,
+                displayWidth: img.width,
+                displayHeight: img.height,
+                aspectRatio: img.naturalWidth / img.naturalHeight
+              });
+            }}
+          />
+        </Box>
       </Box>
     </Box>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -30,6 +30,35 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
   imageFilter,
   onClose
 }) => {
+  const [sourceImageDimensions, setSourceImageDimensions] = useState<{width: number, height: number} | null>(null);
+  const [referenceImageDimensions, setReferenceImageDimensions] = useState<{width: number, height: number} | null>(null);
+
+  const handleSourceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    setSourceImageDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight
+    });
+    console.log('[@component:VerificationImageComparisonDialog] Source image loaded:', {
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      aspectRatio: img.naturalWidth / img.naturalHeight
+    });
+  };
+
+  const handleReferenceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    setReferenceImageDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight
+    });
+    console.log('[@component:VerificationImageComparisonDialog] Reference image loaded:', {
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      aspectRatio: img.naturalWidth / img.naturalHeight
+    });
+  };
+
   return (
     <Dialog
       open={open}
@@ -83,6 +112,21 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 Filter: {imageFilter}
               </Typography>
             )}
+            {/* Show image dimensions for debugging */}
+            {(sourceImageDimensions || referenceImageDimensions) && (
+              <Box sx={{ display: 'flex', gap: 2, fontSize: '0.7rem', color: '#ccc' }}>
+                {sourceImageDimensions && (
+                  <Typography component="span" sx={{ fontSize: '0.7rem' }}>
+                    Source: {sourceImageDimensions.width}×{sourceImageDimensions.height}
+                  </Typography>
+                )}
+                {referenceImageDimensions && (
+                  <Typography component="span" sx={{ fontSize: '0.7rem' }}>
+                    Reference: {referenceImageDimensions.width}×{referenceImageDimensions.height}
+                  </Typography>
+                )}
+              </Box>
+            )}
           </Box>
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
@@ -106,44 +150,78 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
         <Box sx={{ 
           display: 'flex', 
           gap: 2, 
-          alignItems: 'flex-start',
+          alignItems: 'flex-start', // Changed from 'flex-start' to allow different heights
           justifyContent: 'center',
           width: '100%'
         }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            flex: 1,
+            maxWidth: referenceUrl ? '50%' : '100%' // Take full width if no reference
+          }}>
             {referenceUrl && (
               <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
                 Source
               </Typography>
             )}
-            <img
-              src={sourceUrl}
-              alt="Source Image"
-              style={{
-                width: '100%',
-                maxHeight: '70vh',
-                objectFit: 'contain',
-                border: '2px solid #666',
-                borderRadius: '8px'
-              }}
-            />
+            <Box sx={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              border: '2px solid #666',
+              borderRadius: '8px',
+              backgroundColor: '#000', // Black background to show image bounds
+              overflow: 'hidden'
+            }}>
+              <img
+                src={sourceUrl}
+                alt="Source Image"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  height: 'auto', // Let height adjust to maintain aspect ratio
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                onLoad={handleSourceImageLoad}
+              />
+            </Box>
           </Box>
           {referenceUrl && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              flex: 1,
+              maxWidth: '50%'
+            }}>
               <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
                 Reference
               </Typography>
-              <img
-                src={referenceUrl}
-                alt="Reference Image"
-                style={{
-                  width: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  border: '2px solid #666',
-                  borderRadius: '8px'
-                }}
-              />
+              <Box sx={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                border: '2px solid #666',
+                borderRadius: '8px',
+                backgroundColor: '#000', // Black background to show image bounds
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={referenceUrl}
+                  alt="Reference Image"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    height: 'auto', // Let height adjust to maintain aspect ratio
+                    objectFit: 'contain',
+                    display: 'block'
+                  }}
+                  onLoad={handleReferenceImageLoad}
+                />
+              </Box>
             </Box>
           )}
         </Box>

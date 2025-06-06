@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -339,16 +339,45 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
-  const handleClearSelection = () => {
+  // Handle area selection from drag overlay
+  const handleAreaSelected = useCallback((area: { x: number; y: number; width: number; height: number }) => {
+    console.log('[@component:VerificationEditor] === AREA SELECTION DEBUG ===');
+    console.log('[@component:VerificationEditor] New area selected:', {
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+      area: area
+    });
+    console.log('[@component:VerificationEditor] Previous selected area:', selectedArea);
+    console.log('[@component:VerificationEditor] Capture image dimensions:', captureImageDimensions);
+    console.log('[@component:VerificationEditor] Original image dimensions:', originalImageDimensions);
+    console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
+    
+    if (onAreaSelected) {
+      console.log('[@component:VerificationEditor] Calling parent onAreaSelected with area:', area);
+      onAreaSelected(area);
+    }
+  }, [selectedArea, captureImageDimensions, originalImageDimensions, captureSourcePath, onAreaSelected]);
+
+  // Handle clearing selection
+  const handleClearSelection = useCallback(() => {
+    console.log('[@component:VerificationEditor] === AREA CLEAR DEBUG ===');
+    console.log('[@component:VerificationEditor] Clearing area selection');
+    console.log('[@component:VerificationEditor] Previous selected area:', selectedArea);
+    
+    // Clear captured reference images when clearing selection
     setCapturedReferenceImage(null);
     setHasCaptured(false);
     // Also clear selected reference when clearing selection
     setSelectedReferenceImage(null);
     setSelectedReferenceInfo(null);
+    
     if (onClearSelection) {
+      console.log('[@component:VerificationEditor] Calling parent onClearSelection');
       onClearSelection();
     }
-  };
+  }, [selectedArea, onClearSelection]);
 
   const handleCaptureReference = async () => {
     if (!selectedArea) {
@@ -361,11 +390,20 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
-    console.log('[@component:VerificationEditor] Capturing temporary reference:', {
-      area: selectedArea,
-      sourcePath: captureSourcePath,
-      processingOptions: referenceType === 'image' ? imageProcessingOptions : undefined
+    console.log('[@component:VerificationEditor] === CAPTURE REFERENCE DEBUG ===');
+    console.log('[@component:VerificationEditor] Selected area (original coordinates):', {
+      x: selectedArea.x,
+      y: selectedArea.y,
+      width: selectedArea.width,
+      height: selectedArea.height,
+      area: selectedArea
     });
+    console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
+    console.log('[@component:VerificationEditor] Capture image dimensions:', captureImageDimensions);
+    console.log('[@component:VerificationEditor] Original image dimensions:', originalImageDimensions);
+    console.log('[@component:VerificationEditor] Reference name:', referenceName);
+    console.log('[@component:VerificationEditor] Model:', model);
+    console.log('[@component:VerificationEditor] Processing options:', referenceType === 'image' ? imageProcessingOptions : undefined);
 
     try {
       let captureResponse;
@@ -403,6 +441,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       }
 
       const result = await captureResponse.json();
+      console.log('[@component:VerificationEditor] Capture response result:', result);
       
       if (result.success) {
         const timestamp = new Date().getTime();
@@ -414,13 +453,16 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // If autocrop was applied and new area dimensions are provided, update the selected area
         if (imageProcessingOptions.autocrop && result.processed_area && onAreaSelected) {
-          console.log('[@component:VerificationEditor] Updating area after autocrop:', result.processed_area);
+          console.log('[@component:VerificationEditor] === AUTOCROP AREA UPDATE ===');
+          console.log('[@component:VerificationEditor] Original area:', selectedArea);
+          console.log('[@component:VerificationEditor] Processed area from server:', result.processed_area);
           onAreaSelected({
             x: result.processed_area.x,
             y: result.processed_area.y,
             width: result.processed_area.width,
             height: result.processed_area.height
           });
+          console.log('[@component:VerificationEditor] Area updated after autocrop');
         }
       } else {
         console.error('[@component:VerificationEditor] Failed to capture reference:', result.error);
@@ -453,29 +495,41 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const performSaveReference = async () => {
     try {
-      console.log('[@component:VerificationEditor] Saving reference:', { 
-        name: referenceName, 
-        type: referenceType, 
-        area: selectedArea 
+      console.log('[@component:VerificationEditor] === SAVE REFERENCE DEBUG ===');
+      console.log('[@component:VerificationEditor] Reference name:', referenceName);
+      console.log('[@component:VerificationEditor] Reference type:', referenceType);
+      console.log('[@component:VerificationEditor] Model:', model);
+      console.log('[@component:VerificationEditor] Selected area (at save time):', {
+        x: selectedArea?.x,
+        y: selectedArea?.y,
+        width: selectedArea?.width,
+        height: selectedArea?.height,
+        area: selectedArea
       });
+      console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
 
       if (referenceType === 'image') {
         // Save image reference
+        const savePayload = {
+          reference_name: referenceName,
+          model_name: model,
+          area: selectedArea,
+          reference_type: 'reference_image',
+          source_path: captureSourcePath  // Add source path to help build cropped filename
+        };
+        
+        console.log('[@component:VerificationEditor] Image save payload:', savePayload);
+        
         const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            reference_name: referenceName,
-            model_name: model,
-            area: selectedArea,
-            reference_type: 'reference_image',
-            source_path: captureSourcePath  // Add source path to help build cropped filename
-          }),
+          body: JSON.stringify(savePayload),
         });
 
         const result = await response.json();
+        console.log('[@component:VerificationEditor] Image save response:', result);
         
         if (result.success) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
@@ -490,21 +544,27 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         }
       } else if (referenceType === 'text') {
         // Save text reference
+        const savePayload = {
+          name: referenceName,
+          model: model,
+          area: selectedArea,
+          text: referenceText,
+          fontSize: detectedTextData?.fontSize,
+          confidence: detectedTextData?.confidence
+        };
+        
+        console.log('[@component:VerificationEditor] Text save payload:', savePayload);
+        
         const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/text/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: referenceName,
-            model: model,
-            area: selectedArea,
-            text: referenceText,
-            fontSize: detectedTextData?.fontSize,
-            confidence: detectedTextData?.confidence
-          }),
+          body: JSON.stringify(savePayload),
         });
 
+        console.log('[@component:VerificationEditor] Text save response status:', response.status);
+        
         if (response.ok) {
           console.log('[@component:VerificationEditor] Text reference saved successfully');
           setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
@@ -532,7 +592,32 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       return;
     }
 
-    console.log('[@component:VerificationEditor] Running verification tests:', verifications);
+    console.log('[@component:VerificationEditor] === VERIFICATION TEST DEBUG ===');
+    console.log('[@component:VerificationEditor] Number of verifications:', verifications.length);
+    console.log('[@component:VerificationEditor] Model:', model);
+    console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
+    
+    // Log each verification with its area coordinates
+    verifications.forEach((verification, index) => {
+      console.log(`[@component:VerificationEditor] Verification ${index}:`, {
+        id: verification.id,
+        label: verification.label,
+        command: verification.command,
+        controller_type: verification.controller_type,
+        params: verification.params,
+        area: verification.params?.area,
+        inputValue: verification.inputValue
+      });
+      
+      if (verification.params?.area) {
+        console.log(`[@component:VerificationEditor] Verification ${index} area details:`, {
+          x: verification.params.area.x,
+          y: verification.params.area.y,
+          width: verification.params.area.width,
+          height: verification.params.area.height
+        });
+      }
+    });
     
     try {
       setLoading(true);
@@ -553,19 +638,23 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         console.log('[@component:VerificationEditor] Using specific capture:', capture_filename);
       }
 
+      const batchPayload = {
+        verifications: verifications,
+        model: model,
+        node_id: 'verification-editor',
+        tree_id: 'verification-tree',
+        capture_filename: capture_filename  // NEW: Send specific capture filename
+      };
+      
+      console.log('[@component:VerificationEditor] Batch execution payload:', batchPayload);
+
       // Execute batch verification with specific capture
       const batchResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/execute-batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          verifications: verifications,
-          model: model,
-          node_id: 'verification-editor',
-          tree_id: 'verification-tree',
-          capture_filename: capture_filename  // NEW: Send specific capture filename
-        }),
+        body: JSON.stringify(batchPayload),
       });
 
       if (!batchResponse.ok) {
@@ -585,6 +674,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           const verification = verifications[index];
           
           console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
+          console.log(`[@component:VerificationEditor] Corresponding verification ${index}:`, verification);
           
           // Determine result type
           let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
