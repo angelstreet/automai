@@ -624,9 +624,13 @@ def ensure_reference_stream_availability():
                 'error': 'reference_name and model are required'
             }), 400
         
+        # Hardcode IPs for testing (same as other functions)
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
         # Forward request to host
         host_response = requests.post(
-            f'http://{HOST_IP}:{HOST_PORT}/stream/ensure-reference-availability',
+            f'http://{host_ip}:{host_port}/stream/ensure-reference-availability',
             json={
                 'reference_name': reference_name,
                 'model': model
