@@ -8,3 +8,4 @@ paramiko
 networkx
 opencv-python
 psutil
+GitPython

@@ -12,6 +12,8 @@ import urllib.parse
 import requests
 import os
 import json
+import time
+import git
 
 # Create blueprint
 verification_server_bp = Blueprint('verification_server', __name__)
@@ -402,6 +404,20 @@ def save_reference():
             if host_result.get('success'):
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_reference] Host save successful: {public_url}")
+                
+                # Wait a moment for host git operations to complete, then pull updates
+                time.sleep(3)
+                
+                # Pull git updates to get the updated resource.json
+                try:
+                    repo_path = os.getcwd()
+                    print(f"[@route:save_reference] Pulling git updates from: {repo_path}")
+                    repo = git.Repo(repo_path)
+                    origin = repo.remotes.origin
+                    origin.pull()
+                    print(f"[@route:save_reference] Git pull successful - resource.json updated")
+                except Exception as git_error:
+                    print(f"[@route:save_reference] Git pull failed: {str(git_error)} - continuing anyway")
                 
                 # Build full URL with nginx-exposed URL
                 full_public_url = f'https://77.56.53.130:444{public_url}'

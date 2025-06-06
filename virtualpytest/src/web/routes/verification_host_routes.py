@@ -312,41 +312,59 @@ def host_save_resource():
                 'error': f'Failed to update resource.json: {str(e)}'
             }), 500
         
-        # Git operations
+        # Git operations using GitPython
         try:
-            # Change to the web directory
-            os.chdir('/var/www/html')
+            import git
+            
+            # Use current working directory as the git repository
+            repo_path = os.getcwd()
+            print(f"[@route:host_save_resource] Using git repository: {repo_path}")
+            
+            # Open the git repository
+            repo = git.Repo(repo_path)
             
             # Git pull first to get latest changes
             print(f"[@route:host_save_resource] Executing git pull...")
-            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
-            if result.returncode != 0:
-                print(f"[@route:host_save_resource] Git pull failed, aborting and continuing: {result.stderr}")
-                subprocess.run(['git', 'merge', '--abort'], capture_output=True, timeout=10)
-            else:
+            try:
+                origin = repo.remotes.origin
+                origin.pull()
                 print(f"[@route:host_save_resource] Git pull successful")
+            except Exception as pull_error:
+                print(f"[@route:host_save_resource] Git pull failed, continuing: {str(pull_error)}")
             
-            # Git commit all changes
+            # Add files to git index
+            print(f"[@route:host_save_resource] Adding files to git...")
+            try:
+                # Add the resource image (relative to repo root)
+                repo.index.add([f'resources/{model}/{reference_name}.png'])
+                # Add the resource.json file (relative to repo root)
+                repo.index.add(['config/resource/resource.json'])
+                print(f"[@route:host_save_resource] Files added to git index")
+            except Exception as add_error:
+                print(f"[@route:host_save_resource] Git add failed: {str(add_error)}")
+            
+            # Git commit
             commit_message = f"save resource {reference_name} for model {model}"
-            print(f"[@route:host_save_resource] Committing all changes...")
-            result = subprocess.run(['git', 'commit', '-am', commit_message], capture_output=True, text=True, timeout=10)
-            if result.returncode != 0:
-                print(f"[@route:host_save_resource] Git commit info: {result.stdout}")
+            print(f"[@route:host_save_resource] Committing changes...")
+            try:
+                repo.index.commit(commit_message)
+                print(f"[@route:host_save_resource] Git commit successful")
+            except Exception as commit_error:
+                print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
             # Git push
             print(f"[@route:host_save_resource] Pushing to remote...")
-            result = subprocess.run(['git', 'push'], capture_output=True, text=True, timeout=30)
-            if result.returncode != 0:
-                print(f"[@route:host_save_resource] Git push failed: {result.stderr}")
-            else:
+            try:
+                origin = repo.remotes.origin
+                origin.push()
                 print(f"[@route:host_save_resource] Git push successful")
+            except Exception as push_error:
+                print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
-        except subprocess.TimeoutExpired:
-            print(f"[@route:host_save_resource] Git operation timeout - continuing anyway")
-        except subprocess.CalledProcessError as e:
-            print(f"[@route:host_save_resource] Git operation warning: {str(e)} - continuing anyway")
+        except ImportError:
+            print(f"[@route:host_save_resource] GitPython not available, skipping git operations")
         except Exception as e:
             print(f"[@route:host_save_resource] Git operation error: {str(e)} - continuing anyway")
         
