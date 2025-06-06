@@ -434,6 +434,85 @@ def save_reference():
         }), 500
 
 # =====================================================
+# SERVER-SIDE TEXT REFERENCE SAVE (FORWARDS TO HOST)
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/reference/text/save', methods=['POST'])
+def save_text_reference():
+    """Forward text reference save request to host to save text resource to git repository."""
+    try:
+        data = request.get_json()
+        reference_name = data.get('name')  # Text save uses 'name' instead of 'reference_name'
+        model = data.get('model')
+        area = data.get('area')
+        text = data.get('text')
+        font_size = data.get('fontSize')
+        confidence = data.get('confidence')
+        
+        print(f"[@route:save_text_reference] Forwarding text save request to host: {reference_name} for model: {model}")
+        print(f"[@route:save_text_reference] Text: '{text}', Font size: {font_size}, Confidence: {confidence}")
+        
+        # Validate required parameters
+        if not reference_name or not model or not area or not text:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: name, model, area, and text are all required'
+            }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
+        print(f"[@route:save_text_reference] Using hardcoded host: {host_ip}:{host_port}")
+        
+        # Forward text save request to host
+        host_text_save_url = f'http://{host_ip}:{host_port}/stream/save-text-resource'
+        
+        text_save_payload = {
+            'reference_name': reference_name,
+            'model': model,
+            'area': area,
+            'text': text,
+            'font_size': font_size,
+            'confidence': confidence
+        }
+        
+        print(f"[@route:save_text_reference] Sending request to {host_text_save_url} with payload: {text_save_payload}")
+        
+        try:
+            host_response = requests.post(host_text_save_url, json=text_save_payload, timeout=60, verify=False)
+            host_result = host_response.json()
+            
+            if host_result.get('success'):
+                print(f"[@route:save_text_reference] Host text save successful")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Text reference "{reference_name}" saved successfully to git repository'
+                })
+            else:
+                error_msg = host_result.get('error', 'Host text save failed')
+                print(f"[@route:save_text_reference] Host text save failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host text save failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:save_text_reference] Failed to connect to host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to host for text saving: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:save_text_reference] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Text reference save error: {str(e)}'
+        }), 500
+
+# =====================================================
 # SERVER-SIDE VERIFICATION EXECUTION (FORWARDS TO HOST)
 # =====================================================
 
@@ -703,4 +782,101 @@ def ensure_reference_stream_availability():
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
+        }), 500
+
+# =====================================================
+# SERVER-SIDE TEXT AUTO-DETECTION (FORWARDS TO HOST)
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/reference/text/auto-detect', methods=['POST'])
+def text_auto_detect():
+    """Forward text auto-detection request to host instead of processing locally."""
+    try:
+        data = request.get_json()
+        area = data.get('area')
+        source_path = data.get('source_path')
+        model = data.get('model', 'default')
+        image_filter = data.get('image_filter', 'none')
+        
+        print(f"[@route:text_auto_detect] Forwarding text auto-detection request to host")
+        print(f"[@route:text_auto_detect] Source path: {source_path}, Model: {model}, Filter: {image_filter}")
+        
+        # Validate required parameters
+        if not area or not source_path:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: area and source_path are required'
+            }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
+        # Extract filename from source_path URL
+        parsed_url = urllib.parse.urlparse(source_path)
+        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+        
+        print(f"[@route:text_auto_detect] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        
+        # Forward text auto-detection request to host
+        host_text_detect_url = f'http://{host_ip}:{host_port}/stream/text-auto-detect'
+        
+        text_detect_payload = {
+            'source_filename': source_filename,
+            'area': area,
+            'model': model,
+            'image_filter': image_filter
+        }
+        
+        print(f"[@route:text_auto_detect] Sending request to {host_text_detect_url} with payload: {text_detect_payload}")
+        
+        try:
+            host_response = requests.post(host_text_detect_url, json=text_detect_payload, timeout=30, verify=False)
+            host_result = host_response.json()
+            
+            if host_result.get('success'):
+                preview_url = host_result.get('preview_url')
+                detected_text = host_result.get('detected_text', '')
+                print(f"[@route:text_auto_detect] Host text auto-detection successful: '{detected_text}'")
+                
+                # Convert relative path to full nginx-exposed URL
+                full_preview_url = f'https://77.56.53.130:444{preview_url}' if preview_url else None
+                
+                return jsonify({
+                    'success': True,
+                    'detected_text': detected_text,
+                    'confidence': host_result.get('confidence', 0.0),
+                    'font_size': host_result.get('font_size', 12.0),
+                    'detected_language': host_result.get('detected_language', 'eng'),
+                    'detected_language_name': host_result.get('detected_language_name', 'English'),
+                    'language_confidence': host_result.get('language_confidence', 0.8),
+                    'preview_url': full_preview_url,
+                    'message': host_result.get('message', 'Text auto-detection completed')
+                })
+            else:
+                error_msg = host_result.get('error', 'Host text auto-detection failed')
+                print(f"[@route:text_auto_detect] Host text auto-detection failed: {error_msg}")
+                
+                # Still return preview URL if available (even on OCR failure)
+                preview_url = host_result.get('preview_url')
+                full_preview_url = f'https://77.56.53.130:444{preview_url}' if preview_url else None
+                
+                return jsonify({
+                    'success': False,
+                    'error': f'Host text auto-detection failed: {error_msg}',
+                    'preview_url': full_preview_url
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:text_auto_detect] Failed to connect to host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to host for text auto-detection: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:text_auto_detect] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Text auto-detection error: {str(e)}'
         }), 500 
