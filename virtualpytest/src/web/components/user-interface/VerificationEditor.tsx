@@ -811,7 +811,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // Use the preview URL returned from the backend (not hardcoded capture.png)
         if (result.preview_url) {
-          const previewUrl = `http://localhost:5009${result.preview_url}`;
+          // Check if result.preview_url is already a complete URL
+          const previewUrl = result.preview_url.startsWith('http://') || result.preview_url.startsWith('https://') 
+            ? result.preview_url
+            : `http://localhost:5009${result.preview_url}`;
           console.log('[@component:VerificationEditor] Setting preview from backend response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
@@ -824,7 +827,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // Still show preview even if OCR failed (but area was cropped)
         if (errorResult.preview_url) {
-          const previewUrl = `http://localhost:5009${errorResult.preview_url}`;
+          // Check if errorResult.preview_url is already a complete URL
+          const previewUrl = errorResult.preview_url.startsWith('http://') || errorResult.preview_url.startsWith('https://') 
+            ? errorResult.preview_url
+            : `http://localhost:5009${errorResult.preview_url}`;
           console.log('[@component:VerificationEditor] Setting preview from error response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
