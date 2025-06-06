@@ -218,10 +218,14 @@ def capture_reference_image():
                 # Convert relative path to full nginx-exposed URL
                 full_image_url = f'https://77.56.53.130:444{cropped_path}'
                 
+                # Extract the actual filename for later save operations
+                cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
+                
                 return jsonify({
                     'success': True,
                     'message': f'Reference image cropped on host: {reference_name}',
-                    'image_url': full_image_url
+                    'image_url': full_image_url,
+                    'cropped_filename': cropped_filename  # Return actual filename
                 })
             else:
                 error_msg = host_result.get('error', 'Host cropping failed')
@@ -303,11 +307,15 @@ def process_area_reference():
                 # Convert relative path to full nginx-exposed URL
                 full_image_url = f'https://77.56.53.130:444{cropped_path}'
                 
+                # Extract the actual filename for later save operations
+                cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
+                
                 return jsonify({
                     'success': True,
                     'message': f'Reference image processed on host: {reference_name}',
                     'image_url': full_image_url,
-                    'processed_area': processed_area
+                    'processed_area': processed_area,
+                    'cropped_filename': cropped_filename  # Return actual filename
                 })
             else:
                 error_msg = host_result.get('error', 'Host processing failed')
@@ -329,4 +337,96 @@ def process_area_reference():
         return jsonify({
             'success': False,
             'error': f'Reference processing error: {str(e)}'
+        }), 500
+
+# =====================================================
+# SERVER-SIDE REFERENCE SAVE (FORWARDS TO HOST)
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/reference/save', methods=['POST'])
+def save_reference():
+    """Forward save request to host to save resource to git repository."""
+    try:
+        data = request.get_json()
+        reference_name = data.get('reference_name')
+        model_name = data.get('model_name')
+        area = data.get('area')
+        reference_type = data.get('reference_type', 'reference_image')
+        source_path = data.get('source_path')  # Source path to extract filename
+        
+        print(f"[@route:save_reference] Forwarding save request to host: {reference_name} for model: {model_name}")
+        print(f"[@route:save_reference] Source path: {source_path}")
+        
+        # Validate required parameters
+        if not reference_name or not model_name or not area:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters: reference_name, model_name, and area are all required'
+            }), 400
+        
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
+        
+        # Extract source filename from source_path if provided
+        if source_path:
+            parsed_url = urllib.parse.urlparse(source_path)
+            source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+            # Build the expected cropped filename: cropped_{reference_name}_{source_filename}
+            cropped_filename = f'cropped_{reference_name}_{source_filename}'
+        else:
+            # Fallback pattern if no source_path provided
+            cropped_filename = f'cropped_{reference_name}.jpg'
+        
+        print(f"[@route:save_reference] Using hardcoded host: {host_ip}:{host_port}, cropped filename: {cropped_filename}")
+        
+        # Forward save request to host
+        host_save_url = f'http://{host_ip}:{host_port}/stream/save-resource'
+        
+        save_payload = {
+            'cropped_filename': cropped_filename,
+            'reference_name': reference_name,
+            'model': model_name,
+            'area': area,
+            'reference_type': reference_type
+        }
+        
+        print(f"[@route:save_reference] Sending request to {host_save_url} with payload: {save_payload}")
+        
+        try:
+            host_response = requests.post(host_save_url, json=save_payload, timeout=60, verify=False)
+            host_result = host_response.json()
+            
+            if host_result.get('success'):
+                public_url = host_result.get('public_url')
+                print(f"[@route:save_reference] Host save successful: {public_url}")
+                
+                # Build full URL with nginx-exposed URL
+                full_public_url = f'https://77.56.53.130:444{public_url}'
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Reference saved to git repository: {reference_name}',
+                    'public_url': full_public_url
+                })
+            else:
+                error_msg = host_result.get('error', 'Host save failed')
+                print(f"[@route:save_reference] Host save failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host save failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:save_reference] Failed to connect to host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to host for saving: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:save_reference] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference save error: {str(e)}'
         }), 500 

@@ -211,12 +211,22 @@ def host_save_resource():
         
         # Build paths
         source_path = f'/var/www/html/stream/captures/{cropped_filename}'
-        resources_dir = f'/var/www/html/stream/resources/{model}'
-        target_filename = f'{reference_name}.png'
-        target_path = f'{resources_dir}/{target_filename}'
-        resource_json_path = '/var/www/html/resource.json'
         
-        print(f"[@route:host_save_resource] Copying from {source_path} to {target_path}")
+        # Repository folder (permanent storage) - relative path from web app
+        repo_resources_dir = f'../resources/{model}'
+        repo_target_filename = f'{reference_name}.png'
+        repo_target_path = f'{repo_resources_dir}/{repo_target_filename}'
+        
+        # Nginx exposition folder (for client access)
+        nginx_resources_dir = f'/var/www/html/stream/resources/{model}'
+        nginx_target_filename = f'{reference_name}.png'
+        nginx_target_path = f'{nginx_resources_dir}/{nginx_target_filename}'
+        
+        resource_json_path = '../config/resource/resource.json'
+        
+        print(f"[@route:host_save_resource] Copying from {source_path}")
+        print(f"[@route:host_save_resource] To repository: {repo_target_path}")
+        print(f"[@route:host_save_resource] To nginx: {nginx_target_path}")
         
         # Check if source cropped file exists
         if not os.path.exists(source_path):
@@ -226,13 +236,16 @@ def host_save_resource():
                 'error': f'Source cropped file not found: {cropped_filename}'
             }), 404
         
-        # Create resources directory if it doesn't exist
-        os.makedirs(resources_dir, exist_ok=True)
-        print(f"[@route:host_save_resource] Created resources directory: {resources_dir}")
+        # Create directories if they don't exist
+        os.makedirs(repo_resources_dir, exist_ok=True)
+        os.makedirs(nginx_resources_dir, exist_ok=True)
+        print(f"[@route:host_save_resource] Created directories: {repo_resources_dir} and {nginx_resources_dir}")
         
-        # Copy cropped image to resources directory
-        shutil.copy2(source_path, target_path)
-        print(f"[@route:host_save_resource] Copied image to: {target_path}")
+        # Copy cropped image to both locations
+        shutil.copy2(source_path, repo_target_path)
+        shutil.copy2(source_path, nginx_target_path)
+        print(f"[@route:host_save_resource] Copied image to repository: {repo_target_path}")
+        print(f"[@route:host_save_resource] Copied image to nginx: {nginx_target_path}")
         
         # Update resource.json
         try:
@@ -247,8 +260,8 @@ def host_save_resource():
             new_resource = {
                 "name": reference_name,
                 "model": model,
-                "path": f"resources/{model}/{target_filename}",
-                "full_path": target_path,
+                "path": f"resources/{model}/{reference_name}.png",
+                "full_path": repo_target_path,
                 "created_at": datetime.now().isoformat(),
                 "type": reference_type,
                 "area": area
@@ -288,7 +301,7 @@ def host_save_resource():
                 # Continue anyway, just log warning
             
             # Git add
-            subprocess.run(['git', 'add', f'stream/resources/{model}/{target_filename}'], check=True, timeout=10)
+            subprocess.run(['git', 'add', f'stream/resources/{model}/{reference_name}.png'], check=True, timeout=10)
             subprocess.run(['git', 'add', 'resource.json'], check=True, timeout=10)
             
             # Git commit
@@ -308,7 +321,7 @@ def host_save_resource():
             print(f"[@route:host_save_resource] Git operation error: {str(e)} - continuing anyway")
         
         # Build public URL
-        public_url = f'/stream/resources/{model}/{target_filename}'
+        public_url = f'/stream/resources/{model}/{reference_name}.png'
         
         print(f"[@route:host_save_resource] Resource saved successfully: {public_url}")
         
