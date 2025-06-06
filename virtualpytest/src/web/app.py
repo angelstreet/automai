@@ -8,6 +8,9 @@ import time
 import subprocess
 import argparse
 import psutil
+import signal
+import atexit
+import hashlib
 
 # Add argument parsing for server/client mode
 parser = argparse.ArgumentParser(description='VirtualPyTest Flask Server')
@@ -340,8 +343,13 @@ def register_with_server():
         # Get public IP (simplified - could use external service)
         public_ip = local_ip  # For now, use local IP
         
+        # Generate a stable client ID based on client name and device model
+        # This ensures the same client gets the same ID on reconnection
+        stable_id_string = f"{client_name}-{device_model}-{local_ip}"
+        stable_client_id = hashlib.md5(stable_id_string.encode()).hexdigest()
+        
         client_info = {
-            'client_id': str(uuid4()),
+            'client_id': stable_client_id,
             'public_ip': public_ip,
             'local_ip': local_ip,
             'client_port': client_port,
@@ -415,6 +423,77 @@ def register_with_server():
         traceback.print_exc()
     
     print("=" * 50)
+
+def unregister_from_server():
+    """Unregister this client from the server"""
+    if SERVER_MODE != 'client' or not client_registration_state['registered']:
+        return
+    
+    try:
+        import requests
+        
+        server_url = client_registration_state['server_url']
+        client_id = client_registration_state['client_id']
+        
+        if not server_url or not client_id:
+            print(f"⚠️ [CLIENT] Cannot unregister: missing server URL or client ID")
+            return
+        
+        print(f"\n🔌 [CLIENT] Unregistering from server...")
+        print(f"   Server: {server_url}")
+        print(f"   Client ID: {client_id[:8]}...")
+        
+        unregister_data = {
+            'client_id': client_id
+        }
+        
+        response = requests.post(
+            f"{server_url}/api/system/unregister",
+            json=unregister_data,
+            timeout=5,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        if response.status_code == 200:
+            print(f"✅ [CLIENT] Successfully unregistered from server")
+            client_registration_state['registered'] = False
+            client_registration_state['client_id'] = None
+            client_registration_state['server_url'] = None
+        else:
+            print(f"⚠️ [CLIENT] Unregistration failed with status: {response.status_code}")
+            try:
+                error_response = response.json()
+                print(f"   Error details: {error_response}")
+            except Exception:
+                print(f"   Raw response: {response.text}")
+                
+    except requests.exceptions.ConnectionError:
+        print(f"⚠️ [CLIENT] Could not connect to server for unregistration (server may be down)")
+    except requests.exceptions.Timeout:
+        print(f"⚠️ [CLIENT] Unregistration request timed out")
+    except Exception as e:
+        print(f"❌ [CLIENT] Unexpected error during unregistration: {e}")
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    print(f"\n🛑 [CLIENT] Received signal {signum}, shutting down gracefully...")
+    unregister_from_server()
+    sys.exit(0)
+
+def cleanup_on_exit():
+    """Cleanup function called on normal exit"""
+    if SERVER_MODE == 'client':
+        print(f"\n🧹 [CLIENT] Performing cleanup on exit...")
+        unregister_from_server()
+
+# Register cleanup handlers for client mode
+if SERVER_MODE == 'client':
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+    signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+    
+    # Register exit handler for normal exit
+    atexit.register(cleanup_on_exit)
 
 # Initialize based on mode
 if SERVER_MODE == 'server':

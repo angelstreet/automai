@@ -189,17 +189,62 @@ def register_client():
         
         # Store client info
         connected_clients = get_connected_clients()
-        connected_clients[client_info['client_id']] = client_info
-        set_connected_clients(connected_clients)
         
-        # Start health check for this client
-        start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
+        # Check if client is already registered (by client_id, name, or IP combination)
+        existing_client_id = None
+        for existing_id, existing_info in connected_clients.items():
+            # Check for exact client_id match (reconnection with same ID)
+            if existing_id == client_info['client_id']:
+                existing_client_id = existing_id
+                break
+            # Check for same device reconnecting (same name + IP + device_model)
+            elif (existing_info.get('name') == client_info['name'] and 
+                  existing_info.get('local_ip') == client_info['local_ip'] and
+                  existing_info.get('device_model') == client_info['device_model']):
+                existing_client_id = existing_id
+                break
         
-        print(f"✅ [SERVER] Client registered successfully:")
-        print(f"   Name: {client_info['name']}")
-        print(f"   Device Model: {client_info['device_model']}")
-        print(f"   Address: {client_info['local_ip']}:{client_info['client_port']}")
-        print(f"   Client ID: {client_info['client_id']}")
+        if existing_client_id:
+            # Update existing client instead of creating duplicate
+            print(f"🔄 [SERVER] Updating existing client registration:")
+            print(f"   Existing ID: {existing_client_id[:8]}...")
+            print(f"   New ID: {client_info['client_id'][:8]}...")
+            print(f"   Name: {client_info['name']}")
+            
+            # Keep the original client_id but update all other info
+            original_registered_at = connected_clients[existing_client_id].get('registered_at')
+            client_info['registered_at'] = original_registered_at  # Keep original registration time
+            client_info['reconnected_at'] = datetime.now().isoformat()  # Add reconnection time
+            
+            # If client_id changed, remove old entry and add with new ID
+            if existing_client_id != client_info['client_id']:
+                del connected_clients[existing_client_id]
+                # Stop old health check thread
+                health_check_threads = get_health_check_threads()
+                if existing_client_id in health_check_threads:
+                    del health_check_threads[existing_client_id]
+                    set_health_check_threads(health_check_threads)
+            
+            connected_clients[client_info['client_id']] = client_info
+            set_connected_clients(connected_clients)
+            
+            # Start health check for the (potentially new) client ID
+            start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
+            
+            print(f"✅ [SERVER] Client registration updated successfully")
+        else:
+            # New client registration
+            connected_clients[client_info['client_id']] = client_info
+            set_connected_clients(connected_clients)
+            
+            # Start health check for this client
+            start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
+            
+            print(f"✅ [SERVER] New client registered successfully:")
+            print(f"   Name: {client_info['name']}")
+            print(f"   Device Model: {client_info['device_model']}")
+            print(f"   Address: {client_info['local_ip']}:{client_info['client_port']}")
+            print(f"   Client ID: {client_info['client_id'][:8]}...")
         
         return jsonify({
             'status': 'success',
