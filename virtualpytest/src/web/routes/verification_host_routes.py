@@ -317,24 +317,31 @@ def host_save_resource():
             # Change to the web directory
             os.chdir('/var/www/html')
             
-            # Git pull
+            # Git pull first to get latest changes
+            print(f"[@route:host_save_resource] Executing git pull...")
             result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
-                print(f"[@route:host_save_resource] Git pull warning: {result.stderr}")
-                # Continue anyway, just log warning
+                print(f"[@route:host_save_resource] Git pull failed, aborting and continuing: {result.stderr}")
+                subprocess.run(['git', 'merge', '--abort'], capture_output=True, timeout=10)
+            else:
+                print(f"[@route:host_save_resource] Git pull successful")
             
-            # Git add
-            subprocess.run(['git', 'add', f'stream/resources/{model}/{reference_name}.png'], check=True, timeout=10)
-            subprocess.run(['git', 'add', 'resource.json'], check=True, timeout=10)
-            
-            # Git commit
-            commit_message = f"save resource {reference_name}"
-            subprocess.run(['git', 'commit', '-m', commit_message], check=True, timeout=10)
+            # Git commit all changes
+            commit_message = f"save resource {reference_name} for model {model}"
+            print(f"[@route:host_save_resource] Committing all changes...")
+            result = subprocess.run(['git', 'commit', '-am', commit_message], capture_output=True, text=True, timeout=10)
+            if result.returncode != 0:
+                print(f"[@route:host_save_resource] Git commit info: {result.stdout}")
             
             # Git push
-            subprocess.run(['git', 'push'], check=True, timeout=30)
+            print(f"[@route:host_save_resource] Pushing to remote...")
+            result = subprocess.run(['git', 'push'], capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                print(f"[@route:host_save_resource] Git push failed: {result.stderr}")
+            else:
+                print(f"[@route:host_save_resource] Git push successful")
             
-            print(f"[@route:host_save_resource] Git operations completed successfully")
+            print(f"[@route:host_save_resource] Git operations completed")
             
         except subprocess.TimeoutExpired:
             print(f"[@route:host_save_resource] Git operation timeout - continuing anyway")
