@@ -337,66 +337,83 @@ def start_health_check(client_id, client_ip, client_port):
         max_failures = 3
         
         # Get the Flask app instance to use in the thread
-        app = current_app._get_current_object()
+        try:
+            app = current_app._get_current_object()
+        except RuntimeError:
+            # If we can't get current app, try to get it from the global context
+            print(f"⚠️ [HEALTH] Could not get current app context for client {client_id}")
+            return
         
         while True:
-            # Use app context for each iteration
-            with app.app_context():
-                connected_clients = getattr(app, '_connected_clients', {})
-                if client_id not in connected_clients:
-                    print(f"🔌 Health check stopped for {client_id} (client removed)")
-                    break
-                
-                try:
-                    response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
-                    if response.status_code == 200:
-                        # Update last seen timestamp
-                        connected_clients[client_id]['last_seen'] = time.time()
-                        connected_clients[client_id]['status'] = 'online'
-                        app._connected_clients = connected_clients
-                        consecutive_failures = 0
-                    else:
+            try:
+                # Use app context for each iteration
+                with app.app_context():
+                    connected_clients = getattr(app, '_connected_clients', {})
+                    if client_id not in connected_clients:
+                        print(f"🔌 [HEALTH] Health check stopped for {client_id} (client removed)")
+                        break
+                    
+                    try:
+                        response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
+                        if response.status_code == 200:
+                            # Update last seen timestamp
+                            connected_clients[client_id]['last_seen'] = time.time()
+                            connected_clients[client_id]['status'] = 'online'
+                            app._connected_clients = connected_clients
+                            consecutive_failures = 0
+                            print(f"💓 [HEALTH] Client {client_id} health check OK")
+                        else:
+                            consecutive_failures += 1
+                            print(f"⚠️ [HEALTH] Client {client_id} health check failed: HTTP {response.status_code}")
+                            
+                    except Exception as e:
                         consecutive_failures += 1
+                        print(f"⚠️ [HEALTH] Health check failed for {client_id}: {e}")
+                    
+                    # Remove client after max failures
+                    if consecutive_failures >= max_failures:
+                        print(f"❌ [HEALTH] Removing client {client_id} after {max_failures} failed health checks")
+                        # Use app context for removal
+                        with app.app_context():
+                            remove_client(client_id)
+                        break
                         
-                except Exception as e:
-                    consecutive_failures += 1
-                    print(f"⚠️ Health check failed for {client_id}: {e}")
-                
-                # Remove client after max failures
-                if consecutive_failures >= max_failures:
-                    print(f"❌ Removing client {client_id} after {max_failures} failed health checks")
-                    # Use app context for removal
-                    with app.app_context():
-                        remove_client(client_id)
-                    break
+            except Exception as context_error:
+                print(f"❌ [HEALTH] App context error for client {client_id}: {context_error}")
+                break
             
             time.sleep(30)  # Check every 30 seconds
     
     # Start health check thread
     health_check_threads = get_health_check_threads()
     if client_id not in health_check_threads:
-        thread = threading.Thread(target=health_worker, daemon=True)
+        thread = threading.Thread(target=health_worker, daemon=True, name=f"health-{client_id[:8]}")
         thread.start()
         health_check_threads[client_id] = thread
         set_health_check_threads(health_check_threads)
+        print(f"🏥 [HEALTH] Started health check thread for client {client_id}")
 
 def remove_client(client_id):
     """Remove a client from the registry"""
     try:
         from flask import current_app
         
+        print(f"🗑️ [CLEANUP] Attempting to remove client {client_id}")
+        
         # Try to get app context, if not available use direct access
         try:
             connected_clients = get_connected_clients()
             health_check_threads = get_health_check_threads()
+            print(f"🗑️ [CLEANUP] Got app context successfully for {client_id}")
         except RuntimeError:
             # If we're outside app context, try to get app directly
             try:
                 app = current_app._get_current_object()
                 connected_clients = getattr(app, '_connected_clients', {})
                 health_check_threads = getattr(app, '_health_check_threads', {})
-            except:
-                print(f"❌ Could not access app context to remove client {client_id}")
+                print(f"🗑️ [CLEANUP] Got app object directly for {client_id}")
+            except Exception as app_error:
+                print(f"❌ [CLEANUP] Could not access app context to remove client {client_id}: {app_error}")
                 return
         
         if client_id in connected_clients:
@@ -406,32 +423,47 @@ def remove_client(client_id):
             # Update the app state
             try:
                 set_connected_clients(connected_clients)
+                print(f"🗑️ [CLEANUP] Updated connected clients list")
             except RuntimeError:
                 # Direct update if context not available
                 try:
                     app = current_app._get_current_object()
                     app._connected_clients = connected_clients
-                except:
-                    pass
+                    print(f"🗑️ [CLEANUP] Updated connected clients directly")
+                except Exception as update_error:
+                    print(f"⚠️ [CLEANUP] Could not update connected clients: {update_error}")
             
-            print(f"🗑️ Removed client: {client_info.get('name', client_id)}")
+            print(f"🗑️ [CLEANUP] Removed client: {client_info.get('name', client_id)}")
+        else:
+            print(f"⚠️ [CLEANUP] Client {client_id} not found in connected clients")
         
         # Clean up health check thread
         if client_id in health_check_threads:
+            thread = health_check_threads[client_id]
             del health_check_threads[client_id]
             
             try:
                 set_health_check_threads(health_check_threads)
+                print(f"🗑️ [CLEANUP] Updated health check threads list")
             except RuntimeError:
                 # Direct update if context not available
                 try:
                     app = current_app._get_current_object()
                     app._health_check_threads = health_check_threads
-                except:
-                    pass
+                    print(f"🗑️ [CLEANUP] Updated health check threads directly")
+                except Exception as update_error:
+                    print(f"⚠️ [CLEANUP] Could not update health check threads: {update_error}")
+            
+            print(f"🗑️ [CLEANUP] Cleaned up health check thread for {client_id}")
+        else:
+            print(f"⚠️ [CLEANUP] No health check thread found for {client_id}")
+            
+        print(f"✅ [CLEANUP] Successfully removed client {client_id}")
             
     except Exception as e:
-        print(f"❌ Error removing client {client_id}: {e}")
+        print(f"❌ [CLEANUP] Error removing client {client_id}: {e}")
+        import traceback
+        traceback.print_exc()
 
 def find_available_client(device_model):
     """Find an available client for the given device model"""
