@@ -294,18 +294,30 @@ const NavigationEditorContent: React.FC = () => {
     try {
       setDevicesLoading(true);
       
+      // Use environment variables or fallback to localhost
+      const serverUrl = process.env.SERVER_URL || 'http://localhost';
+      const serverPort = process.env.SERVER_PORT || '5009';
+      const fullServerUrl = `${serverUrl}:${serverPort}`;
+      
+      console.log(`[@component:NavigationEditor] Using server URL: ${fullServerUrl}`);
+      
       // Fetch registered clients as devices instead of using device database
-      const response = await fetch('http://localhost:5009/api/system/clients/devices');
+      const response = await fetch(`${fullServerUrl}/api/system/clients/devices`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       
       if (result.success) {
         const registeredDevices = result.devices || [];
         setDevices(registeredDevices);
-        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices`);
+        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices from ${fullServerUrl}`);
       } else {
-        console.error('[@component:NavigationEditor] Failed to fetch registered devices:', result.error);
-        setDevices([]);
+        throw new Error(result.error || 'Server returned success: false');
       }
+      
     } catch (error: any) {
       console.error('[@component:NavigationEditor] Error fetching registered devices:', error);
       setDevices([]);
