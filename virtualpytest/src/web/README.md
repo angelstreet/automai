@@ -62,7 +62,7 @@ A modern React TypeScript web interface for the VirtualPyTest framework, providi
    python app.py
    ```
 
-The web interface will be available at `http://localhost:5173` and the API at `http://localhost:5009`.
+The web interface will be available at `http://localhost:5073` and the API at `http://localhost:5009`.
 
 ## Project Structure
 

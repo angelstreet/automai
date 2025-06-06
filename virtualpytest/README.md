@@ -95,7 +95,7 @@ VirtualPyTest is an open-source web-based test management tool for creating, org
    npm run dev
    ```
 
-   The web interface will be available at `http://localhost:5173`
+   The web interface will be available at `http://localhost:5073`
 
 ## Database Schema
 
