@@ -884,5 +884,171 @@ def save_text_reference():
         print(f"[@route:save_text_reference] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Text reference save error: {str(e)}'
+            'error': f'Failed to save text reference: {str(e)}'
+        }), 500
+
+# =====================================================
+# SERVER-SIDE ADB VERIFICATION ENDPOINTS (FORWARDS TO HOST)
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/verification/adb/element-lists', methods=['POST'])
+def get_adb_element_lists():
+    """Forward ADB element lists request to host to get UI elements."""
+    try:
+        data = request.get_json()
+        model = data.get('model', 'default')
+        search_term = data.get('search_term', '')
+        
+        print(f"[@route:get_adb_element_lists] Getting ADB element lists for model: {model}")
+        if search_term:
+            print(f"[@route:get_adb_element_lists] With search term: '{search_term}'")
+        
+        # Forward to host using hardcoded IP (same pattern as image/text verification)
+        host_url = 'http://77.56.53.130:5119/stream/adb-element-lists'
+        
+        payload = {
+            'model': model,
+            'search_term': search_term
+        }
+        
+        print(f"[@route:get_adb_element_lists] Forwarding to host: {host_url}")
+        
+        response = requests.post(host_url, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[@route:get_adb_element_lists] Host response successful")
+            return jsonify(result)
+        else:
+            error_msg = f'Host returned status {response.status_code}'
+            print(f"[@route:get_adb_element_lists] Host error: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to get ADB element lists from host: {error_msg}'
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[@route:get_adb_element_lists] Connection error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to connect to host for ADB element lists: {str(e)}'
+        }), 500
+        
+    except Exception as e:
+        print(f"[@route:get_adb_element_lists] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'ADB element lists error: {str(e)}'
+        }), 500
+
+@verification_server_bp.route('/api/virtualpytest/verification/adb/wait-element-appear', methods=['POST'])
+def wait_adb_element_appear():
+    """Forward ADB wait for element appear request to host."""
+    try:
+        data = request.get_json()
+        search_term = data.get('search_term', '')
+        timeout = data.get('timeout', 10.0)
+        model = data.get('model', 'default')
+        
+        print(f"[@route:wait_adb_element_appear] Waiting for element: '{search_term}' (timeout: {timeout}s)")
+        
+        if not search_term:
+            return jsonify({
+                'success': False,
+                'error': 'search_term is required'
+            }), 400
+        
+        # Forward to host using hardcoded IP
+        host_url = 'http://77.56.53.130:5119/stream/adb-wait-element-appear'
+        
+        payload = {
+            'search_term': search_term,
+            'timeout': timeout,
+            'model': model
+        }
+        
+        print(f"[@route:wait_adb_element_appear] Forwarding to host: {host_url}")
+        
+        response = requests.post(host_url, json=payload, timeout=timeout + 5)  # Add 5s buffer
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[@route:wait_adb_element_appear] Host response: {result.get('success', False)}")
+            return jsonify(result)
+        else:
+            error_msg = f'Host returned status {response.status_code}'
+            print(f"[@route:wait_adb_element_appear] Host error: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to wait for element appear on host: {error_msg}'
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[@route:wait_adb_element_appear] Connection error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to connect to host for ADB wait element appear: {str(e)}'
+        }), 500
+        
+    except Exception as e:
+        print(f"[@route:wait_adb_element_appear] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'ADB wait element appear error: {str(e)}'
+        }), 500
+
+@verification_server_bp.route('/api/virtualpytest/verification/adb/wait-element-disappear', methods=['POST'])
+def wait_adb_element_disappear():
+    """Forward ADB wait for element disappear request to host."""
+    try:
+        data = request.get_json()
+        search_term = data.get('search_term', '')
+        timeout = data.get('timeout', 10.0)
+        model = data.get('model', 'default')
+        
+        print(f"[@route:wait_adb_element_disappear] Waiting for element to disappear: '{search_term}' (timeout: {timeout}s)")
+        
+        if not search_term:
+            return jsonify({
+                'success': False,
+                'error': 'search_term is required'
+            }), 400
+        
+        # Forward to host using hardcoded IP
+        host_url = 'http://77.56.53.130:5119/stream/adb-wait-element-disappear'
+        
+        payload = {
+            'search_term': search_term,
+            'timeout': timeout,
+            'model': model
+        }
+        
+        print(f"[@route:wait_adb_element_disappear] Forwarding to host: {host_url}")
+        
+        response = requests.post(host_url, json=payload, timeout=timeout + 5)  # Add 5s buffer
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[@route:wait_adb_element_disappear] Host response: {result.get('success', False)}")
+            return jsonify(result)
+        else:
+            error_msg = f'Host returned status {response.status_code}'
+            print(f"[@route:wait_adb_element_disappear] Host error: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to wait for element disappear on host: {error_msg}'
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[@route:wait_adb_element_disappear] Connection error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to connect to host for ADB wait element disappear: {str(e)}'
+        }), 500
+        
+    except Exception as e:
+        print(f"[@route:wait_adb_element_disappear] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'ADB wait element disappear error: {str(e)}'
         }), 500 
