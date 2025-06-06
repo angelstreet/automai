@@ -735,7 +735,7 @@ def execute_image_verification_host(verification, source_path, model, verificati
                 print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to source")
         
         # === STEP 2: Handle Reference Image ===
-        # Copy reference image and its existing filtered versions to stream directory
+        # Copy reference image and apply filter if needed
         if image_filter and image_filter != 'none':
             # User wants filtered comparison - check if filtered reference exists
             base_path, ext = os.path.splitext(image_path)
@@ -745,8 +745,17 @@ def execute_image_verification_host(verification, source_path, model, verificati
                 print(f"[@route:execute_image_verification_host] Using existing filtered reference: {filtered_reference_path}")
                 shutil.copy2(filtered_reference_path, reference_result_path)
             else:
-                print(f"[@route:execute_image_verification_host] Filtered reference not found, using original: {image_path}")
+                print(f"[@route:execute_image_verification_host] Filtered reference not found, creating dynamically from original: {image_path}")
+                # Copy original reference first
                 shutil.copy2(image_path, reference_result_path)
+                # Apply filter dynamically to the copied reference
+                from controllers.verification.image import apply_image_filter
+                if not apply_image_filter(reference_result_path, image_filter):
+                    print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to reference, using original")
+                    # If filter fails, copy original again to ensure clean state
+                    shutil.copy2(image_path, reference_result_path)
+                else:
+                    print(f"[@route:execute_image_verification_host] Successfully applied {image_filter} filter to reference image")
         else:
             # User wants original comparison - use original reference
             print(f"[@route:execute_image_verification_host] Using original reference: {image_path}")
@@ -858,6 +867,13 @@ def execute_text_verification_host(verification, source_path, model, verificatio
             # Copy full source image
             shutil.copy2(source_path, source_result_path)
         
+        # Apply filter to source image if user selected one (can improve OCR accuracy)
+        if image_filter and image_filter != 'none':
+            print(f"[@route:execute_text_verification_host] Applying {image_filter} filter to source image for OCR")
+            from controllers.verification.image import apply_image_filter
+            if not apply_image_filter(source_result_path, image_filter):
+                print(f"[@route:execute_text_verification_host] Warning: Failed to apply {image_filter} filter to source")
+
         # Load image for OCR
         img = cv2.imread(source_result_path)
         if img is None:

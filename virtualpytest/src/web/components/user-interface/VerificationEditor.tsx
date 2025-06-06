@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -211,7 +211,34 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   } | null>(null);
 
   // Use the provided layout config or get it from the model type
-  const finalLayoutConfig = layoutConfig || getVerificationEditorLayout(model);
+  const finalLayoutConfig = useMemo(() => {
+    const config = layoutConfig || getVerificationEditorLayout(model);
+    console.log('[@component:VerificationEditor] Layout config recalculated:', {
+      model,
+      providedLayoutConfig: layoutConfig,
+      calculatedConfig: config,
+      isMobileModel: config.isMobileModel,
+      width: config.width,
+      height: config.height,
+      captureHeight: config.captureHeight
+    });
+    return config;
+  }, [model, layoutConfig]);
+
+  // Debug logging for component mount/unmount
+  useEffect(() => {
+    console.log('[@component:VerificationEditor] Component mounted with props:', {
+      isVisible,
+      model,
+      isScreenshotMode,
+      isCaptureActive,
+      layoutConfig: finalLayoutConfig
+    });
+    
+    return () => {
+      console.log('[@component:VerificationEditor] Component unmounting');
+    };
+  }, []);
 
   // Debug logging for selected reference image changes
   useEffect(() => {
@@ -873,7 +900,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   if (!model || model.trim() === '') {
     return (
       <Box sx={{ 
-        width: finalLayoutConfig.isMobileModel ? finalLayoutConfig.width : '350px', // Fixed larger width for landscape models
+        width: finalLayoutConfig.width, 
         height: finalLayoutConfig.height, 
         p: 1, 
         display: 'flex', 
@@ -881,7 +908,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         gap: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        ...sx 
+        ...sx,
       }}>
         <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
           Configuration Error
@@ -917,7 +944,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           background: 'rgba(255,255,255,0.5)',
         },
       },
-      ...sx 
+      ...sx,
     }}>
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
         Verification Editor

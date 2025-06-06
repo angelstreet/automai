@@ -41,33 +41,27 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
     return `${url}${separator}t=${timestamp}`;
   };
 
-  // Get the filtered image URL based on the selected filter
-  const getFilteredImageUrl = (url: string, filter?: 'none' | 'greyscale' | 'binary') => {
-    if (!url || !filter || filter === 'none') return url;
-    
-    // Remove file extension and add filter suffix
-    const lastDotIndex = url.lastIndexOf('.');
-    if (lastDotIndex === -1) return url;
-    
-    const baseUrl = url.substring(0, lastDotIndex);
-    const extension = url.substring(lastDotIndex);
-    
-    const filterSuffix = filter === 'greyscale' ? '_greyscale' : '_binary';
-    return `${baseUrl}${filterSuffix}${extension}`;
+  // Get CSS filter based on the selected filter
+  const getCSSFilter = (filter?: 'none' | 'greyscale' | 'binary') => {
+    switch (filter) {
+      case 'greyscale':
+        return 'grayscale(100%)';
+      case 'binary':
+        return 'grayscale(100%) contrast(1000%) brightness(1000%)';
+      case 'none':
+      default:
+        return 'none';
+    }
   };
 
-  const filteredSourceUrl = getFilteredImageUrl(sourceUrl, imageFilter);
-  const filteredReferenceUrl = getFilteredImageUrl(referenceUrl, imageFilter);
+  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
+  const cssFilter = getCSSFilter(imageFilter);
   
-  // Debug logging for filtered images
+  // Debug logging for filters
   if (imageFilter && imageFilter !== 'none') {
-    console.log(`[@component:VerificationImageComparisonThumbnails] Using ${imageFilter} filter:`);
-    console.log(`[@component:VerificationImageComparisonThumbnails] Source: ${sourceUrl} -> ${filteredSourceUrl}`);
-    console.log(`[@component:VerificationImageComparisonThumbnails] Reference: ${referenceUrl} -> ${filteredReferenceUrl}`);
+    console.log(`[@component:VerificationImageComparisonThumbnails] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`);
   }
-  
-  const cacheBustedSourceUrl = getCacheBustedUrl(filteredSourceUrl);
-  const cacheBustedReferenceUrl = getCacheBustedUrl(filteredReferenceUrl);
 
   return (
     <Box 
@@ -110,7 +104,8 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
                 width: 'auto',
                 height: 'auto',
                 objectFit: 'contain', // Maintain aspect ratio
-                display: 'block'
+                display: 'block',
+                filter: cssFilter // Apply dynamic CSS filter
               }}
               onLoad={(e) => {
                 const img = e.target as HTMLImageElement;
@@ -152,7 +147,8 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
                 width: 'auto',
                 height: 'auto',
                 objectFit: 'contain', // Maintain aspect ratio
-                display: 'block'
+                display: 'block',
+                filter: cssFilter // Apply dynamic CSS filter
               }}
               onLoad={(e) => {
                 const img = e.target as HTMLImageElement;
@@ -170,7 +166,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
       <Box sx={{ mt: 1, textAlign: 'center' }}>
         {imageFilter && imageFilter !== 'none' && (
           <Typography variant="caption" sx={{ display: 'block', color: '#666' }}>
-            Filter: {imageFilter}
+            Filter: {imageFilter} (CSS)
           </Typography>
         )}
         <Typography variant="caption" sx={{ display: 'block', color: '#999', fontSize: '0.7rem' }}>

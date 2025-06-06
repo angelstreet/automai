@@ -47,33 +47,27 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
     return `${url}${separator}t=${timestamp}`;
   };
 
-  // Get the filtered image URL based on the selected filter
-  const getFilteredImageUrl = (url: string, filter?: 'none' | 'greyscale' | 'binary') => {
-    if (!url || !filter || filter === 'none') return url;
-    
-    // Remove file extension and add filter suffix
-    const lastDotIndex = url.lastIndexOf('.');
-    if (lastDotIndex === -1) return url;
-    
-    const baseUrl = url.substring(0, lastDotIndex);
-    const extension = url.substring(lastDotIndex);
-    
-    const filterSuffix = filter === 'greyscale' ? '_greyscale' : '_binary';
-    return `${baseUrl}${filterSuffix}${extension}`;
+  // Get CSS filter based on the selected filter
+  const getCSSFilter = (filter?: 'none' | 'greyscale' | 'binary') => {
+    switch (filter) {
+      case 'greyscale':
+        return 'grayscale(100%)';
+      case 'binary':
+        return 'grayscale(100%) contrast(1000%) brightness(1000%)';
+      case 'none':
+      default:
+        return 'none';
+    }
   };
 
-  const filteredSourceUrl = getFilteredImageUrl(sourceUrl, imageFilter);
-  const filteredReferenceUrl = getFilteredImageUrl(referenceUrl, imageFilter);
+  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
+  const cssFilter = getCSSFilter(imageFilter);
 
-  // Debug logging for filtered images
+  // Debug logging for filters
   if (imageFilter && imageFilter !== 'none') {
-    console.log(`[@component:VerificationImageComparisonDialog] Using ${imageFilter} filter:`);
-    console.log(`[@component:VerificationImageComparisonDialog] Source: ${sourceUrl} -> ${filteredSourceUrl}`);
-    console.log(`[@component:VerificationImageComparisonDialog] Reference: ${referenceUrl} -> ${filteredReferenceUrl}`);
+    console.log(`[@component:VerificationImageComparisonDialog] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`);
   }
-
-  const cacheBustedSourceUrl = getCacheBustedUrl(filteredSourceUrl);
-  const cacheBustedReferenceUrl = getCacheBustedUrl(filteredReferenceUrl);
 
   return (
     <Dialog 
@@ -106,6 +100,19 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 }}
               >
                 {resultType}
+              </Typography>
+            )}
+            {imageFilter && imageFilter !== 'none' && (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#666',
+                  padding: '2px 6px',
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 1
+                }}
+              >
+                Filter: {imageFilter} (CSS)
               </Typography>
             )}
           </Box>
@@ -145,7 +152,8 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   backgroundColor: 'transparent',
                   border: 'none',
                   padding: 0,
-                  margin: 0
+                  margin: 0,
+                  filter: cssFilter // Apply dynamic CSS filter
                 }}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load source image:', sourceUrl);
@@ -185,7 +193,8 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   backgroundColor: 'transparent',
                   border: 'none',
                   padding: 0,
-                  margin: 0
+                  margin: 0,
+                  filter: cssFilter // Apply dynamic CSS filter
                 }}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load reference image:', referenceUrl);

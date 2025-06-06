@@ -26,6 +26,7 @@ import { StreamViewer } from './StreamViewer';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
+import { getVerificationEditorLayout } from '../../../config/layoutConfig';
 
 interface ScreenDefinitionEditorProps {
   /** Device configuration with AV parameters */
@@ -142,6 +143,16 @@ export function ScreenDefinitionEditor({
     objectFit: 'cover' as const,
     isMobileModel: deviceModel === 'android_mobile',
   }), [deviceModel]);
+
+  // Get verification editor layout config for parent container sizing
+  const verificationEditorLayout = useMemo(() => {
+    const config = getVerificationEditorLayout(deviceModel);
+    console.log('[@component:ScreenDefinitionEditor] Verification editor layout config:', {
+      deviceModel,
+      config
+    });
+    return config;
+  }, [deviceModel]);
 
   // Connection state - simplified
   const [isConnected, setIsConnected] = useState(false);
@@ -635,8 +646,8 @@ export function ScreenDefinitionEditor({
         }}>
           {/* Main Screen Definition Editor Panel */}
           <Box sx={{
-            width: deviceModel === 'android_mobile' ? '270px' : '660px', // 200px wider for landscape models
-            height: '510px',
+            width: verificationEditorLayout.width,
+            height: verificationEditorLayout.height,
             bgcolor: '#1E1E1E',
             border: '2px solid #1E1E1E',
             borderRadius: '1px 0 0 1px',
