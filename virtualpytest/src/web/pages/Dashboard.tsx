@@ -11,6 +11,9 @@ import {
   Computer as ComputerIcon,
   PhoneAndroid as PhoneIcon,
   Tv as TvIcon,
+  ViewModule as GridViewIcon,
+  TableRows as TableViewIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -27,6 +30,16 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
@@ -60,6 +73,8 @@ interface ConnectedDevice {
   last_seen: number;
 }
 
+type ViewMode = 'grid' | 'table';
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
@@ -69,10 +84,15 @@ const Dashboard: React.FC = () => {
   });
   const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [devicesLoading, setDevicesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   useEffect(() => {
     fetchDashboardData();
+    // Set up auto-refresh for devices every 30 seconds
+    const interval = setInterval(fetchDevicesData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -146,6 +166,33 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const fetchDevicesData = async () => {
+    try {
+      setDevicesLoading(true);
+      const devicesRes = await fetch(`${API_BASE_URL}/system/clients`);
+      
+      if (devicesRes.ok) {
+        const devicesResponse = await devicesRes.json();
+        if (devicesResponse.status === 'success' && devicesResponse.clients) {
+          setConnectedDevices(devicesResponse.clients);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh devices data:', err);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  const handleViewModeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newViewMode: ViewMode,
+  ) => {
+    if (newViewMode !== null) {
+      setViewMode(newViewMode);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -192,6 +239,149 @@ const Dashboard: React.FC = () => {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
   };
+
+  const formatRegisteredAt = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    } catch {
+      return 'Unknown';
+    }
+  };
+
+  const renderDevicesGrid = () => (
+    <Grid container spacing={2}>
+      {connectedDevices.map((device) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} key={device.client_id}>
+          <Card variant="outlined" sx={{ height: '100%' }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  {getDeviceIcon(device.device_model)}
+                  <Typography variant="h6" component="div" noWrap>
+                    {device.name}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={device.status}
+                  size="small"
+                  color={device.status === 'online' ? 'success' : 'error'}
+                  variant="outlined"
+                />
+              </Box>
+              
+              <Typography color="textSecondary" variant="body2" gutterBottom>
+                Model: {device.device_model}
+              </Typography>
+              
+              <Typography color="textSecondary" variant="body2" gutterBottom>
+                Local IP: {device.local_ip}:{device.client_port}
+              </Typography>
+              
+              <Typography color="textSecondary" variant="body2" gutterBottom>
+                Public IP: {device.public_ip}
+              </Typography>
+              
+              <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
+                {device.capabilities.map((capability) => (
+                  <Chip
+                    key={capability}
+                    label={capability}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.7rem' }}
+                  />
+                ))}
+              </Box>
+              
+              <Typography color="textSecondary" variant="caption" display="block">
+                Last seen: {formatLastSeen(device.last_seen)}
+              </Typography>
+              
+              <Typography color="textSecondary" variant="caption" display="block">
+                Registered: {formatRegisteredAt(device.registered_at)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  );
+
+  const renderDevicesTable = () => (
+    <TableContainer component={Paper} variant="outlined">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Device</TableCell>
+            <TableCell>Model</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Local IP</TableCell>
+            <TableCell>Public IP</TableCell>
+            <TableCell>Capabilities</TableCell>
+            <TableCell>Last Seen</TableCell>
+            <TableCell>Registered</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {connectedDevices.map((device) => (
+            <TableRow key={device.client_id} hover>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  {getDeviceIcon(device.device_model)}
+                  <Typography variant="body2">{device.name}</Typography>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">{device.device_model}</Typography>
+              </TableCell>
+              <TableCell>
+                <Chip
+                  label={device.status}
+                  size="small"
+                  color={device.status === 'online' ? 'success' : 'error'}
+                  variant="outlined"
+                />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontFamily="monospace">
+                  {device.local_ip}:{device.client_port}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontFamily="monospace">
+                  {device.public_ip}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Box display="flex" flexWrap="wrap" gap={0.5}>
+                  {device.capabilities.map((capability) => (
+                    <Chip
+                      key={capability}
+                      label={capability}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.7rem' }}
+                    />
+                  ))}
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {formatLastSeen(device.last_seen)}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {formatRegisteredAt(device.registered_at)}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 
   if (loading) {
     return (
@@ -341,58 +531,48 @@ const Dashboard: React.FC = () => {
 
       {/* Connected Devices */}
       <Paper sx={{ p: 2, mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Connected Devices ({connectedDevices.length})
-        </Typography>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+          <Typography variant="h6">
+            Registered Clients ({connectedDevices.length})
+          </Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={handleViewModeChange}
+              size="small"
+            >
+              <ToggleButton value="grid">
+                <Tooltip title="Grid View">
+                  <GridViewIcon />
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="table">
+                <Tooltip title="Table View">
+                  <TableViewIcon />
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+            <Tooltip title="Refresh Devices">
+              <IconButton 
+                onClick={fetchDevicesData} 
+                disabled={devicesLoading}
+                size="small"
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+        
+        {devicesLoading && (
+          <Box display="flex" justifyContent="center" py={2}>
+            <CircularProgress size={24} />
+          </Box>
+        )}
+        
         {connectedDevices.length > 0 ? (
-          <Grid container spacing={2}>
-            {connectedDevices.map((device) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={device.client_id}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {getDeviceIcon(device.device_model)}
-                        <Typography variant="h6" component="div">
-                          {device.name}
-                        </Typography>
-                      </Box>
-                      <Chip
-                        label={device.status}
-                        size="small"
-                        color={device.status === 'online' ? 'success' : 'error'}
-                        variant="outlined"
-                      />
-                    </Box>
-                    
-                    <Typography color="textSecondary" variant="body2" gutterBottom>
-                      Model: {device.device_model}
-                    </Typography>
-                    
-                    <Typography color="textSecondary" variant="body2" gutterBottom>
-                      IP: {device.local_ip}:{device.client_port}
-                    </Typography>
-                    
-                    <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
-                      {device.capabilities.map((capability) => (
-                        <Chip
-                          key={capability}
-                          label={capability}
-                          size="small"
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem' }}
-                        />
-                      ))}
-                    </Box>
-                    
-                    <Typography color="textSecondary" variant="caption">
-                      Last seen: {formatLastSeen(device.last_seen)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          viewMode === 'grid' ? renderDevicesGrid() : renderDevicesTable()
         ) : (
           <Box textAlign="center" py={4}>
             <DevicesIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
