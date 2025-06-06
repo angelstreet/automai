@@ -30,9 +30,6 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
   imageFilter,
   onClose
 }) => {
-  const [sourceImageDimensions, setSourceImageDimensions] = useState<{width: number, height: number} | null>(null);
-  const [referenceImageDimensions, setReferenceImageDimensions] = useState<{width: number, height: number} | null>(null);
-
   const getResultColor = () => {
     switch (resultType) {
       case 'PASS': return '#4caf50';
@@ -42,17 +39,16 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
     }
   };
 
-  const handleSourceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.target as HTMLImageElement;
-    setSourceImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-    console.log(`[@component:VerificationImageComparisonDialog] Source image loaded: ${img.naturalWidth}x${img.naturalHeight}`);
+  // Add cache-busting parameters to force browser to reload images
+  const getCacheBustedUrl = (url: string) => {
+    if (!url) return url;
+    const timestamp = Date.now();
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${timestamp}`;
   };
 
-  const handleReferenceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.target as HTMLImageElement;
-    setReferenceImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-    console.log(`[@component:VerificationImageComparisonDialog] Reference image loaded: ${img.naturalWidth}x${img.naturalHeight}`);
-  };
+  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
 
   return (
     <Dialog 
@@ -96,11 +92,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
         </Box>
       </DialogTitle>
       
-      <DialogContent sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, height: '100%', minHeight: '400px' }}>
+      <DialogContent sx={{ padding: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, height: '100%', minHeight: '400px' }}>
           {/* Source Image */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+            <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
               Source Image
             </Typography>
             <Box 
@@ -109,15 +105,12 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #ddd',
-                borderRadius: 1,
-                backgroundColor: '#f9f9f9',
                 minHeight: '300px',
                 overflow: 'hidden'
               }}
             >
               <img
-                src={sourceUrl}
+                src={cacheBustedSourceUrl}
                 alt="Source"
                 style={{
                   maxWidth: '100%',
@@ -126,24 +119,16 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   height: 'auto',
                   objectFit: 'contain'
                 }}
-                onLoad={handleSourceImageLoad}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load source image:', sourceUrl);
                 }}
               />
             </Box>
-            {sourceImageDimensions && (
-              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
-                Dimensions: {sourceImageDimensions.width} × {sourceImageDimensions.height}
-                <br />
-                Aspect Ratio: {(sourceImageDimensions.width / sourceImageDimensions.height).toFixed(2)}
-              </Typography>
-            )}
           </Box>
 
           {/* Reference Image */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+            <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
               Reference Image
             </Typography>
             <Box 
@@ -152,15 +137,12 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #ddd',
-                borderRadius: 1,
-                backgroundColor: '#f9f9f9',
                 minHeight: '300px',
                 overflow: 'hidden'
               }}
             >
               <img
-                src={referenceUrl}
+                src={cacheBustedReferenceUrl}
                 alt="Reference"
                 style={{
                   maxWidth: '100%',
@@ -169,52 +151,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   height: 'auto',
                   objectFit: 'contain'
                 }}
-                onLoad={handleReferenceImageLoad}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load reference image:', referenceUrl);
                 }}
               />
             </Box>
-            {referenceImageDimensions && (
-              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
-                Dimensions: {referenceImageDimensions.width} × {referenceImageDimensions.height}
-                <br />
-                Aspect Ratio: {(referenceImageDimensions.width / referenceImageDimensions.height).toFixed(2)}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-
-        {/* Additional Information */}
-        <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Verification Details:
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
-            {userThreshold !== undefined && (
-              <Typography variant="body2">
-                <strong>Threshold:</strong> {(userThreshold * 100).toFixed(1)}%
-              </Typography>
-            )}
-            {matchingResult !== undefined && (
-              <Typography variant="body2">
-                <strong>Match Confidence:</strong> {(matchingResult * 100).toFixed(1)}%
-              </Typography>
-            )}
-            {imageFilter && imageFilter !== 'none' && (
-              <Typography variant="body2">
-                <strong>Image Filter:</strong> {imageFilter}
-              </Typography>
-            )}
-            {sourceImageDimensions && referenceImageDimensions && (
-              <Typography variant="body2">
-                <strong>Dimensions Match:</strong> {
-                  sourceImageDimensions.width === referenceImageDimensions.width && 
-                  sourceImageDimensions.height === referenceImageDimensions.height 
-                    ? 'Yes' : 'No'
-                }
-              </Typography>
-            )}
           </Box>
         </Box>
       </DialogContent>

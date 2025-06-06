@@ -33,6 +33,17 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
     }
   };
 
+  // Add cache-busting parameters to force browser to reload images
+  const getCacheBustedUrl = (url: string) => {
+    if (!url) return url;
+    const timestamp = Date.now();
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${timestamp}`;
+  };
+
+  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
+
   return (
     <Box 
       onClick={handleClick}
@@ -70,7 +81,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
             }}
           >
             <img
-              src={sourceUrl}
+              src={cacheBustedSourceUrl}
               alt="Source"
               style={{
                 maxWidth: '100%',
@@ -112,7 +123,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
             }}
           >
             <img
-              src={referenceUrl}
+              src={cacheBustedReferenceUrl}
               alt="Reference"
               style={{
                 maxWidth: '100%',
