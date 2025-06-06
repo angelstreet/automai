@@ -314,7 +314,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       if (result.success) {
         const timestamp = new Date().getTime();
-        const imageUrl = `http://localhost:5009${result.image_url}?t=${timestamp}`;
+        // Check if result.image_url is already a complete URL (starts with http:// or https://)
+        const imageUrl = result.image_url.startsWith('http://') || result.image_url.startsWith('https://') 
+          ? `${result.image_url}?t=${timestamp}`
+          : `http://localhost:5009${result.image_url}?t=${timestamp}`;
         console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
         setCapturedReferenceImage(imageUrl);
         setHasCaptured(true);
