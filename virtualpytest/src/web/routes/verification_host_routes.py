@@ -316,8 +316,8 @@ def host_save_resource():
         try:
             import git
             
-            # Use current working directory as the git repository
-            repo_path = os.getcwd()
+            # Use simple relative path to git repository root
+            repo_path = "../../../"
             print(f"[@route:host_save_resource] Using git repository: {repo_path}")
             
             # Open the git repository

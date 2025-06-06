@@ -410,7 +410,8 @@ def save_reference():
                 
                 # Pull git updates to get the updated resource.json
                 try:
-                    repo_path = os.getcwd()
+                    # Use simple relative path to git repository root
+                    repo_path = "../../../"
                     print(f"[@route:save_reference] Pulling git updates from: {repo_path}")
                     repo = git.Repo(repo_path)
                     origin = repo.remotes.origin
