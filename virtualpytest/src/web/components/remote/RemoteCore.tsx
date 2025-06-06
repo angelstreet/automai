@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { RemoteInterface } from './RemoteInterface';
 import { RemoteType } from '../../types/remote/remoteTypes';
+import { getRemoteLayout } from '../../../config/layoutConfig';
 
 interface RemoteCoreProps {
   /** The type of remote device */
@@ -66,6 +67,10 @@ export function RemoteCore({
   // Use default scale from remoteConfig
   const defaultScale = remoteConfig?.remote_info?.default_scale || 1;
 
+  // Get layout configuration for this remote type
+  const remoteLayout = getRemoteLayout(remoteType);
+  const containerWidth = remoteLayout.containerWidth * defaultScale;
+
   // Get fallback values based on remote type
   const getFallbackValues = () => {
     switch (remoteType) {
@@ -101,8 +106,6 @@ export function RemoteCore({
 
   if (style === 'panel') {
     // Panel style (same as compact, but within panel layout)
-    const containerWidth = 130 * defaultScale;
-    
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -149,6 +152,7 @@ export function RemoteCore({
             onCommand={onCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
+            remoteType={remoteType}
           />
         </Box>
 
@@ -174,8 +178,6 @@ export function RemoteCore({
     );
   } else {
     // Compact style (for CompactAndroidTVRemote)
-    const containerWidth = 130 * defaultScale;
-    
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -222,6 +224,7 @@ export function RemoteCore({
             onCommand={onCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
+            remoteType={remoteType}
           />
         </Box>
         <Button 

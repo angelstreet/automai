@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { RemoteConfig } from '../../types/remote/types';
+import { getRemoteLayout } from '../../../config/layoutConfig';
 
 interface RemoteInterfaceProps {
   remoteConfig: RemoteConfig | null;
@@ -9,6 +10,7 @@ interface RemoteInterfaceProps {
   onCommand: (command: string, params?: any) => void;
   fallbackImageUrl: string;
   fallbackName: string;
+  remoteType?: string; // Add remoteType to get proper layout config
 }
 
 export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
@@ -18,7 +20,11 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
   onCommand,
   fallbackImageUrl,
   fallbackName,
+  remoteType,
 }) => {
+  // Get layout configuration for this remote type
+  const remoteLayout = getRemoteLayout(remoteType);
+
   // Helper function to render a button from configuration
   const renderRemoteButton = (buttonId: string, config: any) => {
     if (!remoteConfig) return null;
@@ -117,8 +123,8 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
         draggable={false} // Prevent image dragging
         onError={(e) => {
           // Fallback if image doesn't load
-          e.currentTarget.style.width = '140px';
-          e.currentTarget.style.height = '360px';
+          e.currentTarget.style.width = `${remoteLayout.fallbackImageWidth}px`;
+          e.currentTarget.style.height = `${remoteLayout.fallbackImageHeight}px`;
           e.currentTarget.style.backgroundColor = '#2a2a2a';
         }}
       />

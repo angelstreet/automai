@@ -11,6 +11,7 @@ import { AndroidMobileCore } from './AndroidMobileCore';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 import { AndroidElement } from '../../types/remote/types';
 import { BaseConnectionConfig } from '../../types/remote/remoteTypes';
+import { getRemoteLayout } from '../../../config/layoutConfig';
 
 interface CompactAndroidMobileProps {
   /** Optional pre-configured connection parameters */
@@ -47,6 +48,9 @@ export function CompactAndroidMobile({
   // Track if we've already attempted auto-connection to prevent retries
   const connectionAttemptedRef = useRef(false);
 
+  // Get layout configuration for android-mobile
+  const remoteLayout = getRemoteLayout('android-mobile');
+
   // Use the extended remote connection hook for Android mobile
   const {
     session,
@@ -57,7 +61,6 @@ export function CompactAndroidMobile({
     androidElements,
     androidApps,
     androidScreenshot,
-    deviceId,
     handleTakeControl,
     handleReleaseControl,
     handleRemoteCommand,
@@ -366,7 +369,7 @@ export function CompactAndroidMobile({
           flex: 1, 
           overflow: 'auto',
           // Compact-specific styling - maxWidth and centered
-          maxWidth: '250px',
+          maxWidth: `${remoteLayout.compactMaxWidth}px`,
           margin: '0 auto',
           width: '100%'
         }}>
@@ -397,12 +400,12 @@ export function CompactAndroidMobile({
       {showOverlay && androidElements.length > 0 && (
         <div style={{ 
           position: 'fixed',
-          left: '43px',
-          top: '180px',
+          left: '30px',
+          top: '128px',
           zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
           transformOrigin: 'top left',
-          transform: 'scale(0.2, 0.1915)', // Separate scaleX and scaleY values
+          transform: 'scale(0.22, 0.22)', // Separate scaleX and scaleY values
           
           background: 'rgba(0,0,0,0.01)' // Add a barely visible background to help with layer creation
         }}>
