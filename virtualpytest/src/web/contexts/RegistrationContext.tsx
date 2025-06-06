@@ -88,10 +88,14 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     const serverUrl = window.location.hostname; // This will be 77.56.53.130
     const serverPort = (import.meta as any).env?.SERVER_PORT || '5019'; // Read from env or fallback
     
+    // Force HTTP since the Flask backend only supports HTTP
+    // Note: This may cause mixed content issues if frontend is HTTPS
     const baseUrl = `http://${serverUrl}:${serverPort}`;
     console.log('[@context:Registration] Built server URL:', baseUrl);
     console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
+    console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
     console.log('[@context:Registration] Backend port from env:', serverPort);
+    console.log('[@context:Registration] Using HTTP for backend (Flask server limitation)');
     console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env?.VITE_SERVER_PORT);
     
     return baseUrl;
@@ -169,6 +173,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       console.error('[@context:Registration] Error name:', err.name);
       console.error('[@context:Registration] Error message:', err.message);
       console.error('[@context:Registration] Error stack:', err.stack);
+      console.error('[@context:Registration] Error constructor:', err.constructor.name);
+      console.error('[@context:Registration] Full error object:', err);
       
       // Additional debugging for network errors
       if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
@@ -176,7 +182,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         console.error('[@context:Registration] - Check if the server is running');
         console.error('[@context:Registration] - Check if the URL is accessible:', `${SERVER_BASE_URL}/api/system/clients/devices`);
         console.error('[@context:Registration] - Check for CORS issues');
+        console.error('[@context:Registration] - Check for mixed content issues (HTTPS->HTTP)');
         console.error('[@context:Registration] - Check browser network tab for more details');
+        console.error('[@context:Registration] - Frontend protocol:', window.location.protocol);
+        console.error('[@context:Registration] - Backend URL protocol:', SERVER_BASE_URL.split(':')[0]);
       }
       
       setError(err.message || 'Failed to fetch hosts');
