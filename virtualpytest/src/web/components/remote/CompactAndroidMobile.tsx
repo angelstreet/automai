@@ -405,7 +405,7 @@ export function CompactAndroidMobile({
           zIndex: 99999999, // Much higher z-index to ensure it's on top of everything
           pointerEvents: 'all',
           transformOrigin: 'top left',
-          transform: 'scale(0.22, 0.22)', // Separate scaleX and scaleY values
+          transform: 'scale(0.23, 0.23)', // Separate scaleX and scaleY values
           
           background: 'rgba(0,0,0,0.01)' // Add a barely visible background to help with layer creation
         }}>
