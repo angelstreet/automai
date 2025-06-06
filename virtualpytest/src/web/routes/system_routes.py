@@ -229,7 +229,8 @@ def register_client():
             set_connected_clients(connected_clients)
             
             # Start health check for the (potentially new) client ID
-            start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
+            # NOTE: Disabled server-initiated health checks in favor of client-initiated pings
+            # start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
             
             print(f"✅ [SERVER] Client registration updated successfully")
         else:
@@ -238,7 +239,8 @@ def register_client():
             set_connected_clients(connected_clients)
             
             # Start health check for this client
-            start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
+            # NOTE: Disabled server-initiated health checks in favor of client-initiated pings
+            # start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
             
             print(f"✅ [SERVER] New client registered successfully:")
             print(f"   Name: {client_info['name']}")
@@ -307,6 +309,76 @@ def health_check():
         'mode': os.getenv('SERVER_MODE', 'server'),
         'system_stats': system_stats
     }), 200
+
+@system_bp.route('/api/system/health-with-devices', methods=['GET'])
+def health_check_with_devices():
+    """Health check endpoint that also returns connected devices"""
+    try:
+        system_stats = get_system_stats()
+        
+        # Get connected clients and clean up stale ones
+        connected_clients = get_connected_clients()
+        
+        # Clean up stale clients (not seen for more than 2 minutes)
+        current_time = time.time()
+        stale_clients = []
+        
+        for client_id, client_info in connected_clients.items():
+            if current_time - client_info.get('last_seen', 0) > 120:  # 2 minutes
+                stale_clients.append(client_id)
+        
+        # Remove stale clients
+        for client_id in stale_clients:
+            remove_client(client_id)
+            print(f"🧹 [HEALTH-CHECK] Removed stale client: {client_id[:8]}...")
+        
+        # Get updated clients list after cleanup
+        connected_clients = get_connected_clients()
+        
+        # Format clients list
+        clients_list = []
+        for client_id, client_info in connected_clients.items():
+            clients_list.append({
+                'client_id': client_id,
+                'name': client_info.get('name'),
+                'device_model': client_info.get('device_model'),
+                'local_ip': client_info.get('local_ip'),
+                'client_port': client_info.get('client_port'),
+                'public_ip': client_info.get('public_ip'),
+                'capabilities': client_info.get('capabilities', []),
+                'status': client_info.get('status'),
+                'registered_at': client_info.get('registered_at'),
+                'last_seen': client_info.get('last_seen'),
+                'system_stats': client_info.get('system_stats', {
+                    'cpu': {'percent': 0},
+                    'memory': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
+                    'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
+                    'timestamp': 0
+                })
+            })
+        
+        print(f"💓 [HEALTH-CHECK] Health check with devices: {len(clients_list)} clients connected")
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': time.time(),
+            'mode': os.getenv('SERVER_MODE', 'server'),
+            'system_stats': system_stats,
+            'clients': {
+                'status': 'success',
+                'clients': clients_list,
+                'total_clients': len(clients_list)
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [HEALTH-CHECK] Error in health check with devices: {e}")
+        return jsonify({
+            'status': 'error',
+            'timestamp': time.time(),
+            'mode': os.getenv('SERVER_MODE', 'server'),
+            'error': str(e)
+        }), 500
 
 @system_bp.route('/api/system/clients', methods=['GET'])
 def list_clients():
@@ -385,6 +457,59 @@ def get_client_by_device_model(device_model):
         
     except Exception as e:
         print(f"❌ Error finding client: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@system_bp.route('/api/system/ping', methods=['POST'])
+def client_ping():
+    """Client sends periodic health ping to server"""
+    try:
+        ping_data = request.get_json()
+        
+        if not ping_data:
+            return jsonify({'error': 'No ping data received'}), 400
+        
+        client_id = ping_data.get('client_id')
+        if not client_id:
+            return jsonify({'error': 'Missing client_id in ping'}), 400
+        
+        connected_clients = get_connected_clients()
+        
+        # Check if client is registered
+        if client_id not in connected_clients:
+            # Client not registered, ask them to register
+            print(f"📍 [PING] Unknown client {client_id[:8]}... sending registration request")
+            return jsonify({
+                'status': 'not_registered',
+                'message': 'Client not registered, please register first',
+                'action': 'register'
+            }), 404
+        
+        # Update client information
+        current_time = time.time()
+        connected_clients[client_id]['last_seen'] = current_time
+        connected_clients[client_id]['status'] = 'online'
+        
+        # Update system stats if provided
+        if 'system_stats' in ping_data:
+            connected_clients[client_id]['system_stats'] = ping_data['system_stats']
+        
+        # Update any other provided fields
+        for field in ['local_ip', 'client_port', 'capabilities']:
+            if field in ping_data:
+                connected_clients[client_id][field] = ping_data[field]
+        
+        set_connected_clients(connected_clients)
+        
+        print(f"💓 [PING] Client {client_id[:8]}... ping received - status updated")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Ping received successfully',
+            'server_time': current_time
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [PING] Error processing client ping: {e}")
         return jsonify({'error': str(e)}), 500
 
 def start_health_check(client_id, client_ip, client_port):

@@ -11,6 +11,7 @@ import psutil
 import signal
 import atexit
 import hashlib
+import threading
 
 # Add argument parsing for server/client mode
 parser = argparse.ArgumentParser(description='VirtualPyTest Flask Server')
@@ -201,6 +202,10 @@ client_registration_state = {
     'client_id': None,
     'server_url': None
 }
+
+# Ping thread for client mode
+ping_thread = None
+ping_stop_event = threading.Event()
 
 # Register all route blueprints
 from routes import register_routes
@@ -400,6 +405,9 @@ def register_with_server():
             print(f"   Server: {full_server_url}")
             print(f"   Client ID: {client_info['client_id']}")
             print(f"   Device Model: {device_model}")
+            
+            # Start periodic ping thread
+            start_ping_thread()
         else:
             print(f"\n❌ [CLIENT] Registration failed with status: {response.status_code}")
             try:
@@ -477,6 +485,7 @@ def unregister_from_server():
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
     print(f"\n🛑 [CLIENT] Received signal {signum}, shutting down gracefully...")
+    stop_ping_thread()
     unregister_from_server()
     sys.exit(0)
 
@@ -484,7 +493,93 @@ def cleanup_on_exit():
     """Cleanup function called on normal exit"""
     if SERVER_MODE == 'client':
         print(f"\n🧹 [CLIENT] Performing cleanup on exit...")
+        stop_ping_thread()
         unregister_from_server()
+
+def start_ping_thread():
+    """Start periodic ping thread for client mode"""
+    global ping_thread, ping_stop_event
+    
+    if SERVER_MODE != 'client' or not client_registration_state['registered']:
+        return
+    
+    def ping_worker():
+        """Worker function that sends periodic pings to server"""
+        ping_interval = 30  # seconds
+        
+        while not ping_stop_event.is_set():
+            try:
+                if not client_registration_state['registered']:
+                    print(f"⚠️ [PING] Client not registered, stopping ping thread")
+                    break
+                
+                server_url = client_registration_state['server_url']
+                client_id = client_registration_state['client_id']
+                
+                if not server_url or not client_id:
+                    print(f"⚠️ [PING] Missing server URL or client ID, stopping ping thread")
+                    break
+                
+                # Prepare ping data
+                ping_data = {
+                    'client_id': client_id,
+                    'system_stats': get_client_system_stats(),
+                    'timestamp': time.time()
+                }
+                
+                # Send ping to server
+                import requests
+                response = requests.post(
+                    f"{server_url}/api/system/ping",
+                    json=ping_data,
+                    timeout=10,
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                if response.status_code == 200:
+                    ping_response = response.json()
+                    print(f"💓 [PING] Ping successful - server time: {ping_response.get('server_time', 'unknown')}")
+                elif response.status_code == 404:
+                    # Server doesn't know about us, need to re-register
+                    ping_response = response.json()
+                    if ping_response.get('status') == 'not_registered':
+                        print(f"🔄 [PING] Server requests re-registration, attempting to register...")
+                        register_with_server()
+                    else:
+                        print(f"⚠️ [PING] Ping failed with 404: {ping_response}")
+                else:
+                    print(f"⚠️ [PING] Ping failed with status {response.status_code}: {response.text}")
+                    
+            except requests.exceptions.ConnectionError:
+                print(f"⚠️ [PING] Could not connect to server (server may be down)")
+            except requests.exceptions.Timeout:
+                print(f"⚠️ [PING] Ping request timed out")
+            except Exception as e:
+                print(f"❌ [PING] Unexpected error during ping: {e}")
+            
+            # Wait for next ping or stop event
+            ping_stop_event.wait(ping_interval)
+    
+    # Start ping thread
+    if ping_thread is None or not ping_thread.is_alive():
+        ping_stop_event.clear()
+        ping_thread = threading.Thread(target=ping_worker, daemon=True, name="client-ping")
+        ping_thread.start()
+        print(f"🏥 [PING] Started periodic ping thread (interval: 30s)")
+
+def stop_ping_thread():
+    """Stop the periodic ping thread"""
+    global ping_thread, ping_stop_event
+    
+    if ping_thread and ping_thread.is_alive():
+        print(f"🛑 [PING] Stopping ping thread...")
+        ping_stop_event.set()
+        ping_thread.join(timeout=5)
+        if ping_thread.is_alive():
+            print(f"⚠️ [PING] Ping thread did not stop gracefully")
+        else:
+            print(f"✅ [PING] Ping thread stopped successfully")
+        ping_thread = None
 
 # Register cleanup handlers for client mode
 if SERVER_MODE == 'client':

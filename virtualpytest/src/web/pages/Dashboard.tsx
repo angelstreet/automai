@@ -240,18 +240,30 @@ const Dashboard: React.FC = () => {
   const fetchDevicesData = async () => {
     try {
       setDevicesLoading(true);
-      const devicesRes = await fetch(`${API_BASE_URL}/system/clients`);
+      // Use the health check endpoint that also returns connected devices
+      const healthRes = await fetch(`${API_BASE_URL}/system/health-with-devices`);
       
-      if (devicesRes.ok) {
-        const devicesResponse = await devicesRes.json();
-        if (devicesResponse.status === 'success' && devicesResponse.clients) {
-          setConnectedDevices(devicesResponse.clients);
-          addFrontendLog('info', `Refreshed devices data: ${devicesResponse.clients.length} devices found`);
+      if (healthRes.ok) {
+        const healthResponse = await healthRes.json();
+        
+        // Extract clients data from the health response
+        if (healthResponse.status === 'healthy' && healthResponse.clients && healthResponse.clients.status === 'success') {
+          setConnectedDevices(healthResponse.clients.clients);
+          addFrontendLog('info', `Health check completed: ${healthResponse.clients.clients.length} devices found`);
+          
+          // Log server health stats if available
+          if (healthResponse.system_stats) {
+            addFrontendLog('info', `Server health - CPU: ${healthResponse.system_stats.cpu.percent}%, RAM: ${healthResponse.system_stats.memory.percent}%, Disk: ${healthResponse.system_stats.disk.percent}%`);
+          }
+        } else {
+          addFrontendLog('warn', 'Health check returned unexpected format', healthResponse);
         }
+      } else {
+        addFrontendLog('error', `Health check failed with status: ${healthRes.status}`);
       }
     } catch (err) {
-      console.error('Failed to refresh devices data:', err);
-      addFrontendLog('error', 'Failed to refresh devices data', err);
+      console.error('Failed to perform health check and refresh devices:', err);
+      addFrontendLog('error', 'Failed to perform health check and refresh devices', err);
     } finally {
       setDevicesLoading(false);
     }
