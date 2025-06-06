@@ -579,9 +579,7 @@ const Dashboard: React.FC = () => {
             <Typography color="textSecondary" variant="h6" gutterBottom>
               No devices connected
             </Typography>
-            <Typography color="textSecondary" variant="body2">
-              Start a client with: python app.py --client
-            </Typography>
+            
           </Box>
         )}
       </Paper>
