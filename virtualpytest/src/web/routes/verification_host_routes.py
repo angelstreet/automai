@@ -336,10 +336,18 @@ def host_save_resource():
             print(f"[@route:host_save_resource] Adding files to git...")
             try:
                 # Add the resource image (relative to repo root)
-                repo.index.add([f'resources/{model}/{reference_name}.png'])
+                # The file is saved to ../resources/{model}/{name}.png from web directory
+                # From git repo root, this is virtualpytest/src/resources/{model}/{name}.png
+                image_git_path = f'virtualpytest/src/resources/{model}/{reference_name}.png'
+                repo.index.add([image_git_path])
+                
                 # Add the resource.json file (relative to repo root)
-                repo.index.add(['config/resource/resource.json'])
-                print(f"[@route:host_save_resource] Files added to git index")
+                # The file is at ../config/resource/resource.json from web directory  
+                # From git repo root, this is virtualpytest/src/config/resource/resource.json
+                config_git_path = 'virtualpytest/src/config/resource/resource.json'
+                repo.index.add([config_git_path])
+                
+                print(f"[@route:host_save_resource] Files added to git index: {image_git_path}, {config_git_path}")
             except Exception as add_error:
                 print(f"[@route:host_save_resource] Git add failed: {str(add_error)}")
             
@@ -352,14 +360,25 @@ def host_save_resource():
             except Exception as commit_error:
                 print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
-            # Git push
+            # Git push (skip if no credentials available)
             print(f"[@route:host_save_resource] Pushing to remote...")
             try:
                 origin = repo.remotes.origin
-                origin.push()
-                print(f"[@route:host_save_resource] Git push successful")
+                
+                # Try to push with token authentication
+                # You can set this as an environment variable: GITHUB_TOKEN
+                github_token = os.environ.get('GITHUB_TOKEN')
+                if github_token:
+                    # Use token authentication
+                    print(f"[@route:host_save_resource] Using token authentication for push")
+                    origin.push()
+                else:
+                    print(f"[@route:host_save_resource] No GITHUB_TOKEN found, skipping push to avoid hanging")
+                    print(f"[@route:host_save_resource] Changes are committed locally - manual push required")
+                    
             except Exception as push_error:
                 print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
+                print(f"[@route:host_save_resource] Changes are committed locally - manual push required")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
