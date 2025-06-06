@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import time
 import subprocess
 import argparse
+import psutil
 
 # Add argument parsing for server/client mode
 parser = argparse.ArgumentParser(description='VirtualPyTest Flask Server')
@@ -202,6 +203,50 @@ client_registration_state = {
 from routes import register_routes
 register_routes(app)
 
+def get_client_system_stats():
+    """Get current system statistics for client registration"""
+    try:
+        # CPU usage percentage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        
+        # Memory usage
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        memory_used_gb = memory.used / (1024**3)
+        memory_total_gb = memory.total / (1024**3)
+        
+        # Disk usage (root partition)
+        disk = psutil.disk_usage('/')
+        disk_percent = (disk.used / disk.total) * 100
+        disk_used_gb = disk.used / (1024**3)
+        disk_total_gb = disk.total / (1024**3)
+        
+        return {
+            'cpu': {
+                'percent': round(cpu_percent, 1)
+            },
+            'memory': {
+                'percent': round(memory_percent, 1),
+                'used_gb': round(memory_used_gb, 2),
+                'total_gb': round(memory_total_gb, 2)
+            },
+            'disk': {
+                'percent': round(disk_percent, 1),
+                'used_gb': round(disk_used_gb, 2),
+                'total_gb': round(disk_total_gb, 2)
+            },
+            'timestamp': time.time()
+        }
+    except Exception as e:
+        print(f"⚠️ [CLIENT] Error getting system stats: {e}")
+        return {
+            'cpu': {'percent': 0},
+            'memory': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
+            'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
+            'timestamp': time.time(),
+            'error': str(e)
+        }
+
 # Client auto-registration logic
 def register_with_server():
     """Register this client with the server"""
@@ -304,7 +349,8 @@ def register_with_server():
             'device_model': device_model,
             'controller_types': ['remote', 'av', 'verification'],
             'capabilities': ['stream', 'capture', 'verification'],
-            'status': 'online'
+            'status': 'online',
+            'system_stats': get_client_system_stats()
         }
         
         print(f"\n📤 [CLIENT] Sending registration request to: {full_server_url}/api/system/register")

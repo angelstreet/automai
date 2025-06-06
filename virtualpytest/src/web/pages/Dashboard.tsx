@@ -87,6 +87,23 @@ interface ConnectedDevice {
   status: string;
   registered_at: string;
   last_seen: number;
+  system_stats: {
+    cpu: {
+      percent: number;
+    };
+    memory: {
+      percent: number;
+      used_gb: number;
+      total_gb: number;
+    };
+    disk: {
+      percent: number;
+      used_gb: number;
+      total_gb: number;
+    };
+    timestamp: number;
+    error?: string;
+  };
 }
 
 interface LogEntry {
@@ -416,6 +433,114 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'error';
+    if (percentage >= 75) return 'warning';
+    if (percentage >= 50) return 'info';
+    return 'success';
+  };
+
+  const SystemStatsDisplay: React.FC<{ stats: ConnectedDevice['system_stats'] }> = ({ stats: systemStats }) => {
+    if (systemStats.error) {
+      return (
+        <Box>
+          <Typography variant="caption" color="error">
+            Stats unavailable: {systemStats.error}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+          <Typography variant="caption" color="textSecondary">
+            CPU
+          </Typography>
+          <Typography variant="caption" fontWeight="bold">
+            {systemStats.cpu.percent}%
+          </Typography>
+        </Box>
+        <Box 
+          sx={{ 
+            width: '100%', 
+            height: 4, 
+            backgroundColor: 'grey.300', 
+            borderRadius: 1,
+            mb: 1
+          }}
+        >
+          <Box
+            sx={{
+              width: `${Math.min(systemStats.cpu.percent, 100)}%`,
+              height: '100%',
+              backgroundColor: `${getUsageColor(systemStats.cpu.percent)}.main`,
+              borderRadius: 1,
+            }}
+          />
+        </Box>
+
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+          <Typography variant="caption" color="textSecondary">
+            RAM
+          </Typography>
+          <Typography variant="caption" fontWeight="bold">
+            {systemStats.memory.percent}% ({systemStats.memory.used_gb}GB/{systemStats.memory.total_gb}GB)
+          </Typography>
+        </Box>
+        <Box 
+          sx={{ 
+            width: '100%', 
+            height: 4, 
+            backgroundColor: 'grey.300', 
+            borderRadius: 1,
+            mb: 1
+          }}
+        >
+          <Box
+            sx={{
+              width: `${Math.min(systemStats.memory.percent, 100)}%`,
+              height: '100%',
+              backgroundColor: `${getUsageColor(systemStats.memory.percent)}.main`,
+              borderRadius: 1,
+            }}
+          />
+        </Box>
+
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+          <Typography variant="caption" color="textSecondary">
+            Disk
+          </Typography>
+          <Typography variant="caption" fontWeight="bold">
+            {systemStats.disk.percent}% ({systemStats.disk.used_gb}GB/{systemStats.disk.total_gb}GB)
+          </Typography>
+        </Box>
+        <Box 
+          sx={{ 
+            width: '100%', 
+            height: 4, 
+            backgroundColor: 'grey.300', 
+            borderRadius: 1,
+            mb: 1
+          }}
+        >
+          <Box
+            sx={{
+              width: `${Math.min(systemStats.disk.percent, 100)}%`,
+              height: '100%',
+              backgroundColor: `${getUsageColor(systemStats.disk.percent)}.main`,
+              borderRadius: 1,
+            }}
+          />
+        </Box>
+
+        <Typography variant="caption" color="textSecondary">
+          Updated: {formatLastSeen(systemStats.timestamp)}
+        </Typography>
+      </Box>
+    );
+  };
+
   const renderDevicesGrid = () => (
     <Grid container spacing={2}>
       {connectedDevices.map((device) => (
@@ -461,6 +586,14 @@ const Dashboard: React.FC = () => {
                 ))}
               </Box>
               
+              {/* System Stats */}
+              <Box mb={2}>
+                <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  System Stats
+                </Typography>
+                <SystemStatsDisplay stats={device.system_stats} />
+              </Box>
+              
               <Typography color="textSecondary" variant="caption" display="block">
                 Last seen: {formatLastSeen(device.last_seen)}
               </Typography>
@@ -485,6 +618,9 @@ const Dashboard: React.FC = () => {
             <TableCell>Status</TableCell>
             <TableCell>Local IP</TableCell>
             <TableCell>Public IP</TableCell>
+            <TableCell>CPU</TableCell>
+            <TableCell>RAM</TableCell>
+            <TableCell>Disk</TableCell>
             <TableCell>Capabilities</TableCell>
             <TableCell>Last Seen</TableCell>
             <TableCell>Registered</TableCell>
@@ -518,6 +654,84 @@ const Dashboard: React.FC = () => {
               <TableCell>
                 <Typography variant="body2" fontFamily="monospace">
                   {device.public_ip}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {device.system_stats.cpu.percent}%
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      width: 40, 
+                      height: 4, 
+                      backgroundColor: 'grey.300', 
+                      borderRadius: 1
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: `${Math.min(device.system_stats.cpu.percent, 100)}%`,
+                        height: '100%',
+                        backgroundColor: `${getUsageColor(device.system_stats.cpu.percent)}.main`,
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {device.system_stats.memory.percent}%
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      width: 40, 
+                      height: 4, 
+                      backgroundColor: 'grey.300', 
+                      borderRadius: 1
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: `${Math.min(device.system_stats.memory.percent, 100)}%`,
+                        height: '100%',
+                        backgroundColor: `${getUsageColor(device.system_stats.memory.percent)}.main`,
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                </Box>
+                <Typography variant="caption" color="textSecondary">
+                  {device.system_stats.memory.used_gb}GB/{device.system_stats.memory.total_gb}GB
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {device.system_stats.disk.percent}%
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      width: 40, 
+                      height: 4, 
+                      backgroundColor: 'grey.300', 
+                      borderRadius: 1
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: `${Math.min(device.system_stats.disk.percent, 100)}%`,
+                        height: '100%',
+                        backgroundColor: `${getUsageColor(device.system_stats.disk.percent)}.main`,
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                </Box>
+                <Typography variant="caption" color="textSecondary">
+                  {device.system_stats.disk.used_gb}GB/{device.system_stats.disk.total_gb}GB
                 </Typography>
               </TableCell>
               <TableCell>
