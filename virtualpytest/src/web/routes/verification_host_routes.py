@@ -234,7 +234,7 @@ def host_save_resource():
             }), 400
         
         # Build paths
-        source_path = f'/var/www/html/stream/captures/{cropped_filename}'
+        source_path = f'/var/www/html/stream/captures/cropped/{cropped_filename}'
         
         # Repository folder (permanent storage) - relative path from web app
         repo_resources_dir = f'../resources/{model}'

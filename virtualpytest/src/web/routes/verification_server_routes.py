@@ -353,9 +353,11 @@ def save_reference():
         area = data.get('area')
         reference_type = data.get('reference_type', 'reference_image')
         source_path = data.get('source_path')  # Source path to extract filename
+        cropped_filename = data.get('cropped_filename')  # NEW: Use provided cropped filename if available
         
         print(f"[@route:save_reference] Forwarding save request to host: {reference_name} for model: {model_name}")
         print(f"[@route:save_reference] Source path: {source_path}")
+        print(f"[@route:save_reference] Provided cropped filename: {cropped_filename}")
         
         # Validate required parameters
         if not reference_name or not model_name or not area:
@@ -368,13 +370,13 @@ def save_reference():
         host_ip = "77.56.53.130"  # Host IP
         host_port = "5119"        # Host internal port
         
-        # Extract source filename from source_path if provided
-        if source_path:
+        # Use provided cropped_filename or build it from source_path (fallback)
+        if not cropped_filename and source_path:
             parsed_url = urllib.parse.urlparse(source_path)
             source_filename = parsed_url.path.split('/')[-1]  # Extract filename
             # Build the expected cropped filename: cropped_{reference_name}_{source_filename}
             cropped_filename = f'cropped_{reference_name}_{source_filename}'
-        else:
+        elif not cropped_filename:
             # Fallback pattern if no source_path provided
             cropped_filename = f'cropped_{reference_name}.jpg'
         
