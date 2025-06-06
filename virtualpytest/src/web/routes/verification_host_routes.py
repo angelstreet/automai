@@ -5,10 +5,15 @@ This module contains the host-side verification API endpoints that:
 - Handle actual image cropping using existing utilities
 - Process images with autocrop and background removal
 - Serve cropped images from local storage
+- Save resources to git repository
 """
 
 from flask import Blueprint, request, jsonify
 import os
+import json
+import subprocess
+import shutil
+from datetime import datetime
 
 # Create blueprint
 verification_host_bp = Blueprint('verification_host', __name__)
@@ -172,4 +177,145 @@ def host_process_area():
         return jsonify({
             'success': False,
             'error': f'Host processing error: {str(e)}'
+        }), 500
+
+# =====================================================
+# HOST-SIDE RESOURCE SAVE ENDPOINT
+# =====================================================
+
+@verification_host_bp.route('/stream/save-resource', methods=['POST'])
+def host_save_resource():
+    """Save already cropped image to resources directory and update git repository."""
+    try:
+        data = request.get_json()
+        cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
+        reference_name = data.get('reference_name')
+        model = data.get('model')
+        area = data.get('area')
+        reference_type = data.get('reference_type', 'reference_image')
+        
+        print(f"[@route:host_save_resource] Saving resource: {reference_name} for model: {model}")
+        print(f"[@route:host_save_resource] Source cropped file: {cropped_filename}")
+        
+        # Validate required parameters
+        if not cropped_filename or not reference_name or not model or not area:
+            return jsonify({
+                'success': False,
+                'error': 'cropped_filename, reference_name, model, and area are required'
+            }), 400
+        
+        # Build paths
+        source_path = f'/var/www/html/stream/captures/{cropped_filename}'
+        resources_dir = f'/var/www/html/stream/resources/{model}'
+        target_filename = f'{reference_name}.png'
+        target_path = f'{resources_dir}/{target_filename}'
+        resource_json_path = '/var/www/html/resource.json'
+        
+        print(f"[@route:host_save_resource] Copying from {source_path} to {target_path}")
+        
+        # Check if source cropped file exists
+        if not os.path.exists(source_path):
+            print(f"[@route:host_save_resource] Source cropped file not found: {source_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Source cropped file not found: {cropped_filename}'
+            }), 404
+        
+        # Create resources directory if it doesn't exist
+        os.makedirs(resources_dir, exist_ok=True)
+        print(f"[@route:host_save_resource] Created resources directory: {resources_dir}")
+        
+        # Copy cropped image to resources directory
+        shutil.copy2(source_path, target_path)
+        print(f"[@route:host_save_resource] Copied image to: {target_path}")
+        
+        # Update resource.json
+        try:
+            # Load existing resource.json or create new structure
+            if os.path.exists(resource_json_path):
+                with open(resource_json_path, 'r') as f:
+                    resource_data = json.load(f)
+            else:
+                resource_data = {"resources": []}
+            
+            # Create new resource entry
+            new_resource = {
+                "name": reference_name,
+                "model": model,
+                "path": f"resources/{model}/{target_filename}",
+                "full_path": target_path,
+                "created_at": datetime.now().isoformat(),
+                "type": reference_type,
+                "area": area
+            }
+            
+            # Remove existing resource with same name and model if it exists
+            resource_data["resources"] = [
+                r for r in resource_data["resources"] 
+                if not (r.get("name") == reference_name and r.get("model") == model)
+            ]
+            
+            # Add new resource
+            resource_data["resources"].append(new_resource)
+            
+            # Save updated resource.json
+            with open(resource_json_path, 'w') as f:
+                json.dump(resource_data, f, indent=2)
+            
+            print(f"[@route:host_save_resource] Updated resource.json with new resource: {reference_name}")
+            
+        except Exception as e:
+            print(f"[@route:host_save_resource] Failed to update resource.json: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to update resource.json: {str(e)}'
+            }), 500
+        
+        # Git operations
+        try:
+            # Change to the web directory
+            os.chdir('/var/www/html')
+            
+            # Git pull
+            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                print(f"[@route:host_save_resource] Git pull warning: {result.stderr}")
+                # Continue anyway, just log warning
+            
+            # Git add
+            subprocess.run(['git', 'add', f'stream/resources/{model}/{target_filename}'], check=True, timeout=10)
+            subprocess.run(['git', 'add', 'resource.json'], check=True, timeout=10)
+            
+            # Git commit
+            commit_message = f"save resource {reference_name}"
+            subprocess.run(['git', 'commit', '-m', commit_message], check=True, timeout=10)
+            
+            # Git push
+            subprocess.run(['git', 'push'], check=True, timeout=30)
+            
+            print(f"[@route:host_save_resource] Git operations completed successfully")
+            
+        except subprocess.TimeoutExpired:
+            print(f"[@route:host_save_resource] Git operation timeout - continuing anyway")
+        except subprocess.CalledProcessError as e:
+            print(f"[@route:host_save_resource] Git operation warning: {str(e)} - continuing anyway")
+        except Exception as e:
+            print(f"[@route:host_save_resource] Git operation error: {str(e)} - continuing anyway")
+        
+        # Build public URL
+        public_url = f'/stream/resources/{model}/{target_filename}'
+        
+        print(f"[@route:host_save_resource] Resource saved successfully: {public_url}")
+        
+        return jsonify({
+            'success': True,
+            'public_url': public_url,
+            'message': f'Resource "{reference_name}" saved successfully'
+        })
+        
+    except Exception as e:
+        print(f"[@route:host_save_resource] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Host save resource error: {str(e)}'
         }), 500 
