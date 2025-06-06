@@ -22,6 +22,11 @@ verification_host_bp = Blueprint('verification_host', __name__)
 # HOST-SIDE CROPPING ENDPOINTS
 # =====================================================
 
+# Host configuration
+HOST_IP = "77.56.53.130"
+HOST_PORT = "5119"
+CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
+
 @verification_host_bp.route('/stream/crop-area', methods=['POST'])
 def host_crop_area():
     """Host-side endpoint to crop images locally using existing utilities."""

@@ -6,14 +6,163 @@ This module contains the server-side verification API endpoints that:
 - Handle verification execution coordination
 - Manage verification actions and status
 - Forward resource save requests to host
+- Provide verification actions and reference lists
 """
 
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
+import os
+import json
 
 # Create blueprint
 verification_server_bp = Blueprint('verification_server', __name__)
+
+# =====================================================
+# VERIFICATION ACTIONS AND REFERENCES
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/verification/actions', methods=['GET'])
+def get_verification_actions():
+    """Get available verification actions organized by category."""
+    try:
+        # Define verification actions organized by category
+        verification_actions = {
+            "Image Verification": [
+                {
+                    "id": "image_appear",
+                    "label": "Image Appear",
+                    "command": "image_appear",
+                    "description": "Wait for an image to appear on screen",
+                    "requiresInput": False,
+                    "params": {
+                        "timeout": 10.0,
+                        "threshold": 0.8
+                    }
+                },
+                {
+                    "id": "image_disappear", 
+                    "label": "Image Disappear",
+                    "command": "image_disappear",
+                    "description": "Wait for an image to disappear from screen",
+                    "requiresInput": False,
+                    "params": {
+                        "timeout": 10.0,
+                        "threshold": 0.8
+                    }
+                }
+            ],
+            "Text Verification": [
+                {
+                    "id": "text_appear",
+                    "label": "Text Appear",
+                    "command": "text_appear", 
+                    "description": "Wait for text to appear on screen",
+                    "requiresInput": True,
+                    "inputLabel": "Text to find",
+                    "inputPlaceholder": "Enter text or regex pattern",
+                    "params": {
+                        "timeout": 10.0,
+                        "confidence": 0.8
+                    }
+                },
+                {
+                    "id": "text_disappear",
+                    "label": "Text Disappear", 
+                    "command": "text_disappear",
+                    "description": "Wait for text to disappear from screen",
+                    "requiresInput": True,
+                    "inputLabel": "Text to find",
+                    "inputPlaceholder": "Enter text or regex pattern",
+                    "params": {
+                        "timeout": 10.0,
+                        "confidence": 0.8
+                    }
+                }
+            ],
+            "ADB Verification": [
+                {
+                    "id": "adb_element_appear",
+                    "label": "Element Appear",
+                    "command": "adb_element_appear",
+                    "description": "Wait for UI element to appear",
+                    "requiresInput": True,
+                    "inputLabel": "Element selector",
+                    "inputPlaceholder": "Enter element text, resource-id, or content-desc",
+                    "params": {
+                        "timeout": 10.0
+                    }
+                },
+                {
+                    "id": "adb_element_disappear",
+                    "label": "Element Disappear", 
+                    "command": "adb_element_disappear",
+                    "description": "Wait for UI element to disappear",
+                    "requiresInput": True,
+                    "inputLabel": "Element selector",
+                    "inputPlaceholder": "Enter element text, resource-id, or content-desc",
+                    "params": {
+                        "timeout": 10.0
+                    }
+                }
+            ]
+        }
+        
+        return jsonify({
+            'success': True,
+            'verifications': verification_actions
+        })
+        
+    except Exception as e:
+        print(f"[@route:get_verification_actions] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get verification actions: {str(e)}'
+        }), 500
+
+@verification_server_bp.route('/api/virtualpytest/reference/list', methods=['GET'])
+def list_references():
+    """List available reference images and text patterns."""
+    try:
+        # Try to read from the main resource config file first
+        config_path = '/Users/cpeengineering/automai/automai/virtualpytest/src/config/resource/resource.json'
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                resource_data = json.load(f)
+            
+            references = []
+            for resource in resource_data.get('resources', []):
+                references.append({
+                    'name': resource.get('name'),
+                    'model': resource.get('model'),
+                    'type': resource.get('type', 'reference_image'),
+                    'path': resource.get('path'),
+                    'full_path': resource.get('full_path'),
+                    'area': resource.get('area'),
+                    'created_at': resource.get('created_at'),
+                    'text': resource.get('text'),  # For text references
+                    'font_size': resource.get('font_size'),  # For text references
+                    'confidence': resource.get('confidence')  # For text references
+                })
+            
+            return jsonify({
+                'success': True,
+                'references': references
+            })
+        else:
+            # Return empty list if config file doesn't exist
+            return jsonify({
+                'success': True,
+                'references': []
+            })
+            
+    except Exception as e:
+        print(f"[@route:list_references] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to list references: {str(e)}'
+        }), 500
 
 # =====================================================
 # SERVER-SIDE REFERENCE IMAGE CAPTURE (FORWARDS TO HOST)
@@ -39,17 +188,18 @@ def capture_reference_image():
             }), 400
         
         # Hardcode IPs for testing
-        host_ip = "192.168.1.103"  # Host IP
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
         server_ip = "192.168.1.67"  # Server IP
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:capture_reference_image] Using hardcoded host: {host_ip}, filename: {source_filename}")
+        print(f"[@route:capture_reference_image] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
         
         # Forward crop request to host
-        host_crop_url = f'http://{host_ip}:5119/stream/crop-area'
+        host_crop_url = f'http://{host_ip}:{host_port}/stream/crop-area'
         
         crop_payload = {
             'source_filename': source_filename,
@@ -117,17 +267,18 @@ def process_area_reference():
             }), 400
         
         # Hardcode IPs for testing
-        host_ip = "192.168.1.103"  # Host IP
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
         server_ip = "192.168.1.67"  # Server IP
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:process_area_reference] Using hardcoded host: {host_ip}, filename: {source_filename}")
+        print(f"[@route:process_area_reference] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
         
         # Forward process request to host
-        host_process_url = f'http://{host_ip}:5119/stream/process-area'
+        host_process_url = f'http://{host_ip}:{host_port}/stream/process-area'
         
         process_payload = {
             'source_filename': source_filename,
@@ -202,7 +353,8 @@ def save_reference():
             }), 400
         
         # Hardcode IPs for testing
-        host_ip = "192.168.1.103"  # Host IP
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
         
         # Extract source filename from source_path if provided
         if source_path:
@@ -214,10 +366,10 @@ def save_reference():
             # Fallback pattern if no source_path provided
             cropped_filename = f'cropped_capture_{reference_name}.jpg'
         
-        print(f"[@route:save_reference] Using hardcoded host: {host_ip}, cropped filename: {cropped_filename}")
+        print(f"[@route:save_reference] Using hardcoded host: {host_ip}:{host_port}, cropped filename: {cropped_filename}")
         
         # Forward save request to host
-        host_save_url = f'http://{host_ip}:5119/stream/save-resource'
+        host_save_url = f'http://{host_ip}:{host_port}/stream/save-resource'
         
         save_payload = {
             'cropped_filename': cropped_filename,
@@ -237,8 +389,8 @@ def save_reference():
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
-                # Build full URL with host IP
-                full_public_url = f'https://{host_ip}:444{public_url}'
+                # Build full URL with nginx-exposed URL
+                full_public_url = f'https://77.56.53.130:444{public_url}'
                 
                 return jsonify({
                     'success': True,

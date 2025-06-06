@@ -32,21 +32,24 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
 
   // Fetch available reference images
   const fetchAvailableReferences = async () => {
-    setReferencesLoading(true);
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/reference/list');
-      const result = await response.json();
+      console.log('[@component:useVerificationReferences] Fetching available references');
+      const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/list');
       
-      if (result.success) {
-        setAvailableReferences(result.references || []);
-        console.log('[@component:useVerificationReferences] Loaded references:', result.references);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('[@component:useVerificationReferences] References fetched:', data);
+      
+      if (data.success) {
+        setAvailableReferences(data.references || []);
       } else {
-        console.error('[@component:useVerificationReferences] Failed to load references:', result.error);
+        console.error('[@component:useVerificationReferences] Failed to fetch references:', data.error);
       }
     } catch (error) {
       console.error('[@component:useVerificationReferences] Error fetching references:', error);
-    } finally {
-      setReferencesLoading(false);
     }
   };
 
