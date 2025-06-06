@@ -405,8 +405,9 @@ def save_reference():
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
-                # Wait a moment for host git operations to complete, then pull updates
-                time.sleep(3)
+                # Host has completed its git operations (pull, add, commit, push)
+                # Now pull the updates to get the latest resource.json
+                print(f"[@route:save_reference] Host git operations completed, pulling updates...")
                 
                 # Pull git updates to get the updated resource.json
                 try:
