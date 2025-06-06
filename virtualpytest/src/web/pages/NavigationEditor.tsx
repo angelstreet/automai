@@ -526,17 +526,16 @@ const NavigationEditorContent: React.FC = () => {
 
   // Memoize disconnect complete handler
   const handleDisconnectComplete = useCallback(() => {
-    // Do NOT automatically release control when the remote component disconnects
-    // This prevents the SSH session from being destroyed after navigation operations
-    console.log('[@component:NavigationEditor] Remote component disconnected, but maintaining control session for navigation');
+    // When remote component disconnects (user clicked disconnect), release control
+    console.log('[@component:NavigationEditor] Remote component disconnected, releasing control');
     
-    // Only hide the remote panel if it's open, but keep control active
+    // Release control state since the remote has already handled SSH disconnection
+    setIsControlActive(false);
+    
+    // Hide the remote panel if it's open
     if (isRemotePanelOpen) {
       handleToggleRemotePanel();
     }
-    
-    // The control session should only be released manually by the user clicking "Release Control"
-    // or when explicitly changing devices, not during automatic disconnections
   }, [isRemotePanelOpen, handleToggleRemotePanel]);
 
   // Handle taking screenshot

@@ -186,12 +186,20 @@ export function CompactAndroidMobile({
       setShowOverlay(false);
       setDumpError(null);
       
+      // Release control first (this handles SSH disconnection and cleanup)
+      console.log('[@component:CompactAndroidMobile] Releasing control before disconnect');
       await handleReleaseControl();
+      
+      // Call parent disconnect callback after successful release
       if (onDisconnectComplete) {
         onDisconnectComplete();
       }
     } catch (error) {
-      console.error('[@component:CompactAndroidMobile] Release control failed:', error);
+      console.error('[@component:CompactAndroidMobile] Error during disconnect:', error);
+      // Still call parent disconnect even if release control fails
+      if (onDisconnectComplete) {
+        onDisconnectComplete();
+      }
     }
   };
 

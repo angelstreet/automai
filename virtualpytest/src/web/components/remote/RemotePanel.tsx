@@ -12,6 +12,7 @@ import {
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { RemoteCore } from './RemoteCore';
 import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
+import { ConnectionForm } from '../../types/remote/types';
 
 interface RemotePanelProps {
   /** The type of remote device */
@@ -130,7 +131,7 @@ export function RemotePanel({
                   fullWidth
                   label={field.label}
                   type={field.type || 'text'}
-                  value={connectionForm[field.name] || ''}
+                  value={connectionForm[field.name as keyof ConnectionForm] || ''}
                   onChange={(e) => handleFormChange(field.name, e.target.value)}
                   size="small"
                 />

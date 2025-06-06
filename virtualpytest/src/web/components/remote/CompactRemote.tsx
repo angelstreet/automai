@@ -110,6 +110,10 @@ export function CompactRemote({
       }
     } catch (error) {
       console.error(`[@component:CompactRemote] Error during disconnect for ${remoteType}:`, error);
+      // Still call parent disconnect even if release control fails
+      if (onDisconnectComplete) {
+        onDisconnectComplete();
+      }
     }
   }, [handleReleaseControl, onDisconnectComplete, remoteType]);
 
