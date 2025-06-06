@@ -1,5 +1,5 @@
 def execute_adb_verification_host(verification, source_path, model, verification_index, results_dir):
-    """Execute ADB verification using direct ADB commands (no SSH needed on host)."""
+    """Execute ADB verification using existing ADB utilities."""
     try:
         params = verification.get('params', {})
         command = verification.get('command', '')
@@ -21,8 +21,16 @@ def execute_adb_verification_host(verification, source_path, model, verification
                 'verification_type': 'adb'
             }
         
-        # Get device ID from environment variables
-        device_id = get_device_id_from_env(model)
+        # Import ADB controller
+        from controllers.verification.adb import ADBVerificationController
+        from utils.sshUtils import SSHConnection
+        
+        # Create SSH connection (localhost since we're on the host)
+        ssh_connection = SSHConnection()
+        ssh_connection.connect('localhost', 22, 'root', password='your_password')  # Adjust credentials as needed
+        
+        # Get device ID from model
+        device_id = get_device_id_from_model(model)
         if not device_id:
             return {
                 'success': False,
@@ -30,8 +38,8 @@ def execute_adb_verification_host(verification, source_path, model, verification
                 'verification_type': 'adb'
             }
         
-        # Initialize direct ADB controller (no SSH needed)
-        adb_controller = DirectADBController(device_id, model)
+        # Initialize ADB controller
+        adb_controller = ADBVerificationController(ssh_connection, device_id, model)
         
         # Execute verification based on command
         if command == 'adb_element_appear':
