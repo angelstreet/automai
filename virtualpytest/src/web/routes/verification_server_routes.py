@@ -582,13 +582,25 @@ def execute_batch_verification():
             if host_result.get('success') is not None:  # Host responded with valid result
                 print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('passed_count', 0)}/{host_result.get('total_count', 0)} passed")
                 
+                # Convert host URLs to nginx-exposed URLs for each result
+                results = host_result.get('results', [])
+                for result in results:
+                    if 'sourceImageUrl' in result:
+                        result['sourceImageUrl'] = f'https://77.56.53.130:444{result["sourceImageUrl"]}'
+                    if 'referenceImageUrl' in result:
+                        result['referenceImageUrl'] = f'https://77.56.53.130:444{result["referenceImageUrl"]}'
+                    if 'resultOverlayUrl' in result:
+                        result['resultOverlayUrl'] = f'https://77.56.53.130:444{result["resultOverlayUrl"]}'
+                
+                print(f"[@route:execute_batch_verification] Converted URLs to nginx-exposed format for {len(results)} results")
+                
                 # Return host result with additional server metadata
                 return jsonify({
                     'success': host_result.get('success'),
                     'message': host_result.get('message'),
                     'passed_count': host_result.get('passed_count', 0),
                     'total_count': host_result.get('total_count', 0),
-                    'results': host_result.get('results', []),
+                    'results': results,  # Use the URL-converted results
                     'node_id': node_id,
                     'tree_id': tree_id,
                     'model': model,

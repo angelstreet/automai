@@ -445,6 +445,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     try {
       setLoading(true);
       setError(null);
+      // Clear previous test results
+      setTestResults([]);
 
       // Skip controller initialization since host is directly connected via ADB
       console.log('[@component:VerificationEditor] Executing verifications directly on host...');
@@ -484,7 +486,48 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       if (batchResult.success) {
         console.log('[@component:VerificationEditor] Batch execution successful:', batchResult.message);
         
-        // Update verifications with results
+        // Process and set test results for NodeVerificationsList to display
+        const processedResults: VerificationTestResult[] = batchResult.results ? batchResult.results.map((result: any, index: number) => {
+          const verification = verifications[index];
+          
+          console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
+          
+          // Determine result type
+          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
+          if (result.success) {
+            resultType = 'PASS';
+          } else if (result.error && !result.message) {
+            resultType = 'ERROR';
+          }
+          
+          const processedResult: VerificationTestResult = {
+            success: result.success,
+            message: result.message,
+            error: result.error,
+            threshold: result.confidence || result.threshold, // Use confidence from host result
+            resultType: resultType,
+            sourceImageUrl: result.sourceImageUrl,
+            referenceImageUrl: result.referenceImageUrl,
+            extractedText: result.extracted_text,
+            searchedText: result.searched_text,
+            imageFilter: result.image_filter || verification.params?.image_filter,
+            detectedLanguage: result.detected_language,
+            languageConfidence: result.language_confidence,
+            // Add ADB-specific fields
+            search_term: result.search_term,
+            wait_time: result.wait_time,
+            total_matches: result.total_matches,
+            matches: result.matches,
+          };
+          
+          console.log(`[@component:VerificationEditor] Processed result ${index}:`, processedResult);
+          return processedResult;
+        }) : [];
+        
+        console.log('[@component:VerificationEditor] Setting test results:', processedResults);
+        setTestResults(processedResults);
+        
+        // Update verifications with results (keep existing logic for backward compatibility)
         const updatedVerifications = verifications.map((verification, index) => {
           const result = batchResult.results?.[index];
           if (result) {
@@ -506,10 +549,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         const errorMessage = batchResult.message || batchResult.error || 'Unknown error occurred';
         console.log('[@component:VerificationEditor] Batch execution failed:', errorMessage);
         setError(`Verification failed: ${errorMessage}`);
+        // Clear test results on failure
+        setTestResults([]);
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error running tests:', error);
       setError(`Error running tests: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Clear test results on error
+      setTestResults([]);
     } finally {
       setLoading(false);
     }
