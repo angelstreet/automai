@@ -58,7 +58,7 @@ cleanup() {
     
     # Kill by port as backup
     kill_port 5009 "Flask Server"
-    kill_port 5109 "Flask Client"
+    kill_port 5119 "Flask Client"
     kill_port 5073 "Vite Dev Server"
     
     echo "✅ All services stopped!"
@@ -72,7 +72,7 @@ trap cleanup SIGINT SIGTERM EXIT
 echo ""
 echo "🧹 Cleaning up existing processes..."
 kill_port 5009 "Flask Server"
-kill_port 5109 "Flask Client" 
+kill_port 5119 "Flask Client" 
 kill_port 5073 "Vite Dev Server"
 
 # Wait a moment for processes to fully terminate
@@ -112,13 +112,13 @@ echo "🛑 To stop: Press Ctrl+C"
 echo ""
 
 # Optional: Start a Flask client for testing
-read -p "🤖 Start a test client on port 5109? (y/N): " -n 1 -r
+read -p "🤖 Start a test client on port 5119? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "📱 Starting Flask Client on port 5109..."
+    echo "📱 Starting Flask Client on port 5119..."
     python app.py --client > flask-client.log 2>&1 &
     CLIENT_PID=$!
-    echo "   📱 Flask Client:     http://localhost:5109"
+    echo "   📱 Flask Client:     http://localhost:5119"
     echo "   Client logs:         tail -f flask-client.log"
 fi
 

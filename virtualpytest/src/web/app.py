@@ -31,6 +31,12 @@ load_dotenv(env_path)
 # Debug: Log environment variable loading
 print(f"Loading environment variables from: {env_path}")
 print(f"File exists: {os.path.exists(env_path)}")
+
+# Environment validation and logging
+print("=" * 60)
+print("🔍 ENVIRONMENT VARIABLES ANALYSIS")
+print("=" * 60)
+
 print("Environment variables loaded:")
 print(f"  HOST_IP: {os.getenv('HOST_IP', 'NOT SET')}")
 print(f"  HOST_USERNAME: {os.getenv('HOST_USERNAME', 'NOT SET')}")
@@ -44,16 +50,63 @@ print(f"  STREAM_PATH: {os.getenv('STREAM_PATH', 'NOT SET')}")
 print(f"  SUPABASE_URL: {'SET' if os.getenv('NEXT_PUBLIC_SUPABASE_URL') else 'NOT SET'}")
 print(f"  SUPABASE_KEY: {'SET' if os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') else 'NOT SET'}")
 
-# Client mode specific environment variables
+# Client mode specific environment variables with validation
 if SERVER_MODE == 'client':
-    print(f"  SERVER_URL: {os.getenv('SERVER_URL', 'NOT SET')}")
-    print(f"  SERVER_PORT: {os.getenv('SERVER_PORT', 'NOT SET')}")
-    print(f"  CLIENT_IP: {os.getenv('CLIENT_IP', 'NOT SET')}")
-    print(f"  CLIENT_PORT: {os.getenv('CLIENT_PORT', 'NOT SET')}")
-    print(f"  CLIENT_NAME: {os.getenv('CLIENT_NAME', 'NOT SET')}")
-    print(f"  DEVICE_MODEL: {os.getenv('DEVICE_MODEL', 'NOT SET')}")
+    print("\n📱 CLIENT MODE ENVIRONMENT VALIDATION:")
+    print("-" * 40)
+    
+    # Required environment variables for client mode
+    required_client_vars = {
+        'SERVER_URL': os.getenv('SERVER_URL'),
+        'SERVER_PORT': os.getenv('SERVER_PORT'),
+        'CLIENT_IP': os.getenv('CLIENT_IP'),
+        'CLIENT_PORT': os.getenv('CLIENT_PORT'),
+        'CLIENT_NAME': os.getenv('CLIENT_NAME'),
+        'DEVICE_MODEL': os.getenv('DEVICE_MODEL')
+    }
+    
+    missing_vars = []
+    empty_vars = []
+    
+    for var_name, var_value in required_client_vars.items():
+        status = "✅ SET" if var_value else "❌ NOT SET"
+        print(f"  {var_name}: {var_value or 'NOT SET'} ({status})")
+        
+        if not var_value:
+            missing_vars.append(var_name)
+        elif var_value.strip() == '':
+            empty_vars.append(var_name)
+    
+    print("\n🔍 CLIENT MODE VALIDATION SUMMARY:")
+    if missing_vars:
+        print(f"❌ Missing required variables: {', '.join(missing_vars)}")
+    if empty_vars:
+        print(f"⚠️  Empty variables: {', '.join(empty_vars)}")
+    
+    if not missing_vars and not empty_vars:
+        print("✅ All required client environment variables are set!")
+    else:
+        print("\n💡 To fix this, set the missing environment variables:")
+        print("   Example:")
+        for var in missing_vars + empty_vars:
+            if var == 'SERVER_URL':
+                print(f"   export {var}=127.0.0.1")
+            elif var == 'SERVER_PORT':
+                print(f"   export {var}=5009")
+            elif var == 'CLIENT_IP':
+                print(f"   export {var}=127.0.0.1")
+            elif var == 'CLIENT_PORT':
+                print(f"   export {var}=5119")
+            elif var == 'CLIENT_NAME':
+                print(f"   export {var}=test-client")
+            elif var == 'DEVICE_MODEL':
+                print(f"   export {var}=android_mobile")
+        print("\n   Then run: python3 app.py --client")
+        
+        # Don't exit, but warn that registration will likely fail
+        print("\n⚠️  WARNING: Client registration will likely fail with missing variables!")
 
-print("---")
+print("=" * 60)
 
 # Add the parent directory to the path to allow imports
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -155,16 +208,59 @@ def register_with_server():
     if SERVER_MODE != 'client':
         return
     
+    print("\n🔗 STARTING CLIENT REGISTRATION")
+    print("=" * 50)
+    
+    # Get environment variables with validation
     server_url = os.getenv('SERVER_URL')
     server_port = os.getenv('SERVER_PORT', '5009')
     client_ip = os.getenv('CLIENT_IP')
-    client_port = os.getenv('CLIENT_PORT', '5109')  # Default to 5109 for client
+    client_port = os.getenv('CLIENT_PORT', '5119')  # Default to 5119 for client
     client_name = os.getenv('CLIENT_NAME', f"client-{uuid4().hex[:8]}")
     device_model = os.getenv('DEVICE_MODEL', 'android_mobile')
     
+    print(f"🔍 [CLIENT] Registration Debug Info:")
+    print(f"   SERVER_URL env: '{os.getenv('SERVER_URL')}' -> '{server_url}'")
+    print(f"   SERVER_PORT env: '{os.getenv('SERVER_PORT')}' -> '{server_port}'")
+    print(f"   CLIENT_IP env: '{os.getenv('CLIENT_IP')}' -> '{client_ip}'")
+    print(f"   CLIENT_PORT env: '{os.getenv('CLIENT_PORT')}' -> '{client_port}'")
+    print(f"   CLIENT_NAME env: '{os.getenv('CLIENT_NAME')}' -> '{client_name}'")
+    print(f"   DEVICE_MODEL env: '{os.getenv('DEVICE_MODEL')}' -> '{device_model}'")
+    
+    # Validate critical environment variables
+    validation_errors = []
+    
     if not server_url:
-        print("ERROR: SERVER_URL not set for client mode")
-        return
+        validation_errors.append("SERVER_URL is required but not set")
+    
+    if not client_ip:
+        validation_errors.append("CLIENT_IP is required but not set")
+    
+    if not os.getenv('DEVICE_MODEL'):
+        validation_errors.append("DEVICE_MODEL is required but not set (using default: android_mobile)")
+    
+    if not os.getenv('CLIENT_NAME'):
+        validation_errors.append(f"CLIENT_NAME not set (using generated: {client_name})")
+    
+    if validation_errors:
+        print(f"\n⚠️ [CLIENT] Environment Variable Issues:")
+        for error in validation_errors:
+            print(f"   - {error}")
+        
+        # Check if we have critical missing vars
+        critical_missing = [error for error in validation_errors if "SERVER_URL" in error or "CLIENT_IP" in error]
+        if critical_missing:
+            print(f"\n❌ [CLIENT] Cannot proceed with registration due to critical missing variables:")
+            for error in critical_missing:
+                print(f"   - {error}")
+            print(f"\n💡 [CLIENT] Set the missing variables and try again:")
+            if not server_url:
+                print(f"   export SERVER_URL=127.0.0.1")
+            if not client_ip:
+                print(f"   export CLIENT_IP=127.0.0.1")
+            return
+        else:
+            print(f"\n⚠️ [CLIENT] Proceeding with warnings (using defaults where possible)")
     
     # Construct full server URL with port
     if '://' in server_url:
@@ -179,6 +275,8 @@ def register_with_server():
         # IP format: server-ip
         full_server_url = f"http://{server_url}:{server_port}"
     
+    print(f"\n🌐 [CLIENT] Full server URL: {full_server_url}")
+    
     try:
         import socket
         import requests
@@ -186,13 +284,13 @@ def register_with_server():
         # Get local IP - use CLIENT_IP if set, otherwise auto-detect
         if client_ip:
             local_ip = client_ip
-            print(f"Using configured CLIENT_IP: {client_ip}")
+            print(f"📍 [CLIENT] Using configured CLIENT_IP: {client_ip}")
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
             s.close()
-            print(f"Auto-detected local IP: {local_ip}")
+            print(f"📍 [CLIENT] Auto-detected local IP: {local_ip}")
         
         # Get public IP (simplified - could use external service)
         public_ip = local_ip  # For now, use local IP
@@ -209,20 +307,68 @@ def register_with_server():
             'status': 'online'
         }
         
-        response = requests.post(f"{full_server_url}/api/system/register", json=client_info, timeout=10)
+        print(f"\n📤 [CLIENT] Sending registration request to: {full_server_url}/api/system/register")
+        print(f"📦 [CLIENT] Client info payload:")
+        for key, value in client_info.items():
+            print(f"     {key}: '{value}' (type: {type(value).__name__})")
+        
+        # Test server connectivity first
+        try:
+            health_response = requests.get(f"{full_server_url}/api/system/health", timeout=5)
+            print(f"\n🏥 [CLIENT] Server health check: {health_response.status_code}")
+            if health_response.status_code == 200:
+                health_data = health_response.json()
+                print(f"     Server health data: {health_data}")
+            else:
+                print(f"     Server health response: {health_response.text}")
+        except Exception as health_error:
+            print(f"\n⚠️ [CLIENT] Server health check failed: {health_error}")
+            print(f"   This might indicate the server is not running or not accessible")
+        
+        # Send registration request
+        response = requests.post(
+            f"{full_server_url}/api/system/register", 
+            json=client_info, 
+            timeout=10,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        print(f"\n📨 [CLIENT] Registration response:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Headers: {dict(response.headers)}")
+        print(f"   Response Text: {response.text}")
         
         if response.status_code == 200:
             client_registration_state['registered'] = True
             client_registration_state['client_id'] = client_info['client_id']
             client_registration_state['server_url'] = full_server_url
-            print(f"✅ Successfully registered with server: {full_server_url}")
+            print(f"\n✅ [CLIENT] Successfully registered with server!")
+            print(f"   Server: {full_server_url}")
             print(f"   Client ID: {client_info['client_id']}")
             print(f"   Device Model: {device_model}")
         else:
-            print(f"❌ Failed to register with server: {response.status_code}")
+            print(f"\n❌ [CLIENT] Registration failed with status: {response.status_code}")
+            try:
+                error_response = response.json()
+                print(f"   Error details: {error_response}")
+            except Exception as json_error:
+                print(f"   Could not parse error response as JSON: {json_error}")
+                print(f"   Raw response: {response.text}")
             
+    except requests.exceptions.ConnectionError as conn_error:
+        print(f"\n❌ [CLIENT] Connection error: {conn_error}")
+        print(f"   Could not connect to server at: {full_server_url}")
+        print(f"   Make sure the server is running: python3 app.py --server")
+    except requests.exceptions.Timeout as timeout_error:
+        print(f"\n❌ [CLIENT] Timeout error: {timeout_error}")
+        print(f"   Server did not respond within 10 seconds")
     except Exception as e:
-        print(f"❌ Error registering with server: {e}")
+        print(f"\n❌ [CLIENT] Unexpected error during registration: {e}")
+        import traceback
+        print(f"   Full traceback:")
+        traceback.print_exc()
+    
+    print("=" * 50)
 
 # Initialize based on mode
 if SERVER_MODE == 'server':
@@ -234,6 +380,6 @@ elif SERVER_MODE == 'client':
 
 if __name__ == '__main__':
     # Use different ports for server and client
-    port = 5009 if SERVER_MODE == 'server' else 5109
+    port = 5009 if SERVER_MODE == 'server' else 5119
     print(f"Starting Flask app on port {port} in {SERVER_MODE.upper()} mode")
     app.run(host='0.0.0.0', port=port, debug=True) 

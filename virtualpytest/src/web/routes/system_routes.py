@@ -128,11 +128,55 @@ def register_client():
     try:
         client_info = request.get_json()
         
+        # Debug: Log the incoming request
+        print(f"🔍 [SERVER] Registration request received:")
+        print(f"   Content-Type: {request.content_type}")
+        print(f"   Raw data: {request.get_data()}")
+        print(f"   Parsed JSON: {client_info}")
+        
+        # Validate that we received JSON data
+        if client_info is None:
+            error_msg = "No JSON data received in request body"
+            print(f"❌ [SERVER] Registration failed: {error_msg}")
+            return jsonify({'error': error_msg}), 400
+        
         # Validate required fields
         required_fields = ['client_id', 'local_ip', 'client_port', 'device_model', 'name']
+        missing_fields = []
+        
         for field in required_fields:
             if field not in client_info:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
+                missing_fields.append(field)
+        
+        if missing_fields:
+            error_msg = f'Missing required fields: {", ".join(missing_fields)}'
+            print(f"❌ [SERVER] Registration failed: {error_msg}")
+            print(f"   Required fields: {required_fields}")
+            print(f"   Received fields: {list(client_info.keys()) if client_info else 'None'}")
+            return jsonify({'error': error_msg}), 400
+        
+        # Validate field values
+        validation_errors = []
+        
+        if not client_info.get('client_id'):
+            validation_errors.append('client_id cannot be empty')
+        
+        if not client_info.get('local_ip'):
+            validation_errors.append('local_ip cannot be empty')
+        
+        if not client_info.get('client_port'):
+            validation_errors.append('client_port cannot be empty')
+        
+        if not client_info.get('device_model'):
+            validation_errors.append('device_model cannot be empty')
+        
+        if not client_info.get('name'):
+            validation_errors.append('name cannot be empty')
+        
+        if validation_errors:
+            error_msg = f'Validation errors: {"; ".join(validation_errors)}'
+            print(f"❌ [SERVER] Registration failed: {error_msg}")
+            return jsonify({'error': error_msg}), 400
         
         # Add timestamp
         client_info['registered_at'] = datetime.now().isoformat()
@@ -146,7 +190,11 @@ def register_client():
         # Start health check for this client
         start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
         
-        print(f"✅ Client registered: {client_info['name']} ({client_info['device_model']}) at {client_info['local_ip']}:{client_info['client_port']}")
+        print(f"✅ [SERVER] Client registered successfully:")
+        print(f"   Name: {client_info['name']}")
+        print(f"   Device Model: {client_info['device_model']}")
+        print(f"   Address: {client_info['local_ip']}:{client_info['client_port']}")
+        print(f"   Client ID: {client_info['client_id']}")
         
         return jsonify({
             'status': 'success',
@@ -155,8 +203,11 @@ def register_client():
         }), 200
         
     except Exception as e:
-        print(f"❌ Error registering client: {e}")
-        return jsonify({'error': str(e)}), 500
+        error_msg = f"Server error during registration: {str(e)}"
+        print(f"❌ [SERVER] {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 500
 
 @system_bp.route('/api/system/unregister', methods=['POST'])
 def unregister_client():
@@ -279,36 +330,45 @@ def get_client_by_device_model(device_model):
 
 def start_health_check(client_id, client_ip, client_port):
     """Start health check thread for a client"""
+    from flask import current_app
+    
     def health_worker():
         consecutive_failures = 0
         max_failures = 3
         
+        # Get the Flask app instance to use in the thread
+        app = current_app._get_current_object()
+        
         while True:
-            connected_clients = get_connected_clients()
-            if client_id not in connected_clients:
-                print(f"🔌 Health check stopped for {client_id} (client removed)")
-                break
-            
-            try:
-                response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
-                if response.status_code == 200:
-                    # Update last seen timestamp
-                    connected_clients[client_id]['last_seen'] = time.time()
-                    connected_clients[client_id]['status'] = 'online'
-                    set_connected_clients(connected_clients)
-                    consecutive_failures = 0
-                else:
+            # Use app context for each iteration
+            with app.app_context():
+                connected_clients = getattr(app, '_connected_clients', {})
+                if client_id not in connected_clients:
+                    print(f"🔌 Health check stopped for {client_id} (client removed)")
+                    break
+                
+                try:
+                    response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
+                    if response.status_code == 200:
+                        # Update last seen timestamp
+                        connected_clients[client_id]['last_seen'] = time.time()
+                        connected_clients[client_id]['status'] = 'online'
+                        app._connected_clients = connected_clients
+                        consecutive_failures = 0
+                    else:
+                        consecutive_failures += 1
+                        
+                except Exception as e:
                     consecutive_failures += 1
-                    
-            except Exception as e:
-                consecutive_failures += 1
-                print(f"⚠️ Health check failed for {client_id}: {e}")
-            
-            # Remove client after max failures
-            if consecutive_failures >= max_failures:
-                print(f"❌ Removing client {client_id} after {max_failures} failed health checks")
-                remove_client(client_id)
-                break
+                    print(f"⚠️ Health check failed for {client_id}: {e}")
+                
+                # Remove client after max failures
+                if consecutive_failures >= max_failures:
+                    print(f"❌ Removing client {client_id} after {max_failures} failed health checks")
+                    # Use app context for removal
+                    with app.app_context():
+                        remove_client(client_id)
+                    break
             
             time.sleep(30)  # Check every 30 seconds
     
@@ -323,18 +383,52 @@ def start_health_check(client_id, client_ip, client_port):
 def remove_client(client_id):
     """Remove a client from the registry"""
     try:
-        connected_clients = get_connected_clients()
+        from flask import current_app
+        
+        # Try to get app context, if not available use direct access
+        try:
+            connected_clients = get_connected_clients()
+            health_check_threads = get_health_check_threads()
+        except RuntimeError:
+            # If we're outside app context, try to get app directly
+            try:
+                app = current_app._get_current_object()
+                connected_clients = getattr(app, '_connected_clients', {})
+                health_check_threads = getattr(app, '_health_check_threads', {})
+            except:
+                print(f"❌ Could not access app context to remove client {client_id}")
+                return
+        
         if client_id in connected_clients:
             client_info = connected_clients[client_id]
             del connected_clients[client_id]
-            set_connected_clients(connected_clients)
+            
+            # Update the app state
+            try:
+                set_connected_clients(connected_clients)
+            except RuntimeError:
+                # Direct update if context not available
+                try:
+                    app = current_app._get_current_object()
+                    app._connected_clients = connected_clients
+                except:
+                    pass
+            
             print(f"🗑️ Removed client: {client_info.get('name', client_id)}")
         
         # Clean up health check thread
-        health_check_threads = get_health_check_threads()
         if client_id in health_check_threads:
             del health_check_threads[client_id]
-            set_health_check_threads(health_check_threads)
+            
+            try:
+                set_health_check_threads(health_check_threads)
+            except RuntimeError:
+                # Direct update if context not available
+                try:
+                    app = current_app._get_current_object()
+                    app._health_check_threads = health_check_threads
+                except:
+                    pass
             
     except Exception as e:
         print(f"❌ Error removing client {client_id}: {e}")
