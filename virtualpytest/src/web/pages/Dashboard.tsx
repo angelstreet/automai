@@ -7,6 +7,10 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
   Schedule as PendingIcon,
+  Devices as DevicesIcon,
+  Computer as ComputerIcon,
+  PhoneAndroid as PhoneIcon,
+  Tv as TvIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -43,6 +47,19 @@ interface DashboardStats {
   }>;
 }
 
+interface ConnectedDevice {
+  client_id: string;
+  name: string;
+  device_model: string;
+  local_ip: string;
+  client_port: string;
+  public_ip: string;
+  capabilities: string[];
+  status: string;
+  registered_at: string;
+  last_seen: number;
+}
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
@@ -50,6 +67,7 @@ const Dashboard: React.FC = () => {
     trees: 0,
     recentActivity: [],
   });
+  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,15 +78,17 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [testCasesRes, campaignsRes, treesRes] = await Promise.all([
+      const [testCasesRes, campaignsRes, treesRes, devicesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/testcases`),
         fetch(`${API_BASE_URL}/campaigns`),
         fetch(`${API_BASE_URL}/navigation/trees`),
+        fetch(`${API_BASE_URL}/system/clients`),
       ]);
 
       let testCases: TestCase[] = [];
       let campaigns: Campaign[] = [];
       let trees: Tree[] = [];
+      let devices: ConnectedDevice[] = [];
 
       if (testCasesRes.ok) {
         testCases = await testCasesRes.json();
@@ -83,6 +103,13 @@ const Dashboard: React.FC = () => {
         // The navigation API returns { success: true, data: [...] }
         if (treesResponse.success && treesResponse.data) {
           trees = treesResponse.data;
+        }
+      }
+
+      if (devicesRes.ok) {
+        const devicesResponse = await devicesRes.json();
+        if (devicesResponse.status === 'success' && devicesResponse.clients) {
+          devices = devicesResponse.clients;
         }
       }
 
@@ -110,6 +137,8 @@ const Dashboard: React.FC = () => {
         trees: trees.length,
         recentActivity,
       });
+      
+      setConnectedDevices(devices);
     } catch (err) {
       setError('Failed to fetch dashboard data');
     } finally {
@@ -143,6 +172,27 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const getDeviceIcon = (deviceModel: string) => {
+    switch (deviceModel) {
+      case 'android_mobile':
+        return <PhoneIcon color="primary" />;
+      case 'android_tv':
+        return <TvIcon color="secondary" />;
+      default:
+        return <ComputerIcon color="info" />;
+    }
+  };
+
+  const formatLastSeen = (timestamp: number) => {
+    const now = Date.now() / 1000;
+    const diff = now - timestamp;
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -161,7 +211,7 @@ const Dashboard: React.FC = () => {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -177,7 +227,7 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -193,7 +243,7 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -204,6 +254,22 @@ const Dashboard: React.FC = () => {
                   <Typography variant="h4">{stats.trees}</Typography>
                 </Box>
                 <TreeIcon color="info" sx={{ fontSize: 40 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Connected Devices
+                  </Typography>
+                  <Typography variant="h4">{connectedDevices.length}</Typography>
+                </Box>
+                <DevicesIcon color="success" sx={{ fontSize: 40 }} />
               </Box>
             </CardContent>
           </Card>
@@ -272,6 +338,73 @@ const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Connected Devices */}
+      <Paper sx={{ p: 2, mt: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Connected Devices ({connectedDevices.length})
+        </Typography>
+        {connectedDevices.length > 0 ? (
+          <Grid container spacing={2}>
+            {connectedDevices.map((device) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={device.client_id}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {getDeviceIcon(device.device_model)}
+                        <Typography variant="h6" component="div">
+                          {device.name}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={device.status}
+                        size="small"
+                        color={device.status === 'online' ? 'success' : 'error'}
+                        variant="outlined"
+                      />
+                    </Box>
+                    
+                    <Typography color="textSecondary" variant="body2" gutterBottom>
+                      Model: {device.device_model}
+                    </Typography>
+                    
+                    <Typography color="textSecondary" variant="body2" gutterBottom>
+                      IP: {device.local_ip}:{device.client_port}
+                    </Typography>
+                    
+                    <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
+                      {device.capabilities.map((capability) => (
+                        <Chip
+                          key={capability}
+                          label={capability}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      ))}
+                    </Box>
+                    
+                    <Typography color="textSecondary" variant="caption">
+                      Last seen: {formatLastSeen(device.last_seen)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Box textAlign="center" py={4}>
+            <DevicesIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+            <Typography color="textSecondary" variant="h6" gutterBottom>
+              No devices connected
+            </Typography>
+            <Typography color="textSecondary" variant="body2">
+              Start a client with: python app.py --client
+            </Typography>
+          </Box>
+        )}
+      </Paper>
 
       {/* System Status */}
       <Paper sx={{ p: 1, mt: 3 }}>

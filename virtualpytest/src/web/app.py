@@ -47,6 +47,9 @@ print(f"  SUPABASE_KEY: {'SET' if os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY') els
 # Client mode specific environment variables
 if SERVER_MODE == 'client':
     print(f"  SERVER_URL: {os.getenv('SERVER_URL', 'NOT SET')}")
+    print(f"  SERVER_PORT: {os.getenv('SERVER_PORT', 'NOT SET')}")
+    print(f"  CLIENT_IP: {os.getenv('CLIENT_IP', 'NOT SET')}")
+    print(f"  CLIENT_PORT: {os.getenv('CLIENT_PORT', 'NOT SET')}")
     print(f"  CLIENT_NAME: {os.getenv('CLIENT_NAME', 'NOT SET')}")
     print(f"  DEVICE_MODEL: {os.getenv('DEVICE_MODEL', 'NOT SET')}")
 
@@ -153,6 +156,9 @@ def register_with_server():
         return
     
     server_url = os.getenv('SERVER_URL')
+    server_port = os.getenv('SERVER_PORT', '5009')
+    client_ip = os.getenv('CLIENT_IP')
+    client_port = os.getenv('CLIENT_PORT', '5109')  # Default to 5109 for client
     client_name = os.getenv('CLIENT_NAME', f"client-{uuid4().hex[:8]}")
     device_model = os.getenv('DEVICE_MODEL', 'android_mobile')
     
@@ -160,15 +166,33 @@ def register_with_server():
         print("ERROR: SERVER_URL not set for client mode")
         return
     
+    # Construct full server URL with port
+    if '://' in server_url:
+        # URL format: http://server-ip or http://server-ip:port
+        if ':' in server_url.split('://')[-1] and server_url.split('://')[-1].count(':') >= 1:
+            # URL already has port
+            full_server_url = server_url
+        else:
+            # URL without port, add it
+            full_server_url = f"{server_url}:{server_port}"
+    else:
+        # IP format: server-ip
+        full_server_url = f"http://{server_url}:{server_port}"
+    
     try:
         import socket
         import requests
         
-        # Get local IP
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        local_ip = s.getsockname()[0]
-        s.close()
+        # Get local IP - use CLIENT_IP if set, otherwise auto-detect
+        if client_ip:
+            local_ip = client_ip
+            print(f"Using configured CLIENT_IP: {client_ip}")
+        else:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            print(f"Auto-detected local IP: {local_ip}")
         
         # Get public IP (simplified - could use external service)
         public_ip = local_ip  # For now, use local IP
@@ -177,6 +201,7 @@ def register_with_server():
             'client_id': str(uuid4()),
             'public_ip': public_ip,
             'local_ip': local_ip,
+            'client_port': client_port,
             'name': client_name,
             'device_model': device_model,
             'controller_types': ['remote', 'av', 'verification'],
@@ -184,13 +209,13 @@ def register_with_server():
             'status': 'online'
         }
         
-        response = requests.post(f"{server_url}/api/system/register", json=client_info, timeout=10)
+        response = requests.post(f"{full_server_url}/api/system/register", json=client_info, timeout=10)
         
         if response.status_code == 200:
             client_registration_state['registered'] = True
             client_registration_state['client_id'] = client_info['client_id']
-            client_registration_state['server_url'] = server_url
-            print(f"✅ Successfully registered with server: {server_url}")
+            client_registration_state['server_url'] = full_server_url
+            print(f"✅ Successfully registered with server: {full_server_url}")
             print(f"   Client ID: {client_info['client_id']}")
             print(f"   Device Model: {device_model}")
         else:
@@ -208,4 +233,7 @@ elif SERVER_MODE == 'client':
     register_with_server()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5009, debug=True) 
+    # Use different ports for server and client
+    port = 5009 if SERVER_MODE == 'server' else 5109
+    print(f"Starting Flask app on port {port} in {SERVER_MODE.upper()} mode")
+    app.run(host='0.0.0.0', port=port, debug=True) 

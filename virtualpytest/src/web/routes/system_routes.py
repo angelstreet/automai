@@ -35,7 +35,7 @@ def register_client():
         client_info = request.get_json()
         
         # Validate required fields
-        required_fields = ['client_id', 'local_ip', 'device_model', 'name']
+        required_fields = ['client_id', 'local_ip', 'client_port', 'device_model', 'name']
         for field in required_fields:
             if field not in client_info:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
@@ -50,9 +50,9 @@ def register_client():
         set_connected_clients(connected_clients)
         
         # Start health check for this client
-        start_health_check(client_info['client_id'], client_info['local_ip'])
+        start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
         
-        print(f"✅ Client registered: {client_info['name']} ({client_info['device_model']}) at {client_info['local_ip']}")
+        print(f"✅ Client registered: {client_info['name']} ({client_info['device_model']}) at {client_info['local_ip']}:{client_info['client_port']}")
         
         return jsonify({
             'status': 'success',
@@ -136,6 +136,7 @@ def list_clients():
                 'name': client_info.get('name'),
                 'device_model': client_info.get('device_model'),
                 'local_ip': client_info.get('local_ip'),
+                'client_port': client_info.get('client_port'),
                 'public_ip': client_info.get('public_ip'),
                 'capabilities': client_info.get('capabilities', []),
                 'status': client_info.get('status'),
@@ -168,6 +169,7 @@ def get_client_by_device_model(device_model):
                         'client_id': client_id,
                         'name': client_info.get('name'),
                         'local_ip': client_info.get('local_ip'),
+                        'client_port': client_info.get('client_port'),
                         'capabilities': client_info.get('capabilities', [])
                     }
                 }), 200
@@ -181,7 +183,7 @@ def get_client_by_device_model(device_model):
         print(f"❌ Error finding client: {e}")
         return jsonify({'error': str(e)}), 500
 
-def start_health_check(client_id, client_ip):
+def start_health_check(client_id, client_ip, client_port):
     """Start health check thread for a client"""
     def health_worker():
         consecutive_failures = 0
@@ -194,7 +196,7 @@ def start_health_check(client_id, client_ip):
                 break
             
             try:
-                response = requests.get(f"http://{client_ip}:5009/api/system/health", timeout=5)
+                response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
                 if response.status_code == 200:
                     # Update last seen timestamp
                     connected_clients[client_id]['last_seen'] = time.time()

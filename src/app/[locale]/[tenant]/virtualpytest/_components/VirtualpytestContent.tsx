@@ -25,7 +25,7 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
       const apiOk = apiResponse.ok;
 
       // Check frontend server
-      const frontendResponse = await fetch('http://localhost:5173');
+      const frontendResponse = await fetch('http://localhost:5073');
       const frontendOk = frontendResponse.ok;
 
       setServerStatus({
@@ -93,7 +93,7 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
                 className={`w-3 h-3 rounded-full ${serverStatus.frontend ? 'bg-green-500' : 'bg-red-500'}`}
               ></div>
               <span className="text-sm">
-                Frontend Server (Port 5173): {serverStatus.frontend ? 'Online' : 'Offline'}
+                Frontend Server (Port 5073): {serverStatus.frontend ? 'Online' : 'Offline'}
               </span>
             </div>
           </div>
@@ -137,11 +137,11 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
                 <li>
                   Frontend:{' '}
                   <a
-                    href="http://localhost:5173"
+                    href="http://localhost:5073"
                     target="_blank"
                     className="text-blue-600 hover:underline"
                   >
-                    http://localhost:5173
+                    http://localhost:5073
                   </a>
                 </li>
               </ul>
@@ -155,7 +155,7 @@ export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestCont
   return (
     <div className="h-full w-full overflow-hidden">
       <iframe
-        src="http://localhost:5173"
+        src="http://localhost:5073"
         className="w-full h-full border-0"
         title="VirtualPyTest Interface"
         allow="fullscreen"
