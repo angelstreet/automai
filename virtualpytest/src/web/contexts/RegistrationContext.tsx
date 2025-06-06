@@ -92,17 +92,31 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       setIsLoading(true);
       setError(null);
       
+      const fullUrl = `${SERVER_BASE_URL}/api/system/clients/devices`;
       console.log('[@context:Registration] Fetching hosts from server');
-      const response = await fetch(`${SERVER_BASE_URL}/api/system/clients/devices`);
+      console.log('[@context:Registration] SERVER_BASE_URL:', SERVER_BASE_URL);
+      console.log('[@context:Registration] Full URL:', fullUrl);
+      console.log('[@context:Registration] Making fetch request...');
+      
+      const response = await fetch(fullUrl);
+      
+      console.log('[@context:Registration] Fetch response received');
+      console.log('[@context:Registration] Response status:', response.status);
+      console.log('[@context:Registration] Response statusText:', response.statusText);
+      console.log('[@context:Registration] Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('[@context:Registration] Response ok:', response.ok);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
+      console.log('[@context:Registration] Parsing JSON response...');
       const result = await response.json();
+      console.log('[@context:Registration] Parsed JSON result:', result);
       
       if (result.success) {
         const rawHosts = result.devices || [];
+        console.log('[@context:Registration] Raw hosts from server:', rawHosts);
         
         // Map server response to include legacy fields for Dashboard compatibility
         const hosts = rawHosts.map((host: any) => ({
@@ -129,6 +143,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
           }
         }));
         
+        console.log('[@context:Registration] Mapped hosts:', hosts);
         setAvailableHosts(hosts);
         console.log(`[@context:Registration] Successfully loaded ${hosts.length} hosts`);
       } else {
@@ -137,6 +152,19 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       
     } catch (err: any) {
       console.error('[@context:Registration] Error fetching hosts:', err);
+      console.error('[@context:Registration] Error name:', err.name);
+      console.error('[@context:Registration] Error message:', err.message);
+      console.error('[@context:Registration] Error stack:', err.stack);
+      
+      // Additional debugging for network errors
+      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+        console.error('[@context:Registration] This is likely a network connectivity issue:');
+        console.error('[@context:Registration] - Check if the server is running');
+        console.error('[@context:Registration] - Check if the URL is accessible:', `${SERVER_BASE_URL}/api/system/clients/devices`);
+        console.error('[@context:Registration] - Check for CORS issues');
+        console.error('[@context:Registration] - Check browser network tab for more details');
+      }
+      
       setError(err.message || 'Failed to fetch hosts');
       setAvailableHosts([]);
     } finally {
