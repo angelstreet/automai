@@ -101,6 +101,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
 
   // Fetch hosts from server
   const fetchHosts = useCallback(async () => {
+    console.log('[@context:Registration] fetchHosts function called!');
     try {
       setIsLoading(true);
       setError(null);
