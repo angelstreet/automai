@@ -58,6 +58,12 @@ interface NodeVerification {
   inputLabel?: string;
   inputPlaceholder?: string;
   inputValue?: string;
+  // Add properties for verification results
+  lastRunResult?: boolean;
+  lastRunResults?: boolean[];
+  resultImageUrl?: string;
+  referenceImageUrl?: string;
+  lastRunDetails?: string;
 }
 
 // Centralized VerificationTestResult interface - MUST match NodeVerificationsList.tsx
@@ -478,287 +484,58 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       setLoading(true);
       setError(null);
 
-      // Step 1: Initialize verification controllers
-      console.log('[@component:VerificationEditor] Initializing verification controllers...');
-      const initResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/take-control', {
+      // Skip controller initialization since host is directly connected via ADB
+      console.log('[@component:VerificationEditor] Executing verifications directly on host...');
+
+      // Step 1: Execute batch verification on host
+      const batchResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/execute-batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          av_controller_type: model // Use the dynamic model instead of hardcoded 'android_mobile'
+          verifications: verifications,
+          model: model, // Use the dynamic model
+          node_id: 'verification-editor' // Identifier for this execution context
         }),
       });
 
-      const initResult = await initResponse.json();
-      if (!initResult.success) {
-        setError(`Failed to initialize verification controllers: ${initResult.error}`);
-        console.error('[@component:VerificationEditor] Controller initialization failed:', initResult.error);
+      const batchResult = await batchResponse.json();
+      if (!batchResult.success) {
+        setError(`Failed to execute verifications: ${batchResult.error}`);
+        console.error('[@component:VerificationEditor] Batch execution failed:', batchResult.error);
         return;
       }
 
-      console.log('[@component:VerificationEditor] Controllers initialized successfully');
-
-      // Step 2: Prepare verifications for API call
-      const verificationsToExecute = verifications.map(verification => {
-        // Start with all existing params including area coordinates
-        let updatedParams = { ...verification.params };
-        
-        console.log('[@component:VerificationEditor] Debug verification params for image:', {
-          full_path: verification.params?.full_path,
-          reference_path: verification.params?.reference_path,
-          reference_image: verification.params?.reference_image,
-          inputValue: verification.inputValue
-        });
-        
-        if (verification.controller_type === 'image') {
-          // Handle image verification parameters
-          if (verification.params?.full_path) {
-            // Use full absolute path from reference data
-            updatedParams.image_path = verification.params.full_path;
-          } else if (verification.params?.reference_path) {
-            // Fallback to relative path (may need to be converted to absolute)
-            updatedParams.image_path = verification.params.reference_path;
-          } else if (verification.inputValue) {
-            // Manual input
-            updatedParams.image_path = verification.inputValue;
-          } else {
-            // No image path provided
-            updatedParams.image_path = '';
-          }
-        } else if (verification.controller_type === 'text') {
-          // Handle text verification parameters
-          if (verification.params?.reference_text) {
-            // Use text from reference data
-            updatedParams.text = verification.params.reference_text;
-          } else if (verification.inputValue) {
-            // Manual input
-            updatedParams.text = verification.inputValue;
-          } else {
-            // No text provided
-            updatedParams.text = '';
-          }
-          
-          // Add text-specific parameters
-          if (verification.params?.font_size) {
-            updatedParams.font_size = verification.params.font_size;
-          }
-          if (verification.params?.confidence) {
-            updatedParams.confidence = verification.params.confidence;
-          }
-        }
-        
-        // Determine what images to provide based on component state
-        if (isScreenshotMode && screenshotPath) {
-          // Screenshot mode with screenshot available
-          updatedParams.image_list = [screenshotPath];
-          console.log('[@component:VerificationEditor] Using screenshot for verification:', screenshotPath);
-        } else if (!isScreenshotMode && videoFramesPath && totalFrames && totalFrames > 0) {
-          // Video mode with saved frames available
-          const framesList = [];
-          for (let i = 0; i < totalFrames; i++) {
-            const isCaptureFrames = videoFramesPath.includes('captures');
-            let framePath;
-            if (isCaptureFrames) {
-              framePath = `${videoFramesPath}/capture_${i + 1}.jpg`;
-            } else {
-              framePath = `${videoFramesPath}/frame_${i.toString().padStart(4, '0')}.jpg`;
-            }
-            framesList.push(framePath);
-          }
-          updatedParams.image_list = framesList;
-          console.log(`[@component:VerificationEditor] Using ${framesList.length} saved frames for verification from:`, videoFramesPath);
-        } else if (!isScreenshotMode && isCaptureActive) {
-          // Video mode with active capture - backend will check /tmp/captures
-          console.log('[@component:VerificationEditor] Video capture is active - backend will use /tmp/captures frames');
-        } else {
-          // No existing images - will start new capture
-          console.log('[@component:VerificationEditor] No existing images - will start new capture');
-        }
-        
-        // Ensure area coordinates are included (from reference or manual input)
-        if (verification.params?.area) {
-          updatedParams.area = verification.params.area;
-          console.log('[@component:VerificationEditor] Including area for verification:', updatedParams.area);
-        }
-        
-        // Use actual timeout from verification params instead of hardcoded value
-        if (verification.params?.timeout) {
-          updatedParams.timeout = verification.params.timeout;
-          console.log('[@component:VerificationEditor] Using timeout from verification params:', updatedParams.timeout);
-        }
-
-        return {
-          ...verification,
-          params: updatedParams
-        };
-      });
-
-      console.log('[@component:VerificationEditor] Executing verifications with details:');
-      verificationsToExecute.forEach((verification, index) => {
-        let strategy = 'Will start new capture';
-        if (verification.params?.image_list && verification.params.image_list.length > 0) {
-          if (isScreenshotMode) {
-            strategy = `Using existing screenshot: ${verification.params.image_list[0]}`;
-          } else {
-            strategy = `Using ${verification.params.image_list.length} existing frames from: ${videoFramesPath}`;
-          }
-        } else if (!isScreenshotMode && isCaptureActive) {
-          strategy = 'Using active capture frames from /tmp/captures';
-        }
-        
-        console.log(`[@component:VerificationEditor] Verification ${index + 1}:`, {
-          id: verification.id,
-          command: verification.command,
-          controller_type: verification.controller_type,
-          strategy: strategy,
-          timeout: verification.params?.timeout,
-          area: verification.params?.area,
-          image_path: verification.params?.image_path
-        });
-      });
-
-      // Step 3: Call the batch verification API
-      const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/execute-batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          verifications: verificationsToExecute,
-          node_id: 'verification_editor_test',
-          tree_id: 'manual_test',
-          model: model  // Pass model name for organizing output images
-        }),
-      });
-
-      const result = await response.json();
-      console.log('[@component:VerificationEditor] Test results:', result);
+      console.log('[@component:VerificationEditor] Verifications executed successfully:', batchResult);
       
-      // Store test results for display
-      const newTestResults: VerificationTestResult[] = [];
-      if (result.results) {
-        result.results.forEach((res: any, index: number) => {
-          const status = res.success ? 'PASSED' : 'FAILED';
-          console.log(`[@component:VerificationEditor] Verification ${index + 1}: ${status} - ${res.message || res.error || 'No details'}`);
-          
-          // Use threshold directly from response (backend handles all processing)
-          let threshold: number | undefined = undefined;
-          if (verificationsToExecute[index]?.controller_type === 'image' || verificationsToExecute[index]?.controller_type === 'text') {
-            // Use threshold directly from response (already processed by backend for appear/disappear operations)
-            if (res.threshold !== undefined && res.threshold !== null) {
-              // Clamp confidence to minimum of 0.0 (no negative confidence values)
-              threshold = Math.max(0.0, res.threshold);
-              console.log(`[@component:VerificationEditor] Using threshold from response: ${res.threshold} (clamped to: ${threshold})`);
-            } else {
-              // Fallback to verification params if backend didn't provide threshold
-              threshold = verificationsToExecute[index]?.params?.threshold || 0.0;
-              console.log(`[@component:VerificationEditor] Using fallback threshold: ${threshold}`);
-            }
+      // Update verification results
+      if (batchResult.results && Array.isArray(batchResult.results)) {
+        const updatedVerifications = verifications.map((verification, index) => {
+          const result = batchResult.results[index];
+          if (result) {
+            return {
+              ...verification,
+              lastRunResult: result.success,
+              lastRunResults: result.success ? [true, ...(verification.lastRunResults || []).slice(0, 9)] : [false, ...(verification.lastRunResults || []).slice(0, 9)],
+              resultImageUrl: result.result_image_url,
+              referenceImageUrl: result.reference_image_url,
+              lastRunDetails: result.details || result.error
+            };
           }
-          
-          // Determine if this is an ERROR (technical issue) or FAIL (test result)
-          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'ERROR';
-          if (res.success) {
-            resultType = 'PASS';
-          } else {
-            // Check if this is a technical error vs test failure
-            const errorMessage = res.message || res.error || '';
-            
-            // Text/Image not found should be FAIL (test failure), not ERROR (technical issue)
-            const isTestFailure = errorMessage.includes('Text pattern') ||
-                                 errorMessage.includes('Image not found') ||
-                                 errorMessage.includes('not found after') ||
-                                 errorMessage.includes('Best confidence:') ||
-                                 errorMessage.includes('Closest text found:');
-            
-            // Technical errors are things like file access, OCR failures, etc.
-            const isTechnicalError = errorMessage.includes('Could not load') || 
-                                    errorMessage.includes('Failed to capture') ||
-                                    errorMessage.includes('Failed to re-capture') ||
-                                    errorMessage.includes('OCR failed') ||
-                                    errorMessage.includes('controller not') ||
-                                    errorMessage.includes('No text specified') ||
-                                    errorMessage.includes('No reference image specified') ||
-                                    errorMessage.includes('ERROR:');
-            
-            if (isTestFailure) {
-              resultType = 'FAIL';
-            } else if (isTechnicalError) {
-              resultType = 'ERROR';
-            } else {
-              // Default to FAIL for unknown cases (better to show as test failure than technical error)
-              resultType = 'FAIL';
-            }
-          }
-          
-          console.log(`[@component:VerificationEditor] Verification ${index + 1} result:`, {
-            success: res.success,
-            resultType: resultType,
-            message: res.message,
-            error: res.error,
-            extractedThreshold: threshold,
-            controllerType: verificationsToExecute[index]?.controller_type,
-            sourceImageUrl: res.source_image_url,
-            referenceImageUrl: res.reference_image_url,
-            extractedText: res.extracted_text,
-            searchedText: res.searched_text
-          });
-
-          // Improve message for very low confidence scores (originally negative)
-          let displayMessage = res.message;
-          if (res.threshold !== undefined && res.threshold < 0 && threshold !== undefined) {
-            // Original confidence was negative, provide clearer message
-            const requiredThreshold = verificationsToExecute[index]?.params?.threshold || 0.8;
-            displayMessage = `Image not found. Images appear completely different (confidence: ${(threshold * 100).toFixed(1)}%, required: ${(requiredThreshold * 100).toFixed(0)}%)`;
-          }
-
-          newTestResults.push({
-            success: res.success,
-            message: displayMessage,
-            error: res.error,
-            threshold,
-            resultType: resultType,
-            // Add image comparison data for UI thumbnails - fix property names
-            sourceImageUrl: res.source_image_url,
-            referenceImageUrl: res.reference_image_url,
-            // Add text comparison data
-            extractedText: res.extracted_text,
-            searchedText: res.searched_text,
-            imageFilter: res.image_filter,
-            // Language detection for text verifications
-            detectedLanguage: res.detected_language,
-            languageConfidence: res.language_confidence,
-            // ADB-specific result data
-            search_term: res.search_term,
-            wait_time: res.wait_time,
-            total_matches: res.total_matches,
-            matches: res.matches
-          });
+          return verification;
         });
-      }
-      setTestResults(newTestResults);
-      
-      if (result.success) {
-        const passedCount = result.passed_count || 0;
-        const totalCount = result.total_verifications || verifications.length;
         
-        // Clear any previous errors since we have results
-        setError(null);
+        setVerifications(updatedVerifications);
         
-        if (passedCount === totalCount) {
-          setSuccessMessage(`All ${totalCount} verification(s) passed!`);
-        } else {
-          setSuccessMessage(`${passedCount}/${totalCount} verification(s) passed. Check results below.`);
-        }
-      } else {
-        // Clear any previous errors and show success message with results info
-        setError(null);
-       
+        // Calculate overall success
+        const allPassed = batchResult.results.every((result: any) => result.success);
+        setError(allPassed ? null : 'Some verifications failed');
       }
+
     } catch (error) {
       console.error('[@component:VerificationEditor] Error running tests:', error);
-      setError('Failed to run verification tests');
+      setError(`Error running tests: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
