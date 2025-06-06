@@ -679,7 +679,7 @@ def execute_image_verification_host(verification, source_path, model, verificati
     try:
         import cv2
         import shutil
-        from controllers.verification.image import copy_reference_with_filtered_versions
+        from controllers.verification.image import copy_reference_with_filtered_versions, crop_reference_image
         
         params = verification.get('params', {})
         area = params.get('area')
@@ -819,6 +819,8 @@ def execute_text_verification_host(verification, source_path, model, verificatio
     try:
         import cv2
         import pytesseract
+        import shutil
+        from controllers.verification.image import crop_reference_image
         
         params = verification.get('params', {})
         area = params.get('area')
