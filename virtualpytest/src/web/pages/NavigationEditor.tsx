@@ -83,6 +83,9 @@ import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
 // Import the useValidationColors hook
 import { useValidationColors } from '../hooks/useValidationColors';
 
+// Import registration context
+import { useRegistration } from '../contexts/RegistrationContext';
+
 // Local interface for verification test results including ADB fields
 interface VerificationTestResult {
   success: boolean;
@@ -224,6 +227,9 @@ function CompactRemoteWithSessionTracking({
 }
 
 const NavigationEditorContent: React.FC = () => {
+  // Use registration context for centralized URL management
+  const { buildApiUrl, isRegistered } = useRegistration();
+  
   // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -294,15 +300,12 @@ const NavigationEditorContent: React.FC = () => {
     try {
       setDevicesLoading(true);
       
-      // Use environment variables or fallback to localhost
-      const serverUrl = process.env.SERVER_URL || 'http://localhost';
-      const serverPort = process.env.SERVER_PORT || '5009';
-      const fullServerUrl = `${serverUrl}:${serverPort}`;
-      
-      console.log(`[@component:NavigationEditor] Using server URL: ${fullServerUrl}`);
+      // Use centralized URL building from registration context
+      const apiUrl = buildApiUrl('/api/system/clients/devices');
+      console.log(`[@component:NavigationEditor] Using API URL: ${apiUrl}`);
       
       // Fetch registered clients as devices instead of using device database
-      const response = await fetch(`${fullServerUrl}/api/system/clients/devices`);
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -313,7 +316,7 @@ const NavigationEditorContent: React.FC = () => {
       if (result.success) {
         const registeredDevices = result.devices || [];
         setDevices(registeredDevices);
-        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices from ${fullServerUrl}`);
+        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices`);
       } else {
         throw new Error(result.error || 'Server returned success: false');
       }
@@ -324,7 +327,7 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setDevicesLoading(false);
     }
-  }, []);
+  }, [buildApiUrl]);
 
   useEffect(() => {
     fetchDevices();
@@ -504,14 +507,14 @@ const NavigationEditorContent: React.FC = () => {
       
       try {
         // Check current stream status while SSH connection is still active
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
+        const response = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/stream/status'));
         if (response.ok) {
           const data = await response.json();
           if (data.success && !data.is_active) {
             console.log('[@component:NavigationEditor] Stream was stopped, will restart after disconnect...');
             
             // Restart the stream before disconnecting
-            const restartResponse = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/restart', {
+            const restartResponse = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/stream/restart'), {
               method: 'POST'
             });
             
@@ -585,7 +588,7 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
       // Call screenshot API with parent and node name parameters
-      const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/screenshot', {
+      const response = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/screenshot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -607,7 +610,7 @@ const NavigationEditorContent: React.FC = () => {
           
           // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
           const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
-          const screenshotUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`;
+          const screenshotUrl = buildApiUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
           
           // Create updated node with screenshot
           const updatedNode = {
@@ -668,7 +671,7 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Initializing verification controllers for device: ${selectedDevice}`);
       
       // Take control of verification controllers
-      const takeControlResponse = await fetch('http://localhost:5009/api/virtualpytest/verification/take-control', {
+      const takeControlResponse = await fetch(buildApiUrl('/api/virtualpytest/verification/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -684,7 +687,7 @@ const NavigationEditorContent: React.FC = () => {
         console.log('[@component:NavigationEditor] Verification controllers initialized:', controlData);
         
         // Get controller status
-        const statusResponse = await fetch('http://localhost:5009/api/virtualpytest/verification/status');
+        const statusResponse = await fetch(buildApiUrl('/api/virtualpytest/verification/status'));
         if (statusResponse.ok) {
           const statusData = await statusResponse.json();
           console.log('[@component:NavigationEditor] Verification controller status:', statusData);
@@ -725,7 +728,7 @@ const NavigationEditorContent: React.FC = () => {
     try {
       console.log('[@component:NavigationEditor] Releasing verification controllers');
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/verification/release-control', {
+      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/release-control'), {
         method: 'POST',
       });
 
@@ -759,7 +762,7 @@ const NavigationEditorContent: React.FC = () => {
       setVerificationResults([]);
       setLastVerifiedNodeId(nodeId);
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/verification/execute-batch', {
+      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute-batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1262,8 +1265,8 @@ const NavigationEditorContent: React.FC = () => {
                   deviceModel={selectedDeviceData.model}
                   autoConnect={true}
                   deviceConnection={{
-                    flask_url: selectedDeviceData.connection?.flask_url || `http://localhost:5009`,
-                    nginx_url: selectedDeviceData.connection?.nginx_url || `https://localhost:444`
+                    flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
+                    nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
                   }}
                   onDisconnectComplete={() => {
                     // Called when screen definition editor disconnects

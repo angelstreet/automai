@@ -35,11 +35,15 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+// Import registration context
+import { useRegistration } from '../contexts/RegistrationContext';
+
 import { Campaign, TestCase, Tree } from '../type';
 
-const API_BASE_URL = 'http://localhost:5009/api';
-
 const CampaignEditor: React.FC = () => {
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [trees, setTrees] = useState<Tree[]>([]);
@@ -67,9 +71,9 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       const [campaignsRes, testCasesRes, treesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/campaigns`),
-        fetch(`${API_BASE_URL}/testcases`),
-        fetch(`${API_BASE_URL}/trees`),
+        fetch(buildApiUrl('/api/campaigns')),
+        fetch(buildApiUrl('/api/testcases')),
+        fetch(buildApiUrl('/api/trees')),
       ]);
 
       if (campaignsRes.ok) {
@@ -96,10 +100,10 @@ const CampaignEditor: React.FC = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing
-        ? `${API_BASE_URL}/campaigns/${formData.campaign_id}`
-        : `${API_BASE_URL}/campaigns`;
+      const url = formData.campaign_id
+        ? buildApiUrl(`/api/campaigns/${formData.campaign_id}`)
+        : buildApiUrl('/api/campaigns');
+      const method = formData.campaign_id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
@@ -125,7 +129,7 @@ const CampaignEditor: React.FC = () => {
   const handleDelete = async (campaignId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+      const response = await fetch(buildApiUrl(`/api/campaigns/${campaignId}`), {
         method: 'DELETE',
       });
 

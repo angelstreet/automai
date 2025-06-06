@@ -43,9 +43,10 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { TestCase, Device, EnvironmentProfile, VerificationCondition } from '../type';
+// Import registration context
+import { useRegistration } from '../contexts/RegistrationContext';
 
-const API_BASE_URL = 'http://localhost:5009/api';
+import { TestCase, Device, EnvironmentProfile, VerificationCondition } from '../type';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -69,6 +70,9 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const TestCaseEditor: React.FC = () => {
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [environmentProfiles, setEnvironmentProfiles] = useState<EnvironmentProfile[]>([]);
@@ -105,7 +109,7 @@ const TestCaseEditor: React.FC = () => {
   const fetchTestCases = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/testcases`);
+      const response = await fetch(buildApiUrl('/api/testcases'));
       if (response.ok) {
         const data = await response.json();
         setTestCases(data);
@@ -121,7 +125,7 @@ const TestCaseEditor: React.FC = () => {
 
   const fetchDevices = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices`);
+      const response = await fetch(buildApiUrl('/api/devices'));
       if (response.ok) {
         const data = await response.json();
         setDevices(data);
@@ -133,7 +137,7 @@ const TestCaseEditor: React.FC = () => {
 
   const fetchEnvironmentProfiles = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/environment-profiles`);
+      const response = await fetch(buildApiUrl('/api/environment-profiles'));
       if (response.ok) {
         const data = await response.json();
         setEnvironmentProfiles(data);
@@ -148,8 +152,8 @@ const TestCaseEditor: React.FC = () => {
       setLoading(true);
       const method = isEditing ? 'PUT' : 'POST';
       const url = isEditing
-        ? `${API_BASE_URL}/testcases/${formData.test_id}`
-        : `${API_BASE_URL}/testcases`;
+        ? buildApiUrl(`/api/testcases/${formData.test_id}`)
+        : buildApiUrl('/api/testcases');
 
       const response = await fetch(url, {
         method,
@@ -175,7 +179,7 @@ const TestCaseEditor: React.FC = () => {
   const handleDelete = async (testId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/testcases/${testId}`, {
+      const response = await fetch(buildApiUrl(`/api/testcases/${testId}`), {
         method: 'DELETE',
       });
 

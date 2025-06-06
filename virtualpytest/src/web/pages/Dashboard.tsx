@@ -58,10 +58,10 @@ import {
   Divider,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { TestCase, Campaign, Tree } from '../type';
-
-const API_BASE_URL = 'http://localhost:5009/api';
+import { useRegistration } from '../contexts/RegistrationContext';
 
 interface DashboardStats {
   testCases: number;
@@ -119,6 +119,8 @@ type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
 type LogSource = 'all' | 'frontend' | 'backend';
 
 const Dashboard: React.FC = () => {
+  const { buildApiUrl } = useRegistration();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -169,10 +171,10 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [testCasesRes, campaignsRes, treesRes, devicesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/testcases`),
-        fetch(`${API_BASE_URL}/campaigns`),
-        fetch(`${API_BASE_URL}/navigation/trees`),
-        fetch(`${API_BASE_URL}/system/clients`),
+        fetch(buildApiUrl('/api/testcases')),
+        fetch(buildApiUrl('/api/campaigns')),
+        fetch(buildApiUrl('/api/navigation/trees')),
+        fetch(buildApiUrl('/api/system/clients')),
       ]);
 
       let testCases: TestCase[] = [];
@@ -241,29 +243,17 @@ const Dashboard: React.FC = () => {
     try {
       setDevicesLoading(true);
       // Use the health check endpoint that also returns connected devices
-      const healthRes = await fetch(`${API_BASE_URL}/system/health-with-devices`);
+      const healthRes = await fetch(buildApiUrl('/api/system/health-with-devices'));
       
       if (healthRes.ok) {
-        const healthResponse = await healthRes.json();
-        
-        // Extract clients data from the health response
-        if (healthResponse.status === 'healthy' && healthResponse.clients && healthResponse.clients.status === 'success') {
-          setConnectedDevices(healthResponse.clients.clients);
-          addFrontendLog('info', `Health check completed: ${healthResponse.clients.clients.length} devices found`);
-          
-          // Log server health stats if available
-          if (healthResponse.system_stats) {
-            addFrontendLog('info', `Server health - CPU: ${healthResponse.system_stats.cpu.percent}%, RAM: ${healthResponse.system_stats.memory.percent}%, Disk: ${healthResponse.system_stats.disk.percent}%`);
-          }
-        } else {
-          addFrontendLog('warn', 'Health check returned unexpected format', healthResponse);
+        const healthData = await healthRes.json();
+        if (healthData.success) {
+          setConnectedDevices(healthData.devices || []);
         }
-      } else {
-        addFrontendLog('error', `Health check failed with status: ${healthRes.status}`);
       }
     } catch (err) {
-      console.error('Failed to perform health check and refresh devices:', err);
-      addFrontendLog('error', 'Failed to perform health check and refresh devices', err);
+      console.error('Failed to fetch devices:', err);
+      addFrontendLog('error', 'Failed to fetch devices', err);
     } finally {
       setDevicesLoading(false);
     }
@@ -274,7 +264,8 @@ const Dashboard: React.FC = () => {
       setLogsLoading(true);
       
       // Fetch backend logs
-      const backendLogsRes = await fetch(`${API_BASE_URL}/system/logs`);
+      const backendLogsRes = await fetch(buildApiUrl('/api/system/logs'));
+      
       if (backendLogsRes.ok) {
         const backendLogs = await backendLogsRes.json();
         

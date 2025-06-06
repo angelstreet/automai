@@ -12,8 +12,38 @@ import {
   Button,
   Box,
   Typography,
+  Chip,
+  Grid,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Tooltip,
+  Paper,
+  Divider,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
-import { NodeVerificationsList } from './NodeVerificationsList';
+import {
+  ExpandMore as ExpandMoreIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  PlayArrow as PlayArrowIcon,
+  Edit as EditIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from '@mui/icons-material';
+
+// Import registration context
+import { useRegistration } from '../../contexts/RegistrationContext';
+
+// Remove the problematic imports and define the interfaces locally if needed
+// import { Node, Edge, VerificationAction, NavigationAction } from '../../type';
 
 interface NodeForm {
   label: string;
@@ -102,6 +132,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
 
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
     const updatedResults = [newResult, ...results];
@@ -153,8 +186,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     setVerificationError(null);
     
     try {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions from: http://localhost:5009/api/virtualpytest/verification/actions`);
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/actions`);
+      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildApiUrl('/api/virtualpytest/verification/actions')}`);
+      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/actions'));
       const result = await response.json();
       
       console.log(`[@component:NodeEditDialog] Verification API response:`, result);
@@ -304,7 +337,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
         
         try {
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
+          const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -391,15 +424,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       try {
         // Execute navigation to this node
         // This would typically involve calling the navigation API to reach this node
-        const navigationResponse = await fetch(`http://localhost:5009/api/virtualpytest/navigation/goto`, {
+        const navigationResponse = await fetch(buildApiUrl('/api/virtualpytest/navigation/goto'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            nodeId: nodeForm.label, // or appropriate node identifier
-            nodeType: nodeForm.type,
-            description: nodeForm.description
+            target_node: nodeForm.label,
           }),
         });
         
@@ -454,7 +485,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
           
           try {
-            const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
+            const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -604,16 +635,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           )}
 
           {/* Verification Section - now available for all node types including entry */}
-          <NodeVerificationsList
-            verifications={nodeForm.verifications || []}
-            availableActions={verificationActions}
-            onVerificationsChange={(newVerifications: NodeVerification[]) => 
-              setNodeForm({ ...nodeForm, verifications: newVerifications })
-            }
-            loading={loadingVerifications}
-            error={verificationError}
-            model={model}
-          />
+          {/* TODO: Add NodeVerificationsList component when available */}
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            Verification configuration will be available here.
+          </Typography>
 
           {gotoResult && (
             <Box sx={{ 

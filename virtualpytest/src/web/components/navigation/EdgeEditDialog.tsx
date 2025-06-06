@@ -8,10 +8,42 @@ import {
   Button,
   Box,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Grid,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Tooltip,
+  Paper,
+  Divider,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
+import {
+  ExpandMore as ExpandMoreIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  PlayArrow as PlayArrowIcon,
+  Edit as EditIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from '@mui/icons-material';
 import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
 import { EdgeActionsList } from './EdgeActionsList';
 import { executeEdgeActions } from '../../utils/navigationApi';
+
+// Import registration context
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ControllerAction {
   id: string;
@@ -51,17 +83,20 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   isControlActive = false,
   selectedDevice = null,
 }) => {
-  const [actions, setActions] = useState<ControllerActions>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runResult, setRunResult] = useState<string | null>(null);
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+  
+  const [controllerActions, setControllerActions] = useState<ControllerActions>({});
+  const [loadingActions, setLoadingActions] = useState(false);
+  const [actionsError, setActionsError] = useState<string | null>(null);
+  const [isRunningActions, setIsRunningActions] = useState(false);
+  const [actionResult, setActionResult] = useState<string | null>(null);
 
-  const canRunActions = isControlActive && selectedDevice && edgeForm.actions.length > 0 && !isRunning;
+  const canRunActions = isControlActive && selectedDevice && edgeForm.actions.length > 0 && !isRunningActions;
 
   useEffect(() => {
     if (!isOpen) {
-      setRunResult(null);
+      setActionResult(null);
     }
   }, [isOpen]);
 
@@ -72,34 +107,34 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       fetchControllerActions(controllerTypes[0]);
     } else if (isOpen && controllerTypes.length === 0) {
       console.log('[@component:EdgeEditDialog] No controller types provided');
-      setError('No controller types available');
+      setActionsError('No controller types available');
     }
   }, [isOpen, controllerTypes]);
 
   const fetchControllerActions = async (controllerType: string) => {
-    setLoading(true);
-    setError(null);
+    setLoadingActions(true);
+    setActionsError(null);
     
     try {
       const apiControllerType = controllerType.replace(/_/g, '-');
-      console.log(`[@component:EdgeEditDialog] Fetching actions from: http://localhost:5009/api/virtualpytest/${apiControllerType}/actions`);
-      const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/actions`);
+      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildApiUrl(`/api/virtualpytest/${apiControllerType}/actions`)}`);
+      const response = await fetch(buildApiUrl(`/api/virtualpytest/${apiControllerType}/actions`));
       const result = await response.json();
       
       console.log(`[@component:EdgeEditDialog] API response:`, result);
       
       if (result.success) {
-        setActions(result.actions);
+        setControllerActions(result.actions);
         console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for ${controllerType}`);
       } else {
         console.error(`[@component:EdgeEditDialog] API returned error:`, result.error);
-        setError(result.error || 'Failed to load actions');
+        setActionsError(result.error || 'Failed to load actions');
       }
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error fetching actions:', err);
-      setError('Failed to connect to server');
+      setActionsError('Failed to connect to server');
     } finally {
-      setLoading(false);
+      setLoadingActions(false);
     }
   };
 
@@ -112,13 +147,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const handleRunActions = async () => {
     if (edgeForm.actions.length === 0) return;
     
-    if (isRunning) {
+    if (isRunningActions) {
       console.log('[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request');
       return;
     }
     
-    setIsRunning(true);
-    setRunResult(null);
+    setIsRunningActions(true);
+    setActionResult(null);
     console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm.retryActions.length} retry actions`);
     
     try {
@@ -138,13 +173,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         retryActions: result.updatedRetryActions || prev.retryActions
       }));
       
-      setRunResult(result.results.join('\n'));
+      setActionResult(result.results.join('\n'));
       
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);
-      setRunResult(`❌ ${err.message}`);
+      setActionResult(`❌ ${err.message}`);
     } finally {
-      setIsRunning(false);
+      setIsRunningActions(false);
     }
   };
 
@@ -186,25 +221,25 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             actions={edgeForm.actions}
             retryActions={edgeForm.retryActions}
             finalWaitTime={edgeForm.finalWaitTime}
-            availableActions={actions}
+            availableActions={controllerActions}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
             onRetryActionsChange={(newRetryActions) => setEdgeForm({ ...edgeForm, retryActions: newRetryActions })}
             onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
           />
 
-          {runResult && (
+          {actionResult && (
             <Box sx={{ 
               p: 2, 
-              bgcolor: runResult.includes('❌ OVERALL RESULT: FAILED') ? 'error.light' : 
-                       runResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
-                       runResult.includes('❌') && !runResult.includes('✅') ? 'error.light' : 
-                       runResult.includes('⚠️') ? 'warning.light' : 'success.light', 
+              bgcolor: actionResult.includes('❌ OVERALL RESULT: FAILED') ? 'error.light' : 
+                       actionResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
+                       actionResult.includes('❌') && !actionResult.includes('✅') ? 'error.light' : 
+                       actionResult.includes('⚠️') ? 'warning.light' : 'success.light', 
               borderRadius: 1,
               maxHeight: 200,
               overflow: 'auto'
             }}>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {runResult}
+                {actionResult}
               </Typography>
             </Box>
           )}
@@ -225,7 +260,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           disabled={!canRunActions}
           sx={{ opacity: !canRunActions ? 0.5 : 1 }}
         >
-          {isRunning ? 'Running...' : 'Run'}
+          {isRunningActions ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>

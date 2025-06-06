@@ -32,6 +32,17 @@ import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
 import { styled } from '@mui/material/styles';
 import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../../../config/layoutConfig';
 
+// Import registration context
+import { useRegistration } from '../../contexts/RegistrationContext';
+
+import { VerificationCondition } from '../../type';
+
+// Define DeviceConnection interface locally since it's not exported
+interface DeviceConnection {
+  flask_url: string;
+  nginx_url: string;
+}
+
 interface VerificationAction {
   id: string;
   label: string;
@@ -217,15 +228,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     type: 'image' | 'text';
   } | null>(null);
 
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+
   // Helper function to get the appropriate base URL for API calls
   const getBaseUrl = () => {
     if (deviceConnection?.flask_url) {
-      console.log(`[@component:VerificationEditor] Using device connection: ${deviceConnection.flask_url}`);
       return deviceConnection.flask_url;
     }
-    // Fallback to localhost for backward compatibility
-    const fallbackUrl = 'http://localhost:5009';
-    console.log(`[@component:VerificationEditor] No device connection provided, using fallback: ${fallbackUrl}`);
+    
+    // Use registration context for fallback URL
+    const fallbackUrl = buildApiUrl('');
+    console.log(`[@component:VerificationEditor] Using fallback URL: ${fallbackUrl}`);
     return fallbackUrl;
   };
 

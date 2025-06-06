@@ -14,16 +14,40 @@ import {
   ListItemText,
   Chip,
   LinearProgress,
+  Divider,
+  Alert,
+  CircularProgress,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Grid,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Camera as CameraIcon,
   Route as RouteIcon,
   Verified as VerifiedIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  PhotoCamera as PhotoCameraIcon,
+  PlayArrow as PlayArrowIcon,
+  Refresh as RefreshIcon,
+  ExpandMore as ExpandMoreIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 import { NodeGotoPanel } from './NodeGotoPanel';
 import { calculateConfidenceScore } from '../../utils/confidenceUtils';
+
+// Import registration context
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -70,8 +94,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   currentNodeId,
   onVerification,
   isVerificationActive = false,
-  verificationControllerStatus,
+  verificationControllerStatus = { image_controller_available: false, text_controller_available: false },
 }) => {
+  // Use registration context for centralized URL management
+  const { buildApiUrl } = useRegistration();
+
   // Don't render the panel for entry nodes
   if ((selectedNode.data.type as string) === 'entry') {
     return null;
@@ -92,7 +119,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const [showVerificationConfirm, setShowVerificationConfirm] = useState(false);
 
   // Add states for verification execution
-  const [isRunningVerifications, setIsRunningVerifications] = useState(false);
+  const [isRunningVerification, setIsRunningVerification] = useState(false);
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
   const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{[index: number]: boolean[]}>({});
 
@@ -198,7 +225,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       return;
     }
     
-    setIsRunningVerifications(true);
+    setIsRunningVerification(true);
     setVerificationResult(null);
     
     try {
@@ -214,7 +241,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         
         try {
           // Execute verification based on controller type
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
+          const response = await fetch(buildApiUrl(`/api/virtualpytest/verification/execute`), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -262,7 +289,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
       setVerificationResult(`❌ ${err.message}`);
     } finally {
-      setIsRunningVerifications(false);
+      setIsRunningVerification(false);
     }
   };
 
@@ -296,7 +323,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                                onVerification;
 
   // Can run verifications if we have control and device (same logic as NodeEditDialog)
-  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
+  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerification;
 
   // Check if node can be deleted (protect entry points and home nodes)
   const isProtectedNode = selectedNode.data.is_root || 
@@ -491,7 +518,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                     : ''
                 }
               >
-                {isRunningVerifications ? 'Running...' : 'Run Verifications'}
+                {isRunningVerification ? 'Running...' : 'Run Verifications'}
               </Button>
             )}
 
@@ -503,7 +530,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             )}
 
             {/* Linear Progress - shown when running verifications */}
-            {isRunningVerifications && (
+            {isRunningVerification && (
               <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
             )}
 
