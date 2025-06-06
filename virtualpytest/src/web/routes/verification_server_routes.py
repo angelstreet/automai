@@ -536,97 +536,61 @@ def execute_batch_verification():
                 'error': 'verifications list is required'
             }), 400
         
-        # Execute verifications one by one on host
-        results = []
-        passed_count = 0
+        # Hardcode IPs for testing
+        host_ip = "77.56.53.130"  # Host IP
+        host_port = "5119"        # Host internal port
         
-        for i, verification in enumerate(verifications):
-            print(f"[@route:execute_batch_verification] Executing verification {i+1}/{len(verifications)}: {verification.get('command')}")
+        # Forward batch verification execution to host
+        host_batch_url = f'http://{host_ip}:{host_port}/stream/execute-verification-batch'
+        
+        batch_payload = {
+            'verifications': verifications,
+            'model': model,
+            'node_id': node_id
+        }
+        
+        print(f"[@route:execute_batch_verification] Sending batch request to {host_batch_url}")
+        
+        try:
+            host_response = requests.post(host_batch_url, json=batch_payload, timeout=120, verify=False)
+            host_result = host_response.json()
             
-            try:
-                # Call single verification endpoint
-                single_result = execute_single_verification_on_host(verification, model, i)
+            if host_result.get('success') is not None:  # Handle both success and failure cases
+                # Convert host paths to nginx-exposed URLs for all results
+                if 'results' in host_result and isinstance(host_result['results'], list):
+                    for result in host_result['results']:
+                        if 'source_image_url' in result:
+                            result['source_image_url'] = f'https://77.56.53.130:444{result["source_image_url"]}'
+                        if 'reference_image_url' in result:
+                            result['reference_image_url'] = f'https://77.56.53.130:444{result["reference_image_url"]}'
+                        if 'result_overlay_url' in result:
+                            result['result_overlay_url'] = f'https://77.56.53.130:444{result["result_overlay_url"]}'
                 
-                if single_result.get('success'):
-                    passed_count += 1
+                # Add tree_id to the response
+                host_result['tree_id'] = tree_id
                 
-                # Add verification metadata
-                single_result['verification_id'] = verification.get('id', f'verification_{i}')
-                single_result['verification_index'] = i
-                single_result['verification_command'] = verification.get('command')
+                print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('success')}")
+                print(f"[@route:execute_batch_verification] Results: {host_result.get('passed_count', 0)}/{host_result.get('total_verifications', 0)} passed")
                 
-                results.append(single_result)
-                
-            except Exception as e:
-                print(f"[@route:execute_batch_verification] Error executing verification {i+1}: {str(e)}")
-                results.append({
+                return jsonify(host_result)
+            else:
+                error_msg = host_result.get('error', 'Host batch verification execution failed')
+                print(f"[@route:execute_batch_verification] Host batch execution failed: {error_msg}")
+                return jsonify({
                     'success': False,
-                    'error': f'Execution error: {str(e)}',
-                    'verification_id': verification.get('id', f'verification_{i}'),
-                    'verification_index': i,
-                    'verification_command': verification.get('command')
-                })
-        
-        # Calculate overall success
-        overall_success = passed_count > 0  # At least one verification passed
-        
-        print(f"[@route:execute_batch_verification] Batch completed: {passed_count}/{len(verifications)} passed")
-        
-        return jsonify({
-            'success': overall_success,
-            'results': results,
-            'passed_count': passed_count,
-            'total_verifications': len(verifications),
-            'node_id': node_id,
-            'tree_id': tree_id,
-            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed'
-        })
+                    'error': f'Host batch execution failed: {error_msg}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:execute_batch_verification] Failed to connect to host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to host for batch verification execution: {str(e)}'
+            }), 500
         
     except Exception as e:
         print(f"[@route:execute_batch_verification] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Batch verification error: {str(e)}'
-        }), 500
-
-def execute_single_verification_on_host(verification, model, verification_index):
-    """Helper function to execute a single verification on host."""
-    try:
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        
-        # Forward verification execution to host
-        host_execute_url = f'http://{host_ip}:{host_port}/stream/execute-verification'
-        
-        execute_payload = {
-            'verification': verification,
-            'model': model,
-            'verification_index': verification_index,
-            'source_filename': None  # Let host use latest capture
-        }
-        
-        host_response = requests.post(host_execute_url, json=execute_payload, timeout=60, verify=False)
-        host_result = host_response.json()
-        
-        # Convert host paths to nginx-exposed URLs
-        if host_result.get('success') is not None:
-            if 'source_image_url' in host_result:
-                host_result['source_image_url'] = f'https://77.56.53.130:444{host_result["source_image_url"]}'
-            if 'reference_image_url' in host_result:
-                host_result['reference_image_url'] = f'https://77.56.53.130:444{host_result["reference_image_url"]}'
-            if 'result_overlay_url' in host_result:
-                host_result['result_overlay_url'] = f'https://77.56.53.130:444{host_result["result_overlay_url"]}'
-        
-        return host_result
-        
-    except requests.exceptions.RequestException as e:
-        return {
-            'success': False,
-            'error': f'Failed to connect to host: {str(e)}'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f'Execution error: {str(e)}'
-        } 
+        }), 500 

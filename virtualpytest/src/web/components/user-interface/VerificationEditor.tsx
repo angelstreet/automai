@@ -500,10 +500,22 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         }),
       });
 
+      // Check if the response is ok
+      if (!batchResponse.ok) {
+        const errorText = await batchResponse.text();
+        console.error('[@component:VerificationEditor] HTTP error:', batchResponse.status, errorText);
+        setError(`HTTP error ${batchResponse.status}: ${errorText}`);
+        return;
+      }
+
       const batchResult = await batchResponse.json();
-      if (!batchResult.success) {
-        setError(`Failed to execute verifications: ${batchResult.error}`);
-        console.error('[@component:VerificationEditor] Batch execution failed:', batchResult.error);
+      console.log('[@component:VerificationEditor] Raw batch result:', batchResult);
+      
+      // Check if the result has success field
+      if (batchResult.success === false) {
+        const errorMessage = batchResult.error || batchResult.message || 'Unknown error occurred';
+        setError(`Failed to execute verifications: ${errorMessage}`);
+        console.error('[@component:VerificationEditor] Batch execution failed:', errorMessage);
         return;
       }
 
@@ -518,9 +530,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               ...verification,
               lastRunResult: result.success,
               lastRunResults: result.success ? [true, ...(verification.lastRunResults || []).slice(0, 9)] : [false, ...(verification.lastRunResults || []).slice(0, 9)],
-              resultImageUrl: result.result_image_url,
+              resultImageUrl: result.result_image_url || result.result_overlay_url,
               referenceImageUrl: result.reference_image_url,
-              lastRunDetails: result.details || result.error
+              lastRunDetails: result.message || result.error || 'No details available'
             };
           }
           return verification;
@@ -530,7 +542,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // Calculate overall success
         const allPassed = batchResult.results.every((result: any) => result.success);
-        setError(allPassed ? null : 'Some verifications failed');
+        const passedCount = batchResult.passed_count || batchResult.results.filter((r: any) => r.success).length;
+        const totalCount = batchResult.total_verifications || batchResult.results.length;
+        
+        if (allPassed) {
+          setError(null);
+          setSuccessMessage(`All ${totalCount} verification(s) passed!`);
+        } else {
+          setError(`${passedCount}/${totalCount} verification(s) passed. Check results for details.`);
+        }
+      } else {
+        console.warn('[@component:VerificationEditor] No results array in response:', batchResult);
+        setError('No verification results received from server');
       }
 
     } catch (error) {

@@ -435,6 +435,125 @@ def host_execute_verification():
             'error': f'Host verification execution error: {str(e)}'
         }), 500
 
+@verification_host_bp.route('/stream/execute-verification-batch', methods=['POST'])
+def host_execute_verification_batch():
+    """Execute batch verification tests on host and return consolidated results."""
+    try:
+        data = request.get_json()
+        verifications = data.get('verifications', [])
+        model = data.get('model', 'default')
+        node_id = data.get('node_id', 'unknown')
+        
+        print(f"[@route:host_execute_verification_batch] Executing {len(verifications)} verifications for node: {node_id}")
+        print(f"[@route:host_execute_verification_batch] Model: {model}")
+        
+        # Validate required parameters
+        if not verifications:
+            return jsonify({
+                'success': False,
+                'error': 'verifications list is required'
+            }), 400
+        
+        # Get latest capture file for all verifications
+        captures_dir = '/var/www/html/stream/captures'
+        source_path = None
+        source_filename = None
+        
+        if os.path.exists(captures_dir):
+            capture_files = [f for f in os.listdir(captures_dir) if f.startswith('capture_') and f.endswith('.jpg')]
+            if capture_files:
+                latest_file = sorted(capture_files)[-1]
+                source_path = f'{captures_dir}/{latest_file}'
+                source_filename = latest_file
+                print(f"[@route:host_execute_verification_batch] Using latest capture: {source_filename}")
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No capture files found'
+                }), 404
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Captures directory not found'
+            }), 404
+        
+        # Create verification results directory
+        results_dir = f'/var/www/html/stream/verification_results/{model}'
+        os.makedirs(results_dir, exist_ok=True)
+        
+        # Execute verifications one by one
+        results = []
+        passed_count = 0
+        
+        for i, verification in enumerate(verifications):
+            print(f"[@route:host_execute_verification_batch] Executing verification {i+1}/{len(verifications)}: {verification.get('command')}")
+            
+            try:
+                controller_type = verification.get('controller_type')
+                
+                # Execute verification based on controller type
+                if controller_type == 'image':
+                    result = execute_image_verification_host(verification, source_path, model, i, results_dir)
+                elif controller_type == 'text':
+                    result = execute_text_verification_host(verification, source_path, model, i, results_dir)
+                elif controller_type == 'adb':
+                    result = execute_adb_verification_host(verification, source_path, model, i, results_dir)
+                else:
+                    result = {
+                        'success': False,
+                        'error': f'Unsupported controller type: {controller_type}'
+                    }
+                
+                # Convert local paths to nginx-exposed URLs
+                if result.get('success'):
+                    if 'source_image_path' in result:
+                        result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
+                    if 'reference_image_path' in result:
+                        result['reference_image_url'] = result['reference_image_path'].replace('/var/www/html', '')
+                    if 'result_overlay_path' in result:
+                        result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
+                
+                if result.get('success'):
+                    passed_count += 1
+                
+                # Add verification metadata
+                result['verification_id'] = verification.get('id', f'verification_{i}')
+                result['verification_index'] = i
+                result['verification_command'] = verification.get('command')
+                
+                results.append(result)
+                
+            except Exception as e:
+                print(f"[@route:host_execute_verification_batch] Error executing verification {i+1}: {str(e)}")
+                results.append({
+                    'success': False,
+                    'error': f'Execution error: {str(e)}',
+                    'verification_id': verification.get('id', f'verification_{i}'),
+                    'verification_index': i,
+                    'verification_command': verification.get('command')
+                })
+        
+        # Calculate overall success
+        overall_success = passed_count > 0  # At least one verification passed
+        
+        print(f"[@route:host_execute_verification_batch] Batch completed: {passed_count}/{len(verifications)} passed")
+        
+        return jsonify({
+            'success': overall_success,
+            'results': results,
+            'passed_count': passed_count,
+            'total_verifications': len(verifications),
+            'node_id': node_id,
+            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed'
+        })
+        
+    except Exception as e:
+        print(f"[@route:host_execute_verification_batch] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Batch verification error: {str(e)}'
+        }), 500
+
 def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
     """Execute image verification using existing image utilities."""
     try:
