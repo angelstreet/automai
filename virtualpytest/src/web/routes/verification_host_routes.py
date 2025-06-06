@@ -48,8 +48,20 @@ def host_crop_area():
         # Build source path - assume images are in /var/www/html/stream/captures/
         source_path = f'/var/www/html/stream/captures/{source_filename}'
         
-        # Build target path for cropped image
-        target_path = f'/var/www/html/stream/captures/cropped_{reference_name}_{source_filename}'
+        # Build target path for cropped image in dedicated cropped folder
+        cropped_dir = '/var/www/html/stream/captures/cropped'
+        os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
+        
+        # Extract base name without extension and timestamp
+        base_name = source_filename.replace('.jpg', '').replace('.png', '')
+        
+        # Avoid double naming if reference_name is already in the filename
+        if reference_name in base_name:
+            target_filename = f'cropped_{base_name}.jpg'
+        else:
+            target_filename = f'cropped_{reference_name}_{base_name}.jpg'
+            
+        target_path = f'{cropped_dir}/{target_filename}'
         
         print(f"[@route:host_crop_area] Cropping from {source_path} to {target_path}")
         
@@ -70,7 +82,7 @@ def host_crop_area():
             
             if success:
                 # Return URL path for the cropped image
-                cropped_url = f'/stream/captures/cropped_{reference_name}_{source_filename}'
+                cropped_url = f'/stream/captures/cropped/{target_filename}'
                 print(f"[@route:host_crop_area] Cropping successful: {cropped_url}")
                 
                 return jsonify({
@@ -123,8 +135,20 @@ def host_process_area():
         # Build source path - assume images are in /var/www/html/stream/captures/
         source_path = f'/var/www/html/stream/captures/{source_filename}'
         
-        # Build target path for processed image
-        target_path = f'/var/www/html/stream/captures/processed_{reference_name}_{source_filename}'
+        # Build target path for processed image in dedicated cropped folder
+        cropped_dir = '/var/www/html/stream/captures/cropped'
+        os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
+        
+        # Extract base name without extension and timestamp
+        base_name = source_filename.replace('.jpg', '').replace('.png', '')
+        
+        # Avoid double naming if reference_name is already in the filename
+        if reference_name in base_name:
+            target_filename = f'processed_{base_name}.jpg'
+        else:
+            target_filename = f'processed_{reference_name}_{base_name}.jpg'
+            
+        target_path = f'{cropped_dir}/{target_filename}'
         
         print(f"[@route:host_process_area] Processing from {source_path} to {target_path}")
         
@@ -160,7 +184,7 @@ def host_process_area():
                     processed_area = area
             
             # Return URL path for the processed image
-            processed_url = f'/stream/captures/processed_{reference_name}_{source_filename}'
+            processed_url = f'/stream/captures/cropped/{target_filename}'
             print(f"[@route:host_process_area] Processing successful: {processed_url}")
             
             return jsonify({
