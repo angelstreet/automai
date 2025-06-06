@@ -323,27 +323,24 @@ def host_save_resource():
             # Open the git repository
             repo = git.Repo(repo_path)
             
-            # Git pull first to get latest changes
-            print(f"[@route:host_save_resource] Executing git pull...")
+            # Step 1: Git pull first to get any server changes
+            print(f"[@route:host_save_resource] Executing git pull to get server changes...")
             try:
                 origin = repo.remotes.origin
                 origin.pull()
                 print(f"[@route:host_save_resource] Git pull successful")
             except Exception as pull_error:
-                print(f"[@route:host_save_resource] Git pull failed, continuing: {str(pull_error)}")
+                print(f"[@route:host_save_resource] Git pull failed: {str(pull_error)}")
+                # Continue anyway - we'll try to commit our changes
             
-            # Add files to git index
+            # Step 2: Add files to git index
             print(f"[@route:host_save_resource] Adding files to git...")
             try:
                 # Add the resource image (relative to repo root)
-                # The file is saved to ../resources/{model}/{name}.png from web directory
-                # From git repo root, this is virtualpytest/src/resources/{model}/{name}.png
                 image_git_path = f'virtualpytest/src/resources/{model}/{reference_name}.png'
                 repo.index.add([image_git_path])
                 
                 # Add the resource.json file (relative to repo root)
-                # The file is at ../config/resource/resource.json from web directory  
-                # From git repo root, this is virtualpytest/src/config/resource/resource.json
                 config_git_path = 'virtualpytest/src/config/resource/resource.json'
                 repo.index.add([config_git_path])
                 
@@ -351,7 +348,7 @@ def host_save_resource():
             except Exception as add_error:
                 print(f"[@route:host_save_resource] Git add failed: {str(add_error)}")
             
-            # Git commit
+            # Step 3: Git commit
             commit_message = f"save resource {reference_name} for model {model}"
             print(f"[@route:host_save_resource] Committing changes...")
             try:
@@ -360,14 +357,29 @@ def host_save_resource():
             except Exception as commit_error:
                 print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
-            # Git push
+            # Step 4: Git push - with timeout to prevent hanging
             print(f"[@route:host_save_resource] Pushing to remote...")
             try:
+                # Set a timeout to prevent hanging on credentials
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Git push timed out")
+                
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(10)  # 10 second timeout
+                
                 origin = repo.remotes.origin
                 origin.push()
+                signal.alarm(0)  # Cancel timeout
                 print(f"[@route:host_save_resource] Git push successful")
+                
+            except TimeoutError:
+                print(f"[@route:host_save_resource] Git push timed out (likely waiting for credentials)")
+                print(f"[@route:host_save_resource] Changes committed locally - manual push required")
             except Exception as push_error:
                 print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
+                print(f"[@route:host_save_resource] Changes committed locally - manual push required")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
