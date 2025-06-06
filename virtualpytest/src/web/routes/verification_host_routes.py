@@ -360,25 +360,14 @@ def host_save_resource():
             except Exception as commit_error:
                 print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
-            # Git push (skip if no credentials available)
+            # Git push
             print(f"[@route:host_save_resource] Pushing to remote...")
             try:
                 origin = repo.remotes.origin
-                
-                # Try to push with token authentication
-                # You can set this as an environment variable: GITHUB_TOKEN
-                github_token = os.environ.get('GITHUB_TOKEN')
-                if github_token:
-                    # Use token authentication
-                    print(f"[@route:host_save_resource] Using token authentication for push")
-                    origin.push()
-                else:
-                    print(f"[@route:host_save_resource] No GITHUB_TOKEN found, skipping push to avoid hanging")
-                    print(f"[@route:host_save_resource] Changes are committed locally - manual push required")
-                    
+                origin.push()
+                print(f"[@route:host_save_resource] Git push successful")
             except Exception as push_error:
                 print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
-                print(f"[@route:host_save_resource] Changes are committed locally - manual push required")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
