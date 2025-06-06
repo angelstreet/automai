@@ -443,9 +443,11 @@ def host_execute_verification_batch():
         verifications = data.get('verifications', [])
         model = data.get('model', 'default')
         node_id = data.get('node_id', 'unknown')
+        capture_filename = data.get('capture_filename')  # NEW: Optional specific capture
         
         print(f"[@route:host_execute_verification_batch] Executing {len(verifications)} verifications for node: {node_id}")
         print(f"[@route:host_execute_verification_batch] Model: {model}")
+        print(f"[@route:host_execute_verification_batch] Capture filename: {capture_filename}")
         
         # Validate required parameters
         if not verifications:
@@ -454,97 +456,71 @@ def host_execute_verification_batch():
                 'error': 'verifications list is required'
             }), 400
         
-        # Get latest capture file for all verifications
-        captures_dir = '/var/www/html/stream/captures'
-        source_path = None
-        source_filename = None
+        # NEW: Resolve capture path using specific filename or fallback
+        source_path, source_filename = resolve_capture_path(capture_filename)
         
-        if os.path.exists(captures_dir):
-            capture_files = [f for f in os.listdir(captures_dir) if f.startswith('capture_') and f.endswith('.jpg')]
-            if capture_files:
-                latest_file = sorted(capture_files)[-1]
-                source_path = f'{captures_dir}/{latest_file}'
-                source_filename = latest_file
-                print(f"[@route:host_execute_verification_batch] Using latest capture: {source_filename}")
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'No capture files found'
-                }), 404
-        else:
+        if not source_path:
             return jsonify({
                 'success': False,
-                'error': 'Captures directory not found'
+                'error': 'No capture file available for verification'
             }), 404
+            
+        print(f"[@route:host_execute_verification_batch] Using capture: {source_filename}")
         
         # Create verification results directory
         results_dir = f'/var/www/html/stream/verification_results/{model}'
         os.makedirs(results_dir, exist_ok=True)
         
-        # Execute verifications one by one
+        # Execute each verification
         results = []
         passed_count = 0
         
         for i, verification in enumerate(verifications):
-            print(f"[@route:host_execute_verification_batch] Executing verification {i+1}/{len(verifications)}: {verification.get('command')}")
+            print(f"[@route:host_execute_verification_batch] Executing verification {i+1}/{len(verifications)}: {verification.get('id', 'unknown')}")
             
-            try:
-                controller_type = verification.get('controller_type')
-                
-                # Execute verification based on controller type
-                if controller_type == 'image':
-                    result = execute_image_verification_host(verification, source_path, model, i, results_dir)
-                elif controller_type == 'text':
-                    result = execute_text_verification_host(verification, source_path, model, i, results_dir)
-                elif controller_type == 'adb':
-                    result = execute_adb_verification_host(verification, source_path, model, i, results_dir)
-                else:
-                    result = {
-                        'success': False,
-                        'error': f'Unsupported controller type: {controller_type}'
-                    }
-                
-                # Convert local paths to nginx-exposed URLs
-                if result.get('success'):
-                    if 'source_image_path' in result:
-                        result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
-                    if 'reference_image_path' in result:
-                        result['reference_image_url'] = result['reference_image_path'].replace('/var/www/html', '')
-                    if 'result_overlay_path' in result:
-                        result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
-                
-                if result.get('success'):
-                    passed_count += 1
-                
-                # Add verification metadata
-                result['verification_id'] = verification.get('id', f'verification_{i}')
-                result['verification_index'] = i
-                result['verification_command'] = verification.get('command')
-                
-                results.append(result)
-                
-            except Exception as e:
-                print(f"[@route:host_execute_verification_batch] Error executing verification {i+1}: {str(e)}")
-                results.append({
+            controller_type = verification.get('controller_type', 'unknown')
+            
+            if controller_type == 'image':
+                result = execute_image_verification_host(verification, source_path, model, i, results_dir)
+            elif controller_type == 'text':
+                result = execute_text_verification_host(verification, source_path, model, i, results_dir)
+            elif controller_type == 'adb':
+                result = execute_adb_verification_host(verification, source_path, model, i, results_dir)
+            else:
+                result = {
                     'success': False,
-                    'error': f'Execution error: {str(e)}',
-                    'verification_id': verification.get('id', f'verification_{i}'),
-                    'verification_index': i,
-                    'verification_command': verification.get('command')
-                })
-        
-        # Calculate overall success
-        overall_success = passed_count > 0  # At least one verification passed
+                    'error': f'Unknown controller type: {controller_type}'
+                }
+            
+            # Convert file paths to URLs for client access
+            if result.get('source_image_path'):
+                result['sourceImageUrl'] = result['source_image_path'].replace('/var/www/html', '')
+            if result.get('reference_image_path'):
+                result['referenceImageUrl'] = result['reference_image_path'].replace('/var/www/html', '')
+            if result.get('result_overlay_path'):
+                result['resultOverlayUrl'] = result['result_overlay_path'].replace('/var/www/html', '')
+            
+            # Add verification metadata to result
+            result['verification_id'] = verification.get('id')
+            result['verification_index'] = i
+            
+            results.append(result)
+            
+            if result.get('success'):
+                passed_count += 1
         
         print(f"[@route:host_execute_verification_batch] Batch completed: {passed_count}/{len(verifications)} passed")
         
+        # Return consolidated results
         return jsonify({
-            'success': overall_success,
-            'results': results,
+            'success': passed_count == len(verifications),
+            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed',
             'passed_count': passed_count,
-            'total_verifications': len(verifications),
+            'total_count': len(verifications),
+            'results': results,
             'node_id': node_id,
-            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed'
+            'model': model,
+            'capture_filename': source_filename  # Return actual filename used
         })
         
     except Exception as e:
@@ -557,25 +533,36 @@ def host_execute_verification_batch():
 def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
     """Execute image verification using existing image utilities."""
     try:
-        from controllers.verification.image import ImageVerificationController
+        from controllers.verification.image import crop_reference_image
         import cv2
         import numpy as np
         
         params = verification.get('params', {})
         area = params.get('area')
-        image_path = params.get('image_path')  # Reference image path
+        
+        # NEW: Get reference name and resolve to actual path
+        reference_name = params.get('reference_image') or params.get('reference_name')
+        image_path = resolve_reference_path(reference_name, model, 'image')
+        
         threshold = params.get('threshold', 0.8)
         image_filter = params.get('image_filter', 'none')
         
-        print(f"[@route:execute_image_verification_host] Reference image: {image_path}")
+        print(f"[@route:execute_image_verification_host] Reference name: {reference_name}")
+        print(f"[@route:execute_image_verification_host] Resolved path: {image_path}")
         print(f"[@route:execute_image_verification_host] Area: {area}")
         print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
         
         # Validate reference image
+        if not reference_name:
+            return {
+                'success': False,
+                'error': 'No reference image specified'
+            }
+            
         if not image_path or not os.path.exists(image_path):
             return {
                 'success': False,
-                'error': f'Reference image not found: {image_path}'
+                'error': f'Reference image not found: {reference_name}'
             }
         
         # Create result file paths
@@ -661,7 +648,12 @@ def execute_text_verification_host(verification, source_path, model, verificatio
         
         params = verification.get('params', {})
         area = params.get('area')
-        text_to_find = params.get('text', '')
+        
+        # NEW: Get text from multiple possible sources
+        text_to_find = (params.get('reference_text') or 
+                       verification.get('inputValue', '') or 
+                       params.get('text', ''))
+        
         confidence = params.get('confidence', 0.8)
         image_filter = params.get('image_filter', 'none')
         
@@ -749,10 +741,14 @@ def execute_adb_verification_host(verification, source_path, model, verification
     """Execute ADB verification using existing ADB utilities."""
     try:
         params = verification.get('params', {})
-        element_selector = params.get('text', '')  # Element to find
+        
+        # NEW: Get element selector from inputValue (where client stores it)
+        element_selector = verification.get('inputValue', '') or params.get('text', '')
         timeout = params.get('timeout', 10.0)
         
         print(f"[@route:execute_adb_verification_host] Element selector: '{element_selector}'")
+        print(f"[@route:execute_adb_verification_host] Available params: {list(params.keys())}")
+        print(f"[@route:execute_adb_verification_host] Verification keys: {list(verification.keys())}")
         
         if not element_selector:
             return {
@@ -760,42 +756,16 @@ def execute_adb_verification_host(verification, source_path, model, verification
                 'error': 'No element selector specified for ADB verification'
             }
         
-        # Create result file paths
-        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
-        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+        # TODO: Implement actual ADB verification logic
+        # For now, return a placeholder result
+        verification_success = True  # Placeholder
         
-        # Copy source image
-        shutil.copy2(source_path, source_result_path)
-        
-        # For now, simulate ADB verification (would need actual ADB implementation)
-        # This is a placeholder that always returns success for demonstration
-        verification_success = True
-        found_elements = 1
-        
-        # Create result overlay image
-        import cv2
-        img = cv2.imread(source_result_path)
-        if img is not None:
-            if verification_success:
-                cv2.putText(img, f'ADB ELEMENT FOUND: "{element_selector}"', (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                cv2.putText(img, f'Elements found: {found_elements}', (10, 60), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-            else:
-                cv2.putText(img, f'ADB ELEMENT NOT FOUND: "{element_selector}"', (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            
-            cv2.imwrite(overlay_result_path, img)
-        
-        message = f'ADB verification {"passed" if verification_success else "failed"}: element "{element_selector}" {"found" if verification_success else "not found"}'
+        message = f'ADB verification {"passed" if verification_success else "failed"}: element "{element_selector}"'
         
         return {
             'success': verification_success,
             'message': message,
             'element_selector': element_selector,
-            'found_elements': found_elements,
-            'source_image_path': source_result_path,
-            'result_overlay_path': overlay_result_path,
             'verification_type': 'adb'
         }
         
@@ -804,4 +774,74 @@ def execute_adb_verification_host(verification, source_path, model, verification
         return {
             'success': False,
             'error': f'ADB verification error: {str(e)}'
-        } 
+        }
+
+def resolve_reference_path(reference_name, model, verification_type):
+    """Host resolves reference names to actual file paths using JSON metadata."""
+    if not reference_name:
+        return None
+        
+    try:
+        # Try to read from resource JSON file
+        resource_json_path = '../config/resource/resource.json'
+        if os.path.exists(resource_json_path):
+            import json
+            with open(resource_json_path, 'r') as f:
+                resource_data = json.load(f)
+            
+            # Find matching resource
+            for resource in resource_data.get('resources', []):
+                if (resource.get('name') == reference_name and 
+                    resource.get('model') == model and
+                    resource.get('type') == f'reference_{verification_type}'):
+                    
+                    # Return the full_path if available
+                    full_path = resource.get('full_path')
+                    if full_path and os.path.exists(full_path):
+                        print(f"[@route:resolve_reference_path] Found in JSON: {full_path}")
+                        return full_path
+        
+        # Fallback: try standard paths
+        if verification_type == 'image':
+            possible_paths = [
+                f'/var/www/html/stream/resources/{model}/{reference_name}.png',
+                f'/var/www/html/stream/resources/{model}/{reference_name}.jpg',
+                f'../resources/{model}/{reference_name}.png',
+                f'../resources/{model}/{reference_name}.jpg'
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    print(f"[@route:resolve_reference_path] Found fallback: {path}")
+                    return path
+        
+        print(f"[@route:resolve_reference_path] Reference not found: {reference_name}")
+        return None
+        
+    except Exception as e:
+        print(f"[@route:resolve_reference_path] Error resolving reference: {str(e)}")
+        return None
+
+def resolve_capture_path(capture_filename=None):
+    """Host resolves capture to use for verification - specific filename or fallback."""
+    captures_dir = '/var/www/html/stream/captures'
+    
+    if capture_filename:
+        # Use specific capture if provided
+        specific_path = f'{captures_dir}/{capture_filename}'
+        if os.path.exists(specific_path):
+            print(f"[@route:resolve_capture_path] Using specific capture: {capture_filename}")
+            return specific_path, capture_filename
+        else:
+            print(f"[@route:resolve_capture_path] Specific capture not found: {capture_filename}")
+    
+    # Fallback to latest capture (for backward compatibility)
+    if os.path.exists(captures_dir):
+        capture_files = [f for f in os.listdir(captures_dir) 
+                        if f.startswith('capture_') and f.endswith('.jpg')]
+        if capture_files:
+            latest_file = sorted(capture_files)[-1]
+            print(f"[@route:resolve_capture_path] Using latest capture: {latest_file}")
+            return f'{captures_dir}/{latest_file}', latest_file
+    
+    print(f"[@route:resolve_capture_path] No captures found in {captures_dir}")
+    return None, None 

@@ -525,9 +525,11 @@ def execute_batch_verification():
         model = data.get('model', 'default')
         node_id = data.get('node_id', 'unknown')
         tree_id = data.get('tree_id', 'unknown')
+        capture_filename = data.get('capture_filename')  # NEW: Optional specific capture
         
         print(f"[@route:execute_batch_verification] Executing {len(verifications)} verifications for node: {node_id}")
         print(f"[@route:execute_batch_verification] Model: {model}")
+        print(f"[@route:execute_batch_verification] Capture filename: {capture_filename}")
         
         # Validate required parameters
         if not verifications:
@@ -540,54 +542,58 @@ def execute_batch_verification():
         host_ip = "77.56.53.130"  # Host IP
         host_port = "5119"        # Host internal port
         
-        # Forward batch verification execution to host
+        # Forward batch execution request to host
         host_batch_url = f'http://{host_ip}:{host_port}/stream/execute-verification-batch'
         
         batch_payload = {
             'verifications': verifications,
             'model': model,
-            'node_id': node_id
+            'node_id': node_id,
+            'capture_filename': capture_filename  # NEW: Forward specific capture filename
         }
         
         print(f"[@route:execute_batch_verification] Sending batch request to {host_batch_url}")
+        print(f"[@route:execute_batch_verification] Payload: {len(verifications)} verifications, model: {model}")
         
         try:
-            host_response = requests.post(host_batch_url, json=batch_payload, timeout=120, verify=False)
+            host_response = requests.post(host_batch_url, json=batch_payload, timeout=60, verify=False)
             host_result = host_response.json()
             
-            if host_result.get('success') is not None:  # Handle both success and failure cases
-                # Convert host paths to nginx-exposed URLs for all results
-                if 'results' in host_result and isinstance(host_result['results'], list):
-                    for result in host_result['results']:
-                        if 'source_image_url' in result:
-                            result['source_image_url'] = f'https://77.56.53.130:444{result["source_image_url"]}'
-                        if 'reference_image_url' in result:
-                            result['reference_image_url'] = f'https://77.56.53.130:444{result["reference_image_url"]}'
-                        if 'result_overlay_url' in result:
-                            result['result_overlay_url'] = f'https://77.56.53.130:444{result["result_overlay_url"]}'
+            if host_result.get('success') is not None:  # Host responded with valid result
+                print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('passed_count', 0)}/{host_result.get('total_count', 0)} passed")
                 
-                # Add tree_id to the response
-                host_result['tree_id'] = tree_id
-                
-                print(f"[@route:execute_batch_verification] Host batch execution completed: {host_result.get('success')}")
-                print(f"[@route:execute_batch_verification] Results: {host_result.get('passed_count', 0)}/{host_result.get('total_verifications', 0)} passed")
-                
-                return jsonify(host_result)
+                # Return host result with additional server metadata
+                return jsonify({
+                    'success': host_result.get('success'),
+                    'message': host_result.get('message'),
+                    'passed_count': host_result.get('passed_count', 0),
+                    'total_count': host_result.get('total_count', 0),
+                    'results': host_result.get('results', []),
+                    'node_id': node_id,
+                    'tree_id': tree_id,
+                    'model': model,
+                    'capture_filename': host_result.get('capture_filename'),  # Return actual filename used by host
+                    'host_response': True
+                })
             else:
-                error_msg = host_result.get('error', 'Host batch verification execution failed')
+                error_msg = host_result.get('error', 'Host batch execution failed')
                 print(f"[@route:execute_batch_verification] Host batch execution failed: {error_msg}")
                 return jsonify({
                     'success': False,
-                    'error': f'Host batch execution failed: {error_msg}'
+                    'error': f'Host batch execution failed: {error_msg}',
+                    'node_id': node_id,
+                    'tree_id': tree_id
                 }), 500
                 
         except requests.exceptions.RequestException as e:
             print(f"[@route:execute_batch_verification] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to connect to host for batch verification execution: {str(e)}'
+                'error': f'Failed to connect to host for batch execution: {str(e)}',
+                'node_id': node_id,
+                'tree_id': tree_id
             }), 500
-        
+            
     except Exception as e:
         print(f"[@route:execute_batch_verification] Error: {str(e)}")
         return jsonify({

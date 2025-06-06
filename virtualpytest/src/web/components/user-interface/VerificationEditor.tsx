@@ -487,7 +487,17 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       // Skip controller initialization since host is directly connected via ADB
       console.log('[@component:VerificationEditor] Executing verifications directly on host...');
 
-      // Step 1: Execute batch verification on host
+      // NEW: Extract capture filename from captureSourcePath for specific capture selection
+      let capture_filename = null;
+      if (captureSourcePath) {
+        // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
+        const url = new URL(captureSourcePath);
+        const pathname = url.pathname;
+        capture_filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
+        console.log('[@component:VerificationEditor] Using specific capture:', capture_filename);
+      }
+
+      // Execute batch verification with specific capture
       const batchResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/execute-batch', {
         method: 'POST',
         headers: {
@@ -495,67 +505,46 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         },
         body: JSON.stringify({
           verifications: verifications,
-          model: model, // Use the dynamic model
-          node_id: 'verification-editor' // Identifier for this execution context
+          model: model,
+          node_id: 'verification-editor',
+          tree_id: 'verification-tree',
+          capture_filename: capture_filename  // NEW: Send specific capture filename
         }),
       });
 
-      // Check if the response is ok
       if (!batchResponse.ok) {
-        const errorText = await batchResponse.text();
-        console.error('[@component:VerificationEditor] HTTP error:', batchResponse.status, errorText);
-        setError(`HTTP error ${batchResponse.status}: ${errorText}`);
-        return;
+        throw new Error(`HTTP ${batchResponse.status}: ${batchResponse.statusText}`);
       }
 
       const batchResult = await batchResponse.json();
       console.log('[@component:VerificationEditor] Raw batch result:', batchResult);
-      
-      // Check if the result has success field
-      if (batchResult.success === false) {
-        const errorMessage = batchResult.error || batchResult.message || 'Unknown error occurred';
-        setError(`Failed to execute verifications: ${errorMessage}`);
-        console.error('[@component:VerificationEditor] Batch execution failed:', errorMessage);
-        return;
-      }
 
-      console.log('[@component:VerificationEditor] Verifications executed successfully:', batchResult);
-      
-      // Update verification results
-      if (batchResult.results && Array.isArray(batchResult.results)) {
+      if (batchResult.success) {
+        console.log('[@component:VerificationEditor] Batch execution successful:', batchResult.message);
+        
+        // Update verifications with results
         const updatedVerifications = verifications.map((verification, index) => {
-          const result = batchResult.results[index];
+          const result = batchResult.results?.[index];
           if (result) {
             return {
               ...verification,
               lastRunResult: result.success,
-              lastRunResults: result.success ? [true, ...(verification.lastRunResults || []).slice(0, 9)] : [false, ...(verification.lastRunResults || []).slice(0, 9)],
-              resultImageUrl: result.result_image_url || result.result_overlay_url,
-              referenceImageUrl: result.reference_image_url,
-              lastRunDetails: result.message || result.error || 'No details available'
+              lastRunResults: [result.success],
+              resultImageUrl: result.sourceImageUrl,
+              referenceImageUrl: result.referenceImageUrl,
+              lastRunDetails: result.message || 'Verification completed'
             };
           }
           return verification;
         });
         
         setVerifications(updatedVerifications);
-        
-        // Calculate overall success
-        const allPassed = batchResult.results.every((result: any) => result.success);
-        const passedCount = batchResult.passed_count || batchResult.results.filter((r: any) => r.success).length;
-        const totalCount = batchResult.total_verifications || batchResult.results.length;
-        
-        if (allPassed) {
-          setError(null);
-          setSuccessMessage(`All ${totalCount} verification(s) passed!`);
-        } else {
-          setError(`${passedCount}/${totalCount} verification(s) passed. Check results for details.`);
-        }
+        setSuccessMessage(`Verification completed: ${batchResult.passed_count}/${batchResult.total_count} passed`);
       } else {
-        console.warn('[@component:VerificationEditor] No results array in response:', batchResult);
-        setError('No verification results received from server');
+        const errorMessage = batchResult.message || batchResult.error || 'Unknown error occurred';
+        console.log('[@component:VerificationEditor] Batch execution failed:', errorMessage);
+        setError(`Verification failed: ${errorMessage}`);
       }
-
     } catch (error) {
       console.error('[@component:VerificationEditor] Error running tests:', error);
       setError(`Error running tests: ${error instanceof Error ? error.message : 'Unknown error'}`);
