@@ -47,8 +47,33 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
     return `${url}${separator}t=${timestamp}`;
   };
 
-  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
-  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
+  // Get the filtered image URL based on the selected filter
+  const getFilteredImageUrl = (url: string, filter?: 'none' | 'greyscale' | 'binary') => {
+    if (!url || !filter || filter === 'none') return url;
+    
+    // Remove file extension and add filter suffix
+    const lastDotIndex = url.lastIndexOf('.');
+    if (lastDotIndex === -1) return url;
+    
+    const baseUrl = url.substring(0, lastDotIndex);
+    const extension = url.substring(lastDotIndex);
+    
+    const filterSuffix = filter === 'greyscale' ? '_greyscale' : '_binary';
+    return `${baseUrl}${filterSuffix}${extension}`;
+  };
+
+  const filteredSourceUrl = getFilteredImageUrl(sourceUrl, imageFilter);
+  const filteredReferenceUrl = getFilteredImageUrl(referenceUrl, imageFilter);
+
+  // Debug logging for filtered images
+  if (imageFilter && imageFilter !== 'none') {
+    console.log(`[@component:VerificationImageComparisonDialog] Using ${imageFilter} filter:`);
+    console.log(`[@component:VerificationImageComparisonDialog] Source: ${sourceUrl} -> ${filteredSourceUrl}`);
+    console.log(`[@component:VerificationImageComparisonDialog] Reference: ${referenceUrl} -> ${filteredReferenceUrl}`);
+  }
+
+  const cacheBustedSourceUrl = getCacheBustedUrl(filteredSourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(filteredReferenceUrl);
 
   return (
     <Dialog 
