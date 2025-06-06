@@ -211,30 +211,90 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const handleRunVerifications = async () => {
     if (!nodeForm.verifications || nodeForm.verifications.length === 0) return;
     
+    console.log('[@component:NodeEditDialog] === VERIFICATION TEST DEBUG ===');
+    console.log('[@component:NodeEditDialog] Number of verifications before filtering:', nodeForm.verifications.length);
+    
+    // Filter out empty/invalid verifications before testing
+    const validVerifications = nodeForm.verifications.filter((verification, index) => {
+      // Check if verification has an id (is configured)
+      if (!verification.id || verification.id.trim() === '') {
+        console.log(`[@component:NodeEditDialog] Removing verification ${index}: No verification type selected`);
+        return false;
+      }
+      
+      // Check if verification has required input based on controller type
+      if (verification.controller_type === 'image') {
+        // Image verifications need a reference image
+        const hasImagePath = verification.params?.full_path || 
+                            verification.params?.reference_path || 
+                            verification.inputValue;
+        if (!hasImagePath) {
+          console.log(`[@component:NodeEditDialog] Removing verification ${index}: No image reference specified`);
+          return false;
+        }
+      } else if (verification.controller_type === 'text') {
+        // Text verifications need text to search for
+        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasText) {
+          console.log(`[@component:NodeEditDialog] Removing verification ${index}: No text specified`);
+          return false;
+        }
+      } else if (verification.controller_type === 'adb') {
+        // ADB verifications need search criteria
+        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasSearchTerm) {
+          console.log(`[@component:NodeEditDialog] Removing verification ${index}: No search term specified`);
+          return false;
+        }
+      }
+      
+      // For other types, check if requiresInput is set and if so, validate accordingly
+      if (verification.requiresInput) {
+        const hasInput = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasInput) {
+          console.log(`[@component:NodeEditDialog] Removing verification ${index}: Required input missing`);
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Update verifications list if any were filtered out
+    if (validVerifications.length !== nodeForm.verifications.length) {
+      console.log(`[@component:NodeEditDialog] Filtered out ${nodeForm.verifications.length - validVerifications.length} empty verifications`);
+      setNodeForm(prev => ({
+        ...prev,
+        verifications: validVerifications
+      }));
+      
+      // Show message about removed verifications
+      if (validVerifications.length === 0) {
+        setVerificationResult('All verifications were empty and have been removed. Please add valid verifications.');
+        return;
+      }
+    }
+    
+    console.log('[@component:NodeEditDialog] Number of valid verifications:', validVerifications.length);
+    
     setIsRunningVerifications(true);
     setVerificationResult(null);
     
     try {
       let results: string[] = [];
-      const updatedVerifications = [...nodeForm.verifications];
+      const updatedVerifications = [...validVerifications]; // Use filtered verifications
       let executionStopped = false;
       
-      for (let i = 0; i < nodeForm.verifications.length; i++) {
-        const verification = nodeForm.verifications[i];
+      // Show message about removed verifications if any
+      if (validVerifications.length !== nodeForm.verifications.length) {
+        results.push(`ℹ️ Removed ${nodeForm.verifications.length - validVerifications.length} empty verification(s)`);
+        results.push('');
+      }
+      
+      for (let i = 0; i < validVerifications.length; i++) {
+        const verification = validVerifications[i];
         
-        if (!verification.id) {
-          results.push(`❌ Verification ${i + 1}: No verification selected`);
-          // Update verification with failed result
-          updatedVerifications[i] = {
-            ...verification,
-            last_run_result: updateLastRunResults(verification.last_run_result || [], false)
-          };
-          results.push(`⏹️ Execution stopped due to failed verification ${i + 1}`);
-          executionStopped = true;
-          break;
-        }
-        
-        console.log(`[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.label}`);
+        console.log(`[@component:NodeEditDialog] Executing verification ${i + 1}/${validVerifications.length}: ${verification.label}`);
         
         const verificationToExecute = {
           ...verification,

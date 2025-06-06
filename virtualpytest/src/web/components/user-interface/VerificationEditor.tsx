@@ -620,13 +620,75 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
 
     console.log('[@component:VerificationEditor] === VERIFICATION TEST DEBUG ===');
-    console.log('[@component:VerificationEditor] Number of verifications:', verifications.length);
+    console.log('[@component:VerificationEditor] Number of verifications before filtering:', verifications.length);
+    
+    // Filter out empty/invalid verifications before testing
+    const validVerifications = verifications.filter((verification, index) => {
+      // Check if verification has an id (is configured)
+      if (!verification.id || verification.id.trim() === '') {
+        console.log(`[@component:VerificationEditor] Removing verification ${index}: No verification type selected`);
+        return false;
+      }
+      
+      // Check if verification has required input based on controller type
+      if (verification.controller_type === 'image') {
+        // Image verifications need a reference image
+        const hasImagePath = verification.params?.full_path || 
+                            verification.params?.reference_path || 
+                            verification.inputValue;
+        if (!hasImagePath) {
+          console.log(`[@component:VerificationEditor] Removing verification ${index}: No image reference specified`);
+          return false;
+        }
+      } else if (verification.controller_type === 'text') {
+        // Text verifications need text to search for
+        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasText) {
+          console.log(`[@component:VerificationEditor] Removing verification ${index}: No text specified`);
+          return false;
+        }
+      } else if (verification.controller_type === 'adb') {
+        // ADB verifications need search criteria
+        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasSearchTerm) {
+          console.log(`[@component:VerificationEditor] Removing verification ${index}: No search term specified`);
+          return false;
+        }
+      }
+      
+      // For other types, check if requiresInput is set and if so, validate accordingly
+      if (verification.requiresInput) {
+        const hasInput = verification.inputValue && verification.inputValue.trim() !== '';
+        if (!hasInput) {
+          console.log(`[@component:VerificationEditor] Removing verification ${index}: Required input missing`);
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Update verifications list if any were filtered out
+    if (validVerifications.length !== verifications.length) {
+      console.log(`[@component:VerificationEditor] Filtered out ${verifications.length - validVerifications.length} empty verifications`);
+      setVerifications(validVerifications);
+      
+      // Show message about removed verifications
+      if (validVerifications.length === 0) {
+        setError('All verifications were empty and have been removed. Please add valid verifications.');
+        return;
+      } else {
+        setSuccessMessage(`Removed ${verifications.length - validVerifications.length} empty verification(s). Testing ${validVerifications.length} valid verification(s).`);
+      }
+    }
+    
+    console.log('[@component:VerificationEditor] Number of valid verifications:', validVerifications.length);
     console.log('[@component:VerificationEditor] Model:', model);
     console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
     
-    // Log each verification with its area coordinates
-    verifications.forEach((verification, index) => {
-      console.log(`[@component:VerificationEditor] Verification ${index}:`, {
+    // Log each valid verification with its area coordinates
+    validVerifications.forEach((verification, index) => {
+      console.log(`[@component:VerificationEditor] Valid verification ${index}:`, {
         id: verification.id,
         label: verification.label,
         command: verification.command,
@@ -666,7 +728,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       }
 
       const batchPayload = {
-        verifications: verifications,
+        verifications: validVerifications, // Use filtered verifications
         model: model,
         node_id: 'verification-editor',
         tree_id: 'verification-tree',
@@ -698,7 +760,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         // Process and set test results for NodeVerificationsList to display
         const processedResults: VerificationTestResult[] = batchResult.results.map((result: any, index: number) => {
-          const verification = verifications[index];
+          const verification = validVerifications[index]; // Use validVerifications instead of verifications
           
           console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
           console.log(`[@component:VerificationEditor] Corresponding verification ${index}:`, verification);
@@ -738,8 +800,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         console.log('[@component:VerificationEditor] Setting test results:', processedResults);
         setTestResults(processedResults);
         
-        // Update verifications with results (keep existing logic for backward compatibility)
-        const updatedVerifications = verifications.map((verification, index) => {
+        // Update verifications with results (use validVerifications for consistency)
+        const updatedVerifications = validVerifications.map((verification, index) => {
           const result = batchResult.results?.[index];
           if (result) {
             return {
