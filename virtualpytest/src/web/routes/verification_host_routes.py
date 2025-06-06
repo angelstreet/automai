@@ -261,7 +261,6 @@ def host_save_resource():
                 "name": reference_name,
                 "model": model,
                 "path": f"resources/{model}/{reference_name}.png",
-                "full_path": repo_target_path,
                 "created_at": datetime.now().isoformat(),
                 "type": reference_type,
                 "area": area
@@ -795,19 +794,19 @@ def resolve_reference_path(reference_name, model, verification_type):
                     resource.get('model') == model and
                     resource.get('type') == f'reference_{verification_type}'):
                     
-                    # Return the full_path if available
-                    full_path = resource.get('full_path')
-                    if full_path and os.path.exists(full_path):
-                        print(f"[@route:resolve_reference_path] Found in JSON: {full_path}")
-                        return full_path
+                    # Build path consistently with save logic: ../resources/{model}/{name}.png
+                    relative_path = f'../{resource.get("path")}'  # Use path from JSON with ../ prefix
+                    if os.path.exists(relative_path):
+                        print(f"[@route:resolve_reference_path] Found in JSON: {relative_path}")
+                        return relative_path
         
-        # Fallback: try standard paths
+        # Fallback: try standard paths (build same way as save logic)
         if verification_type == 'image':
             possible_paths = [
-                f'/var/www/html/stream/resources/{model}/{reference_name}.png',
-                f'/var/www/html/stream/resources/{model}/{reference_name}.jpg',
                 f'../resources/{model}/{reference_name}.png',
-                f'../resources/{model}/{reference_name}.jpg'
+                f'../resources/{model}/{reference_name}.jpg',
+                f'/var/www/html/stream/resources/{model}/{reference_name}.png',
+                f'/var/www/html/stream/resources/{model}/{reference_name}.jpg'
             ]
             for path in possible_paths:
                 if os.path.exists(path):
