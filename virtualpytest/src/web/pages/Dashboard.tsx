@@ -14,6 +14,11 @@ import {
   ViewModule as GridViewIcon,
   TableRows as TableViewIcon,
   Refresh as RefreshIcon,
+  BugReport as DebugIcon,
+  Terminal as TerminalIcon,
+  Clear as ClearIcon,
+  Download as DownloadIcon,
+  FilterList as FilterIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -40,8 +45,19 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
+  Divider,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { TestCase, Campaign, Tree } from '../type';
 
@@ -73,7 +89,17 @@ interface ConnectedDevice {
   last_seen: number;
 }
 
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  source: 'frontend' | 'backend';
+  message: string;
+  details?: any;
+}
+
 type ViewMode = 'grid' | 'table';
+type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
+type LogSource = 'all' | 'frontend' | 'backend';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -87,6 +113,15 @@ const Dashboard: React.FC = () => {
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Debug logs state
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logFilter, setLogFilter] = useState<LogLevel>('all');
+  const [logSource, setLogSource] = useState<LogSource>('all');
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -94,6 +129,24 @@ const Dashboard: React.FC = () => {
     const interval = setInterval(fetchDevicesData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Auto-refresh logs
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (autoRefreshLogs) {
+      interval = setInterval(fetchLogs, 5000); // Refresh every 5 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefreshLogs]);
+
+  // Auto-scroll to bottom of logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
 
   const fetchDashboardData = async () => {
     try {
@@ -161,6 +214,7 @@ const Dashboard: React.FC = () => {
       setConnectedDevices(devices);
     } catch (err) {
       setError('Failed to fetch dashboard data');
+      addFrontendLog('error', 'Failed to fetch dashboard data', err);
     } finally {
       setLoading(false);
     }
@@ -175,14 +229,102 @@ const Dashboard: React.FC = () => {
         const devicesResponse = await devicesRes.json();
         if (devicesResponse.status === 'success' && devicesResponse.clients) {
           setConnectedDevices(devicesResponse.clients);
+          addFrontendLog('info', `Refreshed devices data: ${devicesResponse.clients.length} devices found`);
         }
       }
     } catch (err) {
       console.error('Failed to refresh devices data:', err);
+      addFrontendLog('error', 'Failed to refresh devices data', err);
     } finally {
       setDevicesLoading(false);
     }
   };
+
+  const fetchLogs = async () => {
+    try {
+      setLogsLoading(true);
+      
+      // Fetch backend logs
+      const backendLogsRes = await fetch(`${API_BASE_URL}/system/logs`);
+      if (backendLogsRes.ok) {
+        const backendLogs = await backendLogsRes.json();
+        
+        // Convert backend logs to our format
+        const formattedBackendLogs: LogEntry[] = backendLogs.map((log: any) => ({
+          timestamp: log.timestamp || new Date().toISOString(),
+          level: log.level || 'info',
+          source: 'backend' as const,
+          message: log.message || log.msg || 'Unknown message',
+          details: log.details || log.data,
+        }));
+
+        // Get frontend logs from console (if available)
+        const frontendLogs = getFrontendLogs();
+        
+        // Combine and sort logs by timestamp
+        const allLogs = [...formattedBackendLogs, ...frontendLogs]
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+          .slice(-100); // Keep only last 100 logs
+
+        setLogs(allLogs);
+      }
+    } catch (err) {
+      console.error('Failed to fetch logs:', err);
+      addFrontendLog('error', 'Failed to fetch server logs', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const getFrontendLogs = (): LogEntry[] => {
+    // This would ideally capture console logs, but for now return stored frontend logs
+    return logs.filter(log => log.source === 'frontend');
+  };
+
+  const addFrontendLog = (level: LogEntry['level'], message: string, details?: any) => {
+    const newLog: LogEntry = {
+      timestamp: new Date().toISOString(),
+      level,
+      source: 'frontend',
+      message,
+      details,
+    };
+    
+    setLogs(prevLogs => [...prevLogs.slice(-99), newLog]); // Keep only last 100 logs
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+    addFrontendLog('info', 'Logs cleared by user');
+  };
+
+  const downloadLogs = () => {
+    const logsText = filteredLogs.map(log => 
+      `[${log.timestamp}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${log.details ? '\n' + JSON.stringify(log.details, null, 2) : ''}`
+    ).join('\n\n');
+    
+    const blob = new Blob([logsText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `virtualpytest-logs-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addFrontendLog('info', 'Logs downloaded by user');
+  };
+
+  const filteredLogs = logs.filter(log => {
+    const levelMatch = logFilter === 'all' || log.level === logFilter;
+    const sourceMatch = logSource === 'all' || log.source === logSource;
+    const searchMatch = logSearch === '' || 
+      log.message.toLowerCase().includes(logSearch.toLowerCase()) ||
+      (log.details && JSON.stringify(log.details).toLowerCase().includes(logSearch.toLowerCase()));
+    
+    return levelMatch && sourceMatch && searchMatch;
+  });
 
   const handleViewModeChange = (
     event: React.MouseEvent<HTMLElement>,
@@ -190,6 +332,7 @@ const Dashboard: React.FC = () => {
   ) => {
     if (newViewMode !== null) {
       setViewMode(newViewMode);
+      addFrontendLog('info', `View mode changed to ${newViewMode}`);
     }
   };
 
@@ -230,6 +373,21 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const getLogLevelColor = (level: LogEntry['level']) => {
+    switch (level) {
+      case 'error':
+        return 'error';
+      case 'warn':
+        return 'warning';
+      case 'info':
+        return 'info';
+      case 'debug':
+        return 'default';
+      default:
+        return 'default';
+    }
+  };
+
   const formatLastSeen = (timestamp: number) => {
     const now = Date.now() / 1000;
     const diff = now - timestamp;
@@ -246,6 +404,15 @@ const Dashboard: React.FC = () => {
       return date.toLocaleString();
     } catch {
       return 'Unknown';
+    }
+  };
+
+  const formatLogTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString();
+    } catch {
+      return 'Invalid time';
     }
   };
 
@@ -528,6 +695,170 @@ const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Debug Logs Section */}
+      <Accordion sx={{ mt: 3 }}>
+        <AccordionSummary expandIcon={<DebugIcon />}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <TerminalIcon />
+            <Typography variant="h6">
+              Debug Logs ({filteredLogs.length})
+            </Typography>
+            {logsLoading && <CircularProgress size={16} />}
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          {/* Log Controls */}
+          <Box display="flex" flexWrap="wrap" gap={2} mb={2} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Search logs..."
+              value={logSearch}
+              onChange={(e) => setLogSearch(e.target.value)}
+              sx={{ minWidth: 200 }}
+            />
+            
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Level</InputLabel>
+              <Select
+                value={logFilter}
+                label="Level"
+                onChange={(e) => setLogFilter(e.target.value as LogLevel)}
+              >
+                <MenuItem value="all">All Levels</MenuItem>
+                <MenuItem value="error">Error</MenuItem>
+                <MenuItem value="warn">Warning</MenuItem>
+                <MenuItem value="info">Info</MenuItem>
+                <MenuItem value="debug">Debug</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Source</InputLabel>
+              <Select
+                value={logSource}
+                label="Source"
+                onChange={(e) => setLogSource(e.target.value as LogSource)}
+              >
+                <MenuItem value="all">All Sources</MenuItem>
+                <MenuItem value="frontend">Frontend</MenuItem>
+                <MenuItem value="backend">Backend</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={autoRefreshLogs}
+                  onChange={(e) => setAutoRefreshLogs(e.target.checked)}
+                />
+              }
+              label="Auto-refresh"
+            />
+
+            <Button
+              startIcon={<RefreshIcon />}
+              onClick={fetchLogs}
+              disabled={logsLoading}
+              size="small"
+            >
+              Refresh
+            </Button>
+
+            <Button
+              startIcon={<ClearIcon />}
+              onClick={clearLogs}
+              size="small"
+              color="warning"
+            >
+              Clear
+            </Button>
+
+            <Button
+              startIcon={<DownloadIcon />}
+              onClick={downloadLogs}
+              size="small"
+              variant="outlined"
+            >
+              Download
+            </Button>
+          </Box>
+
+          <Divider sx={{ mb: 2 }} />
+
+          {/* Logs Display */}
+          <Paper 
+            variant="outlined" 
+            sx={{ 
+              height: 400, 
+              overflow: 'auto', 
+              p: 1, 
+              backgroundColor: 'background.default',
+              fontFamily: 'monospace'
+            }}
+          >
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map((log, index) => (
+                <Box key={index} sx={{ mb: 1, fontSize: '0.875rem' }}>
+                  <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        fontFamily: 'monospace',
+                        minWidth: 80
+                      }}
+                    >
+                      {formatLogTimestamp(log.timestamp)}
+                    </Typography>
+                    <Chip
+                      label={log.level.toUpperCase()}
+                      size="small"
+                      color={getLogLevelColor(log.level) as any}
+                      sx={{ minWidth: 60, fontSize: '0.7rem' }}
+                    />
+                    <Chip
+                      label={log.source}
+                      size="small"
+                      variant="outlined"
+                      sx={{ minWidth: 80, fontSize: '0.7rem' }}
+                    />
+                  </Box>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontFamily: 'monospace',
+                      pl: 2,
+                      color: log.level === 'error' ? 'error.main' : 'text.primary'
+                    }}
+                  >
+                    {log.message}
+                  </Typography>
+                  {log.details && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontFamily: 'monospace',
+                        pl: 2,
+                        color: 'text.secondary',
+                        display: 'block',
+                        whiteSpace: 'pre-wrap'
+                      }}
+                    >
+                      {JSON.stringify(log.details, null, 2)}
+                    </Typography>
+                  )}
+                </Box>
+              ))
+            ) : (
+              <Typography color="textSecondary" sx={{ textAlign: 'center', mt: 4 }}>
+                No logs found matching current filters
+              </Typography>
+            )}
+            <div ref={logsEndRef} />
+          </Paper>
+        </AccordionDetails>
+      </Accordion>
 
       {/* Connected Devices */}
       <Paper sx={{ p: 2, mt: 3 }}>
