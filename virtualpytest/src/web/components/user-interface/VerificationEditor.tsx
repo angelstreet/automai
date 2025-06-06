@@ -989,7 +989,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: finalLayoutConfig.objectFit,
+                        objectFit: 'contain',
                         maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%'
                       }}
                     />
