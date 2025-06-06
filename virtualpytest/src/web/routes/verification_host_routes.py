@@ -368,15 +368,36 @@ def host_save_resource():
             except Exception as commit_error:
                 print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
-            # Git push - simple version without signal timeout
+            # Git push - requires token authentication
             print(f"[@route:host_save_resource] Pushing to remote...")
             try:
-                origin = repo.remotes.origin
-                origin.push()
-                print(f"[@route:host_save_resource] Git push successful")
+                # Require GitHub token for authentication
+                github_token = os.environ.get('GITHUB_TOKEN')
+                if not github_token:
+                    print(f"[@route:host_save_resource] No GITHUB_TOKEN found - skipping push")
+                    print(f"[@route:host_save_resource] Changes committed locally only")
+                else:
+                    print(f"[@route:host_save_resource] Using token authentication for push")
+                    origin = repo.remotes.origin
+                    original_url = origin.url
+                    
+                    # Replace https://github.com/ with https://token@github.com/
+                    if original_url.startswith('https://github.com/'):
+                        token_url = original_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+                        origin.set_url(token_url)
+                        
+                        try:
+                            origin.push()
+                            print(f"[@route:host_save_resource] Git push successful")
+                        finally:
+                            # Restore original URL
+                            origin.set_url(original_url)
+                    else:
+                        print(f"[@route:host_save_resource] Remote URL not supported for token auth: {original_url}")
+                        
             except Exception as push_error:
                 print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
-                print(f"[@route:host_save_resource] Changes committed locally - manual push may be required")
+                print(f"[@route:host_save_resource] Changes committed locally only")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
