@@ -113,6 +113,7 @@ interface NodeVerificationsListProps {
   onTest?: () => void;
   testResults?: VerificationTestResult[];
   reloadTrigger?: number; // Trigger to reload references
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
 }
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
@@ -125,6 +126,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   onTest,
   testResults = [],
   reloadTrigger = 0,
+  onReferenceSelected,
 }) => {
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
   const [imageComparisonDialog, setImageComparisonDialog] = useState<{
@@ -287,6 +289,10 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           reference_name: selectedRef.name,
           font_size: selectedRef.font_size
         });
+      }
+
+      if (onReferenceSelected) {
+        onReferenceSelected(referenceName, selectedRef);
       }
     }
   };

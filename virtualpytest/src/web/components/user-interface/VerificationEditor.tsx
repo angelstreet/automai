@@ -203,6 +203,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     removeBackground: false
   });
 
+  // NEW: State for selected reference image preview
+  const [selectedReferenceImage, setSelectedReferenceImage] = useState<string | null>(null);
+  const [selectedReferenceInfo, setSelectedReferenceInfo] = useState<{
+    name: string;
+    type: 'image' | 'text';
+  } | null>(null);
+
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = layoutConfig || getVerificationEditorLayout(model);
 
@@ -250,9 +257,50 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     setTestResults([]);
   };
 
+  // NEW: Handle reference selection to update preview
+  const handleReferenceSelected = (referenceName: string, referenceData: any) => {
+    console.log('[@component:VerificationEditor] Reference selected:', referenceName, referenceData);
+    
+    if (referenceData && referenceData.type === 'image' && referenceData.full_path) {
+      // Build the complete URL for the reference image
+      const referenceUrl = referenceData.full_path.startsWith('http://') || referenceData.full_path.startsWith('https://') 
+        ? referenceData.full_path
+        : `https://77.56.53.130:444${referenceData.full_path}`;
+      
+      console.log('[@component:VerificationEditor] Setting reference image preview:', referenceUrl);
+      setSelectedReferenceImage(referenceUrl);
+      setSelectedReferenceInfo({
+        name: referenceName,
+        type: 'image'
+      });
+      
+      // Clear any captured reference since we're now showing a selected reference
+      setCapturedReferenceImage(null);
+      setHasCaptured(false);
+    } else if (referenceData && referenceData.type === 'text') {
+      // For text references, clear the image preview
+      setSelectedReferenceImage(null);
+      setSelectedReferenceInfo({
+        name: referenceName,
+        type: 'text'
+      });
+      
+      // Clear any captured reference
+      setCapturedReferenceImage(null);
+      setHasCaptured(false);
+    } else {
+      // Clear preview if no valid reference
+      setSelectedReferenceImage(null);
+      setSelectedReferenceInfo(null);
+    }
+  };
+
   const handleClearSelection = () => {
     setCapturedReferenceImage(null);
     setHasCaptured(false);
+    // Also clear selected reference when clearing selection
+    setSelectedReferenceImage(null);
+    setSelectedReferenceInfo(null);
     if (onClearSelection) {
       onClearSelection();
     }
@@ -483,11 +531,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       const batchResult = await batchResponse.json();
       console.log('[@component:VerificationEditor] Raw batch result:', batchResult);
 
-      if (batchResult.success) {
-        console.log('[@component:VerificationEditor] Batch execution successful:', batchResult.message);
+      // Process results if we have them, regardless of overall batch success
+      // The batch can be "unsuccessful" if some verifications failed, but we still want to show the results
+      if (batchResult.results && batchResult.results.length > 0) {
+        console.log('[@component:VerificationEditor] Processing batch results:', batchResult.results.length, 'results');
         
         // Process and set test results for NodeVerificationsList to display
-        const processedResults: VerificationTestResult[] = batchResult.results ? batchResult.results.map((result: any, index: number) => {
+        const processedResults: VerificationTestResult[] = batchResult.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
           console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
@@ -522,7 +572,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           
           console.log(`[@component:VerificationEditor] Processed result ${index}:`, processedResult);
           return processedResult;
-        }) : [];
+        });
         
         console.log('[@component:VerificationEditor] Setting test results:', processedResults);
         setTestResults(processedResults);
@@ -544,12 +594,23 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         });
         
         setVerifications(updatedVerifications);
-        setSuccessMessage(`Verification completed: ${batchResult.passed_count}/${batchResult.total_count} passed`);
-      } else {
+        
+        // Show success message with pass/fail count
+        const passedCount = batchResult.passed_count || 0;
+        const totalCount = batchResult.total_count || processedResults.length;
+        setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
+        
+      } else if (batchResult.success === false && batchResult.error) {
+        // Only treat as error if there's an actual error and no results
         const errorMessage = batchResult.message || batchResult.error || 'Unknown error occurred';
-        console.log('[@component:VerificationEditor] Batch execution failed:', errorMessage);
+        console.log('[@component:VerificationEditor] Batch execution failed with error:', errorMessage);
         setError(`Verification failed: ${errorMessage}`);
-        // Clear test results on failure
+        // Clear test results on actual failure
+        setTestResults([]);
+      } else {
+        // Fallback case - no results and no clear error
+        console.log('[@component:VerificationEditor] No results received from batch execution');
+        setError('No verification results received');
         setTestResults([]);
       }
     } catch (error) {
@@ -783,7 +844,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   <>
                     <img 
                       src={capturedReferenceImage}
-                      alt="Reference"
+                      alt="Captured Reference"
                       style={{
                         width: '100%',
                         height: '100%',
@@ -816,6 +877,37 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                         </Typography>
                       </Box>
                     )}
+                  </>
+                ) : selectedReferenceImage ? (
+                  <>
+                    <img 
+                      src={selectedReferenceImage}
+                      alt="Selected Reference"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%'
+                      }}
+                    />
+                    {/* Reference info overlay */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 4,
+                      left: 4,
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      borderRadius: 1,
+                      padding: '2px 6px',
+                      zIndex: 5
+                    }}>
+                      <Typography variant="caption" sx={{ 
+                        color: '#90caf9', 
+                        fontSize: '0.65rem', 
+                        fontWeight: 600
+                      }}>
+                        📁 {selectedReferenceInfo?.name}
+                      </Typography>
+                    </Box>
                   </>
                 ) : (
                   <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
@@ -1243,6 +1335,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               onTest={handleTest}
               testResults={testResults}
               reloadTrigger={referenceSaveCounter}
+              onReferenceSelected={handleReferenceSelected}
             />
           </Box>
         </Collapse>
