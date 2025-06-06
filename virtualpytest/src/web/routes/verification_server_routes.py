@@ -601,4 +601,59 @@ def execute_batch_verification():
         return jsonify({
             'success': False,
             'error': f'Batch verification error: {str(e)}'
+        }), 500
+
+# =====================================================
+# SERVER-SIDE REFERENCE STREAM AVAILABILITY ENDPOINT
+# =====================================================
+
+@verification_server_bp.route('/api/virtualpytest/reference/ensure-stream-availability', methods=['POST'])
+def ensure_reference_stream_availability():
+    """Ensure reference image is available in stream directory for preview."""
+    try:
+        data = request.get_json()
+        reference_name = data.get('reference_name')
+        model = data.get('model')
+        
+        print(f"[@route:ensure_reference_stream_availability] Ensuring availability for: {reference_name} (model: {model})")
+        
+        # Validate required parameters
+        if not reference_name or not model:
+            return jsonify({
+                'success': False,
+                'error': 'reference_name and model are required'
+            }), 400
+        
+        # Forward request to host
+        host_response = requests.post(
+            f'http://{HOST_IP}:{HOST_PORT}/stream/ensure-reference-availability',
+            json={
+                'reference_name': reference_name,
+                'model': model
+            },
+            timeout=30
+        )
+        
+        if host_response.status_code == 200:
+            host_result = host_response.json()
+            print(f"[@route:ensure_reference_stream_availability] Host response: {host_result.get('success')}")
+            return jsonify(host_result)
+        else:
+            print(f"[@route:ensure_reference_stream_availability] Host request failed: {host_response.status_code}")
+            return jsonify({
+                'success': False,
+                'error': f'Host request failed: {host_response.status_code}'
+            }), host_response.status_code
+            
+    except requests.exceptions.RequestException as e:
+        print(f"[@route:ensure_reference_stream_availability] Request error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to connect to host: {str(e)}'
+        }), 500
+    except Exception as e:
+        print(f"[@route:ensure_reference_stream_availability] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
         }), 500 
