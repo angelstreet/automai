@@ -82,9 +82,22 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - client connects directly to server IP
-  // Use the same IP that hosts connect to for consistency
-  const SERVER_BASE_URL = 'http://77.56.53.130:5009';
+  // Server configuration - use same hostname as frontend with backend port from env
+  const getServerBaseUrl = () => {
+    // Use the same hostname as the frontend, but with the backend port from environment
+    const serverUrl = window.location.hostname; // This will be 77.56.53.130
+    const serverPort = (import.meta as any).env?.SERVER_PORT || '5019'; // Read from env or fallback
+    
+    const baseUrl = `http://${serverUrl}:${serverPort}`;
+    console.log('[@context:Registration] Built server URL:', baseUrl);
+    console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
+    console.log('[@context:Registration] Backend port from env:', serverPort);
+    console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env?.VITE_SERVER_PORT);
+    
+    return baseUrl;
+  };
+
+  const SERVER_BASE_URL = getServerBaseUrl();
 
   // Fetch hosts from server
   const fetchHosts = useCallback(async () => {
