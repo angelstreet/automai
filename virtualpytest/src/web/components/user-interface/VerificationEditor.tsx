@@ -410,8 +410,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       });
 
       if (referenceType === 'image') {
-        // Save image reference using new endpoint
-        const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/save', {
+        // Save image reference
+        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
