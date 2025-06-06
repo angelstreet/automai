@@ -195,7 +195,7 @@ export function DeviceFormDialogClient({
   const deviceTypeOptions = [
     { value: 'linux', label: 'Linux Device' },
     { value: 'windows', label: 'Windows Device' },
-    { value: 'android_phone', label: 'Android Phone' },
+    { value: 'android_mobile', label: 'Android Mobile' },
     { value: 'android_tablet', label: 'Android Tablet' },
     { value: 'android_tv', label: 'Android TV' },
     { value: 'android_firetv', label: 'Android FireTV' },

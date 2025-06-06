@@ -81,7 +81,7 @@ function HostCardClient({ host, onDelete, onTestConnection }: HostCardClientProp
             label: 'Win',
             icon: '🪟',
           };
-        case 'android_phone':
+        case 'android_mobile':
           return {
             color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
             label: 'Phone',

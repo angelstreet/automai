@@ -40,7 +40,7 @@ import { CreateModelDialog } from '../components/model/CreateModelDialog';
 import { deviceModelApi, Model } from '../services/deviceModelService';
 
 const modelTypes = [
-  'Android Phone',
+  'Android Mobile',
   'Android TV',
   'Android Tablet',
   'iOs Phone',

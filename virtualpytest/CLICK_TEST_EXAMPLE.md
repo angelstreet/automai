@@ -87,7 +87,7 @@ To test the new click functionality, you can use this simple example:
 ```typescript
 const testResolutions = {
   // Common phone resolutions
-  'android_phone': { width: 1080, height: 2340 },
+  'android_mobile': { width: 1080, height: 2340 },
   'pixel_6': { width: 1080, height: 2400 },
   
   // TV/Set-top box resolutions  

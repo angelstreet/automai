@@ -312,7 +312,7 @@ export function RecAndroidPhoneRemote({
 
   return (
     <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-full max-w-xs overflow-hidden">
-      <h3 className="text-xs font-medium mb-2 text-center">📱 Android Phone Remote</h3>
+      <h3 className="text-xs font-medium mb-2 text-center">📱 Android Mobile Remote</h3>
 
       {/* Connection status */}
       {connectionError && (

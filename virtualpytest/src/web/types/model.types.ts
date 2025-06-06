@@ -15,7 +15,7 @@ export interface Model {
 export type ModelCreateData = Omit<Model, 'id'>;
 
 export const MODEL_TYPES = [
-  'Android Phone',
+  'Android Mobile',
   'Android TV',
   'Android Tablet',
   'iOs Phone',

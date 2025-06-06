@@ -285,7 +285,7 @@ export function RecDeviceModal({ device, isOpen, onClose }: DeviceModalProps) {
         return { title: 'Android TV', remoteType: 'androidTv' as RemoteType, canShowRemote: true };
       case 'androidPhone':
         return {
-          title: 'Android Phone',
+          title: 'Android Mobile',
           remoteType: 'androidPhone' as RemoteType,
           canShowRemote: true,
         };

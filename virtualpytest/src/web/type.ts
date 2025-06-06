@@ -68,7 +68,7 @@ export interface TestCase {
   export interface Device {
     id: string;
     name: string;
-    type: 'android_phone' | 'firetv' | 'appletv' | 'stb_eos' | 'linux' | 'windows' | 'stb';
+    type: 'android_mobile' | 'firetv' | 'appletv' | 'stb_eos' | 'linux' | 'windows' | 'stb';
     model: string;
     version: string;
     environment: 'prod' | 'preprod' | 'dev' | 'staging';

@@ -45,7 +45,7 @@ interface CreateModelDialogProps {
 }
 
 const modelTypes = [
-  'Android Phone',
+  'Android Mobile',
   'Android TV',
   'Android Tablet',
   'iOs Phone',

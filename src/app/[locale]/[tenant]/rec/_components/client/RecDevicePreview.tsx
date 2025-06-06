@@ -287,7 +287,7 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
             <div className="text-center">
               <div className="text-2xl mb-2">{device.type === 'androidTv' ? '📺' : '📱'}</div>
               <div className="text-xs text-gray-500">
-                {device.type === 'androidTv' ? 'Android TV' : 'Android Phone'}
+                {device.type === 'androidTv' ? 'Android TV' : 'Android Mobile'}
               </div>
               <div className="text-xs text-blue-500 mt-1">Click to start stream</div>
             </div>
@@ -449,7 +449,7 @@ export function RecDevicePreview({ device, onClick }: DevicePreviewProps) {
       case 'androidTv':
         return { icon: '📺', label: 'Android TV', status: isStreaming ? 'STREAMING' : 'READY' };
       case 'androidPhone':
-        return { icon: '📱', label: 'Android Phone', status: isStreaming ? 'STREAMING' : 'READY' };
+        return { icon: '📱', label: 'Android Mobile', status: isStreaming ? 'STREAMING' : 'READY' };
       case 'host':
         // Use device_type from database to show Linux/Windows instead of "Host VNC"
         const hostDevice = device as DeviceConfig & { type: 'host'; device_type?: string };
