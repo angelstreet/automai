@@ -20,9 +20,20 @@ export const VerificationTextComparisonDisplay: React.FC<VerificationTextCompari
   languageConfidence,
   onSourceImageClick
 }) => {
+  // Helper function to build complete URL
+  const buildImageUrl = (url: string): string => {
+    if (!url) return '';
+    // If URL already starts with http/https, use it as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Otherwise, prepend localhost
+    return `http://localhost:5009${url}`;
+  };
+
   const handleSourceImageClick = () => {
     if (sourceUrl) {
-      onSourceImageClick(`http://localhost:5009${sourceUrl}`, resultType);
+      onSourceImageClick(buildImageUrl(sourceUrl), resultType);
     }
   };
 
@@ -61,7 +72,7 @@ export const VerificationTextComparisonDisplay: React.FC<VerificationTextCompari
             Source
           </Typography>
           <img
-            src={`http://localhost:5009${sourceUrl}`}
+            src={buildImageUrl(sourceUrl)}
             alt="Source"
             onClick={handleSourceImageClick}
             style={{

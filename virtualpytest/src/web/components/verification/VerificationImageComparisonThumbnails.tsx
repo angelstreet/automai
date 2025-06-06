@@ -20,10 +20,21 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
   imageFilter,
   onImageClick
 }) => {
+  // Helper function to build complete URL
+  const buildImageUrl = (url: string): string => {
+    if (!url) return '';
+    // If URL already starts with http/https, use it as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Otherwise, prepend localhost
+    return `http://localhost:5009${url}`;
+  };
+
   const handleImageClick = () => {
     onImageClick(
-      `http://localhost:5009${sourceUrl}`,
-      `http://localhost:5009${referenceUrl}`,
+      buildImageUrl(sourceUrl),
+      buildImageUrl(referenceUrl),
       userThreshold,
       matchingResult,
       resultType,
@@ -49,7 +60,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
           Source
         </Typography>
         <img
-          src={`http://localhost:5009${sourceUrl}`}
+          src={buildImageUrl(sourceUrl)}
           alt="Source"
           style={{
             width: '100%',
@@ -68,7 +79,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
           Reference
         </Typography>
         <img
-          src={`http://localhost:5009${referenceUrl}`}
+          src={buildImageUrl(referenceUrl)}
           alt="Reference"
           style={{
             width: '100%',

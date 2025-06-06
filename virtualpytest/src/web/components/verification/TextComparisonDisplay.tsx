@@ -20,6 +20,17 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
   languageConfidence,
   onSourceImageClick
 }) => {
+  // Helper function to build complete URL
+  const buildImageUrl = (url: string): string => {
+    if (!url) return '';
+    // If URL already starts with http/https, use it as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Otherwise, prepend localhost
+    return `http://localhost:5009${url}`;
+  };
+
   // Map language codes to readable names
   const getLanguageName = (langCode: string) => {
     const languageMap: { [key: string]: string } = {
@@ -55,7 +66,7 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
             Source
           </Typography>
           <img
-            src={`http://localhost:5009${sourceUrl}`}
+            src={buildImageUrl(sourceUrl)}
             alt="Source"
             onClick={onSourceImageClick}
             style={{
