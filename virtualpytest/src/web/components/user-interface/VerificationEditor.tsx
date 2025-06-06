@@ -338,62 +338,24 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
   };
 
-  const checkReferenceExists = async (referenceName: string, modelName: string, referenceType: 'image' | 'text'): Promise<boolean> => {
-    try {
-      if (referenceType === 'image') {
-        // Check if the image reference already exists by trying to fetch it
-        const response = await fetch(`http://192.168.1.67:5009/api/virtualpytest/reference/image/${modelName}/${referenceName}.png`);
-        return response.ok;
-      } else if (referenceType === 'text') {
-        // Check if text reference exists by fetching the reference list and looking for matching name/model
-        const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/list');
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.references) {
-            return result.references.some((ref: any) => 
-              ref.name === referenceName && 
-              ref.model === modelName && 
-              ref.type === 'text'
-            );
-          }
-        }
-        return false;
-      }
-      return false;
-    } catch (error) {
-      // If there's an error fetching, assume it doesn't exist
-      return false;
-    }
-  };
-
   const handleSaveReference = async () => {
     if (!referenceName.trim() || !selectedArea || !model) {
       console.log('[@component:VerificationEditor] Cannot save: missing reference name, area, or model');
       return;
     }
 
-    // Validate regex for text references before checking existence
+    // Validate regex for text references before saving
     if (referenceType === 'text' && !validateRegex(referenceText)) {
       console.error('[@component:VerificationEditor] Invalid regex pattern:', referenceText);
       return;
     }
 
     try {
-      // Check if reference already exists
-      const exists = await checkReferenceExists(referenceName, model, referenceType);
-      
-      if (exists) {
-        // Show confirmation dialog for both image and text references
-        console.log(`[@component:VerificationEditor] ${referenceType} reference "${referenceName}" already exists, showing confirmation`);
-        setShowConfirmDialog(true);
-        return;
-      }
-
-      // If doesn't exist, proceed with save
+      // Proceed directly with save
       await performSaveReference();
 
     } catch (error) {
-      console.error('[@component:VerificationEditor] Error checking/saving reference:', error);
+      console.error('[@component:VerificationEditor] Error saving reference:', error);
     }
   };
 
