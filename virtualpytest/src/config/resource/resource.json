@@ -1,22 +1,6 @@
 {
   "resources": [
     {
-      "name": "default_text",
-      "model": "android_mobile",
-      "path": "resources/android_mobile/default_text.png",
-      "created_at": "2025-06-03T14:37:33.847091",
-      "type": "text_reference",
-      "area": {
-        "x": 733.8461538461538,
-        "y": 600,
-        "width": 154.6153846153846,
-        "height": 34.61538461538461
-      },
-      "text": "Beliebt im TV",
-      "font_size": 16,
-      "confidence": 0.93
-    },
-    {
       "name": "test_save",
       "model": "android_mobile",
       "path": "resources/android_mobile/test_save.png",
@@ -57,6 +41,22 @@
         "width": 431.5357453559184,
         "height": 285.332378076864
       }
+    },
+    {
+      "name": "default_text",
+      "model": "android_mobile",
+      "path": "resources/android_mobile/default_text.png",
+      "created_at": "2025-06-06T19:20:05.100255",
+      "type": "text_reference",
+      "area": {
+        "x": 711.8800054296186,
+        "y": 596.3024297543097,
+        "width": 214.7522736527759,
+        "height": 37.529523550970545
+      },
+      "text": "Popular on TV",
+      "font_size": 18.666666666666668,
+      "confidence": 95.33333333333333
     }
   ]
 }
