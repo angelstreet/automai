@@ -119,7 +119,13 @@ type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
 type LogSource = 'all' | 'frontend' | 'backend';
 
 const Dashboard: React.FC = () => {
-  const { buildApiUrl } = useRegistration();
+  const { 
+    buildApiUrl, 
+    availableHosts, 
+    fetchHosts, 
+    isLoading: hostsLoading, 
+    error: hostsError 
+  } = useRegistration();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
@@ -127,9 +133,7 @@ const Dashboard: React.FC = () => {
     trees: 0,
     recentActivity: [],
   });
-  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [devicesLoading, setDevicesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   
@@ -144,10 +148,11 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    // Set up auto-refresh for devices every 30 seconds
-    const interval = setInterval(fetchDevicesData, 30000);
+    fetchHosts(); // Use centralized host fetching
+    // Set up auto-refresh for hosts every 30 seconds
+    const interval = setInterval(fetchHosts, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchHosts]);
 
   // Auto-refresh logs
   useEffect(() => {
@@ -170,17 +175,15 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [testCasesRes, campaignsRes, treesRes, devicesRes] = await Promise.all([
+      const [testCasesRes, campaignsRes, treesRes] = await Promise.all([
         fetch(buildApiUrl('/api/testcases')),
         fetch(buildApiUrl('/api/campaigns')),
         fetch(buildApiUrl('/api/navigation/trees')),
-        fetch(buildApiUrl('/api/system/clients')),
       ]);
 
       let testCases: TestCase[] = [];
       let campaigns: Campaign[] = [];
       let trees: Tree[] = [];
-      let devices: ConnectedDevice[] = [];
 
       if (testCasesRes.ok) {
         testCases = await testCasesRes.json();
@@ -195,13 +198,6 @@ const Dashboard: React.FC = () => {
         // The navigation API returns { success: true, data: [...] }
         if (treesResponse.success && treesResponse.data) {
           trees = treesResponse.data;
-        }
-      }
-
-      if (devicesRes.ok) {
-        const devicesResponse = await devicesRes.json();
-        if (devicesResponse.status === 'success' && devicesResponse.clients) {
-          devices = devicesResponse.clients;
         }
       }
 
@@ -230,32 +226,11 @@ const Dashboard: React.FC = () => {
         recentActivity,
       });
       
-      setConnectedDevices(devices);
     } catch (err) {
       setError('Failed to fetch dashboard data');
       addFrontendLog('error', 'Failed to fetch dashboard data', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDevicesData = async () => {
-    try {
-      setDevicesLoading(true);
-      // Use the health check endpoint that also returns connected devices
-      const healthRes = await fetch(buildApiUrl('/api/system/health-with-devices'));
-      
-      if (healthRes.ok) {
-        const healthData = await healthRes.json();
-        if (healthData.success) {
-          setConnectedDevices(healthData.devices || []);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch devices:', err);
-      addFrontendLog('error', 'Failed to fetch devices', err);
-    } finally {
-      setDevicesLoading(false);
     }
   };
 
@@ -546,7 +521,7 @@ const Dashboard: React.FC = () => {
 
   const renderDevicesGrid = () => (
     <Grid container spacing={2}>
-      {connectedDevices.map((device) => (
+      {availableHosts.map((device) => (
         <Grid item xs={12} sm={6} md={4} lg={3} key={device.client_id}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent>
@@ -630,7 +605,7 @@ const Dashboard: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {connectedDevices.map((device) => (
+          {availableHosts.map((device) => (
             <TableRow key={device.client_id} hover>
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
@@ -841,7 +816,7 @@ const Dashboard: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Connected Devices
                   </Typography>
-                  <Typography variant="h4">{connectedDevices.length}</Typography>
+                  <Typography variant="h4">{availableHosts.length}</Typography>
                 </Box>
                 <DevicesIcon color="success" sx={{ fontSize: 40 }} />
               </Box>
@@ -917,7 +892,7 @@ const Dashboard: React.FC = () => {
       <Paper sx={{ p: 2, mt: 3 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
           <Typography variant="h6">
-            Registered Clients ({connectedDevices.length})
+            Registered Clients ({availableHosts.length})
           </Typography>
           <Box display="flex" alignItems="center" gap={1}>
             <ToggleButtonGroup
@@ -939,8 +914,8 @@ const Dashboard: React.FC = () => {
             </ToggleButtonGroup>
             <Tooltip title="Refresh Devices">
               <IconButton 
-                onClick={fetchDevicesData} 
-                disabled={devicesLoading}
+                onClick={fetchHosts} 
+                disabled={hostsLoading}
                 size="small"
               >
                 <RefreshIcon />
@@ -949,13 +924,13 @@ const Dashboard: React.FC = () => {
           </Box>
         </Box>
         
-        {devicesLoading && (
+        {hostsLoading && (
           <Box display="flex" justifyContent="center" py={2}>
             <CircularProgress size={24} />
           </Box>
         )}
         
-        {connectedDevices.length > 0 ? (
+        {availableHosts.length > 0 ? (
           viewMode === 'grid' ? renderDevicesGrid() : renderDevicesTable()
         ) : (
           <Box textAlign="center" py={4}>

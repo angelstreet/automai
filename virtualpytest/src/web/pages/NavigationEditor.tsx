@@ -227,8 +227,17 @@ function CompactRemoteWithSessionTracking({
 }
 
 const NavigationEditorContent: React.FC = () => {
-  // Use registration context for centralized URL management
-  const { buildApiUrl, isRegistered } = useRegistration();
+  // Use registration context for centralized URL management and host data
+  const { 
+    buildApiUrl, 
+    availableHosts, 
+    selectedHost, 
+    setAvailableHosts, 
+    setSelectedHost,
+    selectHostById,
+    buildHostUrl,
+    buildNginxUrl 
+  } = useRegistration();
   
   // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
@@ -315,7 +324,11 @@ const NavigationEditorContent: React.FC = () => {
       
       if (result.success) {
         const registeredDevices = result.devices || [];
+        
+        // Store devices in both local state (for compatibility) and registration context
         setDevices(registeredDevices);
+        setAvailableHosts(registeredDevices);
+        
         console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices`);
       } else {
         throw new Error(result.error || 'Server returned success: false');
@@ -324,10 +337,11 @@ const NavigationEditorContent: React.FC = () => {
     } catch (error: any) {
       console.error('[@component:NavigationEditor] Error fetching registered devices:', error);
       setDevices([]);
+      setAvailableHosts([]);
     } finally {
       setDevicesLoading(false);
     }
-  }, [buildApiUrl]);
+  }, [buildApiUrl, setAvailableHosts]);
 
   useEffect(() => {
     fetchDevices();
@@ -496,7 +510,18 @@ const NavigationEditorContent: React.FC = () => {
     }
     
     setSelectedDevice(device);
-  }, [selectedDevice, isControlActive]);
+    
+    // Also update the registration context with the selected host
+    if (device) {
+      const host = availableHosts.find(h => h.name === device);
+      if (host) {
+        setSelectedHost(host);
+        console.log(`[@component:NavigationEditor] Selected host in context: ${host.name} (${host.local_ip}:${host.client_port})`);
+      }
+    } else {
+      setSelectedHost(null);
+    }
+  }, [selectedDevice, isControlActive, availableHosts, setSelectedHost]);
 
   const handleTakeControl = useCallback(async () => {
     const wasControlActive = isControlActive;

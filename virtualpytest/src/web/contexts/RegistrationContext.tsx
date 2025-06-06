@@ -1,43 +1,73 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface DeviceConnection {
   flask_url: string;
   nginx_url: string;
 }
 
-interface RegisteredClient {
+interface RegisteredHost {
   id: string;
   name: string;
   model: string;
+  description?: string;
   connection: DeviceConnection;
   status: string;
   last_seen: number;
+  registered_at: string;
   capabilities: string[];
-  controller_types: string[];
+  system_stats: {
+    cpu: {
+      percent: number;
+    };
+    memory: {
+      percent: number;
+      used_gb: number;
+      total_gb: number;
+    };
+    disk: {
+      percent: number;
+      used_gb: number;
+      total_gb: number;
+    };
+    timestamp: number;
+    error?: string;
+  };
+  // Legacy fields for compatibility with Dashboard
+  client_id: string;
+  device_model: string;
+  local_ip: string;
+  client_port: string;
+  public_ip: string;
+  controller_types?: string[];
   controller_configs?: any;
 }
 
 interface RegistrationContextType {
-  // Registration state
-  isRegistered: boolean;
-  registrationLoading: boolean;
-  registrationError: string | null;
+  // Host data
+  availableHosts: RegisteredHost[];
+  selectedHost: RegisteredHost | null;
+  isLoading: boolean;
+  error: string | null;
   
-  // Current client info
-  currentClient: RegisteredClient | null;
+  // Data Management
+  fetchHosts: () => Promise<void>;
+  selectHost: (hostId: string) => void;
+  clearSelection: () => void;
   
-  // Available registered clients (for multi-client scenarios)
-  availableClients: RegisteredClient[];
+  // URL Builders (NO hardcoded values)
+  buildServerUrl: (endpoint: string) => string;        // Always to main server
+  buildHostUrl: (hostId: string, endpoint: string) => string;   // To specific host
+  buildNginxUrl: (hostId: string, path: string) => string;      // To host's nginx
   
-  // Connection helpers
-  getFlaskUrl: () => string;
-  getNginxUrl: () => string;
+  // Convenience getters
+  getHostById: (hostId: string) => RegisteredHost | null;
+  getAvailableHosts: () => RegisteredHost[];
+  
+  // Legacy compatibility (for gradual migration)
   buildApiUrl: (endpoint: string) => string;
-  buildNginxUrl: (path: string) => string;
-  
-  // Actions
-  refreshRegistration: () => Promise<void>;
-  selectClient: (clientId: string) => void;
+  setAvailableHosts: (hosts: RegisteredHost[]) => void;
+  setSelectedHost: (host: RegisteredHost | null) => void;
+  selectHostById: (hostId: string) => void;
 }
 
 const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined);
@@ -47,207 +77,165 @@ interface RegistrationProviderProps {
 }
 
 export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ children }) => {
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [registrationLoading, setRegistrationLoading] = useState(true);
-  const [registrationError, setRegistrationError] = useState<string | null>(null);
-  const [currentClient, setCurrentClient] = useState<RegisteredClient | null>(null);
-  const [availableClients, setAvailableClients] = useState<RegisteredClient[]>([]);
+  const [availableHosts, setAvailableHosts] = useState<RegisteredHost[]>([]);
+  const [selectedHost, setSelectedHost] = useState<RegisteredHost | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get server URL from environment with fallback
-  const getServerUrl = useCallback(() => {
-    const serverUrl = process.env.SERVER_URL || 'http://localhost';
-    const serverPort = process.env.SERVER_PORT || '5009';
-    return `${serverUrl}:${serverPort}`;
-  }, []);
+  // Server configuration - client connects directly to server IP
+  // No environment variables needed - server IP is known
+  const SERVER_BASE_URL = 'http://127.0.0.1:5009';
 
-  // Register this client with the server
-  const registerClient = useCallback(async () => {
+  // Fetch hosts from server
+  const fetchHosts = useCallback(async () => {
     try {
-      console.log('[@context:Registration] Starting client registration');
-      setRegistrationLoading(true);
-      setRegistrationError(null);
-
-      const serverUrl = getServerUrl();
+      setIsLoading(true);
+      setError(null);
       
-      // Get client information from environment or generate
-      const clientData = {
-        client_id: process.env.CLIENT_ID || generateClientId(),
-        public_ip: process.env.CLIENT_IP || 'localhost',
-        local_ip: process.env.CLIENT_IP || 'localhost', 
-        client_port: process.env.CLIENT_PORT || '5119',
-        name: process.env.CLIENT_NAME || 'virtualpytest-client',
-        device_model: process.env.DEVICE_MODEL || 'android_mobile',
-        controller_types: ['remote', 'av', 'verification'],
-        capabilities: ['stream', 'capture', 'verification'],
-        status: 'online',
-        system_stats: {
-          cpu: { percent: 0 },
-          memory: { percent: 0, used_gb: 0, total_gb: 0 },
-          disk: { percent: 0, used_gb: 0, total_gb: 0 },
-          timestamp: Date.now() / 1000
-        }
-      };
-
-      console.log(`[@context:Registration] Registering with server: ${serverUrl}`);
+      console.log('[@context:Registration] Fetching hosts from server');
+      const response = await fetch(`${SERVER_BASE_URL}/api/system/clients/devices`);
       
-      const response = await fetch(`${serverUrl}/api/system/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(clientData),
-      });
-
       if (!response.ok) {
-        throw new Error(`Registration failed: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
+      
       const result = await response.json();
       
       if (result.success) {
-        console.log('[@context:Registration] Client registered successfully');
-        setIsRegistered(true);
+        const rawHosts = result.devices || [];
         
-        // Set current client data
-        const clientInfo: RegisteredClient = {
-          id: clientData.client_id,
-          name: clientData.name,
-          model: clientData.device_model,
-          connection: {
-            flask_url: `http://${clientData.local_ip}:${clientData.client_port}`,
-            nginx_url: `https://${clientData.local_ip}:444` // Default nginx port
-          },
-          status: 'online',
-          last_seen: Date.now(),
-          capabilities: clientData.capabilities,
-          controller_types: clientData.controller_types
-        };
+        // Map server response to include legacy fields for Dashboard compatibility
+        const hosts = rawHosts.map((host: any) => ({
+          ...host,
+          // Legacy field mappings for Dashboard compatibility
+          client_id: host.id,
+          device_model: host.model,
+          local_ip: host.connection?.flask_url ? 
+            host.connection.flask_url.replace('http://', '').split(':')[0] : 
+            'unknown',
+          client_port: host.connection?.flask_url ? 
+            host.connection.flask_url.split(':')[2] || '5009' : 
+            '5009',
+          public_ip: host.connection?.flask_url ? 
+            host.connection.flask_url.replace('http://', '').split(':')[0] : 
+            'unknown',
+          // Ensure system_stats has default structure if missing
+          system_stats: host.system_stats || {
+            cpu: { percent: 0 },
+            memory: { percent: 0, used_gb: 0, total_gb: 0 },
+            disk: { percent: 0, used_gb: 0, total_gb: 0 },
+            timestamp: Date.now() / 1000,
+            error: 'Stats not available'
+          }
+        }));
         
-        setCurrentClient(clientInfo);
-        
-        // Also fetch other available clients
-        await fetchAvailableClients();
-        
+        setAvailableHosts(hosts);
+        console.log(`[@context:Registration] Successfully loaded ${hosts.length} hosts`);
       } else {
-        throw new Error(result.error || 'Registration failed');
+        throw new Error(result.error || 'Server returned success: false');
       }
       
-    } catch (error: any) {
-      console.error('[@context:Registration] Registration error:', error);
-      setRegistrationError(error.message);
-      setIsRegistered(false);
+    } catch (err: any) {
+      console.error('[@context:Registration] Error fetching hosts:', err);
+      setError(err.message || 'Failed to fetch hosts');
+      setAvailableHosts([]);
     } finally {
-      setRegistrationLoading(false);
+      setIsLoading(false);
     }
-  }, [getServerUrl]);
+  }, []);
 
-  // Fetch available registered clients
-  const fetchAvailableClients = useCallback(async () => {
-    try {
-      const serverUrl = getServerUrl();
-      const response = await fetch(`${serverUrl}/api/system/clients/devices`);
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setAvailableClients(result.devices || []);
-          console.log(`[@context:Registration] Found ${result.devices?.length || 0} available clients`);
-        }
-      }
-    } catch (error) {
-      console.warn('[@context:Registration] Failed to fetch available clients:', error);
+  // Build server URL (always goes to main server)
+  const buildServerUrl = useCallback((endpoint: string) => {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `${SERVER_BASE_URL}/${cleanEndpoint}`;
+  }, []);
+
+  // Build host URL (goes directly to specific host)
+  const buildHostUrl = useCallback((hostId: string, endpoint: string) => {
+    const host = availableHosts.find(h => h.id === hostId);
+    if (!host) {
+      throw new Error(`Host with ID ${hostId} not found`);
     }
-  }, [getServerUrl]);
-
-  // Generate a simple client ID
-  const generateClientId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  };
-
-  // Connection helper functions
-  const getFlaskUrl = useCallback(() => {
-    if (currentClient?.connection?.flask_url) {
-      return currentClient.connection.flask_url;
-    }
-    return getServerUrl();
-  }, [currentClient?.connection?.flask_url, getServerUrl]);
-
-  const getNginxUrl = useCallback(() => {
-    if (currentClient?.connection?.nginx_url) {
-      return currentClient.connection.nginx_url;
-    }
-    const serverUrl = process.env.SERVER_URL || 'http://localhost';
-    const nginxPort = process.env.NGINX_PORT || '444';
-    return `${serverUrl}:${nginxPort}`;
-  }, [currentClient?.connection?.nginx_url]);
-
-  const buildApiUrl = useCallback((endpoint: string) => {
-    const baseUrl = getFlaskUrl();
+    
+    const baseUrl = host.connection?.flask_url || `http://${host.local_ip}:${host.client_port}`;
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     return `${baseUrl}/${cleanEndpoint}`;
-  }, [getFlaskUrl]);
+  }, [availableHosts]);
 
-  const buildNginxUrl = useCallback((path: string) => {
-    const baseUrl = getNginxUrl();
+  // Build nginx URL (for host media/files)
+  const buildNginxUrl = useCallback((hostId: string, path: string) => {
+    const host = availableHosts.find(h => h.id === hostId);
+    if (!host) {
+      throw new Error(`Host with ID ${hostId} not found`);
+    }
+    
+    const baseUrl = host.connection?.nginx_url || `https://${host.local_ip}:444`;
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${baseUrl}/${cleanPath}`;
-  }, [getNginxUrl]);
+  }, [availableHosts]);
 
-  // Select a different client (for multi-client scenarios)
-  const selectClient = useCallback((clientId: string) => {
-    const client = availableClients.find(c => c.id === clientId);
-    if (client) {
-      setCurrentClient(client);
-      console.log(`[@context:Registration] Selected client: ${client.name}`);
+  // Select host by ID
+  const selectHost = useCallback((hostId: string) => {
+    const host = availableHosts.find(h => h.id === hostId);
+    if (host) {
+      setSelectedHost(host);
+      console.log(`[@context:Registration] Selected host: ${host.name} (${host.local_ip}:${host.client_port})`);
+    } else {
+      console.warn(`[@context:Registration] Host with ID ${hostId} not found`);
     }
-  }, [availableClients]);
+  }, [availableHosts]);
 
-  // Refresh registration and available clients
-  const refreshRegistration = useCallback(async () => {
-    await registerClient();
-  }, [registerClient]);
+  // Clear selection
+  const clearSelection = useCallback(() => {
+    setSelectedHost(null);
+    console.log('[@context:Registration] Cleared host selection');
+  }, []);
 
-  // Register on mount
-  useEffect(() => {
-    registerClient();
-  }, [registerClient]);
+  // Get host by ID
+  const getHostById = useCallback((hostId: string) => {
+    return availableHosts.find(h => h.id === hostId) || null;
+  }, [availableHosts]);
 
-  // Set up periodic ping to maintain registration
-  useEffect(() => {
-    if (!isRegistered) return;
+  // Get all available hosts
+  const getAvailableHosts = useCallback(() => {
+    return availableHosts;
+  }, [availableHosts]);
 
-    const pingInterval = setInterval(async () => {
-      try {
-        const serverUrl = getServerUrl();
-        await fetch(`${serverUrl}/api/system/ping`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            client_id: currentClient?.id
-          }),
-        });
-      } catch (error) {
-        console.warn('[@context:Registration] Ping failed:', error);
-      }
-    }, 30000); // Ping every 30 seconds
+  // Legacy compatibility functions (for gradual migration)
+  const buildApiUrl = useCallback((endpoint: string) => {
+    return buildServerUrl(endpoint);
+  }, [buildServerUrl]);
 
-    return () => clearInterval(pingInterval);
-  }, [isRegistered, currentClient?.id, getServerUrl]);
+  const selectHostById = useCallback((hostId: string) => {
+    selectHost(hostId);
+  }, [selectHost]);
 
   const value: RegistrationContextType = {
-    isRegistered,
-    registrationLoading,
-    registrationError,
-    currentClient,
-    availableClients,
-    getFlaskUrl,
-    getNginxUrl,
-    buildApiUrl,
+    // State
+    availableHosts,
+    selectedHost,
+    isLoading,
+    error,
+    
+    // Data Management
+    fetchHosts,
+    selectHost,
+    clearSelection,
+    
+    // URL Builders
+    buildServerUrl,
+    buildHostUrl,
     buildNginxUrl,
-    refreshRegistration,
-    selectClient,
+    
+    // Convenience getters
+    getHostById,
+    getAvailableHosts,
+    
+    // Legacy compatibility
+    buildApiUrl,
+    setAvailableHosts,
+    setSelectedHost,
+    selectHostById,
   };
 
   return (
