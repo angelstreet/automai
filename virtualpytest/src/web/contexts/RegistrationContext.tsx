@@ -83,8 +83,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [error, setError] = useState<string | null>(null);
 
   // Server configuration - client connects directly to server IP
-  // No environment variables needed - server IP is known
-  const SERVER_BASE_URL = 'http://127.0.0.1:5009';
+  // Use the same IP that hosts connect to for consistency
+  const SERVER_BASE_URL = 'http://77.56.53.130:5009';
 
   // Fetch hosts from server
   const fetchHosts = useCallback(async () => {

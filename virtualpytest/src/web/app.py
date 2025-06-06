@@ -156,7 +156,14 @@ except Exception as e:
     controllers_available = False
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS to allow all origins for development
+CORS(app, 
+     origins="*",  # Allow all origins
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "Accept"],
+     supports_credentials=False  # Set to False when using origins="*"
+)
 
 # Initialize Flask app context variables for client registry
 with app.app_context():
