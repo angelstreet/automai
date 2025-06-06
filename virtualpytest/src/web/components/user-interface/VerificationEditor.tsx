@@ -226,20 +226,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const fetchVerificationActions = async () => {
     try {
-      console.log('[@component:VerificationEditor] Fetching verification actions');
       const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/actions');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('[@component:VerificationEditor] Verification actions fetched:', data);
-      
-      if (data.success) {
-        setVerificationActions(data.verifications);
-      } else {
-        console.error('[@component:VerificationEditor] Failed to fetch verification actions:', data.error);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setVerificationActions(result.verifications);
+        }
       }
     } catch (error) {
       console.error('[@component:VerificationEditor] Error fetching verification actions:', error);
@@ -280,8 +272,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     try {
       let captureResponse;
       
-      // For image type with processing options, use the process-area endpoint
       if (referenceType === 'image' && (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)) {
+        console.log('[@component:VerificationEditor] Using process-area endpoint with processing options');
         captureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/process-area', {
           method: 'POST',
           headers: {
@@ -290,14 +282,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           body: JSON.stringify({
             area: selectedArea,
             source_path: captureSourcePath,
-            reference_name: 'capture', // Always use 'capture' for temporary file
+            reference_name: referenceName,
             model: model,
             autocrop: imageProcessingOptions.autocrop,
-            remove_background: imageProcessingOptions.removeBackground,
+            remove_background: imageProcessingOptions.removeBackground
           }),
         });
       } else {
-        // Standard capture without processing
+        console.log('[@component:VerificationEditor] Using standard capture endpoint');
         captureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/capture', {
           method: 'POST',
           headers: {
@@ -306,8 +298,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           body: JSON.stringify({
             area: selectedArea,
             source_path: captureSourcePath,
-            reference_name: 'capture', // Always use 'capture' for temporary file
-            model: model,
+            reference_name: referenceName,
+            model: model
           }),
         });
       }
@@ -316,10 +308,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       if (result.success) {
         const timestamp = new Date().getTime();
-        // Check if result.image_url is already a complete URL (starts with http:// or https://)
-        const imageUrl = result.image_url.startsWith('http://') || result.image_url.startsWith('https://') 
-          ? `${result.image_url}?t=${timestamp}`
-          : `http://192.168.1.67:5009${result.image_url}?t=${timestamp}`;
+        // Server now returns complete URLs, so use them directly with cache-busting timestamp
+        const imageUrl = `${result.image_url}?t=${timestamp}`;
         console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
         setCapturedReferenceImage(imageUrl);
         setHasCaptured(true);
@@ -411,7 +401,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
       if (referenceType === 'image') {
         // Save image reference
-        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/save', {
+        const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/save', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -822,7 +812,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           // Check if result.preview_url is already a complete URL
           const previewUrl = result.preview_url.startsWith('http://') || result.preview_url.startsWith('https://') 
             ? result.preview_url
-            : `http://192.168.1.67:5009${result.preview_url}`;
+            : `https://77.56.53.130:444${result.preview_url}`;
           console.log('[@component:VerificationEditor] Setting preview from backend response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
@@ -838,7 +828,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           // Check if errorResult.preview_url is already a complete URL
           const previewUrl = errorResult.preview_url.startsWith('http://') || errorResult.preview_url.startsWith('https://') 
             ? errorResult.preview_url
-            : `http://192.168.1.67:5009${errorResult.preview_url}`;
+            : `https://77.56.53.130:444${errorResult.preview_url}`;
           console.log('[@component:VerificationEditor] Setting preview from error response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);

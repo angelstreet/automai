@@ -215,10 +215,13 @@ def capture_reference_image():
                 cropped_path = host_result.get('cropped_path')
                 print(f"[@route:capture_reference_image] Host cropping successful: {cropped_path}")
                 
+                # Convert relative path to full nginx-exposed URL
+                full_image_url = f'https://77.56.53.130:444{cropped_path}'
+                
                 return jsonify({
                     'success': True,
                     'message': f'Reference image cropped on host: {reference_name}',
-                    'image_url': cropped_path
+                    'image_url': full_image_url
                 })
             else:
                 error_msg = host_result.get('error', 'Host cropping failed')
@@ -297,10 +300,13 @@ def process_area_reference():
                 processed_area = host_result.get('processed_area')
                 print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
                 
+                # Convert relative path to full nginx-exposed URL
+                full_image_url = f'https://77.56.53.130:444{cropped_path}'
+                
                 return jsonify({
                     'success': True,
                     'message': f'Reference image processed on host: {reference_name}',
-                    'image_url': cropped_path,
+                    'image_url': full_image_url,
                     'processed_area': processed_area
                 })
             else:
