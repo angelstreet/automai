@@ -17,18 +17,20 @@ from pathlib import Path
 from ..base_controllers import VerificationControllerInterface
 
 
-def crop_reference_image(source_path, target_path, area):
+def crop_reference_image(source_path, target_path, area, create_filtered_versions=True):
     """
-    Crop a reference image from a source image and save it.
+    Crop an image to a specific area and save it.
     
     Args:
-        source_path (str): Path to the source image
-        target_path (str): Path where the cropped image will be saved
-        area (dict): Area to crop {x, y, width, height}
+        source_path: Path to source image
+        target_path: Path to save cropped image
+        area: Dictionary with x, y, width, height coordinates
+        create_filtered_versions: Whether to create greyscale/binary versions (default True)
         
     Returns:
         bool: True if successful, False otherwise
     """
+
     try:
         # Read source image
         img = cv2.imread(source_path)
@@ -60,8 +62,9 @@ def crop_reference_image(source_path, target_path, area):
         
         if result:
             print(f"Reference image saved successfully: {target_path}")
-            # Automatically create greyscale and binary versions
-            _create_filtered_versions(target_path)
+            # Only create filtered versions if requested (for source images, not reference copies)
+            if create_filtered_versions:
+                _create_filtered_versions(target_path)
             return True
         else:
             print(f"Failed to save reference image: {target_path}")
@@ -307,6 +310,54 @@ def process_reference_image(image_path: str, autocrop: bool = False, remove_back
     except Exception as e:
         print(f"[@controller:ImageVerification] Error processing image: {e}")
         raise e
+
+
+def copy_reference_with_filtered_versions(source_path, target_path):
+    """
+    Copy a reference image and its existing filtered versions (greyscale, binary) if they exist.
+    This avoids recreating filtered versions that already exist for saved references.
+    
+    Args:
+        source_path: Path to source reference image
+        target_path: Path to copy reference image to
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        import shutil
+        
+        # Copy the main reference image
+        shutil.copy2(source_path, target_path)
+        print(f"[@controller:ImageVerification] Copied reference image: {source_path} -> {target_path}")
+        
+        # Get base paths for filtered versions
+        source_base, source_ext = os.path.splitext(source_path)
+        target_base, target_ext = os.path.splitext(target_path)
+        
+        # Copy greyscale version if it exists
+        source_greyscale = f"{source_base}_greyscale{source_ext}"
+        target_greyscale = f"{target_base}_greyscale{target_ext}"
+        if os.path.exists(source_greyscale):
+            shutil.copy2(source_greyscale, target_greyscale)
+            print(f"[@controller:ImageVerification] Copied greyscale version: {source_greyscale} -> {target_greyscale}")
+        else:
+            print(f"[@controller:ImageVerification] No greyscale version found at: {source_greyscale}")
+        
+        # Copy binary version if it exists
+        source_binary = f"{source_base}_binary{source_ext}"
+        target_binary = f"{target_base}_binary{target_ext}"
+        if os.path.exists(source_binary):
+            shutil.copy2(source_binary, target_binary)
+            print(f"[@controller:ImageVerification] Copied binary version: {source_binary} -> {target_binary}")
+        else:
+            print(f"[@controller:ImageVerification] No binary version found at: {source_binary}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"[@controller:ImageVerification] Error copying reference with filtered versions: {e}")
+        return False
 
 
 class ImageVerificationController(VerificationControllerInterface):

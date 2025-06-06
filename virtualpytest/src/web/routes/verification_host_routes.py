@@ -677,46 +677,47 @@ def host_execute_verification_batch():
 def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
     """Execute image verification using existing image utilities."""
     try:
-        from controllers.verification.image import crop_reference_image
         import cv2
-        import numpy as np
+        import shutil
+        from controllers.verification.image import copy_reference_with_filtered_versions
         
         params = verification.get('params', {})
         area = params.get('area')
-        
-        # NEW: Get reference name and resolve to actual path
-        reference_name = params.get('reference_image') or params.get('reference_name')
-        image_path = resolve_reference_path(reference_name, model, 'image')
-        
         threshold = params.get('threshold', 0.8)
         image_filter = params.get('image_filter', 'none')
+        reference_name = verification.get('inputValue', '')
         
         print(f"[@route:execute_image_verification_host] Reference name: {reference_name}")
-        print(f"[@route:execute_image_verification_host] Resolved path: {image_path}")
+        print(f"[@route:execute_image_verification_host] Image filter: {image_filter}")
         print(f"[@route:execute_image_verification_host] Area: {area}")
         print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
         
-        # Validate reference image
         if not reference_name:
             return {
                 'success': False,
                 'error': 'No reference image specified'
             }
-            
-        if not image_path or not os.path.exists(image_path):
+        
+        # Resolve reference image path
+        image_path = resolve_reference_path(reference_name, model, 'image')
+        if not image_path:
             return {
                 'success': False,
                 'error': f'Reference image not found: {reference_name}'
             }
         
-        # Create result file paths
+        print(f"[@route:execute_image_verification_host] Resolved path: {image_path}")
+        
+        # Create result file paths in stream directory
         source_result_path = f'{results_dir}/source_image_{verification_index}.png'
         reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
         overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
         
-        # Crop source image to area if specified
+        # === STEP 1: Handle Source Image ===
+        # Crop source image to area if specified (always crop for source)
         if area:
-            success = crop_reference_image(source_path, source_result_path, area)
+            # Use the updated function that doesn't create filtered versions automatically
+            success = crop_reference_image(source_path, source_result_path, area, create_filtered_versions=False)
             if not success:
                 return {
                     'success': False,
@@ -726,11 +727,33 @@ def execute_image_verification_host(verification, source_path, model, verificati
             # Copy full source image
             shutil.copy2(source_path, source_result_path)
         
-        # Copy reference image for comparison
-        shutil.copy2(image_path, reference_result_path)
+        # Apply filter to source image if user selected one
+        if image_filter and image_filter != 'none':
+            print(f"[@route:execute_image_verification_host] Applying {image_filter} filter to source image")
+            from controllers.verification.image import apply_image_filter
+            if not apply_image_filter(source_result_path, image_filter):
+                print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to source")
         
-        # Initialize image verification controller (simplified)
-        # For now, use basic template matching with OpenCV
+        # === STEP 2: Handle Reference Image ===
+        # Copy reference image and its existing filtered versions to stream directory
+        if image_filter and image_filter != 'none':
+            # User wants filtered comparison - check if filtered reference exists
+            base_path, ext = os.path.splitext(image_path)
+            filtered_reference_path = f"{base_path}_{image_filter}{ext}"
+            
+            if os.path.exists(filtered_reference_path):
+                print(f"[@route:execute_image_verification_host] Using existing filtered reference: {filtered_reference_path}")
+                shutil.copy2(filtered_reference_path, reference_result_path)
+            else:
+                print(f"[@route:execute_image_verification_host] Filtered reference not found, using original: {image_path}")
+                shutil.copy2(image_path, reference_result_path)
+        else:
+            # User wants original comparison - use original reference
+            print(f"[@route:execute_image_verification_host] Using original reference: {image_path}")
+            shutil.copy2(image_path, reference_result_path)
+        
+        # === STEP 3: Perform Verification ===
+        # Load both images for comparison
         source_img = cv2.imread(source_result_path)
         ref_img = cv2.imread(reference_result_path)
         
@@ -740,12 +763,19 @@ def execute_image_verification_host(verification, source_path, model, verificati
                 'error': 'Failed to load images for comparison'
             }
         
+        print(f"[@route:execute_image_verification_host] Source image shape: {source_img.shape}")
+        print(f"[@route:execute_image_verification_host] Reference image shape: {ref_img.shape}")
+        
         # Perform template matching
         result_match = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_match)
         
         # Check if match exceeds threshold
         verification_success = max_val >= threshold
+        
+        print(f"[@route:execute_image_verification_host] Template matching confidence: {max_val:.4f}")
+        print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
+        print(f"[@route:execute_image_verification_host] Verification result: {verification_success}")
         
         # Create result overlay image
         overlay_img = source_img.copy()

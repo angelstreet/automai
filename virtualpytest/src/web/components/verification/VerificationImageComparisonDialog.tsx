@@ -33,214 +33,194 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
   const [sourceImageDimensions, setSourceImageDimensions] = useState<{width: number, height: number} | null>(null);
   const [referenceImageDimensions, setReferenceImageDimensions] = useState<{width: number, height: number} | null>(null);
 
+  const getResultColor = () => {
+    switch (resultType) {
+      case 'PASS': return '#4caf50';
+      case 'FAIL': return '#f44336';
+      case 'ERROR': return '#ff9800';
+      default: return '#757575';
+    }
+  };
+
   const handleSourceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.target as HTMLImageElement;
-    setSourceImageDimensions({
-      width: img.naturalWidth,
-      height: img.naturalHeight
-    });
-    console.log('[@component:VerificationImageComparisonDialog] Source image loaded:', {
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      aspectRatio: img.naturalWidth / img.naturalHeight
-    });
+    setSourceImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    console.log(`[@component:VerificationImageComparisonDialog] Source image loaded: ${img.naturalWidth}x${img.naturalHeight}`);
   };
 
   const handleReferenceImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.target as HTMLImageElement;
-    setReferenceImageDimensions({
-      width: img.naturalWidth,
-      height: img.naturalHeight
-    });
-    console.log('[@component:VerificationImageComparisonDialog] Reference image loaded:', {
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      aspectRatio: img.naturalWidth / img.naturalHeight
-    });
+    setReferenceImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    console.log(`[@component:VerificationImageComparisonDialog] Reference image loaded: ${img.naturalWidth}x${img.naturalHeight}`);
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="xl"
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
       fullWidth
       PaperProps={{
         sx: {
-          backgroundColor: '#2E2E2E',
-          color: '#ffffff',
-          maxWidth: '95vw',
-          maxHeight: '95vh'
+          minHeight: '80vh',
+          maxHeight: '90vh'
         }
       }}
     >
-      <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem', textAlign: 'center' }}>
-        {userThreshold !== undefined || matchingResult !== undefined ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {userThreshold !== undefined && (
-                <Typography component="span" sx={{ fontSize: '0.9rem' }}>
-                  Threshold: {(userThreshold * 100).toFixed(1)}%
-                </Typography>
-              )}
-              {matchingResult !== undefined && (
-                <Typography component="span" sx={{ 
-                  fontSize: '0.9rem',
-                  color: resultType === 'PASS' ? '#4caf50' : '#f44336',
-                  fontWeight: 600
-                }}>
-                  Matching: {(matchingResult * 100).toFixed(1)}%
-                </Typography>
-              )}
-              {resultType && (
-                <Typography component="span" sx={{ 
-                  color: resultType === 'PASS' ? '#4caf50' : 
-                        resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                  fontWeight: 600,
-                  fontSize: '0.9rem'
-                }}>
-                  [{resultType}]
-                </Typography>
-              )}
-            </Box>
-            {imageFilter && imageFilter !== 'none' && (
-              <Typography component="span" sx={{ 
-                color: '#90caf9',
-                fontWeight: 500,
-                fontSize: '0.8rem'
-              }}>
-                Filter: {imageFilter}
-              </Typography>
-            )}
-            {/* Show image dimensions for debugging */}
-            {(sourceImageDimensions || referenceImageDimensions) && (
-              <Box sx={{ display: 'flex', gap: 2, fontSize: '0.7rem', color: '#ccc' }}>
-                {sourceImageDimensions && (
-                  <Typography component="span" sx={{ fontSize: '0.7rem' }}>
-                    Source: {sourceImageDimensions.width}×{sourceImageDimensions.height}
-                  </Typography>
-                )}
-                {referenceImageDimensions && (
-                  <Typography component="span" sx={{ fontSize: '0.7rem' }}>
-                    Reference: {referenceImageDimensions.width}×{referenceImageDimensions.height}
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </Box>
-        ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-            <Typography component="span">
-              {referenceUrl ? 'Image Comparison' : 'Text Verification'}
-            </Typography>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            Image Verification Comparison
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {resultType && (
-              <Typography component="span" sx={{ 
-                color: resultType === 'PASS' ? '#4caf50' : 
-                      resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                fontWeight: 600,
-                fontSize: '0.9rem'
-              }}>
-                [{resultType}]
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  color: getResultColor(), 
+                  fontWeight: 'bold',
+                  padding: '4px 8px',
+                  border: `2px solid ${getResultColor()}`,
+                  borderRadius: 1
+                }}
+              >
+                {resultType}
+              </Typography>
+            )}
+            {matchingResult !== undefined && (
+              <Typography variant="subtitle2" sx={{ color: '#666' }}>
+                Confidence: {(matchingResult * 100).toFixed(1)}%
               </Typography>
             )}
           </Box>
-        )}
+        </Box>
       </DialogTitle>
-      <DialogContent sx={{ p: 2 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          alignItems: 'flex-start', // Changed from 'flex-start' to allow different heights
-          justifyContent: 'center',
-          width: '100%'
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            flex: 1,
-            maxWidth: referenceUrl ? '50%' : '100%' // Take full width if no reference
-          }}>
-            {referenceUrl && (
-              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                Source
-              </Typography>
-            )}
-            <Box sx={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              border: '2px solid #666',
-              borderRadius: '8px',
-              backgroundColor: '#000', // Black background to show image bounds
-              overflow: 'hidden'
-            }}>
+      
+      <DialogContent sx={{ padding: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, height: '100%', minHeight: '400px' }}>
+          {/* Source Image */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+              Source Image
+            </Typography>
+            <Box 
+              sx={{ 
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #ddd',
+                borderRadius: 1,
+                backgroundColor: '#f9f9f9',
+                minHeight: '300px',
+                overflow: 'hidden'
+              }}
+            >
               <img
                 src={sourceUrl}
-                alt="Source Image"
+                alt="Source"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '70vh',
-                  height: 'auto', // Let height adjust to maintain aspect ratio
-                  objectFit: 'contain',
-                  display: 'block'
+                  maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain'
                 }}
                 onLoad={handleSourceImageLoad}
+                onError={(e) => {
+                  console.error('[@component:VerificationImageComparisonDialog] Failed to load source image:', sourceUrl);
+                }}
               />
             </Box>
-          </Box>
-          {referenceUrl && (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              flex: 1,
-              maxWidth: '50%'
-            }}>
-              <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
-                Reference
+            {sourceImageDimensions && (
+              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
+                Dimensions: {sourceImageDimensions.width} × {sourceImageDimensions.height}
+                <br />
+                Aspect Ratio: {(sourceImageDimensions.width / sourceImageDimensions.height).toFixed(2)}
               </Typography>
-              <Box sx={{
-                width: '100%',
+            )}
+          </Box>
+
+          {/* Reference Image */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+              Reference Image
+            </Typography>
+            <Box 
+              sx={{ 
+                flex: 1,
                 display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #666',
-                borderRadius: '8px',
-                backgroundColor: '#000', // Black background to show image bounds
+                border: '2px solid #ddd',
+                borderRadius: 1,
+                backgroundColor: '#f9f9f9',
+                minHeight: '300px',
                 overflow: 'hidden'
-              }}>
-                <img
-                  src={referenceUrl}
-                  alt="Reference Image"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '70vh',
-                    height: 'auto', // Let height adjust to maintain aspect ratio
-                    objectFit: 'contain',
-                    display: 'block'
-                  }}
-                  onLoad={handleReferenceImageLoad}
-                />
-              </Box>
+              }}
+            >
+              <img
+                src={referenceUrl}
+                alt="Reference"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain'
+                }}
+                onLoad={handleReferenceImageLoad}
+                onError={(e) => {
+                  console.error('[@component:VerificationImageComparisonDialog] Failed to load reference image:', referenceUrl);
+                }}
+              />
             </Box>
-          )}
+            {referenceImageDimensions && (
+              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
+                Dimensions: {referenceImageDimensions.width} × {referenceImageDimensions.height}
+                <br />
+                Aspect Ratio: {(referenceImageDimensions.width / referenceImageDimensions.height).toFixed(2)}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        {/* Additional Information */}
+        <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            Verification Details:
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
+            {userThreshold !== undefined && (
+              <Typography variant="body2">
+                <strong>Threshold:</strong> {(userThreshold * 100).toFixed(1)}%
+              </Typography>
+            )}
+            {matchingResult !== undefined && (
+              <Typography variant="body2">
+                <strong>Match Confidence:</strong> {(matchingResult * 100).toFixed(1)}%
+              </Typography>
+            )}
+            {imageFilter && imageFilter !== 'none' && (
+              <Typography variant="body2">
+                <strong>Image Filter:</strong> {imageFilter}
+              </Typography>
+            )}
+            {sourceImageDimensions && referenceImageDimensions && (
+              <Typography variant="body2">
+                <strong>Dimensions Match:</strong> {
+                  sourceImageDimensions.width === referenceImageDimensions.width && 
+                  sourceImageDimensions.height === referenceImageDimensions.height 
+                    ? 'Yes' : 'No'
+                }
+              </Typography>
+            )}
+          </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
-        <Button 
-          onClick={onClose}
-          variant="outlined"
-          size="small"
-          sx={{
-            borderColor: '#666',
-            color: '#ffffff',
-            fontSize: '0.75rem',
-            '&:hover': {
-              borderColor: '#888',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-            }
-          }}
-        >
+      
+      <DialogActions>
+        <Button onClick={onClose} variant="contained">
           Close
         </Button>
       </DialogActions>
