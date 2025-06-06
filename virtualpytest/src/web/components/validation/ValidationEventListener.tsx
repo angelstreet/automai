@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 export const ValidationEvents = {
   OPEN_PREVIEW: 'VALIDATION_OPEN_PREVIEW',
@@ -11,12 +11,13 @@ export const ValidationEvents = {
 };
 
 export default function ValidationEventListener() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleValidationComplete = () => {
       console.log('[@component:ValidationEventListener] Validation completed, refreshing route');
-      router.refresh();
+      // In React Router, we can navigate to current location to refresh
+      window.location.reload();
     };
 
     window.addEventListener(ValidationEvents.VALIDATION_COMPLETE, handleValidationComplete);
@@ -24,7 +25,7 @@ export default function ValidationEventListener() {
     return () => {
       window.removeEventListener(ValidationEvents.VALIDATION_COMPLETE, handleValidationComplete);
     };
-  }, [router]);
+  }, [navigate]);
 
   return null;
 } 
