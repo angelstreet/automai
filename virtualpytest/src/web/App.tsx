@@ -22,7 +22,7 @@ import TestCaseEditor from './pages/TestCaseEditor';
 import NavigationEditor from './pages/NavigationEditor';
 
 // Import navigation components
-import NavigationBar from './components/Navigation/NavigationBar';
+import NavigationBar from './components/navigation/NavigationBar';
 import ThemeToggle from './components/ThemeToggle';
 import Footer from './components/Footer';
 
