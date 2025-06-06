@@ -430,6 +430,59 @@ def list_clients():
         print(f"❌ Error listing clients: {e}")
         return jsonify({'error': str(e)}), 500
 
+@system_bp.route('/api/system/clients/devices', methods=['GET'])
+def list_clients_as_devices():
+    """Return registered clients in device-compatible format for NavigationEditor"""
+    try:
+        connected_clients = get_connected_clients()
+        
+        # Clean up stale clients (not seen for more than 2 minutes)
+        current_time = time.time()
+        stale_clients = []
+        
+        for client_id, client_info in connected_clients.items():
+            if current_time - client_info.get('last_seen', 0) > 120:  # 2 minutes
+                stale_clients.append(client_id)
+        
+        # Remove stale clients
+        for client_id in stale_clients:
+            remove_client(client_id)
+        
+        # Convert clients to device-compatible format
+        devices = []
+        for client_id, client_info in connected_clients.items():
+            if client_info.get('status') == 'online':
+                local_ip = client_info.get('local_ip')
+                client_port = client_info.get('client_port')
+                
+                devices.append({
+                    'id': client_id,
+                    'name': client_info.get('name'),
+                    'model': client_info.get('device_model'),
+                    'description': f"Registered client: {client_info.get('name')}",
+                    'connection': {
+                        'flask_url': f"http://{local_ip}:{client_port}",
+                        'nginx_url': f"https://{local_ip}:444"
+                    },
+                    'status': 'online',
+                    'last_seen': client_info.get('last_seen'),
+                    'registered_at': client_info.get('registered_at'),
+                    'capabilities': client_info.get('capabilities', []),
+                    'system_stats': client_info.get('system_stats', {})
+                })
+        
+        print(f"📱 [DEVICES] Returning {len(devices)} online devices from registered clients")
+        
+        return jsonify({
+            'success': True,
+            'devices': devices,
+            'total_devices': len(devices)
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [DEVICES] Error listing clients as devices: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @system_bp.route('/api/system/client/<device_model>', methods=['GET'])
 def get_client_by_device_model(device_model):
     """Get available client for specific device model"""

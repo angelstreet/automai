@@ -54,6 +54,11 @@ interface ScreenDefinitionEditorProps {
   onDisconnectComplete?: () => void;
   /** Custom styling */
   sx?: any;
+  /** Device connection information for dynamic endpoints */
+  deviceConnection?: {
+    flask_url: string;    // e.g., "http://192.168.1.67:5119"
+    nginx_url: string;    // e.g., "https://192.168.1.67:444"
+  };
 }
 
 interface CaptureStats {
@@ -124,7 +129,8 @@ export function ScreenDefinitionEditor({
   deviceModel,
   autoConnect = false,
   onDisconnectComplete,
-  sx = {}
+  sx = {},
+  deviceConnection,
 }: ScreenDefinitionEditorProps) {
   // Debug parent component re-renders
   useEffect(() => {
@@ -926,6 +932,7 @@ export function ScreenDefinitionEditor({
               videoFramesPath={videoFramesPath}
               totalFrames={totalFrames}
               currentFrame={currentFrame}
+              deviceConnection={deviceConnection}
               sx={{
                 backgroundColor: '#1E1E1E',
                 borderRadius: '0 1px 1px 0',

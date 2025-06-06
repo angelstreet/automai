@@ -141,6 +141,11 @@ interface VerificationEditorProps {
   sx?: any;
   onReferenceSaved?: (referenceName: string) => void;
   layoutConfig?: VerificationEditorLayoutConfig; // Allow direct override if needed
+  // Device connection information
+  deviceConnection?: {
+    flask_url: string;    // e.g., "http://192.168.1.67:5119"
+    nginx_url: string;    // e.g., "https://192.168.1.67:444"
+  };
 }
 
 export const VerificationEditor: React.FC<VerificationEditorProps> = ({
@@ -164,6 +169,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   sx = {},
   onReferenceSaved,
   layoutConfig,
+  // Device connection information
+  deviceConnection,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
@@ -209,6 +216,34 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     name: string;
     type: 'image' | 'text';
   } | null>(null);
+
+  // Helper function to get the appropriate base URL for API calls
+  const getBaseUrl = () => {
+    if (deviceConnection?.flask_url) {
+      console.log(`[@component:VerificationEditor] Using device connection: ${deviceConnection.flask_url}`);
+      return deviceConnection.flask_url;
+    }
+    // Fallback to localhost for backward compatibility
+    const fallbackUrl = 'http://localhost:5009';
+    console.log(`[@component:VerificationEditor] No device connection provided, using fallback: ${fallbackUrl}`);
+    return fallbackUrl;
+  };
+
+  // Helper function to convert Flask HTTP URLs to Nginx HTTPS URLs
+  const convertToNginxUrl = (flaskUrl: string) => {
+    if (deviceConnection?.nginx_url) {
+      try {
+        const path = new URL(flaskUrl).pathname;
+        const nginxUrl = `${deviceConnection.nginx_url}${path}`;
+        console.log(`[@component:VerificationEditor] Converting Flask URL to Nginx: ${flaskUrl} -> ${nginxUrl}`);
+        return nginxUrl;
+      } catch (error) {
+        console.error(`[@component:VerificationEditor] Error converting URL: ${error}`);
+        return flaskUrl;
+      }
+    }
+    return flaskUrl;
+  };
 
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = useMemo(() => {
@@ -273,7 +308,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const fetchVerificationActions = async () => {
     try {
-      const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/actions');
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/virtualpytest/verification/actions`);
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
@@ -304,7 +340,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     if (referenceData && referenceData.type === 'image') {
       try {
         // Use existing server route to ensure the reference is available in stream directory
-        const ensureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/ensure-stream-availability', {
+        const baseUrl = getBaseUrl();
+        const ensureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/ensure-stream-availability`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -434,10 +471,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
     try {
       let captureResponse;
+      const baseUrl = getBaseUrl();
       
       if (referenceType === 'image' && (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)) {
         console.log('[@component:VerificationEditor] Using process-area endpoint with processing options');
-        captureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/process-area', {
+        captureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/process-area`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -453,7 +491,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         });
       } else {
         console.log('[@component:VerificationEditor] Using standard capture endpoint');
-        captureResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/capture', {
+        captureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/capture`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -547,7 +585,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         console.log('[@component:VerificationEditor] Image save payload:', savePayload);
         
-        const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/save', {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/api/virtualpytest/reference/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -582,7 +621,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         
         console.log('[@component:VerificationEditor] Text save payload:', savePayload);
         
-        const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/text/save', {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -738,7 +778,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       console.log('[@component:VerificationEditor] Batch execution payload:', batchPayload);
 
       // Execute batch verification with specific capture
-      const batchResponse = await fetch('http://192.168.1.67:5009/api/virtualpytest/verification/execute-batch', {
+      const baseUrl = getBaseUrl();
+      const batchResponse = await fetch(`${baseUrl}/api/virtualpytest/verification/execute-batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -860,7 +901,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     try {
       console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
       
-      const response = await fetch('http://192.168.1.67:5009/api/virtualpytest/reference/text/auto-detect', {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/auto-detect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -894,7 +936,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           // Check if result.preview_url is already a complete URL
           const previewUrl = result.preview_url.startsWith('http://') || result.preview_url.startsWith('https://') 
             ? result.preview_url
-            : `https://77.56.53.130:444${result.preview_url}`;
+            : convertToNginxUrl(result.preview_url);
           console.log('[@component:VerificationEditor] Setting preview from backend response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
@@ -910,7 +952,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           // Check if errorResult.preview_url is already a complete URL
           const previewUrl = errorResult.preview_url.startsWith('http://') || errorResult.preview_url.startsWith('https://') 
             ? errorResult.preview_url
-            : `https://77.56.53.130:444${errorResult.preview_url}`;
+            : convertToNginxUrl(errorResult.preview_url);
           console.log('[@component:VerificationEditor] Setting preview from error response:', previewUrl);
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);

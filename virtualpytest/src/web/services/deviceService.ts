@@ -12,6 +12,16 @@ export interface Device {
   controller_configs?: any; // JSONB data for controller configurations
   created_at: string;
   updated_at: string;
+  // Connection information for registered clients
+  connection?: {
+    flask_url: string;    // e.g., "http://192.168.1.67:5119"
+    nginx_url: string;    // e.g., "https://192.168.1.67:444"
+  };
+  status?: string;
+  last_seen?: number;
+  registered_at?: string;
+  capabilities?: string[];
+  system_stats?: any;
 }
 
 export interface DeviceCreatePayload {

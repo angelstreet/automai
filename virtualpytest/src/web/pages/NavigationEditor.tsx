@@ -290,14 +290,24 @@ const NavigationEditorContent: React.FC = () => {
 
   // Fetch devices
   const fetchDevices = useCallback(async () => {
-    console.log('[@component:NavigationEditor] Fetching devices');
+    console.log('[@component:NavigationEditor] Fetching registered devices from server');
     try {
       setDevicesLoading(true);
-      const fetchedDevices = await deviceApi.getAllDevices();
-      setDevices(fetchedDevices);
-      console.log(`[@component:NavigationEditor] Successfully loaded ${fetchedDevices.length} devices`);
+      
+      // Fetch registered clients as devices instead of using device database
+      const response = await fetch('http://localhost:5009/api/system/clients/devices');
+      const result = await response.json();
+      
+      if (result.success) {
+        const registeredDevices = result.devices || [];
+        setDevices(registeredDevices);
+        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices`);
+      } else {
+        console.error('[@component:NavigationEditor] Failed to fetch registered devices:', result.error);
+        setDevices([]);
+      }
     } catch (error: any) {
-      console.error('[@component:NavigationEditor] Error fetching devices:', error);
+      console.error('[@component:NavigationEditor] Error fetching registered devices:', error);
       setDevices([]);
     } finally {
       setDevicesLoading(false);
@@ -1239,6 +1249,10 @@ const NavigationEditorContent: React.FC = () => {
                   deviceConfig={selectedDeviceData.controller_configs}
                   deviceModel={selectedDeviceData.model}
                   autoConnect={true}
+                  deviceConnection={{
+                    flask_url: selectedDeviceData.connection?.flask_url || `http://localhost:5009`,
+                    nginx_url: selectedDeviceData.connection?.nginx_url || `https://localhost:444`
+                  }}
                   onDisconnectComplete={() => {
                     // Called when screen definition editor disconnects
                     console.log('[@component:NavigationEditor] Screen definition editor disconnected');
