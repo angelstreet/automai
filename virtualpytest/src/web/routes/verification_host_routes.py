@@ -260,6 +260,33 @@ def host_save_resource():
                 'error': f'Source cropped file not found: {cropped_filename}'
             }), 404
         
+        # Git operations using GitPython
+        try:
+            import git
+            
+            # Use simple relative path to git repository root
+            repo_path = "../../../"
+            print(f"[@route:host_save_resource] Using git repository: {repo_path}")
+            
+            # Open the git repository
+            repo = git.Repo(repo_path)
+            
+            # Step 1: Git pull FIRST - before modifying any files
+            print(f"[@route:host_save_resource] Executing git pull to get server changes...")
+            try:
+                origin = repo.remotes.origin
+                origin.pull()
+                print(f"[@route:host_save_resource] Git pull successful")
+            except Exception as pull_error:
+                print(f"[@route:host_save_resource] Git pull failed: {str(pull_error)}")
+                # Continue anyway - we'll try to commit our changes
+        
+        except ImportError:
+            print(f"[@route:host_save_resource] GitPython not available, skipping git operations")
+        except Exception as e:
+            print(f"[@route:host_save_resource] Git operation error: {str(e)} - continuing anyway")
+        
+        # Step 2: NOW modify files (copy images and update resource.json)
         # Create directories if they don't exist
         os.makedirs(repo_resources_dir, exist_ok=True)
         os.makedirs(nginx_resources_dir, exist_ok=True)
@@ -312,28 +339,12 @@ def host_save_resource():
                 'error': f'Failed to update resource.json: {str(e)}'
             }), 500
         
-        # Git operations using GitPython
+        # Step 3: Git add, commit, and push the changes
         try:
             import git
+            repo = git.Repo("../../../")
             
-            # Use simple relative path to git repository root
-            repo_path = "../../../"
-            print(f"[@route:host_save_resource] Using git repository: {repo_path}")
-            
-            # Open the git repository
-            repo = git.Repo(repo_path)
-            
-            # Step 1: Git pull first to get any server changes
-            print(f"[@route:host_save_resource] Executing git pull to get server changes...")
-            try:
-                origin = repo.remotes.origin
-                origin.pull()
-                print(f"[@route:host_save_resource] Git pull successful")
-            except Exception as pull_error:
-                print(f"[@route:host_save_resource] Git pull failed: {str(pull_error)}")
-                # Continue anyway - we'll try to commit our changes
-            
-            # Step 2: Add files to git index
+            # Add files to git index
             print(f"[@route:host_save_resource] Adding files to git...")
             try:
                 # Add the resource image (relative to repo root)
@@ -348,7 +359,7 @@ def host_save_resource():
             except Exception as add_error:
                 print(f"[@route:host_save_resource] Git add failed: {str(add_error)}")
             
-            # Step 3: Git commit
+            # Git commit
             commit_message = f"save resource {reference_name} for model {model}"
             print(f"[@route:host_save_resource] Committing changes...")
             try:
@@ -357,34 +368,18 @@ def host_save_resource():
             except Exception as commit_error:
                 print(f"[@route:host_save_resource] Git commit failed: {str(commit_error)}")
             
-            # Step 4: Git push - with timeout to prevent hanging
+            # Git push - simple version without signal timeout
             print(f"[@route:host_save_resource] Pushing to remote...")
             try:
-                # Set a timeout to prevent hanging on credentials
-                import signal
-                
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("Git push timed out")
-                
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(10)  # 10 second timeout
-                
                 origin = repo.remotes.origin
                 origin.push()
-                signal.alarm(0)  # Cancel timeout
                 print(f"[@route:host_save_resource] Git push successful")
-                
-            except TimeoutError:
-                print(f"[@route:host_save_resource] Git push timed out (likely waiting for credentials)")
-                print(f"[@route:host_save_resource] Changes committed locally - manual push required")
             except Exception as push_error:
                 print(f"[@route:host_save_resource] Git push failed: {str(push_error)}")
-                print(f"[@route:host_save_resource] Changes committed locally - manual push required")
+                print(f"[@route:host_save_resource] Changes committed locally - manual push may be required")
             
             print(f"[@route:host_save_resource] Git operations completed")
             
-        except ImportError:
-            print(f"[@route:host_save_resource] GitPython not available, skipping git operations")
         except Exception as e:
             print(f"[@route:host_save_resource] Git operation error: {str(e)} - continuing anyway")
         
