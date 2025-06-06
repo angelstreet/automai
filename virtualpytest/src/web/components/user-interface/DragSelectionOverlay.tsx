@@ -24,6 +24,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [currentDrag, setCurrentDrag] = useState<DragArea | null>(null);
+  const [isHoveringImage, setIsHoveringImage] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const getImageBounds = useCallback(() => {
@@ -90,26 +91,34 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
   }, [imageRef, getImageBounds]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStart || !imageRef.current) return;
+    if (!imageRef.current) return;
     
     const bounds = getImageBounds();
     if (!bounds) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     
-    // Constrain mouse to image bounds
-    x = Math.max(bounds.left, Math.min(bounds.left + bounds.width, x));
-    y = Math.max(bounds.top, Math.min(bounds.top + bounds.height, y));
+    // Check if hovering over image area
+    const isOverImage = x >= bounds.left && x <= bounds.left + bounds.width && 
+                       y >= bounds.top && y <= bounds.top + bounds.height;
+    setIsHoveringImage(isOverImage);
+    
+    // Handle dragging logic only if currently dragging
+    if (!isDragging || !dragStart) return;
+    
+    // Constrain mouse to image bounds during drag
+    const constrainedX = Math.max(bounds.left, Math.min(bounds.left + bounds.width, x));
+    const constrainedY = Math.max(bounds.top, Math.min(bounds.top + bounds.height, y));
     
     const startX = Math.max(bounds.left, Math.min(bounds.left + bounds.width, dragStart.x));
     const startY = Math.max(bounds.top, Math.min(bounds.top + bounds.height, dragStart.y));
     
-    const left = Math.min(startX, x) - bounds.left;
-    const top = Math.min(startY, y) - bounds.top;
-    const width = Math.abs(x - startX);
-    const height = Math.abs(y - startY);
+    const left = Math.min(startX, constrainedX) - bounds.left;
+    const top = Math.min(startY, constrainedY) - bounds.top;
+    const width = Math.abs(constrainedX - startX);
+    const height = Math.abs(constrainedY - startY);
     
     // Minimum size constraint
     if (width >= 10 && height >= 10) {
@@ -163,9 +172,9 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        cursor: isDragging ? 'crosshair' : 'default',
+        cursor: isDragging ? 'crosshair' : (isHoveringImage ? 'crosshair' : 'default'),
         userSelect: 'none',
-        pointerEvents: isDragging ? 'auto' : 'none', // Only capture events when dragging
+        pointerEvents: 'auto', // Always allow pointer events
         zIndex: 5,
         ...sx
       }}
@@ -173,23 +182,6 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* Invisible dragging area - only active when not dragging to allow initial click */}
-      {!isDragging && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            pointerEvents: 'auto',
-            cursor: 'crosshair',
-            zIndex: 1
-          }}
-          onMouseDown={handleMouseDown}
-        />
-      )}
-      
       {/* Selection rectangle */}
       {displayArea && getImageBounds() && (
         <Box

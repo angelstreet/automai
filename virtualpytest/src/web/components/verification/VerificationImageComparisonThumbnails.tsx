@@ -52,12 +52,8 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
         border: `2px solid ${getResultColor()}`,
         borderRadius: 1,
         padding: 1,
-        backgroundColor: '#f5f5f5'
       }}
     >
-      <Typography variant="caption" sx={{ color: getResultColor(), fontWeight: 'bold', mb: 1, display: 'block' }}>
-        {resultType} {matchingResult !== undefined && `(${(matchingResult * 100).toFixed(1)}%)`}
-      </Typography>
       
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         {/* Source Image */}
@@ -147,11 +143,6 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
 
       {/* Additional Info */}
       <Box sx={{ mt: 1, textAlign: 'center' }}>
-        {userThreshold !== undefined && (
-          <Typography variant="caption" sx={{ display: 'block', color: '#666' }}>
-            Threshold: {(userThreshold * 100).toFixed(1)}%
-          </Typography>
-        )}
         {imageFilter && imageFilter !== 'none' && (
           <Typography variant="caption" sx={{ display: 'block', color: '#666' }}>
             Filter: {imageFilter}

@@ -83,17 +83,12 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 {resultType}
               </Typography>
             )}
-            {matchingResult !== undefined && (
-              <Typography variant="subtitle2" sx={{ color: '#666' }}>
-                Confidence: {(matchingResult * 100).toFixed(1)}%
-              </Typography>
-            )}
           </Box>
         </Box>
       </DialogTitle>
       
       <DialogContent sx={{ padding: 1 }}>
-        <Box sx={{ display: 'flex', gap: 1, height: '100%', minHeight: '400px' }}>
+        <Box sx={{ display: 'flex', gap: 0.2, height: '100%', minHeight: '400px' }}>
           {/* Source Image */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
@@ -106,7 +101,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: '300px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                backgroundColor: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0
               }}
             >
               <img
@@ -117,7 +116,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   maxHeight: '100%',
                   width: 'auto',
                   height: 'auto',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  margin: 0
                 }}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load source image:', sourceUrl);
@@ -138,7 +141,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: '300px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                backgroundColor: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0
               }}
             >
               <img
@@ -149,7 +156,11 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   maxHeight: '100%',
                   width: 'auto',
                   height: 'auto',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  margin: 0
                 }}
                 onError={(e) => {
                   console.error('[@component:VerificationImageComparisonDialog] Failed to load reference image:', referenceUrl);
