@@ -82,21 +82,24 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - use same hostname as frontend with backend port from env
+  // Server configuration - derive from current URL + port from env
   const getServerBaseUrl = () => {
-    // Use the same hostname as the frontend, but with the backend port from environment
-    const serverUrl = window.location.hostname; // This will be 77.56.53.130
-    const serverPort = (import.meta as any).env?.SERVER_PORT || '5019'; // Read from env or fallback
+    // Use current window location for protocol and hostname
+    const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
+    const serverIp = window.location.hostname; // Get IP/hostname from current URL
+    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Only port from env
     
-    // Force HTTP since the Flask backend only supports HTTP
-    // Note: This may cause mixed content issues if frontend is HTTPS
-    const baseUrl = `http://${serverUrl}:${serverPort}`;
+    // Build the complete server URL using current protocol and hostname
+    const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+    
+    console.log('[@context:Registration] Server Configuration:');
+    console.log('[@context:Registration] Current window protocol:', window.location.protocol);
+    console.log('[@context:Registration] Current window hostname:', window.location.hostname);
+    console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env.VITE_SERVER_PORT);
+    console.log('[@context:Registration] Resolved server protocol:', serverProtocol);
+    console.log('[@context:Registration] Resolved server IP:', serverIp);
+    console.log('[@context:Registration] Resolved server port:', serverPort);
     console.log('[@context:Registration] Built server URL:', baseUrl);
-    console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
-    console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
-    console.log('[@context:Registration] Backend port from env:', serverPort);
-    console.log('[@context:Registration] Using HTTP for backend (Flask server limitation)');
-    console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env?.VITE_SERVER_PORT);
     
     return baseUrl;
   };
