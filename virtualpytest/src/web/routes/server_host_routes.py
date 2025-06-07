@@ -32,134 +32,159 @@ server_host_bp = Blueprint('server_host', __name__)
 
 @server_host_bp.route('/api/virtualpytest/take-control', methods=['POST'])
 def server_take_control():
-    """Unified take control endpoint - handles locking + host controller checks"""
+    """Server-side take control - lock device and call host"""
     try:
-        data = request.get_json()
-        device_model = data.get('device_model', 'android_mobile')
-        video_device = data.get('video_device', '/dev/video0')
+        data = request.get_json() or {}
+        device_id = data.get('device_id')
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:server_take_control] Taking control of device")
-        print(f"[@route:server_take_control] Device model: {device_model}")
-        print(f"[@route:server_take_control] Video device: {video_device}")
-        print(f"[@route:server_take_control] Session ID: {session_id}")
-        
-        # Step 1: Find host by device model
-        host_info = get_host_by_model(device_model)
-        
-        if not host_info:
-            print(f"[@route:server_take_control] No host found for device model: {device_model}")
+        if not device_id:
             return jsonify({
                 'success': False,
-                'error': f'No host available for device model: {device_model}'
-            }), 404
+                'error': 'device_id is required'
+            }), 400
         
-        device_id = host_info.get('client_id')
-        print(f"[@route:server_take_control] Found host: {device_id} for device model: {device_model}")
+        print(f"[@route:server_take_control] Take control requested for device: {device_id}")
+        print(f"[@route:server_take_control] Session ID: {session_id}")
         
-        # Step 2: Clean up expired locks
-        cleanup_expired_locks()
-        
-        # Step 3: Check if device is already locked
-        if is_device_locked_in_registry(device_id):
-            lock_info = get_device_lock_info(device_id)
-            locked_by = lock_info.get('lockedBy', 'unknown') if lock_info else 'unknown'
-            
-            # If locked by the same session, allow it (re-entrant lock)
-            if locked_by == session_id:
-                print(f"[@route:server_take_control] Device {device_id} already locked by same session: {session_id}")
-            else:
-                print(f"[@route:server_take_control] Device {device_id} is locked by another session: {locked_by}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Device is currently locked by another session: {locked_by}',
-                    'lock_info': lock_info
-                }), 409  # Conflict
-        
-        # Step 4: Lock the device for this session
-        if not is_device_locked_in_registry(device_id):
-            lock_success = lock_device_in_registry(device_id, session_id)
-            if not lock_success:
-                print(f"[@route:server_take_control] Failed to lock device: {device_id}")
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to acquire device lock'
-                }), 500
-            print(f"[@route:server_take_control] Successfully locked device: {device_id} for session: {session_id}")
-        
-        # Step 5: Call host take control to check all controllers
+        # Get device information with host details
         try:
-            print(f"[@route:server_take_control] Calling host take control for device: {device_model}")
+            import requests
+            device_response = requests.get(f"http://localhost:5009/api/system/device/{device_id}")
             
-            host_response = make_host_request(
-                '/take-control',
-                method='POST',
-                use_https=True,
-                json={
-                    'device_model': device_model,
-                    'video_device': video_device,
-                    'session_id': session_id
-                },
-                timeout=30
-            )
-            
-            if host_response.status_code == 200:
-                host_result = host_response.json()
-                print(f"[@route:server_take_control] Host take control result: {host_result}")
-                
-                # Get lock info for response
-                lock_info = get_device_lock_info(device_id)
-                
-                # Build comprehensive response
-                response_data = {
-                    'success': host_result.get('success', False),
-                    'message': f'Take control completed for {device_model}',
-                    'device_model': device_model,
-                    'device_id': device_id,
-                    'video_device': video_device,
-                    'session_id': session_id,
-                    'host_info': {
-                        'id': device_id,
-                        'name': host_info.get('name', 'Unknown'),
-                        'ip': host_info.get('local_ip', 'unknown'),
-                        'status': host_info.get('status', 'unknown')
-                    },
-                    'lock_info': lock_info,
-                    # Include all controller status from host
-                    'controllers': host_result.get('controllers', {}),
-                    'stream_url': host_result.get('stream_url'),
-                    'host_available': True
-                }
-                
-                # If host reported failure, include error details
-                if not host_result.get('success', False):
-                    response_data['error'] = host_result.get('error', 'Host controller checks failed')
-                    response_data['controller_errors'] = host_result.get('controller_errors', {})
-                
-                return jsonify(response_data)
-            else:
-                print(f"[@route:server_take_control] Host take control failed: {host_response.status_code}")
+            if not device_response.ok:
                 return jsonify({
                     'success': False,
-                    'error': f'Host communication failed: HTTP {host_response.status_code}',
-                    'device_id': device_id,
+                    'error': f'Device not found: {device_id}',
+                    'host_available': False
+                }), 404
+            
+            device_data = device_response.json()
+            if not device_data.get('success'):
+                return jsonify({
+                    'success': False,
+                    'error': device_data.get('error', 'Failed to get device information'),
+                    'host_available': False
+                }), 404
+            
+            device_info = device_data['device']
+            device_model = device_info['device_model']
+            host_connection = device_info['host_connection']
+            
+            print(f"[@route:server_take_control] Found device: {device_info['device_name']} ({device_model})")
+            print(f"[@route:server_take_control] Host: {device_info['host_name']} at {device_info['host_ip']}:{device_info['host_port']}")
+            
+        except Exception as e:
+            print(f"[@route:server_take_control] Error getting device info: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to get device information: {str(e)}',
+                'host_available': False
+            }), 500
+        
+        # Lock the device using deviceLockManager
+        try:
+            from web.utils.deviceLockManager import deviceLockManager
+            
+            # Try to acquire lock for the device
+            lock_acquired = deviceLockManager.acquire_lock(device_id, session_id)
+            
+            if not lock_acquired:
+                current_owner = deviceLockManager.get_lock_owner(device_id)
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} is already locked by session: {current_owner}',
+                    'device_locked': True,
+                    'locked_by': current_owner,
+                    'host_available': True
+                }), 409
+            
+            print(f"[@route:server_take_control] Successfully locked device {device_id} for session {session_id}")
+            
+        except Exception as e:
+            print(f"[@route:server_take_control] Error acquiring device lock: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to lock device: {str(e)}',
+                'host_available': True
+            }), 500
+        
+        # Call host to take control
+        try:
+            import requests
+            
+            host_url = f"{host_connection['flask_url']}/take-control"
+            host_payload = {
+                'device_id': device_id,
+                'device_model': device_model,
+                'device_ip': device_info['device_ip'],
+                'device_port': device_info['device_port'],
+                'session_id': session_id
+            }
+            
+            print(f"[@route:server_take_control] Calling host at: {host_url}")
+            print(f"[@route:server_take_control] Host payload: {host_payload}")
+            
+            host_response = requests.post(host_url, json=host_payload, timeout=30)
+            
+            if host_response.ok:
+                host_data = host_response.json()
+                print(f"[@route:server_take_control] Host response: {host_data}")
+                
+                if host_data.get('success'):
+                    return jsonify({
+                        'success': True,
+                        'message': 'Successfully took control of device',
+                        'device_id': device_id,
+                        'device_model': device_model,
+                        'device_locked': True,
+                        'locked_by': session_id,
+                        'host_available': True,
+                        'controllers': host_data.get('controllers', {}),
+                        'host_info': {
+                            'host_id': device_info['host_id'],
+                            'host_name': device_info['host_name'],
+                            'host_ip': device_info['host_ip'],
+                            'host_port': device_info['host_port']
+                        }
+                    }), 200
+                else:
+                    # Host failed, release the device lock
+                    deviceLockManager.release_lock(device_id, session_id)
+                    return jsonify({
+                        'success': False,
+                        'error': host_data.get('error', 'Host failed to take control'),
+                        'device_locked': False,
+                        'host_available': True,
+                        'controller_errors': host_data.get('controller_errors', {})
+                    }), 500
+            else:
+                # Host request failed, release the device lock
+                deviceLockManager.release_lock(device_id, session_id)
+                return jsonify({
+                    'success': False,
+                    'error': f'Host request failed: {host_response.status_code} {host_response.text}',
+                    'device_locked': False,
                     'host_available': False
                 }), 500
                 
         except Exception as e:
-            print(f"[@route:server_take_control] Host communication error: {str(e)}")
+            # Host communication failed, release the device lock
+            deviceLockManager.release_lock(device_id, session_id)
+            print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Host communication error: {str(e)}',
-                'device_id': device_id,
+                'error': f'Failed to communicate with host: {str(e)}',
+                'device_locked': False,
                 'host_available': False
             }), 500
         
     except Exception as e:
-        print(f"[@route:server_take_control] Error: {str(e)}")
+        print(f"[@route:server_take_control] Unexpected error: {e}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': f'Unexpected error: {str(e)}',
+            'host_available': False
         }), 500
 
 
@@ -239,7 +264,7 @@ def server_release_control():
 
 @server_host_bp.route('/take-control', methods=['POST'])
 def host_take_control():
-    """Host-side take control - check AV/stream status only"""
+    """Host-side take control - check AV controller status using abstract interface"""
     try:
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
@@ -251,57 +276,74 @@ def host_take_control():
         print(f"[@route:host_take_control] Video device: {video_device}")
         print(f"[@route:host_take_control] Session ID: {session_id}")
         
-        # Only check AV Controller (stream status)
+        # Use controller factory to create appropriate AV controller
         try:
-            print(f"[@route:host_take_control] Checking AV/stream controller")
-            from controllers import ControllerFactory
+            print(f"[@route:host_take_control] Creating AV controller using factory")
             
-            av_controller = ControllerFactory.create_av_controller(
-                capture_type="hdmi_stream",
-                device_name=f"Host AV - {device_model}",
+            # Import the controller factory
+            from controllers import create_device_controllers
+            
+            # Create device controller set based on device model
+            # This will automatically map device_model to the correct controller types
+            device_controllers = create_device_controllers(
+                device_name=f"Host - {device_model}",
+                device_type=device_model,
+                # Pass any additional parameters that controllers might need
                 video_device=video_device
             )
             
-            av_result = av_controller.take_control()
+            # Get the AV controller from the device set
+            av_controller = device_controllers.av
             
-            print(f"[@route:host_take_control] AV controller result: {av_result.get('status', 'unknown')}")
+            print(f"[@route:host_take_control] Created AV controller: {av_controller.__class__.__name__}")
             
-            # Build stream URL if AV controller is working
-            stream_url = None
-            if av_result.get('success', False):
-                # Build stream URL based on host configuration
+            # Use the abstract take_control method
+            control_result = av_controller.take_control()
+            
+            print(f"[@route:host_take_control] Controller take_control result: {control_result}")
+            
+            # Build response based on controller result
+            if control_result.get('success', False):
+                # Build stream URL if controller indicates stream is ready
                 import os
                 host_ip = os.environ.get('HOST_IP', '77.56.53.130')
                 stream_url = f"https://{host_ip}:444/stream/video"
-            
-            # Build response focused only on AV/stream
-            response_data = {
-                'success': av_result.get('success', False),
-                'status': av_result.get('status', 'unknown'),
-                'message': f'AV controller check completed for {device_model}',
-                'device_model': device_model,
-                'video_device': video_device,
-                'session_id': session_id,
-                'controller_type': 'av',
-                'stream_url': stream_url,
-                'host_connected': True,
-                'timestamp': __import__('time').time()
-            }
-            
-            # Include error if AV failed
-            if not av_result.get('success', False):
-                response_data['error'] = av_result.get('error', 'AV controller failed')
-            
-            print(f"[@route:host_take_control] AV result: {'SUCCESS' if av_result.get('success', False) else 'FAILURE'}")
-            
-            return jsonify(response_data)
+                
+                return jsonify({
+                    'success': True,
+                    'status': control_result.get('status', 'ready'),
+                    'message': f'AV controller ready for {device_model}',
+                    'device_model': device_model,
+                    'video_device': video_device,
+                    'session_id': session_id,
+                    'controller_type': 'av',
+                    'controller_class': av_controller.__class__.__name__,
+                    'stream_url': stream_url,
+                    'controller_details': control_result.get('details', {}),
+                    'host_connected': True,
+                    'timestamp': __import__('time').time()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'status': control_result.get('status', 'failed'),
+                    'error': control_result.get('error', 'AV controller not ready'),
+                    'device_model': device_model,
+                    'video_device': video_device,
+                    'session_id': session_id,
+                    'controller_type': 'av',
+                    'controller_class': av_controller.__class__.__name__,
+                    'controller_details': control_result.get('details', {}),
+                    'host_connected': True,
+                    'timestamp': __import__('time').time()
+                })
             
         except Exception as e:
-            print(f"[@route:host_take_control] AV controller error: {str(e)}")
+            print(f"[@route:host_take_control] Controller error: {str(e)}")
             return jsonify({
                 'success': False,
                 'status': 'error',
-                'error': f'AV controller exception: {str(e)}',
+                'error': f'Controller error: {str(e)}',
                 'controller_type': 'av',
                 'device_model': device_model,
                 'host_connected': True,

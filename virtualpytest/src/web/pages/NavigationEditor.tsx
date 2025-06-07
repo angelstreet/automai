@@ -564,10 +564,11 @@ const NavigationEditorContent: React.FC = () => {
       }
     }
     
-    // If taking control, use the new unified endpoint
+    // If taking control, use the new unified endpoint with device_id
     if (!wasControlActive && selectedDeviceData) {
       try {
-        console.log('[@component:NavigationEditor] Taking control using unified endpoint');
+        console.log('[@component:NavigationEditor] Taking control using device_id');
+        console.log('[@component:NavigationEditor] Selected device:', selectedDeviceData);
         
         const response = await fetch(buildApiUrl('/api/virtualpytest/take-control'), {
           method: 'POST',
@@ -575,8 +576,7 @@ const NavigationEditorContent: React.FC = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            device_model: selectedDeviceData.model || 'android_mobile',
-            video_device: selectedDeviceData.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+            device_id: selectedDeviceData.id,  // Use id property from Device interface
             session_id: 'navigation-editor-session'
           }),
         });
@@ -588,6 +588,7 @@ const NavigationEditorContent: React.FC = () => {
           if (data.success) {
             console.log('[@component:NavigationEditor] Successfully took control');
             console.log('[@component:NavigationEditor] Controllers status:', data.controllers);
+            console.log('[@component:NavigationEditor] Host info:', data.host_info);
             
             // Update verification controller status based on response
             const verificationControllers = data.controllers?.verification || {};
@@ -616,6 +617,14 @@ const NavigationEditorContent: React.FC = () => {
           }
         } else {
           console.error('[@component:NavigationEditor] Take control request failed:', response.status, response.statusText);
+          
+          // Try to get error details from response
+          try {
+            const errorData = await response.json();
+            console.error('[@component:NavigationEditor] Error details:', errorData);
+          } catch (e) {
+            console.error('[@component:NavigationEditor] Could not parse error response');
+          }
         }
       } catch (error) {
         console.error('[@component:NavigationEditor] Error taking control:', error);

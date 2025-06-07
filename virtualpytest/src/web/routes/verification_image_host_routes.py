@@ -216,7 +216,7 @@ def host_process_area():
 
 @verification_image_host_bp.route('/stream/save-resource', methods=['POST'])
 def host_save_resource():
-    """Save already cropped image to resources directory and update git repository."""
+    """Save cropped image directly to Cloudflare R2 and update resource registry."""
     try:
         data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
@@ -225,7 +225,7 @@ def host_save_resource():
         area = data.get('area')
         reference_type = data.get('reference_type', 'reference_image')
         
-        print(f"[@route:host_save_resource] Saving resource: {reference_name} for model: {model}")
+        print(f"[@route:host_save_resource] Uploading reference to R2: {reference_name} for model: {model}")
         print(f"[@route:host_save_resource] Source cropped file: {cropped_filename}")
         
         # Validate required parameters
@@ -235,16 +235,10 @@ def host_save_resource():
                 'error': 'cropped_filename, reference_name, and model are required'
             }), 400
         
-        # Build paths
+        # Build source path for cropped file
         cropped_source_path = f'/var/www/html/stream/captures/cropped/{cropped_filename}'
-        resource_dir = f'../resources/{model}'
-        os.makedirs(resource_dir, exist_ok=True)
         
-        # Build target filename for resource
-        target_filename = f'{reference_name}.jpg'
-        target_path = f'{resource_dir}/{target_filename}'
-        
-        print(f"[@route:host_save_resource] Copying from {cropped_source_path} to {target_path}")
+        print(f"[@route:host_save_resource] Uploading from {cropped_source_path} to Cloudflare R2")
         
         # Check if cropped file exists
         if not os.path.exists(cropped_source_path):
@@ -254,19 +248,38 @@ def host_save_resource():
                 'error': f'Cropped file not found: {cropped_filename}'
             }), 404
         
-        # Copy cropped file to resources directory
+        # Upload directly to Cloudflare R2
         try:
-            import shutil
-            shutil.copy2(cropped_source_path, target_path)
-            print(f"[@route:host_save_resource] File copied successfully")
-        except Exception as copy_error:
-            print(f"[@route:host_save_resource] File copy failed: {copy_error}")
+            from utils.cloudflare_upload import CloudflareUploader
+            
+            uploader = CloudflareUploader()
+            
+            # Upload to R2 with organized path
+            r2_path = f'reference-images/{model}/{reference_name}.jpg'
+            upload_result = uploader.upload_file(cropped_source_path, r2_path)
+            
+            if not upload_result.get('success'):
+                error_msg = upload_result.get('error', 'Unknown upload error')
+                print(f"[@route:host_save_resource] R2 upload failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to upload to Cloudflare R2: {error_msg}'
+                }), 500
+            
+            # Get signed URL from upload result
+            r2_public_url = upload_result.get('signed_url')
+            
+            print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_path}")
+            print(f"[@route:host_save_resource] R2 public URL: {r2_public_url}")
+            
+        except Exception as upload_error:
+            print(f"[@route:host_save_resource] R2 upload exception: {upload_error}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to copy file: {str(copy_error)}'
+                'error': f'Failed to upload to R2: {str(upload_error)}'
             }), 500
         
-        # Update resource.json
+        # Update resource.json with R2 URL only
         resource_json_path = '../config/resource/resource.json'
         os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
         
@@ -286,15 +299,14 @@ def host_save_resource():
             if not (r.get('name') == reference_name and r.get('model') == model)
         ]
         
-        # Add new resource
+        # Add new resource with R2 URL as path
         new_resource = {
             'name': reference_name,
             'model': model,
             'type': reference_type,
             'area': area,
             'created_at': datetime.now().isoformat(),
-            'path': f'resources/{model}/{target_filename}',
-            'full_path': f'/var/www/html/stream/resources/{model}/{target_filename}'
+            'path': r2_public_url  # R2 URL is the path
         }
         
         resource_data['resources'].append(new_resource)
@@ -303,31 +315,29 @@ def host_save_resource():
         with open(resource_json_path, 'w') as f:
             json.dump(resource_data, f, indent=2)
         
-        print(f"[@route:host_save_resource] Resource JSON updated")
+        print(f"[@route:host_save_resource] Resource JSON updated with R2 URL")
         
-        # Perform git operations
+        # Git operations for resource.json only
         try:
             # Change to the parent directory for git operations
             original_cwd = os.getcwd()
             os.chdir('..')
             
-            print(f"[@route:host_save_resource] Performing git operations...")
+            print(f"[@route:host_save_resource] Performing git operations for resource.json...")
             
             # Git pull to get latest changes
             subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
             
-            # Git add the resource file and JSON
-            subprocess.run(['git', 'add', f'resources/{model}/{target_filename}'], check=True, capture_output=True, text=True)
+            # Git add only the resource.json file
             subprocess.run(['git', 'add', 'config/resource/resource.json'], check=True, capture_output=True, text=True)
             
             # Git commit with descriptive message
-            commit_message = f'Add reference image: {reference_name} for {model}'
+            commit_message = f'Add R2 reference: {reference_name} for {model}'
             subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
             
             # Git push with authentication
             github_token = os.getenv('GITHUB_TOKEN')
             if github_token:
-                # Use token for authentication
                 subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
                 print(f"[@route:host_save_resource] Git operations completed successfully")
             else:
@@ -336,12 +346,12 @@ def host_save_resource():
             # Return to original directory
             os.chdir(original_cwd)
             
-            # Return success with public URL
-            public_url = f'/resources/{model}/{target_filename}'
+            # Return success with R2 URL
             return jsonify({
                 'success': True,
-                'message': f'Resource saved and committed: {reference_name}',
-                'public_url': public_url
+                'message': f'Reference uploaded to R2: {reference_name}',
+                'r2_url': r2_public_url,
+                'r2_path': r2_path
             })
             
         except subprocess.CalledProcessError as git_error:
@@ -356,7 +366,7 @@ def host_save_resource():
         print(f"[@route:host_save_resource] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Resource save error: {str(e)}'
+            'error': f'R2 save error: {str(e)}'
         }), 500
 
 @verification_image_host_bp.route('/stream/ensure-reference-availability', methods=['POST'])
@@ -577,46 +587,62 @@ def execute_image_verification_host(verification, source_path, model, verificati
         }
 
 def resolve_reference_path(reference_name, model, verification_type):
-    """Host resolves reference names to actual file paths using JSON metadata."""
+    """Download reference image from R2 URL and cache locally for verification."""
     if not reference_name:
         return None
         
     try:
-        # Try to read from resource JSON file
+        # Read R2 URL from resource JSON file
         resource_json_path = '../config/resource/resource.json'
-        if os.path.exists(resource_json_path):
-            import json
-            with open(resource_json_path, 'r') as f:
-                resource_data = json.load(f)
+        if not os.path.exists(resource_json_path):
+            print(f"[@route:resolve_reference_path] Resource JSON not found: {resource_json_path}")
+            return None
             
-            # Find matching resource
-            for resource in resource_data.get('resources', []):
-                if (resource.get('name') == reference_name and 
-                    resource.get('model') == model and
-                    resource.get('type') == f'reference_{verification_type}'):
-                    
-                    # Build path consistently with save logic: ../resources/{model}/{name}.png
-                    relative_path = f'../{resource.get("path")}'  # Use path from JSON with ../ prefix
-                    if os.path.exists(relative_path):
-                        print(f"[@route:resolve_reference_path] Found in JSON: {relative_path}")
-                        return relative_path
+        with open(resource_json_path, 'r') as f:
+            resource_data = json.load(f)
         
-        # Fallback: try standard paths (build same way as save logic)
-        if verification_type == 'image':
-            possible_paths = [
-                f'../resources/{model}/{reference_name}.png',
-                f'../resources/{model}/{reference_name}.jpg',
-                f'/var/www/html/stream/resources/{model}/{reference_name}.png',
-                f'/var/www/html/stream/resources/{model}/{reference_name}.jpg'
-            ]
-            for path in possible_paths:
-                if os.path.exists(path):
-                    print(f"[@route:resolve_reference_path] Found fallback: {path}")
-                    return path
+        # Find matching resource
+        r2_url = None
+        for resource in resource_data.get('resources', []):
+            if (resource.get('name') == reference_name and 
+                resource.get('model') == model and
+                resource.get('type') == f'reference_{verification_type}'):
+                
+                r2_url = resource.get('path')  # R2 URL is stored in path field
+                break
         
-        print(f"[@route:resolve_reference_path] Reference not found: {reference_name}")
-        return None
+        if not r2_url:
+            print(f"[@route:resolve_reference_path] Reference not found in JSON: {reference_name}")
+            return None
+        
+        print(f"[@route:resolve_reference_path] Found R2 URL: {r2_url}")
+        
+        # Create cache directory
+        cache_dir = '/tmp/r2_cache'
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        # Cache filename
+        cache_filename = f"{model}_{reference_name}.jpg"
+        cache_path = os.path.join(cache_dir, cache_filename)
+        
+        # Download from R2 to cache
+        try:
+            import requests
+            
+            print(f"[@route:resolve_reference_path] Downloading from R2 to cache: {cache_path}")
+            response = requests.get(r2_url, timeout=30)
+            response.raise_for_status()
+            
+            with open(cache_path, 'wb') as f:
+                f.write(response.content)
+            
+            print(f"[@route:resolve_reference_path] R2 image cached successfully")
+            return cache_path
+            
+        except Exception as download_error:
+            print(f"[@route:resolve_reference_path] Failed to download from R2: {download_error}")
+            return None
         
     except Exception as e:
-        print(f"[@route:resolve_reference_path] Error resolving reference: {str(e)}")
+        print(f"[@route:resolve_reference_path] Error resolving R2 reference: {str(e)}")
         return None 

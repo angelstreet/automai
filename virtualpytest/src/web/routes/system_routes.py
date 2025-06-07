@@ -125,133 +125,170 @@ def clear_logs():
 
 @system_bp.route('/api/system/register', methods=['POST'])
 def register_client():
-    """Client registers with server"""
+    """Host registers with server"""
     try:
-        client_info = request.get_json()
+        host_info = request.get_json()
         
         # Debug: Log the incoming request
-        print(f"🔍 [SERVER] Registration request received:")
+        print(f"🔍 [SERVER] Host registration request received:")
         print(f"   Content-Type: {request.content_type}")
         print(f"   Raw data: {request.get_data()}")
-        print(f"   Parsed JSON: {client_info}")
+        print(f"   Parsed JSON: {host_info}")
         
         # Validate that we received JSON data
-        if client_info is None:
+        if host_info is None:
             error_msg = "No JSON data received in request body"
             print(f"❌ [SERVER] Registration failed: {error_msg}")
             return jsonify({'error': error_msg}), 400
         
-        # Validate required fields
-        required_fields = ['client_id', 'local_ip', 'client_port', 'device_model', 'name']
+        # Handle backward compatibility - map old client_* fields to host_* fields
+        if 'client_id' in host_info and 'host_id' not in host_info:
+            host_info['host_id'] = host_info['client_id']
+        if 'name' in host_info and 'host_name' not in host_info:
+            host_info['host_name'] = host_info['name']
+        if 'local_ip' in host_info and 'host_ip' not in host_info:
+            host_info['host_ip'] = host_info['local_ip']
+        if 'client_port' in host_info and 'host_port' not in host_info:
+            host_info['host_port'] = host_info['client_port']
+        
+        # Validate required fields with coherent naming
+        required_fields = ['host_id', 'host_ip', 'host_port', 'device_model', 'host_name']
         missing_fields = []
         
         for field in required_fields:
-            if field not in client_info:
+            if field not in host_info:
                 missing_fields.append(field)
         
         if missing_fields:
             error_msg = f'Missing required fields: {", ".join(missing_fields)}'
             print(f"❌ [SERVER] Registration failed: {error_msg}")
             print(f"   Required fields: {required_fields}")
-            print(f"   Received fields: {list(client_info.keys()) if client_info else 'None'}")
+            print(f"   Received fields: {list(host_info.keys()) if host_info else 'None'}")
             return jsonify({'error': error_msg}), 400
         
         # Validate field values
         validation_errors = []
         
-        if not client_info.get('client_id'):
-            validation_errors.append('client_id cannot be empty')
+        if not host_info.get('host_id'):
+            validation_errors.append('host_id cannot be empty')
         
-        if not client_info.get('local_ip'):
-            validation_errors.append('local_ip cannot be empty')
+        if not host_info.get('host_ip'):
+            validation_errors.append('host_ip cannot be empty')
         
-        if not client_info.get('client_port'):
-            validation_errors.append('client_port cannot be empty')
+        if not host_info.get('host_port'):
+            validation_errors.append('host_port cannot be empty')
         
-        if not client_info.get('device_model'):
+        if not host_info.get('device_model'):
             validation_errors.append('device_model cannot be empty')
         
-        if not client_info.get('name'):
-            validation_errors.append('name cannot be empty')
+        if not host_info.get('host_name'):
+            validation_errors.append('host_name cannot be empty')
         
         if validation_errors:
             error_msg = f'Validation errors: {"; ".join(validation_errors)}'
             print(f"❌ [SERVER] Registration failed: {error_msg}")
             return jsonify({'error': error_msg}), 400
         
-        # Add timestamp
-        client_info['registered_at'] = datetime.now().isoformat()
-        client_info['last_seen'] = time.time()
+        # Generate device_id and set device defaults if not provided
+        device_id = f"{host_info['host_id']}_device_{host_info['device_model']}"
+        device_name = host_info.get('device_name', f"{host_info['device_model'].replace('_', ' ').title()}")
+        device_ip = host_info.get('device_ip', host_info['host_ip'])  # Default to host IP
+        device_port = host_info.get('device_port', '5555')  # Default ADB port
         
-        # Add initial system stats if this is a client registering
-        if 'system_stats' not in client_info:
-            client_info['system_stats'] = get_system_stats()
+        # Create structured host registration with device information
+        structured_host_info = {
+            # Host information
+            'host_id': host_info['host_id'],
+            'host_name': host_info['host_name'],
+            'host_ip': host_info['host_ip'],
+            'host_port': host_info['host_port'],
+            'protocol': host_info.get('protocol', 'https'),
+            'internal_port': host_info.get('internal_port', host_info['host_port']),
+            'https_port': host_info.get('https_port', '444'),
+            'nginx_port': host_info.get('nginx_port', '444'),
+            'controller_types': host_info.get('controller_types', []),
+            'capabilities': host_info.get('capabilities', []),
+            'status': 'online',
+            
+            # Device information (what this host controls)
+            'device': {
+                'device_id': device_id,
+                'device_name': device_name,
+                'device_model': host_info['device_model'],
+                'device_ip': device_ip,
+                'device_port': device_port,
+                'controller_configs': host_info.get('controller_configs', {})
+            },
+            
+            # Timestamps
+            'registered_at': datetime.now().isoformat(),
+            'last_seen': time.time(),
+            
+            # System stats
+            'system_stats': host_info.get('system_stats', get_system_stats())
+        }
         
-        # Store client info
+        # Store host info
         connected_clients = get_connected_clients()
         
-        # Check if client is already registered (by client_id, name, or IP combination)
-        existing_client_id = None
+        # Check if host is already registered (by host_id, host_name, or IP combination)
+        existing_host_id = None
         for existing_id, existing_info in connected_clients.items():
-            # Check for exact client_id match (reconnection with same ID)
-            if existing_id == client_info['client_id']:
-                existing_client_id = existing_id
+            # Check for exact host_id match (reconnection with same ID)
+            if existing_id == structured_host_info['host_id']:
+                existing_host_id = existing_id
                 break
-            # Check for same device reconnecting (same name + IP + device_model)
-            elif (existing_info.get('name') == client_info['name'] and 
-                  existing_info.get('local_ip') == client_info['local_ip'] and
-                  existing_info.get('device_model') == client_info['device_model']):
-                existing_client_id = existing_id
+            # Check for same host reconnecting (same host_name + IP + device_model)
+            elif (existing_info.get('host_name') == structured_host_info['host_name'] and 
+                  existing_info.get('host_ip') == structured_host_info['host_ip'] and
+                  existing_info.get('device', {}).get('device_model') == structured_host_info['device']['device_model']):
+                existing_host_id = existing_id
                 break
         
-        if existing_client_id:
-            # Update existing client instead of creating duplicate
-            print(f"🔄 [SERVER] Updating existing client registration:")
-            print(f"   Existing ID: {existing_client_id[:8]}...")
-            print(f"   New ID: {client_info['client_id'][:8]}...")
-            print(f"   Name: {client_info['name']}")
+        if existing_host_id:
+            # Update existing host instead of creating duplicate
+            print(f"🔄 [SERVER] Updating existing host registration:")
+            print(f"   Existing ID: {existing_host_id[:8]}...")
+            print(f"   New ID: {structured_host_info['host_id'][:8]}...")
+            print(f"   Host Name: {structured_host_info['host_name']}")
+            print(f"   Device: {structured_host_info['device']['device_name']} ({structured_host_info['device']['device_model']})")
             
-            # Keep the original client_id but update all other info
-            original_registered_at = connected_clients[existing_client_id].get('registered_at')
-            client_info['registered_at'] = original_registered_at  # Keep original registration time
-            client_info['reconnected_at'] = datetime.now().isoformat()  # Add reconnection time
+            # Keep the original registration time but update all other info
+            original_registered_at = connected_clients[existing_host_id].get('registered_at')
+            structured_host_info['registered_at'] = original_registered_at  # Keep original registration time
+            structured_host_info['reconnected_at'] = datetime.now().isoformat()  # Add reconnection time
             
-            # If client_id changed, remove old entry and add with new ID
-            if existing_client_id != client_info['client_id']:
-                del connected_clients[existing_client_id]
+            # If host_id changed, remove old entry and add with new ID
+            if existing_host_id != structured_host_info['host_id']:
+                del connected_clients[existing_host_id]
                 # Stop old health check thread
                 health_check_threads = get_health_check_threads()
-                if existing_client_id in health_check_threads:
-                    del health_check_threads[existing_client_id]
+                if existing_host_id in health_check_threads:
+                    del health_check_threads[existing_host_id]
                     set_health_check_threads(health_check_threads)
             
-            connected_clients[client_info['client_id']] = client_info
+            connected_clients[structured_host_info['host_id']] = structured_host_info
             set_connected_clients(connected_clients)
             
-            # Start health check for the (potentially new) client ID
-            # NOTE: Disabled server-initiated health checks in favor of client-initiated pings
-            # start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
-            
-            print(f"✅ [SERVER] Client registration updated successfully")
+            print(f"✅ [SERVER] Host registration updated successfully")
         else:
-            # New client registration
-            connected_clients[client_info['client_id']] = client_info
+            # New host registration
+            connected_clients[structured_host_info['host_id']] = structured_host_info
             set_connected_clients(connected_clients)
             
-            # Start health check for this client
-            # NOTE: Disabled server-initiated health checks in favor of client-initiated pings
-            # start_health_check(client_info['client_id'], client_info['local_ip'], client_info['client_port'])
-            
-            print(f"✅ [SERVER] New client registered successfully:")
-            print(f"   Name: {client_info['name']}")
-            print(f"   Device Model: {client_info['device_model']}")
-            print(f"   Address: {client_info['local_ip']}:{client_info['client_port']}")
-            print(f"   Client ID: {client_info['client_id'][:8]}...")
+            print(f"✅ [SERVER] New host registered successfully:")
+            print(f"   Host Name: {structured_host_info['host_name']}")
+            print(f"   Host Address: {structured_host_info['host_ip']}:{structured_host_info['host_port']}")
+            print(f"   Device: {structured_host_info['device']['device_name']} ({structured_host_info['device']['device_model']})")
+            print(f"   Device Address: {structured_host_info['device']['device_ip']}:{structured_host_info['device']['device_port']}")
+            print(f"   Host ID: {structured_host_info['host_id'][:8]}...")
+            print(f"   Device ID: {structured_host_info['device']['device_id']}")
         
         return jsonify({
             'status': 'success',
-            'message': 'Client registered successfully',
-            'client_id': client_info['client_id']
+            'message': 'Host registered successfully',
+            'host_id': structured_host_info['host_id'],
+            'device_id': structured_host_info['device']['device_id']
         }), 200
         
     except Exception as e:
@@ -330,7 +367,6 @@ def health_check_with_devices():
         # Remove stale clients
         for client_id in stale_clients:
             remove_client(client_id)
-            print(f"🧹 [HEALTH-CHECK] Removed stale client: {client_id[:8]}...")
         
         # Get updated clients list after cleanup
         connected_clients = get_connected_clients()
@@ -432,46 +468,88 @@ def list_clients():
 
 @system_bp.route('/api/system/clients/devices', methods=['GET'])
 def list_clients_as_devices():
-    """Return registered clients in device-compatible format for NavigationEditor"""
+    """Return registered devices with host references for NavigationEditor"""
     try:
         connected_clients = get_connected_clients()
         
-        # Clean up stale clients (not seen for more than 2 minutes)
+        # Clean up stale hosts (not seen for more than 2 minutes)
         current_time = time.time()
-        stale_clients = []
+        stale_hosts = []
         
-        for client_id, client_info in connected_clients.items():
-            if current_time - client_info.get('last_seen', 0) > 120:  # 2 minutes
-                stale_clients.append(client_id)
+        for host_id, host_info in connected_clients.items():
+            if current_time - host_info.get('last_seen', 0) > 120:  # 2 minutes
+                stale_hosts.append(host_id)
         
-        # Remove stale clients
-        for client_id in stale_clients:
-            remove_client(client_id)
+        # Remove stale hosts
+        for host_id in stale_hosts:
+            remove_client(host_id)
         
-        # Convert clients to device-compatible format
+        # Convert hosts to device-compatible format with host references
         devices = []
-        for client_id, client_info in connected_clients.items():
-            if client_info.get('status') == 'online':
-                local_ip = client_info.get('local_ip')
-                client_port = client_info.get('client_port')
+        for host_id, host_info in connected_clients.items():
+            if host_info.get('status') == 'online':
+                # Extract host connection info
+                host_ip = host_info.get('host_ip') or host_info.get('local_ip')  # Backward compatibility
+                host_port = host_info.get('host_port') or host_info.get('client_port')  # Backward compatibility
+                host_name = host_info.get('host_name') or host_info.get('name')  # Backward compatibility
+                
+                # Extract device info from structured format or backward compatibility
+                device_info = host_info.get('device', {})
+                if device_info:
+                    # New structured format
+                    device_id = device_info.get('device_id')
+                    device_name = device_info.get('device_name')
+                    device_model = device_info.get('device_model')
+                    device_ip = device_info.get('device_ip')
+                    device_port = device_info.get('device_port')
+                    controller_configs = device_info.get('controller_configs', {})
+                else:
+                    # Backward compatibility - create device info from old format
+                    device_model = host_info.get('device_model', 'unknown')
+                    device_id = f"{host_id}_device_{device_model}"
+                    device_name = f"{device_model.replace('_', ' ').title()}"
+                    device_ip = host_ip
+                    device_port = '5555'  # Default ADB port
+                    controller_configs = {}
                 
                 devices.append({
-                    'id': client_id,
-                    'name': client_info.get('name'),
-                    'model': client_info.get('device_model'),
-                    'description': f"Registered client: {client_info.get('name')}",
+                    # Device information
+                    'id': device_id,  # Keep 'id' for NavigationEditor compatibility
+                    'device_id': device_id,
+                    'name': device_name,  # Keep 'name' for NavigationEditor compatibility
+                    'device_name': device_name,
+                    'model': device_model,  # Keep 'model' for NavigationEditor compatibility
+                    'device_model': device_model,
+                    'device_ip': device_ip,
+                    'device_port': device_port,
+                    'controller_configs': controller_configs,
+                    'description': f"Device: {device_name} controlled by host: {host_name}",
+                    
+                    # Host reference information
+                    'host_id': host_id,
+                    'host_name': host_name,
+                    'host_ip': host_ip,
+                    'host_port': host_port,
                     'connection': {
-                        'flask_url': f"http://{local_ip}:{client_port}",
-                        'nginx_url': f"https://{local_ip}:444"
+                        'flask_url': f"http://{host_ip}:{host_port}",
+                        'nginx_url': f"https://{host_ip}:444"
                     },
+                    'host_connection': {
+                        'flask_url': f"http://{host_ip}:{host_port}",
+                        'nginx_url': f"https://{host_ip}:444"
+                    },
+                    
+                    # Status and metadata
                     'status': 'online',
-                    'last_seen': client_info.get('last_seen'),
-                    'registered_at': client_info.get('registered_at'),
-                    'capabilities': client_info.get('capabilities', []),
-                    'system_stats': client_info.get('system_stats', {})
+                    'last_seen': host_info.get('last_seen'),
+                    'registered_at': host_info.get('registered_at'),
+                    'capabilities': host_info.get('capabilities', []),
+                    'system_stats': host_info.get('system_stats', {})
                 })
         
-        print(f"📱 [DEVICES] Returning {len(devices)} online devices from registered clients")
+        print(f"📱 [DEVICES] Returning {len(devices)} online devices from registered hosts")
+        for device in devices:
+            print(f"   Device: {device['device_name']} ({device['device_model']}) on host: {device['host_name']}")
         
         return jsonify({
             'success': True,
@@ -480,36 +558,151 @@ def list_clients_as_devices():
         }), 200
         
     except Exception as e:
-        print(f"❌ [DEVICES] Error listing clients as devices: {e}")
+        print(f"❌ [DEVICES] Error listing devices: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@system_bp.route('/api/system/device/<device_id>', methods=['GET'])
+def get_device_by_id(device_id):
+    """Get device information with host details by device_id"""
+    try:
+        connected_clients = get_connected_clients()
+        
+        # Find device by device_id across all hosts
+        for host_id, host_info in connected_clients.items():
+            if host_info.get('status') == 'online':
+                # Check if this host has the requested device
+                device_info = host_info.get('device', {})
+                if device_info and device_info.get('device_id') == device_id:
+                    # Extract host connection info
+                    host_ip = host_info.get('host_ip') or host_info.get('local_ip')
+                    host_port = host_info.get('host_port') or host_info.get('client_port')
+                    host_name = host_info.get('host_name') or host_info.get('name')
+                    
+                    return jsonify({
+                        'success': True,
+                        'device': {
+                            # Device information
+                            'device_id': device_info.get('device_id'),
+                            'device_name': device_info.get('device_name'),
+                            'device_model': device_info.get('device_model'),
+                            'device_ip': device_info.get('device_ip'),
+                            'device_port': device_info.get('device_port'),
+                            'controller_configs': device_info.get('controller_configs', {}),
+                            
+                            # Host information
+                            'host_id': host_id,
+                            'host_name': host_name,
+                            'host_ip': host_ip,
+                            'host_port': host_port,
+                            'host_connection': {
+                                'flask_url': f"http://{host_ip}:{host_port}",
+                                'nginx_url': f"https://{host_ip}:444"
+                            },
+                            'capabilities': host_info.get('capabilities', [])
+                        }
+                    }), 200
+                
+                # Also check backward compatibility format
+                elif not device_info and host_info.get('device_model'):
+                    # Generate device_id for backward compatibility
+                    compat_device_id = f"{host_id}_device_{host_info.get('device_model')}"
+                    if compat_device_id == device_id:
+                        host_ip = host_info.get('host_ip') or host_info.get('local_ip')
+                        host_port = host_info.get('host_port') or host_info.get('client_port')
+                        host_name = host_info.get('host_name') or host_info.get('name')
+                        device_model = host_info.get('device_model')
+                        
+                        return jsonify({
+                            'success': True,
+                            'device': {
+                                # Device information (backward compatibility)
+                                'device_id': compat_device_id,
+                                'device_name': f"{device_model.replace('_', ' ').title()}",
+                                'device_model': device_model,
+                                'device_ip': host_ip,
+                                'device_port': '5555',
+                                'controller_configs': {},
+                                
+                                # Host information
+                                'host_id': host_id,
+                                'host_name': host_name,
+                                'host_ip': host_ip,
+                                'host_port': host_port,
+                                'host_connection': {
+                                    'flask_url': f"http://{host_ip}:{host_port}",
+                                    'nginx_url': f"https://{host_ip}:444"
+                                },
+                                'capabilities': host_info.get('capabilities', [])
+                            }
+                        }), 200
+        
+        return jsonify({
+            'success': False,
+            'error': f'No device found with device_id: {device_id}'
+        }), 404
+        
+    except Exception as e:
+        print(f"❌ Error finding device: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @system_bp.route('/api/system/client/<device_model>', methods=['GET'])
 def get_client_by_device_model(device_model):
-    """Get available client for specific device model"""
+    """Get available host for specific device model (backward compatibility)"""
     try:
         connected_clients = get_connected_clients()
         
-        # Find client with matching device model
-        for client_id, client_info in connected_clients.items():
-            if client_info.get('device_model') == device_model and client_info.get('status') == 'online':
-                return jsonify({
-                    'status': 'success',
-                    'client': {
-                        'client_id': client_id,
-                        'name': client_info.get('name'),
-                        'local_ip': client_info.get('local_ip'),
-                        'client_port': client_info.get('client_port'),
-                        'capabilities': client_info.get('capabilities', [])
-                    }
-                }), 200
+        # Find host with matching device model
+        for host_id, host_info in connected_clients.items():
+            if host_info.get('status') == 'online':
+                # Check new structured format first
+                device_info = host_info.get('device', {})
+                if device_info and device_info.get('device_model') == device_model:
+                    host_ip = host_info.get('host_ip') or host_info.get('local_ip')
+                    host_port = host_info.get('host_port') or host_info.get('client_port')
+                    host_name = host_info.get('host_name') or host_info.get('name')
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'client': {
+                            'client_id': host_id,  # Backward compatibility
+                            'host_id': host_id,
+                            'name': host_name,
+                            'local_ip': host_ip,  # Backward compatibility
+                            'host_ip': host_ip,
+                            'client_port': host_port,  # Backward compatibility
+                            'host_port': host_port,
+                            'capabilities': host_info.get('capabilities', []),
+                            'device': device_info
+                        }
+                    }), 200
+                
+                # Check backward compatibility format
+                elif host_info.get('device_model') == device_model:
+                    host_ip = host_info.get('host_ip') or host_info.get('local_ip')
+                    host_port = host_info.get('host_port') or host_info.get('client_port')
+                    host_name = host_info.get('host_name') or host_info.get('name')
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'client': {
+                            'client_id': host_id,  # Backward compatibility
+                            'host_id': host_id,
+                            'name': host_name,
+                            'local_ip': host_ip,  # Backward compatibility
+                            'host_ip': host_ip,
+                            'client_port': host_port,  # Backward compatibility
+                            'host_port': host_port,
+                            'capabilities': host_info.get('capabilities', [])
+                        }
+                    }), 200
         
         return jsonify({
             'status': 'error',
-            'message': f'No available client found for device model: {device_model}'
+            'message': f'No available host found for device model: {device_model}'
         }), 404
         
     except Exception as e:
-        print(f"❌ Error finding client: {e}")
+        print(f"❌ Error finding host: {e}")
         return jsonify({'error': str(e)}), 500
 
 @system_bp.route('/api/system/ping', methods=['POST'])

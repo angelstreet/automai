@@ -218,23 +218,22 @@ class RemoteControllerInterface(BaseController):
 
 class AVControllerInterface(BaseController):
     """
-    Abstract interface for audio/video capture and analysis.
+    Abstract interface for audio/video capture controllers.
     
-    Defines the interface that A/V controllers must implement
-    for media capture and analysis. Each device can have its own
-    implementation of this interface.
+    Simplified interface focused on core AV capture functionality.
+    Audio analysis and video analysis are handled by verification controllers.
     """
     
     def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI"):
         super().__init__("av", device_name)
         self.capture_source = capture_source
         self.is_capturing_video = False
-        self.is_capturing_audio = False
         self.capture_session_id = None
     
     @abstractmethod
-    def start_video_capture(self, resolution: str = "1920x1080", fps: int = 30) -> bool:
-        """Start video capture. Must be implemented by subclasses."""
+    def start_video_capture(self, duration: float = 60.0, filename: str = None, 
+                           resolution: str = None, fps: int = None) -> bool:
+        """Start video capture with optional parameters. Must be implemented by subclasses."""
         pass
     
     @abstractmethod
@@ -244,42 +243,7 @@ class AVControllerInterface(BaseController):
     
     @abstractmethod
     def capture_frame(self, filename: str = None) -> bool:
-        """Capture a single video frame. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def start_audio_capture(self, sample_rate: int = 44100, channels: int = 2) -> bool:
-        """Start audio capture. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def stop_audio_capture(self) -> bool:
-        """Stop audio capture. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def detect_audio_level(self) -> float:
-        """Detect current audio level. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def detect_silence(self, threshold: float = 5.0, duration: float = 2.0) -> bool:
-        """Detect if audio is silent. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def analyze_video_content(self, analysis_type: str = "motion") -> Dict[str, Any]:
-        """Analyze video content. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def wait_for_video_change(self, timeout: float = 10.0, threshold: float = 10.0) -> bool:
-        """Wait for video content to change. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def record_session(self, duration: float, filename: str = None) -> bool:
-        """Record audio/video session. Must be implemented by subclasses."""
+        """Capture a single video frame/screenshot. Must be implemented by subclasses."""
         pass
     
     def take_control(self) -> Dict[str, Any]:
@@ -304,7 +268,7 @@ class AVControllerInterface(BaseController):
                     'details': {
                         'capture_source': self.capture_source,
                         'is_capturing_video': self.is_capturing_video,
-                        'is_capturing_audio': self.is_capturing_audio
+                        'capabilities': ['video_capture', 'screenshot']
                     }
                 }
             else:

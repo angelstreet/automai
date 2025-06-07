@@ -34,7 +34,7 @@ class HDMIStreamController(AVControllerInterface):
                 - stream_bitrate: Bitrate for streaming (default: '400k')
                 - service_name: systemd service name (default: 'hdmi-stream')
         """
-        super().__init__(device_name, "HDMI_STREAM")
+        super().__init__(device_name, "HDMI")
         
         # Required parameters
         self.video_device = kwargs.get('video_device')
@@ -54,6 +54,7 @@ class HDMIStreamController(AVControllerInterface):
         
         # Direct FFmpeg processes (for verification operations only)
         self.capture_process = None
+        self.is_capturing_video = False
         
         # Rolling buffer settings
         self.rolling_buffer_duration = 60  # seconds
@@ -400,6 +401,81 @@ WantedBy=multi-user.target
             print(f"HDMI[{self.capture_source}]: Screenshot error: {e}")
             return None
         
+    def capture_frame(self, filename: str = None) -> bool:
+        """
+        Capture a single video frame (alias for take_screenshot).
+        
+        Args:
+            filename: Optional filename for the frame
+            
+        Returns:
+            True if frame was captured successfully, False otherwise
+        """
+        result = self.take_screenshot(filename)
+        return result is not None
+        
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of HDMI stream and verify it's working.
+        
+        Returns:
+            Dictionary with success status and stream information
+        """
+        try:
+            print(f"HDMI[{self.capture_source}]: Taking control of HDMI stream")
+            
+            # Check if we can connect to the HDMI device
+            if not self.is_connected:
+                if not self.connect():
+                    return {
+                        'success': False,
+                        'status': 'connection_failed',
+                        'error': 'Failed to connect to HDMI device',
+                        'controller_type': 'av',
+                        'device_name': self.device_name
+                    }
+            
+            # Check stream status
+            stream_status = self.get_stream_status()
+            is_streaming = stream_status.get('is_streaming', False)
+            
+            # If not streaming, try to start it
+            if not is_streaming:
+                print(f"HDMI[{self.capture_source}]: Stream not active, attempting to start")
+                if self.start_stream():
+                    # Re-check status after starting
+                    stream_status = self.get_stream_status()
+                    is_streaming = stream_status.get('is_streaming', False)
+            
+            if is_streaming:
+                return {
+                    'success': True,
+                    'status': 'stream_ready',
+                    'controller_type': 'av',
+                    'device_name': self.device_name,
+                    'stream_info': stream_status,
+                    'capabilities': ['video_capture', 'screenshot', 'streaming']
+                }
+            else:
+                return {
+                    'success': False,
+                    'status': 'stream_failed',
+                    'error': 'Failed to start HDMI stream',
+                    'controller_type': 'av',
+                    'device_name': self.device_name,
+                    'stream_info': stream_status
+                }
+                
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Take control error: {e}")
+            return {
+                'success': False,
+                'status': 'error',
+                'error': f'HDMI controller error: {str(e)}',
+                'controller_type': 'av',
+                'device_name': self.device_name
+            }
+        
     def start_video_capture(self, duration: float = 60.0, filename: str = None, 
                            resolution: str = None, fps: int = None) -> bool:
         """
@@ -532,41 +608,6 @@ WantedBy=multi-user.target
             time.sleep(1)
             
         self.is_capturing_video = False
-        self.rolling_buffer_active = False
-        
-    def start_audio_capture(self, sample_rate: int = 44100, channels: int = 2) -> bool:
-        """Audio capture not implemented for HDMI stream controller."""
-        print(f"HDMI[{self.capture_source}]: Audio capture not implemented")
-        print(f"HDMI[{self.capture_source}]: Use AudioVerificationController for audio analysis")
-        return False
-        
-    def stop_audio_capture(self) -> bool:
-        """Audio capture not implemented for HDMI stream controller."""
-        return False
-        
-    def detect_audio_level(self) -> float:
-        """Audio detection moved to AudioVerificationController."""
-        print(f"HDMI[{self.capture_source}]: Audio detection moved to AudioVerificationController")
-        return 0.0
-        
-    def detect_silence(self, threshold: float = 5.0, duration: float = 2.0) -> bool:
-        """Audio detection moved to AudioVerificationController."""
-        print(f"HDMI[{self.capture_source}]: Audio detection moved to AudioVerificationController")
-        return False
-        
-    def analyze_video_content(self, analysis_type: str = "motion") -> Dict[str, Any]:
-        """Video analysis moved to VideoVerificationController."""
-        print(f"HDMI[{self.capture_source}]: Video analysis moved to VideoVerificationController")
-        return {"error": "Use VideoVerificationController for video analysis"}
-        
-    def wait_for_video_change(self, timeout: float = 10.0, threshold: float = 10.0) -> bool:
-        """Video analysis moved to VideoVerificationController."""
-        print(f"HDMI[{self.capture_source}]: Video analysis moved to VideoVerificationController")
-        return False
-        
-    def record_session(self, duration: float, filename: str = None) -> bool:
-        """Record a video session (alias for start_video_capture)."""
-        return self.start_video_capture(duration, filename)
         
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
@@ -579,7 +620,6 @@ WantedBy=multi-user.target
             'capture_source': self.capture_source,
             'connected': self.is_connected,
             'capturing_video': self.is_capturing_video,
-            'capturing_audio': False,  # Not supported
             'session_id': self.capture_session_id if hasattr(self, 'capture_session_id') else None,
             'video_device': self.video_device,
             'output_path': str(self.output_path),
