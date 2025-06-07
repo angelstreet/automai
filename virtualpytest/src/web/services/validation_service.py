@@ -5,17 +5,23 @@ This service orchestrates the validation process by leveraging
 existing pathfinding infrastructure to test all nodes and paths.
 """
 
-import sys
-import os
 from typing import Dict, List, Any, Optional
 import time
 import json
 import requests
 
-# Add paths for imports
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
+# Use centralized path setup
+import sys
+import os
+
+# Add utils directory to access path_setup
+current_dir = os.path.dirname(os.path.abspath(__file__))
+web_dir = os.path.dirname(current_dir)
+utils_dir = os.path.join(web_dir, 'utils')
+sys.path.insert(0, utils_dir)
+
+from path_setup import setup_all_paths
+setup_all_paths()
 
 # Import existing pathfinding utilities
 from navigation_pathfinding import (
@@ -27,8 +33,6 @@ from navigation_pathfinding import (
 )
 
 # Import navigation cache
-web_cache_path = os.path.join(web_dir, 'cache')
-sys.path.insert(0, web_cache_path)
 from navigation_cache import get_cached_graph
 from navigation_graph import get_node_info, get_entry_points
 

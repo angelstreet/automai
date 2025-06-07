@@ -9,25 +9,16 @@ This module contains the API endpoints for:
 """
 
 from flask import Blueprint, request, jsonify
-import sys
-import os
 
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)
-
-# Import from web utils directory
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
 from .utils import check_supabase, get_team_id
 
 # Import navigation automation services - try/except for graceful fallback
 try:
-    # Add services directory to path
-    services_path = os.path.join(web_dir, 'services')
-    sys.path.insert(0, services_path)
+    # Services path already set up by centralized setup
     from navigation_service import navigation_service
     NAVIGATION_AUTOMATION_AVAILABLE = True
 except ImportError as e:
@@ -192,9 +183,7 @@ def get_cache_stats():
     try:
         print(f"[@api:pathfinding:cache_stats] Request for cache statistics")
         
-        # Import cache functions
-        cache_path = os.path.join(web_dir, 'cache')
-        sys.path.insert(0, cache_path)
+        # Import cache functions (path already set up by centralized setup)
         from navigation_cache import get_cache_stats
         
         stats = get_cache_stats()

@@ -16,21 +16,14 @@ import threading
 import time
 from queue import Queue, Empty
 
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)
-
-# Import from web utils directory
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
 from .utils import check_supabase, get_team_id
 
 # Import validation services
 try:
-    services_path = os.path.join(web_dir, 'services')
-    sys.path.insert(0, services_path)
     from validation_service import validation_service
     VALIDATION_SERVICE_AVAILABLE = True
 except ImportError as e:

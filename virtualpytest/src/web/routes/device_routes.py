@@ -8,17 +8,11 @@ This module contains the device management API endpoints for:
 """
 
 from flask import Blueprint, request, jsonify
-import sys
-import os
 
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
-# Import from web utils directory (go up one level from routes to web, then into utils)
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
 from device_utils import (
     get_all_devices, get_device, create_device, 
     update_device, delete_device, check_device_name_exists

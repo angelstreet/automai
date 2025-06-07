@@ -2,18 +2,17 @@
 Smart validation utility functions for navigation trees with NetworkX-based path calculation
 """
 
-import sys
-import os
 from typing import List, Dict, Any, Optional, Set, Tuple
 from collections import defaultdict, deque
 import networkx as nx
 
-# Add paths for imports
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-web_cache_path = os.path.join(web_dir, 'cache')
-sys.path.insert(0, web_utils_path)
-sys.path.insert(0, web_cache_path)
+# Use centralized path setup
+import sys
+import os
+
+# Add utils directory to access path_setup (we're already in utils, so just import directly)
+from path_setup import setup_all_paths
+setup_all_paths()
 
 # Import existing NetworkX-based navigation utilities
 from navigation_pathfinding import (

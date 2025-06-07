@@ -27,16 +27,14 @@ import os
 import time
 import atexit
 
-# Setup Python paths BEFORE imports
+# Add utils directory to access path_setup
 current_dir = os.path.dirname(os.path.abspath(__file__))
-local_utils_path = os.path.join(current_dir, 'utils')
-parent_src_path = os.path.dirname(current_dir)
-parent_utils_path = os.path.join(parent_src_path, 'utils')
+utils_dir = os.path.join(current_dir, 'utils')
+sys.path.insert(0, utils_dir)
 
-# Add paths in order of preference (local first, then parent)
-sys.path.insert(0, local_utils_path)
-sys.path.insert(1, parent_utils_path)
-sys.path.insert(2, parent_src_path)
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
 from appUtils import (
     load_environment_variables,

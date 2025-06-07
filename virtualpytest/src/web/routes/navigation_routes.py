@@ -7,19 +7,12 @@ This module contains the API endpoints for:
 """
 
 from flask import Blueprint, request, jsonify
-import sys
-import os
 from datetime import datetime
 import uuid
 
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)
-
-# Import from web utils directory
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
 from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 

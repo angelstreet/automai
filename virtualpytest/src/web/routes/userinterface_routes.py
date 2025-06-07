@@ -6,18 +6,10 @@ This module contains the API endpoints for managing user interfaces.
 
 from flask import Blueprint, request, jsonify
 
-# Import utility functions
-import sys
-import os
+# Use centralized path setup
+from path_setup import setup_all_paths
+setup_all_paths()
 
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
-
-# Import from web utils directory (go up one level from routes to web, then into utils)
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
 from userinterface_utils import (
     get_all_userinterfaces, get_userinterface, create_userinterface, 
     update_userinterface, delete_userinterface, check_userinterface_name_exists
