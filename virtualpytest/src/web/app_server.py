@@ -121,7 +121,7 @@ def main():
     # Register all route blueprints
     try:
         from routes import register_routes
-        register_routes(app)
+        register_routes(app, mode='server')
         print("✅ [SERVER] Routes registered successfully")
     except ImportError as import_error:
         print(f"⚠️ [SERVER] Warning: Could not import routes module: {import_error}")

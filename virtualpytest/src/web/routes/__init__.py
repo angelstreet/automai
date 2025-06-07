@@ -36,36 +36,75 @@ from .verification_execution_server_routes import verification_execution_server_
 from .power_routes import power_bp
 from .system_routes import system_bp
 
-def register_routes(app: Flask):
-    """Register all application routes"""
+def register_routes(app: Flask, mode='server'):
+    """
+    Register application routes based on mode
+    
+    Args:
+        app: Flask application instance
+        mode: 'server' or 'host' - determines which routes to register
+    """
     CORS(app)
     
-    # Register all blueprints
+    print(f"[@routes:register_routes] Registering routes for mode: {mode}")
+    
+    # =====================================================
+    # COMMON ROUTES (registered on both server and host)
+    # =====================================================
     app.register_blueprint(core_bp)
     app.register_blueprint(device_bp)
     app.register_blueprint(controller_bp)
-    app.register_blueprint(remote_bp)
-    app.register_blueprint(audiovideo_bp)
     app.register_blueprint(stats_bp)
-    app.register_blueprint(navigation_bp)
-    app.register_blueprint(pathfinding_bp)
-    app.register_blueprint(validation_bp)
-    app.register_blueprint(campaign_bp)
-    app.register_blueprint(testcase_bp)
     app.register_blueprint(userinterface_bp)
     app.register_blueprint(devicemodel_bp)
     
-    # Register separated verification blueprints
-    app.register_blueprint(verification_common_bp)
-    app.register_blueprint(verification_image_host_bp)
-    app.register_blueprint(verification_text_host_bp)
-    app.register_blueprint(verification_adb_host_bp)
-    app.register_blueprint(verification_image_server_bp)
-    app.register_blueprint(verification_text_server_bp)
-    app.register_blueprint(verification_adb_server_bp)
-    app.register_blueprint(verification_execution_host_bp)
-    app.register_blueprint(verification_execution_server_bp)
+    if mode == 'server':
+        # =====================================================
+        # SERVER-ONLY ROUTES (port 5009)
+        # =====================================================
+        print(f"[@routes:register_routes] Registering SERVER-specific routes")
+        
+        # System management (server manages host registrations)
+        app.register_blueprint(system_bp)
+        
+        # Server-side verification endpoints (proxy to hosts)
+        app.register_blueprint(verification_common_bp)
+        app.register_blueprint(verification_image_server_bp)
+        app.register_blueprint(verification_text_server_bp)
+        app.register_blueprint(verification_adb_server_bp)
+        app.register_blueprint(verification_execution_server_bp)
+        
+        # Server-side functionality
+        app.register_blueprint(remote_bp)
+        app.register_blueprint(audiovideo_bp)
+        app.register_blueprint(navigation_bp)
+        app.register_blueprint(pathfinding_bp)
+        app.register_blueprint(validation_bp)
+        app.register_blueprint(campaign_bp)
+        app.register_blueprint(testcase_bp)
+        app.register_blueprint(screen_definition_blueprint, url_prefix='/api/virtualpytest/screen-definition')
+        app.register_blueprint(power_bp)
+        
+        print(f"[@routes:register_routes] SERVER routes registered successfully")
+        
+    elif mode == 'host':
+        # =====================================================
+        # HOST-ONLY ROUTES (port 5119)
+        # =====================================================
+        print(f"[@routes:register_routes] Registering HOST-specific routes")
+        
+        # Host-side verification endpoints (actual execution)
+        app.register_blueprint(verification_image_host_bp)
+        app.register_blueprint(verification_text_host_bp)
+        app.register_blueprint(verification_adb_host_bp)
+        app.register_blueprint(verification_execution_host_bp)
+        
+        # Host-side functionality (if needed)
+        # Note: Most host routes are in the verification_*_host_bp blueprints
+        
+        print(f"[@routes:register_routes] HOST routes registered successfully")
+        
+    else:
+        raise ValueError(f"Invalid mode: {mode}. Must be 'server' or 'host'")
     
-    app.register_blueprint(screen_definition_blueprint, url_prefix='/api/virtualpytest/screen-definition')
-    app.register_blueprint(power_bp)
-    app.register_blueprint(system_bp) 
+    print(f"[@routes:register_routes] Route registration completed for mode: {mode}") 
