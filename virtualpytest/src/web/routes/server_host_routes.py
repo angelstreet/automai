@@ -289,117 +289,54 @@ def server_release_control():
 
 @server_host_bp.route('/take-control', methods=['POST'])
 def host_take_control():
-    """Host-side take control - check AV controller status using abstract interface"""
+    """Host-side take control - ONLY check if stream service is running"""
     try:
-        print(f"[@route:host_take_control] === STARTING HOST TAKE CONTROL ===")
-        
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
-        video_device = data.get('video_device', '/dev/video0')
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:host_take_control] AV controller take control requested")
+        print(f"[@route:host_take_control] Checking stream service status")
         print(f"[@route:host_take_control] Device model: {device_model}")
-        print(f"[@route:host_take_control] Video device: {video_device}")
         print(f"[@route:host_take_control] Session ID: {session_id}")
         
-        # Use controller factory to create appropriate AV controller
-        try:
-            print(f"[@route:host_take_control] === STEP 1: About to import HDMIStreamController ===")
-            
-            # Import the HDMI controller directly to avoid factory import issues
-            from controllers.audiovideo.hdmi_stream import HDMIStreamController
-            
-            print(f"[@route:host_take_control] === STEP 2: Successfully imported HDMIStreamController ===")
-            
-            # Create HDMI stream controller directly
-            print(f"[@route:host_take_control] === STEP 3: About to create HDMIStreamController instance ===")
-            
-            av_controller = HDMIStreamController(
-                device_name=f"Host - {device_model}",
-                video_device=video_device,
-                output_path="/var/www/html/stream/",
-                stream_resolution="640x360",
-                stream_fps=12,
-                stream_bitrate="400k"
-            )
-            
-            print(f"[@route:host_take_control] === STEP 4: Successfully created HDMIStreamController instance ===")
-            print(f"[@route:host_take_control] Created AV controller: {av_controller.__class__.__name__}")
-            
-            # Use the abstract take_control method
-            print(f"[@route:host_take_control] === STEP 5: About to call take_control() ===")
-            control_result = av_controller.take_control()
-            
-            print(f"[@route:host_take_control] === STEP 6: take_control() completed ===")
-            print(f"[@route:host_take_control] Controller take_control result: {control_result}")
-            
-            # Build response based on controller result
-            if control_result.get('success', False):
-                # Build stream URL if controller indicates stream is ready
-                import os
-                host_ip = os.environ.get('HOST_IP', '77.56.53.130')
-                stream_url = f"https://{host_ip}:444/stream/video"
-                
-                print(f"[@route:host_take_control] === SUCCESS: Returning success response ===")
-                return jsonify({
-                    'success': True,
-                    'status': control_result.get('status', 'ready'),
-                    'message': f'AV controller ready for {device_model}',
-                    'device_model': device_model,
-                    'video_device': video_device,
-                    'session_id': session_id,
-                    'controller_type': 'av',
-                    'controller_class': av_controller.__class__.__name__,
-                    'stream_url': stream_url,
-                    'controller_details': control_result.get('details', {}),
-                    'host_connected': True,
-                    'timestamp': __import__('time').time()
-                })
-            else:
-                print(f"[@route:host_take_control] === FAILURE: Controller failed, returning error response ===")
-                return jsonify({
-                    'success': False,
-                    'status': control_result.get('status', 'failed'),
-                    'error': control_result.get('error', 'AV controller not ready'),
-                    'device_model': device_model,
-                    'video_device': video_device,
-                    'session_id': session_id,
-                    'controller_type': 'av',
-                    'controller_class': av_controller.__class__.__name__,
-                    'controller_details': control_result.get('details', {}),
-                    'host_connected': True,
-                    'timestamp': __import__('time').time()
-                })
-            
-        except Exception as e:
-            print(f"[@route:host_take_control] === EXCEPTION IN CONTROLLER SECTION ===")
-            print(f"[@route:host_take_control] Controller error: {str(e)}")
-            print(f"[@route:host_take_control] Exception type: {type(e)}")
-            import traceback
-            print(f"[@route:host_take_control] Traceback: {traceback.format_exc()}")
-            
+        # ONLY check if stream.service is running
+        import subprocess
+        result = subprocess.run(
+            ['sudo', 'systemctl', 'status', 'stream.service'], 
+            capture_output=True, 
+            text=True
+        )
+        
+        print(f"[@route:host_take_control] systemctl status result: {result.returncode}")
+        print(f"[@route:host_take_control] systemctl stdout: {result.stdout}")
+        
+        # Check if service is active
+        is_active = 'Active: active (running)' in result.stdout
+        
+        if is_active:
+            print(f"[@route:host_take_control] Stream service is running")
+            return jsonify({
+                'success': True,
+                'status': 'stream_ready',
+                'message': 'Stream service is active',
+                'device_model': device_model,
+                'session_id': session_id,
+                'service_status': 'active'
+            })
+        else:
+            print(f"[@route:host_take_control] Stream service is not running")
             return jsonify({
                 'success': False,
-                'status': 'error',
-                'error': f'Controller error: {str(e)}',
-                'controller_type': 'av',
+                'status': 'stream_not_ready',
+                'error': 'Stream service is not active',
                 'device_model': device_model,
-                'host_connected': True,
-                'timestamp': __import__('time').time()
-            }), 500
-        
+                'session_id': session_id,
+                'service_status': 'inactive'
+            })
+            
     except Exception as e:
-        print(f"[@route:host_take_control] === EXCEPTION IN MAIN FUNCTION ===")
-        print(f"[@route:host_take_control] Error: {str(e)}")
-        print(f"[@route:host_take_control] Exception type: {type(e)}")
-        import traceback
-        print(f"[@route:host_take_control] Traceback: {traceback.format_exc()}")
-        
+        print(f"[@route:host_take_control] Error checking service: {str(e)}")
         return jsonify({
             'success': False,
-            'status': 'error',
-            'error': f'Host AV take control error: {str(e)}',
-            'host_connected': True,
-            'timestamp': __import__('time').time()
+            'error': f'Failed to check stream service: {str(e)}'
         }), 500 

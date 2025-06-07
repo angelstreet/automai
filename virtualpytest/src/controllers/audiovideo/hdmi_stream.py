@@ -65,11 +65,9 @@ class HDMIStreamController(AVControllerInterface):
         # Paths
         self.output_path = Path(self.output_path)
         self.stream_file = self.output_path / "output.m3u8"
-        self.screenshots_path = self.output_path / "screenshots"
         self.captures_path = self.output_path / "captures"
         
-        # Create directories
-        self.screenshots_path.mkdir(parents=True, exist_ok=True)
+        # Create directories (removed screenshots_path)
         self.captures_path.mkdir(parents=True, exist_ok=True)
         
     def connect(self) -> bool:
