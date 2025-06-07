@@ -1,0 +1,12 @@
+# Navigation Config Directory
+# Track all JSON files but ignore temporary/backup files
+
+# Ignore backup files
+*_backup_*.json
+*_pre_save_*.json
+
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db 

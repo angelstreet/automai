@@ -254,9 +254,9 @@ def host_save_resource():
             
             uploader = CloudflareUploader()
             
-            # Upload to R2 with organized path
+            # Upload to R2 with organized path and public access
             r2_path = f'reference-images/{model}/{reference_name}.jpg'
-            upload_result = uploader.upload_file(cropped_source_path, r2_path)
+            upload_result = uploader.upload_file(cropped_source_path, r2_path, public=True)
             
             if not upload_result.get('success'):
                 error_msg = upload_result.get('error', 'Unknown upload error')
@@ -266,11 +266,11 @@ def host_save_resource():
                     'error': f'Failed to upload to Cloudflare R2: {error_msg}'
                 }), 500
             
-            # Get signed URL from upload result
-            r2_public_url = upload_result.get('signed_url')
+            # Get public URL from upload result (no expiration)
+            r2_public_url = upload_result.get('url')
             
             print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_path}")
-            print(f"[@route:host_save_resource] R2 public URL: {r2_public_url}")
+            print(f"[@route:host_save_resource] R2 public URL (unlimited): {r2_public_url}")
             
         except Exception as upload_error:
             print(f"[@route:host_save_resource] R2 upload exception: {upload_error}")
@@ -587,7 +587,7 @@ def execute_image_verification_host(verification, source_path, model, verificati
         }
 
 def resolve_reference_path(reference_name, model, verification_type):
-    """Download reference image from R2 URL and cache locally for verification."""
+    """Download reference image from R2 public URL and cache locally for verification."""
     if not reference_name:
         return None
         
@@ -608,14 +608,14 @@ def resolve_reference_path(reference_name, model, verification_type):
                 resource.get('model') == model and
                 resource.get('type') == f'reference_{verification_type}'):
                 
-                r2_url = resource.get('path')  # R2 URL is stored in path field
+                r2_url = resource.get('path')  # R2 public URL is stored in path field
                 break
         
         if not r2_url:
             print(f"[@route:resolve_reference_path] Reference not found in JSON: {reference_name}")
             return None
         
-        print(f"[@route:resolve_reference_path] Found R2 URL: {r2_url}")
+        print(f"[@route:resolve_reference_path] Found R2 public URL: {r2_url}")
         
         # Create cache directory
         cache_dir = '/tmp/r2_cache'
@@ -625,11 +625,18 @@ def resolve_reference_path(reference_name, model, verification_type):
         cache_filename = f"{model}_{reference_name}.jpg"
         cache_path = os.path.join(cache_dir, cache_filename)
         
-        # Download from R2 to cache
+        # Check if cached file exists and is recent (avoid re-downloading)
+        if os.path.exists(cache_path):
+            # If file is less than 1 hour old, use cached version
+            if (time.time() - os.path.getmtime(cache_path)) < 3600:
+                print(f"[@route:resolve_reference_path] Using cached R2 image: {cache_path}")
+                return cache_path
+        
+        # Download from R2 public URL to cache
         try:
             import requests
             
-            print(f"[@route:resolve_reference_path] Downloading from R2 to cache: {cache_path}")
+            print(f"[@route:resolve_reference_path] Downloading from R2 public URL to cache: {cache_path}")
             response = requests.get(r2_url, timeout=30)
             response.raise_for_status()
             

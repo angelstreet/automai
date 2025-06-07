@@ -51,6 +51,12 @@ def register_host_with_server():
     host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port - should match internal if no port forwarding
     HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port for images
     
+    # Get device information from environment variables
+    device_name = os.getenv('DEVICE_NAME')  # Optional - will be generated if not provided
+    device_model = os.getenv('DEVICE_MODEL', 'android_mobile')  # Default to android_mobile if not specified
+    device_ip = os.getenv('DEVICE_IP', host_ip)  # Default to host IP if not specified
+    device_port = os.getenv('DEVICE_PORT', '5555')  # Default ADB port
+    
     print(f"🔍 [HOST] Registration Debug Info:")
     print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
     print(f"   SERVER_PORT env: '{server_port}'")
@@ -61,6 +67,10 @@ def register_host_with_server():
     print(f"   HOST_PORT_INTERNAL env: '{host_port_internal}'")
     print(f"   HOST_PORT_EXTERNAL env: '{host_port_external}'")
     print(f"   HOST_PORT_WEB env: '{HOST_PORT_WEB}'")
+    print(f"   DEVICE_NAME env: '{device_name}'")
+    print(f"   DEVICE_MODEL env: '{device_model}'")
+    print(f"   DEVICE_IP env: '{device_ip}'")
+    print(f"   DEVICE_PORT env: '{device_port}'")
     
     # Validate critical environment variables
     validation_errors = []
@@ -74,13 +84,16 @@ def register_host_with_server():
     if not host_ip:
         validation_errors.append("HOST_IP is required but not set")
     
+    if not device_model:
+        validation_errors.append("DEVICE_MODEL is required but not set")
+    
     if validation_errors:
         print(f"\n⚠️ [HOST] Environment Variable Issues:")
         for error in validation_errors:
             print(f"   - {error}")
         
         # Check if we have critical missing vars
-        critical_missing = [error for error in validation_errors if any(x in error for x in ["SERVER_IP", "HOST_NAME", "HOST_IP"])]
+        critical_missing = [error for error in validation_errors if any(x in error for x in ["SERVER_IP", "HOST_NAME", "HOST_IP", "DEVICE_MODEL"])]
         if critical_missing:
             print(f"\n❌ [HOST] Cannot proceed with registration due to critical missing variables:")
             for error in critical_missing:
@@ -92,6 +105,8 @@ def register_host_with_server():
                 print(f"   export HOST_NAME=sunri-pi1")
             if not host_ip:
                 print(f"   export HOST_IP=192.168.1.67")
+            if not device_model:
+                print(f"   export DEVICE_MODEL=android_mobile")
             return
         else:
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
@@ -116,6 +131,17 @@ def register_host_with_server():
         # This ensures the same host gets the same ID on reconnection
         stable_host_id = generate_stable_host_id(host_name, host_ip)
         
+        # Generate device_id dynamically based on host_id and device_model
+        device_id = f"{stable_host_id}_device_{device_model}"
+        print(f"🔧 [HOST] Generated device_id: {device_id}")
+        
+        # Generate device_name if not provided in environment
+        if not device_name:
+            device_name = f"{device_model.replace('_', ' ').title()}"
+            print(f"🔧 [HOST] Generated device_name: {device_name}")
+        else:
+            print(f"📋 [HOST] Using device_name from environment: {device_name}")
+        
         host_info = {
             'client_id': stable_host_id,  # Keep as client_id for API compatibility
             'public_ip': host_ip,
@@ -125,7 +151,11 @@ def register_host_with_server():
             'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
             'https_port': HOST_PORT_WEB,  # HTTPS port - for nginx/images (port forwarding)
             'name': host_name,
-            'device_model': 'android_mobile',  # Default device model
+            'device_model': device_model,  # Now from environment variable
+            'device_id': device_id,  # From environment or generated
+            'device_name': device_name,  # From environment or generated
+            'device_ip': device_ip,  # From environment or defaults to host_ip
+            'device_port': device_port,  # From environment or defaults to 5555
             'controller_types': ['remote', 'av', 'verification'],
             'capabilities': ['stream', 'capture', 'verification'],
             'status': 'online',

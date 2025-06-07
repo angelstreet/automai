@@ -190,10 +190,26 @@ def register_client():
             return jsonify({'error': error_msg}), 400
         
         # Generate device_id and set device defaults if not provided
-        device_id = f"{host_info['host_id']}_device_{host_info['device_model']}"
-        device_name = host_info.get('device_name', f"{host_info['device_model'].replace('_', ' ').title()}")
+        # Use device information from host if provided, otherwise generate defaults
+        device_id = host_info.get('device_id')
+        if not device_id:
+            # Generate device_id if not provided by host (backward compatibility)
+            device_id = f"{host_info['host_id']}_device_{host_info['device_model']}"
+        
+        device_name = host_info.get('device_name')
+        if not device_name:
+            # Generate device_name if not provided by host (backward compatibility)
+            device_name = f"{host_info['device_model'].replace('_', ' ').title()}"
+        
         device_ip = host_info.get('device_ip', host_info['host_ip'])  # Default to host IP
         device_port = host_info.get('device_port', '5555')  # Default ADB port
+        
+        print(f"[@route:register_client] Device information:")
+        print(f"   Device ID: {device_id} ({'from host' if host_info.get('device_id') else 'generated'})")
+        print(f"   Device Name: {device_name} ({'from host' if host_info.get('device_name') else 'generated'})")
+        print(f"   Device Model: {host_info['device_model']}")
+        print(f"   Device IP: {device_ip}")
+        print(f"   Device Port: {device_port}")
         
         # Create structured host registration with device information
         structured_host_info = {

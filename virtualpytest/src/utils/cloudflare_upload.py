@@ -69,16 +69,17 @@ class CloudflareUploader:
             else:
                 raise
     
-    def upload_file(self, local_path: str, remote_path: str) -> Dict:
+    def upload_file(self, local_path: str, remote_path: str, public: bool = False) -> Dict:
         """
         Upload a file to R2.
         
         Args:
             local_path: Path to local file
             remote_path: Path in R2 bucket (e.g., 'images/screenshot.jpg')
+            public: If True, make file publicly accessible
             
         Returns:
-            Dict with success status and signed URL
+            Dict with success status and URL (public or signed)
         """
         try:
             if not os.path.exists(local_path):
@@ -89,25 +90,35 @@ class CloudflareUploader:
             if not content_type:
                 content_type = 'application/octet-stream'
             
+            # Prepare upload arguments
+            extra_args = {'ContentType': content_type}
+            if public:
+                extra_args['ACL'] = 'public-read'
+            
             # Upload file
             with open(local_path, 'rb') as f:
                 self.s3_client.upload_fileobj(
                     f,
                     self.bucket_name,
                     remote_path,
-                    ExtraArgs={'ContentType': content_type}
+                    ExtraArgs=extra_args
                 )
             
-            # Get signed URL
-            signed_url = self.get_signed_url(remote_path)
+            # Get appropriate URL
+            if public:
+                file_url = self.get_public_url(remote_path)
+            else:
+                file_url = self.get_signed_url(remote_path)
             
-            logger.info(f"Uploaded: {local_path} -> {remote_path}")
+            logger.info(f"Uploaded: {local_path} -> {remote_path} (public: {public})")
             
             return {
                 'success': True,
                 'remote_path': remote_path,
-                'signed_url': signed_url,
-                'size': os.path.getsize(local_path)
+                'url': file_url,
+                'signed_url': file_url,  # For backward compatibility
+                'size': os.path.getsize(local_path),
+                'public': public
             }
             
         except Exception as e:
@@ -135,6 +146,30 @@ class CloudflareUploader:
             logger.error(f"Failed to generate signed URL: {str(e)}")
             return ""
     
+    def get_public_url(self, remote_path: str) -> str:
+        """
+        Get a public URL for a file in R2 (no expiration).
+        
+        Args:
+            remote_path: Path in R2 bucket
+            
+        Returns:
+            Public URL string
+        """
+        try:
+            # Extract account ID from endpoint URL
+            endpoint_url = os.environ.get('CLOUDFLARE_R2_ENDPOINT', '')
+            if '.r2.cloudflarestorage.com' in endpoint_url:
+                account_id = endpoint_url.split('//')[1].split('.')[0]
+                return f"https://pub-{account_id}.r2.dev/{remote_path}"
+            else:
+                # Fallback to signed URL with very long expiration
+                return self.get_signed_url(remote_path, expires_in=31536000)  # 1 year
+        except Exception as e:
+            logger.error(f"Failed to generate public URL: {str(e)}")
+            # Fallback to signed URL
+            return self.get_signed_url(remote_path, expires_in=31536000)
+    
     def delete_file(self, remote_path: str) -> bool:
         """Delete a file from R2."""
         try:
@@ -156,10 +191,10 @@ class CloudflareUploader:
 
 # Convenience functions for common use cases
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
-    """Upload a reference image."""
+    """Upload a reference image with public access (no expiration)."""
     uploader = CloudflareUploader()
     remote_path = f"reference-images/{model}/{image_name}"
-    return uploader.upload_file(local_path, remote_path)
+    return uploader.upload_file(local_path, remote_path, public=True)
 
 
 def upload_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:

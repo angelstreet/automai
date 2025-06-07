@@ -17,6 +17,7 @@ import { useNavigationState } from './navigation/useNavigationState';
 import { useConnectionRules } from './navigation/useConnectionRules';
 import { useNavigationHistory } from './navigation/useNavigationHistory';
 import { useNavigationCRUD } from './navigation/useNavigationCRUD';
+import { useNavigationConfig } from './navigation/useNavigationConfig';
 import { useNodeEdgeManagement } from './navigation/useNodeEdgeManagement';
 
 // Import registration context and default team ID
@@ -68,7 +69,7 @@ export const useNavigationEditor = () => {
   // Connection rules hook
   const { validateConnection, getRulesSummary } = useConnectionRules();
   
-  // CRUD operations hook
+  // CRUD operations hook (legacy database operations)
   const crudHook = useNavigationCRUD({
     currentTreeId: navigationState.currentTreeId,
     currentTreeName: navigationState.currentTreeName,
@@ -92,6 +93,31 @@ export const useNavigationEditor = () => {
     setCurrentViewRootId: navigationState.setCurrentViewRootId,
     setViewPath: navigationState.setViewPath,
     setUserInterface: navigationState.setUserInterface,
+    nodes: navigationState.nodes,
+    edges: navigationState.edges,
+    allNodes: navigationState.allNodes,
+    allEdges: navigationState.allEdges,
+    isSaving: navigationState.isSaving,
+    apiCall, // Pass the apiCall function
+  });
+  
+  // Navigation config operations hook (new JSON config file operations)
+  const configHook = useNavigationConfig({
+    currentTreeName: navigationState.currentTreeName,
+    setCurrentTreeName: navigationState.setCurrentTreeName,
+    setNodes: navigationState.setNodes,
+    setEdges: navigationState.setEdges,
+    setAllNodes: navigationState.setAllNodes,
+    setAllEdges: navigationState.setAllEdges,
+    setInitialState: navigationState.setInitialState,
+    setHistory: navigationState.setHistory,
+    setHistoryIndex: navigationState.setHistoryIndex,
+    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+    setIsLoading: navigationState.setIsLoading,
+    setError: navigationState.setError,
+    setSaveError: navigationState.setSaveError,
+    setSaveSuccess: navigationState.setSaveSuccess,
+    setIsSaving: navigationState.setIsSaving,
     nodes: navigationState.nodes,
     edges: navigationState.edges,
     allNodes: navigationState.allNodes,
@@ -466,11 +492,11 @@ export const useNavigationEditor = () => {
     navigationState.setCurrentTreeName(targetTreeName);
     navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
     
-    // Load tree data for that level from database
-    crudHook.loadFromDatabase();
+    // Load tree data for that level from config
+    configHook.loadFromConfig(targetTreeName);
     
-    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeId}`);
-  }, [navigationState, crudHook.loadFromDatabase, navigate]);
+    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeName}`);
+  }, [navigationState, configHook.loadFromConfig, navigate]);
 
   // Go back to parent tree
   const goBackToParent = useCallback(() => {
@@ -486,12 +512,12 @@ export const useNavigationEditor = () => {
       navigationState.setCurrentTreeName(targetTreeName);
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
       
-      // Load parent tree data from database
-      crudHook.loadFromDatabase();
+      // Load parent tree data from config
+      configHook.loadFromConfig(targetTreeName);
       
       console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeId}`);
     }
-  }, [navigationState, crudHook.loadFromDatabase, navigate]);
+  }, [navigationState, configHook.loadFromConfig, navigate]);
 
   // Discard changes function with confirmation
   const discardChanges = useCallback(() => {
@@ -944,11 +970,26 @@ export const useNavigationEditor = () => {
     onNodeDoubleClick: onNodeDoubleClickUpdated,
     onPaneClick,
     
-    // Actions from CRUD hook
+    // Actions from CRUD hook (legacy database operations)
     loadFromDatabase: crudHook.loadFromDatabase,
     saveToDatabase: crudHook.saveToDatabase,
     createEmptyTree: crudHook.createEmptyTree,
     convertTreeData: crudHook.convertToNavigationTreeData,
+    
+    // Actions from Config hook (new JSON config file operations)
+    loadFromConfig: configHook.loadFromConfig,
+    saveToConfig: configHook.saveToConfig,
+    listAvailableTrees: configHook.listAvailableTrees,
+    createEmptyTreeConfig: configHook.createEmptyTree,
+    
+    // Lock management from Config hook
+    isLocked: configHook.isLocked,
+    lockInfo: configHook.lockInfo,
+    sessionId: configHook.sessionId,
+    lockNavigationTree: configHook.lockNavigationTree,
+    unlockNavigationTree: configHook.unlockNavigationTree,
+    checkTreeLockStatus: configHook.checkTreeLockStatus,
+    setupAutoUnlock: configHook.setupAutoUnlock,
     
     // Actions from Node/Edge management hook
     handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,

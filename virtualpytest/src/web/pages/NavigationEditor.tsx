@@ -438,6 +438,17 @@ const NavigationEditorContent: React.FC = () => {
     // Actions
     loadFromDatabase,
     saveToDatabase,
+    loadFromConfig,
+    saveToConfig,
+    listAvailableTrees,
+    createEmptyTreeConfig,
+    isLocked,
+    lockInfo,
+    sessionId,
+    lockNavigationTree,
+    unlockNavigationTree,
+    checkTreeLockStatus,
+    setupAutoUnlock,
     handleNodeFormSubmit,
     handleEdgeFormSubmit,
     handleDeleteNode,
@@ -484,12 +495,20 @@ const NavigationEditorContent: React.FC = () => {
   
   // Load tree data when component mounts or treeId changes
   useEffect(() => {
-    if (currentTreeId && !isLoadingInterface && currentTreeId !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Loading tree data for: ${currentTreeId}`);
-      lastLoadedTreeId.current = currentTreeId;
-      loadFromDatabase();
+    if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
+      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
+      lastLoadedTreeId.current = currentTreeName;
+      
+      // Load from config instead of database
+      loadFromConfig(currentTreeName);
+      
+      // Setup auto-unlock for this tree
+      const cleanup = setupAutoUnlock(currentTreeName);
+      
+      // Return cleanup function
+      return cleanup;
     }
-  }, [currentTreeId, isLoadingInterface]);
+  }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
   // Handle remote control actions
   const handleToggleRemotePanel = useCallback(() => {
@@ -869,7 +888,7 @@ const NavigationEditorContent: React.FC = () => {
             let updatedVerifications;
             if (existingVerifications.length > 0) {
               // Update the first verification's last_run_result
-              updatedVerifications = existingVerifications.map((verification, index) => {
+              updatedVerifications = existingVerifications.map((verification: any, index: number) => {
                 if (index === 0) {
                   const existingResults = verification.last_run_result || [];
                   const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
@@ -956,7 +975,7 @@ const NavigationEditorContent: React.FC = () => {
             let updatedActions;
             if (existingActions.length > 0) {
               // Update the first action's last_run_result
-              updatedActions = existingActions.map((action, index) => {
+              updatedActions = existingActions.map((action: any, index: number) => {
                 if (index === 0) {
                   const existingResults = action.last_run_result || [];
                   const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
@@ -998,7 +1017,7 @@ const NavigationEditorContent: React.FC = () => {
           
           let updatedActions;
           if (existingActions.length > 0) {
-            updatedActions = existingActions.map((action, index) => {
+            updatedActions = existingActions.map((action: any, index: number) => {
               if (index === 0) {
                 const existingResults = action.last_run_result || [];
                 const updatedResults = [validationResult, ...existingResults].slice(0, 10);
@@ -1060,12 +1079,20 @@ const NavigationEditorContent: React.FC = () => {
   
   // Load tree data when component mounts or treeId changes
   useEffect(() => {
-    if (currentTreeId && !isLoadingInterface && currentTreeId !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Loading tree data for: ${currentTreeId}`);
-      lastLoadedTreeId.current = currentTreeId;
-      loadFromDatabase();
+    if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
+      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
+      lastLoadedTreeId.current = currentTreeName;
+      
+      // Load from config instead of database
+      loadFromConfig(currentTreeName);
+      
+      // Setup auto-unlock for this tree
+      const cleanup = setupAutoUnlock(currentTreeName);
+      
+      // Return cleanup function
+      return cleanup;
     }
-  }, [currentTreeId, isLoadingInterface]);
+  }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
   // Clear verification results when a different node is selected
   useEffect(() => {
@@ -1102,6 +1129,9 @@ const NavigationEditorContent: React.FC = () => {
         error={error}
         historyIndex={historyIndex}
         historyLength={history.length}
+        isLocked={isLocked}
+        lockInfo={lockInfo}
+        sessionId={sessionId}
         userInterface={userInterface}
         selectedDevice={selectedDevice}
         isControlActive={isControlActive}
@@ -1117,6 +1147,9 @@ const NavigationEditorContent: React.FC = () => {
         onUndo={undo}
         onRedo={redo}
         onSaveToDatabase={saveToDatabase}
+        onSaveToConfig={() => saveToConfig(currentTreeName)}
+        onLockTree={() => lockNavigationTree(currentTreeName)}
+        onUnlockTree={() => unlockNavigationTree(currentTreeName)}
         onDiscardChanges={discardChanges}
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}

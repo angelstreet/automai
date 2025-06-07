@@ -48,6 +48,9 @@ from .verification_adb_server_routes import verification_adb_server_bp
 from .verification_execution_host_routes import verification_execution_host_bp
 from .verification_execution_server_routes import verification_execution_server_bp
 
+# Import navigation config routes
+from .navigation_config_routes import navigation_config_bp
+
 # Import unified server-host routes
 from .server_host_routes import server_host_bp
 
@@ -100,6 +103,7 @@ def register_routes(app: Flask, mode='server'):
         app.register_blueprint(remote_bp)
         app.register_blueprint(audiovideo_bp)
         app.register_blueprint(navigation_bp)
+        app.register_blueprint(navigation_config_bp)
         app.register_blueprint(pathfinding_bp)
         app.register_blueprint(validation_bp)
         app.register_blueprint(campaign_bp)

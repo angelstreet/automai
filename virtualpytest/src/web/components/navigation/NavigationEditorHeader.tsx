@@ -52,6 +52,11 @@ interface NavigationEditorHeaderProps {
   historyIndex: number;
   historyLength: number;
   
+  // Lock management props
+  isLocked?: boolean;
+  lockInfo?: any;
+  sessionId?: string;
+  
   // Remote control props
   isRemotePanelOpen: boolean;
   selectedDevice: string | null;
@@ -76,6 +81,9 @@ interface NavigationEditorHeaderProps {
   onUndo: () => void;
   onRedo: () => void;
   onSaveToDatabase: () => void;
+  onSaveToConfig?: () => void;
+  onLockTree?: () => void;
+  onUnlockTree?: () => void;
   onDiscardChanges: () => void;
   
   // Tree filtering handlers
@@ -107,6 +115,9 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   error,
   historyIndex,
   historyLength,
+  isLocked,
+  lockInfo,
+  sessionId,
   isRemotePanelOpen,
   selectedDevice,
   isControlActive,
@@ -122,6 +133,9 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onUndo,
   onRedo,
   onSaveToDatabase,
+  onSaveToConfig,
+  onLockTree,
+  onUnlockTree,
   onDiscardChanges,
   onFocusNodeChange,
   onDepthChange,
@@ -166,8 +180,24 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
             width: '100%'
           }}>
             
-            {/* Section 1: Tree Name */}
+            {/* Section 1: Tree Name with Lock Indicator */}
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              {/* Lock Indicator */}
+              {isLocked && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mr: 1,
+                  px: 1,
+                  py: 0.5,
+                  backgroundColor: lockInfo?.locked_by === sessionId ? 'success.light' : 'warning.light',
+                  borderRadius: 1,
+                  fontSize: '0.7rem'
+                }}>
+                  🔒 {lockInfo?.locked_by === sessionId ? 'Locked by you' : 'Locked by another user'}
+                </Box>
+              )}
+              
               {/* Simple Tree Name Display */}
               <Typography
                 variant="h6"
@@ -281,10 +311,27 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               </IconButton>
               
               <IconButton 
-                onClick={onSaveToDatabase} 
+                onClick={() => {
+                  // Use config save if available, otherwise fallback to database save
+                  if (onSaveToConfig) {
+                    onSaveToConfig();
+                  } else {
+                    onSaveToDatabase();
+                  }
+                }} 
                 size="small" 
-                title={hasUnsavedChanges ? "Save Changes to Database" : "Save to Database"}
-                disabled={isLoading || !!error}
+                title={
+                  isLocked && lockInfo?.locked_by !== sessionId 
+                    ? "Cannot save - tree is locked by another user"
+                    : hasUnsavedChanges 
+                      ? "Save Changes to Config" 
+                      : "Save to Config"
+                }
+                disabled={
+                  isLoading || 
+                  !!error || 
+                  (isLocked && lockInfo?.locked_by !== sessionId)
+                }
                 color={hasUnsavedChanges ? "primary" : "default"}
               >
                 {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
