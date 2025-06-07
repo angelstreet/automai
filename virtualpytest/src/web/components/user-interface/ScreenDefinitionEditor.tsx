@@ -270,55 +270,15 @@ export function ScreenDefinitionEditor({
     checkRemoteConnection();
   }, [buildServerUrl]);
 
-  // Initial check for stream status - only once, no polling
+  // Initial check for stream status - REMOVED: unnecessary after successful take control
+  // Stream status is already confirmed during take control process
   useEffect(() => {
-    const checkInitialStatus = async () => {
-      if (!isConnected) return;
-      
-      try {
-        // Add a small delay to make sure SSH connection is ready
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        
-        const response = await fetch(buildServerUrl('/api/virtualpytest/screen-definition/stream/status'));
-        if (!response.ok) {
-          console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, assuming stream is running...');
-          // Assume stream is running instead of trying to restart it
-          setStreamStatus('running');
-          return;
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          if (data.is_active) {
-            setStreamStatus('running');
-          } else {
-            // Check if SSH is active before attempting restart
-            if (data.ssh_active === false) {
-              console.log('[@component:ScreenDefinitionEditor] Stream is stopped but SSH is not active. Marking stream as running without restart.');
-              setStreamStatus('running');
-            } else {
-              setStreamStatus('stopped');
-              // Automatically attempt to restart if stream is stopped and SSH is active
-              console.log('[@component:ScreenDefinitionEditor] Stream is stopped, attempting automatic restart...');
-              // setTimeout(() => restartStream(), 1000); // Commented out automatic restart
-            }
-          }
-        } else {
-          // If we can't determine status, assume stream is running instead of trying to restart
-          console.log('[@component:ScreenDefinitionEditor] Stream status unknown, assuming stream is running...');
-          setStreamStatus('running');
-        }
-      } catch (error) {
-        // Just set status to running and don't attempt restart
-        console.log('[@component:ScreenDefinitionEditor] Stream status check unavailable, assuming stream is running...');
-        setStreamStatus('running');
-      }
-    };
-
     if (isConnected) {
-      checkInitialStatus();
+      // Assume stream is running since we got here after successful take control
+      console.log('[@component:ScreenDefinitionEditor] Connected after take control, assuming stream is running');
+      setStreamStatus('running');
     }
-  }, [isConnected, buildServerUrl]);
+  }, [isConnected]);
   
   // Start video capture - new simple logic: just record timestamp and show LED
   const handleStartCapture = async () => {
