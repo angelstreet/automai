@@ -51,19 +51,21 @@ def server_take_control():
             # Find device by device_id across all hosts
             device_info = None
             host_info = None
+            host_id = None  # Track the actual registry key for locking
             
-            for host_id, host_data in connected_clients.items():
+            for registry_host_id, host_data in connected_clients.items():
                 if host_data.get('status') == 'online':
                     # Check new structured format first
                     device_data = host_data.get('device', {})
                     if device_data and device_data.get('device_id') == device_id:
                         device_info = device_data
                         host_info = host_data
+                        host_id = registry_host_id  # Use the registry key for locking
                         break
                     
                     # Check backward compatibility format
                     elif not device_data and host_data.get('device_model'):
-                        compat_device_id = f"{host_id}_device_{host_data.get('device_model')}"
+                        compat_device_id = f"{registry_host_id}_device_{host_data.get('device_model')}"
                         if compat_device_id == device_id:
                             # Create device_info from backward compatibility format
                             device_info = {
@@ -74,9 +76,10 @@ def server_take_control():
                                 'device_port': '5555'
                             }
                             host_info = host_data
+                            host_id = registry_host_id  # Use the registry key for locking
                             break
             
-            if not device_info or not host_info:
+            if not device_info or not host_info or not host_id:
                 return jsonify({
                     'success': False,
                     'error': f'Device not found in registry: {device_id}',
@@ -92,6 +95,7 @@ def server_take_control():
             
             print(f"[@route:server_take_control] Found device: {device_info.get('device_name')} ({device_model})")
             print(f"[@route:server_take_control] Host: {host_name} at {host_ip}:{host_port}")
+            print(f"[@route:server_take_control] Registry key for locking: {host_id}")
             
         except Exception as e:
             print(f"[@route:server_take_control] Error getting device from registry: {e}")
@@ -105,12 +109,12 @@ def server_take_control():
         try:
             from web.utils.deviceLockManager import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
             
-            # Try to acquire lock for the device
-            lock_acquired = lock_device_in_registry(device_id, session_id)
+            # Try to acquire lock for the HOST (using host_id as registry key)
+            lock_acquired = lock_device_in_registry(host_id, session_id)
             
             if not lock_acquired:
                 # Get lock info to see who owns it
-                lock_info = get_device_lock_info(device_id)
+                lock_info = get_device_lock_info(host_id)
                 current_owner = lock_info.get('lockedBy', 'unknown') if lock_info else 'unknown'
                 return jsonify({
                     'success': False,
@@ -120,7 +124,7 @@ def server_take_control():
                     'host_available': True
                 }), 409
             
-            print(f"[@route:server_take_control] Successfully locked device {device_id} for session {session_id}")
+            print(f"[@route:server_take_control] Successfully locked host {host_id} for session {session_id}")
             
         except Exception as e:
             print(f"[@route:server_take_control] Error acquiring device lock: {e}")
@@ -163,7 +167,7 @@ def server_take_control():
                         'host_available': True,
                         'controllers': host_data.get('controllers', {}),
                         'host_info': {
-                            'host_id': host_info.get('host_id') or list(connected_clients.keys())[0],
+                            'host_id': host_id,
                             'host_name': host_name,
                             'host_ip': host_ip,
                             'host_port': host_port
@@ -171,7 +175,7 @@ def server_take_control():
                     }), 200
                 else:
                     # Host failed, release the device lock
-                    unlock_device_in_registry(device_id, session_id)
+                    unlock_device_in_registry(host_id, session_id)
                     return jsonify({
                         'success': False,
                         'error': host_data.get('error', 'Host failed to take control'),
@@ -181,7 +185,7 @@ def server_take_control():
                     }), 500
             else:
                 # Host request failed, release the device lock
-                unlock_device_in_registry(device_id, session_id)
+                unlock_device_in_registry(host_id, session_id)
                 return jsonify({
                     'success': False,
                     'error': f'Host request failed: {host_response.status_code} {host_response.text}',
@@ -191,7 +195,7 @@ def server_take_control():
                 
         except Exception as e:
             # Host communication failed, release the device lock
-            unlock_device_in_registry(device_id, session_id)
+            unlock_device_in_registry(host_id, session_id)
             print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,
