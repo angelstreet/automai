@@ -64,9 +64,9 @@ from appUtils import (
 )
 
 from hostUtils import (
-    register_with_server,
-    start_health_check_thread,
-    cleanup_host_resources
+    register_host_with_server,
+    start_ping_thread,
+    cleanup_on_exit
 )
 
 def cleanup_host_ports():
@@ -82,14 +82,14 @@ def cleanup_host_ports():
 
 def setup_host_cleanup():
     """Setup cleanup handlers for host shutdown"""
-    def cleanup_on_exit():
+    def cleanup_on_exit_wrapper():
         """Cleanup function called on normal exit"""
         print(f"\n🧹 [HOST] Performing cleanup on exit...")
-        cleanup_host_resources()
+        cleanup_on_exit()  # Call the hostUtils cleanup function
         print(f"✅ [HOST] Host cleanup completed")
     
     # Register exit handler for normal exit
-    atexit.register(cleanup_on_exit)
+    atexit.register(cleanup_on_exit_wrapper)
 
 def main():
     """Main function for host application"""
@@ -168,14 +168,13 @@ def main():
     
     # Register with server in a separate thread
     registration_thread = threading.Thread(
-        target=register_with_server,
-        args=(app, host_id),
+        target=register_host_with_server,
         daemon=True
     )
     registration_thread.start()
     
     # Start health check thread
-    health_check_thread = start_health_check_thread(app, host_id)
+    start_ping_thread()
     
     print(f"\n🚀 [HOST] Starting Flask app on port {host_port_internal}")
     print(f"🌐 [HOST] Host will be available at: http://0.0.0.0:{host_port_internal}")

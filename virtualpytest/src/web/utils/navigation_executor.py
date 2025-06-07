@@ -97,7 +97,7 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         
         # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
         api_controller_type = 'android-mobile'  # Default controller type
-        api_url = f"http://localhost:{SERVER_PORT}/api/virtualpytest/{api_controller_type}/execute-action"
+        api_url = get_api_url(f"/api/virtualpytest/{api_controller_type}/execute-action")
         
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
@@ -558,7 +558,7 @@ def execute_action_object(action_obj: dict) -> bool:
         
         # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
         api_controller_type = 'android-mobile'  # Default controller type
-        api_url = f"http://localhost:{SERVER_PORT}/api/virtualpytest/{api_controller_type}/execute-action"
+        api_url = get_api_url(f"/api/virtualpytest/{api_controller_type}/execute-action")
         
         print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
         
@@ -751,4 +751,15 @@ def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, curr
         'summary': f"Navigate from {start_node} to {target_node_id} in {len(transitions) if transitions else 0} transitions ({total_actions} actions)" if transitions else "No path found"
     }
     
-    return preview 
+    return preview
+
+# Get server URL from environment (similar to registration context)
+def get_api_url(endpoint: str) -> str:
+    """Get API URL for endpoint, similar to buildApiUrl in registration context"""
+    server_port = os.getenv('SERVER_PORT', '5009')
+    server_ip = os.getenv('SERVER_IP', 'localhost') 
+    server_protocol = os.getenv('SERVER_PROTOCOL', 'http')
+    
+    base_url = f"{server_protocol}://{server_ip}:{server_port}"
+    clean_endpoint = endpoint.lstrip('/')
+    return f"{base_url}/{clean_endpoint}" 
