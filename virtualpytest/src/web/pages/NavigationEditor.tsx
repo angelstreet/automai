@@ -372,6 +372,17 @@ const NavigationEditorContent: React.FC = () => {
     console.log(`[@component:NavigationEditor] Disconnection will be handled by the generic remote component`);
   }, [isControlActive, remoteConfig?.type]);
 
+  // Auto-open/close remote panel when control state changes
+  useEffect(() => {
+    if (isControlActive && remoteConfig && !isRemotePanelOpen) {
+      console.log('[@component:NavigationEditor] Control activated, automatically opening remote panel');
+      setIsRemotePanelOpen(true);
+    } else if (!isControlActive && isRemotePanelOpen) {
+      console.log('[@component:NavigationEditor] Control released, automatically closing remote panel');
+      setIsRemotePanelOpen(false);
+    }
+  }, [isControlActive, remoteConfig, isRemotePanelOpen]);
+
   const {
     // State
     nodes,

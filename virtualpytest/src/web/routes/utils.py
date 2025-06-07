@@ -87,7 +87,7 @@ def build_host_url(host_info, endpoint, use_https=True):
         # Fallback to legacy fields if connection info not available
         host_ip = host_info.get('local_ip')
         # Use proper naming: host_port for server-to-host communication
-        host_port = host_info.get('host_port') or host_info.get('client_port', '6119')  # Fallback for backward compatibility
+        host_port = host_info.get('host_port') or host_info.get('client_port', '5119')  # Fallback for backward compatibility
         
         if not host_ip:
             raise ValueError("Host connection information not found in registration info")
@@ -97,7 +97,7 @@ def build_host_url(host_info, endpoint, use_https=True):
         base_url = f"{protocol}://{host_ip}:{host_port}"
     else:
         # Parse the flask_url to get the base URL
-        # flask_url format: "http://77.56.53.130:6119"
+        # flask_url format: "http://77.56.53.130:5119"
         parsed = urllib.parse.urlparse(flask_url)
         
         # Use the protocol from use_https parameter, but keep the host and port from flask_url
