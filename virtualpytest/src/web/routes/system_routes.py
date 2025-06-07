@@ -14,6 +14,13 @@ import psutil
 from datetime import datetime
 from collections import deque
 
+# Import the new controller config factory
+from ..utils.controllerConfigFactory import (
+    create_controller_configs_from_device_info,
+    get_device_capabilities_from_model,
+    get_controller_types_from_model
+)
+
 system_bp = Blueprint('system', __name__)
 
 # In-memory log storage for debug purposes
@@ -211,6 +218,27 @@ def register_client():
         print(f"   Device IP: {device_ip}")
         print(f"   Device Port: {device_port}")
         
+        # Generate complete controller_configs using factory (NO SSH NEEDED!)
+        controller_configs = create_controller_configs_from_device_info(
+            device_model=host_info['device_model'],
+            device_ip=device_ip,
+            device_port=device_port,
+            host_ip=host_info['host_ip'],
+            host_port=host_info['host_port']
+        )
+        
+        # Generate capabilities and controller types from device model
+        capabilities = get_device_capabilities_from_model(host_info['device_model'])
+        controller_types = get_controller_types_from_model(host_info['device_model'])
+        
+        print(f"[@route:register_client] Generated controller configs:")
+        print(f"   Remote: {controller_configs.get('remote', {}).get('implementation', 'none')}")
+        print(f"   AV: {controller_configs.get('av', {}).get('implementation', 'none')}")
+        print(f"   Verification: {controller_configs.get('verification', {}).get('implementation', 'none')}")
+        print(f"   Power: {controller_configs.get('power', {}).get('implementation', 'none')}")
+        print(f"   Capabilities: {capabilities}")
+        print(f"   Controller Types: {controller_types}")
+        
         # Create structured host registration with device information
         structured_host_info = {
             # Host information
@@ -222,8 +250,8 @@ def register_client():
             'internal_port': host_info.get('internal_port', host_info['host_port']),
             'https_port': host_info.get('https_port', '444'),
             'nginx_port': host_info.get('nginx_port', '444'),
-            'controller_types': host_info.get('controller_types', []),
-            'capabilities': host_info.get('capabilities', []),
+            'controller_types': controller_types,  # Use generated controller types
+            'capabilities': capabilities,  # Use generated capabilities
             'status': 'online',
             
             # Device information (what this host controls)
@@ -233,7 +261,7 @@ def register_client():
                 'device_model': host_info['device_model'],
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'controller_configs': host_info.get('controller_configs', {})
+                'controller_configs': controller_configs  # Use generated controller configs
             },
             
             # Timestamps
@@ -815,12 +843,6 @@ def start_health_check(client_id, client_ip, client_port):
                                     print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK")
                             except Exception as json_error:
                                 print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK (no stats)")
-                            
-                            app_instance._connected_clients = connected_clients
-                            consecutive_failures = 0
-                        else:
-                            consecutive_failures += 1
-                            print(f"⚠️ [HEALTH] Client {client_id[:8]}... health check failed: HTTP {response.status_code}")
                             
                     except Exception as e:
                         consecutive_failures += 1
