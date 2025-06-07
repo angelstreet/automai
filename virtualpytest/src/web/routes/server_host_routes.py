@@ -138,7 +138,7 @@ def server_take_control():
         try:
             import requests
             
-            host_url = f"http://{host_ip}:{host_port}/take-control"
+            host_url = f"https://{host_ip}:{host_port}/take-control"
             host_payload = {
                 'device_id': device_id,
                 'device_model': device_model,
@@ -150,7 +150,7 @@ def server_take_control():
             print(f"[@route:server_take_control] Calling host at: {host_url}")
             print(f"[@route:server_take_control] Host payload: {host_payload}")
             
-            host_response = requests.post(host_url, json=host_payload, timeout=30)
+            host_response = requests.post(host_url, json=host_payload, timeout=30, verify=False)
             
             if host_response.ok:
                 host_data = host_response.json()
@@ -291,6 +291,8 @@ def server_release_control():
 def host_take_control():
     """Host-side take control - check AV controller status using abstract interface"""
     try:
+        print(f"[@route:host_take_control] === STARTING HOST TAKE CONTROL ===")
+        
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
         video_device = data.get('video_device', '/dev/video0')
@@ -303,28 +305,33 @@ def host_take_control():
         
         # Use controller factory to create appropriate AV controller
         try:
-            print(f"[@route:host_take_control] Creating AV controller using factory")
+            print(f"[@route:host_take_control] === STEP 1: About to import HDMIStreamController ===")
             
-            # Import the controller factory
-            from controllers import create_device_controllers
+            # Import the HDMI controller directly to avoid factory import issues
+            from controllers.audiovideo.hdmi_stream import HDMIStreamController
             
-            # Create device controller set based on device model
-            # This will automatically map device_model to the correct controller types
-            device_controllers = create_device_controllers(
+            print(f"[@route:host_take_control] === STEP 2: Successfully imported HDMIStreamController ===")
+            
+            # Create HDMI stream controller directly
+            print(f"[@route:host_take_control] === STEP 3: About to create HDMIStreamController instance ===")
+            
+            av_controller = HDMIStreamController(
                 device_name=f"Host - {device_model}",
-                device_type=device_model,
-                # Pass any additional parameters that controllers might need
-                video_device=video_device
+                video_device=video_device,
+                output_path="/var/www/html/stream/",
+                stream_resolution="640x360",
+                stream_fps=12,
+                stream_bitrate="400k"
             )
             
-            # Get the AV controller from the device set
-            av_controller = device_controllers.av
-            
+            print(f"[@route:host_take_control] === STEP 4: Successfully created HDMIStreamController instance ===")
             print(f"[@route:host_take_control] Created AV controller: {av_controller.__class__.__name__}")
             
             # Use the abstract take_control method
+            print(f"[@route:host_take_control] === STEP 5: About to call take_control() ===")
             control_result = av_controller.take_control()
             
+            print(f"[@route:host_take_control] === STEP 6: take_control() completed ===")
             print(f"[@route:host_take_control] Controller take_control result: {control_result}")
             
             # Build response based on controller result
@@ -334,6 +341,7 @@ def host_take_control():
                 host_ip = os.environ.get('HOST_IP', '77.56.53.130')
                 stream_url = f"https://{host_ip}:444/stream/video"
                 
+                print(f"[@route:host_take_control] === SUCCESS: Returning success response ===")
                 return jsonify({
                     'success': True,
                     'status': control_result.get('status', 'ready'),
@@ -349,6 +357,7 @@ def host_take_control():
                     'timestamp': __import__('time').time()
                 })
             else:
+                print(f"[@route:host_take_control] === FAILURE: Controller failed, returning error response ===")
                 return jsonify({
                     'success': False,
                     'status': control_result.get('status', 'failed'),
@@ -364,7 +373,12 @@ def host_take_control():
                 })
             
         except Exception as e:
+            print(f"[@route:host_take_control] === EXCEPTION IN CONTROLLER SECTION ===")
             print(f"[@route:host_take_control] Controller error: {str(e)}")
+            print(f"[@route:host_take_control] Exception type: {type(e)}")
+            import traceback
+            print(f"[@route:host_take_control] Traceback: {traceback.format_exc()}")
+            
             return jsonify({
                 'success': False,
                 'status': 'error',
@@ -376,7 +390,12 @@ def host_take_control():
             }), 500
         
     except Exception as e:
+        print(f"[@route:host_take_control] === EXCEPTION IN MAIN FUNCTION ===")
         print(f"[@route:host_take_control] Error: {str(e)}")
+        print(f"[@route:host_take_control] Exception type: {type(e)}")
+        import traceback
+        print(f"[@route:host_take_control] Traceback: {traceback.format_exc()}")
+        
         return jsonify({
             'success': False,
             'status': 'error',
