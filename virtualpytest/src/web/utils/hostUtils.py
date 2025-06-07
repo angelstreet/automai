@@ -48,7 +48,7 @@ def register_host_with_server():
     host_ip = os.getenv('HOST_IP')
     host_protocol = os.getenv('HOST_PROTOCOL', 'http')  # Default to http
     host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
-    host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port
+    host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port - should match internal if no port forwarding
     HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port for images
     
     print(f"🔍 [HOST] Registration Debug Info:")
