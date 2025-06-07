@@ -4,7 +4,7 @@ import threading
 import signal
 import atexit
 import requests
-from .appUtils import get_host_system_stats, generate_stable_host_id
+from appUtils import get_host_system_stats, generate_stable_host_id
 
 # Client registration state for host mode
 client_registration_state = {

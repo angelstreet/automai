@@ -24,7 +24,7 @@ import os
 import time
 import atexit
 
-# Add both local utils and parent src/utils to path for imports
+# Setup Python paths BEFORE imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 local_utils_path = os.path.join(current_dir, 'utils')
 parent_src_path = os.path.dirname(current_dir)
@@ -35,7 +35,7 @@ sys.path.insert(0, local_utils_path)
 sys.path.insert(1, parent_utils_path)
 sys.path.insert(2, parent_src_path)
 
-from utils.appUtils import (
+from appUtils import (
     load_environment_variables,
     setup_paths,
     kill_process_on_port,
@@ -48,7 +48,7 @@ from utils.appUtils import (
     DEFAULT_USER_ID
 )
 
-from utils.hostUtils import (
+from hostUtils import (
     register_host_with_server,
     stop_ping_thread,
     unregister_from_server
@@ -58,15 +58,9 @@ def cleanup_host_ports():
     """Clean up ports for host mode"""
     print(f"\n🧹 [HOST] Cleaning up ports for HOST mode...")
     
-    # Get host port from environment (load env first if not loaded)
+    # Only clean up the host port - DO NOT touch the server port!
     host_port = int(os.getenv('HOST_PORT', '5119'))
     kill_process_on_port(host_port)
-    
-    # Also check if we need to clean up any server processes
-    # that might be running from previous sessions
-    server_port = int(os.getenv('SERVER_PORT', '5009'))
-    if server_port != host_port:  # Don't double-clean the same port
-        kill_process_on_port(server_port)
 
 def setup_host_cleanup():
     """Setup cleanup handlers for host shutdown"""
