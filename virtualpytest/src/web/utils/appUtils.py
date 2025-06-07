@@ -31,24 +31,6 @@ def load_environment_variables(mode='server'):
     
     return env_path
 
-def setup_paths():
-    """Setup Python paths for imports"""
-    # Add the parent directory to the path to allow imports
-    parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    sys.path.insert(0, parent_dir)  # Insert at beginning to prioritize over local utils
-
-    # Add parent src/utils directory to path for supabase_utils and other utilities
-    parent_utils_path = os.path.join(parent_dir, 'utils')
-    sys.path.insert(0, parent_utils_path)
-
-    # Add controllers directory to path
-    controllers_path = os.path.join(parent_dir, 'controllers')
-    sys.path.append(controllers_path)
-
-    # Add web utils path specifically
-    web_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'utils')
-    sys.path.insert(0, web_utils_path)
-
 def kill_process_on_port(port):
     """Kill any process using the specified port"""
     try:
@@ -228,7 +210,7 @@ def setup_flask_app(app_name="VirtualPyTest"):
 def setup_supabase_connection():
     """Setup Supabase connection"""
     try:
-        from supabase_utils import get_supabase_client
+        from utils.supabase_utils import get_supabase_client
         
         # Test the connection by checking if supabase client is available
         supabase_client = get_supabase_client()

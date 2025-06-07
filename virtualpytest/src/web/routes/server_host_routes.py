@@ -7,14 +7,11 @@ This module contains the unified take-control endpoints that:
 - Provide single API endpoint for take control operations
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import requests
+import time
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
-
-from .utils import get_host_by_model, build_host_url, make_host_request
+from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id
 from deviceLockManager import (
     lock_device_in_registry,
     unlock_device_in_registry,

@@ -1,14 +1,13 @@
-'''
-Device Model API Routes
+"""
+Device Model Management Routes
 
-This module contains the API endpoints for managing device models.
-'''
+This module contains the device model management API endpoints for:
+- Device models management
+- Hardware specifications management
+- Controller configurations management
+"""
 
 from flask import Blueprint, request, jsonify
-
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
 
 from devicemodel_utils import (
     get_all_devicemodels, get_devicemodel, create_devicemodel, 

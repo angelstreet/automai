@@ -9,21 +9,7 @@ import json
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-import sys
-import os
 
-# Add paths for absolute imports instead of relative imports
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_cache_path = os.path.join(web_dir, 'cache')
-sys.path.insert(0, web_cache_path)
-
-# Add src directory to path to import supabase_utils
-current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
-web_dir = os.path.dirname(current_dir)                    # /src/web  
-src_dir = os.path.dirname(web_dir)                        # /src
-
-# Add the main src directory to Python path
-sys.path.insert(0, src_dir)
 from utils.supabase_utils import get_supabase_client
 
 # =====================================================

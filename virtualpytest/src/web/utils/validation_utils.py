@@ -1,18 +1,19 @@
 """
-Smart validation utility functions for navigation trees with NetworkX-based path calculation
+Validation Utilities
+
+This module provides utility functions for navigation tree validation.
 """
+
+import json
+import uuid
+from datetime import datetime
+from typing import Dict, List, Optional
+
+from utils.supabase_utils import get_supabase_client
 
 from typing import List, Dict, Any, Optional, Set, Tuple
 from collections import defaultdict, deque
 import networkx as nx
-
-# Use centralized path setup
-import sys
-import os
-
-# Add utils directory to access path_setup (we're already in utils, so just import directly)
-from path_setup import setup_all_paths
-setup_all_paths()
 
 # Import existing NetworkX-based navigation utilities
 from navigation_pathfinding import (

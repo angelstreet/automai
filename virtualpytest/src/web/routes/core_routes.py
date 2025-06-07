@@ -8,13 +8,6 @@ This module contains the core API endpoints for:
 from flask import Blueprint, request, jsonify, current_app
 
 # Import utility functions
-import sys
-import os
-
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
-
 from .utils import get_team_id
 
 # Create blueprint

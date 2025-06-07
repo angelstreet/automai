@@ -20,19 +20,29 @@ import os
 import time
 import atexit
 
-# Add utils directory to access path_setup
+# Add necessary paths for imports (same as routes/__init__.py)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-utils_dir = os.path.join(current_dir, 'utils')
-sys.path.insert(0, utils_dir)
+web_dir = current_dir
+src_dir = os.path.dirname(web_dir)
+parent_dir = os.path.dirname(src_dir)
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
+# Add paths to sys.path
+paths_to_add = [
+    os.path.join(web_dir, 'utils'),           # /src/web/utils
+    os.path.join(web_dir, 'cache'),           # /src/web/cache
+    os.path.join(web_dir, 'services'),        # /src/web/services
+    os.path.join(parent_dir, 'utils'),        # /src/utils  
+    src_dir,                                  # /src
+    os.path.join(parent_dir, 'controllers'),  # /controllers
+]
+
+for path in paths_to_add:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 # Try direct import from appUtils instead of utils.appUtils
 from appUtils import (
     load_environment_variables,
-    setup_paths,
     kill_process_on_port,
     setup_flask_app,
     setup_supabase_connection,
@@ -79,9 +89,6 @@ def main():
     
     # Load environment variables FIRST (needed for port cleanup)
     env_path = load_environment_variables(mode='server')
-    
-    # Setup Python paths
-    setup_paths()
     
     # Clean up ports before starting (now that env is loaded)
     cleanup_server_ports()

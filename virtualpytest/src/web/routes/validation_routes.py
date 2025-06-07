@@ -1,34 +1,28 @@
 """
-Validation Routes for Navigation Trees
+Validation API Routes
 
-This module contains the API endpoints for:
-- Validation preview (what will be tested)
-- Running comprehensive validation
-- Exporting validation reports
-- Real-time validation progress (Server-Sent Events)
+This module contains the validation endpoints for:
+- Comprehensive navigation tree validation
+- Edge validation sequences
+- Node verification testing
+- Validation progress tracking
 """
 
 from flask import Blueprint, request, jsonify, Response
-import sys
-import os
 import json
-import threading
 import time
-from queue import Queue, Empty
-
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from .utils import check_supabase, get_team_id
 
-# Import validation services
+# Import validation services - try/except for graceful fallback
 try:
-    from validation_service import validation_service
-    VALIDATION_SERVICE_AVAILABLE = True
+    from validation_service import ValidationService
+    VALIDATION_AUTOMATION_AVAILABLE = True
 except ImportError as e:
-    print(f"[@validation_routes] Warning: Validation service not available: {e}")
-    VALIDATION_SERVICE_AVAILABLE = False
+    print(f"[@validation_routes] Warning: Validation automation not available: {e}")
+    VALIDATION_AUTOMATION_AVAILABLE = False
 
 # Create blueprint
 validation_bp = Blueprint('validation', __name__, url_prefix='/api/validation')
@@ -54,7 +48,7 @@ def create_progress_callback(session_id: str):
 @validation_bp.route('/preview/<tree_id>', methods=['GET'])
 def get_validation_preview(tree_id):
     """API endpoint for validation preview"""
-    if not VALIDATION_SERVICE_AVAILABLE:
+    if not VALIDATION_AUTOMATION_AVAILABLE:
         return jsonify({
             'success': False,
             'error': 'Validation service not available',
@@ -66,7 +60,7 @@ def get_validation_preview(tree_id):
         
         team_id = get_team_id()
         
-        preview = validation_service.get_validation_preview(tree_id, team_id)
+        preview = ValidationService.get_validation_preview(tree_id, team_id)
         
         return jsonify({
             'success': True,
@@ -285,7 +279,7 @@ def validation_progress(session_id):
 @validation_bp.route('/run/<tree_id>', methods=['POST'])
 def run_validation(tree_id):
     """API endpoint for running comprehensive validation with optional progress tracking"""
-    if not VALIDATION_SERVICE_AVAILABLE:
+    if not VALIDATION_AUTOMATION_AVAILABLE:
         return jsonify({
             'success': False,
             'error': 'Validation service not available',
@@ -312,16 +306,16 @@ def run_validation(tree_id):
             
             # Set up progress callback
             progress_callback = create_progress_callback(session_id)
-            validation_service.set_progress_callback(progress_callback)
+            ValidationService.set_progress_callback(progress_callback)
         else:
             # Clear any existing progress callback
-            validation_service.set_progress_callback(None)
+            ValidationService.set_progress_callback(None)
         
         # Run validation with optional skipped edges (this will now call progress callback during execution)
-        results = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges=skipped_edges)
+        results = ValidationService.run_comprehensive_validation(tree_id, team_id, skipped_edges=skipped_edges)
         
         # Clear progress callback after completion
-        validation_service.set_progress_callback(None)
+        ValidationService.set_progress_callback(None)
         
         response_data = {
             'success': True,
@@ -341,7 +335,7 @@ def run_validation(tree_id):
     except Exception as e:
         print(f"[@api:validation:run] Error: {e}")
         # Clear progress callback on error
-        validation_service.set_progress_callback(None)
+        ValidationService.set_progress_callback(None)
         return jsonify({
             'success': False,
             'error': str(e),
@@ -355,7 +349,7 @@ def run_validation(tree_id):
 @validation_bp.route('/export/<tree_id>', methods=['GET'])
 def export_validation_report(tree_id):
     """API endpoint for exporting validation reports"""
-    if not VALIDATION_SERVICE_AVAILABLE:
+    if not VALIDATION_AUTOMATION_AVAILABLE:
         return jsonify({
             'success': False,
             'error': 'Validation service not available',
@@ -368,7 +362,7 @@ def export_validation_report(tree_id):
         team_id = get_team_id()
         format_type = request.args.get('format', 'json')
         
-        report_data = validation_service.export_validation_report(tree_id, team_id, format_type)
+        report_data = ValidationService.export_validation_report(tree_id, team_id, format_type)
         
         # Set appropriate content type based on format
         if format_type == 'csv':

@@ -10,11 +10,7 @@ This module contains the server-side verification control endpoints that:
 from flask import Blueprint, request, jsonify
 import requests
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
-
-from .utils import get_host_by_model, build_host_nginx_url, make_host_request
+from .utils import get_host_by_model, build_host_url, make_host_request
 from deviceLockManager import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -246,7 +242,7 @@ def take_verification_control():
             # Build stream URL (this would be the actual video stream URL)
             try:
                 # Example stream URL - adjust based on your actual streaming setup
-                stream_url = build_host_nginx_url(host_info, 'stream/video')
+                stream_url = build_host_url(host_info, 'stream/video')
                 print(f"[@route:take_verification_control] Built stream URL: {stream_url}")
             except Exception as e:
                 print(f"[@route:take_verification_control] Failed to build stream URL: {str(e)}")

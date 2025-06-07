@@ -1,27 +1,14 @@
 """
-Validation Service for Navigation Trees
+Validation Service
 
-This service orchestrates the validation process by leveraging
-existing pathfinding infrastructure to test all nodes and paths.
+Service for comprehensive navigation tree validation.
+Provides functionality for testing navigation paths and verifying UI elements.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional, Any
 import time
 import json
 import requests
-
-# Use centralized path setup
-import sys
-import os
-
-# Add utils directory to access path_setup
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(current_dir)
-utils_dir = os.path.join(web_dir, 'utils')
-sys.path.insert(0, utils_dir)
-
-from path_setup import setup_all_paths
-setup_all_paths()
 
 # Import existing pathfinding utilities
 from navigation_pathfinding import (

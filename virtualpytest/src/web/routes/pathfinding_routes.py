@@ -10,10 +10,6 @@ This module contains the API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
-
 from .utils import check_supabase, get_team_id
 
 # Import navigation automation services - try/except for graceful fallback

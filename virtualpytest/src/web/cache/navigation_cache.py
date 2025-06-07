@@ -9,19 +9,6 @@ from typing import Dict, Optional
 import sys
 import os
 
-# Use centralized path setup
-import sys
-import os
-
-# Add utils directory to access path_setup
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(current_dir)
-utils_dir = os.path.join(web_dir, 'utils')
-sys.path.insert(0, utils_dir)
-
-from path_setup import setup_all_paths
-setup_all_paths()
-
 # Global cache storage
 _navigation_graphs_cache: Dict[str, nx.DiGraph] = {}
 _cache_timestamps: Dict[str, datetime] = {}

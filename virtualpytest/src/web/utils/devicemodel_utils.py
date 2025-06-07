@@ -8,20 +8,7 @@ Device models define hardware specifications and controller configurations for t
 import json
 import uuid
 from typing import Dict, List, Optional
-import sys
-import os
 
-# Add src directory to path to import supabase_utils
-# Get the path to the main src directory 
-# Current file: /virtualpytest/src/web/utils/devicemodel_utils.py
-# Target file:  /virtualpytest/src/utils/supabase_utils.py
-# So we need to go up 2 levels: utils -> web -> src, then into utils
-current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
-web_dir = os.path.dirname(current_dir)                    # /src/web  
-src_dir = os.path.dirname(web_dir)                        # /src
-
-# Add the main src directory to Python path
-sys.path.insert(0, src_dir)
 from utils.supabase_utils import get_supabase_client
 
 def get_all_devicemodels(team_id: str) -> List[Dict]:

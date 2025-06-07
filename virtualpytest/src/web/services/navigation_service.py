@@ -1,25 +1,16 @@
 """
-High-level navigation service
-Orchestrates pathfinding, caching, and execution
+Navigation Service
+
+High-level service for navigation operations.
+Provides a clean interface for all navigation functionality including:
+- Navigation execution with verification
+- Navigation previews and pathfinding
+- Take control session management
+- Cache management
 """
 
-from typing import List, Dict, Optional
 import time
-import sys
-import os
-
-# Use centralized path setup
-import sys
-import os
-
-# Add utils directory to access path_setup
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(current_dir)
-utils_dir = os.path.join(web_dir, 'utils')
-sys.path.insert(0, utils_dir)
-
-from path_setup import setup_all_paths
-setup_all_paths()
+from typing import Dict, List
 
 class NavigationService:
     """

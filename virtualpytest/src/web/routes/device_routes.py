@@ -9,10 +9,6 @@ This module contains the device management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
-
 from device_utils import (
     get_all_devices, get_device, create_device, 
     update_device, delete_device, check_device_name_exists

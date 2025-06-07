@@ -8,11 +8,6 @@ from typing import List, Dict, Optional, Tuple
 import sys
 import os
 
-# Add paths for absolute imports instead of relative imports
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_cache_path = os.path.join(web_dir, 'cache')
-sys.path.insert(0, web_cache_path)
-
 def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_node_id: str = None) -> Optional[List[Dict]]:
     """
     Find shortest path to target node using NetworkX algorithms

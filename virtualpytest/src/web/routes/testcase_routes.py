@@ -1,24 +1,23 @@
-'''
+"""
 Test Case API Routes
 
-This module contains the API endpoints for managing test cases.
-'''
+This module contains the test case management endpoints for:
+- Creating test cases
+- Retrieving test cases
+- Updating test cases
+- Deleting test cases
+"""
 
 from flask import Blueprint, request, jsonify, current_app
 
 # Import utility functions
-import sys
-import os
-
-# Add parent directory to path for imports
-src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
+from .utils import get_team_id
 
 from utils.supabase_utils import (
     get_all_test_cases, get_test_case, save_test_case, delete_test_case
 )
 
-from .utils import check_supabase, get_team_id
+from .utils import check_supabase
 
 # Create blueprint
 testcase_bp = Blueprint('testcase', __name__, url_prefix='/api')

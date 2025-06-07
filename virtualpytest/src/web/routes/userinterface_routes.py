@@ -1,14 +1,12 @@
-'''
-User Interface API Routes
+"""
+User Interface Management Routes
 
-This module contains the API endpoints for managing user interfaces.
-'''
+This module contains the user interface management API endpoints for:
+- User interfaces management
+- Device compatibility management
+"""
 
 from flask import Blueprint, request, jsonify
-
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
 
 from userinterface_utils import (
     get_all_userinterfaces, get_userinterface, create_userinterface, 

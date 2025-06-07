@@ -9,8 +9,8 @@ from flask import Blueprint, request, jsonify
 import uuid
 from datetime import datetime
 
-# Import our navigation utilities
-from ..utils.navigationLockManager import (
+# Import our navigation utilities using absolute imports
+from navigationLockManager import (
     lock_navigation_tree,
     unlock_navigation_tree,
     is_navigation_tree_locked,
@@ -19,7 +19,7 @@ from ..utils.navigationLockManager import (
     cleanup_expired_navigation_locks
 )
 
-from ..utils.navigationConfigManager import (
+from navigationConfigManager import (
     load_navigation_tree_from_config,
     save_navigation_tree_to_config,
     list_available_navigation_trees,
@@ -28,7 +28,7 @@ from ..utils.navigationConfigManager import (
     validate_navigation_tree_structure
 )
 
-from ..utils.navigationGitManager import (
+from navigationGitManager import (
     perform_navigation_git_operations,
     pull_latest_navigation_config,
     check_navigation_git_status

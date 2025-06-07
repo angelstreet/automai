@@ -10,10 +10,6 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 import uuid
 
-# Use centralized path setup
-from path_setup import setup_all_paths
-setup_all_paths()
-
 from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 
     update_navigation_tree, delete_navigation_tree, check_navigation_tree_name_exists,
