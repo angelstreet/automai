@@ -82,20 +82,21 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - hardcode port 5009 for simplicity
+  // Server configuration - use same protocol and IP as frontend + port from env
   const getServerBaseUrl = () => {
-    // Use same protocol and hostname as frontend, hardcode port 5009
+    // Use same protocol and hostname as frontend, get port from environment
     const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
     const serverIp = window.location.hostname; // Get IP from current URL
-    const serverPort = '5009'; // Hardcoded server port
+    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Port from env with fallback
     
     // Build server URL using same protocol and IP as frontend
     const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
     
-    console.log('[@context:Registration] Server Configuration (hardcoded port):');
+    console.log('[@context:Registration] Server Configuration (from environment):');
     console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
     console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
-    console.log('[@context:Registration] Hardcoded server port:', serverPort);
+    console.log('[@context:Registration] VITE_SERVER_PORT from env:', (import.meta as any).env.VITE_SERVER_PORT);
+    console.log('[@context:Registration] Using server port:', serverPort);
     console.log('[@context:Registration] Built server URL:', baseUrl);
     
     return baseUrl;
