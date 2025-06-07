@@ -630,6 +630,10 @@ const NavigationEditorContent: React.FC = () => {
             
             // Set control to active
             setIsControlActive(true);
+            
+            // Refresh device data to get updated controller_configs from factory
+            console.log('[@component:NavigationEditor] Refreshing device data after successful take control');
+            await fetchDevices();
           } else {
             console.error('[@component:NavigationEditor] Take control failed:', data.error);
             console.error('[@component:NavigationEditor] Controller errors:', data.controller_errors);
@@ -643,6 +647,10 @@ const NavigationEditorContent: React.FC = () => {
                 image_controller_available: false,
                 text_controller_available: false,
               });
+              
+              // Refresh device data to get updated controller_configs from factory
+              console.log('[@component:NavigationEditor] Refreshing device data after partial control');
+              await fetchDevices();
             }
           }
         } else {
