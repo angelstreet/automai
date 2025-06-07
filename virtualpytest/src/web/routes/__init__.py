@@ -121,6 +121,9 @@ def register_routes(app: Flask, mode='server'):
         app.register_blueprint(verification_adb_host_bp)
         app.register_blueprint(verification_execution_host_bp)
         
+        # Unified server-host communication routes (needed for /take-control endpoint)
+        app.register_blueprint(server_host_bp)
+        
         # Host-side functionality (if needed)
         # Note: Most host routes are in the verification_*_host_bp blueprints
         
