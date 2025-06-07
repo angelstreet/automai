@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify, current_app
 import requests
 import time
 
-from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id
+from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
 from deviceLockManager import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -44,38 +44,60 @@ def server_take_control():
         print(f"[@route:server_take_control] Take control requested for device: {device_id}")
         print(f"[@route:server_take_control] Session ID: {session_id}")
         
-        # Get device information with host details
+        # Get device information from registry instead of HTTP call
         try:
-            import requests
-            device_response = requests.get(f"http://localhost:5009/api/system/device/{device_id}")
+            connected_clients = get_connected_clients()
             
-            if not device_response.ok:
+            # Find device by device_id across all hosts
+            device_info = None
+            host_info = None
+            
+            for host_id, host_data in connected_clients.items():
+                if host_data.get('status') == 'online':
+                    # Check new structured format first
+                    device_data = host_data.get('device', {})
+                    if device_data and device_data.get('device_id') == device_id:
+                        device_info = device_data
+                        host_info = host_data
+                        break
+                    
+                    # Check backward compatibility format
+                    elif not device_data and host_data.get('device_model'):
+                        compat_device_id = f"{host_id}_device_{host_data.get('device_model')}"
+                        if compat_device_id == device_id:
+                            # Create device_info from backward compatibility format
+                            device_info = {
+                                'device_id': compat_device_id,
+                                'device_name': f"{host_data.get('device_model', '').replace('_', ' ').title()}",
+                                'device_model': host_data.get('device_model'),
+                                'device_ip': host_data.get('host_ip') or host_data.get('local_ip'),
+                                'device_port': '5555'
+                            }
+                            host_info = host_data
+                            break
+            
+            if not device_info or not host_info:
                 return jsonify({
                     'success': False,
-                    'error': f'Device not found: {device_id}',
+                    'error': f'Device not found in registry: {device_id}',
                     'host_available': False
                 }), 404
             
-            device_data = device_response.json()
-            if not device_data.get('success'):
-                return jsonify({
-                    'success': False,
-                    'error': device_data.get('error', 'Failed to get device information'),
-                    'host_available': False
-                }), 404
+            # Extract host connection info
+            host_ip = host_info.get('host_ip') or host_info.get('local_ip')
+            host_port = host_info.get('host_port') or host_info.get('client_port')
+            host_name = host_info.get('host_name') or host_info.get('name')
             
-            device_info = device_data['device']
-            device_model = device_info['device_model']
-            host_connection = device_info['host_connection']
+            device_model = device_info.get('device_model')
             
-            print(f"[@route:server_take_control] Found device: {device_info['device_name']} ({device_model})")
-            print(f"[@route:server_take_control] Host: {device_info['host_name']} at {device_info['host_ip']}:{device_info['host_port']}")
+            print(f"[@route:server_take_control] Found device: {device_info.get('device_name')} ({device_model})")
+            print(f"[@route:server_take_control] Host: {host_name} at {host_ip}:{host_port}")
             
         except Exception as e:
-            print(f"[@route:server_take_control] Error getting device info: {e}")
+            print(f"[@route:server_take_control] Error getting device from registry: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to get device information: {str(e)}',
+                'error': f'Failed to get device information from registry: {str(e)}',
                 'host_available': False
             }), 500
         
@@ -110,12 +132,12 @@ def server_take_control():
         try:
             import requests
             
-            host_url = f"{host_connection['flask_url']}/take-control"
+            host_url = f"http://{host_ip}:{host_port}/take-control"
             host_payload = {
                 'device_id': device_id,
                 'device_model': device_model,
-                'device_ip': device_info['device_ip'],
-                'device_port': device_info['device_port'],
+                'device_ip': device_info.get('device_ip'),
+                'device_port': device_info.get('device_port'),
                 'session_id': session_id
             }
             
@@ -139,10 +161,10 @@ def server_take_control():
                         'host_available': True,
                         'controllers': host_data.get('controllers', {}),
                         'host_info': {
-                            'host_id': device_info['host_id'],
-                            'host_name': device_info['host_name'],
-                            'host_ip': device_info['host_ip'],
-                            'host_port': device_info['host_port']
+                            'host_id': host_info.get('host_id') or list(connected_clients.keys())[0],
+                            'host_name': host_name,
+                            'host_ip': host_ip,
+                            'host_port': host_port
                         }
                     }), 200
                 else:
