@@ -82,23 +82,17 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - derive from current URL + port from env
+  // Server configuration - use http://localhost since frontend and backend are on same server
   const getServerBaseUrl = () => {
-    // Use current window location for protocol and hostname
-    const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
-    const serverIp = window.location.hostname; // Get IP/hostname from current URL
-    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Only port from env
+    // Since frontend and backend are on the same server, use http://localhost
+    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Server port from env
     
-    // Build the complete server URL using current protocol and hostname
-    const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+    // Always use http://localhost for same-server communication
+    const baseUrl = `http://localhost:${serverPort}`;
     
-    console.log('[@context:Registration] Server Configuration:');
-    console.log('[@context:Registration] Current window protocol:', window.location.protocol);
-    console.log('[@context:Registration] Current window hostname:', window.location.hostname);
+    console.log('[@context:Registration] Server Configuration (same server):');
     console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env.VITE_SERVER_PORT);
-    console.log('[@context:Registration] Resolved server protocol:', serverProtocol);
-    console.log('[@context:Registration] Resolved server IP:', serverIp);
-    console.log('[@context:Registration] Resolved server port:', serverPort);
+    console.log('[@context:Registration] Using http://localhost for backend (same server)');
     console.log('[@context:Registration] Built server URL:', baseUrl);
     
     return baseUrl;
