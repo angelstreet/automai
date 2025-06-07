@@ -20,18 +20,25 @@ import os
 import time
 import atexit
 
-# Add both local utils and parent src/utils to path for imports
+# Setup Python paths BEFORE imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 local_utils_path = os.path.join(current_dir, 'utils')
 parent_src_path = os.path.dirname(current_dir)
 parent_utils_path = os.path.join(parent_src_path, 'utils')
+
+# Debug: Print paths being added
+print(f"Current dir: {current_dir}")
+print(f"Local utils path: {local_utils_path}")
+print(f"Local utils exists: {os.path.exists(local_utils_path)}")
+print(f"appUtils.py exists: {os.path.exists(os.path.join(local_utils_path, 'appUtils.py'))}")
 
 # Add paths in order of preference (local first, then parent)
 sys.path.insert(0, local_utils_path)
 sys.path.insert(1, parent_utils_path)
 sys.path.insert(2, parent_src_path)
 
-from utils.appUtils import (
+# Try direct import from appUtils instead of utils.appUtils
+from appUtils import (
     load_environment_variables,
     setup_paths,
     kill_process_on_port,
@@ -44,7 +51,7 @@ from utils.appUtils import (
     DEFAULT_USER_ID
 )
 
-from utils.serverUtils import (
+from serverUtils import (
     initialize_server_globals,
     cleanup_server_resources
 )

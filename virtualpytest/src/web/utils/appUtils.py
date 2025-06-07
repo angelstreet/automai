@@ -265,7 +265,7 @@ def validate_environment_variables(mode='server'):
     print("=" * 60)
 
     print("Environment variables loaded:")
-    print(f"  SERVER_URL: {os.getenv('SERVER_URL', 'NOT SET')}")
+    print(f"  SERVER_IP: {os.getenv('SERVER_IP', 'NOT SET')}")
     print(f"  SERVER_PORT: {os.getenv('SERVER_PORT', 'NOT SET')}")
     print(f"  GITHUB_TOKEN: {'SET' if os.getenv('GITHUB_TOKEN') else 'NOT SET'}")
 
@@ -275,7 +275,7 @@ def validate_environment_variables(mode='server'):
         
         # Required environment variables for host mode
         required_host_vars = {
-            'SERVER_URL': os.getenv('SERVER_URL'),
+            'SERVER_IP': os.getenv('SERVER_IP'),
             'SERVER_PORT': os.getenv('SERVER_PORT'),
             'HOST_NAME': os.getenv('HOST_NAME'),
             'HOST_IP': os.getenv('HOST_IP'),
@@ -309,7 +309,7 @@ def validate_environment_variables(mode='server'):
             print("\n💡 To fix this, set the missing environment variables:")
             print("   Example:")
             for var in missing_vars + empty_vars:
-                if var == 'SERVER_URL':
+                if var == 'SERVER_IP':
                     print(f"   export {var}=77.56.53.130")
                 elif var == 'SERVER_PORT':
                     print(f"   export {var}=5009")
@@ -334,7 +334,7 @@ def validate_environment_variables(mode='server'):
         
         # Required environment variables for server mode
         required_server_vars = {
-            'SERVER_URL': os.getenv('SERVER_URL'),
+            'SERVER_IP': os.getenv('SERVER_IP'),
             'SERVER_PORT': os.getenv('SERVER_PORT'),
             'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN')
         }
