@@ -564,22 +564,72 @@ const NavigationEditorContent: React.FC = () => {
       }
     }
     
-    // Toggle control state
-    const newControlState = !isControlActive;
-    setIsControlActive(newControlState);
-    
-    // If taking control (not releasing) and device has remote capabilities, automatically open remote panel
-    if (newControlState && !wasControlActive && selectedDeviceData && remoteConfig) {
-      console.log('[@component:NavigationEditor] Taking control - automatically opening remote panel for device with remote capabilities');
-      setIsRemotePanelOpen(true);
+    // If taking control, use the new unified endpoint
+    if (!wasControlActive && selectedDeviceData) {
+      try {
+        console.log('[@component:NavigationEditor] Taking control using unified endpoint');
+        
+        const response = await fetch(buildApiUrl('/api/virtualpytest/take-control'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_model: selectedDeviceData.model || 'android_mobile',
+            video_device: selectedDeviceData.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+            session_id: 'navigation-editor-session'
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[@component:NavigationEditor] Take control result:', data);
+          
+          if (data.success) {
+            console.log('[@component:NavigationEditor] Successfully took control');
+            console.log('[@component:NavigationEditor] Controllers status:', data.controllers);
+            
+            // Update verification controller status based on response
+            const verificationControllers = data.controllers?.verification || {};
+            setVerificationControllerStatus({
+              image_controller_available: verificationControllers.image?.success || false,
+              text_controller_available: verificationControllers.text?.success || false,
+            });
+            setIsVerificationActive(data.success);
+            
+            // Set control to active
+            setIsControlActive(true);
+          } else {
+            console.error('[@component:NavigationEditor] Take control failed:', data.error);
+            console.error('[@component:NavigationEditor] Controller errors:', data.controller_errors);
+            
+            // Still set control active if host is available, even if some controllers failed
+            if (data.host_available) {
+              console.log('[@component:NavigationEditor] Host is available, allowing partial control');
+              setIsControlActive(true);
+              setIsVerificationActive(false);
+              setVerificationControllerStatus({
+                image_controller_available: false,
+                text_controller_available: false,
+              });
+            }
+          }
+        } else {
+          console.error('[@component:NavigationEditor] Take control request failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('[@component:NavigationEditor] Error taking control:', error);
+      }
+    } else {
+      // Releasing control - just set state to false
+      setIsControlActive(false);
+      setIsVerificationActive(false);
+      setVerificationControllerStatus({
+        image_controller_available: false,
+        text_controller_available: false,
+      });
     }
-    
-    // If releasing control, close the remote panel
-    if (!newControlState && wasControlActive && isRemotePanelOpen) {
-      console.log('[@component:NavigationEditor] Releasing control - closing remote panel');
-      setIsRemotePanelOpen(false);
-    }
-  }, [isControlActive, selectedDeviceData, hasAVCapabilities, remoteConfig, isRemotePanelOpen, buildApiUrl]);
+  }, [isControlActive, selectedDeviceData, hasAVCapabilities, buildApiUrl]);
 
   // Memoize session state change handler to prevent recreating on every render
   const handleSessionStateChange = useCallback((session: {
@@ -696,99 +746,6 @@ const NavigationEditorContent: React.FC = () => {
     }
   };
 
-  // Initialize verification controllers when device control is activated
-  const initializeVerificationControllers = useCallback(async () => {
-    if (!selectedDevice || !isControlActive) {
-      console.log('[@component:NavigationEditor] Cannot initialize verification controllers: no device selected or not in control');
-      setIsVerificationActive(false);
-      setVerificationControllerStatus({
-        image_controller_available: false,
-        text_controller_available: false,
-      });
-      return;
-    }
-
-    try {
-      console.log(`[@component:NavigationEditor] Initializing verification controllers for device: ${selectedDevice}`);
-      
-      // Take control of verification controllers
-      const takeControlResponse = await fetch(buildApiUrl('/api/virtualpytest/verification/take-control'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          device_model: selectedDeviceData?.model || 'android_mobile',
-          video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
-        }),
-      });
-
-      if (takeControlResponse.ok) {
-        const controlData = await takeControlResponse.json();
-        console.log('[@component:NavigationEditor] Verification controllers initialized:', controlData);
-        
-        // Get controller status
-        const statusResponse = await fetch(buildApiUrl('/api/virtualpytest/verification/status'));
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          console.log('[@component:NavigationEditor] Verification controller status:', statusData);
-          
-          setVerificationControllerStatus({
-            image_controller_available: statusData.image_controller_available || false,
-            text_controller_available: statusData.text_controller_available || false,
-          });
-          setIsVerificationActive(true);
-        } else {
-          console.error('[@component:NavigationEditor] Failed to get verification controller status');
-          setIsVerificationActive(false);
-        }
-      } else {
-        console.error('[@component:NavigationEditor] Failed to initialize verification controllers:', takeControlResponse.status);
-        setIsVerificationActive(false);
-        setVerificationControllerStatus({
-          image_controller_available: false,
-          text_controller_available: false,
-        });
-      }
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Error initializing verification controllers:', error);
-      setIsVerificationActive(false);
-      setVerificationControllerStatus({
-        image_controller_available: false,
-        text_controller_available: false,
-      });
-    }
-  }, [selectedDevice, isControlActive, selectedDeviceData]);
-
-  // Release verification controllers when device control is deactivated
-  const releaseVerificationControllers = useCallback(async () => {
-    if (!isVerificationActive) {
-      return;
-    }
-
-    try {
-      console.log('[@component:NavigationEditor] Releasing verification controllers');
-      
-      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/release-control'), {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        console.log('[@component:NavigationEditor] Verification controllers released successfully');
-      } else {
-        console.error('[@component:NavigationEditor] Failed to release verification controllers:', response.status);
-      }
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Error releasing verification controllers:', error);
-    } finally {
-      setIsVerificationActive(false);
-      setVerificationControllerStatus({
-        image_controller_available: false,
-        text_controller_available: false,
-      });
-    }
-  }, [isVerificationActive]);
-
   // Handle verification execution
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
     if (!isVerificationActive || !verifications || verifications.length === 0) {
@@ -882,7 +839,7 @@ const NavigationEditorContent: React.FC = () => {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
       setVerificationResults([]);
     }
-  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition]);
+  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildApiUrl, setVerificationResults, setLastVerifiedNodeId]);
 
   // Handle node updates - callback for NodeSelectionPanel
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
@@ -1085,14 +1042,21 @@ const NavigationEditorContent: React.FC = () => {
     console.log(`[@component:NavigationEditor] Updated edge ${edgeId} and marked tree as having unsaved changes`);
   }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
 
-  // Effect to initialize/release verification controllers when control state changes
+  // Show message if tree ID is missing
   useEffect(() => {
-    if (isControlActive && selectedDevice) {
-      initializeVerificationControllers();
-    } else {
-      releaseVerificationControllers();
+    if (!treeId && !interfaceId) {
+      console.log('[@component:NavigationEditor] Missing tree ID in URL');
     }
-  }, [isControlActive, selectedDevice, initializeVerificationControllers, releaseVerificationControllers]);
+  }, [treeId, interfaceId]);
+  
+  // Load tree data when component mounts or treeId changes
+  useEffect(() => {
+    if (currentTreeId && !isLoadingInterface && currentTreeId !== lastLoadedTreeId.current) {
+      console.log(`[@component:NavigationEditor] Loading tree data for: ${currentTreeId}`);
+      lastLoadedTreeId.current = currentTreeId;
+      loadFromDatabase();
+    }
+  }, [currentTreeId, isLoadingInterface]);
 
   // Clear verification results when a different node is selected
   useEffect(() => {

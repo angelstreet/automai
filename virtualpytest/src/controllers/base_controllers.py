@@ -35,6 +35,22 @@ class BaseController(ABC):
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information. Must be implemented by subclasses."""
         pass
+    
+    @abstractmethod
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of the device/service and verify it's ready.
+        This method should check the current status, attempt to connect/restart
+        services if needed, and return a comprehensive status report.
+        
+        Returns:
+            Dict containing:
+            - success: bool - Whether take control was successful
+            - status: str - Current status description
+            - error: str - Error message if failed
+            - details: Dict - Additional status details
+        """
+        pass
 
 
 class RemoteControllerInterface(BaseController):
@@ -64,6 +80,47 @@ class RemoteControllerInterface(BaseController):
     def execute_sequence(self, commands: list) -> bool:
         """Execute a sequence of remote commands. Must be implemented by subclasses."""
         pass
+    
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of remote device and verify ADB/SSH connectivity.
+        Default implementation - should be overridden by subclasses.
+        
+        For ADB-based controllers, this should:
+        1. Check SSH connection to host
+        2. Check ADB device connectivity
+        3. Reconnect ADB if needed
+        4. Return status
+        """
+        try:
+            # Default implementation just tries to connect
+            if self.connect():
+                return {
+                    'success': True,
+                    'status': 'connected',
+                    'controller_type': 'remote',
+                    'device_name': self.device_name,
+                    'details': {
+                        'connection_method': 'generic',
+                        'is_connected': self.is_connected
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'status': 'connection_failed',
+                    'error': 'Failed to connect to remote device',
+                    'controller_type': 'remote',
+                    'device_name': self.device_name
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'status': 'error',
+                'error': f'Remote controller error: {str(e)}',
+                'controller_type': 'remote',
+                'device_name': self.device_name
+            }
     
     # Optional navigation methods with default implementations
     def navigate_up(self) -> bool:
@@ -225,6 +282,48 @@ class AVControllerInterface(BaseController):
         """Record audio/video session. Must be implemented by subclasses."""
         pass
     
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of AV system and verify stream is working.
+        Default implementation - should be overridden by subclasses.
+        
+        For stream-based controllers, this should:
+        1. Check if stream service is running (systemctl status stream)
+        2. Restart stream service if needed (systemctl restart stream)
+        3. Verify stream is accessible
+        4. Return status
+        """
+        try:
+            # Default implementation just tries to connect
+            if self.connect():
+                return {
+                    'success': True,
+                    'status': 'stream_ready',
+                    'controller_type': 'av',
+                    'device_name': self.device_name,
+                    'details': {
+                        'capture_source': self.capture_source,
+                        'is_capturing_video': self.is_capturing_video,
+                        'is_capturing_audio': self.is_capturing_audio
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'status': 'stream_failed',
+                    'error': 'Failed to initialize AV stream',
+                    'controller_type': 'av',
+                    'device_name': self.device_name
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'status': 'error',
+                'error': f'AV controller error: {str(e)}',
+                'controller_type': 'av',
+                'device_name': self.device_name
+            }
+
 
 class VerificationControllerInterface(BaseController):
     """
@@ -260,6 +359,47 @@ class VerificationControllerInterface(BaseController):
     def clear_verification_results(self) -> None:
         """Clear verification results. Common implementation."""
         self.verification_results.clear()
+    
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of verification system and verify controllers are ready.
+        Default implementation - should be overridden by subclasses.
+        
+        For verification controllers, this should:
+        1. Check if required verification tools are available (OCR, OpenCV, etc.)
+        2. Initialize verification session
+        3. Return status of available verification types
+        """
+        try:
+            # Default implementation just tries to connect
+            if self.connect():
+                return {
+                    'success': True,
+                    'status': 'verification_ready',
+                    'controller_type': 'verification',
+                    'device_name': self.device_name,
+                    'details': {
+                        'verification_types': ['image', 'text', 'adb'],  # Default types
+                        'session_id': self.verification_session_id,
+                        'results_count': len(self.verification_results)
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'status': 'verification_failed',
+                    'error': 'Failed to initialize verification controllers',
+                    'controller_type': 'verification',
+                    'device_name': self.device_name
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'status': 'error',
+                'error': f'Verification controller error: {str(e)}',
+                'controller_type': 'verification',
+                'device_name': self.device_name
+            }
 
 
 class PowerControllerInterface(BaseController):
@@ -296,6 +436,48 @@ class PowerControllerInterface(BaseController):
     def get_power_status(self) -> Dict[str, Any]:
         """Get current power status. Must be implemented by subclasses."""
         pass
+    
+    def take_control(self) -> Dict[str, Any]:
+        """
+        Take control of power system and verify it's ready.
+        Default implementation - should be overridden by subclasses.
+        
+        For power controllers, this should:
+        1. Check if power control hardware is accessible
+        2. Verify current power state
+        3. Return power management status
+        """
+        try:
+            # Default implementation just tries to connect and get status
+            if self.connect():
+                power_status = self.get_power_status()
+                return {
+                    'success': True,
+                    'status': 'power_ready',
+                    'controller_type': 'power',
+                    'device_name': self.device_name,
+                    'details': {
+                        'power_type': self.power_type,
+                        'current_state': power_status.get('power_state', 'unknown'),
+                        'session_id': self.power_session_id
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'status': 'power_failed',
+                    'error': 'Failed to connect to power controller',
+                    'controller_type': 'power',
+                    'device_name': self.device_name
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'status': 'error',
+                'error': f'Power controller error: {str(e)}',
+                'controller_type': 'power',
+                'device_name': self.device_name
+            }
 
     # Optional power management methods with default implementations
     def soft_reboot(self, timeout: float = 60.0) -> bool:

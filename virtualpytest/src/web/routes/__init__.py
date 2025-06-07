@@ -48,6 +48,9 @@ from .verification_adb_server_routes import verification_adb_server_bp
 from .verification_execution_host_routes import verification_execution_host_bp
 from .verification_execution_server_routes import verification_execution_server_bp
 
+# Import unified server-host routes
+from .server_host_routes import server_host_bp
+
 from .power_routes import power_bp
 from .system_routes import system_bp
 
@@ -81,6 +84,9 @@ def register_routes(app: Flask, mode='server'):
         
         # System management (server manages host registrations)
         app.register_blueprint(system_bp)
+        
+        # Unified server-host communication routes
+        app.register_blueprint(server_host_bp)
         
         # Server-side verification endpoints (proxy to hosts)
         app.register_blueprint(verification_common_bp)
