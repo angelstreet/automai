@@ -85,6 +85,7 @@ const App: React.FC = () => {
 
               {/* Navigation Editor Route */}
               <Route path="/navigation-editor/:treeName/:treeId" element={<NavigationEditor />} />
+              <Route path="/navigation-editor/:treeName" element={<NavigationEditor />} />
 
             </Routes>
           </Container>

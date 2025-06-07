@@ -283,23 +283,15 @@ const UserInterface: React.FC = () => {
   // Handle edit navigation functionality
   const handleEditNavigation = (userInterface: UserInterfaceType) => {
     try {
-      const rootTree = userInterface.root_tree;
+      console.log('[@component:UserInterface] Opening navigation editor for userinterface:', {
+        interfaceId: userInterface.id,
+        interfaceName: userInterface.name,
+      });
       
-      if (rootTree && rootTree.id && rootTree.name) {
-        console.log('[@component:UserInterface] Opening navigation editor for:', {
-          interfaceId: userInterface.id,
-          interfaceName: userInterface.name,
-          treeId: rootTree.id,
-          treeName: rootTree.name
-        });
-        
-        // Navigate to navigation editor in the same tab
-        const url = `/navigation-editor/${encodeURIComponent(rootTree.name)}/${encodeURIComponent(rootTree.id)}`;
-        window.location.href = url;
-      } else {
-        console.warn('[@component:UserInterface] No root navigation tree found for user interface:', userInterface.id);
-        setError('No root navigation tree found for this user interface. You may need to create one first or reload the data.');
-      }
+      // Navigate to navigation editor using the userinterface name directly
+      // This matches our simplified config system: {userinterface_name}.json
+      const url = `/navigation-editor/${encodeURIComponent(userInterface.name)}`;
+      window.location.href = url;
     } catch (err) {
       console.error('[@component:UserInterface] Error opening navigation editor:', err);
       setError('Failed to open navigation editor. Please try again.');
@@ -536,7 +528,6 @@ const UserInterface: React.FC = () => {
                           variant="outlined"
                           startIcon={<LaunchIcon fontSize="small" />}
                           onClick={() => handleEditNavigation(userInterface)}
-                          disabled={!userInterface.root_tree}
                           sx={{ 
                             minWidth: 'auto',
                             px: 1,

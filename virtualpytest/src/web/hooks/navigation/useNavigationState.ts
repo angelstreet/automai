@@ -8,12 +8,13 @@ import {
 import { UINavigationNode, UINavigationEdge, NodeForm, EdgeForm } from '../../types/navigationTypes';
 
 export const useNavigationState = () => {
-  const { treeId, treeName, interfaceId } = useParams<{ treeId: string, treeName: string, interfaceId: string }>();
+  const { treeId, treeName, interfaceId } = useParams<{ treeId?: string, treeName: string, interfaceId?: string }>();
   
   // Navigation state for breadcrumbs and nested trees
-  const [currentTreeId, setCurrentTreeId] = useState<string>(treeId || 'home');
+  // Use treeName as both ID and name for simplified approach
+  const [currentTreeId, setCurrentTreeId] = useState<string>(treeName || treeId || 'home');
   const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
-  const [navigationPath, setNavigationPath] = useState<string[]>([treeId || 'home']);
+  const [navigationPath, setNavigationPath] = useState<string[]>([treeName || treeId || 'home']);
   const [navigationNamePath, setNavigationNamePath] = useState<string[]>([treeName || 'home']);
   
   // Save operation state
