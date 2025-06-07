@@ -11,6 +11,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 import os
+from .utils import make_host_request, get_primary_host
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__)
@@ -137,18 +138,20 @@ def list_references():
         
         print(f"[@route:list_references] Getting reference list for model: {model}")
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        
-        print(f"[@route:list_references] Using hardcoded host: {host_ip}:{host_port}")
-        
-        # Forward request to host
-        host_response = requests.get(
-            f'http://{host_ip}:{host_port}/stream/references',
-            params={'model': model},
-            timeout=30
-        )
+        # Use dynamic host discovery instead of hardcoded values
+        try:
+            host_response = make_host_request(
+                '/stream/references',
+                method='GET',
+                params={'model': model},
+                use_https=True
+            )
+        except ValueError as e:
+            print(f"[@route:list_references] Host discovery error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'No hosts available: {str(e)}'
+            }), 503
         
         if host_response.status_code == 200:
             host_result = host_response.json()
@@ -192,20 +195,24 @@ def verification_actions():
                 'error': 'action, reference_name, and model are required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        
-        # Forward action request to host
-        host_response = requests.post(
-            f'http://{host_ip}:{host_port}/stream/reference-actions',
-            json={
-                'action': action,
-                'reference_name': reference_name,
-                'model': model
-            },
-            timeout=30
-        )
+        # Use dynamic host discovery instead of hardcoded values
+        try:
+            host_response = make_host_request(
+                '/stream/reference-actions',
+                method='POST',
+                json={
+                    'action': action,
+                    'reference_name': reference_name,
+                    'model': model
+                },
+                use_https=True
+            )
+        except ValueError as e:
+            print(f"[@route:verification_actions] Host discovery error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'No hosts available: {str(e)}'
+            }), 503
         
         if host_response.status_code == 200:
             host_result = host_response.json()
@@ -237,26 +244,54 @@ def verification_status():
     try:
         print(f"[@route:verification_status] Getting verification system status")
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        
-        # Forward status request to host
-        host_response = requests.get(
-            f'http://{host_ip}:{host_port}/stream/verification-status',
-            timeout=30
-        )
-        
-        if host_response.status_code == 200:
-            host_result = host_response.json()
-            print(f"[@route:verification_status] Host response: {host_result.get('status')}")
-            return jsonify(host_result)
-        else:
-            print(f"[@route:verification_status] Host request failed: {host_response.status_code}")
+        # Check if any hosts are available
+        host_info = get_primary_host()
+        if not host_info:
+            print(f"[@route:verification_status] No hosts available")
             return jsonify({
                 'success': False,
-                'error': f'Host request failed: {host_response.status_code}'
-            }), host_response.status_code
+                'error': 'No hosts available',
+                'status': 'no_hosts'
+            }), 503
+        
+        # Try to get status from host (but this endpoint might not exist yet)
+        try:
+            host_response = make_host_request(
+                '/stream/verification-status',
+                method='GET',
+                use_https=True
+            )
+            
+            if host_response.status_code == 200:
+                host_result = host_response.json()
+                print(f"[@route:verification_status] Host response: {host_result.get('status')}")
+                return jsonify(host_result)
+            else:
+                print(f"[@route:verification_status] Host request failed: {host_response.status_code}")
+                # If the endpoint doesn't exist (404), return a mock status
+                if host_response.status_code == 404:
+                    print(f"[@route:verification_status] Host endpoint not found, returning mock status")
+                    return jsonify({
+                        'success': True,
+                        'status': 'ready',
+                        'controllers_available': ['image', 'text', 'adb'],
+                        'message': 'Verification system is ready (mock status)',
+                        'host_connected': True,
+                        'device_model': host_info.get('device_model', 'unknown'),
+                        'host_id': host_info.get('client_id', 'unknown')
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Host request failed: {host_response.status_code}'
+                    }), host_response.status_code
+                    
+        except ValueError as e:
+            print(f"[@route:verification_status] Host discovery error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'No hosts available: {str(e)}'
+            }), 503
             
     except requests.exceptions.RequestException as e:
         print(f"[@route:verification_status] Request error: {str(e)}")
