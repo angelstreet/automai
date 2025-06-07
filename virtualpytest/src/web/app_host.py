@@ -144,11 +144,13 @@ def main():
     
     # Get configuration
     host_port = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
-    host_protocol = os.getenv('HOST_PROTOCOL', 'http')
+    # Force HTTP for Flask app (nginx handles HTTPS termination)
+    host_protocol = 'http'  # Always use HTTP for Flask backend
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
     print(f"\n🚀 [HOST] Starting Flask app on port {host_port}")
     print(f"🌐 [HOST] Host will be available at: {host_protocol}://0.0.0.0:{host_port}")
+    print(f"🔧 [HOST] Note: Flask runs on HTTP, nginx handles HTTPS termination")
     print(f"🐛 [HOST] Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     print("=" * 60)
     
