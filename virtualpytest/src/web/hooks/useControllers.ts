@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRegistration } from '../contexts/RegistrationContext';
 
 export interface ControllerType {
   id: string;
@@ -16,6 +17,7 @@ export interface ControllerTypes {
 }
 
 export function useControllers() {
+  const { buildServerUrl } = useRegistration();
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function useControllers() {
   const fetchControllerTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5009/api/virtualpytest/controller-types');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/controller-types'));
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useRegistration } from '../../contexts/RegistrationContext';
 import { ControllerTypes } from '../../types/remote/types';
 
 export function useControllerTypes() {
+  const { buildServerUrl } = useRegistration();
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,8 +13,8 @@ export function useControllerTypes() {
       setLoading(true);
       console.log('🔍 Fetching controller types from backend...');
       
-      // Use absolute URL to ensure we're hitting the correct backend
-      const response = await fetch('http://localhost:5009/api/virtualpytest/controller-types');
+      // Use RegistrationContext to build URL
+      const response = await fetch(buildServerUrl('/api/virtualpytest/controller-types'));
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {
