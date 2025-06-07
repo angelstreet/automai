@@ -9,6 +9,67 @@ import os
 import subprocess
 from typing import Dict, Any, Optional
 
+def commit_and_push_navigation_config(commit_message: str = "Update navigation config") -> bool:
+    """
+    Commit and push navigation config changes to git
+    
+    Args:
+        commit_message: Commit message for the changes
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Committing and pushing changes: {commit_message}")
+        
+        # Store original directory
+        original_cwd = os.getcwd()
+        
+        # Change to the parent directory for git operations
+        os.chdir('..')
+        
+        # Git add all navigation config files
+        add_result = subprocess.run(['git', 'add', 'config/navigation/'], check=True, capture_output=True, text=True)
+        print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Git add completed")
+        
+        # Git commit with message
+        commit_result = subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
+        print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Git commit completed")
+        
+        # Git push with authentication
+        github_token = os.getenv('GITHUB_TOKEN')
+        if github_token:
+            push_result = subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+            print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Git push completed successfully")
+        else:
+            print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Warning: GITHUB_TOKEN not set, skipping push")
+        
+        # Return to original directory
+        os.chdir(original_cwd)
+        
+        return True
+        
+    except subprocess.CalledProcessError as git_error:
+        # Ensure we return to original directory on error
+        try:
+            os.chdir(original_cwd)
+        except:
+            pass
+            
+        print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Git operation failed: {str(git_error)}")
+        return False
+        
+    except Exception as e:
+        # Ensure we return to original directory on error
+        try:
+            os.chdir(original_cwd)
+        except:
+            pass
+            
+        print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Error: {str(e)}")
+        return False
+
+
 def perform_navigation_git_operations(tree_name: str, operation_type: str = "save") -> Dict[str, Any]:
     """
     Perform git operations for navigation config files
@@ -108,12 +169,12 @@ def perform_navigation_git_operations(tree_name: str, operation_type: str = "sav
         }
 
 
-def pull_latest_navigation_config() -> Dict[str, Any]:
+def pull_latest_navigation_config() -> bool:
     """
     Pull latest navigation config changes from git
     
     Returns:
-        dict: Result of git pull operation
+        bool: True if successful, False otherwise
     """
     try:
         print(f"[@utils:navigationGitManager:pull_latest_navigation_config] Pulling latest navigation config changes")
@@ -131,12 +192,7 @@ def pull_latest_navigation_config() -> Dict[str, Any]:
         os.chdir(original_cwd)
         
         print(f"[@utils:navigationGitManager:pull_latest_navigation_config] Git pull completed successfully")
-        
-        return {
-            'success': True,
-            'message': 'Latest navigation config changes pulled successfully',
-            'output': pull_result.stdout
-        }
+        return True
         
     except subprocess.CalledProcessError as git_error:
         # Ensure we return to original directory on error
@@ -145,13 +201,8 @@ def pull_latest_navigation_config() -> Dict[str, Any]:
         except:
             pass
             
-        error_message = f'Git pull failed: {str(git_error)}'
-        print(f"[@utils:navigationGitManager:pull_latest_navigation_config] {error_message}")
-        
-        return {
-            'success': False,
-            'error': error_message
-        }
+        print(f"[@utils:navigationGitManager:pull_latest_navigation_config] Git pull failed: {str(git_error)}")
+        return False
         
     except Exception as e:
         # Ensure we return to original directory on error
@@ -160,13 +211,8 @@ def pull_latest_navigation_config() -> Dict[str, Any]:
         except:
             pass
             
-        error_message = f'Navigation git pull error: {str(e)}'
-        print(f"[@utils:navigationGitManager:pull_latest_navigation_config] {error_message}")
-        
-        return {
-            'success': False,
-            'error': error_message
-        }
+        print(f"[@utils:navigationGitManager:pull_latest_navigation_config] Error: {str(e)}")
+        return False
 
 
 def check_navigation_git_status() -> Dict[str, Any]:

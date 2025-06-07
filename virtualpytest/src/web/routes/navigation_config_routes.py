@@ -1,385 +1,299 @@
 """
 Navigation Config Routes
 
-API endpoints for managing navigation trees as JSON config files.
-Includes lock management to prevent editing conflicts.
+API endpoints for managing navigation tree configurations stored as JSON files.
+Uses simple userinterface name mapping: {userinterface_name}.json
 """
 
 from flask import Blueprint, request, jsonify
-import uuid
-from datetime import datetime
-
-# Import our navigation utilities using absolute imports
-from navigationLockManager import (
-    lock_navigation_tree,
-    unlock_navigation_tree,
-    is_navigation_tree_locked,
-    get_navigation_tree_lock_info,
-    get_all_locked_navigation_trees,
-    cleanup_expired_navigation_locks
-)
-
+from navigationLockManager import NavigationLockManager
 from navigationConfigManager import (
+    list_available_navigation_trees,
     load_navigation_tree_from_config,
     save_navigation_tree_to_config,
-    list_available_navigation_trees,
-    delete_navigation_tree_config,
-    backup_navigation_tree_config,
     validate_navigation_tree_structure
 )
-
 from navigationGitManager import (
-    perform_navigation_git_operations,
     pull_latest_navigation_config,
-    check_navigation_git_status
+    commit_and_push_navigation_config
 )
 
 # Create blueprint
 navigation_config_bp = Blueprint('navigation_config', __name__)
 
-# =====================================================
-# NAVIGATION TREE LISTING AND READING
-# =====================================================
+# Initialize lock manager
+lock_manager = NavigationLockManager()
+
 
 @navigation_config_bp.route('/api/navigation/config/trees', methods=['GET'])
 def list_navigation_trees():
-    """List all available navigation trees in config directory."""
+    """
+    List all available navigation trees with lock status
+    
+    Returns:
+        JSON response with list of trees and their lock status
+    """
     try:
-        print(f"[@route:navigation_config:list_navigation_trees] Listing available navigation trees")
+        print("[@route:navigation_config:list_navigation_trees] Listing available navigation trees")
         
-        # Pull latest changes first
-        pull_result = pull_latest_navigation_config()
-        if not pull_result['success']:
-            print(f"[@route:navigation_config:list_navigation_trees] Warning: Git pull failed: {pull_result.get('error')}")
+        # Pull latest changes from git
+        pull_latest_navigation_config()
         
         # Get list of available trees
         tree_names = list_available_navigation_trees()
         
-        # Get lock information for each tree
-        trees_with_lock_info = []
-        for tree_name in tree_names:
-            lock_info = get_navigation_tree_lock_info(tree_name)
-            trees_with_lock_info.append({
-                'name': tree_name,
+        # Add lock information for each tree
+        trees_with_locks = []
+        for userinterface_name in tree_names:
+            lock_info = lock_manager.get_lock_info(userinterface_name)
+            trees_with_locks.append({
+                'name': userinterface_name,
                 'is_locked': lock_info is not None,
                 'lock_info': lock_info
             })
         
-        print(f"[@route:navigation_config:list_navigation_trees] Found {len(tree_names)} navigation trees")
+        print(f"[@route:navigation_config:list_navigation_trees] Found {len(trees_with_locks)} navigation trees")
         
         return jsonify({
             'success': True,
-            'trees': trees_with_lock_info,
-            'total_count': len(tree_names)
+            'trees': trees_with_locks,
+            'total_count': len(trees_with_locks)
         })
         
     except Exception as e:
         print(f"[@route:navigation_config:list_navigation_trees] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to list navigation trees: {str(e)}'
+            'error': str(e)
         }), 500
 
 
-@navigation_config_bp.route('/api/navigation/config/trees/<tree_name>', methods=['GET'])
-def get_navigation_tree(tree_name):
-    """Get a specific navigation tree from config file. Reading is always allowed."""
+@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>', methods=['GET'])
+def get_navigation_tree(userinterface_name):
+    """
+    Load a specific navigation tree by userinterface name
+    
+    Args:
+        userinterface_name: The userinterface name (e.g., 'horizon_mobile_android')
+        
+    Returns:
+        JSON response with tree data and lock status
+    """
     try:
-        print(f"[@route:navigation_config:get_navigation_tree] Loading navigation tree: {tree_name}")
+        print(f"[@route:navigation_config:get_navigation_tree] Loading navigation tree: {userinterface_name}")
         
-        # Pull latest changes first
-        pull_result = pull_latest_navigation_config()
-        if not pull_result['success']:
-            print(f"[@route:navigation_config:get_navigation_tree] Warning: Git pull failed: {pull_result.get('error')}")
+        # Pull latest changes from git
+        pull_latest_navigation_config()
         
-        # Load tree data (reading is always allowed, regardless of lock)
-        tree_data = load_navigation_tree_from_config(tree_name)
+        # Load tree data
+        tree_data = load_navigation_tree_from_config(userinterface_name)
         
         if tree_data is None:
             return jsonify({
                 'success': False,
-                'error': f'Navigation tree not found: {tree_name}'
+                'error': f'Navigation tree not found: {userinterface_name}'
             }), 404
         
         # Get lock information
-        lock_info = get_navigation_tree_lock_info(tree_name)
+        lock_info = lock_manager.get_lock_info(userinterface_name)
         
-        print(f"[@route:navigation_config:get_navigation_tree] Successfully loaded tree: {tree_name}")
+        print(f"[@route:navigation_config:get_navigation_tree] Successfully loaded tree: {userinterface_name}")
         
         return jsonify({
             'success': True,
-            'tree_name': tree_name,
             'tree_data': tree_data,
+            'tree_name': userinterface_name,
             'is_locked': lock_info is not None,
             'lock_info': lock_info
         })
         
     except Exception as e:
-        print(f"[@route:navigation_config:get_navigation_tree] Error loading tree {tree_name}: {str(e)}")
+        print(f"[@route:navigation_config:get_navigation_tree] Error loading tree {userinterface_name}: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to load navigation tree: {str(e)}'
+            'error': str(e)
         }), 500
 
 
-# =====================================================
-# NAVIGATION TREE LOCKING
-# =====================================================
-
-@navigation_config_bp.route('/api/navigation/config/trees/<tree_name>/lock', methods=['POST'])
-def lock_tree(tree_name):
-    """Lock a navigation tree for editing."""
+@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>/lock', methods=['POST'])
+def lock_navigation_tree(userinterface_name):
+    """
+    Lock a navigation tree for editing
+    
+    Args:
+        userinterface_name: The userinterface name to lock
+        
+    Returns:
+        JSON response with lock status
+    """
     try:
-        data = request.get_json() or {}
-        session_id = data.get('session_id', str(uuid.uuid4()))
+        print(f"[@route:navigation_config:lock_navigation_tree] Locking tree: {userinterface_name}")
         
-        print(f"[@route:navigation_config:lock_tree] Attempting to lock tree: {tree_name} for session: {session_id}")
-        
-        # Attempt to lock the tree
-        lock_success = lock_navigation_tree(tree_name, session_id)
-        
-        if lock_success:
-            return jsonify({
-                'success': True,
-                'message': f'Navigation tree locked successfully: {tree_name}',
-                'tree_name': tree_name,
-                'session_id': session_id,
-                'locked_at': datetime.now().isoformat()
-            })
-        else:
-            # Get current lock info
-            lock_info = get_navigation_tree_lock_info(tree_name)
+        # Get session ID from request
+        session_id = request.json.get('session_id') if request.json else None
+        if not session_id:
             return jsonify({
                 'success': False,
-                'error': f'Navigation tree is already locked by another session',
-                'tree_name': tree_name,
-                'current_lock': lock_info
-            }), 409  # Conflict
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:lock_tree] Error locking tree {tree_name}: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to lock navigation tree: {str(e)}'
-        }), 500
-
-
-@navigation_config_bp.route('/api/navigation/config/trees/<tree_name>/unlock', methods=['POST'])
-def unlock_tree(tree_name):
-    """Unlock a navigation tree."""
-    try:
-        data = request.get_json() or {}
-        session_id = data.get('session_id')
-        
-        print(f"[@route:navigation_config:unlock_tree] Attempting to unlock tree: {tree_name}")
-        
-        # Attempt to unlock the tree
-        unlock_success = unlock_navigation_tree(tree_name, session_id)
-        
-        if unlock_success:
-            return jsonify({
-                'success': True,
-                'message': f'Navigation tree unlocked successfully: {tree_name}',
-                'tree_name': tree_name
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to unlock navigation tree (not locked by this session)',
-                'tree_name': tree_name
-            }), 403  # Forbidden
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:unlock_tree] Error unlocking tree {tree_name}: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to unlock navigation tree: {str(e)}'
-        }), 500
-
-
-# =====================================================
-# NAVIGATION TREE SAVING (REQUIRES LOCK)
-# =====================================================
-
-@navigation_config_bp.route('/api/navigation/config/trees/<tree_name>', methods=['PUT'])
-def save_navigation_tree(tree_name):
-    """Save a navigation tree to config file. Requires the tree to be locked by the same session."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided'
+                'error': 'Session ID is required'
             }), 400
         
-        session_id = data.get('session_id')
-        tree_data = data.get('tree_data')
+        # Attempt to acquire lock
+        success = lock_manager.acquire_lock(userinterface_name, session_id)
+        
+        if success:
+            lock_info = lock_manager.get_lock_info(userinterface_name)
+            print(f"[@route:navigation_config:lock_navigation_tree] Successfully locked tree: {userinterface_name}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Tree {userinterface_name} locked successfully',
+                'lock_info': lock_info
+            })
+        else:
+            existing_lock = lock_manager.get_lock_info(userinterface_name)
+            print(f"[@route:navigation_config:lock_navigation_tree] Failed to lock tree {userinterface_name} - already locked")
+            
+            return jsonify({
+                'success': False,
+                'error': f'Tree {userinterface_name} is already locked',
+                'existing_lock': existing_lock
+            }), 409
+        
+    except Exception as e:
+        print(f"[@route:navigation_config:lock_navigation_tree] Error locking tree {userinterface_name}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>/unlock', methods=['POST'])
+def unlock_navigation_tree(userinterface_name):
+    """
+    Unlock a navigation tree
+    
+    Args:
+        userinterface_name: The userinterface name to unlock
+        
+    Returns:
+        JSON response with unlock status
+    """
+    try:
+        print(f"[@route:navigation_config:unlock_navigation_tree] Unlocking tree: {userinterface_name}")
+        
+        # Get session ID from request
+        session_id = request.json.get('session_id') if request.json else None
+        if not session_id:
+            return jsonify({
+                'success': False,
+                'error': 'Session ID is required'
+            }), 400
+        
+        # Attempt to release lock
+        success = lock_manager.release_lock(userinterface_name, session_id)
+        
+        if success:
+            print(f"[@route:navigation_config:unlock_navigation_tree] Successfully unlocked tree: {userinterface_name}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Tree {userinterface_name} unlocked successfully'
+            })
+        else:
+            print(f"[@route:navigation_config:unlock_navigation_tree] Failed to unlock tree {userinterface_name}")
+            
+            return jsonify({
+                'success': False,
+                'error': f'Failed to unlock tree {userinterface_name}. You may not own the lock.'
+            }), 403
+        
+    except Exception as e:
+        print(f"[@route:navigation_config:unlock_navigation_tree] Error unlocking tree {userinterface_name}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>', methods=['PUT'])
+def save_navigation_tree(userinterface_name):
+    """
+    Save a navigation tree (requires lock)
+    
+    Args:
+        userinterface_name: The userinterface name to save
+        
+    Returns:
+        JSON response with save status
+    """
+    try:
+        print(f"[@route:navigation_config:save_navigation_tree] Saving tree: {userinterface_name}")
+        
+        # Get request data
+        if not request.json:
+            return jsonify({
+                'success': False,
+                'error': 'Request body is required'
+            }), 400
+        
+        session_id = request.json.get('session_id')
+        tree_data = request.json.get('tree_data')
+        commit_message = request.json.get('commit_message', f'Update navigation tree: {userinterface_name}')
+        
+        if not session_id:
+            return jsonify({
+                'success': False,
+                'error': 'Session ID is required'
+            }), 400
         
         if not tree_data:
             return jsonify({
                 'success': False,
-                'error': 'No tree data provided'
+                'error': 'Tree data is required'
             }), 400
         
-        print(f"[@route:navigation_config:save_navigation_tree] Attempting to save tree: {tree_name}")
-        
-        # Check if tree is locked
-        if not is_navigation_tree_locked(tree_name):
+        # Check if user has lock
+        lock_info = lock_manager.get_lock_info(userinterface_name)
+        if not lock_info or lock_info['session_id'] != session_id:
             return jsonify({
                 'success': False,
-                'error': 'Navigation tree must be locked before saving'
+                'error': f'You must have a lock on tree {userinterface_name} to save it'
             }), 403
         
-        # Check if locked by this session
-        lock_info = get_navigation_tree_lock_info(tree_name)
-        if lock_info and lock_info.get('locked_by') != session_id:
-            return jsonify({
-                'success': False,
-                'error': 'Navigation tree is locked by another session',
-                'current_lock': lock_info
-            }), 403
-        
-        # Validate tree data structure
+        # Validate tree structure
         if not validate_navigation_tree_structure(tree_data):
             return jsonify({
                 'success': False,
-                'error': 'Invalid navigation tree structure (must have nodes and edges arrays)'
+                'error': 'Invalid tree data structure'
             }), 400
         
-        # Create backup before saving
-        backup_path = backup_navigation_tree_config(tree_name, "pre_save")
-        if backup_path:
-            print(f"[@route:navigation_config:save_navigation_tree] Created backup: {backup_path}")
+        # Save to config file
+        success = save_navigation_tree_to_config(userinterface_name, tree_data)
         
-        # Save tree to config file
-        save_success = save_navigation_tree_to_config(tree_name, tree_data)
-        
-        if not save_success:
+        if not success:
             return jsonify({
                 'success': False,
-                'error': 'Failed to save navigation tree to config file'
+                'error': 'Failed to save tree to config file'
             }), 500
         
-        # Perform git operations
-        git_result = perform_navigation_git_operations(tree_name, "save")
+        # Commit and push to git
+        git_success = commit_and_push_navigation_config(commit_message)
         
-        print(f"[@route:navigation_config:save_navigation_tree] Successfully saved tree: {tree_name}")
+        if not git_success:
+            print(f"[@route:navigation_config:save_navigation_tree] Warning: Git commit/push failed for tree {userinterface_name}")
+            # Don't fail the save operation, just warn
         
-        return jsonify({
-            'success': True,
-            'message': f'Navigation tree saved successfully: {tree_name}',
-            'tree_name': tree_name,
-            'git_result': git_result,
-            'backup_created': backup_path is not None
-        })
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:save_navigation_tree] Error saving tree {tree_name}: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to save navigation tree: {str(e)}'
-        }), 500
-
-
-# =====================================================
-# LOCK MANAGEMENT AND STATUS
-# =====================================================
-
-@navigation_config_bp.route('/api/navigation/config/locks', methods=['GET'])
-def get_all_locks():
-    """Get all currently locked navigation trees."""
-    try:
-        print(f"[@route:navigation_config:get_all_locks] Getting all navigation tree locks")
-        
-        # Clean up expired locks first
-        cleaned_count = cleanup_expired_navigation_locks()
-        
-        # Get all locked trees
-        locked_trees = get_all_locked_navigation_trees()
+        print(f"[@route:navigation_config:save_navigation_tree] Successfully saved tree: {userinterface_name}")
         
         return jsonify({
             'success': True,
-            'locked_trees': locked_trees,
-            'total_locked': len(locked_trees),
-            'expired_cleaned': cleaned_count
+            'message': f'Tree {userinterface_name} saved successfully',
+            'git_committed': git_success
         })
         
     except Exception as e:
-        print(f"[@route:navigation_config:get_all_locks] Error: {str(e)}")
+        print(f"[@route:navigation_config:save_navigation_tree] Error saving tree {userinterface_name}: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to get lock information: {str(e)}'
-        }), 500
-
-
-@navigation_config_bp.route('/api/navigation/config/locks/cleanup', methods=['POST'])
-def cleanup_locks():
-    """Manually clean up expired navigation tree locks."""
-    try:
-        data = request.get_json() or {}
-        timeout_seconds = data.get('timeout_seconds', 1800)  # Default 30 minutes
-        
-        print(f"[@route:navigation_config:cleanup_locks] Cleaning up locks older than {timeout_seconds} seconds")
-        
-        cleaned_count = cleanup_expired_navigation_locks(timeout_seconds)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Cleaned up {cleaned_count} expired locks',
-            'cleaned_count': cleaned_count
-        })
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:cleanup_locks] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to cleanup locks: {str(e)}'
-        }), 500
-
-
-# =====================================================
-# GIT STATUS AND OPERATIONS
-# =====================================================
-
-@navigation_config_bp.route('/api/navigation/config/git/status', methods=['GET'])
-def get_git_status():
-    """Get git status for navigation config directory."""
-    try:
-        print(f"[@route:navigation_config:get_git_status] Checking git status for navigation config")
-        
-        git_status = check_navigation_git_status()
-        
-        return jsonify({
-            'success': True,
-            'git_status': git_status
-        })
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:get_git_status] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to get git status: {str(e)}'
-        }), 500
-
-
-@navigation_config_bp.route('/api/navigation/config/git/pull', methods=['POST'])
-def pull_config():
-    """Pull latest navigation config changes from git."""
-    try:
-        print(f"[@route:navigation_config:pull_config] Pulling latest navigation config changes")
-        
-        pull_result = pull_latest_navigation_config()
-        
-        return jsonify({
-            'success': pull_result['success'],
-            'message': pull_result.get('message'),
-            'error': pull_result.get('error'),
-            'output': pull_result.get('output')
-        })
-        
-    except Exception as e:
-        print(f"[@route:navigation_config:pull_config] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to pull config: {str(e)}'
+            'error': str(e)
         }), 500 

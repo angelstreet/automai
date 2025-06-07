@@ -11,6 +11,95 @@ from typing import Optional, Dict, Any
 # Simple global lock registry
 navigation_locks: Dict[str, Dict[str, Any]] = {}
 
+class NavigationLockManager:
+    """
+    Navigation Lock Manager class for managing navigation tree locks
+    """
+    
+    def __init__(self):
+        """Initialize the lock manager"""
+        pass
+    
+    def acquire_lock(self, tree_name: str, session_id: str) -> bool:
+        """
+        Acquire a lock on a navigation tree
+        
+        Args:
+            tree_name: The navigation tree name to lock
+            session_id: Session ID of the user locking the tree
+            
+        Returns:
+            bool: True if successfully locked, False if already locked
+        """
+        return lock_navigation_tree(tree_name, session_id)
+    
+    def release_lock(self, tree_name: str, session_id: str) -> bool:
+        """
+        Release a lock on a navigation tree
+        
+        Args:
+            tree_name: The navigation tree name to unlock
+            session_id: Session ID of the user unlocking the tree
+            
+        Returns:
+            bool: True if successfully unlocked, False if not owned by session
+        """
+        return unlock_navigation_tree(tree_name, session_id)
+    
+    def is_locked(self, tree_name: str) -> bool:
+        """
+        Check if a navigation tree is locked
+        
+        Args:
+            tree_name: The navigation tree name to check
+            
+        Returns:
+            bool: True if tree is locked, False otherwise
+        """
+        return is_navigation_tree_locked(tree_name)
+    
+    def get_lock_info(self, tree_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get lock information for a navigation tree
+        
+        Args:
+            tree_name: The navigation tree name to check
+            
+        Returns:
+            dict: Lock information with session_id, locked_at, etc. or None if not locked
+        """
+        lock_info = get_navigation_tree_lock_info(tree_name)
+        if lock_info:
+            # Rename 'locked_by' to 'session_id' for consistency
+            return {
+                'session_id': lock_info.get('locked_by'),
+                'locked_at': lock_info.get('locked_at'),
+                'locked_duration': lock_info.get('locked_duration')
+            }
+        return None
+    
+    def cleanup_expired_locks(self, timeout_seconds: int = 1800) -> int:
+        """
+        Clean up expired locks
+        
+        Args:
+            timeout_seconds: Lock timeout in seconds (default: 30 minutes)
+            
+        Returns:
+            int: Number of locks cleaned up
+        """
+        return cleanup_expired_navigation_locks(timeout_seconds)
+    
+    def get_all_locks(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get all currently locked navigation trees
+        
+        Returns:
+            dict: Dictionary of locked trees with their lock info
+        """
+        return get_all_locked_navigation_trees()
+
+
 def lock_navigation_tree(tree_name: str, session_id: str = "default-session") -> bool:
     """
     Lock a navigation tree for editing

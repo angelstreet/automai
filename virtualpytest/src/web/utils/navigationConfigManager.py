@@ -2,7 +2,7 @@
 Navigation Config Manager
 
 Handles reading and writing navigation trees to JSON config files.
-Maintains exact same format as current database structure.
+Simple mapping: userinterface name -> {userinterface_name}.json
 """
 
 import os
@@ -29,33 +29,33 @@ def ensure_config_directory() -> bool:
         return False
 
 
-def get_config_file_path(tree_name: str) -> Path:
+def get_config_file_path(userinterface_name: str) -> Path:
     """
-    Get the full path for a navigation tree config file
+    Get the full path for a navigation tree config file based on userinterface name
     
     Args:
-        tree_name: The navigation tree name
+        userinterface_name: The userinterface name (e.g., 'horizon_mobile_android')
         
     Returns:
         Path: Full path to the config file
     """
-    return CONFIG_DIR / f"{tree_name}.json"
+    return CONFIG_DIR / f"{userinterface_name}.json"
 
 
-def load_navigation_tree_from_config(tree_name: str) -> Optional[Dict[str, Any]]:
+def load_navigation_tree_from_config(userinterface_name: str) -> Optional[Dict[str, Any]]:
     """
-    Load a navigation tree from JSON config file
+    Load a navigation tree from JSON config file based on userinterface name
     
     Args:
-        tree_name: The navigation tree name to load
+        userinterface_name: The userinterface name to load (e.g., 'horizon_mobile_android')
         
     Returns:
         dict: Navigation tree data with 'nodes' and 'edges' keys, or None if not found
     """
     try:
-        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Loading tree: {tree_name}")
+        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Loading tree for userinterface: {userinterface_name}")
         
-        config_file = get_config_file_path(tree_name)
+        config_file = get_config_file_path(userinterface_name)
         
         if not config_file.exists():
             print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Config file not found: {config_file}")
@@ -69,27 +69,27 @@ def load_navigation_tree_from_config(tree_name: str) -> Optional[Dict[str, Any]]
             print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Invalid tree structure in {config_file}")
             return None
         
-        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Successfully loaded tree {tree_name} with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges")
+        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Successfully loaded tree for {userinterface_name} with {len(tree_data.get('nodes', []))} nodes and {len(tree_data.get('edges', []))} edges")
         return tree_data
         
     except Exception as e:
-        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Error loading tree {tree_name}: {str(e)}")
+        print(f"[@utils:navigationConfigManager:load_navigation_tree_from_config] Error loading tree for {userinterface_name}: {str(e)}")
         return None
 
 
-def save_navigation_tree_to_config(tree_name: str, tree_data: Dict[str, Any]) -> bool:
+def save_navigation_tree_to_config(userinterface_name: str, tree_data: Dict[str, Any]) -> bool:
     """
-    Save a navigation tree to JSON config file
+    Save a navigation tree to JSON config file based on userinterface name
     
     Args:
-        tree_name: The navigation tree name to save
+        userinterface_name: The userinterface name (e.g., 'horizon_mobile_android')
         tree_data: Navigation tree data with 'nodes' and 'edges' keys
         
     Returns:
         bool: True if saved successfully, False otherwise
     """
     try:
-        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Saving tree: {tree_name}")
+        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Saving tree for userinterface: {userinterface_name}")
         
         # Ensure config directory exists
         if not ensure_config_directory():
@@ -97,20 +97,20 @@ def save_navigation_tree_to_config(tree_name: str, tree_data: Dict[str, Any]) ->
         
         # Validate tree data structure
         if not isinstance(tree_data, dict) or 'nodes' not in tree_data or 'edges' not in tree_data:
-            print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Invalid tree data structure for {tree_name}")
+            print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Invalid tree data structure for {userinterface_name}")
             return False
         
-        config_file = get_config_file_path(tree_name)
+        config_file = get_config_file_path(userinterface_name)
         
         # Write to file with proper formatting
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(tree_data, f, indent=2, ensure_ascii=False)
         
-        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Successfully saved tree {tree_name} to {config_file}")
+        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Successfully saved tree for {userinterface_name} to {config_file}")
         return True
         
     except Exception as e:
-        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Error saving tree {tree_name}: {str(e)}")
+        print(f"[@utils:navigationConfigManager:save_navigation_tree_to_config] Error saving tree for {userinterface_name}: {str(e)}")
         return False
 
 
@@ -119,7 +119,7 @@ def list_available_navigation_trees() -> List[str]:
     List all available navigation trees in the config directory
     
     Returns:
-        list: List of navigation tree names (without .json extension)
+        list: List of userinterface names (without .json extension)
     """
     try:
         print(f"[@utils:navigationConfigManager:list_available_navigation_trees] Listing trees in {CONFIG_DIR}")
@@ -130,8 +130,9 @@ def list_available_navigation_trees() -> List[str]:
         
         tree_names = []
         for file_path in CONFIG_DIR.glob("*.json"):
-            tree_name = file_path.stem  # Get filename without extension
-            tree_names.append(tree_name)
+            if file_path.name != '.gitignore':  # Skip gitignore
+                userinterface_name = file_path.stem  # Get filename without extension
+                tree_names.append(userinterface_name)
         
         tree_names.sort()  # Sort alphabetically
         
@@ -143,20 +144,20 @@ def list_available_navigation_trees() -> List[str]:
         return []
 
 
-def delete_navigation_tree_config(tree_name: str) -> bool:
+def delete_navigation_tree_config(userinterface_name: str) -> bool:
     """
-    Delete a navigation tree config file
+    Delete a navigation tree config file based on userinterface name
     
     Args:
-        tree_name: The navigation tree name to delete
+        userinterface_name: The userinterface name to delete
         
     Returns:
         bool: True if deleted successfully or file didn't exist, False on error
     """
     try:
-        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Deleting tree: {tree_name}")
+        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Deleting tree for userinterface: {userinterface_name}")
         
-        config_file = get_config_file_path(tree_name)
+        config_file = get_config_file_path(userinterface_name)
         
         if not config_file.exists():
             print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Config file does not exist: {config_file}")
@@ -164,20 +165,20 @@ def delete_navigation_tree_config(tree_name: str) -> bool:
         
         config_file.unlink()
         
-        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Successfully deleted tree config: {tree_name}")
+        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Successfully deleted tree config for: {userinterface_name}")
         return True
         
     except Exception as e:
-        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Error deleting tree {tree_name}: {str(e)}")
+        print(f"[@utils:navigationConfigManager:delete_navigation_tree_config] Error deleting tree for {userinterface_name}: {str(e)}")
         return False
 
 
-def backup_navigation_tree_config(tree_name: str, backup_suffix: str = None) -> Optional[str]:
+def backup_navigation_tree_config(userinterface_name: str, backup_suffix: str = None) -> Optional[str]:
     """
     Create a backup of a navigation tree config file
     
     Args:
-        tree_name: The navigation tree name to backup
+        userinterface_name: The userinterface name to backup
         backup_suffix: Optional suffix for backup file (default: timestamp)
         
     Returns:
@@ -186,9 +187,9 @@ def backup_navigation_tree_config(tree_name: str, backup_suffix: str = None) -> 
     try:
         import time
         
-        print(f"[@utils:navigationConfigManager:backup_navigation_tree_config] Creating backup for tree: {tree_name}")
+        print(f"[@utils:navigationConfigManager:backup_navigation_tree_config] Creating backup for userinterface: {userinterface_name}")
         
-        config_file = get_config_file_path(tree_name)
+        config_file = get_config_file_path(userinterface_name)
         
         if not config_file.exists():
             print(f"[@utils:navigationConfigManager:backup_navigation_tree_config] Config file does not exist: {config_file}")
@@ -199,7 +200,7 @@ def backup_navigation_tree_config(tree_name: str, backup_suffix: str = None) -> 
             timestamp = int(time.time())
             backup_suffix = f"backup_{timestamp}"
         
-        backup_file = CONFIG_DIR / f"{tree_name}_{backup_suffix}.json"
+        backup_file = config_file.parent / f"{userinterface_name}_{backup_suffix}.json"
         
         # Copy file
         import shutil
@@ -209,13 +210,13 @@ def backup_navigation_tree_config(tree_name: str, backup_suffix: str = None) -> 
         return str(backup_file)
         
     except Exception as e:
-        print(f"[@utils:navigationConfigManager:backup_navigation_tree_config] Error creating backup for {tree_name}: {str(e)}")
+        print(f"[@utils:navigationConfigManager:backup_navigation_tree_config] Error creating backup for {userinterface_name}: {str(e)}")
         return None
 
 
 def validate_navigation_tree_structure(tree_data: Dict[str, Any]) -> bool:
     """
-    Validate that navigation tree data has the correct structure
+    Validate that tree data has the required structure
     
     Args:
         tree_data: Navigation tree data to validate
@@ -224,18 +225,16 @@ def validate_navigation_tree_structure(tree_data: Dict[str, Any]) -> bool:
         bool: True if structure is valid, False otherwise
     """
     try:
-        # Check basic structure
         if not isinstance(tree_data, dict):
             return False
         
+        # Must have nodes and edges arrays
         if 'nodes' not in tree_data or 'edges' not in tree_data:
             return False
         
-        # Check that nodes and edges are lists
         if not isinstance(tree_data['nodes'], list) or not isinstance(tree_data['edges'], list):
             return False
         
-        # Basic validation passed
         return True
         
     except Exception as e:
