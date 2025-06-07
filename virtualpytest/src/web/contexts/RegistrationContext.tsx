@@ -87,7 +87,16 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
 
   // Server configuration - use same protocol and IP as frontend + port from env
   const getServerBaseUrl = () => {
-    // Use same protocol and hostname as frontend, get port from environment
+    // In development, use empty string to make requests go through Vite proxy
+    // In production, construct the full URL
+    const isDevelopment = (import.meta as any).env.DEV;
+    
+    if (isDevelopment) {
+      console.log('[@context:Registration] Development mode detected, using Vite proxy (relative URLs)');
+      return ''; // Empty string makes requests relative, going through Vite proxy
+    }
+    
+    // Production: Use same protocol and hostname as frontend, get port from environment
     const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
     const serverIp = window.location.hostname; // Get IP from current URL
     const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
@@ -95,7 +104,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     // Build server URL using same protocol and IP as frontend
     const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
     
-    console.log('[@context:Registration] Server Configuration (from environment):');
+    console.log('[@context:Registration] Production mode - Server Configuration:');
     console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
     console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
     console.log('[@context:Registration] VITE_SERVER_PORT from env:', (import.meta as any).env.VITE_SERVER_PORT);
