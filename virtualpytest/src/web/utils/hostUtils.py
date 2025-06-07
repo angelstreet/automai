@@ -33,8 +33,10 @@ def register_host_with_server():
     # Get environment variables with validation
     server_ip = os.getenv('SERVER_IP')  # Changed from SERVER_URL to SERVER_IP
     server_port = os.getenv('SERVER_PORT', '5009')
+    server_protocol = os.getenv('SERVER_PROTOCOL', 'http')  # Default to http
     host_name = os.getenv('HOST_NAME')
     host_ip = os.getenv('HOST_IP')
+    host_protocol = os.getenv('HOST_PROTOCOL', 'http')  # Default to http
     host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
     host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port
     host_port_https = os.getenv('HOST_PORT_HTTPS', '444')  # HTTPS/nginx port for images
@@ -42,8 +44,10 @@ def register_host_with_server():
     print(f"🔍 [HOST] Registration Debug Info:")
     print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
     print(f"   SERVER_PORT env: '{server_port}'")
+    print(f"   SERVER_PROTOCOL env: '{server_protocol}'")
     print(f"   HOST_NAME env: '{host_name}'")
     print(f"   HOST_IP env: '{host_ip}'")
+    print(f"   HOST_PROTOCOL env: '{host_protocol}'")
     print(f"   HOST_PORT_INTERNAL env: '{host_port_internal}'")
     print(f"   HOST_PORT_EXTERNAL env: '{host_port_external}'")
     print(f"   HOST_PORT_HTTPS env: '{host_port_https}'")
@@ -82,8 +86,16 @@ def register_host_with_server():
         else:
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
     
-    # Construct full server URL with IP and port
-    full_server_url = f"http://{server_ip}:{server_port}"
+    # Smart URL construction - handle cases where SERVER_IP might already contain protocol
+    if server_ip.startswith('http://') or server_ip.startswith('https://'):
+        # SERVER_IP already contains protocol, use it as-is but add port if needed
+        if ':' in server_ip.split('://', 1)[1]:  # Already has port
+            full_server_url = server_ip
+        else:
+            full_server_url = f"{server_ip}:{server_port}"
+    else:
+        # SERVER_IP is just IP/hostname, construct URL with protocol
+        full_server_url = f"{server_protocol}://{server_ip}:{server_port}"
     
     print(f"\n🌐 [HOST] Full server URL: {full_server_url}")
     
@@ -98,6 +110,7 @@ def register_host_with_server():
             'client_id': stable_host_id,  # Keep as client_id for API compatibility
             'public_ip': host_ip,
             'local_ip': host_ip,
+            'protocol': host_protocol,  # HOST protocol (http or https)
             'client_port': host_port_external,  # EXTERNAL port - server uses this to communicate with host
             'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
             'https_port': host_port_https,  # HTTPS port - for nginx/images (port forwarding)

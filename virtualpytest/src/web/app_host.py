@@ -9,10 +9,12 @@ Usage:
     python3 app_host.py
 
 Environment Variables Required (in .env.host file):
-    SERVER_IP - IP address of the server (e.g., 77.56.53.130)
+    SERVER_IP - IP address of the server (e.g., 77.56.53.130 or https://77.56.53.130)
     SERVER_PORT - Port of the server (default: 5009)
+    SERVER_PROTOCOL - Protocol to use for server (http or https, default: http)
     HOST_NAME - Name of this host (e.g., sunri-pi1)
     HOST_IP - IP address of this host
+    HOST_PROTOCOL - Protocol to use for host (http or https, default: http)
     HOST_PORT_INTERNAL - Internal port where Flask app runs (default: 5119)
     HOST_PORT_EXTERNAL - External port for server communication (default: 5119)
     HOST_PORT_HTTPS - HTTPS port for nginx/images (default: 444)
@@ -142,10 +144,11 @@ def main():
     
     # Get configuration
     host_port = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
+    host_protocol = os.getenv('HOST_PROTOCOL', 'http')
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
     print(f"\n🚀 [HOST] Starting Flask app on port {host_port}")
-    print(f"🌐 [HOST] Host will be available at: http://0.0.0.0:{host_port}")
+    print(f"🌐 [HOST] Host will be available at: {host_protocol}://0.0.0.0:{host_port}")
     print(f"🐛 [HOST] Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     print("=" * 60)
     

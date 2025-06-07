@@ -277,8 +277,10 @@ def validate_environment_variables(mode='server'):
         required_host_vars = {
             'SERVER_IP': os.getenv('SERVER_IP'),
             'SERVER_PORT': os.getenv('SERVER_PORT'),
+            'SERVER_PROTOCOL': os.getenv('SERVER_PROTOCOL'),
             'HOST_NAME': os.getenv('HOST_NAME'),
             'HOST_IP': os.getenv('HOST_IP'),
+            'HOST_PROTOCOL': os.getenv('HOST_PROTOCOL'),
             'HOST_PORT_INTERNAL': os.getenv('HOST_PORT_INTERNAL'),
             'HOST_PORT_EXTERNAL': os.getenv('HOST_PORT_EXTERNAL'),
             'HOST_PORT_HTTPS': os.getenv('HOST_PORT_HTTPS'),
@@ -314,10 +316,14 @@ def validate_environment_variables(mode='server'):
                     print(f"   export {var}=77.56.53.130")
                 elif var == 'SERVER_PORT':
                     print(f"   export {var}=5009")
+                elif var == 'SERVER_PROTOCOL':
+                    print(f"   export {var}=http")
                 elif var == 'HOST_NAME':
                     print(f"   export {var}=sunri-pi1")
                 elif var == 'HOST_IP':
                     print(f"   export {var}=77.56.53.130")
+                elif var == 'HOST_PROTOCOL':
+                    print(f"   export {var}=http")
                 elif var == 'HOST_PORT_INTERNAL':
                     print(f"   export {var}=5119")
                 elif var == 'HOST_PORT_EXTERNAL':
