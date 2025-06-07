@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import signal
 from pathlib import Path
+import threading
 
 # Create blueprint with consistent name - remove URL prefix as it's set in register_routes
 screen_definition_blueprint = Blueprint('screen_definition', __name__)
@@ -27,6 +28,11 @@ capture_process = None
 capture_pid = None
 remote_capture_dir = None
 stream_was_active_before_capture = False
+
+def get_android_mobile_controller():
+    """Helper function to get android_mobile_controller from current_app"""
+    global_sessions = getattr(current_app, 'global_sessions', {})
+    return global_sessions.get('android_mobile_controller')
 
 # Initialize dirs on startup
 def ensure_dirs():
@@ -51,7 +57,7 @@ def ensure_dirs():
 def take_screenshot():
     """Take high resolution screenshot using FFmpeg from HDMI source with fixed 1920x1080 resolution."""
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         data = request.get_json()
         current_app.logger.info(f"[@api:screen-definition] Screenshot request: {data}")
@@ -170,7 +176,7 @@ def start_capture():
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
     
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         data = request.get_json()
         current_app.logger.info(f"[@api:screen-definition] Capture start request: {data}")
@@ -316,7 +322,7 @@ def stop_capture():
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
     
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         data = request.get_json() or {}
         current_app.logger.info(f"[@api:screen-definition] Capture stop request: {data}")
@@ -416,7 +422,7 @@ def get_capture_status():
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
     
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
@@ -468,7 +474,7 @@ def get_latest_frame():
     global remote_capture_dir
     
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
@@ -688,7 +694,7 @@ def serve_image_by_path():
 def get_stream_status():
     """Get the current status of the stream service."""
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
@@ -732,7 +738,7 @@ def get_stream_status():
 def stop_stream():
     """Stop the stream service."""
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({
@@ -768,7 +774,7 @@ def stop_stream():
 def restart_stream():
     """Restart the stream service."""
     try:
-        from app import android_mobile_controller
+        android_mobile_controller = get_android_mobile_controller()
         
         if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
             return jsonify({

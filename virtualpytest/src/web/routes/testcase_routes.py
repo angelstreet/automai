@@ -4,7 +4,7 @@ Test Case API Routes
 This module contains the API endpoints for managing test cases.
 '''
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 # Import utility functions
 import sys
@@ -26,8 +26,8 @@ testcase_bp = Blueprint('testcase', __name__, url_prefix='/api')
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
     '''Get user_id from request headers or use default for demo'''
-    from app import DEFAULT_USER_ID
-    return request.headers.get('X-User-ID', DEFAULT_USER_ID)
+    default_user_id = getattr(current_app, 'default_user_id', 'default-user-id')
+    return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
 # TEST CASES ENDPOINTS

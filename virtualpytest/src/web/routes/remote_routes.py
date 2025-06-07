@@ -8,7 +8,7 @@ This module contains the remote control API endpoints for:
 - Bluetooth Remote control
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import time
 import os
 import sys
@@ -24,6 +24,21 @@ from utils.sshSessionRegistry import SSHSessionRegistry
 # Create blueprint
 remote_bp = Blueprint('remote', __name__)
 
+def get_android_tv_session():
+    """Helper function to get android_tv_session from current_app"""
+    global_sessions = getattr(current_app, 'global_sessions', {})
+    return global_sessions.get('android_tv_session', {})
+
+def get_ir_remote_session():
+    """Helper function to get ir_remote_session from current_app"""
+    global_sessions = getattr(current_app, 'global_sessions', {})
+    return global_sessions.get('ir_remote_session', {})
+
+def get_bluetooth_remote_session():
+    """Helper function to get bluetooth_remote_session from current_app"""
+    global_sessions = getattr(current_app, 'global_sessions', {})
+    return global_sessions.get('bluetooth_remote_session', {})
+
 # =====================================================
 # ANDROID TV REMOTE CONTROL ENDPOINTS
 # =====================================================
@@ -31,7 +46,7 @@ remote_bp = Blueprint('remote', __name__)
 @remote_bp.route('/api/virtualpytest/android-tv/take-control', methods=['POST'])
 def take_android_tv_control():
     """Take control of Android TV device via SSH+ADB."""
-    from app import android_tv_session
+    android_tv_session = get_android_tv_session()
     
     try:
         data = request.get_json()
@@ -98,7 +113,7 @@ def take_android_tv_control():
 @remote_bp.route('/api/virtualpytest/android-tv/release-control', methods=['POST'])
 def release_android_tv_control():
     """Release control of Android TV device."""
-    from app import android_tv_session
+    android_tv_session = get_android_tv_session()
     
     try:
         if android_tv_session['connected'] and android_tv_session['controller']:
@@ -132,7 +147,7 @@ def release_android_tv_control():
 @remote_bp.route('/api/virtualpytest/android-tv/command', methods=['POST'])
 def send_android_tv_command():
     """Send command to Android TV device."""
-    from app import android_tv_session
+    android_tv_session = get_android_tv_session()
     
     try:
         if not android_tv_session['connected'] or not android_tv_session['controller']:
@@ -226,7 +241,7 @@ def send_android_tv_command():
 @remote_bp.route('/api/virtualpytest/android-tv/status', methods=['GET'])
 def get_android_tv_status():
     """Get Android TV session status."""
-    from app import android_tv_session
+    android_tv_session = get_android_tv_session()
     
     try:
         if android_tv_session['connected'] and android_tv_session['controller']:
@@ -296,9 +311,9 @@ def get_android_tv_config():
 @remote_bp.route('/api/virtualpytest/android-tv/screenshot', methods=['POST'])
 def android_tv_screenshot():
     """Take a screenshot of the Android TV device."""
+    android_tv_session = get_android_tv_session()
+    
     try:
-        from app import android_tv_session
-        
         if not android_tv_session['connected'] or not android_tv_session['controller']:
             return jsonify({
                 'success': False,
@@ -375,7 +390,6 @@ def get_android_mobile_defaults():
 def android_mobile_take_control():
     """Take control of Android Mobile device via SSH and ADB."""
     try:
-        import app
         from controllers.remote.android_mobile import AndroidMobileRemoteController
         
         data = request.get_json()
@@ -395,7 +409,7 @@ def android_mobile_take_control():
         # Attempt connection
         if controller.connect():
             # Store controller globally for subsequent commands
-            app.android_mobile_controller = controller
+            current_app.android_mobile_controller = controller
             
             # Register SSH session in registry for sharing with verification system
             if hasattr(controller, 'ssh_connection') and controller.ssh_connection:
@@ -427,11 +441,9 @@ def android_mobile_take_control():
 def android_mobile_release_control():
     """Release control of Android Mobile device."""
     try:
-        import app
-        
-        if hasattr(app, 'android_mobile_controller') and app.android_mobile_controller:
-            app.android_mobile_controller.disconnect()
-            app.android_mobile_controller = None
+        if hasattr(current_app, 'android_mobile_controller') and current_app.android_mobile_controller:
+            current_app.android_mobile_controller.disconnect()
+            current_app.android_mobile_controller = None
             
         # Clean up SSH session from registry
         SSHSessionRegistry.remove_session()
@@ -452,9 +464,7 @@ def android_mobile_release_control():
 def execute_android_mobile_action():
     """Execute a specific action by action ID for Android Mobile controller."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active connection'
@@ -492,7 +502,7 @@ def execute_android_mobile_action():
                     'success': False,
                     'error': 'Key parameter required for press_key command'
                 }), 400
-            success = app.android_mobile_controller.press_key(key)
+            success = current_app.android_mobile_controller.press_key(key)
             message = f'Key "{key}" {"pressed" if success else "failed"}'
             
         elif command in ['BACK', 'HOME', 'MENU', 'POWER', 'VOLUME_UP', 'VOLUME_DOWN']:
@@ -507,10 +517,10 @@ def execute_android_mobile_action():
             }
             keycode = keycode_map.get(command)
             if keycode:
-                success = app.android_mobile_controller.press_key(keycode)
+                success = current_app.android_mobile_controller.press_key(keycode)
             else:
                 # Try sending the command directly
-                success = app.android_mobile_controller.press_key(command)
+                success = current_app.android_mobile_controller.press_key(command)
             message = f'Key "{command}" {"pressed" if success else "failed"}'
             
         elif command == 'launch_app':
@@ -520,7 +530,7 @@ def execute_android_mobile_action():
                     'success': False,
                     'error': 'Package parameter required for launch_app command'
                 }), 400
-            success = app.android_mobile_controller.launch_app(package)
+            success = current_app.android_mobile_controller.launch_app(package)
             message = f'App "{package}" {"launched" if success else "failed"}'
             
         elif command == 'close_app':
@@ -530,7 +540,7 @@ def execute_android_mobile_action():
                     'success': False,
                     'error': 'Package parameter required for close_app command'
                 }), 400
-            success = app.android_mobile_controller.close_app(package)
+            success = current_app.android_mobile_controller.close_app(package)
             message = f'App "{package}" {"closed" if success else "failed"}'
             
         elif command == 'input_text':
@@ -540,7 +550,7 @@ def execute_android_mobile_action():
                     'success': False,
                     'error': 'Text parameter required for input_text command'
                 }), 400
-            success = app.android_mobile_controller.input_text(text)
+            success = current_app.android_mobile_controller.input_text(text)
             message = f'Text input {"successful" if success else "failed"}'
             
         elif command == 'click_element':
@@ -557,8 +567,8 @@ def execute_android_mobile_action():
             if '|' in element_id:
                 print(f"[@route:execute_android_mobile_action] Detected pipe-separated terms in element_id: '{element_id}'")
                 # Use the advanced click_element_by_search method that supports pipe-separated terms
-                success = app.android_mobile_controller.adb_utils.click_element_by_search(
-                    app.android_mobile_controller.android_device_id, 
+                success = current_app.android_mobile_controller.adb_utils.click_element_by_search(
+                    current_app.android_mobile_controller.android_device_id, 
                     element_id
                 )
                 if success:
@@ -570,8 +580,8 @@ def execute_android_mobile_action():
                 # Try to click element directly by text, content description, or resource ID
                 # First try to find element from last UI dump if available
                 target_element = None
-                if hasattr(app.android_mobile_controller, 'last_ui_elements') and app.android_mobile_controller.last_ui_elements:
-                    for element in app.android_mobile_controller.last_ui_elements:
+                if hasattr(current_app.android_mobile_controller, 'last_ui_elements') and current_app.android_mobile_controller.last_ui_elements:
+                    for element in current_app.android_mobile_controller.last_ui_elements:
                         if element.id == element_id:
                             target_element = element
                             break
@@ -580,21 +590,21 @@ def execute_android_mobile_action():
                 if not target_element:
                     # Do a fresh UI dump first
                     print(f"[@route:execute_android_mobile_action] Element not found in cache, doing fresh UI dump")
-                    dump_success, elements, dump_error = app.android_mobile_controller.dump_ui_elements()
+                    dump_success, elements, dump_error = current_app.android_mobile_controller.dump_ui_elements()
                     
                     if dump_success:
                         # Try to find element by various methods
-                        target_element = app.android_mobile_controller.find_element_by_text(element_id)
+                        target_element = current_app.android_mobile_controller.find_element_by_text(element_id)
                         if not target_element:
-                            target_element = app.android_mobile_controller.find_element_by_content_desc(element_id)
+                            target_element = current_app.android_mobile_controller.find_element_by_content_desc(element_id)
                         if not target_element:
-                            target_element = app.android_mobile_controller.find_element_by_resource_id(element_id)
+                            target_element = current_app.android_mobile_controller.find_element_by_resource_id(element_id)
                     else:
                         print(f"[@route:execute_android_mobile_action] UI dump failed: {dump_error}")
                 
                 if target_element:
                     # Click the found element
-                    success = app.android_mobile_controller.click_element(target_element)
+                    success = current_app.android_mobile_controller.click_element(target_element)
                     if success:
                         message = f'Element "{element_id}" click successful'
                     else:
@@ -609,8 +619,8 @@ def execute_android_mobile_action():
                 else:
                     # Fallback: try using smart search even for single terms
                     print(f"[@route:execute_android_mobile_action] Element not found with basic search, trying smart search")
-                    success = app.android_mobile_controller.adb_utils.click_element_by_search(
-                        app.android_mobile_controller.android_device_id, 
+                    success = current_app.android_mobile_controller.adb_utils.click_element_by_search(
+                        current_app.android_mobile_controller.android_device_id, 
                         element_id
                     )
                     if success:
@@ -637,7 +647,7 @@ def execute_android_mobile_action():
                 }), 400
             
             # Use the coordinate tap method from the controller
-            success = app.android_mobile_controller.tap_coordinates(x, y)
+            success = current_app.android_mobile_controller.tap_coordinates(x, y)
             message = f'Coordinate tap at ({x}, {y}) {"successful" if success else "failed"}'
             
         else:
@@ -663,19 +673,17 @@ def execute_android_mobile_action():
 def android_mobile_dump_ui():
     """Dump UI elements from Android Mobile device."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No acticve connection'
             }), 400
             
-        success, elements, error = app.android_mobile_controller.dump_ui_elements()
+        success, elements, error = current_app.android_mobile_controller.dump_ui_elements()
         
         if success:
             # Get device resolution
-            resolution = app.android_mobile_controller.get_device_resolution()
+            resolution = current_app.android_mobile_controller.get_device_resolution()
             
             # Convert elements to JSON-serializable format
             elements_data = []
@@ -712,9 +720,7 @@ def android_mobile_dump_ui():
 def android_mobile_click_element():
     """Click on a UI element on Android Mobile device."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No acticve connection'
@@ -731,7 +737,7 @@ def android_mobile_click_element():
             
         # Find the element by ID from the last UI dump
         target_element = None
-        for element in app.android_mobile_controller.last_ui_elements:
+        for element in current_app.android_mobile_controller.last_ui_elements:
             if element.id == element_id:
                 target_element = element
                 break
@@ -743,7 +749,7 @@ def android_mobile_click_element():
             }), 400
             
         # Click the element using the correct method signature
-        success = app.android_mobile_controller.click_element(target_element)
+        success = current_app.android_mobile_controller.click_element(target_element)
         
         return jsonify({
             'success': success,
@@ -760,15 +766,13 @@ def android_mobile_click_element():
 def android_mobile_get_apps():
     """Get installed apps from Android Mobile device."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No acticve connection'
             }), 400
             
-        apps = app.android_mobile_controller.get_installed_apps()
+        apps = current_app.android_mobile_controller.get_installed_apps()
         
         # Convert apps to JSON-serializable format
         apps_data = []
@@ -793,16 +797,14 @@ def android_mobile_get_apps():
 def android_mobile_screenshot():
     """Take a screenshot of the Android mobile device"""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No acticve connection'
             }), 400
         
         # Take screenshot using the existing controller
-        success, screenshot_data, error = app.android_mobile_controller.take_screenshot()
+        success, screenshot_data, error = current_app.android_mobile_controller.take_screenshot()
         
         if success:
             return jsonify({
@@ -825,23 +827,21 @@ def android_mobile_screenshot():
 def android_mobile_screenshot_and_dump_ui():
     """Take a screenshot and dump UI elements from Android Mobile device in one call."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No acticve connection'
             }), 400
             
         # Take screenshot first
-        success_screenshot, screenshot_data, screenshot_error = app.android_mobile_controller.take_screenshot()
+        success_screenshot, screenshot_data, screenshot_error = current_app.android_mobile_controller.take_screenshot()
         
         # Dump UI elements
-        success_ui, elements, ui_error = app.android_mobile_controller.dump_ui_elements()
+        success_ui, elements, ui_error = current_app.android_mobile_controller.dump_ui_elements()
         
         if success_screenshot and success_ui:
             # Get device resolution
-            resolution = app.android_mobile_controller.get_device_resolution()
+            resolution = current_app.android_mobile_controller.get_device_resolution()
             
             # Convert elements to JSON-serializable format
             elements_data = []
@@ -1045,9 +1045,7 @@ def get_android_mobile_actions():
 def android_mobile_command():
     """Send command to Android Mobile device."""
     try:
-        import app
-        
-        if not hasattr(app, 'android_mobile_controller') or not app.android_mobile_controller:
+        if not hasattr(current_app, 'android_mobile_controller') or not current_app.android_mobile_controller:
             return jsonify({
                 'success': False,
                 'error': 'No active connection'
@@ -1067,7 +1065,7 @@ def android_mobile_command():
                     'error': 'Key parameter required for press_key command'
                 }), 400
                 
-            success = app.android_mobile_controller.press_key(key)
+            success = current_app.android_mobile_controller.press_key(key)
             return jsonify({
                 'success': success,
                 'message': f'Key "{key}" {"pressed" if success else "failed"}'
@@ -1081,7 +1079,7 @@ def android_mobile_command():
                     'error': 'Package parameter required for launch_app command'
                 }), 400
                 
-            success = app.android_mobile_controller.launch_app(package)
+            success = current_app.android_mobile_controller.launch_app(package)
             return jsonify({
                 'success': success,
                 'message': f'App "{package}" {"launched" if success else "failed"}'
@@ -1095,7 +1093,7 @@ def android_mobile_command():
                     'error': 'Package parameter required for close_app command'
                 }), 400
                 
-            success = app.android_mobile_controller.close_app(package)
+            success = current_app.android_mobile_controller.close_app(package)
             return jsonify({
                 'success': success,
                 'message': f'App "{package}" {"closed" if success else "failed"}'
@@ -1109,7 +1107,7 @@ def android_mobile_command():
                     'error': 'Text parameter required for input_text command'
                 }), 400
                 
-            success = app.android_mobile_controller.input_text(text)
+            success = current_app.android_mobile_controller.input_text(text)
             return jsonify({
                 'success': success,
                 'message': f'Text input {"successful" if success else "failed"}'
@@ -1132,7 +1130,7 @@ def android_mobile_command():
             
             keycode = keycode_map.get(command)
             if keycode:
-                success = app.android_mobile_controller.press_key(keycode)
+                success = current_app.android_mobile_controller.press_key(keycode)
                 return jsonify({
                     'success': success,
                     'message': f'Key "{command}" {"pressed" if success else "failed"}'
@@ -1152,7 +1150,7 @@ def android_mobile_command():
                     'error': 'Package parameter required for LAUNCH_APP command'
                 }), 400
                 
-            success = app.android_mobile_controller.launch_app(package)
+            success = current_app.android_mobile_controller.launch_app(package)
             return jsonify({
                 'success': success,
                 'message': f'App "{package}" {"launched" if success else "failed"}'
@@ -1182,7 +1180,7 @@ def android_mobile_command():
 @remote_bp.route('/api/virtualpytest/ir-remote/connect', methods=['POST'])
 def connect_ir_remote():
     """Connect to IR remote device"""
-    from app import ir_remote_session
+    ir_remote_session = get_ir_remote_session()
     
     error = check_controllers_available()
     if error:
@@ -1243,7 +1241,7 @@ def connect_ir_remote():
 @remote_bp.route('/api/virtualpytest/ir-remote/disconnect', methods=['POST'])
 def disconnect_ir_remote():
     """Disconnect from IR remote device"""
-    from app import ir_remote_session
+    ir_remote_session = get_ir_remote_session()
     
     try:
         print(f"[@api:ir-remote:disconnect] Disconnecting from IR device")
@@ -1281,7 +1279,7 @@ def disconnect_ir_remote():
 @remote_bp.route('/api/virtualpytest/ir-remote/command', methods=['POST'])
 def send_ir_remote_command():
     """Send command to IR remote device"""
-    from app import ir_remote_session
+    ir_remote_session = get_ir_remote_session()
     
     if not ir_remote_session['connected'] or not ir_remote_session['controller']:
         return jsonify({
@@ -1342,7 +1340,7 @@ def send_ir_remote_command():
 @remote_bp.route('/api/virtualpytest/ir-remote/status', methods=['GET'])
 def get_ir_remote_status():
     """Get IR remote connection status"""
-    from app import ir_remote_session
+    ir_remote_session = get_ir_remote_session()
     
     return jsonify({
         'connected': ir_remote_session['connected'],
@@ -1374,7 +1372,7 @@ def get_ir_remote_config():
 @remote_bp.route('/api/virtualpytest/bluetooth-remote/connect', methods=['POST'])
 def connect_bluetooth_remote():
     """Connect to Bluetooth remote device"""
-    from app import bluetooth_remote_session
+    bluetooth_remote_session = get_bluetooth_remote_session()
     
     error = check_controllers_available()
     if error:
@@ -1434,7 +1432,7 @@ def connect_bluetooth_remote():
 @remote_bp.route('/api/virtualpytest/bluetooth-remote/disconnect', methods=['POST'])
 def disconnect_bluetooth_remote():
     """Disconnect from Bluetooth remote device"""
-    from app import bluetooth_remote_session
+    bluetooth_remote_session = get_bluetooth_remote_session()
     
     try:
         print(f"[@api:bluetooth-remote:disconnect] Disconnecting from Bluetooth device")
@@ -1472,7 +1470,7 @@ def disconnect_bluetooth_remote():
 @remote_bp.route('/api/virtualpytest/bluetooth-remote/command', methods=['POST'])
 def send_bluetooth_remote_command():
     """Send command to Bluetooth remote device"""
-    from app import bluetooth_remote_session
+    bluetooth_remote_session = get_bluetooth_remote_session()
     
     if not bluetooth_remote_session['connected'] or not bluetooth_remote_session['controller']:
         return jsonify({
@@ -1533,7 +1531,7 @@ def send_bluetooth_remote_command():
 @remote_bp.route('/api/virtualpytest/bluetooth-remote/status', methods=['GET'])
 def get_bluetooth_remote_status():
     """Get Bluetooth remote connection status"""
-    from app import bluetooth_remote_session
+    bluetooth_remote_session = get_bluetooth_remote_session()
     
     return jsonify({
         'connected': bluetooth_remote_session['connected'],

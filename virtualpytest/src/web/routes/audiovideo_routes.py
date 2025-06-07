@@ -7,7 +7,7 @@ This module contains the audio/video API endpoints for:
 - Audio level detection
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 
 # Create blueprint
@@ -16,7 +16,7 @@ audiovideo_bp = Blueprint('audiovideo', __name__)
 # Helper functions
 def check_controllers_available():
     """Helper function to check if controllers are available"""
-    from app import controllers_available
+    controllers_available = getattr(current_app, 'controllers_available', False)
     if not controllers_available:
         return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
     return None

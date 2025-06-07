@@ -8,7 +8,7 @@ This module contains the VirtualPyTest controller system API endpoints for:
 - Device sets creation
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import time
 
 # Create blueprint
@@ -17,7 +17,7 @@ controller_bp = Blueprint('controller', __name__)
 # Helper functions
 def check_controllers_available():
     """Helper function to check if controllers are available"""
-    from app import controllers_available
+    controllers_available = getattr(current_app, 'controllers_available', False)
     if not controllers_available:
         return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
     return None

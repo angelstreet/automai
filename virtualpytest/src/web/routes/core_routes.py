@@ -5,7 +5,7 @@ This module contains the core API endpoints for:
 - Health check
 """
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 # Import utility functions
 import sys
@@ -15,7 +15,7 @@ import os
 src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, src_dir)  # Insert at beginning to prioritize over local utils
 
-from .utils import check_supabase, get_team_id
+from .utils import get_team_id
 
 # Create blueprint
 core_bp = Blueprint('core', __name__)
@@ -27,10 +27,16 @@ core_bp = Blueprint('core', __name__)
 @core_bp.route('/api/health')
 def health():
     """Health check endpoint"""
-    from app import supabase_client
-    supabase_status = "connected" if supabase_client else "disconnected"
+    supabase_status = "connected" if current_app.supabase_client else "disconnected"
     return jsonify({
         'status': 'ok',
         'supabase': supabase_status,
         'team_id': get_team_id()
-    }) 
+    })
+
+def check_supabase():
+    """Helper function to check if Supabase is available"""
+    supabase_client = getattr(current_app, 'supabase_client', None)
+    if supabase_client is None:
+        return jsonify({'error': 'Supabase not available'}), 503
+    return None 
