@@ -23,7 +23,7 @@ def register_host_with_server():
     print("=" * 50)
     
     # Get environment variables with validation
-    server_url = os.getenv('SERVER_URL')
+    server_ip = os.getenv('SERVER_IP')  # Changed from SERVER_URL to SERVER_IP
     server_port = os.getenv('SERVER_PORT', '5009')
     host_name = os.getenv('HOST_NAME')
     host_ip = os.getenv('HOST_IP')
@@ -31,7 +31,7 @@ def register_host_with_server():
     host_nginx_port = os.getenv('HOST_NGINX_PORT', '444')
     
     print(f"🔍 [HOST] Registration Debug Info:")
-    print(f"   SERVER_URL env: '{server_url}'")
+    print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
     print(f"   SERVER_PORT env: '{server_port}'")
     print(f"   HOST_NAME env: '{host_name}'")
     print(f"   HOST_IP env: '{host_ip}'")
@@ -41,8 +41,8 @@ def register_host_with_server():
     # Validate critical environment variables
     validation_errors = []
     
-    if not server_url:
-        validation_errors.append("SERVER_URL is required but not set")
+    if not server_ip:  # Changed from server_url
+        validation_errors.append("SERVER_IP is required but not set")
     
     if not host_name:
         validation_errors.append("HOST_NAME is required but not set")
@@ -56,34 +56,24 @@ def register_host_with_server():
             print(f"   - {error}")
         
         # Check if we have critical missing vars
-        critical_missing = [error for error in validation_errors if any(x in error for x in ["SERVER_URL", "HOST_NAME", "HOST_IP"])]
+        critical_missing = [error for error in validation_errors if any(x in error for x in ["SERVER_IP", "HOST_NAME", "HOST_IP"])]
         if critical_missing:
             print(f"\n❌ [HOST] Cannot proceed with registration due to critical missing variables:")
             for error in critical_missing:
                 print(f"   - {error}")
             print(f"\n💡 [HOST] Set the missing variables and try again:")
-            if not server_url:
-                print(f"   export SERVER_URL=77.56.53.130")
+            if not server_ip:  # Changed from server_url
+                print(f"   export SERVER_IP=192.168.1.67")
             if not host_name:
                 print(f"   export HOST_NAME=sunri-pi1")
             if not host_ip:
-                print(f"   export HOST_IP=77.56.53.130")
+                print(f"   export HOST_IP=192.168.1.67")
             return
         else:
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
     
-    # Construct full server URL with port
-    if '://' in server_url:
-        # URL format: http://server-ip or http://server-ip:port
-        if ':' in server_url.split('://')[-1] and server_url.split('://')[-1].count(':') >= 1:
-            # URL already has port
-            full_server_url = server_url
-        else:
-            # URL without port, add it
-            full_server_url = f"{server_url}:{server_port}"
-    else:
-        # IP format: server-ip
-        full_server_url = f"http://{server_url}:{server_port}"
+    # Construct full server URL with IP and port
+    full_server_url = f"http://{server_ip}:{server_port}"
     
     print(f"\n🌐 [HOST] Full server URL: {full_server_url}")
     

@@ -9,7 +9,7 @@ Usage:
     python3 app_server.py
 
 Environment Variables Required (in .env.server file):
-    SERVER_URL - IP address of this server (e.g., 77.56.53.130)
+    SERVER_IP - IP address of this server (e.g., 192.168.1.67)
     SERVER_PORT - Port for this server (default: 5009)
     GITHUB_TOKEN - GitHub token for authentication
     DEBUG - Set to 'true' to enable debug mode (default: false)
@@ -20,8 +20,16 @@ import os
 import time
 import atexit
 
-# Add utils to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils'))
+# Add both local utils and parent src/utils to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+local_utils_path = os.path.join(current_dir, 'utils')
+parent_src_path = os.path.dirname(current_dir)
+parent_utils_path = os.path.join(parent_src_path, 'utils')
+
+# Add paths in order of preference (local first, then parent)
+sys.path.insert(0, local_utils_path)
+sys.path.insert(1, parent_utils_path)
+sys.path.insert(2, parent_src_path)
 
 from utils.appUtils import (
     load_environment_variables,
@@ -114,8 +122,12 @@ def main():
         from routes import register_routes
         register_routes(app)
         print("✅ [SERVER] Routes registered successfully")
+    except ImportError as import_error:
+        print(f"⚠️ [SERVER] Warning: Could not import routes module: {import_error}")
+        print("   Some API endpoints may not be available")
     except Exception as e:
         print(f"⚠️ [SERVER] Warning: Could not register routes: {e}")
+        print("   Some API endpoints may not be available")
     
     # Setup cleanup handlers (only atexit, not signal handlers to avoid conflicts)
     setup_server_cleanup()

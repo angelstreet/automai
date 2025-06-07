@@ -9,7 +9,7 @@ Usage:
     python3 app_host.py
 
 Environment Variables Required (in .env.host file):
-    SERVER_URL - IP address of the server (e.g., 77.56.53.130)
+    SERVER_IP - IP address of the server (e.g., 77.56.53.130)
     SERVER_PORT - Port of the server (default: 5009)
     HOST_NAME - Name of this host (e.g., sunri-pi1)
     HOST_IP - IP address of this host
@@ -24,8 +24,16 @@ import os
 import time
 import atexit
 
-# Add utils to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils'))
+# Add both local utils and parent src/utils to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+local_utils_path = os.path.join(current_dir, 'utils')
+parent_src_path = os.path.dirname(current_dir)
+parent_utils_path = os.path.join(parent_src_path, 'utils')
+
+# Add paths in order of preference (local first, then parent)
+sys.path.insert(0, local_utils_path)
+sys.path.insert(1, parent_utils_path)
+sys.path.insert(2, parent_src_path)
 
 from utils.appUtils import (
     load_environment_variables,
@@ -123,8 +131,12 @@ def main():
         from routes import register_routes
         register_routes(app)
         print("✅ [HOST] Routes registered successfully")
+    except ImportError as import_error:
+        print(f"⚠️ [HOST] Warning: Could not import routes module: {import_error}")
+        print("   Some API endpoints may not be available")
     except Exception as e:
         print(f"⚠️ [HOST] Warning: Could not register routes: {e}")
+        print("   Some API endpoints may not be available")
     
     # Setup cleanup handlers (only atexit, not signal handlers to avoid conflicts)
     setup_host_cleanup()
