@@ -103,13 +103,15 @@ def server_take_control():
         
         # Lock the device using deviceLockManager
         try:
-            from web.utils.deviceLockManager import deviceLockManager
+            from web.utils.deviceLockManager import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
             
             # Try to acquire lock for the device
-            lock_acquired = deviceLockManager.acquire_lock(device_id, session_id)
+            lock_acquired = lock_device_in_registry(device_id, session_id)
             
             if not lock_acquired:
-                current_owner = deviceLockManager.get_lock_owner(device_id)
+                # Get lock info to see who owns it
+                lock_info = get_device_lock_info(device_id)
+                current_owner = lock_info.get('lockedBy', 'unknown') if lock_info else 'unknown'
                 return jsonify({
                     'success': False,
                     'error': f'Device {device_id} is already locked by session: {current_owner}',
@@ -169,7 +171,7 @@ def server_take_control():
                     }), 200
                 else:
                     # Host failed, release the device lock
-                    deviceLockManager.release_lock(device_id, session_id)
+                    unlock_device_in_registry(device_id, session_id)
                     return jsonify({
                         'success': False,
                         'error': host_data.get('error', 'Host failed to take control'),
@@ -179,7 +181,7 @@ def server_take_control():
                     }), 500
             else:
                 # Host request failed, release the device lock
-                deviceLockManager.release_lock(device_id, session_id)
+                unlock_device_in_registry(device_id, session_id)
                 return jsonify({
                     'success': False,
                     'error': f'Host request failed: {host_response.status_code} {host_response.text}',
@@ -189,7 +191,7 @@ def server_take_control():
                 
         except Exception as e:
             # Host communication failed, release the device lock
-            deviceLockManager.release_lock(device_id, session_id)
+            unlock_device_in_registry(device_id, session_id)
             print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,
