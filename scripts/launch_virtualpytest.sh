@@ -1,55 +1,49 @@
 #!/bin/bash
 
-# VirtualPyTest Launch Script
-# This script starts the VirtualPyTest system with proper process management
-
-echo "🚀 Starting VirtualPyTest System..."
+# VirtualPyTest Launch Script - Simple Unified Logging
+echo "🚀 Starting VirtualPyTest System with Unified Logging..."
 
 # Activate virtual environment
-echo "📦 Activating virtual environment..."
 source /home/sunri-pi1/myvenv/bin/activate
-
-# Change to the web directory
 cd ~/automai/virtualpytest/src/web
 
-# Function to cleanup background processes on exit
-cleanup() {
-    echo "🧹 Cleaning up background processes..."
-    if [ ! -z "$SERVER_PID" ]; then
-        echo "🛑 Stopping server (PID: $SERVER_PID)..."
-        kill $SERVER_PID 2>/dev/null
-    fi
-    if [ ! -z "$NPM_PID" ]; then
-        echo "🛑 Stopping npm dev server (PID: $NPM_PID)..."
-        kill $NPM_PID 2>/dev/null
-    fi
-    echo "✅ Cleanup completed"
-    exit 0
+# Colors for different services
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Function to run command with colored prefix
+run_with_prefix() {
+    local prefix="$1"
+    local color="$2"
+    shift 2
+    "$@" 2>&1 | while IFS= read -r line; do
+        echo -e "${color}[${prefix}]${NC} $line"
+    done &
 }
 
-# Set up signal handlers for cleanup
+# Cleanup function
+cleanup() {
+    echo -e "\n${RED}🛑 Shutting down all services...${NC}"
+    jobs -p | xargs -r kill 2>/dev/null
+    exit 0
+}
 trap cleanup SIGINT SIGTERM
 
-# Start the server in background
-echo "🖥️  Starting VirtualPyTest server..."
-python app.py --server &
-SERVER_PID=$!
-echo "📍 Server started with PID: $SERVER_PID"
-
-# Start npm dev server in background
-echo "⚛️  Starting npm dev server..."
-npm run dev &
-NPM_PID=$!
-echo "📍 NPM dev server started with PID: $NPM_PID"
-
-# Wait a moment for server to start
-echo "⏳ Waiting for server to initialize..."
-sleep 3
-
-# Start the host (this will run in foreground)
-echo "🏠 Starting VirtualPyTest host..."
+echo "📺 Starting services with unified logging..."
 echo "💡 Press Ctrl+C to stop all services"
-python app.py --host
+echo "=================================================================================="
 
-# If we reach here, the host process ended, so cleanup
-cleanup
+# Start all services with prefixed output
+run_with_prefix "SERVER" "$BLUE" python app.py --server
+sleep 2
+
+run_with_prefix "NPM" "$YELLOW" npm run dev
+sleep 2
+
+run_with_prefix "HOST" "$GREEN" python app.py --host
+
+# Wait for all background jobs
+wait
