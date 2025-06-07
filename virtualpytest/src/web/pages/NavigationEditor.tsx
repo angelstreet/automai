@@ -75,7 +75,7 @@ import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefin
 
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
-import { deviceApi, Device } from '../services/deviceService';
+import { useDeviceApi, Device } from '../services/deviceService';
 
 // Import the hook to access SSH session state
 import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
@@ -227,6 +227,9 @@ function CompactRemoteWithSessionTracking({
 }
 
 const NavigationEditorContent: React.FC = () => {
+  // Get the device API service
+  const deviceApi = useDeviceApi();
+  
   // Use registration context for centralized URL management and host data
   const { 
     buildApiUrl, 

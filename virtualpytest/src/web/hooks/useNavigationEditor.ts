@@ -19,22 +19,31 @@ import { useNavigationHistory } from './navigation/useNavigationHistory';
 import { useNavigationCRUD } from './navigation/useNavigationCRUD';
 import { useNodeEdgeManagement } from './navigation/useNodeEdgeManagement';
 
-// Get server port from environment variable with fallback to 5119
-const getServerPort = () => {
-  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-};
+// Import registration context and default team ID
+import { useRegistration, DEFAULT_TEAM_ID } from '../contexts/RegistrationContext';
 
-const API_BASE_URL = `http://localhost:${getServerPort()}`;
-
-const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";  // Match the server-side default
-
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+export const useNavigationEditor = () => {
+  const navigate = useNavigate();
+  
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+  
+  // Initialize teamId in localStorage if not already set
+  useEffect(() => {
+    if (!localStorage.getItem('teamId') && !sessionStorage.getItem('teamId')) {
+      console.log(`[@hook:useNavigationEditor] Setting default team_id in localStorage: ${DEFAULT_TEAM_ID}`);
+      localStorage.setItem('teamId', DEFAULT_TEAM_ID);
+    }
+  }, []);
+  
+  // Create apiCall function using buildServerUrl
+  const apiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
   // Get team_id from localStorage or other state management, or use default
   const teamId = localStorage.getItem('teamId') || sessionStorage.getItem('teamId') || DEFAULT_TEAM_ID;
   
   console.log(`[@hook:useNavigationEditor:apiCall] Making API call to ${endpoint} with team_id: ${teamId}`);
   
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildServerUrl(endpoint), {
     headers: {
       'Content-Type': 'application/json',
       // Include team_id in header to ensure proper RLS permissions
@@ -51,18 +60,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   }
   
   return response.json();
-};
-
-export const useNavigationEditor = () => {
-  const navigate = useNavigate();
-  
-  // Initialize teamId in localStorage if not already set
-  useEffect(() => {
-    if (!localStorage.getItem('teamId') && !sessionStorage.getItem('teamId')) {
-      console.log(`[@hook:useNavigationEditor] Setting default team_id in localStorage: ${DEFAULT_TEAM_ID}`);
-      localStorage.setItem('teamId', DEFAULT_TEAM_ID);
-    }
-  }, []);
+  }, [buildServerUrl]);
   
   // Use the modular state hook
   const navigationState = useNavigationState();
@@ -99,6 +97,7 @@ export const useNavigationEditor = () => {
     allNodes: navigationState.allNodes,
     allEdges: navigationState.allEdges,
     isSaving: navigationState.isSaving,
+    apiCall, // Pass the apiCall function
   });
   
   // History management hook

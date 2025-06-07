@@ -13,11 +13,6 @@ import os
 # Create blueprint
 verification_adb_host_bp = Blueprint('verification_adb_host', __name__)
 
-# Host configuration
-HOST_IP = "77.56.53.130"
-HOST_PORT = "5119"
-CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
-
 # =====================================================
 # HOST-SIDE ADB VERIFICATION ENDPOINTS
 # =====================================================

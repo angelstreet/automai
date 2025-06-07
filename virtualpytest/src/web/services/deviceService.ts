@@ -4,6 +4,7 @@
  * This service handles all API calls related to device management.
  */
 
+import { useMemo } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
 
 export interface Device {
@@ -14,6 +15,7 @@ export interface Device {
   status: string;
   last_seen: number;
   capabilities: string[];
+  controller_configs?: any; // Controller configurations object
   connection?: {
     flask_url: string;
     nginx_url: string;
@@ -24,6 +26,7 @@ export interface DeviceCreatePayload {
   name: string;
   model: string;
   description?: string;
+  controllerConfigs?: any; // Controller configurations for creation
 }
 
 export interface ApiResponse<T> {
@@ -179,16 +182,9 @@ class DeviceApiService {
 // Hook to create service instance with context
 export const useDeviceApi = () => {
   const { buildServerUrl } = useRegistration();
-  return new DeviceApiService(buildServerUrl);
-};
-
-// Legacy export for backward compatibility - will be removed once all components are updated
-export const deviceApi = new DeviceApiService((endpoint: string) => {
-  // Fallback URL builder for legacy usage
-  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
-  const serverProtocol = window.location.protocol.replace(':', '');
-  const serverIp = window.location.hostname;
-  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
-}); 
+  
+  // Use useMemo to create a stable reference to prevent infinite loops
+  return useMemo(() => {
+    return new DeviceApiService(buildServerUrl);
+  }, [buildServerUrl]);
+}; 

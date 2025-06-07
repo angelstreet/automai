@@ -36,6 +36,7 @@ import {
 import { useState, useEffect } from 'react';
 import { useValidation } from '../hooks/useValidation';
 import { useValidationColors } from '../../hooks/useValidationColors';
+import { useRegistration } from '../../contexts/RegistrationContext';
 import React from 'react';
 
 interface ValidationPreviewClientProps {
@@ -66,37 +67,52 @@ interface OptimalPathData {
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const { showPreview, previewData, lastResult, closePreview, runValidation, viewLastResult } = useValidation(treeId);
   const { resetForNewValidation } = useValidationColors(treeId);
+  const { buildServerUrl } = useRegistration();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
   const [selectedEdges, setSelectedEdges] = useState<Set<number>>(new Set());
   const [depthFilter, setDepthFilter] = useState<'all' | '1' | '2'>('all');
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [totalSteps, setTotalSteps] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Load optimal path when preview opens
   useEffect(() => {
     if (showPreview && treeId && !optimalPath) {
-      loadOptimalPath();
+      fetchOptimalPath();
     }
   }, [showPreview, treeId]);
 
-  const loadOptimalPath = async () => {
-    setLoadingOptimalPath(true);
+  const fetchOptimalPath = async () => {
+    if (!treeId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch(`http://localhost:5009/api/validation/optimal-path/${treeId}`);
+      const response = await fetch(buildServerUrl(`api/validation/optimal-path/${treeId}`));
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
-        setOptimalPath(data.optimal_path);
-        // Select all steps by default
-        const allSteps = data.optimal_path.sequence
-          .map((step: OptimalPathStep) => step.step_number);
-        setSelectedEdges(new Set(allSteps));
+        setOptimalPath(data.optimal_path || []);
+        setTotalSteps(data.total_steps || 0);
+        setEstimatedTime(data.estimated_time_minutes || 0);
+      } else {
+        setError(data.error || 'Failed to fetch optimal path');
       }
-    } catch (error) {
-      console.error('Failed to load optimal path:', error);
+    } catch (err: any) {
+      console.error('[@component:ValidationPreviewClient] Error fetching optimal path:', err);
+      setError(err.message || 'Failed to fetch optimal path');
     } finally {
-      setLoadingOptimalPath(false);
+      setIsLoading(false);
     }
   };
 
@@ -452,7 +468,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                     </>
                   ) : (
                     <Typography variant="body2" color="error" sx={{ textAlign: 'center', py: 2 }}>
-                      Failed to load NetworkX optimal path.
+                      {error || 'Failed to load NetworkX optimal path'}
                     </Typography>
                   )}
                 </Box>

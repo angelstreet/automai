@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Box } from '@mui/material';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface StreamClickOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -16,6 +17,9 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   onTap,
   sx = {}
 }) => {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+  
   const overlayRef = useRef<HTMLDivElement>(null);
   const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(null);
 
@@ -64,7 +68,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     try {
       console.log(`[@component:StreamClickOverlay] Sending tap command: ${x}, ${y}`);
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/execute-action', {
+      const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/execute-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,7 +93,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     } catch (error) {
       console.error(`[@component:StreamClickOverlay] ❌ Tap request failed:`, error);
     }
-  }, []);
+  }, [buildServerUrl]);
 
   const showClickAnimation = useCallback((x: number, y: number) => {
     const animationId = Date.now();

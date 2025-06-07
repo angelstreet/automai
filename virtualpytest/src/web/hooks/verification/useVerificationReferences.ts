@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ReferenceImage {
   name: string;
@@ -27,63 +28,54 @@ interface UseVerificationReferencesReturn {
 }
 
 export const useVerificationReferences = (reloadTrigger?: number): UseVerificationReferencesReturn => {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+  
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
-  // Fetch available reference images from local resource.json file
   const fetchAvailableReferences = async () => {
+    setReferencesLoading(true);
     try {
-      setReferencesLoading(true);
-      console.log('[@component:useVerificationReferences] Fetching available references from local resource.json');
+      console.log('[@hook:useVerificationReferences] Fetching available references...');
       
-      // Import the resource.json file directly
-      const resourceData = await import('../../../config/resource/resource.json');
-      console.log('[@component:useVerificationReferences] Raw resource data:', resourceData);
+      const response = await fetch(buildServerUrl('/api/virtualpytest/reference/list'));
       
-      // Extract resources array from the imported data
-      const resources = resourceData.default?.resources || resourceData.resources || [];
-      console.log('[@component:useVerificationReferences] Extracted resources:', resources);
-      
-      // Map the resources to the expected ReferenceImage format
-      const mappedReferences: ReferenceImage[] = resources.map((resource: any) => ({
-        name: resource.name,
-        model: resource.model,
-        path: resource.path || '',
-        full_path: resource.full_path || '',
-        created_at: resource.created_at,
-        type: resource.type === 'reference_image' ? 'image' : 'text',
-        area: resource.area,
-        text: resource.text,
-        font_size: resource.font_size,
-        confidence: resource.confidence
-      }));
-      
-      console.log('[@component:useVerificationReferences] Mapped references:', mappedReferences);
-      setAvailableReferences(mappedReferences);
-      
-    } catch (error) {
-      console.error('[@component:useVerificationReferences] Error loading references from resource.json:', error);
-      
-      // Fallback: try to fetch from API if local file fails
-      try {
-        console.log('[@component:useVerificationReferences] Falling back to API fetch');
-        const response = await fetch('http://localhost:5009/api/virtualpytest/reference/list');
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[@hook:useVerificationReferences] Raw response:', result);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('[@component:useVerificationReferences] API References fetched:', data);
-        
-        if (data.success) {
-          setAvailableReferences(data.references || []);
+        if (result.success && result.references) {
+          console.log(`[@hook:useVerificationReferences] Found ${result.references.length} references`);
+          
+          // Process references to ensure consistent structure
+          const processedReferences = result.references.map((ref: any) => ({
+            name: ref.name,
+            model: ref.model,
+            path: ref.path,
+            full_path: ref.full_path,
+            created_at: ref.created_at,
+            type: ref.type || 'image', // Default to 'image' if type is missing
+            area: ref.area || { x: 0, y: 0, width: 0, height: 0 }, // Default area if missing
+            // Text reference specific fields
+            text: ref.text,
+            font_size: ref.font_size,
+            confidence: ref.confidence
+          }));
+          
+          setAvailableReferences(processedReferences);
+          console.log('[@hook:useVerificationReferences] Processed references:', processedReferences);
         } else {
-          console.error('[@component:useVerificationReferences] Failed to fetch references from API:', data.error);
+          console.log('[@hook:useVerificationReferences] No references found or request failed');
+          setAvailableReferences([]);
         }
-      } catch (apiError) {
-        console.error('[@component:useVerificationReferences] API fallback also failed:', apiError);
+      } else {
+        console.error('[@hook:useVerificationReferences] Failed to fetch references:', response.status);
+        setAvailableReferences([]);
       }
+    } catch (error) {
+      console.error('[@hook:useVerificationReferences] Error fetching references:', error);
+      setAvailableReferences([]);
     } finally {
       setReferencesLoading(false);
     }
@@ -97,18 +89,10 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
     return filtered;
   };
 
-  // Fetch available reference images on component mount
+  // Fetch references on mount and when reload trigger changes
   useEffect(() => {
     fetchAvailableReferences();
-  }, []);
-
-  // Reload references when reloadTrigger changes
-  useEffect(() => {
-    if (reloadTrigger && reloadTrigger > 0) {
-      console.log('[@component:useVerificationReferences] Reloading references due to trigger:', reloadTrigger);
-      fetchAvailableReferences();
-    }
-  }, [reloadTrigger]);
+  }, [reloadTrigger, buildServerUrl]);
 
   return {
     availableReferences,

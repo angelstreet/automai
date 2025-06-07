@@ -2,37 +2,6 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UINavigationNode, UINavigationEdge, NavigationTreeData } from '../../types/navigationTypes';
 
-// Get server port from environment variable with fallback to 5119
-const getServerPort = () => {
-  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-};
-
-const API_BASE_URL = `http://localhost:${getServerPort()}`;
-const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
-
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const teamId = localStorage.getItem('teamId') || sessionStorage.getItem('teamId') || DEFAULT_TEAM_ID;
-  
-  console.log(`[@hook:useNavigationCRUD:apiCall] Making API call to ${endpoint} with team_id: ${teamId}`);
-  
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Team-ID': teamId,
-      ...options.headers,
-    },
-    ...options,
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => 'Unknown error');
-    console.error(`[@hook:useNavigationCRUD:apiCall] API call failed: ${response.status} - ${errorText}`);
-    throw new Error(`API call failed: ${response.status}`);
-  }
-  
-  return response.json();
-};
-
 interface CRUDState {
   currentTreeId: string;
   currentTreeName: string;
@@ -61,6 +30,7 @@ interface CRUDState {
   allEdges: UINavigationEdge[];
   isSaving: boolean;
   setUserInterface: (userInterface: any | null) => void;
+  apiCall: (endpoint: string, options?: RequestInit) => Promise<any>;
 }
 
 export const useNavigationCRUD = (state: CRUDState) => {
@@ -95,7 +65,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
       state.setIsLoading(true);
       state.setError(null);
       
-      const response = await apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
+      const response = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
       
       if (response.success && (response.tree_info || response.tree_data)) {
         const treeInfo = response.tree_info || {};
@@ -268,7 +238,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
       console.log(`[@hook:useNavigationCRUD] Saving ${nodesToSave.length} total nodes and ${edgesToSave.length} total edges`);
       
       // Check if tree exists
-      const checkResponse = await apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
+      const checkResponse = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
       
       if (checkResponse.success && (checkResponse.tree_info || checkResponse.tree_data)) {
         // Tree exists, update it
@@ -281,7 +251,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
           }
         };
         
-        const updateResponse = await apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`, {
+        const updateResponse = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
         });
@@ -310,7 +280,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
           }
         };
         
-        const createResponse = await apiCall('/api/navigation/trees', {
+        const createResponse = await state.apiCall('/api/navigation/trees', {
           method: 'POST',
           body: JSON.stringify(treeData),
         });

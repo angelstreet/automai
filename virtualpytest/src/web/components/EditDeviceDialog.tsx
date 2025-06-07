@@ -22,10 +22,10 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { Model } from '../services/deviceModelService';
+import { Model } from '../types/model.types';
 import { DeviceFormData } from '../types/controllerConfig.types';
 import { ControllerConfigService } from '../services/controllerConfigService';
-import { deviceModelApi } from '../services/deviceModelService';
+import { useDeviceModelApi } from '../services/deviceModelService';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './device-wizard/BasicInfoStep';
@@ -61,6 +61,9 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Get the device model API service
+  const deviceModelApi = useDeviceModelApi();
+
   // Wizard state
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +98,8 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     },
   ];
 
-  // Load device models
+  // Fetch device models when dialog opens
+  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -112,7 +116,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     if (open) {
       fetchModels();
     }
-  }, [open]);
+  }, [open]); // Remove deviceModelApi dependency - only depend on open state
 
   // Initialize form when device or dialog state changes
   useEffect(() => {

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface TextComparisonDisplayProps {
   searchedText: string;
@@ -20,15 +21,19 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
   languageConfidence,
   onSourceImageClick
 }) => {
-  // Helper function to build complete URL
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
-    // If URL already starts with http/https, use it as-is
+    
+    // If it's already a complete URL, return as is
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    // Otherwise, prepend localhost
-    return `http://localhost:5009${url}`;
+    
+    // Otherwise, build the URL using the registration context
+    return buildServerUrl(url);
   };
 
   // Map language codes to readable names

@@ -27,6 +27,7 @@ import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
 import { getVerificationEditorLayout } from '../../../config/layoutConfig';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ScreenDefinitionEditorProps {
   /** Device configuration with AV parameters */
@@ -132,6 +133,9 @@ export function ScreenDefinitionEditor({
   sx = {},
   deviceConnection,
 }: ScreenDefinitionEditorProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   // Debug parent component re-renders
   useEffect(() => {
     console.log('[@component:ScreenDefinitionEditor] Component mounted/re-rendered with props:', {
@@ -244,7 +248,7 @@ export function ScreenDefinitionEditor({
     const checkRemoteConnection = async () => {
       try {
         // Simple check if android_mobile_controller exists
-        const response = await fetch('http://localhost:5009/api/virtualpytest/android-mobile/config', {
+        const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/config'), {
           method: 'GET',
         });
         
@@ -264,7 +268,7 @@ export function ScreenDefinitionEditor({
 
     // Check once on mount, no loops
     checkRemoteConnection();
-  }, []);
+  }, [buildServerUrl]);
 
   // Initial check for stream status - only once, no polling
   useEffect(() => {
@@ -275,7 +279,7 @@ export function ScreenDefinitionEditor({
         // Add a small delay to make sure SSH connection is ready
         await new Promise(resolve => setTimeout(resolve, 2500));
         
-        const response = await fetch('http://localhost:5009/api/virtualpytest/screen-definition/stream/status');
+        const response = await fetch(buildServerUrl('/api/virtualpytest/screen-definition/stream/status'));
         if (!response.ok) {
           console.log('[@component:ScreenDefinitionEditor] Initial stream status check failed, assuming stream is running...');
           // Assume stream is running instead of trying to restart it
@@ -314,7 +318,7 @@ export function ScreenDefinitionEditor({
     if (isConnected) {
       checkInitialStatus();
     }
-  }, [isConnected]);
+  }, [isConnected, buildServerUrl]);
   
   // Start video capture - new simple logic: just record timestamp and show LED
   const handleStartCapture = async () => {

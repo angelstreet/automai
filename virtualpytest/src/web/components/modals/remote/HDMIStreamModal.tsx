@@ -14,9 +14,11 @@ import {
   CardContent,
   Chip,
   IconButton,
+  DialogActions,
 } from '@mui/material';
 import { PlayArrow, Videocam, VolumeUp, Settings, Close as CloseIcon } from '@mui/icons-material';
 import { HDMIStreamPanel } from '../../remote/HDMIStreamPanel';
+import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface HDMIStreamModalProps {
   open: boolean;
@@ -24,6 +26,9 @@ interface HDMIStreamModalProps {
 }
 
 export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   // Stream configuration state
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
@@ -76,7 +81,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   // Fetch default stream URL from environment variables if available
   const fetchDefaultValues = async () => {
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/defaults');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
       const result = await response.json();
       
       if (result.success && result.defaults) {

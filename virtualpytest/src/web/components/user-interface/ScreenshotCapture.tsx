@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { DragSelectionOverlay } from './DragSelectionOverlay';
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface DragArea {
   x: number;
@@ -37,6 +38,9 @@ export function ScreenshotCapture({
   model,
   sx = {}
 }: ScreenshotCaptureProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+  
   const imageRef = useRef<HTMLImageElement>(null);
 
   // Get layout configuration based on model
@@ -85,7 +89,7 @@ export function ScreenshotCapture({
         return '';
       }
       
-      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:ScreenshotCapture] Generated image URL: ${finalUrl}`);
       return finalUrl;
     }
@@ -95,7 +99,7 @@ export function ScreenshotCapture({
       const filename = screenshotPath.split('?')[0];
       console.log(`[@component:ScreenshotCapture] Using filename screenshot: ${filename}`);
       
-      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:ScreenshotCapture] Generated image URL from filename: ${finalUrl}`);
       return finalUrl;
     }
@@ -115,10 +119,10 @@ export function ScreenshotCapture({
     
     // Default case - convert to API endpoint URL
     const cleanPath = screenshotPath.split('?')[0];
-    const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+    const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`);
     console.log(`[@component:ScreenshotCapture] Generated default URL: ${finalUrl}`);
     return finalUrl;
-  }, [screenshotPath]);
+  }, [screenshotPath, buildServerUrl]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = screenshotPath && imageUrl && !isCapturing && onAreaSelected && imageRef.current;

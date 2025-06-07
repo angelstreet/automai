@@ -1,9 +1,4 @@
 // Capture API utility functions
-const getServerPort = () => {
-  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-};
-
-const API_BASE_URL = `http://localhost:${getServerPort()}/api/virtualpytest/screen-definition`;
 
 export interface CaptureStartResponse {
   success: boolean;
@@ -43,23 +38,36 @@ export interface LatestFrameResponse {
 }
 
 export class CaptureApi {
-  private static captureInfo: {
+  private buildServerUrl: ((endpoint: string) => string) | null = null;
+  private captureInfo: {
     capture_pid?: string;
     remote_capture_dir?: string;
     device_model?: string;
   } | null = null;
 
+  // Initialize with buildServerUrl function from RegistrationContext
+  initialize(buildServerUrl: (endpoint: string) => string) {
+    this.buildServerUrl = buildServerUrl;
+  }
+
+  private getApiBaseUrl(): string {
+    if (!this.buildServerUrl) {
+      throw new Error('CaptureApi not initialized. Call initialize() with buildServerUrl function first.');
+    }
+    return this.buildServerUrl('api/virtualpytest/screen-definition');
+  }
+
   /**
    * Start capturing frames at 10fps with rolling 30s buffer
    */
-  static async startCapture(
+  async startCapture(
     videoDevice: string = '/dev/video0',
     deviceModel: string = 'android_mobile'
   ): Promise<CaptureStartResponse> {
     try {
       console.log(`[@util:CaptureApi] Starting capture for device: ${deviceModel}`);
       
-      const response = await fetch(`${API_BASE_URL}/capture/start`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/capture/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +105,7 @@ export class CaptureApi {
   /**
    * Stop capturing and download frames to local folder
    */
-  static async stopCapture(): Promise<CaptureStopResponse> {
+  async stopCapture(): Promise<CaptureStopResponse> {
     try {
       if (!this.captureInfo) {
         return {
@@ -108,7 +116,7 @@ export class CaptureApi {
 
       console.log(`[@util:CaptureApi] Stopping capture PID: ${this.captureInfo.capture_pid}`);
       
-      const response = await fetch(`${API_BASE_URL}/capture/stop`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/capture/stop`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,9 +151,9 @@ export class CaptureApi {
   /**
    * Get current capture status
    */
-  static async getCaptureStatus(): Promise<CaptureStatusResponse> {
+  async getCaptureStatus(): Promise<CaptureStatusResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/capture/status`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/capture/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +175,7 @@ export class CaptureApi {
   /**
    * Get the latest captured frame
    */
-  static async getLatestFrame(): Promise<LatestFrameResponse> {
+  async getLatestFrame(): Promise<LatestFrameResponse> {
     try {
       if (!this.captureInfo) {
         return {
@@ -176,7 +184,7 @@ export class CaptureApi {
         };
       }
 
-      const response = await fetch(`${API_BASE_URL}/capture/latest-frame`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/capture/latest-frame`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -204,23 +212,26 @@ export class CaptureApi {
   /**
    * Check if there's an active capture session
    */
-  static hasActiveCaptureSession(): boolean {
+  hasActiveCaptureSession(): boolean {
     return this.captureInfo !== null;
   }
 
   /**
    * Get current capture info
    */
-  static getCaptureInfo() {
+  getCaptureInfo() {
     return this.captureInfo;
   }
 
   /**
    * Clear capture info (for cleanup)
    */
-  static clearCaptureInfo() {
+  clearCaptureInfo() {
     this.captureInfo = null;
   }
 }
+
+// Export a singleton instance for components to use
+export const captureApi = new CaptureApi();
 
 export default CaptureApi; 

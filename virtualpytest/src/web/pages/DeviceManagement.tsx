@@ -37,10 +37,13 @@ import {
 import React, { useState, useEffect } from 'react';
 import CreateDeviceDialog from '../components/CreateDeviceDialog';
 import EditDeviceDialog from '../components/EditDeviceDialog';
-import { deviceApi, Device, DeviceCreatePayload } from '../services/deviceService';
+import { useDeviceApi, Device, DeviceCreatePayload } from '../services/deviceService';
 import { useTheme } from '@mui/material/styles';
 
 const DeviceManagement: React.FC = () => {
+  // Get the device API service
+  const deviceApi = useDeviceApi();
+  
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,9 +62,11 @@ const DeviceManagement: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const theme = useTheme();
 
+  // Fetch devices on component mount only
+  // deviceApi is now stable thanks to useMemo in useDeviceApi hook
   useEffect(() => {
     fetchDevices();
-  }, []);
+  }, []); // Remove deviceApi dependency - only fetch on mount
 
   useEffect(() => {
     const filtered = devices.filter(device =>

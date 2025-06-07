@@ -36,11 +36,15 @@ import {
   CircularProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { userInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../services/userInterfaceApi';
-import { deviceApi, Device } from '../services/deviceService';
+import { useUserInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../services/userInterfaceApi';
+import { useDeviceApi, Device } from '../services/deviceService';
 
 
 const UserInterface: React.FC = () => {
+  // Get the API services
+  const userInterfaceApi = useUserInterfaceApi();
+  const deviceApi = useDeviceApi();
+  
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
@@ -69,11 +73,12 @@ const UserInterface: React.FC = () => {
       .filter(model => model && model.trim() !== '')
   )).sort();
 
-  // Load data on component mount
+  // Load data on component mount only
+  // deviceApi is now stable thanks to useMemo in useDeviceApi hook
   useEffect(() => {
     loadUserInterfaces();
     loadDevices();
-  }, []);
+  }, []); // Remove deviceApi dependency - only load on mount
 
   const loadDevices = async () => {
     try {

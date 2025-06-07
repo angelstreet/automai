@@ -1,9 +1,4 @@
 // Navigation API utility functions
-const getServerPort = () => {
-  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-};
-
-const API_BASE_URL = `http://localhost:${getServerPort()}/api/navigation`;
 
 export interface NavigationStep {
   step_number: number;
@@ -62,10 +57,24 @@ export interface NavigationStatsResponse {
 }
 
 export class NavigationApi {
+  private buildServerUrl: ((endpoint: string) => string) | null = null;
+
+  // Initialize with buildServerUrl function from RegistrationContext
+  initialize(buildServerUrl: (endpoint: string) => string) {
+    this.buildServerUrl = buildServerUrl;
+  }
+
+  private getApiBaseUrl(): string {
+    if (!this.buildServerUrl) {
+      throw new Error('NavigationApi not initialized. Call initialize() with buildServerUrl function first.');
+    }
+    return this.buildServerUrl('api/navigation');
+  }
+
   /**
    * Get navigation preview (path from current/root to target node)
    */
-  static async getNavigationPreview(
+  async getNavigationPreview(
     treeId: string,
     targetNodeId: string,
     currentNodeId?: string
@@ -73,7 +82,7 @@ export class NavigationApi {
     try {
       console.log(`[@util:NavigationApi] Getting navigation preview for node ${targetNodeId} in tree ${treeId}`);
       
-      const url = new URL(`${API_BASE_URL}/preview/${treeId}/${targetNodeId}`);
+      const url = new URL(`${this.getApiBaseUrl()}/preview/${treeId}/${targetNodeId}`);
       if (currentNodeId) {
         url.searchParams.append('current_node_id', currentNodeId);
       }
@@ -110,7 +119,7 @@ export class NavigationApi {
   /**
    * Execute navigation to target node
    */
-  static async executeNavigation(
+  async executeNavigation(
     treeId: string,
     targetNodeId: string,
     currentNodeId?: string,
@@ -119,7 +128,7 @@ export class NavigationApi {
     try {
       console.log(`[@util:NavigationApi] Executing navigation to node ${targetNodeId} in tree ${treeId}`);
       
-      const response = await fetch(`${API_BASE_URL}/navigate/${treeId}/${targetNodeId}`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/navigate/${treeId}/${targetNodeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,11 +164,11 @@ export class NavigationApi {
   /**
    * Get take control status for a tree
    */
-  static async getTakeControlStatus(treeId: string): Promise<TakeControlStatusResponse> {
+  async getTakeControlStatus(treeId: string): Promise<TakeControlStatusResponse> {
     try {
       console.log(`[@util:NavigationApi] Getting take control status for tree ${treeId}`);
       
-      const response = await fetch(`${API_BASE_URL}/take-control/${treeId}/status`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/take-control/${treeId}/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -189,7 +198,7 @@ export class NavigationApi {
   /**
    * Toggle take control mode
    */
-  static async toggleTakeControl(
+  async toggleTakeControl(
     treeId: string,
     action: 'activate' | 'deactivate' = 'activate',
     userId: string = 'default_user'
@@ -197,7 +206,7 @@ export class NavigationApi {
     try {
       console.log(`[@util:NavigationApi] ${action === 'activate' ? 'Activating' : 'Deactivating'} take control for tree ${treeId}`);
       
-      const response = await fetch(`${API_BASE_URL}/take-control/${treeId}`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/take-control/${treeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,11 +241,11 @@ export class NavigationApi {
   /**
    * Get navigation graph statistics
    */
-  static async getNavigationStats(treeId: string): Promise<NavigationStatsResponse> {
+  async getNavigationStats(treeId: string): Promise<NavigationStatsResponse> {
     try {
       console.log(`[@util:NavigationApi] Getting navigation stats for tree ${treeId}`);
       
-      const response = await fetch(`${API_BASE_URL}/stats/${treeId}`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/stats/${treeId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -271,11 +280,11 @@ export class NavigationApi {
   /**
    * Clear navigation cache
    */
-  static async clearNavigationCache(treeId?: string): Promise<{success: boolean; error?: string}> {
+  async clearNavigationCache(treeId?: string): Promise<{success: boolean; error?: string}> {
     try {
       console.log(`[@util:NavigationApi] Clearing navigation cache${treeId ? ` for tree ${treeId}` : ''}`);
       
-      const response = await fetch(`${API_BASE_URL}/cache/clear`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/cache/clear`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -319,6 +328,7 @@ export interface ActionExecutionResult {
 export async function executeEdgeActions(
   actions: any[],
   controllerTypes: string[],
+  buildServerUrl: (endpoint: string) => string,
   updateActionResults?: (index: number, success: boolean) => void,
   finalWaitTime: number = 2000,
   retryActions: any[] = [],
@@ -394,7 +404,7 @@ export async function executeEdgeActions(
       let actionSuccess = false;
       
       try {
-        const response = await fetch(`http://localhost:${getServerPort()}/api/virtualpytest/${apiControllerType}/execute-action`, {
+        const response = await fetch(buildServerUrl(`api/virtualpytest/${apiControllerType}/execute-action`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -508,7 +518,7 @@ export async function executeEdgeActions(
         let actionSuccess = false;
         
         try {
-          const response = await fetch(`http://localhost:${getServerPort()}/api/virtualpytest/${apiControllerType}/execute-action`, {
+          const response = await fetch(buildServerUrl(`api/virtualpytest/${apiControllerType}/execute-action`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: actionToExecute }),
@@ -610,4 +620,7 @@ export async function executeEdgeActions(
     updatedActions,
     updatedRetryActions
   };
-} 
+}
+
+// Export a singleton instance for components to use
+export const navigationApi = new NavigationApi(); 

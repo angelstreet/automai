@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+// Default team ID constant - centralized here for use across the application
+export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
+
 interface DeviceConnection {
   flask_url: string;
   nginx_url: string;

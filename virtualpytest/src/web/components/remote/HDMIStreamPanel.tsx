@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -10,8 +10,20 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
+  Tooltip,
+  Collapse,
 } from '@mui/material';
-import { PlayArrow, Videocam, VolumeUp, Settings } from '@mui/icons-material';
+import {
+  PlayArrow,
+  Videocam,
+  VolumeUp,
+  Settings,
+  ExpandMore,
+  ExpandLess,
+} from '@mui/icons-material';
+import { StreamViewer } from '../user-interface/StreamViewer';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface HDMIStreamPanelProps {
   /** Optional pre-configured connection parameters */
@@ -58,6 +70,9 @@ export function HDMIStreamPanel({
   compact = false,
   sx = {}
 }: HDMIStreamPanelProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   // Stream configuration state
   const [resolution, setResolution] = useState(connectionConfig?.resolution || '1920x1080');
   const [fps, setFps] = useState(connectionConfig?.fps || 30);
@@ -136,18 +151,13 @@ export function HDMIStreamPanel({
 
   const fetchDefaultValues = async () => {
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/defaults');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
       const result = await response.json();
       
       if (result.success && result.defaults) {
         setSSHConnectionForm(prev => ({
           ...prev,
-          host_ip: result.defaults.host_ip || prev.host_ip,
-          host_username: result.defaults.host_username || prev.host_username,
-          host_password: result.defaults.host_password || prev.host_password,
-          host_port: result.defaults.host_port || prev.host_port,
-          stream_path: result.defaults.stream_path || prev.stream_path,
-          video_device: result.defaults.video_device || prev.video_device,
+          ...result.defaults
         }));
         console.log('[@component:HDMIStreamPanel] Loaded default SSH connection values');
       }
@@ -158,37 +168,28 @@ export function HDMIStreamPanel({
 
   // SSH connection
   const handleConnect = async () => {
-    if (!sshConnectionForm.host_ip || !sshConnectionForm.host_username || !sshConnectionForm.host_password || !sshConnectionForm.stream_path || !sshConnectionForm.video_device) {
-      setConnectionError('Please fill in all SSH connection fields');
-      return;
-    }
-    
     setIsConnecting(true);
     setConnectionError(null);
     
     try {
-      console.log('[@component:HDMIStreamPanel] Connecting via SSH to:', sshConnectionForm.host_ip);
+      console.log('[@component:HDMIStreamPanel] Starting HDMI stream connection...');
       
-      const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/take-control', {
+      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          host_ip: sshConnectionForm.host_ip,
-          host_username: sshConnectionForm.host_username,
-          host_password: sshConnectionForm.host_password,
-          host_port: sshConnectionForm.host_port,
-          stream_path: sshConnectionForm.stream_path,
-          video_device: sshConnectionForm.video_device,
-          resolution: resolution,
-          fps: fps,
-        }),
+        body: JSON.stringify(sshConnectionForm),
       });
 
       const result = await response.json();
+      console.log('[@component:HDMIStreamPanel] Connection response:', result);
 
       if (result.success) {
+        console.log('[@component:HDMIStreamPanel] Successfully connected to HDMI stream');
+        setIsConnected(true);
+        setConnectionError(null);
+        
         if (controllerRef.current) {
           controllerRef.current.connected = true;
           controllerRef.current.streaming = true;
@@ -200,19 +201,16 @@ export function HDMIStreamPanel({
           controllerRef.current.stats.stream_fps = fps;
         }
         
-        setIsConnected(true);
-        setIsStreaming(true);
-        console.log('[@component:HDMIStreamPanel] SSH connection established successfully');
-        
         startStatsSimulation();
-        
       } else {
-        setConnectionError(result.error || 'Failed to establish SSH connection');
+        const errorMsg = result.error || 'Failed to connect to HDMI stream';
+        console.error('[@component:HDMIStreamPanel] Connection failed:', errorMsg);
+        setConnectionError(errorMsg);
       }
-      
-    } catch (error: any) {
-      console.error('[@component:HDMIStreamPanel] SSH connection failed:', error);
-      setConnectionError(error.message || 'Failed to establish SSH connection');
+    } catch (err: any) {
+      const errorMsg = err.message || 'Connection failed - network or server error';
+      console.error('[@component:HDMIStreamPanel] Exception during connection:', err);
+      setConnectionError(errorMsg);
     } finally {
       setIsConnecting(false);
     }
@@ -220,49 +218,25 @@ export function HDMIStreamPanel({
   
   // Disconnect from stream
   const handleDisconnect = async () => {
-    console.log('[@component:HDMIStreamPanel] Disconnecting from stream');
-    
-    if (controllerRef.current) {
-      if (controllerRef.current.sshConnection) {
-        console.log('[@component:HDMIStreamPanel] Closing SSH connection to:', controllerRef.current.sshConnection.host_ip);
-        
-        try {
-          const response = await fetch('http://localhost:5009/api/virtualpytest/hdmi-stream/release-control', {
+    setIsConnecting(true);
+    setConnectionError(null);
+
+    try {
+      console.log('[@component:HDMIStreamPanel] Disconnecting HDMI stream...');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/release-control'), {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          const result = await response.json();
-          if (result.success) {
-            console.log('[@component:HDMIStreamPanel] SSH connection released successfully');
-          } else {
-            console.error('[@component:HDMIStreamPanel] Failed to release SSH connection:', result.error);
-          }
-        } catch (error) {
-          console.error('[@component:HDMIStreamPanel] Error releasing SSH connection:', error);
-        }
-      }
+      });
       
-      controllerRef.current.connected = false;
-      controllerRef.current.streaming = false;
-      controllerRef.current.streamUrl = '';
-      controllerRef.current.sshConnection = null;
-      controllerRef.current.stats = {
-        stream_url: '',
-        is_streaming: false,
-        uptime_seconds: 0,
-        frames_received: 0,
-        bytes_received: 0,
-        stream_quality: '1920x1080',
-        stream_fps: 30
-      };
+      console.log('[@component:HDMIStreamPanel] Disconnection successful');
+    } catch (err: any) {
+      console.error('[@component:HDMIStreamPanel] Disconnect error:', err);
+    } finally {
+      // Always reset state
+      setIsConnected(false);
+      setStreamStats(null);
+      setIsConnecting(false);
+      console.log('[@component:HDMIStreamPanel] Session state reset');
     }
-    
-    setIsConnected(false);
-    setIsStreaming(false);
-    setStreamStats(null);
   };
   
   // Simulate stream statistics

@@ -32,7 +32,7 @@ def health():
         'status': 'ok',
         'supabase': supabase_status,
         'team_id': get_team_id()
-    })
+    }) 
 
 def check_supabase():
     """Helper function to check if Supabase is available"""

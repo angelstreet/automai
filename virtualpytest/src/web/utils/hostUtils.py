@@ -32,7 +32,7 @@ def register_host_with_server():
     Port Architecture:
     - HOST_PORT_INTERNAL: Where Flask app runs locally (e.g., 5119)
     - HOST_PORT_EXTERNAL: Port server uses to communicate with host (e.g., 5119 or forwarded port)
-    - HOST_PORT_HTTPS: HTTPS port for nginx/images (e.g., 444)
+    - HOST_PORT_WEB: HTTPS port for nginx/images (e.g., 444)
     
     The server will use HOST_PORT_EXTERNAL (client_port) for all communication.
     """
@@ -48,7 +48,7 @@ def register_host_with_server():
     host_protocol = os.getenv('HOST_PROTOCOL', 'http')  # Default to http
     host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
     host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port
-    host_port_https = os.getenv('HOST_PORT_HTTPS', '444')  # HTTPS/nginx port for images
+    HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port for images
     
     print(f"🔍 [HOST] Registration Debug Info:")
     print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
@@ -59,7 +59,7 @@ def register_host_with_server():
     print(f"   HOST_PROTOCOL env: '{host_protocol}'")
     print(f"   HOST_PORT_INTERNAL env: '{host_port_internal}'")
     print(f"   HOST_PORT_EXTERNAL env: '{host_port_external}'")
-    print(f"   HOST_PORT_HTTPS env: '{host_port_https}'")
+    print(f"   HOST_PORT_WEB env: '{HOST_PORT_WEB}'")
     
     # Validate critical environment variables
     validation_errors = []
@@ -122,7 +122,7 @@ def register_host_with_server():
             'protocol': host_protocol,  # HOST protocol (http or https)
             'client_port': host_port_external,  # EXTERNAL port - server uses this to communicate with host
             'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
-            'https_port': host_port_https,  # HTTPS port - for nginx/images (port forwarding)
+            'https_port': HOST_PORT_WEB,  # HTTPS port - for nginx/images (port forwarding)
             'name': host_name,
             'device_model': 'android_mobile',  # Default device model
             'controller_types': ['remote', 'av', 'verification'],
@@ -130,7 +130,7 @@ def register_host_with_server():
             'status': 'online',
             'system_stats': get_host_system_stats(),
             # Legacy field for backward compatibility
-            'nginx_port': host_port_https
+            'nginx_port': HOST_PORT_WEB
         }
         
         print(f"\n📤 [HOST] Sending registration request to: {full_server_url}/api/system/register")

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -10,6 +10,9 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
+  Tooltip,
+  Collapse,
 } from '@mui/material';
 import {
   PowerSettingsNew,
@@ -18,7 +21,11 @@ import {
   Link,
   LinkOff,
   FiberManualRecord,
+  ExpandMore,
+  ExpandLess,
+  Usb,
 } from '@mui/icons-material';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface USBPowerPanelProps {
   /** Custom styling */
@@ -40,6 +47,9 @@ interface PowerStatus {
 }
 
 export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   // Connection form state
   const [connectionForm, setConnectionForm] = useState<USBConnectionForm>({
     host_ip: '',
@@ -66,7 +76,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
   useEffect(() => {
     const fetchDefaults = async () => {
       try {
-        const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/defaults');
+        const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/defaults'));
         const result = await response.json();
         
         if (result.success && result.defaults) {
@@ -85,11 +95,11 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     
     // Check if already connected
     checkConnectionStatus();
-  }, []);
+  }, [buildServerUrl]);
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/status');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/status'));
       const result = await response.json();
       
       if (result.success && result.connected) {
@@ -104,9 +114,11 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
   };
 
   const checkPowerStatus = async () => {
+    if (!isConnected) return;
+    
     try {
       console.log('[@component:USBPowerPanel] Checking power status...');
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/power-status');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/power-status'));
       const result = await response.json();
       
       if (result.success && result.power_status) {
@@ -121,6 +133,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
       }
     } catch (error) {
       console.log('[@component:USBPowerPanel] Could not check power status:', error);
+      setPowerStatus(prev => ({ ...prev, error: 'Failed to check power status' }));
     }
   };
 
@@ -135,8 +148,12 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
   };
 
   const handleConnect = async () => {
-    if (!connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password) {
-      setError('Please fill in all required connection fields');
+    // Validate required fields
+    const requiredFields: (keyof USBConnectionForm)[] = ['host_ip', 'host_username', 'host_password', 'usb_hub'];
+    const missingFields = requiredFields.filter(field => !connectionForm[field]);
+    
+    if (missingFields.length > 0) {
+      setError(`Missing required fields: ${missingFields.join(', ')}`);
       return;
     }
 
@@ -145,7 +162,9 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/take-control', {
+      console.log('[@component:USBPowerPanel] Starting USB power connection...');
+
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,22 +173,24 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
       });
 
       const result = await response.json();
+      console.log('[@component:USBPowerPanel] Connection response:', result);
 
       if (result.success) {
+        console.log('[@component:USBPowerPanel] Successfully connected to USB power controller');
         setIsConnected(true);
         setSuccessMessage(result.message);
-        console.log('[@component:USBPowerPanel] Connection successful:', result.message);
         
-        // Immediately check power status after successful connection
-        console.log('[@component:USBPowerPanel] Getting initial power status...');
-        await checkPowerStatus();
+        // Check initial power status
+        setTimeout(checkPowerStatus, 1000);
       } else {
-        setError(result.error || 'Connection failed');
-        console.error('[@component:USBPowerPanel] Connection failed:', result.error);
+        const errorMsg = result.error || 'Failed to connect to USB power controller';
+        console.error('[@component:USBPowerPanel] Connection failed:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err: any) {
-      setError(`Connection request failed: ${err.message}`);
-      console.error('[@component:USBPowerPanel] Connection error:', err);
+      const errorMsg = err.message || 'Connection failed - network or server error';
+      console.error('[@component:USBPowerPanel] Exception during connection:', err);
+      setError(errorMsg);
     } finally {
       setIsConnecting(false);
     }
@@ -181,28 +202,23 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/release-control', {
+      console.log('[@component:USBPowerPanel] Disconnecting USB power controller...');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/release-control'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setIsConnected(false);
-        setPowerStatus({ power_state: 'unknown', connected: false });
-        setSuccessMessage(result.message);
-        console.log('[@component:USBPowerPanel] Disconnection successful:', result.message);
-      } else {
-        setError(result.error || 'Disconnection failed');
-        console.error('[@component:USBPowerPanel] Disconnection failed:', result.error);
-      }
+      
+      console.log('[@component:USBPowerPanel] Disconnection successful');
     } catch (err: any) {
-      setError(`Disconnection request failed: ${err.message}`);
-      console.error('[@component:USBPowerPanel] Disconnection error:', err);
+      console.error('[@component:USBPowerPanel] Disconnect error:', err);
     } finally {
+      // Always reset state
+      setIsConnected(false);
+      setPowerStatus({
+        power_state: 'unknown',
+        connected: false
+      });
+      setSuccessMessage(null);
+      console.log('[@component:USBPowerPanel] Session state reset');
       setIsConnecting(false);
     }
   };
@@ -218,30 +234,39 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/toggle', {
+      console.log('[@component:USBPowerPanel] Toggling power...');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/toggle'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          usb_hub: connectionForm.usb_hub
+        }),
       });
 
       const result = await response.json();
+      console.log('[@component:USBPowerPanel] Toggle response:', result);
 
       if (result.success) {
-        setSuccessMessage(result.message);
-        console.log('[@component:USBPowerPanel] Toggle successful:', result.message);
-        // Update power status immediately
+        console.log('[@component:USBPowerPanel] Power toggle successful');
+        // Update power status
         setPowerStatus(prev => ({
           ...prev,
-          power_state: result.new_state
+          power_state: result.new_state || (prev.power_state === 'on' ? 'off' : 'on')
         }));
+        
+        // Refresh status after a delay
+        setTimeout(checkPowerStatus, 2000);
       } else {
-        setError(result.error || 'Toggle failed');
-        console.error('[@component:USBPowerPanel] Toggle failed:', result.error);
+        const errorMsg = result.error || 'Failed to toggle power';
+        console.error('[@component:USBPowerPanel] Power toggle failed:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err: any) {
-      setError(`Toggle request failed: ${err.message}`);
-      console.error('[@component:USBPowerPanel] Toggle error:', err);
+      const errorMsg = err.message || 'Power toggle failed - network or server error';
+      console.error('[@component:USBPowerPanel] Exception during power toggle:', err);
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -258,30 +283,39 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('http://localhost:5009/api/virtualpytest/usb-power/reboot', {
+      console.log('[@component:USBPowerPanel] Rebooting device...');
+      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/reboot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          usb_hub: connectionForm.usb_hub
+        }),
       });
 
       const result = await response.json();
+      console.log('[@component:USBPowerPanel] Reboot response:', result);
 
       if (result.success) {
-        setSuccessMessage(result.message);
-        console.log('[@component:USBPowerPanel] Reboot successful:', result.message);
-        // After reboot, power should be on
+        console.log('[@component:USBPowerPanel] Device reboot initiated');
+        // Set power state to unknown during reboot
         setPowerStatus(prev => ({
           ...prev,
-          power_state: 'on'
+          power_state: 'unknown'
         }));
+        
+        // Check status after reboot delay
+        setTimeout(checkPowerStatus, 10000); // 10 seconds for reboot
       } else {
-        setError(result.error || 'Reboot failed');
-        console.error('[@component:USBPowerPanel] Reboot failed:', result.error);
+        const errorMsg = result.error || 'Failed to reboot device';
+        console.error('[@component:USBPowerPanel] Device reboot failed:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err: any) {
-      setError(`Reboot request failed: ${err.message}`);
-      console.error('[@component:USBPowerPanel] Reboot error:', err);
+      const errorMsg = err.message || 'Device reboot failed - network or server error';
+      console.error('[@component:USBPowerPanel] Exception during device reboot:', err);
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }

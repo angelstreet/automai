@@ -37,7 +37,8 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { CreateModelDialog } from '../components/model/CreateModelDialog';
-import { deviceModelApi, Model } from '../services/deviceModelService';
+import { useDeviceModelApi } from '../services/deviceModelService';
+import { Model } from '../types/model.types';
 
 const modelTypes = [
   'Android Mobile',
@@ -67,6 +68,9 @@ const MenuProps = {
 };
 
 const Models: React.FC = () => {
+  // Get the device model API service
+  const deviceModelApi = useDeviceModelApi();
+  
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -87,10 +91,11 @@ const Models: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load device models on component mount
+  // Load device models on component mount only
+  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
   useEffect(() => {
     loadDeviceModels();
-  }, []);
+  }, []); // Remove deviceModelApi dependency - only load on mount
 
   const loadDeviceModels = async () => {
     try {

@@ -6,7 +6,9 @@ interface VirtualPyTestContentProps {
   pageMetadata?: any;
 }
 
-export default function VirtualPyTestContent({ pageMetadata }: VirtualPyTestContentProps) {
+export default function VirtualPyTestContent({
+  pageMetadata: _pageMetadata,
+}: VirtualPyTestContentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [serverStatus, setServerStatus] = useState({

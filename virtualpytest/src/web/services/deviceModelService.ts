@@ -4,20 +4,9 @@
  * This service handles all API calls related to device model management.
  */
 
+import { useMemo } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
-
-export interface DeviceModel {
-  id: string;
-  name: string;
-  description?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DeviceModelCreatePayload {
-  name: string;
-  description?: string;
-}
+import { Model, ModelCreateData } from '../types/model.types';
 
 export interface ApiResponse<T> {
   status: string;
@@ -35,7 +24,7 @@ class DeviceModelApiService {
   /**
    * Get all device models
    */
-  async getAllDeviceModels(): Promise<DeviceModel[]> {
+  async getAllDeviceModels(): Promise<Model[]> {
     try {
       const response = await fetch(this.buildUrl('/api/devicemodels'), {
         method: 'GET',
@@ -59,7 +48,7 @@ class DeviceModelApiService {
   /**
    * Get a specific device model by ID
    */
-  async getDeviceModel(id: string): Promise<DeviceModel> {
+  async getDeviceModel(id: string): Promise<Model> {
     try {
       const response = await fetch(this.buildUrl(`/api/devicemodels/${id}`), {
         method: 'GET',
@@ -83,7 +72,7 @@ class DeviceModelApiService {
   /**
    * Create a new device model
    */
-  async createDeviceModel(payload: DeviceModelCreatePayload): Promise<DeviceModel> {
+  async createDeviceModel(payload: ModelCreateData): Promise<Model> {
     try {
       const response = await fetch(this.buildUrl('/api/devicemodels'), {
         method: 'POST',
@@ -98,7 +87,7 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<DeviceModel> = await response.json();
+      const data: ApiResponse<Model> = await response.json();
       if (data.status === 'success' && data.devicemodel) {
         return data.devicemodel;
       } else {
@@ -113,7 +102,7 @@ class DeviceModelApiService {
   /**
    * Update an existing device model
    */
-  async updateDeviceModel(id: string, payload: DeviceModelCreatePayload): Promise<DeviceModel> {
+  async updateDeviceModel(id: string, payload: ModelCreateData): Promise<Model> {
     try {
       const response = await fetch(this.buildUrl(`/api/devicemodels/${id}`), {
         method: 'PUT',
@@ -128,7 +117,7 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<DeviceModel> = await response.json();
+      const data: ApiResponse<Model> = await response.json();
       if (data.status === 'success' && data.devicemodel) {
         return data.devicemodel;
       } else {
@@ -171,16 +160,9 @@ class DeviceModelApiService {
 // Hook to create service instance with context
 export const useDeviceModelApi = () => {
   const { buildServerUrl } = useRegistration();
-  return new DeviceModelApiService(buildServerUrl);
-};
-
-// Legacy export for backward compatibility - will be removed once all components are updated
-export const deviceModelApi = new DeviceModelApiService((endpoint: string) => {
-  // Fallback URL builder for legacy usage
-  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
-  const serverProtocol = window.location.protocol.replace(':', '');
-  const serverIp = window.location.hostname;
-  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
-}); 
+  
+  // Use useMemo to create a stable reference to prevent infinite loops
+  return useMemo(() => {
+    return new DeviceModelApiService(buildServerUrl);
+  }, [buildServerUrl]);
+}; 

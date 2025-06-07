@@ -8,14 +8,21 @@ import {
 } from '../types/validationTypes';
 
 export class ValidationService {
-  // Get server port from environment variable with fallback to 5119
-  private getServerPort(): string {
-    return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-  }
-
-  private baseUrl = `http://localhost:${this.getServerPort()}/api/validation`;
   private progressCallback: ((progress: ValidationProgress) => void) | null = null;
   private eventSource: EventSource | null = null;
+  private buildServerUrl: ((endpoint: string) => string) | null = null;
+
+  // Initialize with buildServerUrl function from RegistrationContext
+  initialize(buildServerUrl: (endpoint: string) => string) {
+    this.buildServerUrl = buildServerUrl;
+  }
+
+  private getBaseUrl(): string {
+    if (!this.buildServerUrl) {
+      throw new Error('ValidationService not initialized. Call initialize() with buildServerUrl function first.');
+    }
+    return this.buildServerUrl('api/validation');
+  }
 
   setProgressCallback(callback: ((progress: ValidationProgress) => void) | null) {
     this.progressCallback = callback;
@@ -25,7 +32,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Getting preview for tree: ${treeId}`);
     
     try {
-      const response = await fetch(`${this.baseUrl}/preview/${treeId}`);
+      const response = await fetch(`${this.getBaseUrl()}/preview/${treeId}`);
       const data: ValidationPreviewResponse = await response.json();
       
       if (!data.success) {
@@ -61,7 +68,7 @@ export class ValidationService {
         requestBody.skipped_edges = skippedEdges;
       }
       
-      const response = await fetch(`${this.baseUrl}/run/${treeId}`, {
+      const response = await fetch(`${this.getBaseUrl()}/run/${treeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +100,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Setting up progress stream for session: ${sessionId}`);
     
     try {
-      this.eventSource = new EventSource(`${this.baseUrl}/progress/${sessionId}`);
+      this.eventSource = new EventSource(`${this.getBaseUrl()}/progress/${sessionId}`);
       
       this.eventSource.onmessage = (event) => {
         try {
@@ -154,7 +161,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Exporting report for tree: ${treeId}, format: ${format}`);
     
     try {
-      const response = await fetch(`${this.baseUrl}/export/${treeId}?format=${format}`);
+      const response = await fetch(`${this.getBaseUrl()}/export/${treeId}?format=${format}`);
       const data: ValidationExportResponse = await response.json();
       
       if (!data.success) {

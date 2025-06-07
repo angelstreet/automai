@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { DragSelectionOverlay } from './DragSelectionOverlay';
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface DragArea {
   x: number;
@@ -60,6 +61,9 @@ export function VideoCapture({
   isCapturing = false,
   sx = {}
 }: VideoCaptureProps) {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentValue, setCurrentValue] = useState(currentFrame);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -236,7 +240,7 @@ export function VideoCapture({
         return '';
       }
       
-      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:VideoCapture] Generated image URL: ${finalUrl}`);
       return finalUrl;
     }
@@ -246,7 +250,7 @@ export function VideoCapture({
       const filename = screenshotPath.split('?')[0];
       console.log(`[@component:VideoCapture] Using filename screenshot: ${filename}`);
       
-      const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`;
+      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:VideoCapture] Generated image URL from filename: ${finalUrl}`);
       return finalUrl;
     }
@@ -266,10 +270,10 @@ export function VideoCapture({
     
     // Default case - convert to API endpoint URL
     const cleanPath = screenshotPath.split('?')[0];
-    const finalUrl = `http://localhost:5009/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`;
+    const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`);
     console.log(`[@component:VideoCapture] Generated default URL: ${finalUrl}`);
     return finalUrl;
-  }, [capturedImages, currentValue]);
+  }, [capturedImages, currentValue, buildServerUrl]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = capturedImages.length > 0 && onAreaSelected && imageRef.current;

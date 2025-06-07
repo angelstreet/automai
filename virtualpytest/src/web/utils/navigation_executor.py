@@ -3,15 +3,26 @@ Navigation execution engine
 Executes navigation steps and tracks current position
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Tuple
 import time
 import sys
 import os
+import json
+import requests
+import logging
+from datetime import datetime
+import traceback
 
-# Add paths for absolute imports instead of relative imports
-web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-web_utils_path = os.path.join(web_dir, 'utils')
-sys.path.insert(0, web_utils_path)
+# Add the parent directory to the path to import utils
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+
+# Import navigation cache
+cache_path = os.path.join(parent_dir, 'cache')
+sys.path.insert(0, cache_path)
+from navigation_cache import get_cached_graph
+from navigation_graph import get_node_info
 
 def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
     """
@@ -85,11 +96,8 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
         
         # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
-        import requests
-        import json
-        
         api_controller_type = 'android-mobile'  # Default controller type
-        api_url = f"http://localhost:5009/api/virtualpytest/{api_controller_type}/execute-action"
+        api_url = f"http://localhost:{SERVER_PORT}/api/virtualpytest/{api_controller_type}/execute-action"
         
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
@@ -549,10 +557,8 @@ def execute_action_object(action_obj: dict) -> bool:
         print(f"[@navigation:executor:execute_action_object] Action params: {action_to_execute.get('params')}")
         
         # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
-        import requests
-        
         api_controller_type = 'android-mobile'  # Default controller type
-        api_url = f"http://localhost:5009/api/virtualpytest/{api_controller_type}/execute-action"
+        api_url = f"http://localhost:{SERVER_PORT}/api/virtualpytest/{api_controller_type}/execute-action"
         
         print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
         

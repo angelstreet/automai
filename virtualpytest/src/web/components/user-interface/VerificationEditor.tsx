@@ -36,6 +36,9 @@ import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 import { VerificationCondition } from '../../type';
+import { VerificationTextComparisonDisplay } from '../verification/VerificationTextComparisonDisplay';
+import { useImageComparisonModal } from '../../hooks/verification/useImageComparisonModal';
+import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
 
 // Define DeviceConnection interface locally since it's not exported
 interface DeviceConnection {
@@ -229,7 +232,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   } | null>(null);
 
   // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
+  const { buildServerUrl } = useRegistration();
 
   // Helper function to get the appropriate base URL for API calls
   const getBaseUrl = () => {
@@ -238,7 +241,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
     
     // Use registration context for fallback URL
-    const fallbackUrl = buildApiUrl('');
+    const fallbackUrl = buildServerUrl('');
     console.log(`[@component:VerificationEditor] Using fallback URL: ${fallbackUrl}`);
     return fallbackUrl;
   };
@@ -552,112 +555,57 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   };
 
   const handleSaveReference = async () => {
-    if (!referenceName.trim() || !selectedArea || !model) {
-      console.log('[@component:VerificationEditor] Cannot save: missing reference name, area, or model');
+    if (!selectedArea || !screenshotPath) {
+      setError('Please select an area on the screenshot first');
       return;
     }
 
-    // Validate regex for text references before saving
-    if (referenceType === 'text' && !validateRegex(referenceText)) {
-      console.error('[@component:VerificationEditor] Invalid regex pattern:', referenceText);
+    if (!referenceName.trim()) {
+      setError('Please enter a reference name');
       return;
     }
 
-    try {
-      // Proceed directly with save
-      await performSaveReference();
+    setPendingSave(true);
+    setError(null);
 
-    } catch (error) {
-      console.error('[@component:VerificationEditor] Error saving reference:', error);
-    }
-  };
-
-  const performSaveReference = async () => {
     try {
-      console.log('[@component:VerificationEditor] === SAVE REFERENCE DEBUG ===');
-      console.log('[@component:VerificationEditor] Reference name:', referenceName);
-      console.log('[@component:VerificationEditor] Reference type:', referenceType);
-      console.log('[@component:VerificationEditor] Model:', model);
-      console.log('[@component:VerificationEditor] Selected area (at save time):', {
-        x: selectedArea?.x,
-        y: selectedArea?.y,
-        width: selectedArea?.width,
-        height: selectedArea?.height,
-        area: selectedArea
+      console.log('[@component:VerificationEditor] Saving reference with data:', {
+        name: referenceName,
+        model: model,
+        area: selectedArea,
+        screenshot_path: screenshotPath
       });
-      console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
 
-      if (referenceType === 'image') {
-        // Save image reference
-        const savePayload = {
-          reference_name: referenceName,
-          model_name: model,
-          area: selectedArea,
-          reference_type: 'reference_image',
-          source_path: captureSourcePath  // Add source path to help build cropped filename
-        };
-        
-        console.log('[@component:VerificationEditor] Image save payload:', savePayload);
-        
-        const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}/api/virtualpytest/reference/save`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(savePayload),
-        });
-
-        const result = await response.json();
-        console.log('[@component:VerificationEditor] Image save response:', result);
-        
-        if (result.success) {
-          console.log('[@component:VerificationEditor] Image reference saved successfully');
-          const publicUrl = result.public_url;
-          setSuccessMessage(`Image reference "${referenceName}" saved successfully! Available at: ${publicUrl}`);
-          setTempReferenceUrl('');
-          setReferenceSaveCounter(prev => prev + 1);
-          onReferenceSaved?.(referenceName);
-        } else {
-          console.error('[@component:VerificationEditor] Failed to save image reference:', result.error);
-          setSuccessMessage(`Failed to save image reference: ${result.error}`);
-        }
-      } else if (referenceType === 'text') {
-        // Save text reference
-        const savePayload = {
+      const response = await fetch(buildServerUrl('/api/virtualpytest/reference/save'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: referenceName,
           model: model,
           area: selectedArea,
-          text: referenceText,
-          fontSize: detectedTextData?.fontSize,
-          confidence: detectedTextData?.confidence
-        };
-        
-        console.log('[@component:VerificationEditor] Text save payload:', savePayload);
-        
-        const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/save`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(savePayload),
-        });
+          screenshot_path: screenshotPath
+        }),
+      });
 
-        console.log('[@component:VerificationEditor] Text save response status:', response.status);
+      const result = await response.json();
+      console.log('[@component:VerificationEditor] Save reference response:', result);
+
+      if (result.success) {
+        console.log('[@component:VerificationEditor] Reference saved successfully');
+        setReferenceName('');
         
-        if (response.ok) {
-          console.log('[@component:VerificationEditor] Text reference saved successfully');
-          setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
-          setDetectedTextData(null);
-          setReferenceSaveCounter(prev => prev + 1);
-          onReferenceSaved?.(referenceName);
-        } else {
-          console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
-        }
+        // Trigger reload of available references
+        setReferenceSaveCounter(prev => prev + 1);
+      } else {
+        setError(result.error || 'Failed to save reference');
       }
-    } catch (error) {
-      console.error('[@component:VerificationEditor] Error saving reference:', error);
+    } catch (err: any) {
+      console.error('[@component:VerificationEditor] Error saving reference:', err);
+      setError(err.message || 'Failed to save reference');
+    } finally {
+      setPendingSave(false);
     }
   };
 
@@ -1006,7 +954,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const handleConfirmOverwrite = async () => {
     setShowConfirmDialog(false);
-    await performSaveReference();
+    await handleSaveReference();
   };
 
   const handleCancelOverwrite = () => {

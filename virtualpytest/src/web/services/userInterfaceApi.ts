@@ -4,6 +4,7 @@
  * This service handles all API calls related to user interface management.
  */
 
+import { useMemo } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
 
 export interface UserInterface {
@@ -179,16 +180,9 @@ class UserInterfaceApiService {
 // Hook to create service instance with context
 export const useUserInterfaceApi = () => {
   const { buildServerUrl } = useRegistration();
-  return new UserInterfaceApiService(buildServerUrl);
-};
-
-// Legacy export for backward compatibility - will be removed once all components are updated
-export const userInterfaceApi = new UserInterfaceApiService((endpoint: string) => {
-  // Fallback URL builder for legacy usage
-  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
-  const serverProtocol = window.location.protocol.replace(':', '');
-  const serverIp = window.location.hostname;
-  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
-}); 
+  
+  // Use useMemo to create a stable reference to prevent infinite loops
+  return useMemo(() => {
+    return new UserInterfaceApiService(buildServerUrl);
+  }, [buildServerUrl]);
+}; 

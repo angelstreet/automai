@@ -11,7 +11,8 @@ import {
   Chip,
   FormHelperText,
 } from '@mui/material';
-import { deviceModelApi, Model } from '../../services/deviceModelService';
+import { useDeviceModelApi } from '../../services/deviceModelService';
+import { Model } from '../../types/model.types';
 import { DeviceFormData } from '../../types/controllerConfig.types';
 
 interface ModelSelectionStepProps {
@@ -32,7 +33,11 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [selectedModelDetails, setSelectedModelDetails] = useState<Model | null>(null);
 
-  // Fetch device models when component mounts
+  // Get the device model API service
+  const deviceModelApi = useDeviceModelApi();
+
+  // Fetch device models when component mounts only
+  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
   useEffect(() => {
     const fetchModels = async () => {
       setLoadingModels(true);
@@ -52,7 +57,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     };
 
     fetchModels();
-  }, []);
+  }, []); // Remove deviceModelApi dependency - only fetch on mount
 
   // Update selected model details when model changes
   useEffect(() => {

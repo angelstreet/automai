@@ -312,7 +312,7 @@ def get_android_tv_config():
 def android_tv_screenshot():
     """Take a screenshot of the Android TV device."""
     android_tv_session = get_android_tv_session()
-    
+        
     try:
         if not android_tv_session['connected'] or not android_tv_session['controller']:
             return jsonify({

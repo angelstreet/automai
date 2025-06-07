@@ -17,7 +17,7 @@ Environment Variables Required (in .env.host file):
     HOST_PROTOCOL - Protocol to use for host (http or https, default: http)
     HOST_PORT_INTERNAL - Internal port where Flask app runs (default: 5119)
     HOST_PORT_EXTERNAL - External port for server communication (default: 5119)
-    HOST_PORT_HTTPS - HTTPS port for nginx/images (default: 444)
+    HOST_PORT_WEB - HTTPS port for nginx/images (default: 444)
     GITHUB_TOKEN - GitHub token for authentication
     DEBUG - Set to 'true' to enable debug mode (default: false)
 """

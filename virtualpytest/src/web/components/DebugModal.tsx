@@ -26,6 +26,7 @@ import {
   Download as DownloadIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
+import { useRegistration } from '../contexts/RegistrationContext';
 
 interface LogEntry {
   timestamp: string;
@@ -39,14 +40,10 @@ interface DebugModalProps {
   onClose: () => void;
 }
 
-// Get server port from environment variable with fallback to 5119
-const getServerPort = () => {
-  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
-};
-
-const API_BASE_URL = `http://localhost:${getServerPort()}/api`;
-
 const DebugModal: React.FC<DebugModalProps> = ({ open, onClose }) => {
+  // Use registration context for centralized URL management
+  const { buildServerUrl } = useRegistration();
+
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +95,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ open, onClose }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/system/logs?lines=${maxLines}`);
+      const response = await fetch(buildServerUrl(`api/system/logs?lines=${maxLines}`));
       
       if (!response.ok) {
         throw new Error(`Failed to fetch logs: ${response.statusText}`);
@@ -125,7 +122,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ open, onClose }) => {
 
   const handleClearLogs = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/system/logs/clear`, {
+      const response = await fetch(buildServerUrl('api/system/logs/clear'), {
         method: 'POST',
       });
       
