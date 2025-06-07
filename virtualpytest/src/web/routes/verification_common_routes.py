@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 import os
-from .utils import make_host_request, get_primary_host
+from .utils import make_host_request, get_primary_host, get_host_by_model, build_host_nginx_url
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__)
@@ -310,50 +310,12 @@ def verification_status():
 # VERIFICATION CONTROLLER MANAGEMENT
 # =====================================================
 
-@verification_common_bp.route('/api/virtualpytest/verification/take-control', methods=['POST'])
-def take_verification_control():
-    """Initialize verification controllers with device model."""
-    try:
-        data = request.get_json()
-        device_model = data.get('device_model', 'android_mobile')
-        video_device = data.get('video_device', '/dev/video0')
-        
-        print(f"[@route:take_verification_control] Initializing verification controllers")
-        print(f"[@route:take_verification_control] Device model: {device_model}")
-        print(f"[@route:take_verification_control] Video device: {video_device}")
-        
-        # For now, return success to indicate the endpoint is working
-        # The actual controller initialization logic can be implemented later
-        return jsonify({
-            'success': True,
-            'message': f'Verification controllers initialized for {device_model}',
-            'device_model': device_model,
-            'video_device': video_device,
-            'controllers_available': ['image', 'text', 'adb']
-        })
-        
-    except Exception as e:
-        print(f"[@route:take_verification_control] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Error initializing verification controllers: {str(e)}'
-        }), 500
+# REMOVED: take-control and release-control endpoints moved to verification_control_server_routes.py
+# These endpoints should only be available on the server, not shared between server and host
 
-@verification_common_bp.route('/api/virtualpytest/verification/release-control', methods=['POST'])
-def release_verification_control():
-    """Release verification controllers."""
-    try:
-        print(f"[@route:release_verification_control] Releasing verification controllers")
-        
-        # For now, return success to indicate the endpoint is working
-        return jsonify({
-            'success': True,
-            'message': 'Verification controllers released'
-        })
-        
-    except Exception as e:
-        print(f"[@route:release_verification_control] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Error releasing verification controllers: {str(e)}'
-        }), 500 
+# The following endpoints have been moved to server-specific routes:
+# - /api/virtualpytest/verification/take-control
+# - /api/virtualpytest/verification/release-control  
+# - /api/virtualpytest/verification/lock-device
+# - /api/virtualpytest/verification/unlock-device
+# - /api/virtualpytest/verification/device-lock-status/<device_id> 

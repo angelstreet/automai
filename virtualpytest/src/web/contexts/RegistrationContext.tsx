@@ -15,6 +15,9 @@ interface RegisteredHost {
   description?: string;
   connection: DeviceConnection;
   status: string;
+  isLocked: boolean;           // NEW - Device lock status
+  lockedBy?: string;          // NEW - Session/user who locked it (optional)
+  lockedAt?: number;          // NEW - Timestamp when locked (optional)
   last_seen: number;
   registered_at: string;
   capabilities: string[];
@@ -56,6 +59,12 @@ interface RegistrationContextType {
   fetchHosts: () => Promise<void>;
   selectHost: (hostId: string) => void;
   clearSelection: () => void;
+  
+  // Device Lock Management
+  lockDevice: (hostId: string, sessionId?: string) => Promise<boolean>;
+  unlockDevice: (hostId: string) => Promise<boolean>;
+  isDeviceLocked: (hostId: string) => boolean;
+  canLockDevice: (hostId: string) => boolean;
   
   // URL Builders (NO hardcoded values)
   buildServerUrl: (endpoint: string) => string;        // Always to main server
@@ -148,6 +157,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         // Map server response to include legacy fields for Dashboard compatibility
         const hosts = rawHosts.map((host: any) => ({
           ...host,
+          // Device lock properties (with defaults if not provided by server)
+          isLocked: host.isLocked || false,
+          lockedBy: host.lockedBy || undefined,
+          lockedAt: host.lockedAt || undefined,
           // Legacy field mappings for Dashboard compatibility
           client_id: host.id,
           device_model: host.model,
@@ -270,6 +283,127 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     selectHost(hostId);
   }, [selectHost]);
 
+  // Device Lock Management Functions
+  const lockDevice = useCallback(async (hostId: string, sessionId?: string): Promise<boolean> => {
+    try {
+      console.log(`[@context:Registration] Attempting to lock device: ${hostId}`);
+      
+      // Check if device exists and is not already locked
+      const host = availableHosts.find(h => h.id === hostId);
+      if (!host) {
+        console.error(`[@context:Registration] Host ${hostId} not found`);
+        return false;
+      }
+      
+      if (host.isLocked) {
+        console.warn(`[@context:Registration] Host ${hostId} is already locked by: ${host.lockedBy}`);
+        return false;
+      }
+      
+      // Call server to lock the device
+      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/lock-device'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_id: hostId,
+          session_id: sessionId || 'default-session',
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to lock device: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state
+        setAvailableHosts(prev => prev.map(h => 
+          h.id === hostId 
+            ? { 
+                ...h, 
+                isLocked: true, 
+                lockedBy: sessionId || 'default-session',
+                lockedAt: Date.now() 
+              }
+            : h
+        ));
+        
+        console.log(`[@context:Registration] Successfully locked device: ${hostId}`);
+        return true;
+      } else {
+        console.error(`[@context:Registration] Server failed to lock device: ${result.error}`);
+        return false;
+      }
+      
+    } catch (error: any) {
+      console.error(`[@context:Registration] Error locking device ${hostId}:`, error);
+      return false;
+    }
+  }, [availableHosts, buildServerUrl]);
+
+  const unlockDevice = useCallback(async (hostId: string): Promise<boolean> => {
+    try {
+      console.log(`[@context:Registration] Attempting to unlock device: ${hostId}`);
+      
+      // Call server to unlock the device
+      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/unlock-device'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_id: hostId,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to unlock device: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update local state
+        setAvailableHosts(prev => prev.map(h => 
+          h.id === hostId 
+            ? { 
+                ...h, 
+                isLocked: false, 
+                lockedBy: undefined,
+                lockedAt: undefined 
+              }
+            : h
+        ));
+        
+        console.log(`[@context:Registration] Successfully unlocked device: ${hostId}`);
+        return true;
+      } else {
+        console.error(`[@context:Registration] Server failed to unlock device: ${result.error}`);
+        return false;
+      }
+      
+    } catch (error: any) {
+      console.error(`[@context:Registration] Error unlocking device ${hostId}:`, error);
+      return false;
+    }
+  }, [buildServerUrl]);
+
+  const isDeviceLocked = useCallback((hostId: string): boolean => {
+    const host = availableHosts.find(h => h.id === hostId);
+    return host?.isLocked || false;
+  }, [availableHosts]);
+
+  const canLockDevice = useCallback((hostId: string): boolean => {
+    const host = availableHosts.find(h => h.id === hostId);
+    if (!host) return false;
+    
+    // Can lock if device exists, is online, and not already locked
+    return host.status === 'online' && !host.isLocked;
+  }, [availableHosts]);
+
   const value: RegistrationContextType = {
     // State
     availableHosts,
@@ -281,6 +415,12 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     fetchHosts,
     selectHost,
     clearSelection,
+    
+    // Device Lock Management
+    lockDevice,
+    unlockDevice,
+    isDeviceLocked,
+    canLockDevice,
     
     // URL Builders
     buildServerUrl,

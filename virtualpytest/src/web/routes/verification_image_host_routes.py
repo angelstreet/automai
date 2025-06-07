@@ -15,6 +15,7 @@ import json
 import subprocess
 import shutil
 from datetime import datetime
+import time
 
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__)

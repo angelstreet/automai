@@ -24,6 +24,7 @@ from .validation_routes import validation_bp
 
 # Import separated verification blueprints
 from .verification_common_routes import verification_common_bp
+from .verification_control_server_routes import verification_control_server_bp
 from .verification_image_host_routes import verification_image_host_bp
 from .verification_text_host_routes import verification_text_host_bp
 from .verification_adb_host_routes import verification_adb_host_bp
@@ -69,6 +70,7 @@ def register_routes(app: Flask, mode='server'):
         
         # Server-side verification endpoints (proxy to hosts)
         app.register_blueprint(verification_common_bp)
+        app.register_blueprint(verification_control_server_bp)
         app.register_blueprint(verification_image_server_bp)
         app.register_blueprint(verification_text_server_bp)
         app.register_blueprint(verification_adb_server_bp)

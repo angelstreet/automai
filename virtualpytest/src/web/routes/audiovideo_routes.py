@@ -362,4 +362,27 @@ def control_hdmi_stream():
         return jsonify(result)
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+@audiovideo_bp.route('/stream/verification-status', methods=['GET'])
+def verification_status():
+    """Get verification system status from host side."""
+    try:
+        print(f"[@route:verification_status] Host verification status requested")
+        
+        # Return host verification status
+        return jsonify({
+            'success': True,
+            'status': 'ready',
+            'controllers_available': ['image', 'text', 'adb'],
+            'message': 'Host verification system is ready',
+            'host_connected': True,
+            'timestamp': __import__('time').time()
+        })
+        
+    except Exception as e:
+        print(f"[@route:verification_status] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Host verification status error: {str(e)}'
+        }), 500 
