@@ -30,11 +30,12 @@ def register_host_with_server():
     """Register this host with the server
     
     Port Architecture:
-    - HOST_PORT_INTERNAL: Where Flask app runs locally (e.g., 5119)
+    - SERVER_PORT (5009): Where the main Flask server runs and serves API endpoints to frontend
+    - HOST_PORT_INTERNAL: Where Flask app runs locally on host (e.g., 5119)
     - HOST_PORT_EXTERNAL: Port server uses to communicate with host (e.g., 5119 or forwarded port)
     - HOST_PORT_WEB: HTTPS port for nginx/images (e.g., 444)
     
-    The server will use HOST_PORT_EXTERNAL (client_port) for all communication.
+    The server will use HOST_PORT_EXTERNAL (host_port) for all server-to-host communication.
     """
     print("\n🔗 STARTING HOST REGISTRATION")
     print("=" * 50)
@@ -120,7 +121,7 @@ def register_host_with_server():
             'public_ip': host_ip,
             'local_ip': host_ip,
             'protocol': host_protocol,  # HOST protocol (http or https)
-            'client_port': host_port_external,  # EXTERNAL port - server uses this to communicate with host
+            'host_port': host_port_external,  # HOST_PORT - server uses this to communicate with host
             'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
             'https_port': HOST_PORT_WEB,  # HTTPS port - for nginx/images (port forwarding)
             'name': host_name,
@@ -129,7 +130,8 @@ def register_host_with_server():
             'capabilities': ['stream', 'capture', 'verification'],
             'status': 'online',
             'system_stats': get_host_system_stats(),
-            # Legacy field for backward compatibility
+            # Legacy fields for backward compatibility
+            'client_port': host_port_external,  # Deprecated: use host_port instead
             'nginx_port': HOST_PORT_WEB
         }
         

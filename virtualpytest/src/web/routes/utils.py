@@ -6,6 +6,7 @@ This module contains common helper functions used across route modules.
 
 from flask import jsonify, request, current_app
 import requests
+import urllib.parse
 
 def check_supabase():
     """Helper function to check if Supabase is available"""
@@ -74,21 +75,36 @@ def build_host_url(host_info, endpoint, use_https=True):
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get host IP and port from registration info
-    host_ip = host_info.get('local_ip')
-    host_port = host_info.get('client_port', '5119')
+    # Get connection info from registration data
+    connection = host_info.get('connection', {})
+    flask_url = connection.get('flask_url')
     
-    if not host_ip:
-        raise ValueError("Host IP not found in registration info")
-    
-    # Build protocol
-    protocol = 'https' if use_https else 'http'
+    if not flask_url:
+        # Fallback to legacy fields if connection info not available
+        host_ip = host_info.get('local_ip')
+        # Use proper naming: host_port for server-to-host communication
+        host_port = host_info.get('host_port') or host_info.get('client_port', '6119')  # Fallback for backward compatibility
+        
+        if not host_ip:
+            raise ValueError("Host connection information not found in registration info")
+        
+        # Build protocol
+        protocol = 'https' if use_https else 'http'
+        base_url = f"{protocol}://{host_ip}:{host_port}"
+    else:
+        # Parse the flask_url to get the base URL
+        # flask_url format: "http://77.56.53.130:6119"
+        parsed = urllib.parse.urlparse(flask_url)
+        
+        # Use the protocol from use_https parameter, but keep the host and port from flask_url
+        protocol = 'https' if use_https else 'http'
+        base_url = f"{protocol}://{parsed.hostname}:{parsed.port}"
     
     # Clean endpoint (remove leading slash if present)
     clean_endpoint = endpoint.lstrip('/')
     
     # Build complete URL
-    url = f"{protocol}://{host_ip}:{host_port}/{clean_endpoint}"
+    url = f"{base_url}/{clean_endpoint}"
     
     return url
 
@@ -106,18 +122,34 @@ def build_host_nginx_url(host_info, path):
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get host IP - nginx typically runs on port 444
-    host_ip = host_info.get('local_ip')
-    nginx_port = '444'  # Standard nginx port for this application
+    # Get connection info from registration data
+    connection = host_info.get('connection', {})
+    nginx_url = connection.get('nginx_url')
     
-    if not host_ip:
-        raise ValueError("Host IP not found in registration info")
+    if nginx_url:
+        # Use the nginx_url directly from connection info
+        # nginx_url format: "https://77.56.53.130:444"
+        base_url = nginx_url
+    else:
+        # Fallback: try to get host IP from flask_url or legacy fields
+        flask_url = connection.get('flask_url')
+        if flask_url:
+            parsed = urllib.parse.urlparse(flask_url)
+            host_ip = parsed.hostname
+        else:
+            host_ip = host_info.get('local_ip')
+        
+        if not host_ip:
+            raise ValueError("Host IP not found in registration info")
+        
+        # Build nginx URL with standard port 444
+        base_url = f"https://{host_ip}:444"
     
     # Clean path (remove leading slash if present)
     clean_path = path.lstrip('/')
     
-    # Build complete nginx URL (always HTTPS for nginx)
-    url = f"https://{host_ip}:{nginx_port}/{clean_path}"
+    # Build complete nginx URL
+    url = f"{base_url}/{clean_path}"
     
     return url
 
