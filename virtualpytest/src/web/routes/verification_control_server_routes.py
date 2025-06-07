@@ -10,7 +10,7 @@ This module contains the server-side verification control endpoints that:
 from flask import Blueprint, request, jsonify
 import requests
 from .utils import get_host_by_model, build_host_nginx_url, make_host_request
-from utils.deviceLockManager import (
+from ..utils.deviceLockManager import (
     lock_device_in_registry,
     unlock_device_in_registry,
     is_device_locked_in_registry,

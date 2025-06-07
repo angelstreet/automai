@@ -129,11 +129,13 @@ def main():
         register_routes(app, mode='host')
         print("✅ [HOST] Routes registered successfully")
     except ImportError as import_error:
-        print(f"⚠️ [HOST] Warning: Could not import routes module: {import_error}")
-        print("   Some API endpoints may not be available")
+        print(f"❌ [HOST] CRITICAL: Could not import routes module: {import_error}")
+        print("   Host cannot function without routes. Stopping...")
+        sys.exit(1)
     except Exception as e:
-        print(f"⚠️ [HOST] Warning: Could not register routes: {e}")
-        print("   Some API endpoints may not be available")
+        print(f"❌ [HOST] CRITICAL: Could not register routes: {e}")
+        print("   Host cannot function without routes. Stopping...")
+        sys.exit(1)
     
     # Setup cleanup handlers (only atexit, not signal handlers to avoid conflicts)
     setup_host_cleanup()
