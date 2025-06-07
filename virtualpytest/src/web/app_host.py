@@ -13,8 +13,9 @@ Environment Variables Required (in .env.host file):
     SERVER_PORT - Port of the server (default: 5009)
     HOST_NAME - Name of this host (e.g., sunri-pi1)
     HOST_IP - IP address of this host
-    HOST_PORT - Port for this host (default: 5119)
-    HOST_NGINX_PORT - Nginx port for this host (default: 444)
+    HOST_PORT_INTERNAL - Internal port where Flask app runs (default: 5119)
+    HOST_PORT_EXTERNAL - External port for server communication (default: 5119)
+    HOST_PORT_HTTPS - HTTPS port for nginx/images (default: 444)
     GITHUB_TOKEN - GitHub token for authentication
     DEBUG - Set to 'true' to enable debug mode (default: false)
 """
@@ -59,7 +60,7 @@ def cleanup_host_ports():
     print(f"\n🧹 [HOST] Cleaning up ports for HOST mode...")
     
     # Only clean up the host port - DO NOT touch the server port!
-    host_port = int(os.getenv('HOST_PORT', '5119'))
+    host_port = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
     kill_process_on_port(host_port)
 
 def setup_host_cleanup():
@@ -140,7 +141,7 @@ def main():
     register_host_with_server()
     
     # Get configuration
-    host_port = int(os.getenv('HOST_PORT', '5119'))
+    host_port = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
     print(f"\n🚀 [HOST] Starting Flask app on port {host_port}")

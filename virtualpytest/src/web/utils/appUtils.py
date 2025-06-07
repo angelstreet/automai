@@ -279,8 +279,9 @@ def validate_environment_variables(mode='server'):
             'SERVER_PORT': os.getenv('SERVER_PORT'),
             'HOST_NAME': os.getenv('HOST_NAME'),
             'HOST_IP': os.getenv('HOST_IP'),
-            'HOST_PORT': os.getenv('HOST_PORT'),
-            'HOST_NGINX_PORT': os.getenv('HOST_NGINX_PORT'),
+            'HOST_PORT_INTERNAL': os.getenv('HOST_PORT_INTERNAL'),
+            'HOST_PORT_EXTERNAL': os.getenv('HOST_PORT_EXTERNAL'),
+            'HOST_PORT_HTTPS': os.getenv('HOST_PORT_HTTPS'),
             'GITHUB_TOKEN': os.getenv('GITHUB_TOKEN')
         }
         
@@ -317,9 +318,11 @@ def validate_environment_variables(mode='server'):
                     print(f"   export {var}=sunri-pi1")
                 elif var == 'HOST_IP':
                     print(f"   export {var}=77.56.53.130")
-                elif var == 'HOST_PORT':
+                elif var == 'HOST_PORT_INTERNAL':
                     print(f"   export {var}=5119")
-                elif var == 'HOST_NGINX_PORT':
+                elif var == 'HOST_PORT_EXTERNAL':
+                    print(f"   export {var}=5119")
+                elif var == 'HOST_PORT_HTTPS':
                     print(f"   export {var}=444")
                 elif var == 'GITHUB_TOKEN':
                     print(f"   export {var}=your_github_token")

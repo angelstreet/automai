@@ -18,7 +18,15 @@ ping_thread = None
 ping_stop_event = threading.Event()
 
 def register_host_with_server():
-    """Register this host with the server"""
+    """Register this host with the server
+    
+    Port Architecture:
+    - HOST_PORT_INTERNAL: Where Flask app runs locally (e.g., 5119)
+    - HOST_PORT_EXTERNAL: Port server uses to communicate with host (e.g., 5119 or forwarded port)
+    - HOST_PORT_HTTPS: HTTPS port for nginx/images (e.g., 444)
+    
+    The server will use HOST_PORT_EXTERNAL (client_port) for all communication.
+    """
     print("\n🔗 STARTING HOST REGISTRATION")
     print("=" * 50)
     
@@ -27,16 +35,18 @@ def register_host_with_server():
     server_port = os.getenv('SERVER_PORT', '5009')
     host_name = os.getenv('HOST_NAME')
     host_ip = os.getenv('HOST_IP')
-    host_port = os.getenv('HOST_PORT', '5119')
-    host_nginx_port = os.getenv('HOST_NGINX_PORT', '444')
+    host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
+    host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port
+    host_port_https = os.getenv('HOST_PORT_HTTPS', '444')  # HTTPS/nginx port for images
     
     print(f"🔍 [HOST] Registration Debug Info:")
     print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
     print(f"   SERVER_PORT env: '{server_port}'")
     print(f"   HOST_NAME env: '{host_name}'")
     print(f"   HOST_IP env: '{host_ip}'")
-    print(f"   HOST_PORT env: '{host_port}'")
-    print(f"   HOST_NGINX_PORT env: '{host_nginx_port}'")
+    print(f"   HOST_PORT_INTERNAL env: '{host_port_internal}'")
+    print(f"   HOST_PORT_EXTERNAL env: '{host_port_external}'")
+    print(f"   HOST_PORT_HTTPS env: '{host_port_https}'")
     
     # Validate critical environment variables
     validation_errors = []
@@ -88,14 +98,17 @@ def register_host_with_server():
             'client_id': stable_host_id,  # Keep as client_id for API compatibility
             'public_ip': host_ip,
             'local_ip': host_ip,
-            'client_port': host_port,  # Keep as client_port for API compatibility
+            'client_port': host_port_external,  # EXTERNAL port - server uses this to communicate with host
+            'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
+            'https_port': host_port_https,  # HTTPS port - for nginx/images (port forwarding)
             'name': host_name,
             'device_model': 'android_mobile',  # Default device model
             'controller_types': ['remote', 'av', 'verification'],
             'capabilities': ['stream', 'capture', 'verification'],
             'status': 'online',
             'system_stats': get_host_system_stats(),
-            'nginx_port': host_nginx_port  # Additional field for nginx port
+            # Legacy field for backward compatibility
+            'nginx_port': host_port_https
         }
         
         print(f"\n📤 [HOST] Sending registration request to: {full_server_url}/api/system/register")
