@@ -85,31 +85,27 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - use same protocol and IP as frontend + port from env
+  // Server configuration - ALWAYS use VITE_SERVER_PORT for API calls
   const getServerBaseUrl = () => {
-    // In development, use empty string to make requests go through Vite proxy
-    // In production, construct the full URL
-    const isDevelopment = (import.meta as any).env.DEV;
+    // For API calls, we ALWAYS need to use the actual server port from environment
+    // regardless of whether we're in development or production mode
     
-    if (isDevelopment) {
-      console.log('[@context:Registration] Development mode detected, using Vite proxy (relative URLs)');
-      return ''; // Empty string makes requests relative, going through Vite proxy
-    }
-    
-    // Production: Use same protocol and hostname as frontend, get port from environment
+    // Get server configuration from environment
+    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
     const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
     const serverIp = window.location.hostname; // Get IP from current URL
-    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
     
-    // Build server URL using same protocol and IP as frontend
+    // Build server URL using same protocol and IP as frontend, but with server port
     const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
     
-    console.log('[@context:Registration] Production mode - Server Configuration:');
+    console.log('[@context:Registration] API Server Configuration:');
+    console.log('[@context:Registration] Frontend URL:', window.location.href);
     console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
     console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
+    console.log('[@context:Registration] Frontend port:', window.location.port);
     console.log('[@context:Registration] VITE_SERVER_PORT from env:', (import.meta as any).env.VITE_SERVER_PORT);
-    console.log('[@context:Registration] Using server port:', serverPort);
-    console.log('[@context:Registration] Built server URL:', baseUrl);
+    console.log('[@context:Registration] Using API server port:', serverPort);
+    console.log('[@context:Registration] Built API server URL:', baseUrl);
     
     return baseUrl;
   };
