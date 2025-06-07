@@ -4,48 +4,48 @@
  * This service handles all API calls related to device management.
  */
 
+import { useRegistration } from '../contexts/RegistrationContext';
+
 export interface Device {
   id: string;
   name: string;
-  description: string;
   model: string;
-  controller_configs?: any; // JSONB data for controller configurations
-  created_at: string;
-  updated_at: string;
-  // Connection information for registered clients
+  description?: string;
+  status: string;
+  last_seen: number;
+  capabilities: string[];
   connection?: {
-    flask_url: string;    // e.g., "http://192.168.1.67:5119"
-    nginx_url: string;    // e.g., "https://192.168.1.67:444"
+    flask_url: string;
+    nginx_url: string;
   };
-  status?: string;
-  last_seen?: number;
-  registered_at?: string;
-  capabilities?: string[];
-  system_stats?: any;
 }
 
 export interface DeviceCreatePayload {
   name: string;
+  model: string;
   description?: string;
-  model?: string;
-  controllerConfigs?: { [key: string]: any }; // Controller configurations from wizard
 }
 
 export interface ApiResponse<T> {
   status: string;
   device?: T;
+  devices?: T[];
   error?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5009/api';
-
 class DeviceApiService {
+  private buildUrl: (endpoint: string) => string;
+
+  constructor(buildUrl: (endpoint: string) => string) {
+    this.buildUrl = buildUrl;
+  }
+
   /**
    * Get all devices
    */
   async getAllDevices(): Promise<Device[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices`, {
+      const response = await fetch(this.buildUrl('/api/devices'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ class DeviceApiService {
    */
   async getDevice(id: string): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devices/${id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ class DeviceApiService {
    */
   async createDevice(payload: DeviceCreatePayload): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices`, {
+      const response = await fetch(this.buildUrl('/api/devices'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ class DeviceApiService {
    */
   async updateDevice(id: string, payload: DeviceCreatePayload): Promise<Device> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devices/${id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ class DeviceApiService {
    */
   async deleteDevice(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devices/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devices/${id}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -176,5 +176,19 @@ class DeviceApiService {
   }
 }
 
-// Export a singleton instance
-export const deviceApi = new DeviceApiService(); 
+// Hook to create service instance with context
+export const useDeviceApi = () => {
+  const { buildServerUrl } = useRegistration();
+  return new DeviceApiService(buildServerUrl);
+};
+
+// Legacy export for backward compatibility - will be removed once all components are updated
+export const deviceApi = new DeviceApiService((endpoint: string) => {
+  // Fallback URL builder for legacy usage
+  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
+  const serverProtocol = window.location.protocol.replace(':', '');
+  const serverIp = window.location.hostname;
+  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${baseUrl}/${cleanEndpoint}`;
+}); 

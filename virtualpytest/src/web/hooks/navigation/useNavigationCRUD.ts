@@ -2,8 +2,12 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UINavigationNode, UINavigationEdge, NavigationTreeData } from '../../types/navigationTypes';
 
-// API helper functions to call the Python backend
-const API_BASE_URL = 'http://localhost:5009';
+// Get server port from environment variable with fallback to 5119
+const getServerPort = () => {
+  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
+};
+
+const API_BASE_URL = `http://localhost:${getServerPort()}`;
 const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
 
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {

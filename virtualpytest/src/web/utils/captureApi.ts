@@ -1,5 +1,9 @@
 // Capture API utility functions
-const API_BASE_URL = 'http://localhost:5009/api/virtualpytest/screen-definition';
+const getServerPort = () => {
+  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
+};
+
+const API_BASE_URL = `http://localhost:${getServerPort()}/api/virtualpytest/screen-definition`;
 
 export interface CaptureStartResponse {
   success: boolean;

@@ -4,50 +4,40 @@
  * This service handles all API calls related to device model management.
  */
 
-export interface Model {
+import { useRegistration } from '../contexts/RegistrationContext';
+
+export interface DeviceModel {
   id: string;
   name: string;
-  types: string[];
-  controllers: {
-    remote: string;
-    av: string;
-    network: string;
-    power: string;
-  };
-  version: string;
-  description: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface ModelCreatePayload {
+export interface DeviceModelCreatePayload {
   name: string;
-  types: string[];
-  controllers: {
-    remote: string;
-    av: string;
-    network: string;
-    power: string;
-  };
-  version?: string;
   description?: string;
 }
 
 export interface ApiResponse<T> {
   status: string;
-  model?: T;
+  devicemodel?: T;
   error?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5009/api';
-
 class DeviceModelApiService {
+  private buildUrl: (endpoint: string) => string;
+
+  constructor(buildUrl: (endpoint: string) => string) {
+    this.buildUrl = buildUrl;
+  }
+
   /**
    * Get all device models
    */
-  async getAllDeviceModels(): Promise<Model[]> {
+  async getAllDeviceModels(): Promise<DeviceModel[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels`, {
+      const response = await fetch(this.buildUrl('/api/devicemodels'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -69,9 +59,9 @@ class DeviceModelApiService {
   /**
    * Get a specific device model by ID
    */
-  async getDeviceModel(id: string): Promise<Model> {
+  async getDeviceModel(id: string): Promise<DeviceModel> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devicemodels/${id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -93,9 +83,9 @@ class DeviceModelApiService {
   /**
    * Create a new device model
    */
-  async createDeviceModel(payload: ModelCreatePayload): Promise<Model> {
+  async createDeviceModel(payload: DeviceModelCreatePayload): Promise<DeviceModel> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels`, {
+      const response = await fetch(this.buildUrl('/api/devicemodels'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,9 +98,9 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<Model> = await response.json();
-      if (data.status === 'success' && data.model) {
-        return data.model;
+      const data: ApiResponse<DeviceModel> = await response.json();
+      if (data.status === 'success' && data.devicemodel) {
+        return data.devicemodel;
       } else {
         throw new Error(data.error || 'Failed to create device model');
       }
@@ -123,9 +113,9 @@ class DeviceModelApiService {
   /**
    * Update an existing device model
    */
-  async updateDeviceModel(id: string, payload: ModelCreatePayload): Promise<Model> {
+  async updateDeviceModel(id: string, payload: DeviceModelCreatePayload): Promise<DeviceModel> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devicemodels/${id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -138,9 +128,9 @@ class DeviceModelApiService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ApiResponse<Model> = await response.json();
-      if (data.status === 'success' && data.model) {
-        return data.model;
+      const data: ApiResponse<DeviceModel> = await response.json();
+      if (data.status === 'success' && data.devicemodel) {
+        return data.devicemodel;
       } else {
         throw new Error(data.error || 'Failed to update device model');
       }
@@ -155,7 +145,7 @@ class DeviceModelApiService {
    */
   async deleteDeviceModel(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/devicemodels/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/devicemodels/${id}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -178,5 +168,19 @@ class DeviceModelApiService {
   }
 }
 
-// Export a singleton instance
-export const deviceModelApi = new DeviceModelApiService(); 
+// Hook to create service instance with context
+export const useDeviceModelApi = () => {
+  const { buildServerUrl } = useRegistration();
+  return new DeviceModelApiService(buildServerUrl);
+};
+
+// Legacy export for backward compatibility - will be removed once all components are updated
+export const deviceModelApi = new DeviceModelApiService((endpoint: string) => {
+  // Fallback URL builder for legacy usage
+  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
+  const serverProtocol = window.location.protocol.replace(':', '');
+  const serverIp = window.location.hostname;
+  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${baseUrl}/${cleanEndpoint}`;
+}); 

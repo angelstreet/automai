@@ -87,7 +87,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     // Use same protocol and hostname as frontend, get port from environment
     const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
     const serverIp = window.location.hostname; // Get IP from current URL
-    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Port from env with fallback
+    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
     
     // Build server URL using same protocol and IP as frontend
     const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
@@ -147,8 +147,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
             host.connection.flask_url.replace('http://', '').split(':')[0] : 
             'unknown',
           client_port: host.connection?.flask_url ? 
-            host.connection.flask_url.split(':')[2] || '5009' : 
-            '5009',
+            host.connection.flask_url.split(':')[2] || '5119' : 
+            '5119',
           public_ip: host.connection?.flask_url ? 
             host.connection.flask_url.replace('http://', '').split(':')[0] : 
             'unknown',

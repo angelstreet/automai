@@ -7,8 +7,13 @@ import {
   ValidationExportResponse 
 } from '../types/validationTypes';
 
-class ValidationService {
-  private baseUrl = 'http://localhost:5009/api/validation';
+export class ValidationService {
+  // Get server port from environment variable with fallback to 5119
+  private getServerPort(): string {
+    return (import.meta as any).env.VITE_SERVER_PORT || '5119';
+  }
+
+  private baseUrl = `http://localhost:${this.getServerPort()}/api/validation`;
   private progressCallback: ((progress: ValidationProgress) => void) | null = null;
   private eventSource: EventSource | null = null;
 

@@ -39,7 +39,12 @@ interface DebugModalProps {
   onClose: () => void;
 }
 
-const API_BASE_URL = 'http://localhost:5009/api';
+// Get server port from environment variable with fallback to 5119
+const getServerPort = () => {
+  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
+};
+
+const API_BASE_URL = `http://localhost:${getServerPort()}/api`;
 
 const DebugModal: React.FC<DebugModalProps> = ({ open, onClose }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);

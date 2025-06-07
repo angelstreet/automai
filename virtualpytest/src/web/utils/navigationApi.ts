@@ -1,5 +1,9 @@
 // Navigation API utility functions
-const API_BASE_URL = 'http://localhost:5009/api/navigation';
+const getServerPort = () => {
+  return (import.meta as any).env.VITE_SERVER_PORT || '5119';
+};
+
+const API_BASE_URL = `http://localhost:${getServerPort()}/api/navigation`;
 
 export interface NavigationStep {
   step_number: number;
@@ -390,7 +394,7 @@ export async function executeEdgeActions(
       let actionSuccess = false;
       
       try {
-        const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+        const response = await fetch(`http://localhost:${getServerPort()}/api/virtualpytest/${apiControllerType}/execute-action`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -504,7 +508,7 @@ export async function executeEdgeActions(
         let actionSuccess = false;
         
         try {
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/${apiControllerType}/execute-action`, {
+          const response = await fetch(`http://localhost:${getServerPort()}/api/virtualpytest/${apiControllerType}/execute-action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: actionToExecute }),

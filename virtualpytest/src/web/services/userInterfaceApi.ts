@@ -4,6 +4,8 @@
  * This service handles all API calls related to user interface management.
  */
 
+import { useRegistration } from '../contexts/RegistrationContext';
+
 export interface UserInterface {
   id: string;
   name: string;
@@ -31,15 +33,19 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5009/api';
-
 class UserInterfaceApiService {
+  private buildUrl: (endpoint: string) => string;
+
+  constructor(buildUrl: (endpoint: string) => string) {
+    this.buildUrl = buildUrl;
+  }
+
   /**
    * Get all user interfaces
    */
   async getAllUserInterfaces(): Promise<UserInterface[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/userinterfaces`, {
+      const response = await fetch(this.buildUrl('/api/userinterfaces'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +69,7 @@ class UserInterfaceApiService {
    */
   async getUserInterface(id: string): Promise<UserInterface> {
     try {
-      const response = await fetch(`${API_BASE_URL}/userinterfaces/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +93,7 @@ class UserInterfaceApiService {
    */
   async createUserInterface(payload: UserInterfaceCreatePayload): Promise<UserInterface> {
     try {
-      const response = await fetch(`${API_BASE_URL}/userinterfaces`, {
+      const response = await fetch(this.buildUrl('/api/userinterfaces'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +123,7 @@ class UserInterfaceApiService {
    */
   async updateUserInterface(id: string, payload: UserInterfaceCreatePayload): Promise<UserInterface> {
     try {
-      const response = await fetch(`${API_BASE_URL}/userinterfaces/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +153,7 @@ class UserInterfaceApiService {
    */
   async deleteUserInterface(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/userinterfaces/${id}`, {
+      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -170,5 +176,19 @@ class UserInterfaceApiService {
   }
 }
 
-// Export a singleton instance
-export const userInterfaceApi = new UserInterfaceApiService(); 
+// Hook to create service instance with context
+export const useUserInterfaceApi = () => {
+  const { buildServerUrl } = useRegistration();
+  return new UserInterfaceApiService(buildServerUrl);
+};
+
+// Legacy export for backward compatibility - will be removed once all components are updated
+export const userInterfaceApi = new UserInterfaceApiService((endpoint: string) => {
+  // Fallback URL builder for legacy usage
+  const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119';
+  const serverProtocol = window.location.protocol.replace(':', '');
+  const serverIp = window.location.hostname;
+  const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${baseUrl}/${cleanEndpoint}`;
+}); 
