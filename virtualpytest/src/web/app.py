@@ -35,9 +35,10 @@ def kill_process_on_port(port):
         print(f"🔍 [PORT] Checking for processes using port {port}...")
         
         # Find processes using the port
-        for proc in psutil.process_iter(['pid', 'name', 'connections']):
+        for proc in psutil.process_iter(['pid', 'name']):
             try:
-                connections = proc.info['connections']
+                # Get process connections directly from the process object
+                connections = proc.connections()
                 if connections:
                     for conn in connections:
                         if hasattr(conn, 'laddr') and conn.laddr and conn.laddr.port == port:
@@ -72,13 +73,41 @@ def kill_process_on_port(port):
                 # Process might have disappeared or we don't have access
                 continue
             except Exception as proc_error:
-                # Skip processes we can't inspect
+                # Skip processes we can't inspect (e.g., no permission to get connections)
                 continue
                 
         print(f"✅ [PORT] Port {port} cleanup completed")
         
     except Exception as e:
         print(f"❌ [PORT] Error during port cleanup: {e}")
+        # Fallback: try using lsof command if available
+        try:
+            print(f"🔄 [PORT] Trying fallback method with lsof...")
+            import subprocess
+            result = subprocess.run(['lsof', '-ti', f':{port}'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid_str in pids:
+                    try:
+                        pid = int(pid_str.strip())
+                        print(f"🎯 [PORT] Found PID {pid} using port {port} (via lsof)")
+                        process = psutil.Process(pid)
+                        process.terminate()
+                        try:
+                            process.wait(timeout=3)
+                            print(f"✅ [PORT] Successfully terminated PID {pid}")
+                        except psutil.TimeoutExpired:
+                            process.kill()
+                            print(f"💀 [PORT] Force killed PID {pid}")
+                    except (ValueError, psutil.NoSuchProcess, psutil.AccessDenied) as pid_error:
+                        print(f"⚠️ [PORT] Could not kill PID {pid_str}: {pid_error}")
+            else:
+                print(f"ℹ️ [PORT] No processes found using port {port} (via lsof)")
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            print(f"⚠️ [PORT] lsof fallback method failed or not available")
+        except Exception as fallback_error:
+            print(f"❌ [PORT] Fallback method error: {fallback_error}")
 
 def cleanup_ports_for_mode():
     """Clean up ports based on the current mode"""
@@ -98,6 +127,10 @@ def cleanup_ports_for_mode():
 # Clean up ports before starting
 print(f"\n🧹 [STARTUP] Cleaning up ports for {SERVER_MODE.upper()} mode...")
 cleanup_ports_for_mode()
+
+# Wait a moment for ports to be fully released
+print(f"⏳ [STARTUP] Waiting for ports to be fully released...")
+time.sleep(2)
 
 # Load environment variables
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.local')
