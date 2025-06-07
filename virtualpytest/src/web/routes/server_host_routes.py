@@ -234,4 +234,86 @@ def server_release_control():
         return jsonify({
             'success': False,
             'error': f'Error releasing control: {str(e)}'
+        }), 500
+
+
+@server_host_bp.route('/take-control', methods=['POST'])
+def host_take_control():
+    """Host-side take control - check AV/stream status only"""
+    try:
+        data = request.get_json() or {}
+        device_model = data.get('device_model', 'android_mobile')
+        video_device = data.get('video_device', '/dev/video0')
+        session_id = data.get('session_id', 'default-session')
+        
+        print(f"[@route:host_take_control] AV controller take control requested")
+        print(f"[@route:host_take_control] Device model: {device_model}")
+        print(f"[@route:host_take_control] Video device: {video_device}")
+        print(f"[@route:host_take_control] Session ID: {session_id}")
+        
+        # Only check AV Controller (stream status)
+        try:
+            print(f"[@route:host_take_control] Checking AV/stream controller")
+            from controllers import ControllerFactory
+            
+            av_controller = ControllerFactory.create_av_controller(
+                capture_type="hdmi_stream",
+                device_name=f"Host AV - {device_model}",
+                video_device=video_device
+            )
+            
+            av_result = av_controller.take_control()
+            
+            print(f"[@route:host_take_control] AV controller result: {av_result.get('status', 'unknown')}")
+            
+            # Build stream URL if AV controller is working
+            stream_url = None
+            if av_result.get('success', False):
+                # Build stream URL based on host configuration
+                import os
+                host_ip = os.environ.get('HOST_IP', '77.56.53.130')
+                stream_url = f"https://{host_ip}:444/stream/video"
+            
+            # Build response focused only on AV/stream
+            response_data = {
+                'success': av_result.get('success', False),
+                'status': av_result.get('status', 'unknown'),
+                'message': f'AV controller check completed for {device_model}',
+                'device_model': device_model,
+                'video_device': video_device,
+                'session_id': session_id,
+                'controller_type': 'av',
+                'stream_url': stream_url,
+                'host_connected': True,
+                'timestamp': __import__('time').time()
+            }
+            
+            # Include error if AV failed
+            if not av_result.get('success', False):
+                response_data['error'] = av_result.get('error', 'AV controller failed')
+            
+            print(f"[@route:host_take_control] AV result: {'SUCCESS' if av_result.get('success', False) else 'FAILURE'}")
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            print(f"[@route:host_take_control] AV controller error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'status': 'error',
+                'error': f'AV controller exception: {str(e)}',
+                'controller_type': 'av',
+                'device_model': device_model,
+                'host_connected': True,
+                'timestamp': __import__('time').time()
+            }), 500
+        
+    except Exception as e:
+        print(f"[@route:host_take_control] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'status': 'error',
+            'error': f'Host AV take control error: {str(e)}',
+            'host_connected': True,
+            'timestamp': __import__('time').time()
         }), 500 

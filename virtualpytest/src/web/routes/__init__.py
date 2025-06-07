@@ -124,6 +124,9 @@ def register_routes(app: Flask, mode='server'):
         # Unified server-host communication routes (needed for /take-control endpoint)
         app.register_blueprint(server_host_bp)
         
+        # Host-side AV functionality (needed for /release-control endpoint)
+        app.register_blueprint(audiovideo_bp)
+        
         # Host-side functionality (if needed)
         # Note: Most host routes are in the verification_*_host_bp blueprints
         
