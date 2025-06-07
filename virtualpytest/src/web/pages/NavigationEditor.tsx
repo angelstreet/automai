@@ -564,9 +564,22 @@ const NavigationEditorContent: React.FC = () => {
       }
     }
     
-    // Now set control to false, which will trigger disconnect
-    setIsControlActive(!isControlActive);
-  }, [isControlActive, selectedDeviceData, hasAVCapabilities]);
+    // Toggle control state
+    const newControlState = !isControlActive;
+    setIsControlActive(newControlState);
+    
+    // If taking control (not releasing) and device has remote capabilities, automatically open remote panel
+    if (newControlState && !wasControlActive && selectedDeviceData && remoteConfig) {
+      console.log('[@component:NavigationEditor] Taking control - automatically opening remote panel for device with remote capabilities');
+      setIsRemotePanelOpen(true);
+    }
+    
+    // If releasing control, close the remote panel
+    if (!newControlState && wasControlActive && isRemotePanelOpen) {
+      console.log('[@component:NavigationEditor] Releasing control - closing remote panel');
+      setIsRemotePanelOpen(false);
+    }
+  }, [isControlActive, selectedDeviceData, hasAVCapabilities, remoteConfig, isRemotePanelOpen, buildApiUrl]);
 
   // Memoize session state change handler to prevent recreating on every render
   const handleSessionStateChange = useCallback((session: {
