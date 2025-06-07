@@ -307,9 +307,6 @@ def host_take_control():
             text=True
         )
         
-        print(f"[@route:host_take_control] systemctl status result: {result.returncode}")
-        print(f"[@route:host_take_control] systemctl stdout: {result.stdout}")
-        
         # Check if service is active
         is_active = 'Active: active (running)' in result.stdout
         
