@@ -29,6 +29,76 @@ else:
 
 print(f"Starting in {SERVER_MODE.upper()} mode")
 
+def kill_process_on_port(port):
+    """Kill any process using the specified port"""
+    try:
+        print(f"🔍 [PORT] Checking for processes using port {port}...")
+        
+        # Find processes using the port
+        for proc in psutil.process_iter(['pid', 'name', 'connections']):
+            try:
+                connections = proc.info['connections']
+                if connections:
+                    for conn in connections:
+                        if hasattr(conn, 'laddr') and conn.laddr and conn.laddr.port == port:
+                            pid = proc.info['pid']
+                            name = proc.info['name']
+                            print(f"🎯 [PORT] Found process using port {port}: PID {pid} ({name})")
+                            
+                            # Kill the process
+                            try:
+                                process = psutil.Process(pid)
+                                process.terminate()  # Try graceful termination first
+                                
+                                # Wait up to 3 seconds for graceful termination
+                                try:
+                                    process.wait(timeout=3)
+                                    print(f"✅ [PORT] Successfully terminated process PID {pid}")
+                                except psutil.TimeoutExpired:
+                                    # Force kill if graceful termination failed
+                                    print(f"⚠️ [PORT] Graceful termination failed, force killing PID {pid}")
+                                    process.kill()
+                                    process.wait(timeout=1)
+                                    print(f"💀 [PORT] Force killed process PID {pid}")
+                                    
+                            except psutil.NoSuchProcess:
+                                print(f"ℹ️ [PORT] Process PID {pid} already terminated")
+                            except psutil.AccessDenied:
+                                print(f"❌ [PORT] Access denied when trying to kill PID {pid}")
+                            except Exception as kill_error:
+                                print(f"❌ [PORT] Error killing process PID {pid}: {kill_error}")
+                                
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                # Process might have disappeared or we don't have access
+                continue
+            except Exception as proc_error:
+                # Skip processes we can't inspect
+                continue
+                
+        print(f"✅ [PORT] Port {port} cleanup completed")
+        
+    except Exception as e:
+        print(f"❌ [PORT] Error during port cleanup: {e}")
+
+def cleanup_ports_for_mode():
+    """Clean up ports based on the current mode"""
+    if SERVER_MODE == 'server':
+        # Server mode uses port 5009
+        kill_process_on_port(5009)
+    elif SERVER_MODE == 'host':
+        # Host mode uses port 5119
+        kill_process_on_port(5119)
+        
+        # Also check if we need to clean up any server processes
+        # that might be running from previous sessions
+        server_port = int(os.getenv('SERVER_PORT', '5009'))
+        if server_port != 5119:  # Don't double-clean the same port
+            kill_process_on_port(server_port)
+
+# Clean up ports before starting
+print(f"\n🧹 [STARTUP] Cleaning up ports for {SERVER_MODE.upper()} mode...")
+cleanup_ports_for_mode()
+
 # Load environment variables
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.local')
 load_dotenv(env_path)
