@@ -40,6 +40,10 @@ def get_connected_hosts():
     """Get all connected hosts from the registration system"""
     return getattr(current_app, '_connected_clients', {})
 
+def get_connected_clients():
+    """Alias for get_connected_hosts - for backward compatibility"""
+    return get_connected_hosts()
+
 def get_host_by_id(host_id):
     """Get a specific host by ID"""
     connected_hosts = get_connected_hosts()
