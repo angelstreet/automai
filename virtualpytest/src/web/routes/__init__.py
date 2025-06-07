@@ -22,9 +22,6 @@ from .screen_definition_routes import screen_definition_blueprint
 from .pathfinding_routes import pathfinding_bp
 from .validation_routes import validation_bp
 
-# Import original verification routes (contains take-control endpoint)
-from .verification_routes import verification_bp
-
 # Import separated verification blueprints
 from .verification_common_routes import verification_common_bp
 from .verification_image_host_routes import verification_image_host_bp
@@ -57,9 +54,6 @@ def register_routes(app: Flask):
     app.register_blueprint(testcase_bp)
     app.register_blueprint(userinterface_bp)
     app.register_blueprint(devicemodel_bp)
-    
-    # Register original verification blueprint (contains take-control endpoint)
-    app.register_blueprint(verification_bp)
     
     # Register separated verification blueprints
     app.register_blueprint(verification_common_bp)
