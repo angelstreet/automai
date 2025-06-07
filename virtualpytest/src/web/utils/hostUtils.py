@@ -1,10 +1,19 @@
 import os
+import sys
 import time
 import threading
 import signal
 import atexit
 import requests
+import uuid
+import psutil
+import platform
+from typing import Dict, Any
 from appUtils import get_host_system_stats, generate_stable_host_id
+
+# Disable SSL warnings for self-signed certificates
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Client registration state for host mode
 client_registration_state = {
@@ -132,7 +141,7 @@ def register_host_with_server():
         
         # Test server connectivity first
         try:
-            health_response = requests.get(f"{full_server_url}/api/system/health", timeout=5)
+            health_response = requests.get(f"{full_server_url}/api/system/health", timeout=5, verify=False)
             print(f"\n🏥 [HOST] Server health check: {health_response.status_code}")
             if health_response.status_code == 200:
                 health_data = health_response.json()
@@ -148,7 +157,8 @@ def register_host_with_server():
             f"{full_server_url}/api/system/register", 
             json=host_info, 
             timeout=10,
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            verify=False
         )
         
         print(f"\n📨 [HOST] Registration response:")
@@ -216,7 +226,8 @@ def unregister_from_server():
             f"{server_url}/api/system/unregister",
             json=unregister_data,
             timeout=5,
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            verify=False
         )
         
         if response.status_code == 200:
@@ -275,7 +286,8 @@ def start_ping_thread():
                     f"{server_url}/api/system/ping",
                     json=ping_data,
                     timeout=10,
-                    headers={'Content-Type': 'application/json'}
+                    headers={'Content-Type': 'application/json'},
+                    verify=False
                 )
                 
                 if response.status_code == 200:
