@@ -15,7 +15,7 @@ from datetime import datetime
 from collections import deque
 
 # Import the new controller config factory
-from ..utils.controllerConfigFactory import (
+from web.utils.controllerConfigFactory import (
     create_controller_configs_from_device_info,
     get_device_capabilities_from_model,
     get_controller_types_from_model
