@@ -82,17 +82,21 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - use http://localhost since frontend and backend are on same server
+  // Server configuration - use same protocol and IP as frontend to avoid CORS/mixed protocol issues
   const getServerBaseUrl = () => {
-    // Since frontend and backend are on the same server, use http://localhost
+    // Use same protocol and hostname as frontend to avoid CORS/mixed protocol issues
+    const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
+    const serverIp = window.location.hostname; // Get IP from current URL
     const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5009'; // Server port from env
     
-    // Always use http://localhost for same-server communication
-    const baseUrl = `http://localhost:${serverPort}`;
+    // Build server URL using same protocol and IP as frontend
+    const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
     
-    console.log('[@context:Registration] Server Configuration (same server):');
+    console.log('[@context:Registration] Server Configuration (avoid CORS/mixed protocol):');
+    console.log('[@context:Registration] Frontend protocol:', window.location.protocol);
+    console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
     console.log('[@context:Registration] VITE_SERVER_PORT:', (import.meta as any).env.VITE_SERVER_PORT);
-    console.log('[@context:Registration] Using http://localhost for backend (same server)');
+    console.log('[@context:Registration] Using same protocol/IP to avoid CORS issues');
     console.log('[@context:Registration] Built server URL:', baseUrl);
     
     return baseUrl;
