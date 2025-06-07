@@ -26,6 +26,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     # Configure remote controller based on device model
     if device_model in ['android_mobile', 'real_android_mobile']:
         controller_configs['remote'] = {
+            'type': 'android_mobile',
             'implementation': 'real_android_mobile',
             'parameters': {
                 'device_ip': device_ip,
@@ -37,6 +38,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     elif device_model == 'android_tv':
         controller_configs['remote'] = {
+            'type': 'android_tv',
             'implementation': 'android_tv', 
             'parameters': {
                 'device_ip': device_ip,
@@ -48,6 +50,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     elif device_model == 'ir_remote':
         controller_configs['remote'] = {
+            'type': 'ir_remote',
             'implementation': 'ir_remote',
             'parameters': {
                 'device_path': '/dev/lirc0',
@@ -57,6 +60,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     elif device_model == 'bluetooth_remote':
         controller_configs['remote'] = {
+            'type': 'bluetooth_remote',
             'implementation': 'bluetooth_remote',
             'parameters': {
                 'device_address': '00:11:22:33:44:55',  # Default - should be configured per device
