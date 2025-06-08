@@ -71,6 +71,7 @@ def take_control():
                     'success': False,
                     'status': 'av_controller_not_found',
                     'error': 'No AV controller object found in own host_device',
+                    'error_type': 'configuration_error',
                     'device_model': device_model,
                     'session_id': session_id,
                     'available_controllers': list(host_device.get('controller_objects', {}).keys())
@@ -82,13 +83,25 @@ def take_control():
             print(f"[@route:take_control] AV controller status: {av_status}")
             
             if not av_status.get('is_streaming', False):
+                # Specific error message for stream service failure
+                service_name = av_status.get('service_name', 'stream service')
+                service_status = av_status.get('service_status', 'unknown')
+                error_message = av_status.get('message', f'Stream service ({service_name}) is not active')
+                
                 return jsonify({
                     'success': False,
-                    'status': 'stream_not_ready',
-                    'error': av_status.get('message', 'Stream service is not active'),
+                    'status': 'stream_service_failed',
+                    'error': f'Host stream status failed: {error_message}',
+                    'error_type': 'stream_service_error',
                     'device_model': device_model,
                     'session_id': session_id,
                     'av_status': av_status,
+                    'service_details': {
+                        'service_name': service_name,
+                        'service_status': service_status,
+                        'systemctl_returncode': av_status.get('systemctl_returncode'),
+                        'systemctl_output': av_status.get('systemctl_output')
+                    },
                     'remote_status': 'not_checked'
                 })
                 
@@ -97,7 +110,8 @@ def take_control():
             return jsonify({
                 'success': False,
                 'status': 'av_controller_error',
-                'error': f'Failed to check AV controller: {str(e)}',
+                'error': f'Host stream status failed: AV controller error - {str(e)}',
+                'error_type': 'av_controller_exception',
                 'device_model': device_model,
                 'session_id': session_id
             })
@@ -114,6 +128,7 @@ def take_control():
                         'success': False,
                         'status': 'remote_controller_not_found',
                         'error': 'No remote controller object found in own host_device',
+                        'error_type': 'configuration_error',
                         'device_model': device_model,
                         'session_id': session_id,
                         'av_status': av_status,
@@ -126,14 +141,27 @@ def take_control():
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
                 
                 if not remote_status.get('adb_connected', False):
+                    # Specific error message for ADB connection failure
+                    adb_status = remote_status.get('adb_status', 'unknown')
+                    device_status = remote_status.get('device_status', 'unknown')
+                    error_message = remote_status.get('message', f'Device {device_ip}:{device_port} not connected via ADB')
+                    
                     return jsonify({
                         'success': False,
-                        'status': 'device_not_ready',
-                        'error': remote_status.get('message', f'Device {device_ip}:{device_port} not connected via ADB'),
+                        'status': 'adb_connection_failed',
+                        'error': f'Host ADB connection failed: {error_message}',
+                        'error_type': 'adb_connection_error',
                         'device_model': device_model,
                         'session_id': session_id,
                         'av_status': av_status,
-                        'remote_status': remote_status
+                        'remote_status': remote_status,
+                        'adb_details': {
+                            'device_ip': device_ip,
+                            'device_port': device_port,
+                            'adb_status': adb_status,
+                            'device_status': device_status,
+                            'android_device_id': remote_status.get('android_device_id')
+                        }
                     })
                     
             except Exception as e:
@@ -141,7 +169,8 @@ def take_control():
                 return jsonify({
                     'success': False,
                     'status': 'remote_controller_error',
-                    'error': f'Failed to check remote controller: {str(e)}',
+                    'error': f'Host ADB connection failed: Remote controller error - {str(e)}',
+                    'error_type': 'remote_controller_exception',
                     'device_model': device_model,
                     'session_id': session_id,
                     'av_status': av_status

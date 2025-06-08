@@ -248,7 +248,8 @@ def register_host_with_server():
                                     output_path='/var/www/html/stream/',
                                     host_ip=av_params.get('host_ip'),
                                     host_port=av_params.get('host_port'),
-                                    host_connection=host_device_object.get('connection', {})
+                                    host_connection=host_device_object.get('connection', {}),
+                                    service_name=av_params.get('service_name', 'hdmi-stream')
                                 )
                                 controller_objects['av'] = av_controller
                                 print(f"   ✅ AV controller created successfully")

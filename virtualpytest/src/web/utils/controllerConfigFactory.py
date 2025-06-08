@@ -74,7 +74,8 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'host_ip': host_ip,
             'host_port': host_port,
             'stream_path': '/stream/video',
-            'connection_timeout': 15
+            'connection_timeout': 15,
+            'service_name': 'stream'  # Correct systemd service name
         }
     }
     

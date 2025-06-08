@@ -165,18 +165,39 @@ def take_control():
                         'device': device_response
                     }), 200
                 else:
-                    # Host failed, release the device lock
+                    # Host failed - pass through specific error details
                     unlock_device_in_registry(device_id, session_id)
+                    
+                    # Determine appropriate HTTP status code based on error type
+                    error_type = host_data.get('error_type', 'unknown')
+                    status_code = 500  # Default to 500 for unknown errors
+                    
+                    if error_type in ['stream_service_error', 'adb_connection_error']:
+                        status_code = 422  # Unprocessable Entity - service/connection issue
+                    elif error_type in ['configuration_error']:
+                        status_code = 503  # Service Unavailable - configuration issue
+                    elif error_type in ['av_controller_exception', 'remote_controller_exception']:
+                        status_code = 500  # Internal Server Error - controller exception
+                    
                     return jsonify({
                         'success': False,
-                        'error': host_data.get('error', 'Host failed to take control')
-                    }), 500
+                        'error': host_data.get('error', 'Host failed to take control'),
+                        'error_type': error_type,
+                        'status': host_data.get('status', 'host_error'),
+                        'host_details': {
+                            'av_status': host_data.get('av_status'),
+                            'remote_status': host_data.get('remote_status'),
+                            'service_details': host_data.get('service_details'),
+                            'adb_details': host_data.get('adb_details')
+                        }
+                    }), status_code
             else:
                 # Host request failed, release the device lock
                 unlock_device_in_registry(device_id, session_id)
                 return jsonify({
                     'success': False,
-                    'error': f'Host request failed: {host_response.status_code} {host_response.text}'
+                    'error': f'Host request failed: {host_response.status_code} {host_response.text}',
+                    'error_type': 'host_communication_error'
                 }), 500
                 
         except Exception as e:

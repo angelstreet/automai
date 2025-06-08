@@ -309,32 +309,79 @@ class HDMIStreamController(AVControllerInterface):
         try:
             # Check if stream service is running
             import subprocess
+            
+            print(f"[@controller:HDMIStream:get_status] Checking service status for: {self.service_name}")
+            
             result = subprocess.run(
                 ['sudo', 'systemctl', 'status', self.service_name], 
                 capture_output=True, 
-                text=True
+                text=True,
+                timeout=10
             )
             
-            # Check if service is active
-            is_stream_active = 'Active: active (running)' in result.stdout
+            print(f"[@controller:HDMIStream:get_status] systemctl status return code: {result.returncode}")
+            print(f"[@controller:HDMIStream:get_status] systemctl status output: {result.stdout}")
+            
+            # More robust service status detection
+            is_stream_active = False
+            service_state = 'unknown'
+            
+            # Check multiple indicators for active service
+            stdout_lower = result.stdout.lower()
+            
+            # Primary check: Look for "active (running)" pattern
+            if 'active (running)' in stdout_lower:
+                is_stream_active = True
+                service_state = 'active_running'
+                print(f"[@controller:HDMIStream:get_status] Service detected as ACTIVE (running)")
+            else:
+                # Service is not active
+                if 'inactive' in stdout_lower:
+                    service_state = 'inactive'
+                elif 'failed' in stdout_lower:
+                    service_state = 'failed'
+                elif result.returncode != 0:
+                    service_state = 'error'
+                else:
+                    service_state = 'unknown'
+                
+                print(f"[@controller:HDMIStream:get_status] Service detected as NOT ACTIVE: {service_state}")
             
             return {
                 'success': True,
                 'controller_type': 'av',
                 'device_name': self.device_name,
-                'service_status': 'active' if is_stream_active else 'inactive',
+                'service_name': self.service_name,
+                'service_status': service_state,
                 'is_streaming': is_stream_active,
                 'is_capturing': self.is_capturing_video,
                 'capture_session_id': self.capture_session_id,
                 'nginx_url': self.nginx_url,
-                'message': 'Stream service is active' if is_stream_active else 'Stream service is not running'
+                'systemctl_returncode': result.returncode,
+                'systemctl_output': result.stdout,
+                'message': f'Stream service ({self.service_name}) is active' if is_stream_active else f'Stream service ({self.service_name}) is not running - status: {service_state}'
             }
             
-        except Exception as e:
+        except subprocess.TimeoutExpired:
+            print(f"[@controller:HDMIStream:get_status] systemctl status command timed out")
             return {
                 'success': False,
                 'controller_type': 'av',
                 'device_name': self.device_name,
+                'service_name': self.service_name,
+                'service_status': 'timeout',
+                'is_streaming': False,
+                'is_capturing': self.is_capturing_video,
+                'nginx_url': self.nginx_url,
+                'error': f'Timeout checking stream service status for {self.service_name}'
+            }
+        except Exception as e:
+            print(f"[@controller:HDMIStream:get_status] Error checking service status: {e}")
+            return {
+                'success': False,
+                'controller_type': 'av',
+                'device_name': self.device_name,
+                'service_name': self.service_name,
                 'service_status': 'error',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
