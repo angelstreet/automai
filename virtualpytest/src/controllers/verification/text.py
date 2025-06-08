@@ -839,10 +839,6 @@ class TextVerificationController(VerificationControllerInterface):
             screenshot_path = None
             if hasattr(self.av_controller, 'take_screenshot'):
                 screenshot_path = self.av_controller.take_screenshot(screenshot_name)
-            elif hasattr(self.av_controller, 'screenshot'):
-                screenshot_path = self.av_controller.screenshot(screenshot_name)
-            elif hasattr(self.av_controller, 'capture_frame'):
-                screenshot_path = self.av_controller.capture_frame(screenshot_name)
             else:
                 print(f"TextVerify[{self.device_name}]: ERROR - No screenshot method available on AV controller")
                 return None

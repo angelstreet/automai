@@ -241,11 +241,6 @@ class AVControllerInterface(BaseController):
         """Stop video capture. Must be implemented by subclasses."""
         pass
     
-    @abstractmethod
-    def capture_frame(self, filename: str = None) -> bool:
-        """Capture a single video frame/screenshot. Must be implemented by subclasses."""
-        pass
-    
     def take_control(self) -> Dict[str, Any]:
         """
         Take control of AV system and verify stream is working.

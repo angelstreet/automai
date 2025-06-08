@@ -176,36 +176,6 @@ class HDMIStreamController(AVControllerInterface):
         
         return host_url
         
-    def capture_frame(self, filename: str = None) -> bool:
-        """
-        Capture a single video frame/screenshot. Required by AVControllerInterface.
-        
-        This method implements the abstract capture_frame method by delegating to 
-        the existing take_screenshot method and returning a boolean success indicator.
-        
-        Args:
-            filename: Optional filename (ignored - uses timestamp-based naming)
-            
-        Returns:
-            bool: True if screenshot was captured successfully, False otherwise
-        """
-        try:
-            print(f"HDMI[{self.capture_source}]: Capturing frame via take_screenshot method")
-            
-            # Delegate to existing take_screenshot method
-            screenshot_url = self.take_screenshot(filename)
-            
-            if screenshot_url:
-                print(f"HDMI[{self.capture_source}]: Frame captured successfully: {screenshot_url}")
-                return True
-            else:
-                print(f"HDMI[{self.capture_source}]: Frame capture failed - no URL returned")
-                return False
-                
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Frame capture error: {e}")
-            return False
-        
     def take_control(self) -> Dict[str, Any]:
         """
         Take control of HDMI stream and verify it's working.
