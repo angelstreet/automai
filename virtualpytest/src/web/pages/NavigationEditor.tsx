@@ -560,128 +560,67 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [selectedDevice, isControlActive, availableHosts, setSelectedHost]);
 
-  const handleTakeControl = useCallback(async () => {
-    const wasControlActive = isControlActive;
-    
-    // If we're releasing control, check if stream needs to be restarted BEFORE disconnecting
-    if (wasControlActive && selectedDeviceData && hasAVCapabilities) {
-      console.log('[@component:NavigationEditor] Releasing control, checking stream status before disconnect...');
-      
-      try {
-        // Check current stream status while SSH connection is still active
-        const response = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/stream/status'));
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && !data.is_active) {
-            console.log('[@component:NavigationEditor] Stream was stopped, will restart after disconnect...');
-            
-            // Restart the stream before disconnecting
-            const restartResponse = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/stream/restart'), {
-              method: 'POST'
-            });
-            
-            if (restartResponse.ok) {
-              const restartData = await restartResponse.json();
-              if (restartData.success) {
-                console.log('[@component:NavigationEditor] Stream restarted successfully before releasing control');
-              }
-            }
-          } else if (data.success && data.is_active) {
-            console.log('[@component:NavigationEditor] Stream is already running, no restart needed');
-          }
-        } else {
-          console.log('[@component:NavigationEditor] Stream status check failed, SSH connection may not be available');
-        }
-      } catch (error) {
-        console.log('[@component:NavigationEditor] Could not check/restart stream before disconnect:', error);
-        // Don't throw error, just log it
-      }
+  const handleTakeControl = async (device: Device) => {
+    if (!device?.id) {
+      console.error('[@component:NavigationEditor] No device ID provided for take control');
+      return;
     }
-    
-    // If taking control, use the new unified endpoint with device_id
-    if (!wasControlActive && selectedDeviceData) {
-      try {
-        console.log('[@component:NavigationEditor] Taking control using device_id');
-        console.log('[@component:NavigationEditor] Selected device:', selectedDeviceData);
-        
-        const response = await fetch(buildApiUrl('/api/virtualpytest/take-control'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            device_id: selectedDeviceData.id,  // Use id property from Device interface
-            session_id: 'navigation-editor-session'
-          }),
-        });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[@component:NavigationEditor] Take control result:', data);
-          
-          if (data.success) {
-            console.log('[@component:NavigationEditor] Successfully took control');
-            console.log('[@component:NavigationEditor] Controllers status:', data.controllers);
-            console.log('[@component:NavigationEditor] Host info:', data.host_info);
-            
-            // Update verification controller status based on response
-            const verificationControllers = data.controllers?.verification || {};
-            setVerificationControllerStatus({
-              image_controller_available: verificationControllers.image?.success || false,
-              text_controller_available: verificationControllers.text?.success || false,
-            });
-            setIsVerificationActive(data.success);
-            
-            // Set control to active
-            setIsControlActive(true);
-            
-            // Check if we should open remote panel using the device data from response
-            if (data.device) {
-              const remoteConfig = getDeviceRemoteConfig(data.device);
-              if (remoteConfig && !isRemotePanelOpen) {
-                console.log('[@component:NavigationEditor] Opening remote panel with device data');
-                setIsRemotePanelOpen(true);
-              }
-            }
-          } else {
-            console.error('[@component:NavigationEditor] Take control failed:', data.error);
-            console.error('[@component:NavigationEditor] Controller errors:', data.controller_errors);
-            
-            // Still set control active if host is available, even if some controllers failed
-            if (data.host_available) {
-              console.log('[@component:NavigationEditor] Host is available, allowing partial control');
-              setIsControlActive(true);
-              setIsVerificationActive(false);
-              setVerificationControllerStatus({
-                image_controller_available: false,
-                text_controller_available: false,
-              });
-            }
-          }
-        } else {
-          console.error('[@component:NavigationEditor] Take control request failed:', response.status, response.statusText);
-          
-          // Try to get error details from response
-          try {
-            const errorData = await response.json();
-            console.error('[@component:NavigationEditor] Error details:', errorData);
-          } catch (e) {
-            console.error('[@component:NavigationEditor] Could not parse error response');
-          }
-        }
-      } catch (error) {
-        console.error('[@component:NavigationEditor] Error taking control:', error);
+    console.log(`[@component:NavigationEditor] Taking control of device: ${device.id}`);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Use the complete device object we already have from the devices list
+      console.log('[@component:NavigationEditor] Using complete device object from frontend state');
+      console.log('[@component:NavigationEditor] Device object:', device);
+      
+      // Check if we should open remote panel using the device data we already have
+      const remoteConfig = getDeviceRemoteConfig(device);
+      console.log('[@component:NavigationEditor] Remote config from existing device:', remoteConfig);
+      
+      if (remoteConfig && !isRemotePanelOpen) {
+        console.log('[@component:NavigationEditor] Opening remote panel with existing device data');
+        setIsRemotePanelOpen(true);
       }
-    } else {
-      // Releasing control - just set state to false
-      setIsControlActive(false);
-      setIsVerificationActive(false);
-      setVerificationControllerStatus({
-        image_controller_available: false,
-        text_controller_available: false,
+
+      // Set the device data immediately from what we already have
+      setSelectedDeviceData(device);
+      console.log('[@component:NavigationEditor] Set selectedDeviceData from existing device object');
+
+      // Still call the server for take control (for locking, stream setup, etc.)
+      const response = await fetch('/api/virtualpytest/take-control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_id: device.id,
+          session_id: generateSessionId(),
+        }),
       });
+
+      const data = await response.json();
+      console.log('[@component:NavigationEditor] Take control response:', data);
+
+      if (data.success) {
+        setIsControlActive(true);
+        console.log('[@component:NavigationEditor] Control activated successfully');
+        
+        // Note: We don't update selectedDeviceData here because we already have the complete object
+        console.log('[@component:NavigationEditor] Using existing complete device object, no need to update from server response');
+      } else {
+        throw new Error(data.message || 'Failed to take control');
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Take control failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to take control');
+      setIsControlActive(false);
+      setSelectedDeviceData(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isControlActive, selectedDeviceData, hasAVCapabilities, buildApiUrl, isRemotePanelOpen]);
+  };
 
   // Memoize session state change handler to prevent recreating on every render
   const handleSessionStateChange = useCallback((session: {
