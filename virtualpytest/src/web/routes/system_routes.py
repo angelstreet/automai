@@ -25,7 +25,8 @@ utils_dir = os.path.join(web_dir, 'utils')
 if os.path.exists(utils_dir) and utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
 
-from utils.controllerConfigFactory import (
+# Import directly from the module file
+from controllerConfigFactory import (
     create_controller_configs_from_device_info,
     get_device_capabilities_from_model,
     get_controller_types_from_model
