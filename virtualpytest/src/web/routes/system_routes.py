@@ -249,9 +249,9 @@ def register_client():
         print(f"   Capabilities: {capabilities}")
         print(f"   Controller types: {controller_types}")
         
-        # Create structured host registration with device information
-        structured_host_info = {
-            # Host information
+        # Create a single, clean host+device object with no redundancy
+        host_device_object = {
+            # === HOST INFORMATION ===
             'host_id': host_info['host_id'],
             'host_name': host_info['host_name'],
             'host_ip': host_info['host_ip'],
@@ -260,25 +260,30 @@ def register_client():
             'internal_port': host_info.get('internal_port', host_info['host_port']),
             'https_port': host_info.get('https_port', '444'),
             'nginx_port': host_info.get('nginx_port', '444'),
-            'controller_types': controller_types,  # Use factory-built controller types
-            'capabilities': capabilities,  # Use factory-built capabilities
             'status': 'online',
             
-            # Device information (what this host controls)
-            'device': {
-                'device_id': device_id,
-                'device_name': device_name,
-                'device_model': host_info['device_model'],
-                'device_ip': device_ip,
-                'device_port': device_port,
-                'controller_configs': controller_configs  # Use factory-built controller configs
+            # === DEVICE INFORMATION ===
+            'device_id': device_id,
+            'device_name': device_name,
+            'device_model': host_info['device_model'],
+            'device_ip': device_ip,
+            'device_port': device_port,
+            
+            # === CONTROLLER INFORMATION ===
+            'controller_configs': controller_configs,  # Complete configs from factory
+            'controller_types': controller_types,      # Factory-built controller types
+            'capabilities': capabilities,              # Factory-built capabilities
+            
+            # === CONNECTION INFORMATION ===
+            'connection': {
+                'flask_url': f"http://{host_info['host_ip']}:{host_info['host_port']}",
+                'nginx_url': f"https://{host_info['host_ip']}:444"
             },
             
-            # Timestamps
+            # === METADATA ===
+            'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
             'registered_at': datetime.now().isoformat(),
             'last_seen': time.time(),
-            
-            # System stats
             'system_stats': host_info.get('system_stats', get_system_stats())
         }
         
@@ -289,13 +294,13 @@ def register_client():
         existing_host_id = None
         for existing_id, existing_info in connected_clients.items():
             # Check for exact host_id match (reconnection with same ID)
-            if existing_id == structured_host_info['host_id']:
+            if existing_id == host_device_object['host_id']:
                 existing_host_id = existing_id
                 break
             # Check for same host reconnecting (same host_name + IP + device_model)
-            elif (existing_info.get('host_name') == structured_host_info['host_name'] and 
-                  existing_info.get('host_ip') == structured_host_info['host_ip'] and
-                  existing_info.get('device', {}).get('device_model') == structured_host_info['device']['device_model']):
+            elif (existing_info.get('host_name') == host_device_object['host_name'] and 
+                  existing_info.get('host_ip') == host_device_object['host_ip'] and
+                  existing_info.get('device_model') == host_device_object['device_model']):
                 existing_host_id = existing_id
                 break
         
@@ -303,17 +308,17 @@ def register_client():
             # Update existing host instead of creating duplicate
             print(f"🔄 [SERVER] Updating existing host registration:")
             print(f"   Existing ID: {existing_host_id[:8]}...")
-            print(f"   New ID: {structured_host_info['host_id'][:8]}...")
-            print(f"   Host Name: {structured_host_info['host_name']}")
-            print(f"   Device: {structured_host_info['device']['device_name']} ({structured_host_info['device']['device_model']})")
+            print(f"   New ID: {host_device_object['host_id'][:8]}...")
+            print(f"   Host Name: {host_device_object['host_name']}")
+            print(f"   Device: {host_device_object['device_name']} ({host_device_object['device_model']})")
             
             # Keep the original registration time but update all other info
             original_registered_at = connected_clients[existing_host_id].get('registered_at')
-            structured_host_info['registered_at'] = original_registered_at  # Keep original registration time
-            structured_host_info['reconnected_at'] = datetime.now().isoformat()  # Add reconnection time
+            host_device_object['registered_at'] = original_registered_at  # Keep original registration time
+            host_device_object['reconnected_at'] = datetime.now().isoformat()  # Add reconnection time
             
             # If host_id changed, remove old entry and add with new ID
-            if existing_host_id != structured_host_info['host_id']:
+            if existing_host_id != host_device_object['host_id']:
                 del connected_clients[existing_host_id]
                 # Stop old health check thread
                 health_check_threads = get_health_check_threads()
@@ -321,28 +326,28 @@ def register_client():
                     del health_check_threads[existing_host_id]
                     set_health_check_threads(health_check_threads)
             
-            connected_clients[structured_host_info['host_id']] = structured_host_info
+            connected_clients[host_device_object['host_id']] = host_device_object
             set_connected_clients(connected_clients)
             
             print(f"✅ [SERVER] Host registration updated successfully")
         else:
             # New host registration
-            connected_clients[structured_host_info['host_id']] = structured_host_info
+            connected_clients[host_device_object['host_id']] = host_device_object
             set_connected_clients(connected_clients)
             
             print(f"✅ [SERVER] New host registered successfully:")
-            print(f"   Host Name: {structured_host_info['host_name']}")
-            print(f"   Host Address: {structured_host_info['host_ip']}:{structured_host_info['host_port']}")
-            print(f"   Device: {structured_host_info['device']['device_name']} ({structured_host_info['device']['device_model']})")
-            print(f"   Device Address: {structured_host_info['device']['device_ip']}:{structured_host_info['device']['device_port']}")
-            print(f"   Host ID: {structured_host_info['host_id'][:8]}...")
-            print(f"   Device ID: {structured_host_info['device']['device_id']}")
+            print(f"   Host Name: {host_device_object['host_name']}")
+            print(f"   Host Address: {host_device_object['host_ip']}:{host_device_object['host_port']}")
+            print(f"   Device: {host_device_object['device_name']} ({host_device_object['device_model']})")
+            print(f"   Device Address: {host_device_object['device_ip']}:{host_device_object['device_port']}")
+            print(f"   Host ID: {host_device_object['host_id'][:8]}...")
+            print(f"   Device ID: {host_device_object['device_id']}")
         
         return jsonify({
             'status': 'success',
             'message': 'Host registered successfully',
-            'host_id': structured_host_info['host_id'],
-            'device_id': structured_host_info['device']['device_id']
+            'host_id': host_device_object['host_id'],
+            'device_id': host_device_object['device_id']
         }), 200
         
     except Exception as e:
@@ -542,59 +547,30 @@ def list_clients_as_devices():
         devices = []
         for host_id, host_info in connected_clients.items():
             if host_info.get('status') == 'online':
-                # Extract host connection info
-                host_ip = host_info.get('host_ip') or host_info.get('local_ip')  # Backward compatibility
-                host_port = host_info.get('host_port') or host_info.get('client_port')  # Backward compatibility
-                host_name = host_info.get('host_name') or host_info.get('name')  # Backward compatibility
-                
-                # Extract device info from structured format or backward compatibility
-                device_info = host_info.get('device', {})
-                if device_info:
-                    # New structured format
-                    device_id = device_info.get('device_id')
-                    device_name = device_info.get('device_name')
-                    device_model = device_info.get('device_model')
-                    device_ip = device_info.get('device_ip')
-                    device_port = device_info.get('device_port')
-                    controller_configs = device_info.get('controller_configs', {})
-                else:
-                    # Backward compatibility - create device info from old format
-                    device_model = host_info.get('device_model', 'unknown')
-                    device_id = f"{host_id}_device_{device_model}"
-                    device_name = f"{device_model.replace('_', ' ').title()}"
-                    device_ip = host_ip
-                    device_port = '5555'  # Default ADB port
-                    controller_configs = {}
-                
+                # Use the single object structure directly - no more nested device object
                 devices.append({
-                    # Device information
-                    'id': device_id,  # Keep 'id' for NavigationEditor compatibility
-                    'device_id': device_id,
-                    'name': device_name,  # Keep 'name' for NavigationEditor compatibility
-                    'device_name': device_name,
-                    'model': device_model,  # Keep 'model' for NavigationEditor compatibility
-                    'device_model': device_model,
-                    'device_ip': device_ip,
-                    'device_port': device_port,
-                    'controller_configs': controller_configs,
-                    'description': f"Device: {device_name} controlled by host: {host_name}",
+                    # Device information (from single object)
+                    'id': host_info.get('device_id'),  # Keep 'id' for NavigationEditor compatibility
+                    'device_id': host_info.get('device_id'),
+                    'name': host_info.get('device_name'),  # Keep 'name' for NavigationEditor compatibility
+                    'device_name': host_info.get('device_name'),
+                    'model': host_info.get('device_model'),  # Keep 'model' for NavigationEditor compatibility
+                    'device_model': host_info.get('device_model'),
+                    'device_ip': host_info.get('device_ip'),
+                    'device_port': host_info.get('device_port'),
+                    'controller_configs': host_info.get('controller_configs', {}),
+                    'description': host_info.get('description'),
                     
-                    # Host reference information
-                    'host_id': host_id,
-                    'host_name': host_name,
-                    'host_ip': host_ip,
-                    'host_port': host_port,
-                    'connection': {
-                        'flask_url': f"http://{host_ip}:{host_port}",
-                        'nginx_url': f"https://{host_ip}:444"
-                    },
-                    'host_connection': {
-                        'flask_url': f"http://{host_ip}:{host_port}",
-                        'nginx_url': f"https://{host_ip}:444"
-                    },
+                    # Host reference information (from single object)
+                    'host_id': host_info.get('host_id'),
+                    'host_name': host_info.get('host_name'),
+                    'host_ip': host_info.get('host_ip'),
+                    'host_port': host_info.get('host_port'),
+                    'connection': host_info.get('connection', {}),
+                    'host_connection': host_info.get('connection', {}),  # Alias for backward compatibility
                     
-                    # Status and metadata
-                    'status': 'online',
+                    # Status and metadata (from single object)
+                    'status': host_info.get('status'),
                     'last_seen': host_info.get('last_seen'),
                     'registered_at': host_info.get('registered_at'),
                     'capabilities': host_info.get('capabilities', []),

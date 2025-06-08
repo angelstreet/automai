@@ -157,43 +157,42 @@ def server_take_control():
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
                 if host_data.get('success'):
-                    # Use the complete device data that's already stored in the registry
-                    # The registry stores the complete_device with all controller_configs built during registration
-                    complete_device = host_info.get('complete_device')
+                    # Use the single host_device_object directly (no more nested structures!)
+                    # The registry now stores everything in one clean object
+                    print(f"[@route:server_take_control] Using single object structure for {device_id}")
                     
-                    if complete_device:
-                        # Use the stored complete device object (no rebuilding!)
-                        print(f"[@route:server_take_control] Using stored complete device data for {device_id}")
-                        return jsonify({
-                            'success': True,
-                            'message': 'Control taken successfully',
-                            'device': complete_device  # Pass through the complete device object
-                        }), 200
-                    else:
-                        # Backward compatibility - build device data from partial info
-                        print(f"[@route:server_take_control] No complete_device found, building from partial data for {device_id}")
-                        device_data = {
-                            'id': device_id,
-                            'device_id': device_id,
-                            'name': device_info.get('device_name') or f"{device_model.replace('_', ' ').title()}",
-                            'device_name': device_info.get('device_name') or f"{device_model.replace('_', ' ').title()}",
-                            'model': device_model,
-                            'device_model': device_model,
-                            'device_ip': device_info.get('device_ip', host_info['host_ip']),
-                            'device_port': device_info.get('device_port', '5555'),
-                            'controller_configs': device_info.get('controller_configs', {}),
-                            'host_id': host_id,
-                            'host_name': host_info.get('host_name'),
-                            'host_ip': host_info['host_ip'],
-                            'host_port': host_info['host_port'],
-                            'capabilities': host_info.get('capabilities', [])
-                        }
+                    # Create device response from the single object
+                    device_response = {
+                        # Device information
+                        'id': host_info.get('device_id'),
+                        'device_id': host_info.get('device_id'),
+                        'name': host_info.get('device_name'),
+                        'device_name': host_info.get('device_name'),
+                        'model': host_info.get('device_model'),
+                        'device_model': host_info.get('device_model'),
+                        'device_ip': host_info.get('device_ip'),
+                        'device_port': host_info.get('device_port'),
+                        'controller_configs': host_info.get('controller_configs', {}),
+                        'description': host_info.get('description'),
                         
-                        return jsonify({
-                            'success': True,
-                            'message': 'Control taken successfully',
-                            'device': device_data
-                        }), 200
+                        # Host information
+                        'host_id': host_info.get('host_id'),
+                        'host_name': host_info.get('host_name'),
+                        'host_ip': host_info.get('host_ip'),
+                        'host_port': host_info.get('host_port'),
+                        'connection': host_info.get('connection', {}),
+                        'host_connection': host_info.get('connection', {}),
+                        
+                        # Status and metadata
+                        'status': host_info.get('status'),
+                        'capabilities': host_info.get('capabilities', [])
+                    }
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': 'Control taken successfully',
+                        'device': device_response
+                    }), 200
                 else:
                     # Host failed, release the device lock
                     unlock_device_in_registry(host_id, session_id)
