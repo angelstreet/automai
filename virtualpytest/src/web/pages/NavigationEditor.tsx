@@ -1159,222 +1159,208 @@ const NavigationEditorContent: React.FC = () => {
           transition: 'margin-right',
           marginRight: isRemotePanelOpen ? '180px' : '0px'
         }}>
-          {isLoading ? (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%' 
-            }}>
-              <CircularProgress />
-              <Typography variant="h6" sx={{ ml: 2 }}>
-                {isLoadingInterface ? 'Loading navigation tree...' : 'Saving navigation tree...'}
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              <div 
-                ref={reactFlowWrapper} 
-                style={{ 
-                  width: '100%',
-                  height: '100%',
-                  minHeight: '500px'
+          <>
+            <div 
+              ref={reactFlowWrapper} 
+              style={{ 
+                width: '100%',
+                height: '100%',
+                minHeight: '500px'
+              }}
+            >
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                onNodeDoubleClick={onNodeDoubleClick}
+                onPaneClick={onPaneClick}
+                onInit={(instance) => {
+                  if (instance && !reactFlowInstance) {
+                    console.log('[@component:NavigationEditor] ReactFlow instance initialized');
+                    setReactFlowInstance(instance);
+                  }
                 }}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultEdgeOptions={{
+                  type: 'uiNavigation',
+                  animated: false,
+                  style: { strokeWidth: 2, stroke: '#b1b1b7' },
+                }}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                // Ensure consistent viewport and prevent auto-fitting
+                translateExtent={[[-5000, -5000], [10000, 10000]]}
+                nodeExtent={[[-5000, -5000], [10000, 10000]]}
+                attributionPosition="bottom-left"
+                connectionLineType={ConnectionLineType.SmoothStep}
+                snapToGrid={true}
+                snapGrid={[15, 15]}
+                deleteKeyCode="Delete"
+                multiSelectionKeyCode="Shift"
+                style={{ width: '100%', height: '100%' }}
+                fitView={false}
+                nodesDraggable={true}
+                nodesConnectable={true}
+                elementsSelectable={true}
+                preventScrolling={false}
+                panOnDrag={true}
+                panOnScroll={false}
+                zoomOnScroll={true}
+                zoomOnPinch={true}
+                zoomOnDoubleClick={false}
+                minZoom={0.1}
+                maxZoom={4}
+                // Disable React Flow's auto-positioning features
+                proOptions={{ hideAttribution: true }}
+                // Prevent automatic layout algorithms
+                nodeOrigin={[0, 0]}
+                // Additional props to prevent automatic positioning
+                autoPanOnConnect={false}
+                autoPanOnNodeDrag={false}
+                connectOnClick={false}
+                // Prevent automatic centering or repositioning
+                onlyRenderVisibleElements={false}
               >
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
-                  onNodeClick={onNodeClick}
-                  onEdgeClick={onEdgeClick}
-                  onNodeDoubleClick={onNodeDoubleClick}
-                  onPaneClick={onPaneClick}
-                  onInit={(instance) => {
-                    if (instance && !reactFlowInstance) {
-                      console.log('[@component:NavigationEditor] ReactFlow instance initialized');
-                      setReactFlowInstance(instance);
+                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
+                <MiniMap 
+                  position="bottom-right"
+                  style={{
+                    backgroundColor: 'var(--card, #ffffff)',
+                    border: '1px solid var(--border, #e5e7eb)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                  }}
+                  nodeColor={(node) => {
+                    switch (node.data?.type) {
+                      case 'screen': return '#3b82f6';
+                      case 'dialog': return '#8b5cf6';
+                      case 'popup': return '#f59e0b';
+                      case 'overlay': return '#10b981';
+                      case 'menu': return '#ffc107';
+                      default: return '#6b7280';
                     }
                   }}
-                  nodeTypes={nodeTypes}
-                  edgeTypes={edgeTypes}
-                  defaultEdgeOptions={{
-                    type: 'uiNavigation',
-                    animated: false,
-                    style: { strokeWidth: 2, stroke: '#b1b1b7' },
-                  }}
-                  defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                  // Ensure consistent viewport and prevent auto-fitting
-                  translateExtent={[[-5000, -5000], [10000, 10000]]}
-                  nodeExtent={[[-5000, -5000], [10000, 10000]]}
-                  attributionPosition="bottom-left"
-                  connectionLineType={ConnectionLineType.SmoothStep}
-                  snapToGrid={true}
-                  snapGrid={[15, 15]}
-                  deleteKeyCode="Delete"
-                  multiSelectionKeyCode="Shift"
-                  style={{ width: '100%', height: '100%' }}
-                  fitView={false}
-                  nodesDraggable={true}
-                  nodesConnectable={true}
-                  elementsSelectable={true}
-                  preventScrolling={false}
-                  panOnDrag={true}
-                  panOnScroll={false}
-                  zoomOnScroll={true}
-                  zoomOnPinch={true}
-                  zoomOnDoubleClick={false}
-                  minZoom={0.1}
-                  maxZoom={4}
-                  // Disable React Flow's auto-positioning features
-                  proOptions={{ hideAttribution: true }}
-                  // Prevent automatic layout algorithms
-                  nodeOrigin={[0, 0]}
-                  // Additional props to prevent automatic positioning
-                  autoPanOnConnect={false}
-                  autoPanOnNodeDrag={false}
-                  connectOnClick={false}
-                  // Prevent automatic centering or repositioning
-                  onlyRenderVisibleElements={false}
-                >
-                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                  <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
-                  <MiniMap 
-                    position="bottom-right"
-                    style={{
-                      backgroundColor: 'var(--card, #ffffff)',
-                      border: '1px solid var(--border, #e5e7eb)',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }}
-                    nodeColor={(node) => {
-                      switch (node.data?.type) {
-                        case 'screen': return '#3b82f6';
-                        case 'dialog': return '#8b5cf6';
-                        case 'popup': return '#f59e0b';
-                        case 'overlay': return '#10b981';
-                        case 'menu': return '#ffc107';
-                        default: return '#6b7280';
-                      }
-                    }}
-                    maskColor="rgba(0, 0, 0, 0.1)"
-                  />
-                </ReactFlow>
-              </div>
-
-              {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
-              {selectedDeviceData && hasAVCapabilities && isControlActive && (
-                <ScreenDefinitionEditor
-                  selectedHostDevice={selectedDeviceData}
-                  autoConnect={true}
-                  deviceConnection={{
-                    flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
-                    nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
-                  }}
-                  onDisconnectComplete={() => {
-                    // Called when screen definition editor disconnects
-                    console.log('[@component:NavigationEditor] Screen definition editor disconnected');
-                  }}
+                  maskColor="rgba(0, 0, 0, 0.1)"
                 />
-              )}
+              </ReactFlow>
+            </div>
 
-              {/* Verification Results Display - Show when there are verification results */}
-              {(() => {
-                const shouldShow = verificationResults.length > 0 && lastVerifiedNodeId;
-                console.log(`[@component:NavigationEditor] Verification display check: results.length=${verificationResults.length}, lastVerifiedNodeId=${lastVerifiedNodeId}, shouldShow=${shouldShow}`);
-                if (shouldShow) {
-                  console.log(`[@component:NavigationEditor] Rendering verification results for node:`, nodes.find(n => n.id === lastVerifiedNodeId)?.data.label);
-                }
-                return shouldShow;
-              })() && (
-                <Box sx={{
-                  position: 'absolute',
-                  bottom: 16,
-                  left: 16,
-                  right: selectedNode || selectedEdge ? '220px' : '16px', // Account for selection panel
-                  maxWidth: '800px',
-                  bgcolor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  p: 2,
-                  zIndex: 900,
-                  maxHeight: '300px',
-                  overflow: 'auto',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1 }}>
-                      Verification Results - Node: {nodes.find(n => n.id === lastVerifiedNodeId)?.data.label || lastVerifiedNodeId}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setVerificationResults([]);
-                        setLastVerifiedNodeId(null);
-                      }}
-                      sx={{ p: 0.25 }}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  
-                  <VerificationResultsDisplay
-                    testResults={verificationResults}
-                    verifications={nodes.find(n => n.id === lastVerifiedNodeId)?.data.verifications || []}
-                    passCondition={verificationPassCondition}
-                    onPassConditionChange={setVerificationPassCondition}
-                    showPassConditionSelector={true}
-                    compact={false}
-                  />
+            {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
+            {selectedDeviceData && hasAVCapabilities && isControlActive && (
+              <ScreenDefinitionEditor
+                selectedHostDevice={selectedDeviceData}
+                autoConnect={true}
+                deviceConnection={{
+                  flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
+                  nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
+                }}
+                onDisconnectComplete={() => {
+                  // Called when screen definition editor disconnects
+                  console.log('[@component:NavigationEditor] Screen definition editor disconnected');
+                }}
+              />
+            )}
+
+            {/* Verification Results Display - Show when there are verification results */}
+            {(() => {
+              const shouldShow = verificationResults.length > 0 && lastVerifiedNodeId;
+              console.log(`[@component:NavigationEditor] Verification display check: results.length=${verificationResults.length}, lastVerifiedNodeId=${lastVerifiedNodeId}, shouldShow=${shouldShow}`);
+              if (shouldShow) {
+                console.log(`[@component:NavigationEditor] Rendering verification results for node:`, nodes.find(n => n.id === lastVerifiedNodeId)?.data.label);
+              }
+              return shouldShow;
+            })() && (
+              <Box sx={{
+                position: 'absolute',
+                bottom: 16,
+                left: 16,
+                right: selectedNode || selectedEdge ? '220px' : '16px', // Account for selection panel
+                maxWidth: '800px',
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 2,
+                zIndex: 900,
+                maxHeight: '300px',
+                overflow: 'auto',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1 }}>
+                    Verification Results - Node: {nodes.find(n => n.id === lastVerifiedNodeId)?.data.label || lastVerifiedNodeId}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setVerificationResults([]);
+                      setLastVerifiedNodeId(null);
+                    }}
+                    sx={{ p: 0.25 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
                 </Box>
-              )}
+                
+                <VerificationResultsDisplay
+                  testResults={verificationResults}
+                  verifications={nodes.find(n => n.id === lastVerifiedNodeId)?.data.verifications || []}
+                  passCondition={verificationPassCondition}
+                  onPassConditionChange={setVerificationPassCondition}
+                  showPassConditionSelector={true}
+                  compact={false}
+                />
+              </Box>
+            )}
 
-              {/* Selection Info Panel */}
-              {(selectedNode || selectedEdge) ? (
-                <>
-                  {selectedNode && (
-                    <NodeSelectionPanel
-                      selectedNode={selectedNode}
-                      nodes={nodes}
-                      onClose={closeSelectionPanel}
-                      onEdit={() => {}}
-                      onDelete={deleteSelected}
-                      onAddChildren={() => {}}
-                      setNodeForm={setNodeForm}
-                      setIsNodeDialogOpen={setIsNodeDialogOpen}
-                      onReset={resetNode}
-                      isControlActive={isControlActive}
-                      selectedDevice={selectedDevice}
-                      onTakeScreenshot={handleTakeScreenshot}
-                      treeId={currentTreeId || ''}
-                      currentNodeId={focusNodeId || undefined}
-                      onVerification={handleVerification}
-                      isVerificationActive={isVerificationActive}
-                      verificationControllerStatus={verificationControllerStatus}
-                      onUpdateNode={handleUpdateNode}
-                    />
-                  )}
-                  
-                  {selectedEdge && (
-                    <EdgeSelectionPanel
-                      selectedEdge={selectedEdge}
-                      onClose={closeSelectionPanel}
-                      onEdit={() => {}}
-                      onDelete={deleteSelected}
-                      setEdgeForm={setEdgeForm}
-                      setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                      isControlActive={isControlActive}
-                      selectedDevice={selectedDevice}
-                      controllerTypes={userInterface?.models || []}
-                      onUpdateEdge={handleUpdateEdge}
-                    />
-                  )}
-                </>
-              ) : null}
-            </>
-          )}
+            {/* Selection Info Panel */}
+            {(selectedNode || selectedEdge) ? (
+              <>
+                {selectedNode && (
+                  <NodeSelectionPanel
+                    selectedNode={selectedNode}
+                    nodes={nodes}
+                    onClose={closeSelectionPanel}
+                    onEdit={() => {}}
+                    onDelete={deleteSelected}
+                    onAddChildren={() => {}}
+                    setNodeForm={setNodeForm}
+                    setIsNodeDialogOpen={setIsNodeDialogOpen}
+                    onReset={resetNode}
+                    isControlActive={isControlActive}
+                    selectedDevice={selectedDevice}
+                    onTakeScreenshot={handleTakeScreenshot}
+                    treeId={currentTreeId || ''}
+                    currentNodeId={focusNodeId || undefined}
+                    onVerification={handleVerification}
+                    isVerificationActive={isVerificationActive}
+                    verificationControllerStatus={verificationControllerStatus}
+                    onUpdateNode={handleUpdateNode}
+                  />
+                )}
+                
+                {selectedEdge && (
+                  <EdgeSelectionPanel
+                    selectedEdge={selectedEdge}
+                    onClose={closeSelectionPanel}
+                    onEdit={() => {}}
+                    onDelete={deleteSelected}
+                    setEdgeForm={setEdgeForm}
+                    setIsEdgeDialogOpen={setIsEdgeDialogOpen}
+                    isControlActive={isControlActive}
+                    selectedDevice={selectedDevice}
+                    controllerTypes={userInterface?.models || []}
+                    onUpdateEdge={handleUpdateEdge}
+                  />
+                )}
+              </>
+            ) : null}
+          </>
         </Box>
 
         {/* Remote Control Panel - Only show if device has remote capabilities */}
