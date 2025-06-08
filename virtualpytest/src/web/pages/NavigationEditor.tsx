@@ -374,12 +374,16 @@ const NavigationEditorContent: React.FC = () => {
 
   // Auto-open/close remote panel when control state changes
   useEffect(() => {
+    console.log(`[@component:NavigationEditor] Auto-open useEffect triggered: isControlActive=${isControlActive}, remoteConfig=${remoteConfig ? 'available' : 'null'}, isRemotePanelOpen=${isRemotePanelOpen}`);
+    
     if (isControlActive && remoteConfig && !isRemotePanelOpen) {
       console.log('[@component:NavigationEditor] Control activated, automatically opening remote panel');
       setIsRemotePanelOpen(true);
     } else if (!isControlActive && isRemotePanelOpen) {
       console.log('[@component:NavigationEditor] Control released, automatically closing remote panel');
       setIsRemotePanelOpen(false);
+    } else if (isControlActive && !remoteConfig) {
+      console.log('[@component:NavigationEditor] Control is active but remoteConfig is null - device data may not be refreshed yet');
     }
   }, [isControlActive, remoteConfig, isRemotePanelOpen]);
 
@@ -631,9 +635,14 @@ const NavigationEditorContent: React.FC = () => {
             // Set control to active
             setIsControlActive(true);
             
-            // Refresh device data to get updated controller_configs from factory
-            console.log('[@component:NavigationEditor] Refreshing device data after successful take control');
-            await fetchDevices();
+            // Check if we should open remote panel using the device data from response
+            if (data.device) {
+              const remoteConfig = getDeviceRemoteConfig(data.device);
+              if (remoteConfig && !isRemotePanelOpen) {
+                console.log('[@component:NavigationEditor] Opening remote panel with device data');
+                setIsRemotePanelOpen(true);
+              }
+            }
           } else {
             console.error('[@component:NavigationEditor] Take control failed:', data.error);
             console.error('[@component:NavigationEditor] Controller errors:', data.controller_errors);
@@ -647,10 +656,6 @@ const NavigationEditorContent: React.FC = () => {
                 image_controller_available: false,
                 text_controller_available: false,
               });
-              
-              // Refresh device data to get updated controller_configs from factory
-              console.log('[@component:NavigationEditor] Refreshing device data after partial control');
-              await fetchDevices();
             }
           }
         } else {
@@ -676,7 +681,7 @@ const NavigationEditorContent: React.FC = () => {
         text_controller_available: false,
       });
     }
-  }, [isControlActive, selectedDeviceData, hasAVCapabilities, buildApiUrl]);
+  }, [isControlActive, selectedDeviceData, hasAVCapabilities, buildApiUrl, isRemotePanelOpen]);
 
   // Memoize session state change handler to prevent recreating on every render
   const handleSessionStateChange = useCallback((session: {

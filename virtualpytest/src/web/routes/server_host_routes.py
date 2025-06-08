@@ -157,9 +157,77 @@ def server_take_control():
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
                 if host_data.get('success'):
+                    # Get complete device data from registry
+                    from web.routes.system_routes import get_connected_clients
+                    connected_clients = get_connected_clients()
+                    
+                    # Find the complete device info
+                    complete_device = None
+                    for registry_host_id, registry_host_info in connected_clients.items():
+                        if registry_host_id == host_id and registry_host_info.get('status') == 'online':
+                            # Extract device info from structured format
+                            device_info = registry_host_info.get('device', {})
+                            if device_info:
+                                # New structured format
+                                complete_device = {
+                                    # Device information
+                                    'device_id': device_info.get('device_id'),
+                                    'device_name': device_info.get('device_name'),
+                                    'device_model': device_info.get('device_model'),
+                                    'device_ip': device_info.get('device_ip'),
+                                    'device_port': device_info.get('device_port'),
+                                    'controller_configs': device_info.get('controller_configs', {}),
+                                    
+                                    # Host information
+                                    'host_id': host_id,
+                                    'host_name': host_name,
+                                    'host_ip': host_ip,
+                                    'host_port': host_port,
+                                    'host_connection': {
+                                        'flask_url': f"http://{host_ip}:{host_port}",
+                                        'nginx_url': f"https://{host_ip}:444"
+                                    },
+                                    'capabilities': registry_host_info.get('capabilities', []),
+                                    'status': 'online',
+                                    'last_seen': registry_host_info.get('last_seen'),
+                                    'registered_at': registry_host_info.get('registered_at'),
+                                    'system_stats': registry_host_info.get('system_stats', {})
+                                }
+                            else:
+                                # Backward compatibility format
+                                device_model = registry_host_info.get('device_model')
+                                complete_device = {
+                                    # Device information (backward compatibility)
+                                    'device_id': f"{host_id}_device_{device_model}",
+                                    'device_name': f"{device_model.replace('_', ' ').title()}",
+                                    'device_model': device_model,
+                                    'device_ip': host_ip,
+                                    'device_port': '5555',
+                                    'controller_configs': {},
+                                    
+                                    # Host information
+                                    'host_id': host_id,
+                                    'host_name': host_name,
+                                    'host_ip': host_ip,
+                                    'host_port': host_port,
+                                    'host_connection': {
+                                        'flask_url': f"http://{host_ip}:{host_port}",
+                                        'nginx_url': f"https://{host_ip}:444"
+                                    },
+                                    'capabilities': registry_host_info.get('capabilities', []),
+                                    'status': 'online',
+                                    'last_seen': registry_host_info.get('last_seen'),
+                                    'registered_at': registry_host_info.get('registered_at'),
+                                    'system_stats': registry_host_info.get('system_stats', {})
+                                }
+                            break
+                    
+                    print(f"[@route:server_take_control] Returning complete device data: {complete_device}")
+                    
                     return jsonify({
                         'success': True,
                         'message': 'Successfully took control of device',
+                        'device': complete_device,  # Return complete device data
                         'device_id': device_id,
                         'device_model': device_model,
                         'device_locked': True,
