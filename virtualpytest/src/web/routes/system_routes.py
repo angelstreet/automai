@@ -13,14 +13,39 @@ import tempfile
 import psutil
 from datetime import datetime
 from collections import deque
+import sys
 
-# Import the new controller config factory
-from utils.controllerConfigFactory import (
-    create_controller_configs_from_device_info,
-    get_device_capabilities_from_model,
-    get_controller_types_from_model
-)
-print("[@system_routes] Successfully imported controllerConfigFactory")
+# Add the web/utils directory to sys.path if not already there
+current_dir = os.path.dirname(os.path.abspath(__file__))
+web_dir = os.path.dirname(current_dir)
+utils_dir = os.path.join(web_dir, 'utils')
+
+if utils_dir not in sys.path:
+    sys.path.insert(0, utils_dir)
+
+try:
+    from utils.controllerConfigFactory import (
+        create_controller_configs_from_device_info,
+        get_device_capabilities_from_model,
+        get_controller_types_from_model
+    )
+    print("[@system_routes] Successfully imported controllerConfigFactory from utils")
+except ImportError:
+    try:
+        # Fallback: try direct import from current directory structure
+        from controllerConfigFactory import (
+            create_controller_configs_from_device_info,
+            get_device_capabilities_from_model,
+            get_controller_types_from_model
+        )
+        print("[@system_routes] Successfully imported controllerConfigFactory (fallback)")
+    except ImportError as e:
+        print(f"[@system_routes] CRITICAL: Failed to import controllerConfigFactory: {e}")
+        print(f"[@system_routes] Current working directory: {os.getcwd()}")
+        print(f"[@system_routes] Python path: {sys.path}")
+        print(f"[@system_routes] Utils directory: {utils_dir}")
+        print(f"[@system_routes] Utils directory exists: {os.path.exists(utils_dir)}")
+        raise ImportError(f"Cannot import controllerConfigFactory: {e}")
 
 system_bp = Blueprint('system', __name__)
 

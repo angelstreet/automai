@@ -13,6 +13,11 @@ web_dir = os.path.dirname(current_dir)
 src_dir = os.path.dirname(web_dir)
 parent_dir = os.path.dirname(src_dir)
 
+print(f"[@routes:__init__] Setting up import paths...")
+print(f"[@routes:__init__] Current dir: {current_dir}")
+print(f"[@routes:__init__] Web dir: {web_dir}")
+print(f"[@routes:__init__] Src dir: {src_dir}")
+
 # Add paths to sys.path
 paths_to_add = [
     os.path.join(web_dir, 'utils'),           # /src/web/utils
@@ -26,6 +31,11 @@ paths_to_add = [
 for path in paths_to_add:
     if path not in sys.path:
         sys.path.insert(0, path)
+        print(f"[@routes:__init__] Added to sys.path: {path}")
+    else:
+        print(f"[@routes:__init__] Already in sys.path: {path}")
+
+print(f"[@routes:__init__] Starting route imports...")
 
 from flask import Flask
 from flask_cors import CORS
@@ -64,7 +74,24 @@ from .navigation_config_routes import navigation_config_bp
 from .server_host_routes import server_host_bp
 
 from .power_routes import power_bp
-from .system_routes import system_bp
+
+# Import system routes with error handling
+try:
+    from .system_routes import system_bp
+    print(f"[@routes:__init__] Successfully imported system_routes")
+except ImportError as e:
+    print(f"[@routes:__init__] CRITICAL: Failed to import system_routes: {e}")
+    print(f"[@routes:__init__] Current working directory: {os.getcwd()}")
+    print(f"[@routes:__init__] Python path: {sys.path[:5]}...")  # Show first 5 paths
+    
+    # Check if utils directory exists
+    utils_path = os.path.join(web_dir, 'utils')
+    print(f"[@routes:__init__] Utils path exists: {os.path.exists(utils_path)}")
+    if os.path.exists(utils_path):
+        print(f"[@routes:__init__] Utils directory contents: {os.listdir(utils_path)}")
+    
+    # Re-raise the error
+    raise ImportError(f"Cannot import system_routes: {e}")
 
 def register_routes(app: Flask, mode='server'):
     """
