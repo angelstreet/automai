@@ -211,6 +211,27 @@ def register_client():
         print(f"   Device IP: {device_ip}")
         print(f"   Device Port: {device_port}")
         
+        # Generate complete controller_configs using factory (NO SSH NEEDED!)
+        controller_configs = create_controller_configs_from_device_info(
+            device_model=host_info['device_model'],
+            device_ip=device_ip,
+            device_port=device_port,
+            host_ip=host_info['host_ip'],
+            host_port=host_info['host_port']
+        )
+        
+        # Generate capabilities and controller types from device model
+        capabilities = get_device_capabilities_from_model(host_info['device_model'])
+        controller_types = get_controller_types_from_model(host_info['device_model'])
+        
+        print(f"[@route:register_client] Generated controller configs:")
+        print(f"   Remote: {controller_configs.get('remote', {}).get('implementation', 'none')}")
+        print(f"   AV: {controller_configs.get('av', {}).get('implementation', 'none')}")
+        print(f"   Verification: {controller_configs.get('verification', {}).get('implementation', 'none')}")
+        print(f"   Power: {controller_configs.get('power', {}).get('implementation', 'none')}")
+        print(f"   Capabilities: {capabilities}")
+        print(f"   Controller Types: {controller_types}")
+        
         # Create structured host registration with device information
         structured_host_info = {
             # Host information
@@ -222,18 +243,54 @@ def register_client():
             'internal_port': host_info.get('internal_port', host_info['host_port']),
             'https_port': host_info.get('https_port', '444'),
             'nginx_port': host_info.get('nginx_port', '444'),
-            'controller_types': host_info.get('controller_types', []),
-            'capabilities': host_info.get('capabilities', []),
+            'controller_types': controller_types,  # Use generated controller types
+            'capabilities': capabilities,  # Use generated capabilities
             'status': 'online',
             
-            # Device information (what this host controls)
+            # Store the COMPLETE device object directly (no partial data)
+            'complete_device': {
+                # Device information
+                'id': device_id,  # Keep 'id' for NavigationEditor compatibility
+                'device_id': device_id,
+                'name': device_name,  # Keep 'name' for NavigationEditor compatibility
+                'device_name': device_name,
+                'model': host_info['device_model'],  # Keep 'model' for NavigationEditor compatibility
+                'device_model': host_info['device_model'],
+                'device_ip': device_ip,
+                'device_port': device_port,
+                'controller_configs': controller_configs,  # Already built by factory
+                'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
+                
+                # Host reference information
+                'host_id': host_info['host_id'],
+                'host_name': host_info['host_name'],
+                'host_ip': host_info['host_ip'],
+                'host_port': host_info['host_port'],
+                'connection': {
+                    'flask_url': f"http://{host_info['host_ip']}:{host_info['host_port']}",
+                    'nginx_url': f"https://{host_info['host_ip']}:444"
+                },
+                'host_connection': {
+                    'flask_url': f"http://{host_info['host_ip']}:{host_info['host_port']}",
+                    'nginx_url': f"https://{host_info['host_ip']}:444"
+                },
+                
+                # Status and metadata
+                'status': 'online',
+                'last_seen': time.time(),
+                'registered_at': datetime.now().isoformat(),
+                'capabilities': capabilities,
+                'system_stats': host_info.get('system_stats', get_system_stats())
+            },
+            
+            # Keep minimal device info for backward compatibility
             'device': {
                 'device_id': device_id,
                 'device_name': device_name,
                 'device_model': host_info['device_model'],
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'controller_configs': host_info.get('controller_configs', {})
+                'controller_configs': controller_configs  # Use generated controller configs
             },
             
             # Timestamps
@@ -816,12 +873,6 @@ def start_health_check(client_id, client_ip, client_port):
                                     print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK")
                             except Exception as json_error:
                                 print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK (no stats)")
-                            
-                            app_instance._connected_clients = connected_clients
-                            consecutive_failures = 0
-                        else:
-                            consecutive_failures += 1
-                            print(f"⚠️ [HEALTH] Client {client_id[:8]}... health check failed: HTTP {response.status_code}")
                             
                     except Exception as e:
                         consecutive_failures += 1
