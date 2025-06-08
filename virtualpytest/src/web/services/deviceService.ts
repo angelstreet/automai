@@ -9,8 +9,11 @@ import { useRegistration } from '../contexts/RegistrationContext';
 
 export interface Device {
   id: string;
+  device_id?: string;
   name: string;
+  device_name?: string;
   model: string;
+  device_model?: string;
   description?: string;
   status: string;
   last_seen: number;
@@ -20,6 +23,12 @@ export interface Device {
     flask_url: string;
     nginx_url: string;
   };
+  host_id?: string;
+  host_name?: string;
+  host_ip?: string;
+  host_port?: string;
+  device_ip?: string;
+  device_port?: string;
 }
 
 export interface DeviceCreatePayload {

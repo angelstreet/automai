@@ -575,13 +575,22 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [selectedDevice, isControlActive, availableHosts, setSelectedHost]);
 
-  const handleTakeControl = async (device: Device) => {
-    if (!device?.id) {
-      console.error('[@component:NavigationEditor] No device ID provided for take control');
+  const handleTakeControl = useCallback(async () => {
+    // Use selectedDeviceData instead of expecting a parameter
+    const device = selectedDeviceData;
+    
+    // Check for device ID using multiple possible field names
+    const deviceId = device?.id || device?.device_id;
+    
+    if (!deviceId) {
+      console.error('[@component:NavigationEditor] No device selected or device ID missing');
+      console.error('[@component:NavigationEditor] selectedDeviceData:', selectedDeviceData);
+      console.error('[@component:NavigationEditor] selectedDevice:', selectedDevice);
+      console.error('[@component:NavigationEditor] Available device fields:', device ? Object.keys(device) : 'no device');
       return;
     }
 
-    console.log(`[@component:NavigationEditor] Taking control of device: ${device.id}`);
+    console.log(`[@component:NavigationEditor] Taking control of device: ${deviceId}`);
     setIsLoading(true);
     setError(null);
 
@@ -599,10 +608,6 @@ const NavigationEditorContent: React.FC = () => {
         setIsRemotePanelOpen(true);
       }
 
-      // Set the device data immediately from what we already have
-      setSelectedDeviceData(device);
-      console.log('[@component:NavigationEditor] Set selectedDeviceData from existing device object');
-
       // Still call the server for take control (for locking, stream setup, etc.)
       const response = await fetch('/api/virtualpytest/take-control', {
         method: 'POST',
@@ -610,7 +615,7 @@ const NavigationEditorContent: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          device_id: device.id,
+          device_id: deviceId,
           session_id: generateSessionId(),
         }),
       });
@@ -631,11 +636,10 @@ const NavigationEditorContent: React.FC = () => {
       console.error('[@component:NavigationEditor] Take control failed:', error);
       setError(error instanceof Error ? error.message : 'Failed to take control');
       setIsControlActive(false);
-      setSelectedDeviceData(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedDeviceData, selectedDevice, isRemotePanelOpen, generateSessionId, setIsLoading, setError, setIsControlActive, setIsRemotePanelOpen]);
 
   // Memoize session state change handler to prevent recreating on every render
   const handleSessionStateChange = useCallback((session: {

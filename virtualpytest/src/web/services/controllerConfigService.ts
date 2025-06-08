@@ -88,8 +88,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
   remote: [
     {
       id: 'android_tv',
-      name: 'Android TV (SSH+ADB)',
-      description: 'Real Android TV control via SSH+ADB connection',
+      name: 'Android TV (ADB)',
+      description: 'Android TV control with ADB',
       implementation: 'android_tv',
       status: 'available',
       inputFields: [
@@ -111,9 +111,9 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
       ]
     },
     {
-      id: 'real_android_mobile',
-      name: 'Android Mobile (SSH+ADB)',
-      description: 'Real Android Mobile control via SSH+ADB connection',
+      id: 'android_mobile',
+      name: 'Android Mobile (ADB)',
+      description: 'Android Mobile control with ADB',
       implementation: 'real_android_mobile',
       status: 'available',
       inputFields: [
