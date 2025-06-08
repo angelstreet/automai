@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useValidationStore } from '../components/store/validationStore';
 import { UINavigationEdge } from '../types/navigationTypes';
 import {
@@ -46,11 +46,19 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     results
   } = useValidationStore();
 
+  // Track if stale validation check has been performed to avoid repeated calls
+  const staleCheckPerformedRef = useRef(false);
+  // Track nodes that have already been logged to avoid spam
+  const loggedNodesRef = useRef(new Set<string>());
+
   // Get validation status for a specific node
   const getNodeValidationStatus = useCallback((nodeId: string): ValidationStatus => {
     // During validation, show testing status for current node
     if (isValidating && currentTestingNode === nodeId) {
-      console.log(`[@hook:useValidationColors] Node ${nodeId} is currently being tested - showing 'testing' status`);
+      if (!loggedNodesRef.current.has(`${nodeId}-testing`)) {
+        console.log(`[@hook:useValidationColors] Node ${nodeId} is currently being tested - showing 'testing' status`);
+        loggedNodesRef.current.add(`${nodeId}-testing`);
+      }
       return 'testing';
     }
 
@@ -58,12 +66,19 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     const status = nodeValidationStatus.get(nodeId);
     if (status) {
       const context = isValidating ? 'during active validation' : 'from persisted results';
-      console.log(`[@hook:useValidationColors] Node ${nodeId} has existing status: ${status.status} (${context})`);
+      if (!loggedNodesRef.current.has(`${nodeId}-${status.status}`)) {
+        console.log(`[@hook:useValidationColors] Node ${nodeId} has existing status: ${status.status} (${context})`);
+        loggedNodesRef.current.add(`${nodeId}-${status.status}`);
+      }
       return status.status;
     }
     
     // If no validation results exist, default to 'untested' (grey)
-    console.log(`[@hook:useValidationColors] Node ${nodeId} has no validation status - defaulting to 'untested'`);
+    // Only log this once per node to avoid spam
+    if (!loggedNodesRef.current.has(`${nodeId}-untested`)) {
+      console.log(`[@hook:useValidationColors] Node ${nodeId} has no validation status - defaulting to 'untested'`);
+      loggedNodesRef.current.add(`${nodeId}-untested`);
+    }
     return 'untested';
   }, [nodeValidationStatus, currentTestingNode, isValidating]);
 
@@ -433,6 +448,8 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
     // Use the store's reset function for consistency
     const store = useValidationStore.getState();
     store.resetValidationColors();
+    // Clear logged nodes to allow fresh logging for new validation
+    loggedNodesRef.current.clear();
   }, []);
 
   // Memoized values for performance
@@ -444,9 +461,22 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
   }), [isValidating, currentTestingNode, currentTestingEdge, results]);
 
   // Effect to automatically detect and clear stale validation results when the hook is first used
+  // Only run once per hook instance to avoid unnecessary re-renders
   useEffect(() => {
-    clearStaleValidationResults();
-  }, [clearStaleValidationResults]);
+    if (!staleCheckPerformedRef.current) {
+      console.log('[@hook:useValidationColors] Performing initial stale validation check');
+      clearStaleValidationResults();
+      staleCheckPerformedRef.current = true;
+    }
+  }, []); // Empty dependency array - only run once on mount
+
+  // Effect to clear logged nodes when validation state changes significantly
+  useEffect(() => {
+    if (isValidating) {
+      console.log('[@hook:useValidationColors] Validation started - clearing logged nodes for fresh logging');
+      loggedNodesRef.current.clear();
+    }
+  }, [isValidating]);
 
   return {
     // Color getters

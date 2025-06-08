@@ -16,7 +16,7 @@ from collections import deque
 
 # Import the new controller config factory
 try:
-    from utils.controllerConfigFactory import (
+    from controllerConfigFactory import (
         create_controller_configs_from_device_info,
         get_device_capabilities_from_model,
         get_controller_types_from_model
@@ -24,30 +24,14 @@ try:
     print("[@system_routes] Successfully imported controllerConfigFactory")
 except ImportError as e:
     print(f"[@system_routes] Failed to import controllerConfigFactory: {e}")
-    # Try alternative import path
-    try:
-        import sys
-        import os
-        # Add the web directory to Python path
-        web_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if web_dir not in sys.path:
-            sys.path.insert(0, web_dir)
-        from utils.controllerConfigFactory import (
-            create_controller_configs_from_device_info,
-            get_device_capabilities_from_model,
-            get_controller_types_from_model
-        )
-        print("[@system_routes] Successfully imported controllerConfigFactory with alternative path")
-    except ImportError as e2:
-        print(f"[@system_routes] Alternative import also failed: {e2}")
-        # Define dummy functions to prevent crashes
-        def create_controller_configs_from_device_info(*args, **kwargs):
-            return {}
-        def get_device_capabilities_from_model(*args, **kwargs):
-            return []
-        def get_controller_types_from_model(*args, **kwargs):
-            return []
-        print("[@system_routes] Using dummy functions for controllerConfigFactory")
+    # Define dummy functions to prevent crashes
+    def create_controller_configs_from_device_info(*args, **kwargs):
+        return {}
+    def get_device_capabilities_from_model(*args, **kwargs):
+        return []
+    def get_controller_types_from_model(*args, **kwargs):
+        return []
+    print("[@system_routes] Using dummy functions for controllerConfigFactory")
 
 system_bp = Blueprint('system', __name__)
 
@@ -850,12 +834,6 @@ def start_health_check(client_id, client_ip, client_port):
                                     print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK")
                             except Exception as json_error:
                                 print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK (no stats)")
-                            
-                            app_instance._connected_clients = connected_clients
-                            consecutive_failures = 0
-                        else:
-                            consecutive_failures += 1
-                            print(f"⚠️ [HEALTH] Client {client_id[:8]}... health check failed: HTTP {response.status_code}")
                             
                     except Exception as e:
                         consecutive_failures += 1

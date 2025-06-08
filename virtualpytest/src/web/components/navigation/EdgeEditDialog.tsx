@@ -101,13 +101,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    console.log(`[@component:EdgeEditDialog] Dialog opened: ${isOpen}, controllerTypes:`, controllerTypes);
-    if (isOpen && controllerTypes.length > 0) {
-      console.log(`[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`);
-      fetchControllerActions(controllerTypes[0]);
-    } else if (isOpen && controllerTypes.length === 0) {
-      console.log('[@component:EdgeEditDialog] No controller types provided');
-      setActionsError('No controller types available');
+    // Only log when dialog is actually opened, not when closed
+    if (isOpen) {
+      console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
+      if (controllerTypes.length > 0) {
+        console.log(`[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`);
+        fetchControllerActions(controllerTypes[0]);
+      } else {
+        console.log('[@component:EdgeEditDialog] No controller types provided');
+        setActionsError('No controller types available');
+      }
     }
   }, [isOpen, controllerTypes]);
 
