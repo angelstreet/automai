@@ -4,11 +4,14 @@ Navigation API Routes
 This module contains the API endpoints for:
 - Navigation trees management
 - Navigation nodes and edges management
+- Navigation execution on devices
 """
 
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 import uuid
+import requests
+import time
 
 from navigation_utils import (
     get_all_navigation_trees, get_navigation_tree, create_navigation_tree, 
@@ -17,7 +20,7 @@ from navigation_utils import (
     save_navigation_nodes_and_edges, get_root_tree_for_interface
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
-from .utils import check_supabase, get_team_id
+from .utils import check_supabase, get_team_id, get_host_device
 
 # Create blueprint
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/api/navigation')
@@ -491,4 +494,162 @@ def get_userinterface_with_root(interface_id):
         }), 200
     except Exception as e:
         print(f"[@api:navigation_routes:get_userinterface_with_root] ERROR: Failed to fetch userinterface: {str(e)}")
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+# =====================================================
+# NAVIGATION EXECUTION ENDPOINTS (HOST)
+# =====================================================
+
+@navigation_bp.route('/execute/<tree_id>/<node_id>', methods=['POST'])
+def execute_navigation_host(tree_id, node_id):
+    """Execute navigation to a specific node on host device"""
+    try:
+        data = request.get_json() or {}
+        current_node_id = data.get('current_node_id')
+        execute_flag = data.get('execute', True)
+        
+        print(f"[@route:execute_navigation_host] Executing navigation on host")
+        print(f"[@route:execute_navigation_host] Tree: {tree_id}, Target: {node_id}")
+        print(f"[@route:execute_navigation_host] Current: {current_node_id}, Execute: {execute_flag}")
+        
+        # Import navigation pathfinding
+        from navigation_pathfinding import find_shortest_path
+        from navigation_cache import get_cached_graph
+        
+        # Get the navigation graph
+        team_id = get_team_id()
+        graph = get_cached_graph(tree_id, team_id)
+        
+        if not graph:
+            return jsonify({
+                'success': False,
+                'error': f'Navigation tree not found: {tree_id}'
+            }), 404
+        
+        # Find path from current to target node
+        path_result = find_shortest_path(tree_id, current_node_id, node_id, team_id)
+        
+        if not path_result.get('success', False):
+            return jsonify({
+                'success': False,
+                'error': path_result.get('error', 'Failed to find navigation path')
+            }), 400
+        
+        transitions = path_result.get('transitions', [])
+        
+        if not execute_flag:
+            # Return path without executing
+            return jsonify({
+                'success': True,
+                'transitions': transitions,
+                'total_transitions': len(transitions),
+                'execution_time': 0,
+                'actions_executed': 0,
+                'total_actions': sum(len(t.get('actions', [])) for t in transitions)
+            })
+        
+        # Execute the navigation path
+        executed_transitions = 0
+        total_actions = 0
+        executed_actions = 0
+        transitions_details = []
+        start_time = time.time()
+        
+        for i, transition in enumerate(transitions):
+            transition_start = time.time()
+            actions = transition.get('actions', [])
+            total_actions += len(actions)
+            
+            print(f"[@route:execute_navigation_host] Executing transition {i+1}/{len(transitions)}: {transition.get('from_node_label', 'Unknown')} -> {transition.get('to_node_label', 'Unknown')}")
+            
+            # Execute each action in the transition
+            transition_success = True
+            transition_error = None
+            
+            for action in actions:
+                try:
+                    # Import and use remote controller
+                    from controllers import get_controller_for_device
+                    
+                    # Get device info from host registry
+                    host_device = get_host_device()
+                    if not host_device:
+                        raise Exception("No host device found")
+                    
+                    # Get remote controller
+                    remote_controller = get_controller_for_device(host_device, 'remote')
+                    if not remote_controller:
+                        raise Exception("Remote controller not available")
+                    
+                    # Execute the action
+                    action_result = remote_controller.execute_action(action)
+                    
+                    if action_result.get('success', False):
+                        executed_actions += 1
+                        print(f"[@route:execute_navigation_host] Action executed: {action.get('command', 'unknown')}")
+                    else:
+                        transition_success = False
+                        transition_error = action_result.get('error', 'Action failed')
+                        print(f"[@route:execute_navigation_host] Action failed: {transition_error}")
+                        break
+                        
+                except Exception as e:
+                    transition_success = False
+                    transition_error = f"Action execution error: {str(e)}"
+                    print(f"[@route:execute_navigation_host] Action execution error: {e}")
+                    break
+            
+            transition_time = time.time() - transition_start
+            
+            # Record transition details
+            transition_detail = {
+                'from_node_id': transition.get('from_node_id'),
+                'to_node_id': transition.get('to_node_id'),
+                'from_node_label': transition.get('from_node_label'),
+                'to_node_label': transition.get('to_node_label'),
+                'actions': actions,
+                'success': transition_success,
+                'error': transition_error,
+                'execution_time': transition_time
+            }
+            transitions_details.append(transition_detail)
+            
+            if transition_success:
+                executed_transitions += 1
+            else:
+                # Stop execution on first failure
+                print(f"[@route:execute_navigation_host] Stopping execution due to transition failure")
+                break
+        
+        execution_time = time.time() - start_time
+        overall_success = executed_transitions == len(transitions)
+        
+        result = {
+            'success': overall_success,
+            'transitions_executed': executed_transitions,
+            'total_transitions': len(transitions),
+            'execution_time': execution_time,
+            'actions_executed': executed_actions,
+            'total_actions': total_actions,
+            'transitions_details': transitions_details
+        }
+        
+        if not overall_success:
+            result['error'] = f"Navigation failed at transition {executed_transitions + 1}"
+        
+        print(f"[@route:execute_navigation_host] Navigation completed: {executed_transitions}/{len(transitions)} transitions, {executed_actions}/{total_actions} actions")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[@route:execute_navigation_host] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'transitions_executed': 0,
+            'total_transitions': 0,
+            'execution_time': 0,
+            'actions_executed': 0,
+            'total_actions': 0,
+            'transitions_details': []
+        }), 500 

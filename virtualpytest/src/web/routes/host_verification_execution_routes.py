@@ -13,9 +13,9 @@ import json
 from datetime import datetime
 
 # Import execution functions from separated modules
-from .verification_image_host_routes import execute_image_verification_host
-from .verification_text_host_routes import execute_text_verification_host
-from .verification_adb_host_routes import execute_adb_verification_host
+from .host_verification_image_routes import execute_image_verification_host
+from .host_verification_text_routes import execute_text_verification_host
+from .host_verification_adb_routes import execute_adb_verification_host
 
 # Create blueprint
 verification_execution_host_bp = Blueprint('verification_execution_host', __name__)

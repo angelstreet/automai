@@ -310,7 +310,7 @@ def verification_status():
 # VERIFICATION CONTROLLER MANAGEMENT
 # =====================================================
 
-# REMOVED: take-control and release-control endpoints moved to verification_control_server_routes.py
+# REMOVED: take-control and release-control endpoints moved to server_verification_control_routes.py
 # These endpoints should only be available on the server, not shared between server and host
 
 # The following endpoints have been moved to server-specific routes:

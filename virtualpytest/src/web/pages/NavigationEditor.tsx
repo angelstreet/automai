@@ -609,14 +609,14 @@ const NavigationEditorContent: React.FC = () => {
       }
 
       // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch('/api/virtualpytest/take-control', {
+      const response = await fetch(buildApiUrl('/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           device_id: deviceId,
-          session_id: generateSessionId(),
+          session_id: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         }),
       });
 

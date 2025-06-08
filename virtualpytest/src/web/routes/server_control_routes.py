@@ -1,15 +1,15 @@
 """
-Server Host Routes
+Server Control Routes
 
-This module contains the unified take-control endpoints that:
-- Handle device locking on server side
-- Coordinate with hosts for controller status checking
-- Provide single API endpoint for take control operations
+This module contains server-side control endpoints that:
+- Handle device locking and unlocking on server side
+- Coordinate with hosts for device control operations
+- Forward requests to appropriate hosts
+- Manage device registry and host discovery
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 import requests
-import time
 
 from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
 from deviceLockManager import (
@@ -21,15 +21,15 @@ from deviceLockManager import (
 )
 
 # Create blueprint
-server_host_bp = Blueprint('server_host', __name__)
+server_control_bp = Blueprint('server_control', __name__)
 
 # =====================================================
-# UNIFIED TAKE CONTROL ENDPOINTS
+# SERVER-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@server_host_bp.route('/api/virtualpytest/take-control', methods=['POST'])
+@server_control_bp.route('/take-control', methods=['POST'])
 def server_take_control():
-    """Simplified take control endpoint - lock device and forward request to host"""
+    """Server-side take control endpoint - lock device and forward request to host"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id')
@@ -107,7 +107,7 @@ def server_take_control():
         try:
             import requests
             
-            host_url = f"https://{host_ip}:{host_port}/take-control"
+            host_url = f"https://{host_ip}:{host_port}/host/take-control"
             host_payload = {
                 'device_id': device_id,
                 'session_id': session_id
@@ -177,9 +177,9 @@ def server_take_control():
         }), 500
 
 
-@server_host_bp.route('/api/virtualpytest/release-control', methods=['POST'])
+@server_control_bp.route('/release-control', methods=['POST'])
 def server_release_control():
-    """Unified release control endpoint - handles unlocking + host controller release"""
+    """Server-side release control endpoint - handles unlocking + host controller release"""
     try:
         data = request.get_json() or {}
         device_model = data.get('device_model')
@@ -205,7 +205,7 @@ def server_release_control():
                 print(f"[@route:server_release_control] Calling host release control")
                 
                 host_response = make_host_request(
-                    '/release-control',
+                    '/host/release-control',
                     method='POST',
                     use_https=True,
                     json={
@@ -251,141 +251,77 @@ def server_release_control():
         }), 500
 
 
-@server_host_bp.route('/take-control', methods=['POST'])
-def take_control():
-    """Host-side take control - Use own stored host_device object"""
+@server_control_bp.route('/navigate', methods=['POST'])
+def server_navigate():
+    """Server route to execute navigation on host device"""
     try:
         data = request.get_json() or {}
-        device_model = data.get('device_model', 'android_mobile')
-        device_ip = data.get('device_ip')
-        device_port = data.get('device_port', 5555)
-        session_id = data.get('session_id', 'default-session')
+        device_id = data.get('device_id')
+        tree_id = data.get('tree_id')
+        target_node_id = data.get('target_node_id')
+        current_node_id = data.get('current_node_id')
+        execute_flag = data.get('execute', True)
         
-        print(f"[@route:take_control] Checking controllers status using own stored host_device")
-        print(f"[@route:take_control] Device model: {device_model}")
-        print(f"[@route:take_control] Device IP: {device_ip}")
-        print(f"[@route:take_control] Device port: {device_port}")
-        print(f"[@route:take_control] Session ID: {session_id}")
+        print(f"[@route:server_navigate] Navigation request for device: {device_id}")
+        print(f"[@route:server_navigate] Tree: {tree_id}, Target: {target_node_id}")
         
-        # ✅ GET OWN STORED HOST_DEVICE OBJECT (set during registration)
-        host_device = getattr(current_app, 'my_host_device', None)
-        
-        if not host_device:
+        if not device_id or not tree_id or not target_node_id:
             return jsonify({
                 'success': False,
-                'status': 'host_device_not_initialized',
-                'error': 'Host device object not initialized. Host may need to re-register.',
-                'device_model': device_model,
-                'session_id': session_id
-            })
+                'error': 'Missing required fields: device_id, tree_id, target_node_id'
+            }), 400
         
-        print(f"[@route:take_control] Using own stored host_device: {host_device.get('host_name')} with device: {host_device.get('device_name')}")
+        # Find host that controls this device
+        connected_clients = get_connected_clients()
+        host_info = None
         
-        # Step 1: Check AV controller from own host_device
-        try:
-            av_controller = host_device.get('controller_objects', {}).get('av')
-            
-            if not av_controller:
-                return jsonify({
-                    'success': False,
-                    'status': 'av_controller_not_found',
-                    'error': 'No AV controller object found in own host_device',
-                    'device_model': device_model,
-                    'session_id': session_id,
-                    'available_controllers': list(host_device.get('controller_objects', {}).keys())
-                })
-            
-            print(f"[@route:take_control] Using own AV controller: {type(av_controller).__name__}")
-            
-            av_status = av_controller.get_status()
-            print(f"[@route:take_control] AV controller status: {av_status}")
-            
-            if not av_status.get('is_streaming', False):
-                return jsonify({
-                    'success': False,
-                    'status': 'stream_not_ready',
-                    'error': av_status.get('message', 'Stream service is not active'),
-                    'device_model': device_model,
-                    'session_id': session_id,
-                    'av_status': av_status,
-                    'remote_status': 'not_checked'
-                })
-                
-        except Exception as e:
-            print(f"[@route:take_control] AV controller error: {e}")
+        for host_id, host_data in connected_clients.items():
+            if host_data.get('status') == 'online' and host_data.get('device_id') == device_id:
+                host_info = host_data
+                break
+        
+        if not host_info:
             return jsonify({
                 'success': False,
-                'status': 'av_controller_error',
-                'error': f'Failed to check AV controller: {str(e)}',
-                'device_model': device_model,
-                'session_id': session_id
-            })
+                'error': f'No online host found for device: {device_id}'
+            }), 404
         
-        # Step 2: Check Remote controller from own host_device for Android devices
-        remote_status = {'adb_status': 'not_applicable'}
+        # Forward request to host
+        host_ip = host_info.get('host_ip')
+        host_port = host_info.get('host_port')
         
-        if device_ip and device_model in ['android_mobile', 'android_tv']:
-            try:
-                remote_controller = host_device.get('controller_objects', {}).get('remote')
-                
-                if not remote_controller:
-                    return jsonify({
-                        'success': False,
-                        'status': 'remote_controller_not_found',
-                        'error': 'No remote controller object found in own host_device',
-                        'device_model': device_model,
-                        'session_id': session_id,
-                        'av_status': av_status,
-                        'available_controllers': list(host_device.get('controller_objects', {}).keys())
-                    })
-                
-                print(f"[@route:take_control] Using own remote controller: {type(remote_controller).__name__}")
-                
-                remote_status = remote_controller.get_status()
-                print(f"[@route:take_control] Remote controller status: {remote_status}")
-                
-                if not remote_status.get('adb_connected', False):
-                    return jsonify({
-                        'success': False,
-                        'status': 'device_not_ready',
-                        'error': remote_status.get('message', f'Device {device_ip}:{device_port} not connected via ADB'),
-                        'device_model': device_model,
-                        'session_id': session_id,
-                        'av_status': av_status,
-                        'remote_status': remote_status
-                    })
-                    
-            except Exception as e:
-                print(f"[@route:take_control] Remote controller error: {e}")
-                return jsonify({
-                    'success': False,
-                    'status': 'remote_controller_error',
-                    'error': f'Failed to check remote controller: {str(e)}',
-                    'device_model': device_model,
-                    'session_id': session_id,
-                    'av_status': av_status
-                })
+        if not host_ip or not host_port:
+            return jsonify({
+                'success': False,
+                'error': 'Host connection information not available'
+            }), 500
         
-        # Both controllers are ready
-        print(f"[@route:take_control] All controllers ready for own device: {host_device.get('device_name')}")
-        return jsonify({
-            'success': True,
-            'status': 'ready',
-            'message': f'All controllers ready for {device_model}',
-            'device_model': device_model,
-            'session_id': session_id,
-            'av_status': av_status,
-            'remote_status': remote_status,
-            'host_device': {
-                'host_name': host_device.get('host_name'),
-                'device_name': host_device.get('device_name'),
-                'device_model': host_device.get('device_model')
-            }
-        })
+        host_url = f"http://{host_ip}:{host_port}/api/navigation/execute/{tree_id}/{target_node_id}"
+        
+        payload = {
+            'current_node_id': current_node_id,
+            'execute': execute_flag
+        }
+        
+        print(f"[@route:server_navigate] Forwarding to host: {host_url}")
+        
+        response = requests.post(host_url, json=payload, timeout=60)
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[@route:server_navigate] Host navigation completed: {result.get('success', False)}")
+            return jsonify(result)
+        else:
+            error_msg = f"Host navigation failed: HTTP {response.status_code}"
+            print(f"[@route:server_navigate] {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), response.status_code
             
     except Exception as e:
-        print(f"[@route:take_control] Error checking controllers: {str(e)}")
+        print(f"[@route:server_navigate] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to check controllers: {str(e)}'
+            'error': str(e)
         }), 500 

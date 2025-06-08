@@ -40,47 +40,48 @@ print(f"[@routes:__init__] Starting route imports...")
 from flask import Flask
 from flask_cors import CORS
 
-from .core_routes import core_bp
-from .device_routes import device_bp
-from .controller_routes import controller_bp
-from .remote_routes import remote_bp
-from .audiovideo_routes import audiovideo_bp
-from .stats_routes import stats_bp
-from .navigation_routes import navigation_bp
-from .campaign_routes import campaign_bp
-from .testcase_routes import testcase_bp
-from .userinterface_routes import userinterface_bp
-from .devicemodel_routes import devicemodel_bp
-from .screen_definition_routes import screen_definition_blueprint
-from .pathfinding_routes import pathfinding_bp
-from .validation_routes import validation_bp
+# Common routes (used by both server and host)
+from .common_core_routes import core_bp
+from .common_device_routes import device_bp
+from .common_controller_routes import controller_bp
+from .common_audiovideo_routes import audiovideo_bp
+from .common_stats_routes import stats_bp
+from .common_userinterface_routes import userinterface_bp
+from .common_devicemodel_routes import devicemodel_bp
+
+# Server-only routes
+from .server_remote_routes import remote_bp
+from .server_navigation_routes import navigation_bp
+from .server_campaign_routes import campaign_bp
+from .server_testcase_routes import testcase_bp
+from .server_screen_definition_routes import screen_definition_blueprint
+from .server_pathfinding_routes import pathfinding_bp
+from .server_validation_routes import validation_bp
+from .server_navigation_config_routes import navigation_config_bp
+from .server_power_routes import power_bp
 
 # Import separated verification blueprints
-from .verification_common_routes import verification_common_bp
-from .verification_control_server_routes import verification_control_server_bp
-from .verification_image_host_routes import verification_image_host_bp
-from .verification_text_host_routes import verification_text_host_bp
-from .verification_adb_host_routes import verification_adb_host_bp
-from .verification_image_server_routes import verification_image_server_bp
-from .verification_text_server_routes import verification_text_server_bp
-from .verification_adb_server_routes import verification_adb_server_bp
-from .verification_execution_host_routes import verification_execution_host_bp
-from .verification_execution_server_routes import verification_execution_server_bp
+from .server_verification_common_routes import verification_common_bp
+from .server_verification_control_routes import verification_control_server_bp
+from .host_verification_image_routes import verification_image_host_bp
+from .host_verification_text_routes import verification_text_host_bp
+from .host_verification_adb_routes import verification_adb_host_bp
+from .server_verification_image_routes import verification_image_server_bp
+from .server_verification_text_routes import verification_text_server_bp
+from .server_verification_adb_routes import verification_adb_server_bp
+from .host_verification_execution_routes import verification_execution_host_bp
+from .server_verification_execution_routes import verification_execution_server_bp
 
-# Import navigation config routes
-from .navigation_config_routes import navigation_config_bp
-
-# Import unified server-host routes
-from .server_host_routes import server_host_bp
-
-from .power_routes import power_bp
+# Import separated control routes (replacing server_host_routes)
+from .server_control_routes import server_control_bp
+from .host_control_routes import host_control_bp
 
 # Import system routes with error handling
 try:
-    from .system_routes import system_bp
-    print(f"[@routes:__init__] Successfully imported system_routes")
+    from .server_system_routes import system_bp
+    print(f"[@routes:__init__] Successfully imported server_system_routes")
 except ImportError as e:
-    print(f"[@routes:__init__] CRITICAL: Failed to import system_routes: {e}")
+    print(f"[@routes:__init__] CRITICAL: Failed to import server_system_routes: {e}")
     print(f"[@routes:__init__] Current working directory: {os.getcwd()}")
     print(f"[@routes:__init__] Python path: {sys.path[:5]}...")  # Show first 5 paths
     
@@ -91,7 +92,7 @@ except ImportError as e:
         print(f"[@routes:__init__] Utils directory contents: {os.listdir(utils_path)}")
     
     # Re-raise the error
-    raise ImportError(f"Cannot import system_routes: {e}")
+    raise ImportError(f"Cannot import server_system_routes: {e}")
 
 def register_routes(app: Flask, mode='server'):
     """
@@ -124,8 +125,8 @@ def register_routes(app: Flask, mode='server'):
         # System management (server manages host registrations)
         app.register_blueprint(system_bp)
         
-        # Unified server-host communication routes
-        app.register_blueprint(server_host_bp)
+        # Server-side control routes (device locking, host coordination)
+        app.register_blueprint(server_control_bp)
         
         # Server-side verification endpoints (proxy to hosts)
         app.register_blueprint(verification_common_bp)
@@ -161,8 +162,8 @@ def register_routes(app: Flask, mode='server'):
         app.register_blueprint(verification_adb_host_bp)
         app.register_blueprint(verification_execution_host_bp)
         
-        # Unified server-host communication routes (needed for /take-control endpoint)
-        app.register_blueprint(server_host_bp)
+        # Host-side control routes (controller management, device control)
+        app.register_blueprint(host_control_bp)
         
         # Host-side AV functionality (needed for /release-control endpoint)
         app.register_blueprint(audiovideo_bp)
