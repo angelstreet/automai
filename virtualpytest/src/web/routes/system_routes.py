@@ -338,6 +338,12 @@ def register_client():
             # Continue with configs only if controller instantiation fails
             controller_objects = {}
         
+        # Use actual controller names directly - no mapping needed
+        capabilities = list(controller_objects.keys())
+        
+        print(f"[@route:register_client] Actual instantiated controllers:")
+        print(f"   Controllers: {list(controller_objects.keys())}")
+        
         # Create a single, clean host+device object with no redundancy
         host_device_object = {
             # === HOST INFORMATION ===
@@ -361,8 +367,7 @@ def register_client():
             # === CONTROLLER INFORMATION ===
             'controller_configs': controller_configs,  # Complete configs from factory (JSON serializable)
             'controller_objects': controller_objects,  # Actual instantiated controller objects (for internal use)
-            'controller_types': controller_types,      # Factory-built controller types
-            'capabilities': capabilities,              # Factory-built capabilities
+            'capabilities': capabilities,              # Actual controller names that exist
             
             # === CONNECTION INFORMATION ===
             'connection': {

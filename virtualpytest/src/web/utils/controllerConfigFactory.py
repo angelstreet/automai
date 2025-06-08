@@ -113,23 +113,26 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
 
 def get_device_capabilities_from_model(device_model):
     """
-    Get device capabilities based on device model.
+    Get device capabilities based on device model by checking actual controller configs.
     
     Args:
         device_model: Device model string
         
     Returns:
-        list: List of capability strings
+        list: List of actual controller names that exist
     """
     
-    base_capabilities = ['stream', 'capture']
+    # Get the actual controller configs for this device model
+    controller_configs = create_controller_configs_from_device_info(
+        device_model=device_model,
+        device_ip='0.0.0.0',  # Placeholder for capability detection
+        device_port='0000',   # Placeholder for capability detection
+        host_ip='0.0.0.0',    # Placeholder for capability detection
+        host_port='0000'      # Placeholder for capability detection
+    )
     
-    if device_model in ['android_mobile', 'android_tv', 'real_android_mobile']:
-        return base_capabilities + ['remote_control', 'adb_verification', 'power_control']
-    elif device_model in ['ir_remote', 'bluetooth_remote']:
-        return base_capabilities + ['remote_control', 'power_control']
-    else:
-        return base_capabilities
+    # Return the actual controller names that exist
+    return list(controller_configs.keys())
 
 
 def get_controller_types_from_model(device_model):
