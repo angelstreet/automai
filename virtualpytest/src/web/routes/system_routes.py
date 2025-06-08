@@ -230,6 +230,25 @@ def register_client():
         print(f"   Device IP: {device_ip}")
         print(f"   Device Port: {device_port}")
         
+        # Build complete controller configs using factory
+        print(f"[@route:register_client] Building controller configs using factory...")
+        controller_configs = create_controller_configs_from_device_info(
+            device_model=host_info['device_model'],
+            device_ip=device_ip,
+            device_port=device_port,
+            host_ip=host_info['host_ip'],
+            host_port=host_info['host_port']
+        )
+        
+        # Get capabilities and controller types from factory
+        capabilities = get_device_capabilities_from_model(host_info['device_model'])
+        controller_types = get_controller_types_from_model(host_info['device_model'])
+        
+        print(f"[@route:register_client] Factory built:")
+        print(f"   Controller configs: {list(controller_configs.keys()) if controller_configs else 'None'}")
+        print(f"   Capabilities: {capabilities}")
+        print(f"   Controller types: {controller_types}")
+        
         # Create structured host registration with device information
         structured_host_info = {
             # Host information
@@ -241,8 +260,8 @@ def register_client():
             'internal_port': host_info.get('internal_port', host_info['host_port']),
             'https_port': host_info.get('https_port', '444'),
             'nginx_port': host_info.get('nginx_port', '444'),
-            'controller_types': host_info.get('controller_types', []),
-            'capabilities': host_info.get('capabilities', []),
+            'controller_types': controller_types,  # Use factory-built controller types
+            'capabilities': capabilities,  # Use factory-built capabilities
             'status': 'online',
             
             # Device information (what this host controls)
@@ -252,7 +271,7 @@ def register_client():
                 'device_model': host_info['device_model'],
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'controller_configs': host_info.get('controller_configs', {})
+                'controller_configs': controller_configs  # Use factory-built controller configs
             },
             
             # Timestamps
