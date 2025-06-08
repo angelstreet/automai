@@ -74,7 +74,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
   const handleControllerClick = (category: string, controller: ControllerType) => {
     if (category === 'remote' && controller.id === 'android_tv') {
       setAndroidTVModalOpen(true);
-    } else if (category === 'remote' && controller.id === 'real_android_mobile') {
+    } else if (category === 'remote' && controller.id === 'android_mobile') {
       setAndroidMobileModalOpen(true);
     } else if (category === 'remote' && controller.id === 'ir_remote') {
       setIrRemoteModalOpen(true);

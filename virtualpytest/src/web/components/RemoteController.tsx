@@ -164,7 +164,7 @@ export function getDeviceType(device: { name: string; model: string; controller_
   // Check controller configs first
   if (device.controller_configs?.remote) {
     const remoteType = device.controller_configs.remote.type;
-    if (remoteType === 'android_mobile' || remoteType === 'real_android_mobile') {
+    if (remoteType === 'android_mobile' || remoteType === 'android_mobile') {
       return 'android_mobile';
     }
     if (remoteType === 'android_tv') {

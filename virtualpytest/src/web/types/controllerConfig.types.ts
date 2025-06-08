@@ -2,7 +2,7 @@ export type ControllerType = 'remote' | 'av' | 'verification' | 'network' | 'pow
 
 export type RemoteControllerImplementation = 
   | 'android_tv' 
-  | 'real_android_mobile' 
+  | 'android_mobile' 
   | 'ir_remote' 
   | 'bluetooth_remote';
 

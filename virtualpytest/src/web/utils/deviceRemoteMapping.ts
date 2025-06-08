@@ -10,35 +10,24 @@ export const getDeviceRemoteConfig = (device: any): DeviceRemoteConfig | null =>
     return null;
   }
   
-  // Map implementation names to types
-  let type: DeviceRemoteConfig['type'];
+  // Validate that the implementation is a supported type
+  const supportedTypes: DeviceRemoteConfig['type'][] = [
+    'android_mobile', 
+    'android_tv', 
+    'ir_remote', 
+    'bluetooth_remote', 
+    'hdmi_stream'
+  ];
   
-  switch (remoteConfig.implementation) {
-    case 'android_tv':
-      type = 'android_tv';
-      break;
-    case 'real_android_mobile':
-    case 'android_mobile':
-      type = 'android_mobile';
-      break;
-    case 'ir_remote':
-      type = 'ir_remote';
-      break;
-    case 'bluetooth_remote':
-      type = 'bluetooth_remote';
-      break;
-    case 'hdmi_stream':
-      type = 'hdmi_stream';
-      break;
-    default:
-      console.warn(`[@util:deviceRemoteMapping] Unknown remote implementation: ${remoteConfig.implementation}`);
-      return null;
+  if (!supportedTypes.includes(remoteConfig.implementation)) {
+    console.warn(`[@util:deviceRemoteMapping] Unknown remote implementation: ${remoteConfig.implementation}`);
+    return null;
   }
   
-  console.log(`[@util:deviceRemoteMapping] Device ${device.name} has remote type: ${type} (implementation: ${remoteConfig.implementation})`);
+  console.log(`[@util:deviceRemoteMapping] Device ${device.name} has remote type: ${remoteConfig.implementation}`);
   
   return {
-    type: type,
+    type: remoteConfig.implementation,
     connectionConfig: remoteConfig // Pass through the entire config as-is
   };
 };

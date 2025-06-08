@@ -45,7 +45,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
     {
       id: 'android_tv',
       name: 'Android TV (ADB)',
-      description: 'Android TV control with ADB via Flask host',
+      description: 'Android TV control with ADB',
       implementation: 'android_tv',
       status: 'available',
       inputFields: [
@@ -68,8 +68,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
     {
       id: 'android_mobile',
       name: 'Android Mobile (ADB)',
-      description: 'Android Mobile control with ADB via Flask host',
-      implementation: 'real_android_mobile',
+      description: 'Android Mobile control with ADB',
+      implementation: 'android_mobile',
       status: 'available',
       inputFields: [
         ...createDeviceIPFields(),

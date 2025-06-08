@@ -7,7 +7,7 @@ Each controller provides different methods for verifying device states and conte
 Available Controllers:
 - TextVerificationController: OCR-based text verification using Tesseract
 - ImageVerificationController: Template matching-based image verification using OpenCV
-- ADBVerificationController: Direct ADB element verification using SSH+ADB commands
+- ADBVerificationController: Direct ADB element verification using ADBcommands
 - VideoVerificationController: Motion detection and video content verification
 - AudioVerificationController: Audio level and sound verification
 """

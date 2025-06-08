@@ -57,8 +57,8 @@ def get_controller_types():
         # Add metadata for each controller type
         controller_metadata = {
             'remote': {
-                'android_tv': {'name': 'Android TV Remote', 'description': 'SSH+ADB Android TV controller', 'status': 'available'},
-                'real_android_mobile': {'name': 'Android Mobile Remote', 'description': 'SSH+ADB Android Mobile controller', 'status': 'available'},
+                'android_tv': {'name': 'Android TV Remote', 'description': 'ADB Android TV controller', 'status': 'available'},
+                'android_mobile': {'name': 'Android Mobile Remote', 'description': 'ADB Android Mobile controller', 'status': 'available'},
                 'ir_remote': {'name': 'IR Remote', 'description': 'Infrared remote controller', 'status': 'available'},
                 'bluetooth_remote': {'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote controller', 'status': 'available'},
             },

@@ -38,7 +38,7 @@ from .verification.adb import ADBVerificationController
 CONTROLLER_REGISTRY = {
     'remote': {
         'android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
-        'real_android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
+        'android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
     },
@@ -48,7 +48,7 @@ CONTROLLER_REGISTRY = {
     'verification': {
         'ocr': TextVerificationController,   # OCR-based text verification using Tesseract
         'image': ImageVerificationController, # Template matching-based image verification using OpenCV
-        'adb': ADBVerificationController,    # Direct ADB element verification using SSH+ADB commands
+        'adb': ADBVerificationController,    # Direct ADB element verification using ADBcommands
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {
@@ -297,13 +297,13 @@ def create_device_controllers(
     # Default controller mappings for different device types
     device_defaults = {
         'android_tv': {
-            'remote_type': 'android_tv',  # SSH+ADB Android TV controller
+            'remote_type': 'android_tv',  # ADBAndroid TV controller
             'av_type': 'adb',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl
         },
         'android_mobile': {
-            'remote_type': 'real_android_mobile',  # SSH+ADB Android mobile controller
+            'remote_type': 'android_mobile',  # ADBAndroid mobile controller
             'av_type': 'adb',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl

@@ -24,10 +24,10 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     controller_configs = {}
     
     # Configure remote controller based on device model
-    if device_model in ['android_mobile', 'real_android_mobile']:
+    if device_model in ['android_mobile', 'android_mobile']:
         controller_configs['remote'] = {
             'type': 'android_mobile',
-            'implementation': 'real_android_mobile',
+            'implementation': 'android_mobile',
             'parameters': {
                 'device_ip': device_ip,
                 'device_port': device_port,
@@ -80,7 +80,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     }
     
     # Configure verification controller
-    if device_model in ['android_mobile', 'android_tv', 'real_android_mobile']:
+    if device_model in ['android_mobile', 'android_tv', 'android_mobile']:
         # Android devices can use ADB verification
         controller_configs['verification'] = {
             'implementation': 'adb',
