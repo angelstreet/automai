@@ -215,6 +215,106 @@ def register_host_with_server():
                 # ✅ DIRECTLY STORE THE HOST_DEVICE OBJECT FROM SERVER RESPONSE
                 host_device_object = registration_response.get('host_device')
                 if host_device_object:
+                    # ✅ INSTANTIATE CONTROLLERS LOCALLY using controller_configs from server
+                    controller_configs = host_device_object.get('controller_configs', {})
+                    if controller_configs:
+                        print(f"✅ [HOST] Instantiating controllers locally using configs from server:")
+                        print(f"   Available configs: {list(controller_configs.keys())}")
+                        
+                        try:
+                            # Import controller factory
+                            import sys
+                            import os
+                            
+                            # Add controllers path
+                            current_dir = os.path.dirname(os.path.abspath(__file__))
+                            controllers_path = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'controllers')
+                            if controllers_path not in sys.path:
+                                sys.path.insert(0, controllers_path)
+                            
+                            from controllers import ControllerFactory
+                            
+                            controller_objects = {}
+                            
+                            # Instantiate AV controller
+                            if 'av' in controller_configs:
+                                av_config = controller_configs['av']
+                                av_params = av_config['parameters']
+                                
+                                print(f"   Creating AV controller: {av_config['implementation']}")
+                                av_controller = ControllerFactory.create_av_controller(
+                                    capture_type=av_config['implementation'],
+                                    device_name=host_device_object.get('device_name'),
+                                    video_device='/dev/video0',
+                                    output_path='/var/www/html/stream/',
+                                    host_ip=av_params.get('host_ip'),
+                                    host_port=av_params.get('host_port'),
+                                    host_connection=host_device_object.get('connection', {})
+                                )
+                                controller_objects['av'] = av_controller
+                                print(f"   ✅ AV controller created successfully")
+                            
+                            # Instantiate Remote controller
+                            if 'remote' in controller_configs:
+                                remote_config = controller_configs['remote']
+                                remote_params = remote_config['parameters']
+                                
+                                print(f"   Creating Remote controller: {remote_config['implementation']}")
+                                remote_controller = ControllerFactory.create_remote_controller(
+                                    device_type=remote_config['implementation'],
+                                    device_name=host_device_object.get('device_name'),
+                                    device_ip=remote_params.get('device_ip'),
+                                    device_port=remote_params.get('device_port'),
+                                    adb_port=remote_params.get('device_port')
+                                )
+                                controller_objects['remote'] = remote_controller
+                                print(f"   ✅ Remote controller created successfully")
+                            
+                            # Instantiate Verification controller
+                            if 'verification' in controller_configs:
+                                verification_config = controller_configs['verification']
+                                verification_params = verification_config['parameters']
+                                
+                                print(f"   Creating Verification controller: {verification_config['implementation']}")
+                                verification_controller = ControllerFactory.create_verification_controller(
+                                    verification_type=verification_config['implementation'],
+                                    device_name=host_device_object.get('device_name'),
+                                    av_controller=controller_objects.get('av'),
+                                    device_ip=verification_params.get('device_ip'),
+                                    device_port=verification_params.get('device_port')
+                                )
+                                controller_objects['verification'] = verification_controller
+                                print(f"   ✅ Verification controller created successfully")
+                            
+                            # Instantiate Power controller
+                            if 'power' in controller_configs:
+                                power_config = controller_configs['power']
+                                power_params = power_config['parameters']
+                                
+                                print(f"   Creating Power controller: {power_config['implementation']}")
+                                power_controller = ControllerFactory.create_power_controller(
+                                    power_type=power_config['implementation'],
+                                    device_name=host_device_object.get('device_name'),
+                                    hub_location=power_params.get('hub_location'),
+                                    port_number=power_params.get('port_number')
+                                )
+                                controller_objects['power'] = power_controller
+                                print(f"   ✅ Power controller created successfully")
+                            
+                            # Add the instantiated controllers to the host_device object
+                            host_device_object['controller_objects'] = controller_objects
+                            print(f"   ✅ All controllers instantiated locally: {list(controller_objects.keys())}")
+                            
+                        except Exception as controller_error:
+                            print(f"   ⚠️ Error instantiating controllers locally: {controller_error}")
+                            import traceback
+                            traceback.print_exc()
+                            # Continue without controllers - host will still be registered
+                            host_device_object['controller_objects'] = {}
+                    else:
+                        print(f"   ⚠️ No controller_configs received from server")
+                        host_device_object['controller_objects'] = {}
+                    
                     # Store in Flask app context (we'll need to get the app instance)
                     try:
                         from flask import current_app

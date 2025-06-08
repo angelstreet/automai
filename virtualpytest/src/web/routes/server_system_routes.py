@@ -14,6 +14,7 @@ import psutil
 from datetime import datetime
 from collections import deque
 import sys
+import json
 
 # Add the web/utils directory to sys.path if not already there
 # Use absolute path calculation to be robust regardless of current working directory
@@ -341,9 +342,15 @@ def register_client():
             print(f"[@route:register_client] All controller objects instantiated: {list(controller_objects.keys())}")
             
         except Exception as e:
-            print(f"[@route:register_client] Warning: Failed to instantiate some controllers: {e}")
-            # Continue with configs only if controller instantiation fails
-            controller_objects = {}
+            error_msg = f"Failed to instantiate controllers: {str(e)}"
+            print(f"❌ [SERVER] Registration failed: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'status': 'error',
+                'error': error_msg,
+                'details': 'Controller instantiation failed during host registration'
+            }), 500
         
         # Use actual controller names directly - no mapping needed
         capabilities = list(controller_objects.keys())
@@ -385,15 +392,6 @@ def register_client():
             'last_seen': time.time(),
             'system_stats': host_info.get('system_stats', get_system_stats())
         }
-        
-        # Store controller objects separately in the app context (not in JSON response)
-        # This allows us to access them later without serialization issues
-        if controller_objects:
-            # Store controller objects in a separate registry that won't be serialized
-            if not hasattr(current_app, '_controller_registry'):
-                current_app._controller_registry = {}
-            current_app._controller_registry[host_info['host_id']] = controller_objects
-            print(f"[@route:register_client] Stored {len(controller_objects)} controller objects in registry")
         
         # Store host info
         connected_clients = get_connected_clients()
@@ -451,7 +449,7 @@ def register_client():
             print(f"   Host ID: {host_device_object['host_id'][:8]}...")
             print(f"   Device ID: {host_device_object['device_id']}")
         
-        # Create a JSON-safe version for the response (exclude controller_objects)
+        # Send a JSON-safe version to the host (exclude controller_objects since host will instantiate its own)
         json_safe_host_device = {k: v for k, v in host_device_object.items() if k != 'controller_objects'}
         
         return jsonify({
@@ -1125,16 +1123,4 @@ def get_system_stats():
             'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
             'timestamp': time.time(),
             'error': str(e)
-        }
-
-def get_controller_objects(host_id):
-    """Get controller objects for a specific host"""
-    if not hasattr(current_app, '_controller_registry'):
-        return {}
-    return current_app._controller_registry.get(host_id, {})
-
-def set_controller_objects(host_id, controller_objects):
-    """Set controller objects for a specific host"""
-    if not hasattr(current_app, '_controller_registry'):
-        current_app._controller_registry = {}
-    current_app._controller_registry[host_id] = controller_objects 
+        } 
