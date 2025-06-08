@@ -7,7 +7,7 @@ This module contains the API endpoints for:
 - Navigation execution on devices
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import uuid
 import requests
@@ -20,7 +20,7 @@ from navigation_utils import (
     save_navigation_nodes_and_edges, get_root_tree_for_interface
 )
 from userinterface_utils import get_all_userinterfaces, get_userinterface
-from .utils import check_supabase, get_team_id, get_host_device
+from .utils import check_supabase, get_team_id
 
 # Create blueprint
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/api/navigation')
@@ -572,7 +572,7 @@ def execute_navigation_host(tree_id, node_id):
                     from controllers import get_controller_for_device
                     
                     # Get device info from host registry
-                    host_device = get_host_device()
+                    host_device = getattr(current_app, 'my_host_device', None)
                     if not host_device:
                         raise Exception("No host device found")
                     
