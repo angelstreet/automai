@@ -300,8 +300,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         return false;
       }
       
-      // Call server to lock the device
-      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/lock-device'), {
+      // Call main server control endpoint to take control (which includes locking)
+      const response = await fetch(buildServerUrl('/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -313,7 +313,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to lock device: ${response.statusText}`);
+        throw new Error(`Failed to take control of device: ${response.statusText}`);
       }
       
       const result = await response.json();
@@ -331,25 +331,25 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
             : h
         ));
         
-        console.log(`[@context:Registration] Successfully locked device: ${hostId}`);
+        console.log(`[@context:Registration] Successfully took control of device: ${hostId}`);
         return true;
       } else {
-        console.error(`[@context:Registration] Server failed to lock device: ${result.error}`);
+        console.error(`[@context:Registration] Server failed to take control of device: ${result.error}`);
         return false;
       }
       
     } catch (error: any) {
-      console.error(`[@context:Registration] Error locking device ${hostId}:`, error);
+      console.error(`[@context:Registration] Error taking control of device ${hostId}:`, error);
       return false;
     }
   }, [availableHosts, buildServerUrl]);
 
   const unlockDevice = useCallback(async (hostId: string): Promise<boolean> => {
     try {
-      console.log(`[@context:Registration] Attempting to unlock device: ${hostId}`);
+      console.log(`[@context:Registration] Attempting to release control of device: ${hostId}`);
       
-      // Call server to unlock the device
-      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/unlock-device'), {
+      // Call main server control endpoint to release control (which includes unlocking)
+      const response = await fetch(buildServerUrl('/release-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -360,7 +360,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to unlock device: ${response.statusText}`);
+        throw new Error(`Failed to release control of device: ${response.statusText}`);
       }
       
       const result = await response.json();
@@ -378,15 +378,15 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
             : h
         ));
         
-        console.log(`[@context:Registration] Successfully unlocked device: ${hostId}`);
+        console.log(`[@context:Registration] Successfully released control of device: ${hostId}`);
         return true;
       } else {
-        console.error(`[@context:Registration] Server failed to unlock device: ${result.error}`);
+        console.error(`[@context:Registration] Server failed to release control of device: ${result.error}`);
         return false;
       }
       
     } catch (error: any) {
-      console.error(`[@context:Registration] Error unlocking device ${hostId}:`, error);
+      console.error(`[@context:Registration] Error releasing control of device ${hostId}:`, error);
       return false;
     }
   }, [buildServerUrl]);

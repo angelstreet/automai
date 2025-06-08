@@ -120,10 +120,11 @@
       }
     },
     "initialization_flow": [
-      "1. Initialize verification controllers via /api/virtualpytest/verification/take-control",
+      "1. Initialize device control via /take-control (main server control endpoint)",
       "2. Get controller status via /api/virtualpytest/verification/status", 
       "3. Pass status to NodeSelectionPanel",
-      "4. Handle verification execution and results"
+      "4. Handle verification execution and results",
+      "Note: Device locking is now handled by main server control, not verification routes"
     ]
   }
 } 
