@@ -276,6 +276,23 @@ const NavigationEditorContent: React.FC = () => {
   // Device state
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Add a setter for selectedDeviceData (derived from devices and selectedDevice)
+  const setSelectedDeviceData = useCallback((device: Device | null) => {
+    if (device) {
+      // Find and select the device by name
+      setSelectedDevice(device.name);
+    } else {
+      setSelectedDevice(null);
+    }
+  }, []);
+
+  // Generate session ID function
+  const generateSessionId = useCallback(() => {
+    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
 
   // Memoize computed values to prevent re-renders
   const selectedDeviceData = useMemo(() => {
@@ -399,8 +416,6 @@ const NavigationEditorContent: React.FC = () => {
     isEdgeDialogOpen,
     nodeForm,
     edgeForm,
-    isLoading,
-    error,
     success,
     reactFlowWrapper,
     reactFlowInstance,
