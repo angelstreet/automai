@@ -1,26 +1,24 @@
 """
 HDMI Stream Controller Implementation
 
-This controller handles HDMI stream acquisition using FFmpeg and provides video streaming functionality.
-It uses systemd services for production streaming and direct FFmpeg for verification operations.
-Verification functionality is handled by separate verification controllers.
+This controller handles HDMI stream acquisition by referencing continuously captured screenshots.
+The host continuously takes screenshots, and this controller references them by timestamp.
+No FFmpeg usage - all video capture is done by referencing timestamped screenshot URLs.
 """
 
-import subprocess
 import threading
 import time
 import os
-import signal
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from ..base_controllers import AVControllerInterface
 
 
 class HDMIStreamController(AVControllerInterface):
-    """HDMI Stream controller that handles FFmpeg-based acquisition and streaming via systemd services."""
+    """HDMI Stream controller that references continuously captured screenshots by timestamp."""
     
     def __init__(self, device_name: str = "HDMI Stream Device", **kwargs):
         """
@@ -29,55 +27,34 @@ class HDMIStreamController(AVControllerInterface):
         Args:
             device_name: Name of the device for logging
             **kwargs: Required parameters:
-                - video_device: Video input device (e.g., '/dev/video0')
-                - output_path: Output directory for stream files (e.g., '/var/www/html/stream/')
-                - stream_resolution: Resolution for streaming (default: '640x360')
-                - stream_fps: FPS for streaming (default: 12)
-                - stream_bitrate: Bitrate for streaming (default: '400k')
-                - service_name: systemd service name (default: 'hdmi-stream')
+                - host_connection: Host connection info with nginx_url (from host device object)
+                - service_name: systemd service name for stream (default: 'hdmi-stream')
         """
         super().__init__(device_name, "HDMI")
         
-        # Required parameters
-        self.video_device = kwargs.get('video_device')
-        self.output_path = kwargs.get('output_path')
+        # Host connection information (from host device object)
+        self.host_connection = kwargs.get('host_connection', {})
+        self.nginx_url = self.host_connection.get('nginx_url', 'https://localhost:444')
         
-        if not self.video_device or not self.output_path:
-            raise ValueError("video_device and output_path are required parameters")
-        
-        # Stream parameters
-        self.stream_resolution = kwargs.get('stream_resolution', '640x360')
-        self.stream_fps = kwargs.get('stream_fps', 12)
-        self.stream_bitrate = kwargs.get('stream_bitrate', '400k')
-        
-        # Service configuration
+        # Service configuration (for stream status checking)
         self.service_name = kwargs.get('service_name', 'hdmi-stream')
-        self.service_file_path = f"/etc/systemd/system/{self.service_name}.service"
         
-        # Direct FFmpeg processes (for verification operations only)
-        self.capture_process = None
+        # Video capture state (timestamp-based, no FFmpeg)
         self.is_capturing_video = False
+        self.capture_start_time = None
+        self.capture_duration = 0
+        self.capture_session_id = None
         
-        # Rolling buffer settings
-        self.rolling_buffer_duration = 60  # seconds
-        self.rolling_buffer_timeout = 600  # 1 hour instead of 3 minutes - remove auto-stop restriction
-        self.rolling_buffer_thread = None
-        self.rolling_buffer_active = False
-        
-        # Paths
-        self.output_path = Path(self.output_path)
-        self.stream_file = self.output_path / "output.m3u8"
-        self.captures_path = self.output_path / "captures"
+        print(f"HDMI[{self.capture_source}]: Initialized with nginx_url: {self.nginx_url}")
         
         
     def connect(self) -> bool:
         """Connect to the HDMI acquisition device."""
         try:
-            print(f"HDMI[{self.capture_source}]: Connecting to video device: {self.video_device}")
+            print(f"HDMI[{self.capture_source}]: Connecting to HDMI stream service")
             self.is_connected = True
             print(f"HDMI[{self.capture_source}]: Connected successfully")
-            print(f"HDMI[{self.capture_source}]: Video device: {self.video_device}")
-            print(f"HDMI[{self.capture_source}]: Output path: {self.output_path}")
+            print(f"HDMI[{self.capture_source}]: nginx_url: {self.nginx_url}")
             print(f"HDMI[{self.capture_source}]: Service name: {self.service_name}")
             return True
         except Exception as e:
@@ -98,6 +75,7 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Restarting streaming service: {self.service_name}")
             
             # Restart systemd service
+            import subprocess
             result = subprocess.run(['sudo', 'systemctl', 'restart', self.service_name], 
                                   capture_output=True, text=True, timeout=30)
             
@@ -121,56 +99,46 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Error restarting stream: {e}")
             return False
         
+    def _get_service_status(self) -> Dict[str, str]:
+        """Get systemd service status."""
+        try:
+            import subprocess
+            result = subprocess.run(['sudo', 'systemctl', 'show', self.service_name, '--no-page'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            status = {}
+            for line in result.stdout.split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    status[key.lower()] = value
+            
+            return status
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error getting service status: {e}")
+            return {}
         
     def get_stream_status(self) -> Dict[str, Any]:
         """Get current streaming service status."""
         service_status = self._get_service_status()
         
-        # Check if stream file exists and get info
-        stream_info = {}
-        if self.stream_file.exists():
-            stat = self.stream_file.stat()
-            stream_info = {
-                'stream_file_exists': True,
-                'stream_file_path': str(self.stream_file),
-                'file_size': stat.st_size,
-                'last_modified': stat.st_mtime,
-                'last_modified_ago': time.time() - stat.st_mtime
-            }
-        else:
-            stream_info = {
-                'stream_file_exists': False,
-                'stream_file_path': str(self.stream_file)
-            }
+        # Check if stream service is running
+        is_streaming = service_status.get('activestate') == 'active' and service_status.get('substate') == 'running'
         
-        # Combine service status with stream info
         status = {
-            'is_streaming': service_status.get('active') == 'active' and service_status.get('sub') == 'running',
-            'session_id': self.capture_session_id if hasattr(self, 'capture_session_id') else None,
+            'is_streaming': is_streaming,
+            'session_id': self.capture_session_id,
             'service_status': service_status,
-            'stream_info': stream_info
+            'nginx_url': self.nginx_url
         }
         
         return status
         
-        
-    def capture_frame(self, filename: str = None) -> bool:
-        """
-        Capture a single video frame (alias for take_screenshot).
-        
-        Args:
-            filename: Optional filename for the frame
-            
-        Returns:
-            True if frame was captured successfully, False otherwise
-        """
-        result = self.take_screenshot(filename)
-        return result is not None
+   
         
     def take_screenshot(self, filename: str = None) -> str:
         """
         Take screenshot using timestamp logic from ScreenDefinitionEditor.
-        Just moved the exact same logic here.
+        Uses nginx_url from host connection to reference continuously captured screenshots.
         """
         if not self.is_connected:
             print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
@@ -196,13 +164,13 @@ class HDMIStreamController(AVControllerInterface):
         
         print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
         
-        # Get host IP from controller config
-        host_ip = getattr(self, 'host_ip', 'localhost')
-        host_url = f"https://{host_ip}:444/stream/captures/capture_{timestamp}.jpg"
+        # Use nginx_url from host connection to reference continuously captured screenshot
+        host_url = f"{self.nginx_url}/stream/captures/capture_{timestamp}.jpg"
         
-        print(f'[@controller:HDMIStream] Built host screenshot URL: {host_url}')
+        print(f'[@controller:HDMIStream] Built screenshot URL using host connection: {host_url}')
+        print(f'[@controller:HDMIStream] nginx_url from host connection: {self.nginx_url}')
         
-        # EXACT COPY: Add 600ms delay before returning URL
+        # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
         print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
         time.sleep(0.6)
         
@@ -233,32 +201,17 @@ class HDMIStreamController(AVControllerInterface):
             stream_status = self.get_stream_status()
             is_streaming = stream_status.get('is_streaming', False)
             
-            # If not streaming, try to start it
-            if not is_streaming:
-                print(f"HDMI[{self.capture_source}]: Stream not active, attempting to start")
-                if self.start_stream():
-                    # Re-check status after starting
-                    stream_status = self.get_stream_status()
-                    is_streaming = stream_status.get('is_streaming', False)
-            
-            if is_streaming:
-                return {
-                    'success': True,
-                    'status': 'stream_ready',
-                    'controller_type': 'av',
-                    'device_name': self.device_name,
-                    'stream_info': stream_status,
-                    'capabilities': ['video_capture', 'screenshot', 'streaming']
-                }
-            else:
-                return {
-                    'success': False,
-                    'status': 'stream_failed',
-                    'error': 'Failed to start HDMI stream',
-                    'controller_type': 'av',
-                    'device_name': self.device_name,
-                    'stream_info': stream_status
-                }
+            # For HDMI stream, we just need the service to be running
+            # The host continuously captures screenshots regardless
+            return {
+                'success': True,
+                'status': 'stream_ready',
+                'controller_type': 'av',
+                'device_name': self.device_name,
+                'stream_info': stream_status,
+                'capabilities': ['video_capture', 'screenshot', 'streaming'],
+                'nginx_url': self.nginx_url
+            }
                 
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Take control error: {e}")
@@ -273,13 +226,14 @@ class HDMIStreamController(AVControllerInterface):
     def start_video_capture(self, duration: float = 60.0, filename: str = None, 
                            resolution: str = None, fps: int = None) -> bool:
         """
-        Start video capture with rolling buffer.
+        Start video capture by recording start time and duration.
+        No FFmpeg usage - just tracks timing for timestamp-based screenshot references.
         
         Args:
-            duration: Duration in seconds (default: 60s, max timeout: 180s)
-            filename: Optional filename for the video
-            resolution: Video resolution (default: same as stream)
-            fps: Video FPS (default: same as stream)
+            duration: Duration in seconds (default: 60s)
+            filename: Optional filename (ignored - uses timestamps)
+            resolution: Video resolution (ignored - uses host stream resolution)
+            fps: Video FPS (ignored - uses 1 frame per second from screenshots)
         """
         if not self.is_connected:
             print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
@@ -289,56 +243,26 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Video capture already active")
             return True
             
-        # Limit duration and apply timeout
-        duration = min(duration, self.rolling_buffer_duration)
-        timeout = self.rolling_buffer_timeout  # Remove the 180 second limit
-        
-        timestamp = int(time.time())
-        video_name = filename or f"capture_{timestamp}.mp4"
-        video_path = self.captures_path / video_name
-        
-        # Use provided resolution/fps or defaults
-        capture_resolution = resolution or self.stream_resolution
-        capture_fps = fps or self.stream_fps
-        
         try:
-            # FFmpeg command for video capture
-            cmd = [
-                '/usr/bin/ffmpeg',
-                '-f', 'v4l2',
-                '-s', capture_resolution,
-                '-r', str(capture_fps),
-                '-i', self.video_device,
-                '-c:v', 'libx264',
-                '-preset', 'fast',
-                '-t', str(duration),  # Duration limit
-                '-y',  # Overwrite output file
-                str(video_path)
-            ]
-            
-            print(f"HDMI[{self.capture_source}]: Starting video capture")
-            print(f"HDMI[{self.capture_source}]: Duration: {duration}s (timeout: {timeout}s)")
-            print(f"HDMI[{self.capture_source}]: Resolution: {capture_resolution}@{capture_fps}fps")
-            print(f"HDMI[{self.capture_source}]: Output: {video_path}")
-            
-            # Start capture process
-            self.capture_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            
+            # Record capture session details
+            self.capture_start_time = datetime.now()
+            self.capture_duration = duration
+            self.capture_session_id = f"capture_{int(time.time())}"
             self.is_capturing_video = True
-            self.rolling_buffer_active = True
             
-            # Start monitoring thread with timeout
-            self.rolling_buffer_thread = threading.Thread(
-                target=self._monitor_video_capture,
-                args=(video_path, timeout),
+            print(f"HDMI[{self.capture_source}]: Starting video capture session")
+            print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
+            print(f"HDMI[{self.capture_source}]: Start time: {self.capture_start_time}")
+            print(f"HDMI[{self.capture_source}]: Duration: {duration}s")
+            print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {self.nginx_url}/stream/captures/")
+            
+            # Start monitoring thread to automatically stop after duration
+            monitoring_thread = threading.Thread(
+                target=self._monitor_capture_duration,
+                args=(duration,),
                 daemon=True
             )
-            self.rolling_buffer_thread.start()
+            monitoring_thread.start()
             
             return True
             
@@ -347,68 +271,46 @@ class HDMIStreamController(AVControllerInterface):
             return False
         
     def stop_video_capture(self) -> bool:
-        """Stop video capture."""
-        if not self.is_capturing_video or not self.capture_process:
+        """Stop video capture session."""
+        if not self.is_capturing_video:
             print(f"HDMI[{self.capture_source}]: No active video capture to stop")
             return False
             
         try:
-            print(f"HDMI[{self.capture_source}]: Stopping video capture")
+            print(f"HDMI[{self.capture_source}]: Stopping video capture session")
+            print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
             
-            # Send SIGTERM to FFmpeg
-            self.capture_process.terminate()
+            # Calculate actual capture duration
+            if self.capture_start_time:
+                actual_duration = (datetime.now() - self.capture_start_time).total_seconds()
+                print(f"HDMI[{self.capture_source}]: Actual capture duration: {actual_duration:.1f}s")
             
-            # Wait for graceful shutdown
-            try:
-                self.capture_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                # Force kill if needed
-                print(f"HDMI[{self.capture_source}]: Force killing capture process")
-                self.capture_process.kill()
-                self.capture_process.wait()
-                
-            self.capture_process = None
             self.is_capturing_video = False
-            self.rolling_buffer_active = False
+            self.capture_session_id = None
             
-            print(f"HDMI[{self.capture_source}]: Video capture stopped")
+            print(f"HDMI[{self.capture_source}]: Video capture session stopped")
             return True
             
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Error stopping video capture: {e}")
             return False
         
-    def _monitor_video_capture(self, video_path: Path, timeout: float):
-        """Monitor video capture process and handle timeout."""
-        start_time = time.time()
+    def _monitor_capture_duration(self, duration: float):
+        """Monitor capture duration and automatically stop after specified time."""
+        time.sleep(duration)
         
-        while self.rolling_buffer_active and self.capture_process:
-            # Check if process is still running
-            if self.capture_process.poll() is not None:
-                # Process finished
-                stdout, stderr = self.capture_process.communicate()
-                if video_path.exists():
-                    print(f"HDMI[{self.capture_source}]: Video capture completed: {video_path}")
-                else:
-                    print(f"HDMI[{self.capture_source}]: Video capture failed: {stderr}")
-                break
-                
-            # Check timeout
-            if time.time() - start_time > timeout:
-                print(f"HDMI[{self.capture_source}]: Video capture timeout ({timeout}s), stopping")
-                self.stop_video_capture()
-                break
-                
-            time.sleep(1)
+        if self.is_capturing_video:
+            print(f"HDMI[{self.capture_source}]: Capture duration ({duration}s) reached, stopping automatically")
+            self.stop_video_capture()
             
-        self.is_capturing_video = False
-        
+
     def get_status(self) -> Dict[str, Any]:
         """Get controller status - check if stream service is running."""
         try:
-            # Check if stream.service is running
+            # Check if stream service is running
+            import subprocess
             result = subprocess.run(
-                ['sudo', 'systemctl', 'status', 'stream.service'], 
+                ['sudo', 'systemctl', 'status', self.service_name], 
                 capture_output=True, 
                 text=True
             )
@@ -422,6 +324,9 @@ class HDMIStreamController(AVControllerInterface):
                 'device_name': self.device_name,
                 'service_status': 'active' if is_stream_active else 'inactive',
                 'is_streaming': is_stream_active,
+                'is_capturing': self.is_capturing_video,
+                'capture_session_id': self.capture_session_id,
+                'nginx_url': self.nginx_url,
                 'message': 'Stream service is active' if is_stream_active else 'Stream service is not running'
             }
             
@@ -432,6 +337,8 @@ class HDMIStreamController(AVControllerInterface):
                 'device_name': self.device_name,
                 'service_status': 'error',
                 'is_streaming': False,
+                'is_capturing': self.is_capturing_video,
+                'nginx_url': self.nginx_url,
                 'error': f'Failed to check stream service: {str(e)}'
             }
 

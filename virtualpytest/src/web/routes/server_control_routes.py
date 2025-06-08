@@ -10,6 +10,7 @@ This module contains server-side control endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
+import urllib.parse
 
 from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
 from deviceLockManager import (
@@ -89,11 +90,7 @@ def take_control():
                     'error': f'No online host found for device: {device_id}'
                 }), 404
             
-            # Extract host connection info
-            host_ip = host_info.get('host_ip')
-            host_port = host_info.get('host_port')
-            
-            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_ip}:{host_port}")
+            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_info.get('host_ip')}:{host_info.get('host_port')}")
             
         except Exception as e:
             unlock_device_in_registry(device_id, session_id)
@@ -103,22 +100,44 @@ def take_control():
                 'error': f'Failed to find host for device: {str(e)}'
             }), 500
         
-        # Forward request to host
+        # Forward request to host using host connection information
         try:
-            import requests
-            
-            host_url = f"https://{host_ip}:{host_port}/host/take-control"
             host_payload = {
                 'device_id': device_id,
                 'session_id': session_id
             }
             
-            print(f"[@route:server_take_control] Forwarding to host: {host_url}")
+            print(f"[@route:server_take_control] Forwarding to host using host connection info")
             print(f"[@route:server_take_control] Payload: {host_payload}")
+            print(f"[@route:server_take_control] Host info for debugging: host_ip={host_info.get('host_ip')}, host_port={host_info.get('host_port')}")
             
-            host_response = requests.post(host_url, json=host_payload, timeout=30, verify=False)
+            # Use host connection information from the host device object
+            host_connection = host_info.get('connection', {})
+            flask_url = host_connection.get('flask_url')
             
-            if host_response.ok:
+            if not flask_url:
+                # Fallback to building URL from host info if connection not available
+                host_ip = host_info.get('host_ip')
+                host_port = host_info.get('host_port')
+                flask_url = f"https://{host_ip}:{host_port}"
+            else:
+                # Use HTTPS version of the flask_url
+                parsed = urllib.parse.urlparse(flask_url)
+                flask_url = f"https://{parsed.hostname}:{parsed.port}"
+            
+            host_url = f"{flask_url}/take-control"
+            
+            print(f"[@route:server_take_control] Built URL from host connection: {host_url}")
+            
+            # Make request using the connection info from host device object
+            host_response = requests.post(
+                host_url, 
+                json=host_payload, 
+                timeout=30, 
+                verify=False
+            )
+            
+            if host_response.status_code == 200:
                 host_data = host_response.json()
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
@@ -205,7 +224,7 @@ def release_control():
                 print(f"[@route:server_release_control] Calling host release control")
                 
                 host_response = make_host_request(
-                    '/host/release-control',
+                    '/release-control',
                     method='POST',
                     use_https=True,
                     json={

@@ -253,6 +253,12 @@ def register_client():
         print(f"[@route:register_client] Instantiating controller objects...")
         controller_objects = {}
         
+        # Build connection information early so it can be passed to controllers
+        host_connection = {
+            'flask_url': f"http://{host_info['host_ip']}:{host_info['host_port']}",
+            'nginx_url': f"https://{host_info['host_ip']}:444"
+        }
+        
         try:
             from controllers import ControllerFactory
             
@@ -268,10 +274,11 @@ def register_client():
                     video_device='/dev/video0',
                     output_path='/var/www/html/stream/',
                     host_ip=av_params.get('host_ip'),
-                    host_port=av_params.get('host_port')
+                    host_port=av_params.get('host_port'),
+                    host_connection=host_connection  # Pass host connection info
                 )
                 controller_objects['av'] = av_controller
-                print(f"[@route:register_client] AV controller created successfully")
+                print(f"[@route:register_client] AV controller created successfully with connection: {host_connection['nginx_url']}")
             
             # Instantiate Remote controller
             if 'remote' in controller_configs:
@@ -370,10 +377,7 @@ def register_client():
             'capabilities': capabilities,              # Actual controller names that exist
             
             # === CONNECTION INFORMATION ===
-            'connection': {
-                'flask_url': f"http://{host_info['host_ip']}:{host_info['host_port']}",
-                'nginx_url': f"https://{host_info['host_ip']}:444"
-            },
+            'connection': host_connection,
             
             # === METADATA ===
             'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
