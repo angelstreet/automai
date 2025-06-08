@@ -14,10 +14,6 @@ def get_usb_power_defaults():
     """Get default connection values for USB Power from environment variables."""
     try:
         defaults = {
-            'host_ip': os.getenv('HOST_IP', ''),
-            'host_username': os.getenv('HOST_USERNAME', ''),
-            'host_password': os.getenv('HOST_PASSWORD', ''),
-            'host_port': os.getenv('HOST_PORT', '22'),
             'usb_hub': os.getenv('USB_HUB', '1')
         }
         
@@ -34,22 +30,13 @@ def get_usb_power_defaults():
 
 @power_bp.route('/api/virtualpytest/usb-power/take-control', methods=['POST'])
 def usb_power_take_control():
-    """Take control of USB Power device via SSH."""
+    """Take control of USB Power device."""
     try:
         import app
         from controllers.power.usb_power import USBPowerController
         
         data = request.get_json()
         print(f"[@api:usb-power:take-control] Connection data received")
-        
-        # Validate required fields
-        required_fields = ['host_ip', 'host_username', 'host_password']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({
-                    'success': False,
-                    'error': f'Missing required field: {field}'
-                }), 400
         
         # Release any existing session first
         if hasattr(app, 'usb_power_controller') and app.usb_power_controller:
@@ -61,10 +48,6 @@ def usb_power_take_control():
         # Create controller instance with connection parameters
         controller = USBPowerController(
             device_name="USB Power Device",
-            host_ip=data.get('host_ip'),
-            host_username=data.get('host_username'),
-            host_password=data.get('host_password'),
-            host_port=int(data.get('host_port', 22)),
             usb_hub=int(data.get('usb_hub', 1))
         )
         
@@ -75,12 +58,12 @@ def usb_power_take_control():
             
             return jsonify({
                 'success': True,
-                'message': f'Successfully connected to USB Power host {data.get("host_ip")}'
+                'message': f'Successfully connected to USB Power hub {data.get("usb_hub")}'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to connect to SSH host'
+                'error': 'Failed to connect to USB hub'
             }), 400
             
     except Exception as e:

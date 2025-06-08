@@ -1171,30 +1171,6 @@ const NavigationEditorContent: React.FC = () => {
                 {isLoadingInterface ? 'Loading navigation tree...' : 'Saving navigation tree...'}
               </Typography>
             </Box>
-          ) : error ? (
-            <Container maxWidth="md" sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%',
-              textAlign: 'center'
-            }}>
-              <ErrorIcon color="error" sx={{ fontSize: 64, mb: 2 }} />
-              <Typography variant="h5" color="error" gutterBottom>
-                Error Loading Navigation Tree
-              </Typography>
-              <Typography variant="body1" paragraph>
-                {error}
-              </Typography>
-              <Button 
-                variant="contained" 
-                onClick={navigateToParent} 
-                startIcon={<ArrowBackIcon />}
-              >
-                Return to Navigation Trees
-              </Button>
-            </Container>
           ) : (
             <>
               <div 

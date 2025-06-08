@@ -284,8 +284,6 @@ def register_client():
                     device_name=device_name,
                     device_ip=remote_params.get('device_ip'),
                     device_port=remote_params.get('device_port'),
-                    host_ip=remote_params.get('host_ip'),
-                    host_port=remote_params.get('host_port'),
                     adb_port=remote_params.get('device_port')
                 )
                 controller_objects['remote'] = remote_controller
@@ -301,9 +299,7 @@ def register_client():
                     verification_type=verification_config['implementation'],
                     device_name=device_name,
                     device_ip=verification_params.get('device_ip'),
-                    device_port=verification_params.get('device_port'),
-                    host_ip=verification_params.get('host_ip'),
-                    host_port=verification_params.get('host_port')
+                    device_port=verification_params.get('device_port')
                 )
                 controller_objects['verification'] = verification_controller
                 print(f"[@route:register_client] Verification controller created successfully")
@@ -318,9 +314,7 @@ def register_client():
                     power_type=power_config['implementation'],
                     device_name=device_name,
                     hub_location=power_params.get('hub_location'),
-                    port_number=power_params.get('port_number'),
-                    host_ip=power_params.get('host_ip'),
-                    host_port=power_params.get('host_port')
+                    port_number=power_params.get('port_number')
                 )
                 controller_objects['power'] = power_controller
                 print(f"[@route:register_client] Power controller created successfully")

@@ -79,10 +79,6 @@ export function CompactAndroidMobile({
       if (connectionConfig) {
         console.log('[@component:CompactAndroidMobile] Initializing with provided config');
         setConnectionForm({
-          host_ip: connectionConfig.host_ip,
-          host_port: connectionConfig.host_port || '22',
-          host_username: connectionConfig.host_username,
-          host_password: connectionConfig.host_password,
           device_ip: connectionConfig.device_ip,
           device_port: connectionConfig.device_port || '5555',
         });
@@ -95,10 +91,7 @@ export function CompactAndroidMobile({
 
   // Auto-connect when config is provided
   useEffect(() => {
-    const hasRequiredFields = connectionForm.host_ip && 
-                             connectionForm.host_username && 
-                             connectionForm.host_password && 
-                             connectionForm.device_ip;
+    const hasRequiredFields = connectionForm.device_ip;
                              
     if (autoConnect && 
         connectionConfig && 

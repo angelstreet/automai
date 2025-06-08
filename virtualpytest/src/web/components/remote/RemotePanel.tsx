@@ -62,10 +62,6 @@ export function RemotePanel({
     if (connectionConfig) {
       console.log(`[@component:RemotePanel] Initializing with provided config for ${remoteType}`);
       setConnectionForm({
-        host_ip: connectionConfig.host_ip,
-        host_port: connectionConfig.host_port || '22',
-        host_username: connectionConfig.host_username,
-        host_password: connectionConfig.host_password,
         device_ip: connectionConfig.device_ip,
         device_port: connectionConfig.device_port || '5555',
       });

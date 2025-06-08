@@ -2,7 +2,7 @@
 Controller Configuration Factory
 
 This module creates complete controller configurations from basic device registration information.
-No SSH credentials needed - all communication is via Flask server APIs.
+All communication is via direct device connections (ADB, uhubctl, etc.).
 """
 
 def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_ip, host_port):
@@ -31,8 +31,6 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'host_ip': host_ip,
-                'host_port': host_port,
                 'connection_timeout': 10
             }
         }
@@ -43,8 +41,6 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'host_ip': host_ip,
-                'host_port': host_port,
                 'connection_timeout': 10
             }
         }
@@ -90,8 +86,6 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_ip': device_ip,
                 'device_port': device_port,
-                'host_ip': host_ip,
-                'host_port': host_port,
                 'connection_timeout': 10
             }
         }
@@ -111,8 +105,6 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         'parameters': {
             'hub_location': '1-1',  # Default USB hub location
             'port_number': 1,       # Default port number
-            'host_ip': host_ip,
-            'host_port': host_port
         }
     }
     

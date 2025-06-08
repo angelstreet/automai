@@ -301,16 +301,12 @@ def create_device_controllers(
             'av_type': 'adb',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl
-            # Required parameters for SSH+ADB connection:
-            # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
         'android_mobile': {
             'remote_type': 'real_android_mobile',  # SSH+ADB Android mobile controller
             'av_type': 'adb',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl
-            # Required parameters for SSH+ADB connection:
-            # host_ip, host_username, host_password/host_key, device_ip, device_port
         },
         'ir_tv': {
             'remote_type': 'ir_remote',

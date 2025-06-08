@@ -6,17 +6,12 @@ import { androidTVRemote, androidMobileRemote } from '../../../config/remote';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 const initialConnectionForm: ConnectionForm = {
-  host_ip: '',
-  host_username: '',
-  host_password: '',
-  host_port: '22',
   device_ip: '',
   device_port: '5555'
 };
 
 const initialSession: AndroidTVSession = {
   connected: false,
-  host_ip: '',
   device_ip: ''
 };
 
@@ -115,7 +110,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.log('[@hook:useRemoteConnection] Starting take control process with form:', connectionForm);
 
       // Validate required fields - all remote types require these four fields
-      const requiredFields: (keyof ConnectionForm)[] = ['host_ip', 'host_username', 'host_password', 'device_ip'];
+      const requiredFields: (keyof ConnectionForm)[] = ['device_ip'];
       const missingFields = requiredFields.filter(field => !connectionForm[field]);
       
       if (missingFields.length > 0) {
@@ -145,7 +140,6 @@ export function useRemoteConnection(remoteType: RemoteType) {
         console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
         setSession({
           connected: true,
-          host_ip: connectionForm.host_ip,
           device_ip: connectionForm.device_ip
         });
         setConnectionError(null);

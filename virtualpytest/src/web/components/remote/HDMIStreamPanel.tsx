@@ -28,10 +28,6 @@ import { useRegistration } from '../../contexts/RegistrationContext';
 interface HDMIStreamPanelProps {
   /** Optional pre-configured connection parameters */
   connectionConfig?: {
-    host_ip: string;
-    host_port: string;
-    host_username: string;
-    host_password: string;
     stream_path: string;
     video_device: string;
     resolution?: string;
@@ -56,10 +52,6 @@ interface StreamStats {
 }
 
 interface SSHConnectionForm {
-  host_ip: string;
-  host_port: string;
-  host_username: string;
-  host_password: string;
   stream_path: string;
   video_device: string;
 }
@@ -79,10 +71,6 @@ export function HDMIStreamPanel({
   
   // SSH connection form state
   const [sshConnectionForm, setSSHConnectionForm] = useState<SSHConnectionForm>({
-    host_ip: connectionConfig?.host_ip || '',
-    host_port: connectionConfig?.host_port || '22',
-    host_username: connectionConfig?.host_username || '',
-    host_password: connectionConfig?.host_password || '',
     stream_path: connectionConfig?.stream_path || '/path/to/output.m3u8',
     video_device: connectionConfig?.video_device || '/dev/video0',
   });
@@ -122,10 +110,6 @@ export function HDMIStreamPanel({
   useEffect(() => {
     if (connectionConfig) {
       setSSHConnectionForm({
-        host_ip: connectionConfig.host_ip,
-        host_port: connectionConfig.host_port,
-        host_username: connectionConfig.host_username,
-        host_password: connectionConfig.host_password,
         stream_path: connectionConfig.stream_path,
         video_device: connectionConfig.video_device,
       });

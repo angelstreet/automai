@@ -5,10 +5,6 @@ export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth' | 
 
 // Base connection configuration interface (shared across Android remotes)
 export interface BaseConnectionConfig {
-  host_ip: string;
-  host_port?: string;
-  host_username: string;
-  host_password: string;
   device_ip: string;
   device_port?: string;
 }

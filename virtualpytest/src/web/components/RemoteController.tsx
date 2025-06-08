@@ -23,10 +23,6 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
     
     const config = device.controller_configs.remote;
     return {
-      host_ip: config.host_ip,
-      host_port: config.host_port || '22',
-      host_username: config.host_username,
-      host_password: config.host_password,
       device_ip: config.device_ip,
       device_port: config.device_port || '5555',
     };

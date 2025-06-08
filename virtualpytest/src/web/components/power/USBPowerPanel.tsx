@@ -33,10 +33,6 @@ interface USBPowerPanelProps {
 }
 
 interface USBConnectionForm {
-  host_ip: string;
-  host_port: string;
-  host_username: string;
-  host_password: string;
   usb_hub: string;
 }
 
@@ -52,10 +48,6 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
   // Connection form state
   const [connectionForm, setConnectionForm] = useState<USBConnectionForm>({
-    host_ip: '',
-    host_port: '22',
-    host_username: '',
-    host_password: '',
     usb_hub: '1',
   });
 
@@ -149,7 +141,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
   const handleConnect = async () => {
     // Validate required fields
-    const requiredFields: (keyof USBConnectionForm)[] = ['host_ip', 'host_username', 'host_password', 'usb_hub'];
+    const requiredFields: (keyof USBConnectionForm)[] = ['usb_hub'];
     const missingFields = requiredFields.filter(field => !connectionForm[field]);
     
     if (missingFields.length > 0) {
@@ -364,47 +356,6 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
           </Typography>
           
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Host IP *"
-                value={connectionForm.host_ip}
-                onChange={handleInputChange('host_ip')}
-                size="small"
-                disabled={isConnected || isConnecting}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Host Port"
-                value={connectionForm.host_port}
-                onChange={handleInputChange('host_port')}
-                size="small"
-                disabled={isConnected || isConnecting}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Username *"
-                value={connectionForm.host_username}
-                onChange={handleInputChange('host_username')}
-                size="small"
-                disabled={isConnected || isConnecting}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Password *"
-                type="password"
-                value={connectionForm.host_password}
-                onChange={handleInputChange('host_password')}
-                size="small"
-                disabled={isConnected || isConnecting}
-              />
-            </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth

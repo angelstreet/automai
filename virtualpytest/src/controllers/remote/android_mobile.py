@@ -1,7 +1,7 @@
 """
 Real Android Mobile Remote Controller Implementation
 
-This controller provides real Android mobile remote control functionality using SSH + ADB.
+This controller provides real Android mobile remote control functionality using ADB.
 Key difference from TV controller: focuses on UI element dumping and clicking rather than just key presses.
 Based on the ADB actions pattern and RecAndroidPhoneRemote component.
 """
@@ -13,7 +13,6 @@ import json
 import os
 from pathlib import Path
 from ..base_controllers import RemoteControllerInterface
-from utils.sshUtils import SSHConnection, create_ssh_connection
 from utils.adbUtils import ADBUtils, AndroidElement, AndroidApp
 
 
@@ -47,23 +46,11 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             device_name: Name of the Android mobile device
             device_type: Type identifier for the device
             **kwargs: Additional parameters including:
-                - host_ip: SSH host IP address (required)
-                - host_port: SSH port (default: 22)
-                - host_username: SSH username (required)
-                - host_password: SSH password (if using password auth)
-                - host_private_key: SSH private key (if using key auth)
                 - device_ip: Android device IP address (required)
                 - adb_port: ADB port (default: 5555)
                 - connection_timeout: Connection timeout in seconds (default: 10)
         """
         super().__init__(device_name, device_type)
-        
-        # SSH connection parameters
-        self.host_ip = kwargs.get('host_ip')
-        self.host_port = kwargs.get('host_port', 22)
-        self.host_username = kwargs.get('host_username')
-        self.host_password = kwargs.get('host_password', '')
-        self.host_private_key = kwargs.get('host_private_key', '')
         
         # Android device parameters
         self.device_ip = kwargs.get('device_ip')
@@ -71,15 +58,10 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
         # Validate required parameters
-        if not self.host_ip:
-            raise ValueError("host_ip is required for AndroidMobileRemoteController")
-        if not self.host_username:
-            raise ValueError("host_username is required for AndroidMobileRemoteController")
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidMobileRemoteController")
             
         self.android_device_id = f"{self.device_ip}:{self.adb_port}"
-        self.ssh_connection = None
         self.adb_utils = None
         self.device_resolution = None
         
@@ -88,30 +70,14 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.last_dump_time = 0
         
     def connect(self) -> bool:
-        """Connect to SSH host and then to Android device via ADB."""
+        """Connect to Android device via ADB."""
         try:
-            print(f"Remote[{self.device_type.upper()}]: Connecting to SSH host {self.host_ip} and Android device {self.android_device_id}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting to Android device {self.android_device_id}")
             
-            # Step 1: Establish SSH connection
-            self.ssh_connection = create_ssh_connection(
-                host=self.host_ip,
-                port=self.host_port,
-                username=self.host_username,
-                password=self.host_password,
-                private_key=self.host_private_key,
-                timeout=self.connection_timeout
-            )
+            # Initialize ADB utilities with direct connection
+            self.adb_utils = ADBUtils()
             
-            if not self.ssh_connection:
-                print(f"Remote[{self.device_type.upper()}]: Failed to establish SSH connection to {self.host_ip}")
-                return False
-                
-            print(f"Remote[{self.device_type.upper()}]: SSH connection established to {self.host_ip}")
-            
-            # Step 2: Initialize ADB utilities
-            self.adb_utils = ADBUtils(self.ssh_connection)
-            
-            # Step 3: Connect to Android device via ADB
+            # Connect to Android device via ADB
             if not self.adb_utils.connect_device(self.android_device_id):
                 print(f"Remote[{self.device_type.upper()}]: Failed to connect to Android device {self.android_device_id}")
                 self.disconnect()
@@ -119,7 +85,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 
             print(f"Remote[{self.device_type.upper()}]: Successfully connected to Android device {self.android_device_id}")
             
-            # Step 4: Get device resolution
+            # Get device resolution
             self.device_resolution = self.adb_utils.get_device_resolution(self.android_device_id)
             if self.device_resolution:
                 print(f"Remote[{self.device_type.upper()}]: Device resolution: {self.device_resolution['width']}x{self.device_resolution['height']}")
@@ -133,15 +99,11 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             return False
             
     def disconnect(self) -> bool:
-        """Disconnect from Android device and SSH host."""
+        """Disconnect from Android device."""
         try:
             print(f"Remote[{self.device_type.upper()}]: Disconnecting from {self.device_name}")
             
-            # Close SSH connection (this will also close ADB connection)
-            if self.ssh_connection:
-                self.ssh_connection.disconnect()
-                self.ssh_connection = None
-                
+            # Clean up ADB connection
             self.adb_utils = None
             self.is_connected = False
             
@@ -194,17 +156,14 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
-            # Use ADB text input command
-            escaped_text = text.replace(" ", "%s").replace("'", "\\'").replace('"', '\\"')
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"adb -s {self.android_device_id} shell input text {escaped_text}"
-            )
+            # Use ADB text input command directly
+            success = self.adb_utils.input_text(self.android_device_id, text)
             
-            if success and exit_code == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Text input failed: {stderr}")
+                print(f"Remote[{self.device_type.upper()}]: Text input failed")
                 return False
                 
         except Exception as e:
@@ -608,23 +567,21 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         Returns:
             bool: True if tap successful
         """
-        if not self.is_connected or not self.ssh_connection:
+        if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
-            # Use SSH connection to execute ADB command
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"adb -s {self.android_device_id} shell input tap {x} {y}"
-            )
+            # Use ADB utils to execute tap command
+            success = self.adb_utils.tap_coordinates(self.android_device_id, x, y)
             
-            if success and exit_code == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Tap failed: {stderr}")
+                print(f"Remote[{self.device_type.upper()}]: Tap failed")
                 return False
                 
         except Exception as e:

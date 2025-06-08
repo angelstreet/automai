@@ -73,10 +73,6 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
       if (connectionConfig) {
         console.log('[@component:AndroidMobileModal] Initializing with provided config');
         setConnectionForm({
-          host_ip: connectionConfig.host_ip,
-          host_port: connectionConfig.host_port || '22',
-          host_username: connectionConfig.host_username,
-          host_password: connectionConfig.host_password,
           device_ip: connectionConfig.device_ip,
           device_port: connectionConfig.device_port || '5555',
         });
@@ -94,10 +90,7 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
 
   // Auto-connect when config is provided and modal opens
   useEffect(() => {
-    const hasRequiredFields = connectionForm.host_ip && 
-                             connectionForm.host_username && 
-                             connectionForm.host_password && 
-                             connectionForm.device_ip;
+    const hasRequiredFields = connectionForm.device_ip;
                              
     if (autoConnect && 
         connectionConfig && 
@@ -237,47 +230,10 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
                 /* Connection Form */
                 <Box>
                   <Typography variant="h6" gutterBottom>
-                    SSH + ADB Connection
+                    ADB Connection
                   </Typography>
 
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Host IP"
-                        value={connectionForm.host_ip}
-                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_ip: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Host Port"
-                        value={connectionForm.host_port}
-                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_port: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Username"
-                        value={connectionForm.host_username}
-                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_username: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        value={connectionForm.host_password}
-                        onChange={(e) => setConnectionForm(prev => ({ ...prev, host_password: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
                     <Grid item xs={6}>
                       <TextField
                         fullWidth
@@ -301,7 +257,7 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
                   <Button
                     variant="contained"
                     onClick={handleTakeControl}
-                    disabled={connectionLoading || !connectionForm.host_ip || !connectionForm.host_username || !connectionForm.host_password || !connectionForm.device_ip}
+                    disabled={connectionLoading || !connectionForm.device_ip}
                     sx={{ mt: 2 }}
                     fullWidth
                   >

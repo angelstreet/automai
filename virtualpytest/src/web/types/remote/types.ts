@@ -24,7 +24,6 @@ export interface TestResult {
 // Session types for different controllers
 export interface AndroidTVSession {
   connected: boolean;
-  host_ip: string;
   device_ip: string;
 }
 
@@ -42,16 +41,11 @@ export interface BluetoothRemoteSession {
 
 export interface AndroidMobileSession {
   connected: boolean;
-  host_ip: string;
   device_ip: string;
 }
 
 // Connection form types
 export interface ConnectionForm {
-  host_ip: string;
-  host_username: string;
-  host_password: string;
-  host_port: string;
   device_ip: string;
   device_port: string;
 }

@@ -54,7 +54,7 @@ export function CompactRemote({
   // Create a stable hash of the connection config to detect changes
   const createConfigHash = useCallback((config: typeof connectionConfig) => {
     if (!config) return '';
-    return `${config.host_ip}-${config.host_port}-${config.host_username}-${config.device_ip}-${config.device_port}`;
+    return `${config.device_ip}-${config.device_port}`;
   }, []);
 
   // Initialize connection form with provided config or fetch defaults
@@ -69,10 +69,6 @@ export function CompactRemote({
       if (connectionConfig) {
         console.log(`[@component:CompactRemote] Initializing with provided config for ${remoteType}`);
         setConnectionForm({
-          host_ip: connectionConfig.host_ip,
-          host_port: connectionConfig.host_port || '22',
-          host_username: connectionConfig.host_username,
-          host_password: connectionConfig.host_password,
           device_ip: connectionConfig.device_ip,
           device_port: connectionConfig.device_port || '5555',
         });
@@ -86,10 +82,7 @@ export function CompactRemote({
   // Separate effect for auto-connect logic
   useEffect(() => {
     // Check if connection form has all required fields populated
-    const hasRequiredFields = connectionForm.host_ip && 
-                             connectionForm.host_username && 
-                             connectionForm.host_password && 
-                             connectionForm.device_ip;
+    const hasRequiredFields = connectionForm.device_ip;
                              
     if (autoConnect && 
         connectionConfig && 

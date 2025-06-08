@@ -50,10 +50,6 @@ export const extractConnectionConfigForAndroid = (remoteConfig: any) => {
   const params = remoteConfig.parameters || remoteConfig;
   
   const config = {
-    host_ip: params.host_ip,
-    host_port: params.host_port || '22',
-    host_username: params.host_username,
-    host_password: params.host_password,
     device_ip: params.device_ip,
     device_port: params.device_port || '5555',
   };
@@ -102,14 +98,10 @@ export const extractConnectionConfigForAV = (avConfig: any) => {
   
   const config = {
     fps: params.fps || 30,
-    host_ip: params.host_ip,
-    host_port: params.host_port || '22',
     resolution: params.resolution || '1920x1080',
     stream_url: params.stream_url,
     stream_path: params.stream_path,
     video_device: params.video_device || '/dev/video0',
-    host_password: params.host_password,
-    host_username: params.host_username,
     connection_timeout: params.connection_timeout || 15,
   };
   

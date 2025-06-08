@@ -20,10 +20,6 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     config: '/api/virtualpytest/android-tv/config'
   },
   connectionFields: [
-    { name: 'host_ip', label: 'Host IP', required: true },
-    { name: 'host_port', label: 'Host Port', default: '22' },
-    { name: 'host_username', label: 'Username', required: true },
-    { name: 'host_password', label: 'Password', type: 'password', required: true },
     { name: 'device_ip', label: 'Device IP', required: true },
     { name: 'device_port', label: 'Device Port', default: '5555' }
   ]
@@ -53,10 +49,6 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     clickElement: '/api/virtualpytest/android-mobile/click-element'
   },
   connectionFields: [
-    { name: 'host_ip', label: 'Host IP', required: true },
-    { name: 'host_port', label: 'Host Port', default: '22' },
-    { name: 'host_username', label: 'Username', required: true },
-    { name: 'host_password', label: 'Password', type: 'password', required: true },
     { name: 'device_ip', label: 'Device IP', required: true },
     { name: 'device_port', label: 'Device Port', default: '5555' }
   ]
@@ -134,10 +126,6 @@ export const USB_POWER_CONFIG: RemoteDeviceConfig = {
     reboot: '/api/virtualpytest/usb-power/reboot'
   },
   connectionFields: [
-    { name: 'host_ip', label: 'Host IP', required: true },
-    { name: 'host_port', label: 'Host Port', default: '22' },
-    { name: 'host_username', label: 'Username', required: true },
-    { name: 'host_password', label: 'Password', type: 'password', required: true },
     { name: 'usb_hub', label: 'USB Hub', default: '1' }
   ]
 };

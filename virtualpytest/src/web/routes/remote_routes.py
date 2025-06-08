@@ -18,9 +18,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .utils import check_controllers_available
 
-# Add SSH session registry import
-from utils.sshSessionRegistry import SSHSessionRegistry
-
 # Create blueprint
 remote_bp = Blueprint('remote', __name__)
 
@@ -45,14 +42,14 @@ def get_bluetooth_remote_session():
 
 @remote_bp.route('/api/virtualpytest/android-tv/take-control', methods=['POST'])
 def take_android_tv_control():
-    """Take control of Android TV device via SSH+ADB."""
+    """Take control of Android TV device via ADB."""
     android_tv_session = get_android_tv_session()
     
     try:
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['host_ip', 'host_username', 'host_password', 'device_ip']
+        required_fields = ['device_ip']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({
@@ -73,10 +70,6 @@ def take_android_tv_control():
         controller = ControllerFactory.create_remote_controller(
             device_type="android_tv",
             device_name="Web Interface TV",
-            host_ip=data['host_ip'],
-            host_username=data['host_username'],
-            host_password=data['host_password'],
-            host_port=int(data.get('host_port', 22)),
             device_ip=data['device_ip'],
             device_port=int(data.get('device_port', 5555))
         )
@@ -87,21 +80,21 @@ def take_android_tv_control():
                 'controller': controller,
                 'connected': True,
                 'connection_details': {
-                    'host_ip': data['host_ip'],
                     'device_ip': data['device_ip'],
+                    'device_port': data.get('device_port', 5555),
                     'connected_at': time.time()
                 }
             })
             
             return jsonify({
                 'success': True,
-                'message': f'Connected to Android TV at {data["host_ip"]} → {data["device_ip"]}',
+                'message': f'Connected to Android TV at {data["device_ip"]}:{data["device_port"]}',
                 'session_info': android_tv_session['connection_details']
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to connect to Android TV. Check SSH credentials and device connectivity.'
+                'error': 'Failed to connect to Android TV. Check device connectivity.'
             }), 400
             
     except Exception as e:
@@ -271,10 +264,6 @@ def get_android_tv_defaults():
     """Get default Android TV connection values from environment variables."""
     try:
         defaults = {
-            'host_ip': os.getenv('HOST_IP', ''),
-            'host_username': os.getenv('HOST_USERNAME', ''),
-            'host_password': os.getenv('HOST_PASSWORD', ''),
-            'host_port': os.getenv('HOST_PORT', '22'),
             'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_TV_IP', '192.168.1.130'),
             'device_port': os.getenv('DEVICE_PORT', '5555')
         }
@@ -367,10 +356,6 @@ def get_android_mobile_defaults():
     """Get default connection values for Android Mobile from environment variables."""
     try:
         defaults = {
-            'host_ip': os.getenv('HOST_IP', ''),
-            'host_username': os.getenv('HOST_USERNAME', ''),
-            'host_password': os.getenv('HOST_PASSWORD', ''),
-            'host_port': os.getenv('HOST_PORT', '22'),
             'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_MOBILE_IP', '192.168.1.29'),
             'device_port': os.getenv('DEVICE_PORT', '5555')
         }
@@ -398,10 +383,6 @@ def android_mobile_take_control():
         # Create controller instance with connection parameters
         controller = AndroidMobileRemoteController(
             device_name="Android Mobile Device",
-            host_ip=data.get('host_ip'),
-            host_username=data.get('host_username'),
-            host_password=data.get('host_password'),
-            host_port=int(data.get('host_port', 22)),
             device_ip=data.get('device_ip'),
             adb_port=int(data.get('device_port', 5555))
         )
@@ -410,16 +391,6 @@ def android_mobile_take_control():
         if controller.connect():
             # Store controller globally for subsequent commands
             current_app.android_mobile_controller = controller
-            
-            # Register SSH session in registry for sharing with verification system
-            if hasattr(controller, 'ssh_connection') and controller.ssh_connection:
-                session_info = {
-                    'device_ip': data.get('device_ip'),
-                    'device_port': data.get('device_port', 5555),
-                    'host_ip': data.get('host_ip')
-                }
-                SSHSessionRegistry.register_session(controller.ssh_connection, session_info)
-                print(f"[@api:android-mobile:take-control] Registered SSH session for sharing")
             
             return jsonify({
                 'success': True,
@@ -444,10 +415,6 @@ def android_mobile_release_control():
         if hasattr(current_app, 'android_mobile_controller') and current_app.android_mobile_controller:
             current_app.android_mobile_controller.disconnect()
             current_app.android_mobile_controller = None
-            
-        # Clean up SSH session from registry
-        SSHSessionRegistry.remove_session()
-        print(f"[@api:android-mobile:release-control] Cleaned up SSH session")
             
         return jsonify({
             'success': True,

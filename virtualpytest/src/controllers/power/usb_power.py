@@ -1,19 +1,19 @@
 """
 USB Power Controller Implementation
 
-This controller provides USB power management functionality using SSH + uhubctl.
-Based on the same pattern as AndroidMobileRemoteController.
+This controller provides USB power management functionality using uhubctl.
+Based on direct USB hub control commands.
 """
 
 from typing import Dict, Any, Optional
 import time
 import os
+import subprocess
 from ..base_controllers import PowerControllerInterface
-from utils.sshUtils import SSHConnection, create_ssh_connection
 
 
 class USBPowerController(PowerControllerInterface):
-    """USB power controller using SSH + uhubctl commands."""
+    """USB power controller using uhubctl commands."""
     
     def __init__(self, device_name: str = "USB Device", power_type: str = "usb", **kwargs):
         """
@@ -23,55 +23,27 @@ class USBPowerController(PowerControllerInterface):
             device_name: Name of the USB device
             power_type: Type identifier for the power controller
             **kwargs: Additional parameters including:
-                - host_ip: SSH host IP address (required)
-                - host_port: SSH port (default: 22)
-                - host_username: SSH username (required)
-                - host_password: SSH password (if using password auth)
-                - host_private_key: SSH private key (if using key auth)
                 - usb_hub: USB hub number (default: 1)
                 - connection_timeout: Connection timeout in seconds (default: 10)
         """
         super().__init__(device_name, power_type)
         
-        # SSH connection parameters
-        self.host_ip = kwargs.get('host_ip')
-        self.host_port = kwargs.get('host_port', 22)
-        self.host_username = kwargs.get('host_username')
-        self.host_password = kwargs.get('host_password', '')
-        self.host_private_key = kwargs.get('host_private_key', '')
-        
         # USB parameters
         self.usb_hub = kwargs.get('usb_hub', 1)
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
-        # Validate required parameters
-        if not self.host_ip:
-            raise ValueError("host_ip is required for USBPowerController")
-        if not self.host_username:
-            raise ValueError("host_username is required for USBPowerController")
-            
-        self.ssh_connection = None
-        
     def connect(self) -> bool:
-        """Connect to SSH host."""
+        """Connect to USB hub."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Connecting to SSH host {self.host_ip}")
+            print(f"Power[{self.power_type.upper()}]: Connecting to USB hub {self.usb_hub}")
             
-            # Establish SSH connection
-            self.ssh_connection = create_ssh_connection(
-                host=self.host_ip,
-                port=self.host_port,
-                username=self.host_username,
-                password=self.host_password,
-                private_key=self.host_private_key,
-                timeout=self.connection_timeout
-            )
-            
-            if not self.ssh_connection:
-                print(f"Power[{self.power_type.upper()}]: Failed to establish SSH connection to {self.host_ip}")
+            # Test uhubctl command availability
+            result = subprocess.run(['uhubctl', '--version'], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"Power[{self.power_type.upper()}]: uhubctl command not available")
                 return False
                 
-            print(f"Power[{self.power_type.upper()}]: SSH connection established to {self.host_ip}")
+            print(f"Power[{self.power_type.upper()}]: USB hub connection established")
             
             self.is_connected = True
             return True
@@ -82,15 +54,10 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def disconnect(self) -> bool:
-        """Disconnect from SSH host."""
+        """Disconnect from USB hub."""
         try:
             print(f"Power[{self.power_type.upper()}]: Disconnecting from {self.device_name}")
             
-            # Close SSH connection
-            if self.ssh_connection:
-                self.ssh_connection.disconnect()
-                self.ssh_connection = None
-                
             self.is_connected = False
             
             print(f"Power[{self.power_type.upper()}]: Disconnected successfully")
@@ -103,50 +70,46 @@ class USBPowerController(PowerControllerInterface):
             
     def power_on(self, timeout: float = 10.0) -> bool:
         """Turn USB hub on using uhubctl."""
-        if not self.is_connected or not self.ssh_connection:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to SSH host")
+        if not self.is_connected:
+            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to USB hub")
             return False
             
         try:
             print(f"Power[{self.power_type.upper()}]: Powering on USB hub {self.usb_hub}")
             
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"sudo uhubctl -l {self.usb_hub} -a on", timeout=timeout
-            )
-            
-            if success and exit_code == 0:
-                print(f"Power[{self.power_type.upper()}]: Successfully powered on USB hub {self.usb_hub}")
-                self.current_power_state = "on"
-                return True
-            else:
-                print(f"Power[{self.power_type.upper()}]: Failed to power on USB hub: {stderr}")
+            # Test uhubctl command availability
+            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub), '-a', 'on'], capture_output=True, text=True, timeout=timeout)
+            if result.returncode != 0:
+                print(f"Power[{self.power_type.upper()}]: Failed to power on USB hub: {result.stderr}")
                 return False
                 
+            print(f"Power[{self.power_type.upper()}]: Successfully powered on USB hub {self.usb_hub}")
+            self.current_power_state = "on"
+            return True
+            
         except Exception as e:
             print(f"Power[{self.power_type.upper()}]: Power on error: {e}")
             return False
             
     def power_off(self, force: bool = False, timeout: float = 5.0) -> bool:
         """Turn USB hub off using uhubctl."""
-        if not self.is_connected or not self.ssh_connection:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to SSH host")
+        if not self.is_connected:
+            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to USB hub")
             return False
             
         try:
             print(f"Power[{self.power_type.upper()}]: Powering off USB hub {self.usb_hub}")
             
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"sudo uhubctl -l {self.usb_hub} -a off", timeout=timeout
-            )
-            
-            if success and exit_code == 0:
-                print(f"Power[{self.power_type.upper()}]: Successfully powered off USB hub {self.usb_hub}")
-                self.current_power_state = "off"
-                return True
-            else:
-                print(f"Power[{self.power_type.upper()}]: Failed to power off USB hub: {stderr}")
+            # Test uhubctl command availability
+            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub), '-a', 'off'], capture_output=True, text=True, timeout=timeout)
+            if result.returncode != 0:
+                print(f"Power[{self.power_type.upper()}]: Failed to power off USB hub: {result.stderr}")
                 return False
                 
+            print(f"Power[{self.power_type.upper()}]: Successfully powered off USB hub {self.usb_hub}")
+            self.current_power_state = "off"
+            return True
+            
         except Exception as e:
             print(f"Power[{self.power_type.upper()}]: Power off error: {e}")
             return False
@@ -176,95 +139,93 @@ class USBPowerController(PowerControllerInterface):
             
     def get_power_status(self) -> Dict[str, Any]:
         """Get current USB hub power status using uhubctl."""
-        if not self.is_connected or not self.ssh_connection:
+        if not self.is_connected:
             return {
                 'power_state': 'unknown',
                 'connected': False,
-                'error': 'Not connected to SSH host'
+                'error': 'Not connected to USB hub'
             }
             
         try:
             print(f"Power[{self.power_type.upper()}]: Checking power status for USB hub {self.usb_hub}")
             
-            success, stdout, stderr, exit_code = self.ssh_connection.execute_command(
-                f"sudo uhubctl -l {self.usb_hub}", timeout=10
-            )
-            
-            if success and exit_code == 0:
-                # Log the actual output for debugging
-                print(f"Power[{self.power_type.upper()}]: uhubctl output:")
-                print(f"--- START OUTPUT ---")
-                print(stdout)
-                print(f"--- END OUTPUT ---")
-                
-                # Parse uhubctl output to determine power state
-                power_state = 'unknown'
-                if stdout:
-                    lines = stdout.strip().split('\n')
-                    for line in lines:
-                        line_lower = line.lower().strip()
-                        print(f"Power[{self.power_type.upper()}]: Parsing line: {line}")
-                        
-                        # Look for different uhubctl output patterns
-                        # Pattern 1: "Current status for hub X [device:port]:"
-                        # Pattern 2: "Port X: 0503 power"
-                        # Pattern 3: "Port X: 0100 off"
-                        
-                        if 'port' in line_lower:
-                            if 'power' in line_lower or '0503' in line_lower:
-                                power_state = 'on'
-                                print(f"Power[{self.power_type.upper()}]: Detected ON state from line: {line}")
-                                break
-                            elif 'off' in line_lower or '0100' in line_lower:
-                                power_state = 'off' 
-                                print(f"Power[{self.power_type.upper()}]: Detected OFF state from line: {line}")
-                                break
-                        
-                        # Alternative patterns for different uhubctl versions
-                        elif 'power' in line_lower:
-                            if 'on' in line_lower or 'enable' in line_lower:
-                                power_state = 'on'
-                                print(f"Power[{self.power_type.upper()}]: Detected ON state from power line: {line}")
-                                break
-                            elif 'off' in line_lower or 'disable' in line_lower:
-                                power_state = 'off'
-                                print(f"Power[{self.power_type.upper()}]: Detected OFF state from power line: {line}")
-                                break
-                    
-                    # If still unknown, try to infer from any status codes
-                    if power_state == 'unknown':
-                        for line in lines:
-                            line_lower = line.lower().strip()
-                            # Look for status codes that indicate power state
-                            if '0503' in line or '0507' in line:  # Common "powered" status codes
-                                power_state = 'on'
-                                print(f"Power[{self.power_type.upper()}]: Detected ON from status code in: {line}")
-                                break
-                            elif '0100' in line or '0000' in line:  # Common "off" status codes  
-                                power_state = 'off'
-                                print(f"Power[{self.power_type.upper()}]: Detected OFF from status code in: {line}")
-                                break
-                
-                # Update our internal state
-                if power_state != 'unknown':
-                    self.current_power_state = power_state
-                
-                print(f"Power[{self.power_type.upper()}]: Power status check result: {power_state}")
-                
-                return {
-                    'power_state': power_state,
-                    'usb_hub': self.usb_hub,
-                    'connected': True,
-                    'uhubctl_output': stdout
-                }
-            else:
-                print(f"Power[{self.power_type.upper()}]: uhubctl command failed: {stderr}")
+            # Test uhubctl command availability
+            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub)], capture_output=True, text=True, timeout=10)
+            if result.returncode != 0:
+                print(f"Power[{self.power_type.upper()}]: uhubctl command failed: {result.stderr}")
                 return {
                     'power_state': 'unknown',
                     'connected': True,
-                    'error': f'uhubctl command failed: {stderr}'
+                    'error': f'uhubctl command failed: {result.stderr}'
                 }
                 
+            # Log the actual output for debugging
+            print(f"Power[{self.power_type.upper()}]: uhubctl output:")
+            print(f"--- START OUTPUT ---")
+            print(result.stdout)
+            print(f"--- END OUTPUT ---")
+            
+            # Parse uhubctl output to determine power state
+            power_state = 'unknown'
+            if result.stdout:
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    line_lower = line.lower().strip()
+                    print(f"Power[{self.power_type.upper()}]: Parsing line: {line}")
+                    
+                    # Look for different uhubctl output patterns
+                    # Pattern 1: "Current status for hub X [device:port]:"
+                    # Pattern 2: "Port X: 0503 power"
+                    # Pattern 3: "Port X: 0100 off"
+                    
+                    if 'port' in line_lower:
+                        if 'power' in line_lower or '0503' in line_lower:
+                            power_state = 'on'
+                            print(f"Power[{self.power_type.upper()}]: Detected ON state from line: {line}")
+                            break
+                        elif 'off' in line_lower or '0100' in line_lower:
+                            power_state = 'off' 
+                            print(f"Power[{self.power_type.upper()}]: Detected OFF state from line: {line}")
+                            break
+                    
+                    # Alternative patterns for different uhubctl versions
+                    elif 'power' in line_lower:
+                        if 'on' in line_lower or 'enable' in line_lower:
+                            power_state = 'on'
+                            print(f"Power[{self.power_type.upper()}]: Detected ON state from power line: {line}")
+                            break
+                        elif 'off' in line_lower or 'disable' in line_lower:
+                            power_state = 'off'
+                            print(f"Power[{self.power_type.upper()}]: Detected OFF state from power line: {line}")
+                            break
+                
+                # If still unknown, try to infer from any status codes
+                if power_state == 'unknown':
+                    for line in lines:
+                        line_lower = line.lower().strip()
+                        # Look for status codes that indicate power state
+                        if '0503' in line or '0507' in line:  # Common "powered" status codes
+                            power_state = 'on'
+                            print(f"Power[{self.power_type.upper()}]: Detected ON from status code in: {line}")
+                            break
+                        elif '0100' in line or '0000' in line:  # Common "off" status codes  
+                            power_state = 'off'
+                            print(f"Power[{self.power_type.upper()}]: Detected OFF from status code in: {line}")
+                            break
+            
+            # Update our internal state
+            if power_state != 'unknown':
+                self.current_power_state = power_state
+            
+            print(f"Power[{self.power_type.upper()}]: Power status check result: {power_state}")
+            
+            return {
+                'power_state': power_state,
+                'usb_hub': self.usb_hub,
+                'connected': True,
+                'uhubctl_output': result.stdout
+            }
+            
         except Exception as e:
             print(f"Power[{self.power_type.upper()}]: Status check error: {e}")
             return {
@@ -279,14 +240,11 @@ class USBPowerController(PowerControllerInterface):
             'controller_type': self.controller_type,
             'power_type': self.power_type,
             'device_name': self.device_name,
-            'host_ip': self.host_ip,
-            'host_port': self.host_port,
-            'host_username': self.host_username,
             'usb_hub': self.usb_hub,
             'connected': self.is_connected,
             'connection_timeout': self.connection_timeout,
             'current_power_state': self.current_power_state,
             'capabilities': [
-                'ssh_connection', 'uhubctl_control', 'power_on', 'power_off', 'reboot'
+                'uhubctl_control', 'power_on', 'power_off', 'reboot'
             ]
         } 

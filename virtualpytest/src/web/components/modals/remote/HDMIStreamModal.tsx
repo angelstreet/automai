@@ -87,9 +87,6 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
       if (result.success && result.defaults) {
         setStreamUrl(result.defaults.stream_path || streamUrl);
         setVideoDevice(result.defaults.video_device || videoDevice);
-        setHostIp(result.defaults.host_ip || '');
-        setHostPort(result.defaults.host_port || 22);
-        setHostUsername(result.defaults.host_username || '');
         console.log('[@component:HDMIStreamModal] Loaded default stream and SSH settings');
       }
     } catch (error) {
