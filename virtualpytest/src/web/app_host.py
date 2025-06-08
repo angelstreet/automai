@@ -66,8 +66,7 @@ from appUtils import (
 from hostUtils import (
     register_host_with_server,
     start_ping_thread,
-    cleanup_on_exit,
-    transfer_pending_host_device_to_app
+    cleanup_on_exit
 )
 
 def cleanup_host_ports():
@@ -134,9 +133,6 @@ def main():
         app.global_sessions = global_sessions
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
-        
-        # ✅ TRANSFER ANY PENDING HOST_DEVICE OBJECT TO APP CONTEXT
-        transfer_pending_host_device_to_app()
     
     # Register all route blueprints for host mode
     try:

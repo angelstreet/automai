@@ -33,19 +33,8 @@ def take_control():
         print(f"[@route:take_control] Device port: {device_port}")
         print(f"[@route:take_control] Session ID: {session_id}")
         
-        # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT OR GLOBAL STORAGE
+        # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT
         host_device = getattr(current_app, 'my_host_device', None)
-        
-        # If not in Flask app context, get it directly from global storage
-        if not host_device:
-            try:
-                from hostUtils import _pending_host_device
-                host_device = _pending_host_device
-                print(f"[@route:take_control] Using host_device from global storage")
-            except Exception as global_error:
-                print(f"[@route:take_control] Error accessing global host_device: {global_error}")
-        else:
-            print(f"[@route:take_control] Using host_device from Flask app context")
         
         if host_device:
             print(f"[@route:take_control] Host device details: {host_device.get('host_name')} - {host_device.get('device_name')}")
@@ -326,39 +315,4 @@ def controller_status():
             'success': False,
             'error': f'Error getting controller status: {str(e)}',
             'controllers': {}
-        }), 500
-
-    """Debug endpoint to check host_device availability"""
-    try:
-        # Try to transfer pending host_device first
-        try:
-            from hostUtils import transfer_pending_host_device_to_app
-            transfer_result = transfer_pending_host_device_to_app()
-            print(f"[@route:debug_host_device] Transfer result: {transfer_result}")
-        except Exception as transfer_error:
-            print(f"[@route:debug_host_device] Transfer error: {transfer_error}")
-        
-        # Check if host_device is available
-        host_device = getattr(current_app, 'my_host_device', None)
-        
-        if host_device:
-            return jsonify({
-                'success': True,
-                'host_device_available': True,
-                'host_name': host_device.get('host_name'),
-                'device_name': host_device.get('device_name'),
-                'device_model': host_device.get('device_model'),
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
-            })
-        else:
-            return jsonify({
-                'success': True,
-                'host_device_available': False,
-                'message': 'Host device object not found in Flask app context'
-            })
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
         }), 500 
