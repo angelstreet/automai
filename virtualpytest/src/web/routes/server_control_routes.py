@@ -28,8 +28,8 @@ server_control_bp = Blueprint('server_control', __name__)
 # =====================================================
 
 @server_control_bp.route('/take-control', methods=['POST'])
-def server_take_control():
-    """Server-side take control endpoint - lock device and forward request to host"""
+def take_control():
+    """Server-side take control - Coordinate device locking and host discovery"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id')
@@ -178,8 +178,8 @@ def server_take_control():
 
 
 @server_control_bp.route('/release-control', methods=['POST'])
-def server_release_control():
-    """Server-side release control endpoint - handles unlocking + host controller release"""
+def release_control():
+    """Server-side release control - Unlock device and forward request to host"""
     try:
         data = request.get_json() or {}
         device_model = data.get('device_model')
@@ -252,8 +252,8 @@ def server_release_control():
 
 
 @server_control_bp.route('/navigate', methods=['POST'])
-def server_navigate():
-    """Server route to execute navigation on host device"""
+def navigate():
+    """Server-side navigation - Forward navigation request to appropriate host"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id')

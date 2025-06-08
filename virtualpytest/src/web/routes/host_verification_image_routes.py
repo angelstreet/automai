@@ -29,9 +29,9 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE IMAGE CROPPING AND PROCESSING ENDPOINTS
 # =====================================================
 
-@verification_image_host_bp.route('/stream/crop-area', methods=['POST'])
-def host_crop_area():
-    """Host-side endpoint to crop images locally using existing utilities."""
+@verification_image_host_bp.route('/image/crop-area', methods=['POST'])
+def crop_area():
+    """Crop area from current screen"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -124,9 +124,9 @@ def host_crop_area():
             'error': f'Host cropping error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/stream/process-area', methods=['POST'])
-def host_process_area():
-    """Host-side endpoint to process images with autocrop and background removal."""
+@verification_image_host_bp.route('/image/process-area', methods=['POST'])
+def process_area():
+    """Process area for verification"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -236,9 +236,9 @@ def host_process_area():
 # HOST-SIDE IMAGE RESOURCE SAVE ENDPOINT
 # =====================================================
 
-@verification_image_host_bp.route('/stream/save-resource', methods=['POST'])
-def host_save_resource():
-    """Save cropped image directly to Cloudflare R2 and update resource registry."""
+@verification_image_host_bp.route('/image/save-resource', methods=['POST'])
+def save_resource():
+    """Save image verification resource"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -402,9 +402,9 @@ def host_save_resource():
             'error': f'R2 save error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/stream/ensure-reference-availability', methods=['POST'])
-def host_ensure_reference_availability():
-    """Ensure reference image is available in stream directory for preview."""
+@verification_image_host_bp.route('/image/ensure-reference-availability', methods=['POST'])
+def ensure_reference_availability():
+    """Ensure reference image is available for verification"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)

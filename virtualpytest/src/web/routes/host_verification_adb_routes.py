@@ -17,9 +17,9 @@ verification_adb_host_bp = Blueprint('verification_adb_host', __name__)
 # HOST-SIDE ADB VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_adb_host_bp.route('/stream/adb-element-lists', methods=['POST'])
-def host_adb_element_lists():
-    """Get ADB UI element lists using existing ADB controller."""
+@verification_adb_host_bp.route('/adb/element-lists', methods=['POST'])
+def adb_element_lists():
+    """Get ADB element lists from device"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -30,15 +30,15 @@ def host_adb_element_lists():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:host_adb_element_lists] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        print(f"[@route:adb_element_lists] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         model = data.get('model', 'default')
         search_term = data.get('search_term', '')
         
-        print(f"[@route:host_adb_element_lists] Getting ADB element lists for model: {model}")
+        print(f"[@route:adb_element_lists] Getting ADB element lists for model: {model}")
         if search_term:
-            print(f"[@route:host_adb_element_lists] With search term: '{search_term}'")
+            print(f"[@route:adb_element_lists] With search term: '{search_term}'")
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
@@ -75,28 +75,28 @@ def host_adb_element_lists():
             }
         
         if success:
-            print(f"[@route:host_adb_element_lists] Success: {result_data.get('total_elements', 0)} elements")
+            print(f"[@route:adb_element_lists] Success: {result_data.get('total_elements', 0)} elements")
             return jsonify({
                 'success': True,
                 'data': result_data
             })
         else:
-            print(f"[@route:host_adb_element_lists] Failed: {error}")
+            print(f"[@route:adb_element_lists] Failed: {error}")
             return jsonify({
                 'success': False,
                 'error': error
             }), 500
             
     except Exception as e:
-        print(f"[@route:host_adb_element_lists] Error: {str(e)}")
+        print(f"[@route:adb_element_lists] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'ADB element lists error: {str(e)}'
         }), 500
 
-@verification_adb_host_bp.route('/stream/adb-wait-element-appear', methods=['POST'])
-def host_adb_wait_element_appear():
-    """Wait for ADB element to appear using existing ADB controller."""
+@verification_adb_host_bp.route('/adb/wait-element-appear', methods=['POST'])
+def adb_wait_element_appear():
+    """Wait for ADB element to appear"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -107,14 +107,14 @@ def host_adb_wait_element_appear():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:host_adb_wait_element_appear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        print(f"[@route:adb_wait_element_appear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         search_term = data.get('search_term', '')
         timeout = data.get('timeout', 10.0)
         model = data.get('model', 'default')
         
-        print(f"[@route:host_adb_wait_element_appear] Waiting for element: '{search_term}' (timeout: {timeout}s)")
+        print(f"[@route:adb_wait_element_appear] Waiting for element: '{search_term}' (timeout: {timeout}s)")
         
         if not search_term:
             return jsonify({
@@ -145,14 +145,14 @@ def host_adb_wait_element_appear():
         success, message, result_data = adb_controller.waitForElementToAppear(search_term, timeout)
         
         if success:
-            print(f"[@route:host_adb_wait_element_appear] Success: {message}")
+            print(f"[@route:adb_wait_element_appear] Success: {message}")
             return jsonify({
                 'success': True,
                 'message': message,
                 'data': result_data
             })
         else:
-            print(f"[@route:host_adb_wait_element_appear] Failed: {message}")
+            print(f"[@route:adb_wait_element_appear] Failed: {message}")
             return jsonify({
                 'success': False,
                 'message': message,
@@ -160,15 +160,15 @@ def host_adb_wait_element_appear():
             }), 200  # Return 200 but success=False for timeout/not found
             
     except Exception as e:
-        print(f"[@route:host_adb_wait_element_appear] Error: {str(e)}")
+        print(f"[@route:adb_wait_element_appear] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'ADB wait element appear error: {str(e)}'
         }), 500
 
-@verification_adb_host_bp.route('/stream/adb-wait-element-disappear', methods=['POST'])
-def host_adb_wait_element_disappear():
-    """Wait for ADB element to disappear using existing ADB controller."""
+@verification_adb_host_bp.route('/adb/wait-element-disappear', methods=['POST'])
+def adb_wait_element_disappear():
+    """Wait for ADB element to disappear"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -179,14 +179,14 @@ def host_adb_wait_element_disappear():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:host_adb_wait_element_disappear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        print(f"[@route:adb_wait_element_disappear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         search_term = data.get('search_term', '')
         timeout = data.get('timeout', 10.0)
         model = data.get('model', 'default')
         
-        print(f"[@route:host_adb_wait_element_disappear] Waiting for element to disappear: '{search_term}' (timeout: {timeout}s)")
+        print(f"[@route:adb_wait_element_disappear] Waiting for element to disappear: '{search_term}' (timeout: {timeout}s)")
         
         if not search_term:
             return jsonify({
@@ -217,14 +217,14 @@ def host_adb_wait_element_disappear():
         success, message, result_data = adb_controller.waitForElementToDisappear(search_term, timeout)
         
         if success:
-            print(f"[@route:host_adb_wait_element_disappear] Success: {message}")
+            print(f"[@route:adb_wait_element_disappear] Success: {message}")
             return jsonify({
                 'success': True,
                 'message': message,
                 'data': result_data
             })
         else:
-            print(f"[@route:host_adb_wait_element_disappear] Failed: {message}")
+            print(f"[@route:adb_wait_element_disappear] Failed: {message}")
             return jsonify({
                 'success': False,
                 'message': message,
@@ -232,7 +232,7 @@ def host_adb_wait_element_disappear():
             }), 200  # Return 200 but success=False for timeout/still present
             
     except Exception as e:
-        print(f"[@route:host_adb_wait_element_disappear] Error: {str(e)}")
+        print(f"[@route:adb_wait_element_disappear] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'ADB wait element disappear error: {str(e)}'

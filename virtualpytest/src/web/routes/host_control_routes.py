@@ -17,8 +17,8 @@ host_control_bp = Blueprint('host_control', __name__)
 # HOST-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@host_control_bp.route('/host/take-control', methods=['POST'])
-def host_take_control():
+@host_control_bp.route('/take-control', methods=['POST'])
+def take_control():
     """Host-side take control - Use own stored host_device object"""
     try:
         data = request.get_json() or {}
@@ -27,11 +27,11 @@ def host_take_control():
         device_port = data.get('device_port', 5555)
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:host_take_control] Checking controllers status using own stored host_device")
-        print(f"[@route:host_take_control] Device model: {device_model}")
-        print(f"[@route:host_take_control] Device IP: {device_ip}")
-        print(f"[@route:host_take_control] Device port: {device_port}")
-        print(f"[@route:host_take_control] Session ID: {session_id}")
+        print(f"[@route:take_control] Checking controllers status using own stored host_device")
+        print(f"[@route:take_control] Device model: {device_model}")
+        print(f"[@route:take_control] Device IP: {device_ip}")
+        print(f"[@route:take_control] Device port: {device_port}")
+        print(f"[@route:take_control] Session ID: {session_id}")
         
         # ✅ GET OWN STORED HOST_DEVICE OBJECT (set during registration)
         host_device = getattr(current_app, 'my_host_device', None)
@@ -45,7 +45,7 @@ def host_take_control():
                 'session_id': session_id
             })
         
-        print(f"[@route:host_take_control] Using own stored host_device: {host_device.get('host_name')} with device: {host_device.get('device_name')}")
+        print(f"[@route:take_control] Using own stored host_device: {host_device.get('host_name')} with device: {host_device.get('device_name')}")
         
         # Step 1: Check AV controller from own host_device
         try:
@@ -61,10 +61,10 @@ def host_take_control():
                     'available_controllers': list(host_device.get('controller_objects', {}).keys())
                 })
             
-            print(f"[@route:host_take_control] Using own AV controller: {type(av_controller).__name__}")
+            print(f"[@route:take_control] Using own AV controller: {type(av_controller).__name__}")
             
             av_status = av_controller.get_status()
-            print(f"[@route:host_take_control] AV controller status: {av_status}")
+            print(f"[@route:take_control] AV controller status: {av_status}")
             
             if not av_status.get('is_streaming', False):
                 return jsonify({
@@ -78,7 +78,7 @@ def host_take_control():
                 })
                 
         except Exception as e:
-            print(f"[@route:host_take_control] AV controller error: {e}")
+            print(f"[@route:take_control] AV controller error: {e}")
             return jsonify({
                 'success': False,
                 'status': 'av_controller_error',
@@ -105,10 +105,10 @@ def host_take_control():
                         'available_controllers': list(host_device.get('controller_objects', {}).keys())
                     })
                 
-                print(f"[@route:host_take_control] Using own remote controller: {type(remote_controller).__name__}")
+                print(f"[@route:take_control] Using own remote controller: {type(remote_controller).__name__}")
                 
                 remote_status = remote_controller.get_status()
-                print(f"[@route:host_take_control] Remote controller status: {remote_status}")
+                print(f"[@route:take_control] Remote controller status: {remote_status}")
                 
                 if not remote_status.get('adb_connected', False):
                     return jsonify({
@@ -122,7 +122,7 @@ def host_take_control():
                     })
                     
             except Exception as e:
-                print(f"[@route:host_take_control] Remote controller error: {e}")
+                print(f"[@route:take_control] Remote controller error: {e}")
                 return jsonify({
                     'success': False,
                     'status': 'remote_controller_error',
@@ -133,7 +133,7 @@ def host_take_control():
                 })
         
         # Both controllers are ready
-        print(f"[@route:host_take_control] All controllers ready for own device: {host_device.get('device_name')}")
+        print(f"[@route:take_control] All controllers ready for own device: {host_device.get('device_name')}")
         return jsonify({
             'success': True,
             'status': 'ready',
@@ -150,30 +150,30 @@ def host_take_control():
         })
             
     except Exception as e:
-        print(f"[@route:host_take_control] Error checking controllers: {str(e)}")
+        print(f"[@route:take_control] Error checking controllers: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Failed to check controllers: {str(e)}'
         }), 500
 
 
-@host_control_bp.route('/host/release-control', methods=['POST'])
-def host_release_control():
+@host_control_bp.route('/release-control', methods=['POST'])
+def release_control():
     """Host-side release control - Release local controllers"""
     try:
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:host_release_control] Releasing host-side control")
-        print(f"[@route:host_release_control] Device model: {device_model}")
-        print(f"[@route:host_release_control] Session ID: {session_id}")
+        print(f"[@route:release_control] Releasing host-side control")
+        print(f"[@route:release_control] Device model: {device_model}")
+        print(f"[@route:release_control] Session ID: {session_id}")
         
         # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
         
         if not host_device:
-            print(f"[@route:host_release_control] No host_device found, assuming already released")
+            print(f"[@route:release_control] No host_device found, assuming already released")
             return jsonify({
                 'success': True,
                 'message': 'No active controllers to release',
@@ -181,7 +181,7 @@ def host_release_control():
                 'session_id': session_id
             })
         
-        print(f"[@route:host_release_control] Releasing controllers for device: {host_device.get('device_name')}")
+        print(f"[@route:release_control] Releasing controllers for device: {host_device.get('device_name')}")
         
         # Release AV controller if available
         av_release_success = True
@@ -189,9 +189,9 @@ def host_release_control():
             av_controller = host_device.get('controller_objects', {}).get('av')
             if av_controller and hasattr(av_controller, 'release_control'):
                 av_controller.release_control()
-                print(f"[@route:host_release_control] AV controller released")
+                print(f"[@route:release_control] AV controller released")
         except Exception as e:
-            print(f"[@route:host_release_control] Error releasing AV controller: {e}")
+            print(f"[@route:release_control] Error releasing AV controller: {e}")
             av_release_success = False
         
         # Release Remote controller if available
@@ -200,9 +200,9 @@ def host_release_control():
             remote_controller = host_device.get('controller_objects', {}).get('remote')
             if remote_controller and hasattr(remote_controller, 'release_control'):
                 remote_controller.release_control()
-                print(f"[@route:host_release_control] Remote controller released")
+                print(f"[@route:release_control] Remote controller released")
         except Exception as e:
-            print(f"[@route:host_release_control] Error releasing remote controller: {e}")
+            print(f"[@route:release_control] Error releasing remote controller: {e}")
             remote_release_success = False
         
         overall_success = av_release_success and remote_release_success
@@ -217,18 +217,18 @@ def host_release_control():
         })
         
     except Exception as e:
-        print(f"[@route:host_release_control] Error: {str(e)}")
+        print(f"[@route:release_control] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Error releasing host-side control: {str(e)}'
         }), 500
 
 
-@host_control_bp.route('/host/controller-status', methods=['GET'])
-def host_controller_status():
+@host_control_bp.route('/controller-status', methods=['GET'])
+def controller_status():
     """Get status of all controllers on this host"""
     try:
-        print(f"[@route:host_controller_status] Getting controller status")
+        print(f"[@route:controller_status] Getting controller status")
         
         # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
@@ -277,7 +277,7 @@ def host_controller_status():
         })
         
     except Exception as e:
-        print(f"[@route:host_controller_status] Error: {str(e)}")
+        print(f"[@route:controller_status] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Error getting controller status: {str(e)}',

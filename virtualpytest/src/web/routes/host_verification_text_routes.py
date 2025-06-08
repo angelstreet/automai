@@ -25,9 +25,9 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE TEXT AUTO-DETECTION ENDPOINT
 # =====================================================
 
-@verification_text_host_bp.route('/stream/text-auto-detect', methods=['POST'])
-def host_text_auto_detect():
-    """Host-side endpoint to perform OCR text auto-detection on cropped image area."""
+@verification_text_host_bp.route('/text/auto-detect', methods=['POST'])
+def text_auto_detect():
+    """Auto-detect text elements in the current screen"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -236,9 +236,9 @@ def host_text_auto_detect():
 # HOST-SIDE TEXT REFERENCE SAVE ENDPOINT
 # =====================================================
 
-@verification_text_host_bp.route('/stream/save-text-resource', methods=['POST'])
-def host_save_text_resource():
-    """Host-side endpoint to save text references directly to resource.json without image files."""
+@verification_text_host_bp.route('/text/save-resource', methods=['POST'])
+def save_text_resource():
+    """Save text verification resource"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
