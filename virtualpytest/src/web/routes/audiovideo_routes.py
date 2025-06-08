@@ -1,267 +1,94 @@
 """
 Audio/Video Routes
 
-This module contains the audio/video API endpoints for:
-- HDMI Stream control
-- Video capture and analysis
-- Audio level detection
+This module contains the essential audio/video API endpoints for:
+- AV controller connection management
+- Video capture control
+- Screenshot capture
 """
 
 from flask import Blueprint, request, jsonify, current_app
-import os
 
 # Create blueprint
 audiovideo_bp = Blueprint('audiovideo', __name__)
 
-# Helper functions
-def check_controllers_available():
-    """Helper function to check if controllers are available"""
-    controllers_available = getattr(current_app, 'controllers_available', False)
-    if not controllers_available:
-        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
-    return None
-
-# =====================================================
-# HDMI STREAM CONTROLLER ENDPOINTS
-# =====================================================
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/defaults', methods=['GET'])
-def get_hdmi_stream_defaults():
-    """Get default HDMI stream connection values from environment variables."""
+@audiovideo_bp.route('/api/virtualpytest/av/connect', methods=['POST'])
+def connect():
+    """Connect to AV controller using own stored host_device object"""
     try:
-        defaults = {
-            'host_ip': os.getenv('HOST_IP', ''),
-            'host_username': os.getenv('HOST_USERNAME', ''),
-            'host_password': os.getenv('HOST_PASSWORD', ''),
-            'host_port': os.getenv('HOST_PORT', '22'),
-            'stream_path': os.getenv('STREAM_PATH', '/var/www/html/stream/output.m3u8')
-        }
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
         
-        return jsonify({
-            'success': True,
-            'defaults': defaults
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/take-control', methods=['POST'])
-def hdmi_stream_take_control():
-    """Establish SSH connection for HDMI stream access."""
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['host_ip', 'host_username', 'host_password', 'stream_path']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({
-                    'success': False,
-                    'error': f'Missing required field: {field}'
-                }), 400
-        
-        host_ip = data['host_ip']
-        host_username = data['host_username']
-        host_password = data['host_password']
-        host_port = int(data.get('host_port', 22))
-        stream_path = data['stream_path']
-        
-        print(f"[@api:hdmi-stream] Taking control of HDMI stream via SSH: {host_username}@{host_ip}:{host_port}")
-        
-        # Use the same SSH connection approach as AndroidMobileRemoteController
-        try:
-            from utils.sshUtils import create_ssh_connection
-            
-            # Create SSH connection
-            ssh_connection = create_ssh_connection(
-                host=host_ip,
-                port=host_port,
-                username=host_username,
-                password=host_password,
-                timeout=30
-            )
-            
-            if not ssh_connection:
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to establish SSH connection'
-                }), 400
-            
-            # Test the stream file exists
-            success, stdout, stderr, exit_code = ssh_connection.execute_command(f"ls -la {stream_path}")
-            
-            # Close the SSH connection after test
-            ssh_connection.disconnect()
-            
-            if success and exit_code == 0:
-                print(f"[@api:hdmi-stream] SSH connection successful, stream file verified: {stream_path}")
-                return jsonify({
-                    'success': True,
-                    'message': f'SSH connection established and stream file verified at {stream_path}',
-                    'stream_info': {
-                        'host': host_ip,
-                        'path': stream_path,
-                        'accessible': True
-                    }
-                })
-            else:
-                error_msg = stderr.strip() if stderr else 'Stream file not found or not accessible'
-                print(f"[@api:hdmi-stream] Stream file verification failed: {error_msg}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Stream file verification failed: {error_msg}'
-                }), 400
-                
-        except ImportError:
-            # Fallback to basic SSH test if sshUtils not available
-            print(f"[@api:hdmi-stream] SSH utilities not available, using basic connection test")
+        if not host_device:
             return jsonify({
-                'success': True,
-                'message': f'SSH connection configured for {stream_path} (utilities not available for verification)',
-                'stream_info': {
-                    'host': host_ip,
-                    'path': stream_path,
-                    'accessible': True
-                }
-            })
-            
-    except Exception as e:
-        print(f"[@api:hdmi-stream] Error during SSH connection: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/release-control', methods=['POST'])
-def hdmi_stream_release_control():
-    """Release SSH connection for HDMI stream."""
-    try:
-        print("[@api:hdmi-stream] Releasing HDMI stream SSH connection")
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
-        # In a real implementation, this would:
-        # 1. Close any active SSH connections
-        # 2. Clean up any port forwarding
-        # 3. Stop any background processes
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
         
-        return jsonify({
-            'success': True,
-            'message': 'HDMI stream SSH connection released successfully'
-        })
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
         
-    except Exception as e:
-        print(f"[@api:hdmi-stream] Error during SSH connection release: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/config', methods=['GET'])
-def get_hdmi_stream_config():
-    """Get HDMI Stream controller configuration"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
-    try:
-        # Get the controller class to retrieve configuration
-        from controllers.audiovideo.hdmi_stream import HDMIStreamController
+        print(f"[@route:connect] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:connect] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
-        # Return configuration options
-        config = {
-            'supported_protocols': ['HLS', 'RTSP', 'HTTP', 'HTTPS'],
-            'supported_resolutions': [
-                '1920x1080', '1280x720', '854x480', '640x360'
-            ],
-            'supported_fps': [15, 24, 25, 30, 50, 60],
-            'default_resolution': '1920x1080',
-            'default_fps': 30,
-            'example_urls': [
-                'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
-                'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8',
-                'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
-            ]
-        }
-        
-        return jsonify(config)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/connect', methods=['POST'])
-def connect_hdmi_stream():
-    """Connect to HDMI stream"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
-    try:
-        from controllers import ControllerFactory
-        
-        data = request.json
-        stream_url = data.get('stream_url', '')
-        resolution = data.get('resolution', '1920x1080')
-        fps = data.get('fps', 30)
-        
-        if not stream_url:
-            return jsonify({'error': 'Stream URL is required'}), 400
-        
-        # Create controller instance
-        controller = ControllerFactory.create_av_controller(
-            capture_type="hdmi_stream",
-            device_name="HDMI Stream",
-            stream_url=stream_url
-        )
-        
-        # Connect to stream
-        connection_result = controller.connect()
+        # Connect to controller
+        connection_result = av_controller.connect()
         
         if connection_result:
-            # Start video capture
-            capture_result = controller.start_video_capture(resolution, fps)
-            
-            if capture_result:
-                status = controller.get_status()
-                return jsonify({
-                    'success': True,
-                    'connected': True,
-                    'streaming': True,
-                    'status': status
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to start video capture'
-                }), 500
+            # Get status after connection
+            status = av_controller.get_status()
+            return jsonify({
+                'success': True,
+                'connected': True,
+                'status': status
+            })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to connect to stream'
+                'error': 'Failed to connect to AV controller'
             }), 500
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/disconnect', methods=['POST'])
-def disconnect_hdmi_stream():
-    """Disconnect from HDMI stream"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
+@audiovideo_bp.route('/api/virtualpytest/av/disconnect', methods=['POST'])
+def disconnect():
+    """Disconnect from AV controller using own stored host_device object"""
     try:
-        from controllers import ControllerFactory
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
         
-        # Create controller instance (in real implementation, you'd retrieve existing instance)
-        controller = ControllerFactory.create_av_controller(
-            capture_type="hdmi_stream",
-            device_name="HDMI Stream"
-        )
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
-        # Disconnect
-        disconnect_result = controller.disconnect()
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:disconnect] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:disconnect] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
+        
+        # Disconnect from controller
+        disconnect_result = av_controller.disconnect()
         
         return jsonify({
             'success': disconnect_result,
@@ -270,152 +97,405 @@ def disconnect_hdmi_stream():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/status', methods=['GET'])
-def get_hdmi_stream_status():
-    """Get HDMI stream status"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
+@audiovideo_bp.route('/api/virtualpytest/av/get_status', methods=['GET'])
+def get_status():
+    """Get AV controller status using own stored host_device object"""
     try:
-        from controllers import ControllerFactory
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
         
-        # Create controller instance (in real implementation, you'd retrieve existing instance)
-        controller = ControllerFactory.create_av_controller(
-            capture_type="hdmi_stream",
-            device_name="HDMI Stream"
-        )
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
-        status = controller.get_status()
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:get_status] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Get controller status
+        status = av_controller.get_status()
         
         return jsonify({
+            'success': True,
             'status': status,
             'timestamp': __import__('time').time()
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@audiovideo_bp.route('/api/virtualpytest/hdmi-stream/control', methods=['POST'])
-def control_hdmi_stream():
-    """Control HDMI stream (start/stop capture, analyze content, etc.)"""
-    error = check_controllers_available()
-    if error:
-        return error
-    
-    try:
-        from controllers import ControllerFactory
-        
-        data = request.json
-        action = data.get('action', '')
-        
-        # Create controller instance
-        controller = ControllerFactory.create_av_controller(
-            capture_type="hdmi_stream",
-            device_name="HDMI Stream"
-        )
-        
-        result = {'success': False}
-        
-        if action == 'start_capture':
-            resolution = data.get('resolution', '1920x1080')
-            fps = data.get('fps', 30)
-            result['success'] = controller.start_video_capture(resolution, fps)
-            result['action'] = 'start_capture'
-            
-        elif action == 'stop_capture':
-            result['success'] = controller.stop_video_capture()
-            result['action'] = 'stop_capture'
-            
-        elif action == 'capture_frame':
-            filename = data.get('filename')
-            result['success'] = controller.capture_frame(filename)
-            result['action'] = 'capture_frame'
-            
-        elif action == 'analyze_content':
-            analysis_type = data.get('analysis_type', 'motion')
-            analysis_result = controller.analyze_video_content(analysis_type)
-            result['success'] = bool(analysis_result)
-            result['analysis'] = analysis_result
-            result['action'] = 'analyze_content'
-            
-        elif action == 'detect_audio_level':
-            audio_level = controller.detect_audio_level()
-            result['success'] = True
-            result['audio_level'] = audio_level
-            result['action'] = 'detect_audio_level'
-            
-        elif action == 'record_session':
-            duration = data.get('duration', 10.0)
-            filename = data.get('filename')
-            result['success'] = controller.record_session(duration, filename)
-            result['action'] = 'record_session'
-            
-        else:
-            return jsonify({'error': f'Unknown action: {action}'}), 400
-        
-        # Get updated status
-        result['status'] = controller.get_status()
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@audiovideo_bp.route('/release-control', methods=['POST'])
-def host_release_control():
-    """Host-side release control - disconnect all controllers"""
-    try:
-        data = request.get_json() or {}
-        device_model = data.get('device_model', 'android_mobile')
-        session_id = data.get('session_id', 'default-session')
-        
-        print(f"[@route:host_release_control] Host release control requested")
-        print(f"[@route:host_release_control] Device model: {device_model}")
-        print(f"[@route:host_release_control] Session ID: {session_id}")
-        
-        # Note: In a real implementation, you would track active controllers
-        # and disconnect them here. For now, we'll just return success.
-        
-        return jsonify({
-            'success': True,
-            'status': 'released',
-            'message': f'Host controllers released for {device_model}',
-            'device_model': device_model,
-            'session_id': session_id,
-            'timestamp': __import__('time').time()
-        })
-        
-    except Exception as e:
-        print(f"[@route:host_release_control] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'status': 'error',
-            'error': f'Host release control error: {str(e)}',
-            'timestamp': __import__('time').time()
+            'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/stream/verification-status', methods=['GET'])
-def verification_status():
-    """Get verification system status from host side - DEPRECATED, use /take-control instead."""
+@audiovideo_bp.route('/api/virtualpytest/av/start_capture', methods=['POST'])
+def start_capture():
+    """Start video capture using own stored host_device object - COPY FROM screen_definition_routes.py"""
     try:
-        print(f"[@route:verification_status] DEPRECATED: Use /take-control instead")
+        data = request.get_json() or {}
         
-        # Return basic status for backward compatibility
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:start_capture] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Extract parameters - COPY FROM screen_definition_routes.py
+        video_device = data.get('video_device', '/dev/video0')
+        device_model = data.get('device_model', 'android_mobile')
+        max_duration = data.get('max_duration', 60)  # 60 second rolling buffer
+        fps = data.get('fps', 5)  # 5 fps
+        resolution = data.get('resolution', '1920x1080')
+        
+        # Connect if not already connected
+        if not av_controller.is_connected:
+            if not av_controller.connect():
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to connect to AV controller'
+                }), 400
+        
+        # COPY THE EXACT LOGIC FROM screen_definition_routes.py start_capture()
+        import subprocess
+        import time
+        import os
+        
+        # Check if capture is already running
+        if hasattr(av_controller, 'capture_process') and av_controller.capture_process and hasattr(av_controller, 'capture_pid') and av_controller.capture_pid:
+            print("[@route:start_capture] Capture already running")
+            return jsonify({
+                'success': True,
+                'capture_pid': av_controller.capture_pid,
+                'remote_capture_dir': getattr(av_controller, 'remote_capture_dir', '/tmp/captures'),
+                'message': 'Capture already active'
+            })
+        
+        # Check if stream is running and stop it
+        try:
+            result = subprocess.run(['sudo', 'systemctl', 'status', 'stream'], capture_output=True, text=True)
+            stream_was_active = "Active: active (running)" in result.stdout
+            
+            if stream_was_active:
+                print("[@route:start_capture] Stopping stream for capture...")
+                result = subprocess.run(['sudo', 'systemctl', 'stop', 'stream'], capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Failed to stop stream service: {result.stderr}'
+                    }), 500
+        except Exception as e:
+            print(f"[@route:start_capture] Warning: Could not check/stop stream service: {e}")
+            stream_was_active = False
+        
+        # Create remote captures directory for rolling buffer
+        remote_capture_dir = "/tmp/captures"
+        os.makedirs(remote_capture_dir, exist_ok=True)
+        
+        # Clean any existing FFmpeg processes first
+        print("[@route:start_capture] Cleaning existing FFmpeg processes...")
+        subprocess.run(['pkill', '-f', 'ffmpeg.*'], capture_output=True)
+        time.sleep(1)  # Give time for processes to die
+        
+        # Clean existing capture files to start fresh
+        subprocess.run(['rm', '-f', f'{remote_capture_dir}/capture_*.jpg'], shell=True, capture_output=True)
+        
+        # COPY EXACT FFmpeg command from screen_definition_routes.py but with timestamp logic
+        FIXED_VIDEO_SIZE = "1920x1080"
+        FIXED_SCALE_SIZE = "640x360"
+        
+        # Combined FFmpeg command: Stream HLS + Rolling buffer capture with TIMESTAMPED filenames
+        # Use strftime to create timestamped filenames like capture_20241201143045.jpg
+        ffmpeg_cmd = (
+            f"/usr/bin/ffmpeg -report "
+            f"-f v4l2 -input_format mjpeg -framerate 20 -video_size {FIXED_VIDEO_SIZE} -i {video_device} "
+            f"-filter_complex \"split=2[stream][capture]; "
+            f"[stream]scale={FIXED_SCALE_SIZE},format=yuv420p[streamout]; "
+            f"[capture]fps=5[captureout]\" "
+            f"-map \"[streamout]\" -c:v libx264 -preset ultrafast -tune zerolatency -b:v 400k -g 5 -flags low_delay -an "
+            f"-f hls -hls_time 1 -hls_list_size 2 -hls_flags delete_segments -hls_segment_type mpegts "
+            f"/var/www/html/stream/output.m3u8 "
+            f"-map \"[captureout]\" -c:v mjpeg -q:v 2 "
+            f"-f image2 -strftime 1 -y {remote_capture_dir}/capture_%Y%m%d%H%M%S.jpg"
+        )
+        
+        print(f"[@route:start_capture] Starting capture with fixed resolution {FIXED_VIDEO_SIZE} and scale {FIXED_SCALE_SIZE}")
+        print(f"[@route:start_capture] FFmpeg command: {ffmpeg_cmd}")
+        
+        # Start FFmpeg capture process
+        start_cmd = f"nohup {ffmpeg_cmd} > {remote_capture_dir}/ffmpeg.log 2>&1 & echo $!"
+        
+        result = subprocess.run(start_cmd, shell=True, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            error_msg = result.stderr.strip() if result.stderr else "Failed to start capture"
+            print(f"[@route:start_capture] Capture start failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to start capture: {error_msg}'
+            }), 500
+        
+        # Get the process ID
+        capture_pid = result.stdout.strip()
+        if not capture_pid:
+            print("[@route:start_capture] No PID returned from FFmpeg start")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to get capture process ID'
+            }), 500
+        
+        print(f"[@route:start_capture] Capture started with PID: {capture_pid}")
+        
+        # Store in controller for tracking
+        av_controller.capture_pid = capture_pid
+        av_controller.remote_capture_dir = remote_capture_dir
+        av_controller.stream_was_active_before_capture = stream_was_active
+        
+        # Wait a moment and verify the process is actually running and creating files
+        time.sleep(2)
+        
+        # Check if process is still running
+        result = subprocess.run(f"ps -p {capture_pid} > /dev/null 2>&1 && echo 'running' || echo 'stopped'", shell=True, capture_output=True, text=True)
+        if 'stopped' in result.stdout:
+            # Get FFmpeg logs for debugging
+            try:
+                with open(f"{remote_capture_dir}/ffmpeg.log", 'r') as f:
+                    log_content = f.read()
+            except:
+                log_content = "Could not read FFmpeg logs"
+            
+            print(f"[@route:start_capture] FFmpeg process died immediately. Logs: {log_content}")
+            return jsonify({
+                'success': False,
+                'error': f'FFmpeg process failed to start. Check video device access. Logs: {log_content}'
+            }), 500
+        
+        # Check if files are being created
+        result = subprocess.run(f"ls -la {remote_capture_dir}/", shell=True, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"[@route:start_capture] Capture directory contents: {result.stdout}")
+        
         return jsonify({
             'success': True,
-            'status': 'deprecated',
-            'message': 'This endpoint is deprecated. Use /take-control instead.',
-            'controllers_available': ['image', 'text', 'adb'],
-            'host_connected': True,
-            'timestamp': __import__('time').time()
+            'capture_pid': capture_pid,
+            'remote_capture_dir': remote_capture_dir,
+            'capture_resolution': FIXED_VIDEO_SIZE,
+            'scale_dimensions': FIXED_SCALE_SIZE,
+            'stream_was_active': stream_was_active,
+            'max_duration': max_duration,
+            'fps': fps,
+            'message': f'Combined streaming + rolling buffer capture started with fixed resolution {FIXED_VIDEO_SIZE} (5fps, 60 seconds max, scaling to {FIXED_SCALE_SIZE})'
         })
-        
+            
     except Exception as e:
-        print(f"[@route:verification_status] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Host verification status error: {str(e)}'
+            'error': str(e)
+        }), 500
+
+@audiovideo_bp.route('/api/virtualpytest/av/stop_capture', methods=['POST'])
+def stop_capture():
+    """Stop video capture using own stored host_device object - COPY FROM screen_definition_routes.py"""
+    try:
+        data = request.get_json() or {}
+        
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:stop_capture] Using own AV controller: {type(av_controller).__name__}")
+        
+        # COPY THE EXACT LOGIC FROM screen_definition_routes.py stop_capture()
+        import subprocess
+        import time
+        import os
+        import base64
+        
+        # Simply kill all ffmpeg processes
+        print("[@route:stop_capture] Stopping all FFmpeg processes...")
+        subprocess.run(['pkill', '-f', 'ffmpeg.*'], capture_output=True)
+        time.sleep(1)  # Give time for processes to stop
+        
+        frames_downloaded = 0
+        TMP_DIR = '/tmp/screenshots'  # Local temp directory
+        local_capture_dir = os.path.join(TMP_DIR, 'captures')
+        os.makedirs(local_capture_dir, exist_ok=True)
+        
+        # Download all captured frames from /tmp/captures/
+        try:
+            remote_capture_dir = getattr(av_controller, 'remote_capture_dir', '/tmp/captures')
+            
+            # List all capture files in remote directory
+            result = subprocess.run(f"ls {remote_capture_dir}/capture_*.jpg 2>/dev/null || echo 'no files'", shell=True, capture_output=True, text=True)
+            
+            if result.returncode == 0 and 'no files' not in result.stdout.strip():
+                capture_files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip().endswith('.jpg')]
+                print(f"[@route:stop_capture] Found {len(capture_files)} capture files to download")
+                
+                # Download each capture file (copy to local temp)
+                for remote_file in capture_files:
+                    try:
+                        filename = os.path.basename(remote_file)
+                        local_file_path = os.path.join(local_capture_dir, filename)
+                        
+                        # Copy file locally
+                        result = subprocess.run(['cp', remote_file, local_file_path], capture_output=True)
+                        
+                        if result.returncode == 0 and os.path.exists(local_file_path) and os.path.getsize(local_file_path) > 0:
+                            frames_downloaded += 1
+                            print(f"[@route:stop_capture] Downloaded frame: {filename}")
+                        else:
+                            print(f"[@route:stop_capture] Failed to copy frame: {filename}")
+                            
+                    except Exception as e:
+                        print(f"[@route:stop_capture] Error downloading frame {remote_file}: {e}")
+                        continue
+            else:
+                print("[@route:stop_capture] No capture files found")
+                
+        except Exception as e:
+            print(f"[@route:stop_capture] Error during frame download: {e}")
+        
+        # Clean up remote capture files
+        try:
+            remote_capture_dir = getattr(av_controller, 'remote_capture_dir', '/tmp/captures')
+            subprocess.run(f"rm -f {remote_capture_dir}/capture_*.jpg", shell=True, capture_output=True)
+            subprocess.run(f"rm -f {remote_capture_dir}/ffmpeg.log", shell=True, capture_output=True)
+        except Exception as e:
+            print(f"[@route:stop_capture] Error cleaning up remote files: {e}")
+        
+        # Restart stream if it was active before capture
+        stream_restarted = False
+        if hasattr(av_controller, 'stream_was_active_before_capture') and av_controller.stream_was_active_before_capture:
+            try:
+                print("[@route:stop_capture] Restarting stream service...")
+                result = subprocess.run(['sudo', 'systemctl', 'start', 'stream'], capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    stream_restarted = True
+                    print("[@route:stop_capture] Stream service restarted successfully")
+                else:
+                    print(f"[@route:stop_capture] Failed to restart stream: {result.stderr}")
+            except Exception as e:
+                print(f"[@route:stop_capture] Error restarting stream: {e}")
+        
+        # Clear controller tracking
+        if hasattr(av_controller, 'capture_pid'):
+            delattr(av_controller, 'capture_pid')
+        if hasattr(av_controller, 'remote_capture_dir'):
+            delattr(av_controller, 'remote_capture_dir')
+        if hasattr(av_controller, 'stream_was_active_before_capture'):
+            delattr(av_controller, 'stream_was_active_before_capture')
+        
+        return jsonify({
+            'success': True,
+            'frames_downloaded': frames_downloaded,
+            'local_capture_dir': local_capture_dir,
+            'stream_restarted': stream_restarted,
+            'message': f'Capture stopped. Downloaded {frames_downloaded} frames to {local_capture_dir}'
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@audiovideo_bp.route('/api/virtualpytest/av/take_screenshot', methods=['POST'])
+def take_screenshot():
+    """Take screenshot via AV controller using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT (no need to receive from frontend)
+        from flask import current_app
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:take_screenshot] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:take_screenshot] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
+        
+        # Connect if not already connected
+        if not av_controller.is_connected:
+            if not av_controller.connect():
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to connect to AV controller'
+                }), 400
+        
+        # Call controller method directly
+        screenshot_url = av_controller.take_screenshot()
+        
+        if screenshot_url:
+            return jsonify({
+                'success': True,
+                'screenshot_url': screenshot_url
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to take screenshot'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500 

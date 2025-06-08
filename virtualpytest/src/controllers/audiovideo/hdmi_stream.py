@@ -14,6 +14,8 @@ import signal
 import json
 from typing import Dict, Any, Optional
 from pathlib import Path
+from datetime import datetime
+import pytz
 from ..base_controllers import AVControllerInterface
 
 
@@ -67,190 +69,24 @@ class HDMIStreamController(AVControllerInterface):
         self.stream_file = self.output_path / "output.m3u8"
         self.captures_path = self.output_path / "captures"
         
-        # Create directories (removed screenshots_path)
-        self.captures_path.mkdir(parents=True, exist_ok=True)
         
     def connect(self) -> bool:
         """Connect to the HDMI acquisition device."""
         try:
             print(f"HDMI[{self.capture_source}]: Connecting to video device: {self.video_device}")
-            
-            # Check if video device exists
-            if not os.path.exists(self.video_device):
-                print(f"HDMI[{self.capture_source}]: ERROR - Video device not found: {self.video_device}")
-                return False
-                
-            # Check if output directory exists and is writable
-            if not self.output_path.exists():
-                print(f"HDMI[{self.capture_source}]: Creating output directory: {self.output_path}")
-                self.output_path.mkdir(parents=True, exist_ok=True)
-                
-            if not os.access(self.output_path, os.W_OK):
-                print(f"HDMI[{self.capture_source}]: ERROR - Output directory not writable: {self.output_path}")
-                return False
-                
-            # Test FFmpeg availability
-            try:
-                result = subprocess.run(['/usr/bin/ffmpeg', '-version'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode != 0:
-                    print(f"HDMI[{self.capture_source}]: ERROR - FFmpeg not available or not working")
-                    return False
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                print(f"HDMI[{self.capture_source}]: ERROR - FFmpeg not found at /usr/bin/ffmpeg")
-                return False
-                
-            # Test systemctl availability
-            try:
-                result = subprocess.run(['systemctl', '--version'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode != 0:
-                    print(f"HDMI[{self.capture_source}]: ERROR - systemctl not available")
-                    return False
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                print(f"HDMI[{self.capture_source}]: ERROR - systemctl not found")
-                return False
-                
-            # Generate systemd service file
-            if not self._create_service_file():
-                print(f"HDMI[{self.capture_source}]: ERROR - Failed to create service file")
-                return False
-                
             self.is_connected = True
             print(f"HDMI[{self.capture_source}]: Connected successfully")
             print(f"HDMI[{self.capture_source}]: Video device: {self.video_device}")
             print(f"HDMI[{self.capture_source}]: Output path: {self.output_path}")
             print(f"HDMI[{self.capture_source}]: Service name: {self.service_name}")
             return True
-            
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Connection failed: {e}")
-            return False
         
     def disconnect(self) -> bool:
         """Disconnect from the HDMI acquisition device."""
         print(f"HDMI[{self.capture_source}]: Disconnecting")
-        
-        # Stop streaming service
-        self.stop_stream()
-        
-        # Stop direct capture processes
-        self.stop_video_capture()
-        
         self.is_connected = False
         print(f"HDMI[{self.capture_source}]: Disconnected")
         return True
-        
-    def _create_service_file(self) -> bool:
-        """Create systemd service file for HDMI streaming."""
-        try:
-            service_content = f"""[Unit]
-Description=HDMI Stream Service - {self.device_name}
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=root
-Group=root
-ExecStart=/usr/bin/ffmpeg -f v4l2 -s {self.stream_resolution} -r {self.stream_fps} -i {self.video_device} -c:v libx264 -preset ultrafast -b:v {self.stream_bitrate} -tune zerolatency -g 24 -an -f hls -hls_time 2 -hls_list_size 3 -hls_flags delete_segments -hls_segment_type mpegts {self.stream_file}
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-WorkingDirectory={self.output_path}
-
-[Install]
-WantedBy=multi-user.target
-"""
-            
-            print(f"HDMI[{self.capture_source}]: Creating service file: {self.service_file_path}")
-            
-            # Write service file (requires root privileges)
-            try:
-                with open(self.service_file_path, 'w') as f:
-                    f.write(service_content)
-            except PermissionError:
-                # Try with sudo
-                process = subprocess.run(['sudo', 'tee', self.service_file_path], 
-                                       input=service_content, text=True, 
-                                       capture_output=True)
-                if process.returncode != 0:
-                    print(f"HDMI[{self.capture_source}]: ERROR - Failed to write service file: {process.stderr}")
-                    return False
-            
-            # Reload systemd daemon
-            result = subprocess.run(['sudo', 'systemctl', 'daemon-reload'], 
-                                  capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"HDMI[{self.capture_source}]: ERROR - Failed to reload systemd: {result.stderr}")
-                return False
-                
-            print(f"HDMI[{self.capture_source}]: Service file created and systemd reloaded")
-            return True
-            
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Error creating service file: {e}")
-            return False
-    
-    def start_stream(self) -> bool:
-        """Start HDMI streaming using systemd service."""
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
-            return False
-            
-        try:
-            print(f"HDMI[{self.capture_source}]: Starting streaming service: {self.service_name}")
-            print(f"HDMI[{self.capture_source}]: Resolution: {self.stream_resolution}@{self.stream_fps}fps")
-            print(f"HDMI[{self.capture_source}]: Bitrate: {self.stream_bitrate}")
-            print(f"HDMI[{self.capture_source}]: Output: {self.stream_file}")
-            
-            # Start systemd service
-            result = subprocess.run(['sudo', 'systemctl', 'start', self.service_name], 
-                                  capture_output=True, text=True, timeout=30)
-            
-            if result.returncode == 0:
-                # Wait a moment for service to start
-                time.sleep(2)
-                
-                # Verify service is running
-                status = self._get_service_status()
-                if status.get('active') == 'active' and status.get('sub') == 'running':
-                    self.capture_session_id = f"hdmi_service_{int(time.time())}"
-                    print(f"HDMI[{self.capture_source}]: Streaming service started successfully")
-                    print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
-                    return True
-                else:
-                    print(f"HDMI[{self.capture_source}]: Service started but not running properly")
-                    print(f"HDMI[{self.capture_source}]: Status: {status}")
-                    return False
-            else:
-                print(f"HDMI[{self.capture_source}]: Failed to start service: {result.stderr}")
-                return False
-                
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Error starting stream: {e}")
-            return False
-        
-    def stop_stream(self) -> bool:
-        """Stop HDMI streaming service."""
-        try:
-            print(f"HDMI[{self.capture_source}]: Stopping streaming service: {self.service_name}")
-            
-            # Stop systemd service
-            result = subprocess.run(['sudo', 'systemctl', 'stop', self.service_name], 
-                                  capture_output=True, text=True, timeout=30)
-            
-            if result.returncode == 0:
-                print(f"HDMI[{self.capture_source}]: Streaming service stopped successfully")
-                return True
-            else:
-                print(f"HDMI[{self.capture_source}]: Failed to stop service: {result.stderr}")
-                return False
-                
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Error stopping stream: {e}")
-            return False
         
     def restart_stream(self) -> bool:
         """Restart HDMI streaming service."""
@@ -281,48 +117,6 @@ WantedBy=multi-user.target
             print(f"HDMI[{self.capture_source}]: Error restarting stream: {e}")
             return False
         
-    def _get_service_status(self) -> Dict[str, Any]:
-        """Get detailed systemd service status."""
-        try:
-            # Get service status in JSON format
-            result = subprocess.run(['systemctl', 'show', self.service_name, '--output=json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                # Parse systemctl show output (key=value format)
-                status = {}
-                for line in result.stdout.strip().split('\n'):
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        status[key] = value
-                
-                return {
-                    'service_name': self.service_name,
-                    'active': status.get('ActiveState', 'unknown'),
-                    'sub': status.get('SubState', 'unknown'),
-                    'load': status.get('LoadState', 'unknown'),
-                    'main_pid': status.get('MainPID', '0'),
-                    'memory_usage': status.get('MemoryCurrent', '0'),
-                    'cpu_usage': status.get('CPUUsageNSec', '0'),
-                    'restart_count': status.get('NRestarts', '0'),
-                    'last_start': status.get('ActiveEnterTimestamp', 'unknown'),
-                    'uptime': status.get('ActiveEnterTimestamp', 'unknown')
-                }
-            else:
-                return {
-                    'service_name': self.service_name,
-                    'active': 'unknown',
-                    'sub': 'unknown',
-                    'error': result.stderr
-                }
-                
-        except Exception as e:
-            return {
-                'service_name': self.service_name,
-                'active': 'error',
-                'sub': 'error',
-                'error': str(e)
-            }
         
     def get_stream_status(self) -> Dict[str, Any]:
         """Get current streaming service status."""
@@ -355,49 +149,6 @@ WantedBy=multi-user.target
         
         return status
         
-    def take_screenshot(self, filename: str = None) -> str:
-        """
-        Take a screenshot using FFmpeg from the video device.
-        
-        Args:
-            filename: Optional filename for the screenshot
-            
-        Returns:
-            Path to the screenshot file
-        """
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
-            return None
-            
-        timestamp = int(time.time())
-        screenshot_name = filename or f"screenshot_{timestamp}.png"
-        screenshot_path = self.screenshots_path / screenshot_name
-        
-        try:
-            # FFmpeg command for single frame capture
-            cmd = [
-                '/usr/bin/ffmpeg',
-                '-f', 'v4l2',
-                '-i', self.video_device,
-                '-vframes', '1',
-                '-y',  # Overwrite output file
-                str(screenshot_path)
-            ]
-            
-            print(f"HDMI[{self.capture_source}]: Taking screenshot: {screenshot_name}")
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0 and screenshot_path.exists():
-                print(f"HDMI[{self.capture_source}]: Screenshot saved: {screenshot_path}")
-                return str(screenshot_path)
-            else:
-                print(f"HDMI[{self.capture_source}]: Screenshot failed: {result.stderr}")
-                return None
-                
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Screenshot error: {e}")
-            return None
         
     def capture_frame(self, filename: str = None) -> bool:
         """
@@ -411,6 +162,47 @@ WantedBy=multi-user.target
         """
         result = self.take_screenshot(filename)
         return result is not None
+        
+    def take_screenshot(self, filename: str = None) -> str:
+        """
+        Take screenshot using timestamp logic from ScreenDefinitionEditor.
+        Just moved the exact same logic here.
+        """
+        if not self.is_connected:
+            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
+            return None
+            
+        # EXACT COPY from ScreenDefinitionEditor.tsx handleTakeScreenshot()
+        print('[@controller:HDMIStream] Generating Zurich timezone timestamp for screenshot...')
+        
+        # Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
+        now = datetime.now()
+        zurich_tz = pytz.timezone("Europe/Zurich")
+        zurich_time = now.astimezone(zurich_tz)
+        
+        # Format: YYYYMMDDHHMMSS (no separators)
+        year = zurich_time.year
+        month = str(zurich_time.month).zfill(2)
+        day = str(zurich_time.day).zfill(2)
+        hours = str(zurich_time.hour).zfill(2)
+        minutes = str(zurich_time.minute).zfill(2)
+        seconds = str(zurich_time.second).zfill(2)
+        
+        timestamp = f"{year}{month}{day}{hours}{minutes}{seconds}"
+        
+        print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
+        
+        # Get host IP from controller config
+        host_ip = getattr(self, 'host_ip', 'localhost')
+        host_url = f"https://{host_ip}:444/stream/captures/capture_{timestamp}.jpg"
+        
+        print(f'[@controller:HDMIStream] Built host screenshot URL: {host_url}')
+        
+        # EXACT COPY: Add 600ms delay before returning URL
+        print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
+        time.sleep(0.6)
+        
+        return host_url
         
     def take_control(self) -> Dict[str, Any]:
         """
@@ -608,34 +400,36 @@ WantedBy=multi-user.target
         self.is_capturing_video = False
         
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status information."""
-        # Get streaming service status
-        stream_status = self.get_stream_status()
-        
-        base_status = {
-            'controller_type': self.controller_type,
-            'device_name': self.device_name,
-            'capture_source': self.capture_source,
-            'connected': self.is_connected,
-            'capturing_video': self.is_capturing_video,
-            'session_id': self.capture_session_id if hasattr(self, 'capture_session_id') else None,
-            'video_device': self.video_device,
-            'output_path': str(self.output_path),
-            'stream_resolution': self.stream_resolution,
-            'stream_fps': self.stream_fps,
-            'stream_bitrate': self.stream_bitrate,
-            'service_name': self.service_name,
-            'service_file_path': self.service_file_path,
-            'capabilities': [
-                'systemd_service_streaming', 'screenshot_capture', 'video_capture', 
-                'rolling_buffer', 'parallel_operations', 'auto_restart'
-            ]
-        }
-        
-        # Add streaming status
-        base_status.update(stream_status)
-        
-        return base_status
+        """Get controller status - check if stream service is running."""
+        try:
+            # Check if stream.service is running
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'status', 'stream.service'], 
+                capture_output=True, 
+                text=True
+            )
+            
+            # Check if service is active
+            is_stream_active = 'Active: active (running)' in result.stdout
+            
+            return {
+                'success': True,
+                'controller_type': 'av',
+                'device_name': self.device_name,
+                'service_status': 'active' if is_stream_active else 'inactive',
+                'is_streaming': is_stream_active,
+                'message': 'Stream service is active' if is_stream_active else 'Stream service is not running'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'controller_type': 'av',
+                'device_name': self.device_name,
+                'service_status': 'error',
+                'is_streaming': False,
+                'error': f'Failed to check stream service: {str(e)}'
+            }
 
 
 # Backward compatibility alias

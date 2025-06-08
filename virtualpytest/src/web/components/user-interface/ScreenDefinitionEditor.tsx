@@ -30,25 +30,8 @@ import { getVerificationEditorLayout } from '../../../config/layoutConfig';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ScreenDefinitionEditorProps {
-  /** Device configuration with AV parameters */
-  deviceConfig?: {
-    av?: {
-      parameters: {
-        fps: number;
-        host_ip: string;
-        host_port: string;
-        resolution: string;
-        stream_url: string;
-        stream_path: string;
-        video_device: string;
-        host_password: string;
-        host_username: string;
-        connection_timeout: number;
-      };
-    };
-  };
-  /** Device model for resource path */
-  deviceModel: string;
+  /** Complete host+device object containing all configuration */
+  selectedHostDevice?: any;
   /** Whether to auto-connect when device is selected */
   autoConnect?: boolean;
   /** Callback when disconnection is complete */
@@ -126,8 +109,7 @@ const RecordingTimer: React.FC<{ isCapturing: boolean }> = ({ isCapturing }) => 
 };
 
 export function ScreenDefinitionEditor({
-  deviceConfig,
-  deviceModel,
+  selectedHostDevice,
   autoConnect = false,
   onDisconnectComplete,
   sx = {},
@@ -136,12 +118,18 @@ export function ScreenDefinitionEditor({
   // Use registration context for centralized URL management
   const { buildServerUrl } = useRegistration();
 
+  // Extract everything from selectedHostDevice
+  const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
+  const deviceConfig = selectedHostDevice?.controller_configs;
+  
+  console.log(`[@component:ScreenDefinitionEditor] Using host_device: ${selectedHostDevice?.host_name} with device: ${selectedHostDevice?.device_name} (${deviceModel})`);
+
   // Debug parent component re-renders
   useEffect(() => {
     console.log('[@component:ScreenDefinitionEditor] Component mounted/re-rendered with props:', {
       deviceModel,
       autoConnect,
-      hasDeviceConfig: !!deviceConfig,
+      hasSelectedHostDevice: !!selectedHostDevice,
       hasOnDisconnectComplete: !!onDisconnectComplete
     });
   });
@@ -432,43 +420,36 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Take screenshot using direct host URL construction
+  // Take screenshot using AV controller
   const handleTakeScreenshot = async () => {
-    if (!isConnected) return;
+    if (!isConnected || !selectedHostDevice) return;
     
     try {
       setIsScreenshotLoading(true);
       setViewMode('screenshot');
       
-      console.log('[@component:ScreenDefinitionEditor] Generating Zurich timezone timestamp for screenshot...');
+      console.log('[@component:ScreenDefinitionEditor] Taking screenshot via AV controller...');
       
-      // Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
-      const now = new Date();
-      const zurichTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Zurich"}));
+      // Call the AV controller endpoint with selectedHostDevice
+      const response = await fetch('/api/virtualpytest/av/take_screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_device: selectedHostDevice // Pass the complete host+device object
+        }),
+      });
       
-      // Format: YYYYMMDDHHMMSS (no separators)
-      const year = zurichTime.getFullYear();
-      const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
-      const day = String(zurichTime.getDate()).padStart(2, '0');
-      const hours = String(zurichTime.getHours()).padStart(2, '0');
-      const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
-      const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
+      const result = await response.json();
       
-      const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      
-      console.log('[@component:ScreenDefinitionEditor] Using Zurich timestamp:', timestamp);
-      
-      const hostUrl = `https://${avConfig?.host_ip}:444/stream/captures/capture_${timestamp}.jpg`;
-      
-      console.log('[@component:ScreenDefinitionEditor] Built host screenshot URL:', hostUrl);
-      
-      // Add 300ms delay before displaying the screenshot to account for real-time stream capture
-      console.log('[@component:ScreenDefinitionEditor] Adding 600ms delay before displaying screenshot...');
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      // Set the host URL directly - no file transfer needed
-      setLastScreenshotPath(hostUrl);
-      setStreamStatus('stopped');
+      if (result.success && result.screenshot_url) {
+        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', result.screenshot_url);
+        setLastScreenshotPath(result.screenshot_url);
+        setStreamStatus('stopped');
+      } else {
+        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
+      }
       
     } catch (error) {
       console.error('[@component:ScreenDefinitionEditor] Screenshot operation failed:', error);

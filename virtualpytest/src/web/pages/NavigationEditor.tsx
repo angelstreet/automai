@@ -1290,8 +1290,7 @@ const NavigationEditorContent: React.FC = () => {
               {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
               {selectedDeviceData && hasAVCapabilities && isControlActive && (
                 <ScreenDefinitionEditor
-                  deviceConfig={selectedDeviceData.controller_configs}
-                  deviceModel={selectedDeviceData.model}
+                  selectedHostDevice={selectedDeviceData}
                   autoConnect={true}
                   deviceConnection={{
                     flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),

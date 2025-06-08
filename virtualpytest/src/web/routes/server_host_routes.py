@@ -308,52 +308,140 @@ def server_release_control():
 
 
 @server_host_bp.route('/take-control', methods=['POST'])
-def host_take_control():
-    """Host-side take control - ONLY check if stream service is running"""
+def take_control():
+    """Host-side take control - Use own stored host_device object"""
     try:
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
+        device_ip = data.get('device_ip')
+        device_port = data.get('device_port', 5555)
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:host_take_control] Checking stream service status")
-        print(f"[@route:host_take_control] Device model: {device_model}")
-        print(f"[@route:host_take_control] Session ID: {session_id}")
+        print(f"[@route:take_control] Checking controllers status using own stored host_device")
+        print(f"[@route:take_control] Device model: {device_model}")
+        print(f"[@route:take_control] Device IP: {device_ip}")
+        print(f"[@route:take_control] Device port: {device_port}")
+        print(f"[@route:take_control] Session ID: {session_id}")
         
-        # ONLY check if stream.service is running
-        import subprocess
-        result = subprocess.run(
-            ['sudo', 'systemctl', 'status', 'stream.service'], 
-            capture_output=True, 
-            text=True
-        )
+        # ✅ GET OWN STORED HOST_DEVICE OBJECT (set during registration)
+        host_device = getattr(current_app, 'my_host_device', None)
         
-        # Check if service is active
-        is_active = 'Active: active (running)' in result.stdout
-        
-        if is_active:
-            print(f"[@route:host_take_control] Stream service is running")
-            return jsonify({
-                'success': True,
-                'status': 'stream_ready',
-                'message': 'Stream service is active',
-                'device_model': device_model,
-                'session_id': session_id,
-                'service_status': 'active'
-            })
-        else:
-            print(f"[@route:host_take_control] Stream service is not running")
+        if not host_device:
             return jsonify({
                 'success': False,
-                'status': 'stream_not_ready',
-                'error': 'Stream service is not active',
+                'status': 'host_device_not_initialized',
+                'error': 'Host device object not initialized. Host may need to re-register.',
                 'device_model': device_model,
-                'session_id': session_id,
-                'service_status': 'inactive'
+                'session_id': session_id
             })
+        
+        print(f"[@route:take_control] Using own stored host_device: {host_device.get('host_name')} with device: {host_device.get('device_name')}")
+        
+        # Step 1: Check AV controller from own host_device
+        try:
+            av_controller = host_device.get('controller_objects', {}).get('av')
+            
+            if not av_controller:
+                return jsonify({
+                    'success': False,
+                    'status': 'av_controller_not_found',
+                    'error': 'No AV controller object found in own host_device',
+                    'device_model': device_model,
+                    'session_id': session_id,
+                    'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                })
+            
+            print(f"[@route:take_control] Using own AV controller: {type(av_controller).__name__}")
+            
+            av_status = av_controller.get_status()
+            print(f"[@route:take_control] AV controller status: {av_status}")
+            
+            if not av_status.get('is_streaming', False):
+                return jsonify({
+                    'success': False,
+                    'status': 'stream_not_ready',
+                    'error': av_status.get('message', 'Stream service is not active'),
+                    'device_model': device_model,
+                    'session_id': session_id,
+                    'av_status': av_status,
+                    'remote_status': 'not_checked'
+                })
+                
+        except Exception as e:
+            print(f"[@route:take_control] AV controller error: {e}")
+            return jsonify({
+                'success': False,
+                'status': 'av_controller_error',
+                'error': f'Failed to check AV controller: {str(e)}',
+                'device_model': device_model,
+                'session_id': session_id
+            })
+        
+        # Step 2: Check Remote controller from own host_device for Android devices
+        remote_status = {'adb_status': 'not_applicable'}
+        
+        if device_ip and device_model in ['android_mobile', 'android_tv']:
+            try:
+                remote_controller = host_device.get('controller_objects', {}).get('remote')
+                
+                if not remote_controller:
+                    return jsonify({
+                        'success': False,
+                        'status': 'remote_controller_not_found',
+                        'error': 'No remote controller object found in own host_device',
+                        'device_model': device_model,
+                        'session_id': session_id,
+                        'av_status': av_status,
+                        'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                    })
+                
+                print(f"[@route:take_control] Using own remote controller: {type(remote_controller).__name__}")
+                
+                remote_status = remote_controller.get_status()
+                print(f"[@route:take_control] Remote controller status: {remote_status}")
+                
+                if not remote_status.get('adb_connected', False):
+                    return jsonify({
+                        'success': False,
+                        'status': 'device_not_ready',
+                        'error': remote_status.get('message', f'Device {device_ip}:{device_port} not connected via ADB'),
+                        'device_model': device_model,
+                        'session_id': session_id,
+                        'av_status': av_status,
+                        'remote_status': remote_status
+                    })
+                    
+            except Exception as e:
+                print(f"[@route:take_control] Remote controller error: {e}")
+                return jsonify({
+                    'success': False,
+                    'status': 'remote_controller_error',
+                    'error': f'Failed to check remote controller: {str(e)}',
+                    'device_model': device_model,
+                    'session_id': session_id,
+                    'av_status': av_status
+                })
+        
+        # Both controllers are ready
+        print(f"[@route:take_control] All controllers ready for own device: {host_device.get('device_name')}")
+        return jsonify({
+            'success': True,
+            'status': 'ready',
+            'message': f'All controllers ready for {device_model}',
+            'device_model': device_model,
+            'session_id': session_id,
+            'av_status': av_status,
+            'remote_status': remote_status,
+            'host_device': {
+                'host_name': host_device.get('host_name'),
+                'device_name': host_device.get('device_name'),
+                'device_model': host_device.get('device_model')
+            }
+        })
             
     except Exception as e:
-        print(f"[@route:host_take_control] Error checking service: {str(e)}")
+        print(f"[@route:take_control] Error checking controllers: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Failed to check stream service: {str(e)}'
+            'error': f'Failed to check controllers: {str(e)}'
         }), 500 

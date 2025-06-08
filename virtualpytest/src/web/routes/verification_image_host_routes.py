@@ -9,7 +9,7 @@ This module contains the host-side image verification API endpoints that:
 - Execute image verification tests
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 import json
 import subprocess
@@ -33,6 +33,17 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 def host_crop_area():
     """Host-side endpoint to crop images locally using existing utilities."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_crop_area] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         source_filename = data.get('source_filename')
         area = data.get('area')
@@ -117,6 +128,17 @@ def host_crop_area():
 def host_process_area():
     """Host-side endpoint to process images with autocrop and background removal."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_process_area] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         source_filename = data.get('source_filename')
         area = data.get('area')
@@ -218,6 +240,17 @@ def host_process_area():
 def host_save_resource():
     """Save cropped image directly to Cloudflare R2 and update resource registry."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_save_resource] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
         reference_name = data.get('reference_name')
@@ -373,6 +406,17 @@ def host_save_resource():
 def host_ensure_reference_availability():
     """Ensure reference image is available in stream directory for preview."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_ensure_reference_availability] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         reference_name = data.get('reference_name')
         model = data.get('model')

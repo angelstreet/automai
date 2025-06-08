@@ -22,6 +22,9 @@ client_registration_state = {
     'server_url': None
 }
 
+# Global storage for host_device object when Flask app context is not available
+_pending_host_device = None
+
 # Ping thread for host mode
 ping_thread = None
 ping_stop_event = threading.Event()
@@ -199,16 +202,55 @@ def register_host_with_server():
         print(f"   Response Text: {response.text}")
         
         if response.status_code == 200:
-            client_registration_state['registered'] = True
-            client_registration_state['client_id'] = host_info['client_id']
-            client_registration_state['server_url'] = full_server_url
-            print(f"\n✅ [HOST] Successfully registered with server!")
-            print(f"   Server: {full_server_url}")
-            print(f"   Host ID: {host_info['client_id']}")
-            print(f"   Host Name: {host_name}")
-            
-            # Start periodic ping thread
-            start_ping_thread()
+            # Parse the registration response
+            try:
+                registration_response = response.json()
+                print(f"📦 [HOST] Registration response data: {registration_response}")
+                
+                # Store basic registration state
+                client_registration_state['registered'] = True
+                client_registration_state['client_id'] = host_info['client_id']
+                client_registration_state['server_url'] = full_server_url
+                
+                # ✅ DIRECTLY STORE THE HOST_DEVICE OBJECT FROM SERVER RESPONSE
+                host_device_object = registration_response.get('host_device')
+                if host_device_object:
+                    # Store in Flask app context (we'll need to get the app instance)
+                    try:
+                        from flask import current_app
+                        current_app.my_host_device = host_device_object
+                        print(f"✅ [HOST] Stored host_device object locally:")
+                        print(f"   Host: {host_device_object.get('host_name')}")
+                        print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
+                        print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
+                    except RuntimeError:
+                        # If we're outside Flask app context, store globally for now
+                        # This will be picked up when the app starts
+                        global _pending_host_device
+                        _pending_host_device = host_device_object
+                        print(f"✅ [HOST] Stored host_device object globally (will transfer to app context when available)")
+                        print(f"   Host: {host_device_object.get('host_name')}")
+                        print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
+                        print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
+                else:
+                    print(f"⚠️ [HOST] No host_device object in registration response")
+                
+                print(f"\n✅ [HOST] Successfully registered with server!")
+                print(f"   Server: {full_server_url}")
+                print(f"   Host ID: {host_info['client_id']}")
+                print(f"   Host Name: {host_name}")
+                
+                # Start periodic ping thread
+                start_ping_thread()
+                
+            except Exception as parse_error:
+                print(f"⚠️ [HOST] Error parsing registration response: {parse_error}")
+                print(f"   Raw response: {response.text}")
+                # Still mark as registered for basic functionality
+                client_registration_state['registered'] = True
+                client_registration_state['client_id'] = host_info['client_id']
+                client_registration_state['server_url'] = full_server_url
+                start_ping_thread()
         else:
             print(f"\n❌ [HOST] Registration failed with status: {response.status_code}")
             try:
@@ -389,3 +431,22 @@ def setup_host_signal_handlers():
     
     # Register exit handler for normal exit
     atexit.register(cleanup_on_exit) 
+
+def transfer_pending_host_device_to_app():
+    """Transfer pending host_device object to Flask app context if available"""
+    global _pending_host_device
+    
+    if _pending_host_device:
+        try:
+            from flask import current_app
+            current_app.my_host_device = _pending_host_device
+            print(f"✅ [HOST] Transferred pending host_device to Flask app context:")
+            print(f"   Host: {_pending_host_device.get('host_name')}")
+            print(f"   Device: {_pending_host_device.get('device_name')} ({_pending_host_device.get('device_model')})")
+            print(f"   Controllers: {list(_pending_host_device.get('controller_objects', {}).keys())}")
+            _pending_host_device = None  # Clear the global storage
+            return True
+        except RuntimeError:
+            # Flask app context not available yet
+            return False
+    return True  # No pending data to transfer 

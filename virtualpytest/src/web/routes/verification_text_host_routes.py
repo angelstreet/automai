@@ -7,7 +7,7 @@ This module contains the host-side text verification API endpoints that:
 - Execute text verification tests
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 import json
 import subprocess
@@ -29,6 +29,17 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 def host_text_auto_detect():
     """Host-side endpoint to perform OCR text auto-detection on cropped image area."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_text_auto_detect] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         source_filename = data.get('source_filename')
         area = data.get('area')
@@ -229,6 +240,17 @@ def host_text_auto_detect():
 def host_save_text_resource():
     """Host-side endpoint to save text references directly to resource.json without image files."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_save_text_resource] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         name = data.get('name')  # Client sends 'name' instead of 'reference_name'
         model = data.get('model')

@@ -7,7 +7,7 @@ This module contains the host-side ADB verification API endpoints that:
 - Wait for elements to appear/disappear
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 
 # Create blueprint
@@ -21,6 +21,17 @@ verification_adb_host_bp = Blueprint('verification_adb_host', __name__)
 def host_adb_element_lists():
     """Get ADB UI element lists using existing ADB controller."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_adb_element_lists] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         model = data.get('model', 'default')
         search_term = data.get('search_term', '')
@@ -87,6 +98,17 @@ def host_adb_element_lists():
 def host_adb_wait_element_appear():
     """Wait for ADB element to appear using existing ADB controller."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_adb_wait_element_appear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         search_term = data.get('search_term', '')
         timeout = data.get('timeout', 10.0)
@@ -148,6 +170,17 @@ def host_adb_wait_element_appear():
 def host_adb_wait_element_disappear():
     """Wait for ADB element to disappear using existing ADB controller."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:host_adb_wait_element_disappear] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         search_term = data.get('search_term', '')
         timeout = data.get('timeout', 10.0)

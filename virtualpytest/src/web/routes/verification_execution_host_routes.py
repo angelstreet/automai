@@ -7,7 +7,7 @@ This module contains the main verification execution endpoints that:
 - Handle batch verification operations
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 import json
 from datetime import datetime
@@ -33,6 +33,17 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 def execute_verification():
     """Execute verification test on host using existing controllers and return results with comparison images."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:execute_verification] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         verification = data.get('verification')
         source_filename = data.get('source_filename')
@@ -111,6 +122,17 @@ def execute_verification():
 def execute_batch_verification():
     """Execute batch verification tests on host and return consolidated results."""
     try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        print(f"[@route:execute_batch_verification] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
         data = request.get_json()
         verifications = data.get('verifications', [])
         source_filename = data.get('source_filename')

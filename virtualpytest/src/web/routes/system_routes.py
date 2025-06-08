@@ -249,6 +249,89 @@ def register_client():
         print(f"   Capabilities: {capabilities}")
         print(f"   Controller types: {controller_types}")
         
+        # Instantiate actual controller objects from configs
+        print(f"[@route:register_client] Instantiating controller objects...")
+        controller_objects = {}
+        
+        try:
+            from controllers import ControllerFactory
+            
+            # Instantiate AV controller
+            if 'av' in controller_configs:
+                av_config = controller_configs['av']
+                av_params = av_config['parameters']
+                
+                print(f"[@route:register_client] Creating AV controller: {av_config['implementation']}")
+                av_controller = ControllerFactory.create_av_controller(
+                    capture_type=av_config['implementation'],
+                    device_name=device_name,
+                    video_device='/dev/video0',
+                    output_path='/var/www/html/stream/',
+                    host_ip=av_params.get('host_ip'),
+                    host_port=av_params.get('host_port')
+                )
+                controller_objects['av'] = av_controller
+                print(f"[@route:register_client] AV controller created successfully")
+            
+            # Instantiate Remote controller
+            if 'remote' in controller_configs:
+                remote_config = controller_configs['remote']
+                remote_params = remote_config['parameters']
+                
+                print(f"[@route:register_client] Creating Remote controller: {remote_config['implementation']}")
+                remote_controller = ControllerFactory.create_remote_controller(
+                    device_type=remote_config['implementation'],
+                    device_name=device_name,
+                    device_ip=remote_params.get('device_ip'),
+                    device_port=remote_params.get('device_port'),
+                    host_ip=remote_params.get('host_ip'),
+                    host_port=remote_params.get('host_port'),
+                    adb_port=remote_params.get('device_port')
+                )
+                controller_objects['remote'] = remote_controller
+                print(f"[@route:register_client] Remote controller created successfully")
+            
+            # Instantiate Verification controller
+            if 'verification' in controller_configs:
+                verification_config = controller_configs['verification']
+                verification_params = verification_config['parameters']
+                
+                print(f"[@route:register_client] Creating Verification controller: {verification_config['implementation']}")
+                verification_controller = ControllerFactory.create_verification_controller(
+                    verification_type=verification_config['implementation'],
+                    device_name=device_name,
+                    device_ip=verification_params.get('device_ip'),
+                    device_port=verification_params.get('device_port'),
+                    host_ip=verification_params.get('host_ip'),
+                    host_port=verification_params.get('host_port')
+                )
+                controller_objects['verification'] = verification_controller
+                print(f"[@route:register_client] Verification controller created successfully")
+            
+            # Instantiate Power controller
+            if 'power' in controller_configs:
+                power_config = controller_configs['power']
+                power_params = power_config['parameters']
+                
+                print(f"[@route:register_client] Creating Power controller: {power_config['implementation']}")
+                power_controller = ControllerFactory.create_power_controller(
+                    power_type=power_config['implementation'],
+                    device_name=device_name,
+                    hub_location=power_params.get('hub_location'),
+                    port_number=power_params.get('port_number'),
+                    host_ip=power_params.get('host_ip'),
+                    host_port=power_params.get('host_port')
+                )
+                controller_objects['power'] = power_controller
+                print(f"[@route:register_client] Power controller created successfully")
+                
+            print(f"[@route:register_client] All controller objects instantiated: {list(controller_objects.keys())}")
+            
+        except Exception as e:
+            print(f"[@route:register_client] Warning: Failed to instantiate some controllers: {e}")
+            # Continue with configs only if controller instantiation fails
+            controller_objects = {}
+        
         # Create a single, clean host+device object with no redundancy
         host_device_object = {
             # === HOST INFORMATION ===
@@ -271,6 +354,7 @@ def register_client():
             
             # === CONTROLLER INFORMATION ===
             'controller_configs': controller_configs,  # Complete configs from factory
+            'controller_objects': controller_objects,  # Actual instantiated controller objects
             'controller_types': controller_types,      # Factory-built controller types
             'capabilities': capabilities,              # Factory-built capabilities
             
@@ -347,7 +431,8 @@ def register_client():
             'status': 'success',
             'message': 'Host registered successfully',
             'host_id': host_device_object['host_id'],
-            'device_id': host_device_object['device_id']
+            'device_id': host_device_object['device_id'],
+            'host_device': host_device_object
         }), 200
         
     except Exception as e:
