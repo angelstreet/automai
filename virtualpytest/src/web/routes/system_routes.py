@@ -16,11 +16,13 @@ from collections import deque
 import sys
 
 # Add the web/utils directory to sys.path if not already there
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(current_dir)
+# Use absolute path calculation to be robust regardless of current working directory
+routes_dir = os.path.dirname(os.path.abspath(__file__))
+web_dir = os.path.dirname(routes_dir)
 utils_dir = os.path.join(web_dir, 'utils')
 
-if utils_dir not in sys.path:
+# Ensure the utils directory exists before adding to path
+if os.path.exists(utils_dir) and utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
 
 from utils.controllerConfigFactory import (
