@@ -21,15 +21,6 @@ host_control_bp = Blueprint('host_control', __name__)
 def take_control():
     """Host-side take control - Use own stored host_device object"""
     try:
-        # ✅ TRANSFER ANY PENDING HOST_DEVICE TO APP CONTEXT FIRST
-        try:
-            from hostUtils import transfer_pending_host_device_to_app
-            print(f"[@route:take_control] Attempting to transfer pending host_device to app context...")
-            transfer_result = transfer_pending_host_device_to_app()
-            print(f"[@route:take_control] Transfer result: {transfer_result}")
-        except Exception as transfer_error:
-            print(f"[@route:take_control] Error during host_device transfer: {transfer_error}")
-        
         data = request.get_json() or {}
         device_model = data.get('device_model', 'android_mobile')
         device_ip = data.get('device_ip')
@@ -42,26 +33,19 @@ def take_control():
         print(f"[@route:take_control] Device port: {device_port}")
         print(f"[@route:take_control] Session ID: {session_id}")
         
-        # ✅ GET OWN STORED HOST_DEVICE OBJECT (set during registration)
+        # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT OR GLOBAL STORAGE
         host_device = getattr(current_app, 'my_host_device', None)
-        print(f"[@route:take_control] Host device found: {host_device is not None}")
         
-        # ✅ IF NOT FOUND IN APP CONTEXT, CHECK GLOBAL STORAGE AND TRANSFER
+        # If not in Flask app context, get it directly from global storage
         if not host_device:
             try:
                 from hostUtils import _pending_host_device
-                if _pending_host_device:
-                    print(f"[@route:take_control] Found pending host_device, transferring to app context...")
-                    current_app.my_host_device = _pending_host_device
-                    host_device = _pending_host_device
-                    # Clear the global storage after successful transfer
-                    import hostUtils
-                    hostUtils._pending_host_device = None
-                    print(f"[@route:take_control] Successfully transferred host_device to app context")
-                else:
-                    print(f"[@route:take_control] No pending host_device found in global storage")
-            except Exception as global_check_error:
-                print(f"[@route:take_control] Error checking global host_device: {global_check_error}")
+                host_device = _pending_host_device
+                print(f"[@route:take_control] Using host_device from global storage")
+            except Exception as global_error:
+                print(f"[@route:take_control] Error accessing global host_device: {global_error}")
+        else:
+            print(f"[@route:take_control] Using host_device from Flask app context")
         
         if host_device:
             print(f"[@route:take_control] Host device details: {host_device.get('host_name')} - {host_device.get('device_name')}")
