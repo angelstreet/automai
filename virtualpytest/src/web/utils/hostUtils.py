@@ -331,7 +331,7 @@ def register_host_with_server():
                     try:
                         from flask import current_app
                         current_app.my_host_device = host_device_object
-                        print(f"✅ [HOST] Stored host_device object locally:")
+                        print(f"✅ [HOST] Stored host_device object in Flask app context:")
                         print(f"   Host: {host_device_object.get('host_name')}")
                         print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
                         print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
@@ -344,6 +344,15 @@ def register_host_with_server():
                         print(f"   Host: {host_device_object.get('host_name')}")
                         print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
                         print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
+                        
+                        # ✅ ALSO TRY TO STORE DIRECTLY IN APP INSTANCE IF AVAILABLE
+                        try:
+                            import __main__
+                            if hasattr(__main__, 'app'):
+                                __main__.app.my_host_device = host_device_object
+                                print(f"✅ [HOST] Also stored host_device object directly in main app instance")
+                        except Exception as app_store_error:
+                            print(f"⚠️ [HOST] Could not store in main app instance: {app_store_error}")
                 else:
                     print(f"⚠️ [HOST] No host_device object in registration response")
                 
@@ -449,6 +458,9 @@ def start_ping_thread():
         
         while not ping_stop_event.is_set():
             try:
+                # ✅ TRY TO TRANSFER PENDING HOST_DEVICE ON EACH PING
+                transfer_pending_host_device_to_app()
+                
                 if not client_registration_state['registered']:
                     print(f"⚠️ [PING] Host not registered, stopping ping thread")
                     break
@@ -548,6 +560,8 @@ def transfer_pending_host_device_to_app():
     """Transfer pending host_device object to Flask app context if available"""
     global _pending_host_device
     
+    print(f"[@hostUtils:transfer_pending_host_device_to_app] Called - pending device exists: {_pending_host_device is not None}")
+    
     if _pending_host_device:
         try:
             from flask import current_app
@@ -558,7 +572,10 @@ def transfer_pending_host_device_to_app():
             print(f"   Controllers: {list(_pending_host_device.get('controller_objects', {}).keys())}")
             _pending_host_device = None  # Clear the global storage
             return True
-        except RuntimeError:
+        except RuntimeError as e:
             # Flask app context not available yet
+            print(f"[@hostUtils:transfer_pending_host_device_to_app] Flask app context not available: {e}")
             return False
+    else:
+        print(f"[@hostUtils:transfer_pending_host_device_to_app] No pending host_device to transfer")
     return True  # No pending data to transfer 
