@@ -9,51 +9,8 @@ import {
  * 
  * This service defines the input field requirements for each controller type and implementation.
  * Based on the VirtualPyTest controller system requirements.
+ * Updated to use Flask communication instead of SSH.
  */
-
-// Helper function to create common SSH connection fields
-const createSSHConnectionFields = (): ControllerInputField[] => [
-  {
-    name: 'host_ip',
-    label: 'Host IP Address',
-    type: 'text',
-    required: true,
-    placeholder: '192.168.1.100',
-    description: 'IP address of the SSH host that will execute ADB commands',
-    validation: {
-      pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-    }
-  },
-  {
-    name: 'host_port',
-    label: 'Host Port',
-    type: 'number',
-    required: false,
-    defaultValue: 22,
-    placeholder: '22',
-    description: 'SSH port on the host',
-    validation: {
-      min: 1,
-      max: 65535
-    }
-  },
-  {
-    name: 'host_username',
-    label: 'Host Username',
-    type: 'text',
-    required: true,
-    placeholder: 'root',
-    description: 'SSH username for the host'
-  },
-  {
-    name: 'host_password',
-    label: 'Host Password',
-    type: 'password',
-    required: true,
-    placeholder: '••••••••',
-    description: 'SSH password for the host'
-  }
-];
 
 // Helper function to create device IP fields
 const createDeviceIPFields = (): ControllerInputField[] => [
@@ -89,11 +46,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
     {
       id: 'android_tv',
       name: 'Android TV (ADB)',
-      description: 'Android TV control with ADB',
+      description: 'Android TV control with ADB via Flask host',
       implementation: 'android_tv',
       status: 'available',
       inputFields: [
-        ...createSSHConnectionFields(),
         ...createDeviceIPFields(),
         {
           name: 'connection_timeout',
@@ -113,11 +69,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
     {
       id: 'android_mobile',
       name: 'Android Mobile (ADB)',
-      description: 'Android Mobile control with ADB',
+      description: 'Android Mobile control with ADB via Flask host',
       implementation: 'real_android_mobile',
       status: 'available',
       inputFields: [
-        ...createSSHConnectionFields(),
         ...createDeviceIPFields(),
         {
           name: 'connection_timeout',
@@ -147,7 +102,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           type: 'text',
           required: true,
           placeholder: '/dev/lirc0',
-          description: 'Path to the IR device'
+          description: 'Path to the IR device on the host'
         },
         {
           name: 'protocol',
@@ -223,12 +178,11 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
   av: [
     {
       id: 'hdmi_stream',
-      name: 'HDMI Stream (SSH+Video Capture)',
-      description: 'HDMI video capture via SSH connection to host with video device',
+      name: 'HDMI Stream (Video Capture)',
+      description: 'HDMI video capture via Flask host with video device',
       implementation: 'hdmi_stream',
       status: 'available',
       inputFields: [
-        ...createSSHConnectionFields(),
         {
           name: 'video_device',
           label: 'Video Capture Device',
@@ -236,7 +190,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           required: true,
           defaultValue: '/dev/video0',
           placeholder: '/dev/video0',
-          description: 'Path to the video capture device (e.g., /dev/video0, /dev/video1)',
+          description: 'Path to the video capture device on the host (e.g., /dev/video0, /dev/video1)',
           validation: {
             pattern: '^/dev/video[0-9]+$'
           }
@@ -292,10 +246,35 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           required: false,
           defaultValue: 15,
           placeholder: '15',
-          description: 'Timeout for SSH connection and stream setup',
+          description: 'Timeout for Flask connection and stream setup',
           validation: {
             min: 5,
             max: 120
+          }
+        }
+      ]
+    }
+  ],
+  verification: [
+    {
+      id: 'adb_verification',
+      name: 'ADB Verification',
+      description: 'Android Debug Bridge verification via Flask host',
+      implementation: 'adb_verification',
+      status: 'available',
+      inputFields: [
+        ...createDeviceIPFields(),
+        {
+          name: 'verification_timeout',
+          label: 'Verification Timeout (seconds)',
+          type: 'number',
+          required: false,
+          defaultValue: 30,
+          placeholder: '30',
+          description: 'Timeout for verification operations',
+          validation: {
+            min: 5,
+            max: 300
           }
         }
       ]
@@ -363,7 +342,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
     {
       id: 'smart_plug',
       name: 'Smart Plug',
-      description: 'Smart plug power control',
+      description: 'Smart plug power control via Flask host',
       implementation: 'smart_plug',
       status: 'placeholder',
       inputFields: [
@@ -425,6 +404,7 @@ export class ControllerConfigService {
     const result: ControllerConfigMap = {
       remote: [],
       av: [],
+      verification: [],
       network: [],
       power: []
     };

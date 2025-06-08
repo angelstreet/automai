@@ -1,4 +1,4 @@
-export type ControllerType = 'remote' | 'av' | 'network' | 'power';
+export type ControllerType = 'remote' | 'av' | 'verification' | 'network' | 'power';
 
 export type RemoteControllerImplementation = 
   | 'android_tv' 
@@ -8,6 +8,11 @@ export type RemoteControllerImplementation =
 
 export type AVControllerImplementation = 
   | 'hdmi_stream';
+
+export type VerificationControllerImplementation = 
+  | 'adb_verification'
+  | 'image_verification'
+  | 'text_verification';
 
 export type NetworkControllerImplementation = 
   | 'network' 
@@ -50,6 +55,7 @@ export interface ControllerConfiguration {
 export interface ControllerConfigMap {
   remote: ControllerConfiguration[];
   av: ControllerConfiguration[];
+  verification: ControllerConfiguration[];
   network: ControllerConfiguration[];
   power: ControllerConfiguration[];
 }
