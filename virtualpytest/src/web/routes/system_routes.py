@@ -359,8 +359,8 @@ def register_client():
             'device_port': device_port,
             
             # === CONTROLLER INFORMATION ===
-            'controller_configs': controller_configs,  # Complete configs from factory
-            'controller_objects': controller_objects,  # Actual instantiated controller objects
+            'controller_configs': controller_configs,  # Complete configs from factory (JSON serializable)
+            'controller_objects': controller_objects,  # Actual instantiated controller objects (for internal use)
             'controller_types': controller_types,      # Factory-built controller types
             'capabilities': capabilities,              # Factory-built capabilities
             
@@ -376,6 +376,15 @@ def register_client():
             'last_seen': time.time(),
             'system_stats': host_info.get('system_stats', get_system_stats())
         }
+        
+        # Store controller objects separately in the app context (not in JSON response)
+        # This allows us to access them later without serialization issues
+        if controller_objects:
+            # Store controller objects in a separate registry that won't be serialized
+            if not hasattr(current_app, '_controller_registry'):
+                current_app._controller_registry = {}
+            current_app._controller_registry[host_info['host_id']] = controller_objects
+            print(f"[@route:register_client] Stored {len(controller_objects)} controller objects in registry")
         
         # Store host info
         connected_clients = get_connected_clients()
@@ -433,12 +442,15 @@ def register_client():
             print(f"   Host ID: {host_device_object['host_id'][:8]}...")
             print(f"   Device ID: {host_device_object['device_id']}")
         
+        # Create a JSON-safe version for the response (exclude controller_objects)
+        json_safe_host_device = {k: v for k, v in host_device_object.items() if k != 'controller_objects'}
+        
         return jsonify({
             'status': 'success',
             'message': 'Host registered successfully',
             'host_id': host_device_object['host_id'],
             'device_id': host_device_object['device_id'],
-            'host_device': host_device_object
+            'host_device': json_safe_host_device
         }), 200
         
     except Exception as e:
@@ -1104,4 +1116,16 @@ def get_system_stats():
             'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
             'timestamp': time.time(),
             'error': str(e)
-        } 
+        }
+
+def get_controller_objects(host_id):
+    """Get controller objects for a specific host"""
+    if not hasattr(current_app, '_controller_registry'):
+        return {}
+    return current_app._controller_registry.get(host_id, {})
+
+def set_controller_objects(host_id, controller_objects):
+    """Set controller objects for a specific host"""
+    if not hasattr(current_app, '_controller_registry'):
+        current_app._controller_registry = {}
+    current_app._controller_registry[host_id] = controller_objects 
