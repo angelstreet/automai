@@ -224,7 +224,6 @@ def register_host_with_server():
                         try:
                             # Import controller factory
                             import sys
-                            import os
                             
                             # Add controllers path
                             current_dir = os.path.dirname(os.path.abspath(__file__))
