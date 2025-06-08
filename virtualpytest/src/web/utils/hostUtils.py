@@ -458,9 +458,6 @@ def start_ping_thread():
         
         while not ping_stop_event.is_set():
             try:
-                # ✅ TRY TO TRANSFER PENDING HOST_DEVICE ON EACH PING
-                transfer_pending_host_device_to_app()
-                
                 if not client_registration_state['registered']:
                     print(f"⚠️ [PING] Host not registered, stopping ping thread")
                     break
