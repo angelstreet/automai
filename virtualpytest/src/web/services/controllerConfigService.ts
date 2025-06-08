@@ -9,7 +9,6 @@ import {
  * 
  * This service defines the input field requirements for each controller type and implementation.
  * Based on the VirtualPyTest controller system requirements.
- * Updated to use Flask communication instead of SSH.
  */
 
 // Helper function to create device IP fields

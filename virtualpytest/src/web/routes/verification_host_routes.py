@@ -122,7 +122,7 @@ def get_device_id_from_env(model):
     return device_id
 
 class DirectADBController:
-    """Direct ADB controller that executes ADB commands locally without SSH."""
+    """Direct ADB controller that executes ADB commands"""
     
     def __init__(self, device_id: str, device_name: str = "ADB Device"):
         """

@@ -2,7 +2,7 @@
 ADB Verification Controller Implementation
 
 This controller provides ADB-based verification functionality using direct ADB connections.
-It uses adbUtils for element verification without SSH.
+It uses adbUtils for element verification.
 """
 
 import time
