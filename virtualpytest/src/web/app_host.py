@@ -28,6 +28,7 @@ import time
 import atexit
 import threading
 import signal
+import requests
 
 # Add necessary paths for imports (same as routes/__init__.py)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -176,9 +177,43 @@ def main():
     # Start health check thread
     start_ping_thread()
     
+    # Add a startup hook to initialize host device after Flask app is ready
+    def initialize_host_device_after_startup():
+        """Initialize host device object after Flask app is fully started"""
+        # Wait for Flask app to be fully ready
+        time.sleep(5)  # Give Flask app time to start
+        
+        try:
+            print(f"\n🔧 [HOST] Initializing host device object in Flask app context...")
+            
+            # Import hostUtils module to access global storage
+            import hostUtils
+            
+            if hostUtils.global_host_device:
+                # Create a Flask app context and store the host device object
+                with app.app_context():
+                    app.my_host_device = hostUtils.global_host_device
+                    print(f"✅ [HOST] Host device initialization completed successfully")
+                    print(f"   Host: {hostUtils.global_host_device.get('host_name')}")
+                    print(f"   Device: {hostUtils.global_host_device.get('device_name')}")
+                    print(f"   Controllers: {list(hostUtils.global_host_device.get('controller_objects', {}).keys())}")
+            else:
+                print(f"⚠️ [HOST] No global host device found yet (registration may still be in progress)")
+                
+        except Exception as e:
+            print(f"⚠️ [HOST] Error during host device initialization: {e}")
+    
+    # Start initialization in a separate thread
+    init_thread = threading.Thread(
+        target=initialize_host_device_after_startup,
+        daemon=True
+    )
+    init_thread.start()
+    
     print(f"\n🚀 [HOST] Starting Flask app on port {host_port_internal}")
     print(f"🌐 [HOST] Host will be available at: http://0.0.0.0:{host_port_internal}")
     print(f"📡 [HOST] Attempting to register with server...")
+    print(f"🔧 [HOST] Host device will be auto-initialized after startup...")
     print(f"🐛 [HOST] Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     print("=" * 60)
     

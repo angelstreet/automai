@@ -26,6 +26,9 @@ client_registration_state = {
 ping_thread = None
 ping_stop_event = threading.Event()
 
+# Global storage for host device object (used when Flask app context is not available)
+global_host_device = None
+
 def register_host_with_server():
     """Register this host with the server
     
@@ -337,6 +340,8 @@ def register_host_with_server():
                         # Flask app context not available during registration - this is expected
                         print(f"⚠️ [HOST] Flask app context not available during registration")
                         print(f"   Host device will be available when Flask routes are accessed")
+                        global global_host_device
+                        global_host_device = host_device_object
                 else:
                     print(f"⚠️ [HOST] No host_device object in registration response")
                 
