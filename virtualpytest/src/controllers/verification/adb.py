@@ -1,33 +1,33 @@
 """
 ADB Verification Controller Implementation
 
-This controller provides ADB-based verification functionality using SSH+ADB.
-It uses existing SSH session and adbUtils for element verification.
+This controller provides ADB-based verification functionality using direct ADB connections.
+It uses adbUtils for element verification without SSH.
 """
 
 import time
 from typing import Dict, Any, List, Optional, Tuple
-from utils.sshUtils import SSHConnection
 from utils.adbUtils import ADBUtils, AndroidElement
 
 
 class ADBVerificationController:
-    """ADB verification controller that uses SSH+ADB commands to verify UI elements."""
+    """ADB verification controller that uses direct ADB commands to verify UI elements."""
     
-    def __init__(self, ssh_connection: SSHConnection, device_id: str, device_name: str = "ADB Device", **kwargs):
+    def __init__(self, device_id: str, device_name: str = "ADB Device", **kwargs):
         """
         Initialize the ADB Verification controller.
         
         Args:
-            ssh_connection: Active SSH connection to the host
             device_id: Android device ID (e.g., "192.168.1.100:5555")
             device_name: Name of the device for logging
+            **kwargs: Additional parameters including:
+                - connection_timeout: Connection timeout in seconds (default: 10)
         """
         self.device_name = device_name
-        self.ssh_connection = ssh_connection
         self.device_id = device_id
-        self.adb_utils = ADBUtils(ssh_connection)
-        self.is_connected = True  # Always connected if we have an active SSH session
+        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        self.adb_utils = ADBUtils()
+        self.is_connected = True  # Assume connected since we're using direct ADB
         
         print(f"[@controller:ADBVerification] Initialized for device {device_id}")
 

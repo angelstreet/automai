@@ -295,12 +295,24 @@ def register_client():
                 verification_params = verification_config['parameters']
                 
                 print(f"[@route:register_client] Creating Verification controller: {verification_config['implementation']}")
-                verification_controller = ControllerFactory.create_verification_controller(
-                    verification_type=verification_config['implementation'],
-                    device_name=device_name,
-                    device_ip=verification_params.get('device_ip'),
-                    device_port=verification_params.get('device_port')
-                )
+                
+                # For ADB verification, construct device_id from device_ip and device_port
+                if verification_config['implementation'] == 'adb':
+                    device_id = f"{verification_params.get('device_ip')}:{verification_params.get('device_port')}"
+                    verification_controller = ControllerFactory.create_verification_controller(
+                        verification_type=verification_config['implementation'],
+                        device_name=device_name,
+                        device_id=device_id,
+                        connection_timeout=verification_params.get('connection_timeout', 10)
+                    )
+                else:
+                    # For other verification types, pass parameters as-is
+                    verification_controller = ControllerFactory.create_verification_controller(
+                        verification_type=verification_config['implementation'],
+                        device_name=device_name,
+                        **verification_params
+                    )
+                
                 controller_objects['verification'] = verification_controller
                 print(f"[@route:register_client] Verification controller created successfully")
             

@@ -1,19 +1,20 @@
 """
-ADB Utilities for VirtualPyTest Controllers
+ADB Utilities for Android Device Control
 
-This module provides ADB command execution utilities for Android device control
-over SSH connections, mirroring the functionality from adbActions.ts.
+This module provides utilities for controlling Android devices via ADB commands.
+Uses direct ADB commands without SSH dependencies.
 """
 
-import re
+import subprocess
 import time
+import re
 import base64
+import xml.etree.ElementTree as ET
 from typing import Dict, Any, List, Optional, Tuple
-from .sshUtils import SSHConnection
 
 
 class AndroidElement:
-    """Represents an Android UI element."""
+    """Represents an Android UI element from UI dump."""
     
     def __init__(self, element_id: int, tag: str, text: str, resource_id: str, 
                  content_desc: str, class_name: str, bounds: str, clickable: bool = False, enabled: bool = True):
@@ -28,14 +29,14 @@ class AndroidElement:
         self.enabled = enabled
         
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary representation."""
+        """Convert element to dictionary for JSON serialization."""
         return {
             'id': self.id,
             'tag': self.tag,
             'text': self.text,
-            'resourceId': self.resource_id,
-            'contentDesc': self.content_desc,
-            'className': self.class_name,
+            'resource_id': self.resource_id,
+            'content_desc': self.content_desc,
+            'class_name': self.class_name,
             'bounds': self.bounds,
             'clickable': self.clickable,
             'enabled': self.enabled
@@ -50,15 +51,15 @@ class AndroidApp:
         self.label = label
         
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary representation."""
+        """Convert app to dictionary for JSON serialization."""
         return {
-            'packageName': self.package_name,
+            'package_name': self.package_name,
             'label': self.label
         }
 
 
 class ADBUtils:
-    """ADB utilities for Android device control over SSH."""
+    """ADB utilities for Android device control using direct ADB commands."""
     
     # ADB key mappings (supporting both simple and DPAD formats)
     ADB_KEYS = {
@@ -103,18 +104,73 @@ class ADBUtils:
         'MEDIA_PREVIOUS': 'KEYCODE_MEDIA_PREVIOUS',
     }
     
-    def __init__(self, ssh_connection: SSHConnection):
+    def __init__(self):
         """
-        Initialize ADB utilities with SSH connection.
+        Initialize ADB utilities.
+        """
+        
+    def execute_command(self, command: str, timeout: int = 30) -> Tuple[bool, str, str, int]:
+        """
+        Execute a command using subprocess.
         
         Args:
-            ssh_connection: Established SSH connection
+            command: Command to execute
+            timeout: Command timeout in seconds
+            
+        Returns:
+            Tuple of (success, stdout, stderr, exit_code)
         """
-        self.ssh = ssh_connection
+        try:
+            print(f"[@lib:adbUtils:execute_command] Executing: {command}")
+            
+            result = subprocess.run(
+                command.split(),
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+            
+            success = result.returncode == 0
+            stdout = result.stdout.strip()
+            stderr = result.stderr.strip()
+            exit_code = result.returncode
+            
+            if success:
+                print(f"[@lib:adbUtils:execute_command] Command successful")
+            else:
+                print(f"[@lib:adbUtils:execute_command] Command failed with exit code {exit_code}: {stderr}")
+            
+            return success, stdout, stderr, exit_code
+            
+        except subprocess.TimeoutExpired:
+            print(f"[@lib:adbUtils:execute_command] Command timed out: {command}")
+            return False, "", "Command timed out", -1
+        except Exception as e:
+            print(f"[@lib:adbUtils:execute_command] Command error: {str(e)}")
+            return False, "", str(e), -1
+    
+    def download_file(self, remote_path: str, local_path: str) -> Tuple[bool, str]:
+        """
+        Download a file from remote path to local path.
+        Since we're using direct ADB, this is just a file copy.
+        
+        Args:
+            remote_path: Source file path
+            local_path: Destination file path
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        try:
+            import shutil
+            shutil.copy2(remote_path, local_path)
+            return True, ""
+        except Exception as e:
+            return False, str(e)
         
     def connect_device(self, device_id: str) -> bool:
         """
-        Connect to ADB device over SSH.
+        Connect to ADB device.
         
         Args:
             device_id: Android device ID (IP:port)
@@ -126,7 +182,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:connect_device] Connecting to ADB device: {device_id}")
             
             # Connect to ADB device
-            success, stdout, stderr, exit_code = self.ssh.execute_command(f"adb connect {device_id}")
+            success, stdout, stderr, exit_code = self.execute_command(f"adb connect {device_id}")
             
             if not success or exit_code != 0:
                 print(f"[@lib:adbUtils:connect_device] ADB connect failed: {stderr}")
@@ -135,7 +191,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:connect_device] ADB connect output: {stdout.strip()}")
             
             # Verify device is connected
-            success, stdout, stderr, exit_code = self.ssh.execute_command("adb devices")
+            success, stdout, stderr, exit_code = self.execute_command("adb devices")
             
             if not success or exit_code != 0:
                 print(f"[@lib:adbUtils:connect_device] Failed to verify device connection")
@@ -201,7 +257,7 @@ class ADBUtils:
             command = f"adb -s {device_id} shell input keyevent {keycode}"
             print(f"[@lib:adbUtils:execute_key_command] Executing: {command}")
             
-            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            success, stdout, stderr, exit_code = self.execute_command(command)
             
             if success and exit_code == 0:
                 print(f"[@lib:adbUtils:execute_key_command] Successfully sent keyevent {keycode} for key '{key}'")
@@ -229,7 +285,7 @@ class ADBUtils:
             
             # Get list of installed packages (3rd party apps only)
             command = f"adb -s {device_id} shell pm list packages -3"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            success, stdout, stderr, exit_code = self.execute_command(command)
             
             if not success or exit_code != 0:
                 print(f"[@lib:adbUtils:get_installed_apps] Failed to get packages list: {stderr}")
@@ -246,7 +302,7 @@ class ADBUtils:
             for package_name in packages[:20]:
                 try:
                     label_command = f"adb -s {device_id} shell dumpsys package {package_name} | grep -A1 'applicationLabel'"
-                    success, stdout, stderr, exit_code = self.ssh.execute_command(label_command)
+                    success, stdout, stderr, exit_code = self.execute_command(label_command)
                     
                     label = package_name  # Default to package name
                     if success and stdout:
@@ -282,7 +338,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:launch_app] Launching app {package_name} on device {device_id}")
             
             command = f"adb -s {device_id} shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            success, stdout, stderr, exit_code = self.execute_command(command)
             
             if success and exit_code == 0:
                 print(f"[@lib:adbUtils:launch_app] Successfully launched {package_name}")
@@ -310,7 +366,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:close_app] Closing app {package_name} on device {device_id}")
             
             command = f"adb -s {device_id} shell am force-stop {package_name}"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            success, stdout, stderr, exit_code = self.execute_command(command)
             
             if success and exit_code == 0:
                 print(f"[@lib:adbUtils:close_app] Successfully closed {package_name}")
@@ -351,7 +407,7 @@ class ADBUtils:
             
             # First, dump the UI hierarchy to a file
             dump_command = f"adb -s {device_id} shell uiautomator dump --compressed /sdcard/ui_dump.xml"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(dump_command)
+            success, stdout, stderr, exit_code = self.execute_command(dump_command)
             
             if not success or exit_code != 0:
                 # Make infrastructure errors more explicit
@@ -366,7 +422,7 @@ class ADBUtils:
             
             # Read the dumped file
             read_command = f"adb -s {device_id} shell cat /sdcard/ui_dump.xml"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(read_command)
+            success, stdout, stderr, exit_code = self.execute_command(read_command)
             
             if not success or exit_code != 0:
                 # Make infrastructure errors more explicit
@@ -569,7 +625,7 @@ class ADBUtils:
             # If we have coordinates from bounds, use direct tap
             if coordinates:
                 command = f"adb -s {device_id} shell input tap {coordinates['x']} {coordinates['y']}"
-                success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+                success, stdout, stderr, exit_code = self.execute_command(command)
                 
                 if success and exit_code == 0:
                     print(f"[@lib:adbUtils:click_element] Successfully clicked element using coordinates")
@@ -600,7 +656,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:get_device_resolution] Getting resolution for device {device_id}")
             
             command = f"adb -s {device_id} shell wm size"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(command)
+            success, stdout, stderr, exit_code = self.execute_command(command)
             
             if not success or exit_code != 0:
                 print(f"[@lib:adbUtils:get_device_resolution] Command failed: {stderr}")
@@ -639,7 +695,7 @@ class ADBUtils:
             screenshot_path = "/sdcard/screenshot.png"
             screenshot_command = f"adb -s {device_id} shell screencap -p {screenshot_path}"
             
-            success, stdout, stderr, exit_code = self.ssh.execute_command(screenshot_command, timeout=30)
+            success, stdout, stderr, exit_code = self.execute_command(screenshot_command, timeout=30)
             
             if not success or exit_code != 0:
                 error_msg = f"Failed to take screenshot: {stderr}"
@@ -651,7 +707,7 @@ class ADBUtils:
             # Pull screenshot to SSH host
             remote_temp_path = "/tmp/android_screenshot.png"
             pull_command = f"adb -s {device_id} pull {screenshot_path} {remote_temp_path}"
-            success, stdout, stderr, exit_code = self.ssh.execute_command(pull_command, timeout=30)
+            success, stdout, stderr, exit_code = self.execute_command(pull_command, timeout=30)
             
             if not success or exit_code != 0:
                 error_msg = f"Failed to pull screenshot: {stderr}"
@@ -668,7 +724,7 @@ class ADBUtils:
                 local_temp_path = temp_file.name
                 
             try:
-                success, error_msg = self.ssh.download_file(remote_temp_path, local_temp_path)
+                success, error_msg = self.download_file(remote_temp_path, local_temp_path)
                 
                 if not success:
                     print(f"[@lib:adbUtils:take_screenshot] Failed to download file: {error_msg}")
@@ -696,7 +752,7 @@ class ADBUtils:
             ]
             
             for cleanup_cmd in cleanup_commands:
-                self.ssh.execute_command(cleanup_cmd)  # Don't check result, it's cleanup
+                self.execute_command(cleanup_cmd)  # Don't check result, it's cleanup
             
             return True, screenshot_data, ""
             
@@ -855,9 +911,9 @@ class ADBUtils:
                             element_id=element_dict['id'],
                             tag=element_dict.get('tag', ''),
                             text=element_dict['text'],
-                            resource_id=element_dict['resourceId'],
-                            content_desc=element_dict['contentDesc'], 
-                            class_name=element_dict['className'],
+                            resource_id=element_dict['resource_id'],
+                            content_desc=element_dict['content_desc'], 
+                            class_name=element_dict['class_name'],
                             bounds=element_dict['bounds'],
                             clickable=element_dict['clickable'],
                             enabled=element_dict['enabled']
@@ -887,9 +943,9 @@ class ADBUtils:
                         element_id=element_dict['id'],
                         tag=element_dict.get('tag', ''),
                         text=element_dict['text'],
-                        resource_id=element_dict['resourceId'],
-                        content_desc=element_dict['contentDesc'], 
-                        class_name=element_dict['className'],
+                        resource_id=element_dict['resource_id'],
+                        content_desc=element_dict['content_desc'], 
+                        class_name=element_dict['class_name'],
                         bounds=element_dict['bounds'],
                         clickable=element_dict['clickable'],
                         enabled=element_dict['enabled']
@@ -946,7 +1002,7 @@ class ADBUtils:
                         Can use pipe-separated terms: "text1|text2|text3"
             text_to_input: Text to input into the found element
             **options: Additional options
-        
+            
         Returns:
             bool: True if input successful
         """
@@ -969,11 +1025,11 @@ class ADBUtils:
                     
                     # Clear existing text first
                     clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_CTRL_A"
-                    self.ssh.execute_command(clear_command)
+                    self.execute_command(clear_command)
                     time.sleep(0.2)
                     
                     clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_DEL"
-                    self.ssh.execute_command(clear_command)
+                    self.execute_command(clear_command)
                     time.sleep(0.2)
                     
                     # Input the text
@@ -981,7 +1037,7 @@ class ADBUtils:
                     escaped_text = text_to_input.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
                     input_command = f"adb -s {device_id} shell input text \"{escaped_text}\""
                     
-                    success, stdout, stderr, exit_code = self.ssh.execute_command(input_command)
+                    success, stdout, stderr, exit_code = self.execute_command(input_command)
                     
                     if success and exit_code == 0:
                         print(f"[@lib:adbUtils:input_text] SUCCESS: Input text completed")
@@ -998,4 +1054,31 @@ class ADBUtils:
                 
         except Exception as e:
             print(f"[@lib:adbUtils:input_text] Error: {e}")
+            return False
+
+    def tap_coordinates(self, device_id: str, x: int, y: int) -> bool:
+        """
+        Tap at specific coordinates on the device screen.
+        
+        Args:
+            device_id: Android device ID
+            x: X coordinate
+            y: Y coordinate
+            
+        Returns:
+            bool: True if tap successful
+        """
+        try:
+            command = f"adb -s {device_id} shell input tap {x} {y}"
+            success, stdout, stderr, exit_code = self.execute_command(command)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:tap_coordinates] Successfully tapped at ({x}, {y})")
+                return True
+            else:
+                print(f"[@lib:adbUtils:tap_coordinates] Tap failed: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"[@lib:adbUtils:tap_coordinates] Error: {e}")
             return False 
