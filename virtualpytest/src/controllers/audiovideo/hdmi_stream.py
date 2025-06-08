@@ -80,6 +80,10 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Output path: {self.output_path}")
             print(f"HDMI[{self.capture_source}]: Service name: {self.service_name}")
             return True
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Connection error: {e}")
+            self.is_connected = False
+            return False
         
     def disconnect(self) -> bool:
         """Disconnect from the HDMI acquisition device."""

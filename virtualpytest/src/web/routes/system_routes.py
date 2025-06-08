@@ -15,23 +15,12 @@ from datetime import datetime
 from collections import deque
 
 # Import the new controller config factory
-try:
-    from controllerConfigFactory import (
-        create_controller_configs_from_device_info,
-        get_device_capabilities_from_model,
-        get_controller_types_from_model
-    )
-    print("[@system_routes] Successfully imported controllerConfigFactory")
-except ImportError as e:
-    print(f"[@system_routes] Failed to import controllerConfigFactory: {e}")
-    # Define dummy functions to prevent crashes
-    def create_controller_configs_from_device_info(*args, **kwargs):
-        return {}
-    def get_device_capabilities_from_model(*args, **kwargs):
-        return []
-    def get_controller_types_from_model(*args, **kwargs):
-        return []
-    print("[@system_routes] Using dummy functions for controllerConfigFactory")
+from utils.controllerConfigFactory import (
+    create_controller_configs_from_device_info,
+    get_device_capabilities_from_model,
+    get_controller_types_from_model
+)
+print("[@system_routes] Successfully imported controllerConfigFactory")
 
 system_bp = Blueprint('system', __name__)
 
