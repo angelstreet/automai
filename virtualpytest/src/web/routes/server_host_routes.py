@@ -29,126 +29,92 @@ server_host_bp = Blueprint('server_host', __name__)
 
 @server_host_bp.route('/api/virtualpytest/take-control', methods=['POST'])
 def server_take_control():
-    """Server-side take control - lock device and call host"""
+    """Simplified take control endpoint - lock device and forward request to host"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id')
         session_id = data.get('session_id', 'default-session')
         
-        if not device_id:
-            return jsonify({
-                'success': False,
-                'error': 'device_id is required'
-            }), 400
-        
         print(f"[@route:server_take_control] Take control requested for device: {device_id}")
         print(f"[@route:server_take_control] Session ID: {session_id}")
         
-        # Get device information from registry instead of HTTP call
-        try:
-            connected_clients = get_connected_clients()
-            
-            # Find device by device_id across all hosts
-            device_info = None
-            host_info = None
-            host_id = None  # Track the actual registry key for locking
-            
-            for registry_host_id, host_data in connected_clients.items():
-                if host_data.get('status') == 'online':
-                    # Check new structured format first
-                    device_data = host_data.get('device', {})
-                    if device_data and device_data.get('device_id') == device_id:
-                        device_info = device_data
-                        host_info = host_data
-                        host_id = registry_host_id  # Use the registry key for locking
-                        break
-                    
-                    # Check backward compatibility format
-                    elif not device_data and host_data.get('device_model'):
-                        compat_device_id = f"{registry_host_id}_device_{host_data.get('device_model')}"
-                        if compat_device_id == device_id:
-                            # Create device_info from backward compatibility format
-                            device_info = {
-                                'device_id': compat_device_id,
-                                'device_name': f"{host_data.get('device_model', '').replace('_', ' ').title()}",
-                                'device_model': host_data.get('device_model'),
-                                'device_ip': host_data.get('host_ip') or host_data.get('local_ip'),
-                                'device_port': '5555'
-                            }
-                            host_info = host_data
-                            host_id = registry_host_id  # Use the registry key for locking
-                            break
-            
-            if not device_info or not host_info or not host_id:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device not found in registry: {device_id}',
-                    'host_available': False
-                }), 404
-            
-            # Extract host connection info
-            host_ip = host_info.get('host_ip') or host_info.get('local_ip')
-            host_port = host_info.get('host_port') or host_info.get('client_port')
-            host_name = host_info.get('host_name') or host_info.get('name')
-            
-            device_model = device_info.get('device_model')
-            
-            print(f"[@route:server_take_control] Found device: {device_info.get('device_name')} ({device_model})")
-            print(f"[@route:server_take_control] Host: {host_name} at {host_ip}:{host_port}")
-            print(f"[@route:server_take_control] Registry key for locking: {host_id}")
-            
-        except Exception as e:
-            print(f"[@route:server_take_control] Error getting device from registry: {e}")
+        if not device_id:
             return jsonify({
                 'success': False,
-                'error': f'Failed to get device information from registry: {str(e)}',
-                'host_available': False
-            }), 500
+                'error': 'Missing device_id'
+            }), 400
         
         # Lock the device using deviceLockManager
         try:
             from web.utils.deviceLockManager import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
             
-            # Try to acquire lock for the HOST (using host_id as registry key)
-            lock_acquired = lock_device_in_registry(host_id, session_id)
+            # Try to acquire lock for the device
+            lock_acquired = lock_device_in_registry(device_id, session_id)
             
             if not lock_acquired:
                 # Get lock info to see who owns it
-                lock_info = get_device_lock_info(host_id)
+                lock_info = get_device_lock_info(device_id)
                 current_owner = lock_info.get('lockedBy', 'unknown') if lock_info else 'unknown'
                 return jsonify({
                     'success': False,
                     'error': f'Device {device_id} is already locked by session: {current_owner}',
                     'device_locked': True,
-                    'locked_by': current_owner,
-                    'host_available': True
+                    'locked_by': current_owner
                 }), 409
             
-            print(f"[@route:server_take_control] Successfully locked host {host_id} for session {session_id}")
+            print(f"[@route:server_take_control] Successfully locked device {device_id} for session {session_id}")
             
         except Exception as e:
             print(f"[@route:server_take_control] Error acquiring device lock: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to lock device: {str(e)}',
-                'host_available': True
+                'error': f'Failed to lock device: {str(e)}'
             }), 500
         
-        # Call host to take control
+        # Get connected clients to find the host for this device
+        try:
+            connected_clients = get_connected_clients()
+            
+            # Find host that owns this device
+            host_info = None
+            for host_id, host_data in connected_clients.items():
+                if host_data.get('device_id') == device_id and host_data.get('status') == 'online':
+                    host_info = host_data
+                    break
+            
+            if not host_info:
+                unlock_device_in_registry(device_id, session_id)
+                return jsonify({
+                    'success': False,
+                    'error': f'No online host found for device: {device_id}'
+                }), 404
+            
+            # Extract host connection info
+            host_ip = host_info.get('host_ip')
+            host_port = host_info.get('host_port')
+            
+            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_ip}:{host_port}")
+            
+        except Exception as e:
+            unlock_device_in_registry(device_id, session_id)
+            print(f"[@route:server_take_control] Error finding host: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to find host for device: {str(e)}'
+            }), 500
+        
+        # Forward request to host
         try:
             import requests
             
             host_url = f"https://{host_ip}:{host_port}/take-control"
             host_payload = {
                 'device_id': device_id,
-                'device_model': device_model,
-                'device_ip': device_info.get('device_ip'),
-                'device_port': device_info.get('device_port'),
                 'session_id': session_id
             }
             
-            print(f"[@route:server_take_control] Calling host at: {host_url}")
-            print(f"[@route:server_take_control] Host payload: {host_payload}")
+            print(f"[@route:server_take_control] Forwarding to host: {host_url}")
+            print(f"[@route:server_take_control] Payload: {host_payload}")
             
             host_response = requests.post(host_url, json=host_payload, timeout=30, verify=False)
             
@@ -157,13 +123,8 @@ def server_take_control():
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
                 if host_data.get('success'):
-                    # Use the single host_device_object directly (no more nested structures!)
-                    # The registry now stores everything in one clean object
-                    print(f"[@route:server_take_control] Using single object structure for {device_id}")
-                    
-                    # Create device response from the single object
+                    # Return the device info from our registry
                     device_response = {
-                        # Device information
                         'id': host_info.get('device_id'),
                         'device_id': host_info.get('device_id'),
                         'name': host_info.get('device_name'),
@@ -172,19 +133,10 @@ def server_take_control():
                         'device_model': host_info.get('device_model'),
                         'device_ip': host_info.get('device_ip'),
                         'device_port': host_info.get('device_port'),
-                        'controller_configs': host_info.get('controller_configs', {}),
-                        'description': host_info.get('description'),
-                        
-                        # Host information
                         'host_id': host_info.get('host_id'),
                         'host_name': host_info.get('host_name'),
                         'host_ip': host_info.get('host_ip'),
                         'host_port': host_info.get('host_port'),
-                        'connection': host_info.get('connection', {}),
-                        'host_connection': host_info.get('connection', {}),
-                        
-                        # Status and metadata
-                        'status': host_info.get('status'),
                         'capabilities': host_info.get('capabilities', [])
                     }
                     
@@ -195,41 +147,33 @@ def server_take_control():
                     }), 200
                 else:
                     # Host failed, release the device lock
-                    unlock_device_in_registry(host_id, session_id)
+                    unlock_device_in_registry(device_id, session_id)
                     return jsonify({
                         'success': False,
-                        'error': host_data.get('error', 'Host failed to take control'),
-                        'device_locked': False,
-                        'host_available': True,
-                        'controller_errors': host_data.get('controller_errors', {})
+                        'error': host_data.get('error', 'Host failed to take control')
                     }), 500
             else:
                 # Host request failed, release the device lock
-                unlock_device_in_registry(host_id, session_id)
+                unlock_device_in_registry(device_id, session_id)
                 return jsonify({
                     'success': False,
-                    'error': f'Host request failed: {host_response.status_code} {host_response.text}',
-                    'device_locked': False,
-                    'host_available': False
+                    'error': f'Host request failed: {host_response.status_code} {host_response.text}'
                 }), 500
                 
         except Exception as e:
             # Host communication failed, release the device lock
-            unlock_device_in_registry(host_id, session_id)
+            unlock_device_in_registry(device_id, session_id)
             print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to communicate with host: {str(e)}',
-                'device_locked': False,
-                'host_available': False
+                'error': f'Failed to communicate with host: {str(e)}'
             }), 500
         
     except Exception as e:
         print(f"[@route:server_take_control] Unexpected error: {e}")
         return jsonify({
             'success': False,
-            'error': f'Unexpected error: {str(e)}',
-            'host_available': False
+            'error': f'Unexpected error: {str(e)}'
         }), 500
 
 
