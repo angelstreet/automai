@@ -37,13 +37,13 @@ echo "💡 Press Ctrl+C to stop all services"
 echo "=================================================================================="
 
 # Start all services with prefixed output
-run_with_prefix "SERVER" "$BLUE" python app.py --server
+run_with_prefix "SERVER" "$BLUE" python app_server.py
 sleep 2
 
 run_with_prefix "NPM" "$YELLOW" npm run dev
 sleep 2
 
-run_with_prefix "HOST" "$GREEN" python app.py --host
+run_with_prefix "HOST" "$GREEN" python app_host.py
 
 # Wait for all background jobs
 wait
