@@ -203,3 +203,74 @@ def make_host_request(endpoint, method='GET', host_id=None, device_model=None, u
     print(f"[@utils:make_host_request] Response: {response.status_code}")
     
     return response 
+
+def build_device_from_host_info(host_id, host_info):
+    """
+    Build a complete device object from host registry information.
+    This ensures consistent device data structure across all endpoints.
+    
+    Args:
+        host_id: The registry key for the host
+        host_info: Host information from the registry
+    
+    Returns:
+        Complete device object with all necessary fields
+    """
+    # Extract host connection info
+    host_ip = host_info.get('host_ip') or host_info.get('local_ip')  # Backward compatibility
+    host_port = host_info.get('host_port') or host_info.get('client_port')  # Backward compatibility
+    host_name = host_info.get('host_name') or host_info.get('name')  # Backward compatibility
+    
+    # Extract device info from structured format or backward compatibility
+    device_info = host_info.get('device', {})
+    if device_info:
+        # New structured format - device data already built during registration
+        device_id = device_info.get('device_id')
+        device_name = device_info.get('device_name')
+        device_model = device_info.get('device_model')
+        device_ip = device_info.get('device_ip')
+        device_port = device_info.get('device_port')
+        controller_configs = device_info.get('controller_configs', {})
+    else:
+        # Backward compatibility - create device info from old format
+        device_model = host_info.get('device_model', 'unknown')
+        device_id = f"{host_id}_device_{device_model}"
+        device_name = f"{device_model.replace('_', ' ').title()}"
+        device_ip = host_ip
+        device_port = '5555'  # Default ADB port
+        controller_configs = {}
+    
+    return {
+        # Device information
+        'id': device_id,  # Keep 'id' for NavigationEditor compatibility
+        'device_id': device_id,
+        'name': device_name,  # Keep 'name' for NavigationEditor compatibility
+        'device_name': device_name,
+        'model': device_model,  # Keep 'model' for NavigationEditor compatibility
+        'device_model': device_model,
+        'device_ip': device_ip,
+        'device_port': device_port,
+        'controller_configs': controller_configs,
+        'description': f"Device: {device_name} controlled by host: {host_name}",
+        
+        # Host reference information
+        'host_id': host_id,
+        'host_name': host_name,
+        'host_ip': host_ip,
+        'host_port': host_port,
+        'connection': {
+            'flask_url': f"http://{host_ip}:{host_port}",
+            'nginx_url': f"https://{host_ip}:444"
+        },
+        'host_connection': {
+            'flask_url': f"http://{host_ip}:{host_port}",
+            'nginx_url': f"https://{host_ip}:444"
+        },
+        
+        # Status and metadata
+        'status': 'online',
+        'last_seen': host_info.get('last_seen'),
+        'registered_at': host_info.get('registered_at'),
+        'capabilities': host_info.get('capabilities', []),
+        'system_stats': host_info.get('system_stats', {})
+    } 
