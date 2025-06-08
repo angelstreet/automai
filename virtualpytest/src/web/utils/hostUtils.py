@@ -22,9 +22,6 @@ client_registration_state = {
     'server_url': None
 }
 
-# Global storage for host_device object when Flask app context is not available
-_pending_host_device = None
-
 # Ping thread for host mode
 ping_thread = None
 ping_stop_event = threading.Event()
@@ -328,7 +325,7 @@ def register_host_with_server():
                         print(f"   ⚠️ No controller_configs received from server")
                         host_device_object['controller_objects'] = {}
                     
-                    # Store in Flask app context (we'll need to get the app instance)
+                    # Store in Flask app context
                     try:
                         from flask import current_app
                         current_app.my_host_device = host_device_object
@@ -337,23 +334,9 @@ def register_host_with_server():
                         print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
                         print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
                     except RuntimeError:
-                        # If we're outside Flask app context, store globally for now
-                        # This will be picked up when the app starts
-                        global _pending_host_device
-                        _pending_host_device = host_device_object
-                        print(f"✅ [HOST] Stored host_device object globally (will transfer to app context when available)")
-                        print(f"   Host: {host_device_object.get('host_name')}")
-                        print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
-                        print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
-                        
-                        # ✅ ALSO TRY TO STORE DIRECTLY IN APP INSTANCE IF AVAILABLE
-                        try:
-                            import __main__
-                            if hasattr(__main__, 'app'):
-                                __main__.app.my_host_device = host_device_object
-                                print(f"✅ [HOST] Also stored host_device object directly in main app instance")
-                        except Exception as app_store_error:
-                            print(f"⚠️ [HOST] Could not store in main app instance: {app_store_error}")
+                        # Flask app context not available during registration - this is expected
+                        print(f"⚠️ [HOST] Flask app context not available during registration")
+                        print(f"   Host device will be available when Flask routes are accessed")
                 else:
                     print(f"⚠️ [HOST] No host_device object in registration response")
                 
@@ -553,27 +536,3 @@ def setup_host_signal_handlers():
     
     # Register exit handler for normal exit
     atexit.register(cleanup_on_exit) 
-
-def transfer_pending_host_device_to_app():
-    """Transfer pending host_device object to Flask app context if available"""
-    global _pending_host_device
-    
-    print(f"[@hostUtils:transfer_pending_host_device_to_app] Called - pending device exists: {_pending_host_device is not None}")
-    
-    if _pending_host_device:
-        try:
-            from flask import current_app
-            current_app.my_host_device = _pending_host_device
-            print(f"✅ [HOST] Transferred pending host_device to Flask app context:")
-            print(f"   Host: {_pending_host_device.get('host_name')}")
-            print(f"   Device: {_pending_host_device.get('device_name')} ({_pending_host_device.get('device_model')})")
-            print(f"   Controllers: {list(_pending_host_device.get('controller_objects', {}).keys())}")
-            _pending_host_device = None  # Clear the global storage
-            return True
-        except RuntimeError as e:
-            # Flask app context not available yet
-            print(f"[@hostUtils:transfer_pending_host_device_to_app] Flask app context not available: {e}")
-            return False
-    else:
-        print(f"[@hostUtils:transfer_pending_host_device_to_app] No pending host_device to transfer")
-    return True  # No pending data to transfer 

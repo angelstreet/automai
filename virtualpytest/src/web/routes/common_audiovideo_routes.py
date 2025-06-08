@@ -498,4 +498,43 @@ def take_screenshot():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@audiovideo_bp.route('/api/virtualpytest/av/debug', methods=['GET'])
+def debug_context():
+    """Debug endpoint to check Flask app context"""
+    try:
+        from flask import current_app
+        
+        # Check what's available in current_app
+        app_attrs = [attr for attr in dir(current_app) if not attr.startswith('_')]
+        
+        # Check specifically for my_host_device
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        debug_info = {
+            'success': True,
+            'app_attributes': app_attrs,
+            'has_my_host_device': host_device is not None,
+            'host_device_type': type(host_device).__name__ if host_device else None,
+            'host_device_keys': list(host_device.keys()) if host_device and isinstance(host_device, dict) else None,
+            'flask_app_name': getattr(current_app, 'name', 'unknown'),
+            'flask_app_id': id(current_app)
+        }
+        
+        if host_device:
+            debug_info['host_device_summary'] = {
+                'host_name': host_device.get('host_name'),
+                'device_name': host_device.get('device_name'),
+                'device_model': host_device.get('device_model'),
+                'controller_objects_keys': list(host_device.get('controller_objects', {}).keys())
+            }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__
         }), 500 
