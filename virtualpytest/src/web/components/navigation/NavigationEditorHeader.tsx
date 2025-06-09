@@ -22,9 +22,10 @@ import {
   ArrowBack as ArrowBackIcon,
   ControlCamera as ControlCameraIcon,
   Tv as TvIcon,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './TreeFilterControls';
-import { Device } from '../../services/deviceService';
+import { useRegistration } from '../../contexts/RegistrationContext';
 import { 
   ValidationButtonClient,
   ValidationPreviewClient,
@@ -65,8 +66,7 @@ interface NavigationEditorHeaderProps {
   // User interface props
   userInterface: any;
   
-  // Device props - passed from parent to avoid duplication
-  devices?: Device[];
+  // Device props - now using RegisteredHost from RegistrationContext
   devicesLoading?: boolean;
   
   // Validation props
@@ -122,7 +122,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   selectedDevice,
   isControlActive,
   userInterface,
-  devices = [],
   devicesLoading = false,
   treeId,
   onNavigateToParent,
@@ -146,26 +145,38 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onUpdateNode,
   onUpdateEdge,
 }) => {
+  // Get devices and lock status from RegistrationContext
+  const { availableHosts, isDeviceLocked } = useRegistration();
+
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
     if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
       console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
-      return devices;
+      return availableHosts;
     }
 
     const interfaceModels = userInterface.models;
-    const filtered = devices.filter(device => 
+    const filtered = availableHosts.filter(device => 
       interfaceModels.includes(device.model)
     );
 
-    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filtered.length}/${devices.length} devices match models: ${interfaceModels.join(', ')}`);
+    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filtered.length}/${availableHosts.length} devices match models: ${interfaceModels.join(', ')}`);
     return filtered;
-  }, [devices, userInterface]);
+  }, [availableHosts, userInterface]);
 
   // Extract device names for the dropdown
   const availableDevices = useMemo(() => {
     return filteredDevices.map(device => device.name);
   }, [filteredDevices]);
+
+  // Check if selected device is locked
+  const selectedDeviceHost = useMemo(() => {
+    return filteredDevices.find(device => device.name === selectedDevice);
+  }, [filteredDevices, selectedDevice]);
+
+  const isSelectedDeviceLocked = useMemo(() => {
+    return selectedDeviceHost ? isDeviceLocked(selectedDeviceHost.id) : false;
+  }, [selectedDeviceHost, isDeviceLocked]);
 
   return (
     <>
@@ -359,11 +370,37 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                   <MenuItem value="">
                     <em>{devicesLoading ? 'Loading...' : 'None'}</em>
                   </MenuItem>
-                  {availableDevices.map((device) => (
-                    <MenuItem key={device} value={device}>
-                      {device}
-                    </MenuItem>
-                  ))}
+                  {filteredDevices.map((device) => {
+                    const deviceIsLocked = isDeviceLocked(device.id);
+                    return (
+                      <MenuItem 
+                        key={device.name} 
+                        value={device.name}
+                        disabled={deviceIsLocked}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          opacity: deviceIsLocked ? 0.6 : 1,
+                        }}
+                      >
+                        {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
+                        <span>{device.name}</span>
+                        {deviceIsLocked && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              ml: 'auto', 
+                              color: 'warning.main',
+                              fontSize: '0.65rem'
+                            }}
+                          >
+                            (Locked)
+                          </Typography>
+                        )}
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
 
@@ -387,7 +424,13 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                     }
                   }
                 }}
-                disabled={!selectedDevice || isLoading || !!error || devicesLoading}
+                disabled={
+                  !selectedDevice || 
+                  isLoading || 
+                  !!error || 
+                  devicesLoading || 
+                  isSelectedDeviceLocked
+                }
                 startIcon={isControlActive ? <TvIcon /> : <TvIcon />}
                 color={isControlActive ? "success" : "primary"}
                 sx={{ 
@@ -398,7 +441,13 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                   whiteSpace: 'nowrap',
                   px: 1.5
                 }}
-                title={isControlActive ? "Release Control" : "Take Control"}
+                title={
+                  isSelectedDeviceLocked 
+                    ? `Device is locked by ${selectedDeviceHost?.lockedBy || 'another user'}`
+                    : isControlActive 
+                      ? "Release Control" 
+                      : "Take Control"
+                }
               >
                 {isControlActive ? 'Release' : 'Control'}
               </Button>
