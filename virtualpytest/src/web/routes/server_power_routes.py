@@ -1,106 +1,105 @@
 """
-USB Power Management Routes
+Power Management Routes (Abstract)
 
-Session-based power control with take-control, release-control, and command execution
+Session-based power control with abstract power controller methods.
+Routes work with any power controller type (USB, network, etc.)
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 
 power_bp = Blueprint('power', __name__, url_prefix='/server/power')
 
-@power_bp.route('/usb-power/defaults', methods=['GET'])
-def get_usb_power_defaults():
-    """Get default connection values for USB Power from environment variables."""
+@power_bp.route('/take-control', methods=['POST'])
+def power_take_control():
+    """Take control of power device using abstract power controller."""
     try:
-        defaults = {
-            'usb_hub': os.getenv('USB_HUB', '1')
-        }
+        print(f"[@route:power:take-control] Starting power take control")
         
-        return jsonify({
-            'success': True,
-            'defaults': defaults
-        })
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 500
         
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Failed to get defaults: {str(e)}'
-        }), 500
-
-@power_bp.route('/usb-power/take-control', methods=['POST'])
-def usb_power_take_control():
-    """Take control of USB Power device."""
-    try:
-        import app
-        from controllers.power.usb_power import USBPowerController
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'Power controller not available on this host'
+            }), 400
         
-        data = request.get_json()
-        print(f"[@api:usb-power:take-control] Connection data received")
-        
-        # Release any existing session first
-        if hasattr(app, 'usb_power_controller') and app.usb_power_controller:
-            try:
-                app.usb_power_controller.disconnect()
-            except:
-                pass
-        
-        # Create controller instance with connection parameters
-        controller = USBPowerController(
-            device_name="USB Power Device",
-            usb_hub=int(data.get('usb_hub', 1))
-        )
-        
-        # Attempt connection
-        if controller.connect():
-            # Store controller globally for subsequent commands
-            app.usb_power_controller = controller
-            
+        # Use abstract controller method
+        if power_controller.connect():
+            print(f"[@route:power:take-control] Successfully connected to power controller")
             return jsonify({
                 'success': True,
-                'message': f'Successfully connected to USB Power hub {data.get("usb_hub")}'
+                'message': 'Successfully connected to power controller'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to connect to USB hub'
+                'error': 'Failed to connect to power controller'
             }), 400
             
     except Exception as e:
+        print(f"[@route:power:take-control] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Connection error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/release-control', methods=['POST'])
-def usb_power_release_control():
-    """Release control of USB Power device."""
+@power_bp.route('/release-control', methods=['POST'])
+def power_release_control():
+    """Release control of power device using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:release-control] Starting power release control")
         
-        if hasattr(app, 'usb_power_controller') and app.usb_power_controller:
-            app.usb_power_controller.disconnect()
-            app.usb_power_controller = None
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if power_controller:
+            power_controller.disconnect()
             
+        print(f"[@route:power:release-control] Power control released")
         return jsonify({
             'success': True,
-            'message': 'USB Power control released'
+            'message': 'Power control released'
         })
         
     except Exception as e:
+        print(f"[@route:power:release-control] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Release error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/status', methods=['GET'])
-def get_usb_power_status():
-    """Get USB Power session status."""
+@power_bp.route('/status', methods=['GET'])
+def get_power_status():
+    """Get power controller session status."""
     try:
-        import app
+        print(f"[@route:power:status] Checking power status")
         
-        if hasattr(app, 'usb_power_controller') and app.usb_power_controller:
-            controller_status = app.usb_power_controller.get_status()
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': True,
+                'connected': False,
+                'controller_status': {}
+            })
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if power_controller:
+            controller_status = power_controller.get_status()
             return jsonify({
                 'success': True,
                 'connected': True,
@@ -114,26 +113,34 @@ def get_usb_power_status():
             })
             
     except Exception as e:
+        print(f"[@route:power:status] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Status check error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/power-status', methods=['GET'])
-def get_usb_power_state():
-    """Get current USB hub power state."""
+@power_bp.route('/power-status', methods=['GET'])
+def get_power_state():
+    """Get current power state using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:power-status] Checking power state")
         
-        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please connect first.'
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active power controller connection'
             }), 400
         
-        print(f"[@api:usb-power:power-status] Checking power status")
-        
-        power_status = app.usb_power_controller.get_power_status()
+        power_status = power_controller.get_power_status()
         
         return jsonify({
             'success': True,
@@ -141,147 +148,182 @@ def get_usb_power_state():
         })
         
     except Exception as e:
+        print(f"[@route:power:power-status] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Power status error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/power-on', methods=['POST'])
-def usb_power_on():
-    """Turn USB power on using active session."""
+@power_bp.route('/power-on', methods=['POST'])
+def power_on():
+    """Turn power on using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:power-on] Executing power on")
         
-        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please connect first.'
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active power controller connection'
             }), 400
         
-        print(f"[@api:usb-power:power-on] Executing power on")
-        
-        success = app.usb_power_controller.power_on(timeout=10.0)
+        success = power_controller.power_on(timeout=10.0)
         
         if success:
+            print(f"[@route:power:power-on] Power on successful")
             return jsonify({
                 'success': True,
-                'message': 'USB hub powered on successfully'
+                'message': 'Power on successful'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to power on USB hub'
+                'error': 'Failed to power on'
             }), 400
             
     except Exception as e:
+        print(f"[@route:power:power-on] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Power on error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/power-off', methods=['POST'])
-def usb_power_off():
-    """Turn USB power off using active session."""
+@power_bp.route('/power-off', methods=['POST'])
+def power_off():
+    """Turn power off using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:power-off] Executing power off")
         
-        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please connect first.'
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active power controller connection'
             }), 400
         
-        print(f"[@api:usb-power:power-off] Executing power off")
-        
-        success = app.usb_power_controller.power_off(timeout=5.0)
+        success = power_controller.power_off(timeout=5.0)
         
         if success:
+            print(f"[@route:power:power-off] Power off successful")
             return jsonify({
                 'success': True,
-                'message': 'USB hub powered off successfully'
+                'message': 'Power off successful'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to power off USB hub'
+                'error': 'Failed to power off'
             }), 400
             
     except Exception as e:
+        print(f"[@route:power:power-off] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Power off error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/reboot', methods=['POST'])
-def usb_power_reboot():
-    """Reboot USB device using active session."""
+@power_bp.route('/reboot', methods=['POST'])
+def power_reboot():
+    """Reboot power device using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:reboot] Executing reboot")
         
-        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please connect first.'
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active power controller connection'
             }), 400
         
-        print(f"[@api:usb-power:reboot] Executing reboot")
-        
-        success = app.usb_power_controller.reboot(timeout=20.0)
+        success = power_controller.reboot(timeout=20.0)
         
         if success:
+            print(f"[@route:power:reboot] Reboot successful")
             return jsonify({
                 'success': True,
-                'message': 'USB hub rebooted successfully'
+                'message': 'Power device rebooted successfully'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to reboot USB hub'
+                'error': 'Failed to reboot power device'
             }), 400
             
     except Exception as e:
+        print(f"[@route:power:reboot] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Reboot error: {str(e)}'
         }), 500
 
-@power_bp.route('/usb-power/toggle', methods=['POST'])
-def usb_power_toggle():
-    """Toggle USB power state (on->off or off->on)."""
+@power_bp.route('/toggle', methods=['POST'])
+def power_toggle():
+    """Toggle power state (on->off or off->on) using abstract power controller."""
     try:
-        import app
+        print(f"[@route:power:toggle] Checking current power state")
         
-        if not hasattr(app, 'usb_power_controller') or not app.usb_power_controller:
+        # Get the already-instantiated power controller from host device
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'No active USB Power connection. Please connect first.'
+                'error': 'Host device object not initialized'
+            }), 500
+        
+        power_controller = host_device.get('controller_objects', {}).get('power')
+        if not power_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No active power controller connection'
             }), 400
         
-        print(f"[@api:usb-power:toggle] Checking current power state")
-        
         # Get current power state
-        power_status = app.usb_power_controller.get_power_status()
+        power_status = power_controller.get_power_status()
         current_state = power_status.get('power_state', 'unknown')
         
-        print(f"[@api:usb-power:toggle] Current state: {current_state}")
+        print(f"[@route:power:toggle] Current state: {current_state}")
         
         # Toggle based on current state
         if current_state == 'on':
-            print(f"[@api:usb-power:toggle] Toggling to OFF")
-            success = app.usb_power_controller.power_off(timeout=5.0)
+            print(f"[@route:power:toggle] Toggling to OFF")
+            success = power_controller.power_off(timeout=5.0)
             new_state = 'off' if success else current_state
-            message = 'USB hub powered off successfully' if success else 'Failed to power off USB hub'
+            message = 'Power device powered off successfully' if success else 'Failed to power off power device'
         elif current_state == 'off':
-            print(f"[@api:usb-power:toggle] Toggling to ON")
-            success = app.usb_power_controller.power_on(timeout=10.0)
+            print(f"[@route:power:toggle] Toggling to ON")
+            success = power_controller.power_on(timeout=10.0)
             new_state = 'on' if success else current_state
-            message = 'USB hub powered on successfully' if success else 'Failed to power on USB hub'
+            message = 'Power device powered on successfully' if success else 'Failed to power on power device'
         else:
             # Unknown state, try to turn on
-            print(f"[@api:usb-power:toggle] Unknown state, attempting to power ON")
-            success = app.usb_power_controller.power_on(timeout=10.0)
+            print(f"[@route:power:toggle] Unknown state, attempting to power ON")
+            success = power_controller.power_on(timeout=10.0)
             new_state = 'on' if success else 'unknown'
-            message = 'USB hub powered on successfully' if success else 'Failed to power on USB hub'
+            message = 'Power device powered on successfully' if success else 'Failed to power on power device'
         
         if success:
             return jsonify({
@@ -298,6 +340,7 @@ def usb_power_toggle():
             }), 400
             
     except Exception as e:
+        print(f"[@route:power:toggle] ERROR: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Toggle error: {str(e)}'

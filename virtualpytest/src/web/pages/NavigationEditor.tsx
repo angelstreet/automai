@@ -232,7 +232,8 @@ const NavigationEditorContent: React.FC = () => {
   
   // Use registration context for centralized URL management and host data
   const { 
-    buildServerUrl, 
+    buildApiUrl,
+    buildServerUrl,
     availableHosts, 
     selectedHost, 
     setAvailableHosts, 
@@ -330,11 +331,11 @@ const NavigationEditorContent: React.FC = () => {
       setDevicesLoading(true);
       
       // Use centralized URL building from registration context
-      const serverUrl = buildServerUrl('/api/system/clients/devices');
-      console.log(`[@component:NavigationEditor] Using server URL: ${serverUrl}`);
+      const apiUrl = buildApiUrl('/api/system/clients/devices');
+      console.log(`[@component:NavigationEditor] Using API URL: ${apiUrl}`);
       
       // Fetch registered clients as devices instead of using device database
-      const response = await fetch(serverUrl);
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -361,7 +362,7 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setDevicesLoading(false);
     }
-  }, [buildServerUrl, setAvailableHosts]);
+  }, [buildApiUrl, setAvailableHosts]);
 
   useEffect(() => {
     fetchDevices();
@@ -609,7 +610,7 @@ const NavigationEditorContent: React.FC = () => {
       }
 
       // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch(buildServerUrl('/server/take-control'), {
+      const response = await fetch(buildApiUrl('/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -688,8 +689,8 @@ const NavigationEditorContent: React.FC = () => {
 
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
-      // Call screenshot API with parent and node name parameters
-      const response = await fetch(buildServerUrl('/api/virtualpytest/screen-definition/screenshot'), {
+      // Step 1: Take screenshot using abstract capture controller
+      const screenshotResponse = await fetch(buildApiUrl('/server/capture/screenshot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -699,19 +700,57 @@ const NavigationEditorContent: React.FC = () => {
           video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
           parent_name: parentName,
           node_name: nodeName,
+          upload_to_cloudflare: false, // Don't upload via screenshot route, we'll use dedicated route
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[@component:NavigationEditor] Screenshot taken successfully:', data);
+      if (screenshotResponse.ok) {
+        const screenshotData = await screenshotResponse.json();
+        console.log('[@component:NavigationEditor] Screenshot taken successfully:', screenshotData);
         
-        if (data.success) {
-          console.log(`[@component:NavigationEditor] Screenshot saved to: ${data.screenshot_path}`);
+        if (screenshotData.success) {
+          console.log(`[@component:NavigationEditor] Screenshot saved to: ${screenshotData.screenshot_path}`);
           
-          // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
-          const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
-          const screenshotUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
+          // Step 2: Upload to Cloudflare using dedicated route
+          let screenshotUrl;
+          let cloudflareUploaded = false;
+          
+          try {
+            const uploadResponse = await fetch(buildApiUrl('/server/capture/upload-navigation-screenshot'), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                source_screenshot_path: screenshotData.additional_screenshot_path || screenshotData.screenshot_path,
+                device_model: selectedDeviceData?.model || 'android_mobile',
+                parent_name: parentName,
+                node_name: nodeName,
+              }),
+            });
+
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json();
+              if (uploadData.success && uploadData.cloudflare_url) {
+                screenshotUrl = uploadData.cloudflare_url;
+                cloudflareUploaded = true;
+                console.log(`[@component:NavigationEditor] Successfully uploaded to Cloudflare R2: ${uploadData.cloudflare_path}`);
+              } else {
+                console.error('[@component:NavigationEditor] Cloudflare upload failed:', uploadData.error);
+              }
+            } else {
+              console.error('[@component:NavigationEditor] Cloudflare upload request failed:', uploadResponse.status, uploadResponse.statusText);
+            }
+          } catch (uploadError) {
+            console.error('[@component:NavigationEditor] Error uploading to Cloudflare:', uploadError);
+          }
+          
+          // Fallback to local URL if Cloudflare upload failed
+          if (!screenshotUrl) {
+            const screenshotPath = screenshotData.additional_screenshot_path || screenshotData.screenshot_path;
+            screenshotUrl = buildApiUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
+            console.log(`[@component:NavigationEditor] Using local URL as fallback: ${screenshotUrl}`);
+          }
           
           // Create updated node with screenshot
           const updatedNode = {
@@ -741,15 +780,17 @@ const NavigationEditorContent: React.FC = () => {
           console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
           console.log(`[@component:NavigationEditor] Marked tree as having unsaved changes`);
           
-          // You can add additional logic here like:
-          // - Show a success notification
-          // - Save the tree to database to persist the screenshot
-          // - Display the screenshot path to the user
+          // Log upload status
+          if (cloudflareUploaded) {
+            console.log(`[@component:NavigationEditor] Screenshot uploaded to Cloudflare R2 via dedicated route`);
+          } else {
+            console.log(`[@component:NavigationEditor] Screenshot saved locally only (Cloudflare upload failed)`);
+          }
         } else {
-          console.error('[@component:NavigationEditor] Screenshot failed:', data.error);
+          console.error('[@component:NavigationEditor] Screenshot failed:', screenshotData.error);
         }
       } else {
-        console.error('[@component:NavigationEditor] Screenshot failed:', response.status, response.statusText);
+        console.error('[@component:NavigationEditor] Screenshot failed:', screenshotResponse.status, screenshotResponse.statusText);
       }
     } catch (error) {
       console.error('[@component:NavigationEditor] Error taking screenshot:', error);
@@ -770,7 +811,7 @@ const NavigationEditorContent: React.FC = () => {
       setVerificationResults([]);
       setLastVerifiedNodeId(nodeId);
       
-      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/execute-batch'), {
+      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute-batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -849,7 +890,7 @@ const NavigationEditorContent: React.FC = () => {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
       setVerificationResults([]);
     }
-  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildServerUrl, setVerificationResults, setLastVerifiedNodeId]);
+  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildApiUrl, setVerificationResults, setLastVerifiedNodeId]);
 
   // Handle node updates - callback for NodeSelectionPanel
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
@@ -1087,11 +1128,6 @@ const NavigationEditorContent: React.FC = () => {
   // Validation colors are automatically loaded from localStorage by Zustand persistence
   // No manual initialization needed
   
-  // Legacy compatibility functions (for gradual migration)
-  const buildApiUrl = useCallback((endpoint: string) => {
-    return buildServerUrl(endpoint);
-  }, [buildServerUrl]);
-  
   return (
     <Box sx={{ 
       width: '100%',
@@ -1261,8 +1297,8 @@ const NavigationEditorContent: React.FC = () => {
                 selectedHostDevice={selectedDeviceData}
                 autoConnect={true}
                 deviceConnection={{
-                  flask_url: selectedDeviceData.connection?.flask_url || buildServerUrl(''),
-                  nginx_url: selectedDeviceData.connection?.nginx_url || buildServerUrl('').replace('http:', 'https:').replace('5009', '444')
+                  flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
+                  nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
                 }}
                 onDisconnectComplete={() => {
                   // Called when screen definition editor disconnects

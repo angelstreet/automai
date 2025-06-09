@@ -26,7 +26,7 @@ import { StreamViewer } from '../user-interface/StreamViewer';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface HDMIStreamPanelProps {
-  /** Optional pre-configured connection parameters */
+  /** Optional pre-configured connection parameters - DEPRECATED with abstract controllers */
   connectionConfig?: {
     stream_path: string;
     video_device: string;
@@ -51,11 +51,6 @@ interface StreamStats {
   stream_fps: number;
 }
 
-interface SSHConnectionForm {
-  stream_path: string;
-  video_device: string;
-}
-
 export function HDMIStreamPanel({
   connectionConfig,
   autoConnect = false,
@@ -65,16 +60,6 @@ export function HDMIStreamPanel({
   // Use registration context for centralized URL management
   const { buildServerUrl } = useRegistration();
 
-  // Stream configuration state
-  const [resolution, setResolution] = useState(connectionConfig?.resolution || '1920x1080');
-  const [fps, setFps] = useState(connectionConfig?.fps || 30);
-  
-  // SSH connection form state
-  const [sshConnectionForm, setSSHConnectionForm] = useState<SSHConnectionForm>({
-    stream_path: connectionConfig?.stream_path || '/path/to/output.m3u8',
-    video_device: connectionConfig?.video_device || '/dev/video0',
-  });
-  
   // Connection and streaming state
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -82,7 +67,7 @@ export function HDMIStreamPanel({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [streamStats, setStreamStats] = useState<StreamStats | null>(null);
   
-  // Simulated controller instance
+  // Controller instance reference
   const controllerRef = useRef<any>(null);
 
   // Initialize controller
@@ -92,105 +77,61 @@ export function HDMIStreamPanel({
         connected: false,
         streaming: false,
         streamUrl: '',
-        sshConnection: null,
         stats: {
           stream_url: '',
           is_streaming: false,
           uptime_seconds: 0,
           frames_received: 0,
           bytes_received: 0,
-          stream_quality: resolution,
-          stream_fps: fps
+          stream_quality: '1920x1080', // Default
+          stream_fps: 30 // Default
         }
       };
     }
-  }, [resolution, fps]);
+  }, []);
 
-  // Initialize connection form with provided config
+  // Auto-connect if requested
   useEffect(() => {
-    if (connectionConfig) {
-      setSSHConnectionForm({
-        stream_path: connectionConfig.stream_path,
-        video_device: connectionConfig.video_device,
-      });
-      setResolution(connectionConfig.resolution || '1920x1080');
-      setFps(connectionConfig.fps || 30);
-    }
-  }, [connectionConfig]);
-
-  // Auto-connect if config is provided and autoConnect is true
-  useEffect(() => {
-    if (connectionConfig && autoConnect && !isConnected && !isConnecting) {
-      console.log('[@component:HDMIStreamPanel] Auto-connecting with provided config');
+    if (autoConnect && !isConnected && !isConnecting) {
+      console.log('[@component:HDMIStreamPanel] Auto-connecting to AV controller');
       handleConnect();
     }
-  }, [connectionConfig, autoConnect, isConnected, isConnecting]);
+  }, [autoConnect, isConnected, isConnecting]);
 
-  // Fetch default values
-  useEffect(() => {
-    if (!connectionConfig) {
-      fetchDefaultValues();
-    }
-  }, [connectionConfig]);
-
-  const fetchDefaultValues = async () => {
-    try {
-      const response = await fetch(buildServerUrl('/server/remote/hdmi-stream/defaults'));
-      const result = await response.json();
-      
-      if (result.success && result.defaults) {
-        setSSHConnectionForm(prev => ({
-          ...prev,
-          ...result.defaults
-        }));
-        console.log('[@component:HDMIStreamPanel] Loaded default SSH connection values');
-      }
-    } catch (error) {
-      console.log('[@component:HDMIStreamPanel] Could not load default values:', error);
-    }
-  };
-
-  // SSH connection
+  // AV controller connection
   const handleConnect = async () => {
     setIsConnecting(true);
     setConnectionError(null);
     
     try {
-      console.log('[@component:HDMIStreamPanel] Starting HDMI stream connection...');
+      console.log('[@component:HDMIStreamPanel] Starting AV controller connection...');
       
-      const response = await fetch(buildServerUrl('/server/take-control'), {
+      const response = await fetch(buildServerUrl('/server/av/connect'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          device_model: 'hdmi_stream',
-          ...sshConnectionForm
-        }),
       });
 
       const result = await response.json();
       console.log('[@component:HDMIStreamPanel] Connection response:', result);
 
       if (result.success) {
-        console.log('[@component:HDMIStreamPanel] Successfully connected to HDMI stream');
+        console.log('[@component:HDMIStreamPanel] Successfully connected to AV controller');
         setIsConnected(true);
         setConnectionError(null);
         
         if (controllerRef.current) {
           controllerRef.current.connected = true;
           controllerRef.current.streaming = true;
-          controllerRef.current.streamUrl = `SSH: ${sshConnectionForm.stream_path}`;
-          controllerRef.current.sshConnection = { ...sshConnectionForm };
-          controllerRef.current.stats.stream_url = `SSH: ${sshConnectionForm.stream_path}`;
+          controllerRef.current.streamUrl = result.stream_url || 'Abstract AV Stream';
+          controllerRef.current.stats.stream_url = result.stream_url || 'Abstract AV Stream';
           controllerRef.current.stats.is_streaming = true;
-          controllerRef.current.stats.stream_quality = resolution;
-          controllerRef.current.stats.stream_fps = fps;
         }
         
         startStatsSimulation();
       } else {
-        const errorMsg = result.error || 'Failed to connect to HDMI stream';
+        const errorMsg = result.error || 'Failed to connect to AV controller';
         console.error('[@component:HDMIStreamPanel] Connection failed:', errorMsg);
         setConnectionError(errorMsg);
       }
@@ -203,18 +144,18 @@ export function HDMIStreamPanel({
     }
   };
   
-  // Disconnect from stream
+  // Disconnect from AV controller
   const handleDisconnect = async () => {
     setIsConnecting(true);
     setConnectionError(null);
 
     try {
-      console.log('[@component:HDMIStreamPanel] Disconnecting HDMI stream...');
-      const response = await fetch(buildServerUrl('/server/release-control'), {
+      console.log('[@component:HDMIStreamPanel] Disconnecting AV controller...');
+      const response = await fetch(buildServerUrl('/server/av/disconnect'), {
             method: 'POST',
       });
       
-      console.log('[@component:HDMIStreamPanel] Disconnection successful');
+      console.log('[@component:HDMIStreamPanel] AV controller disconnection successful');
     } catch (err: any) {
       console.error('[@component:HDMIStreamPanel] Disconnect error:', err);
     } finally {
@@ -232,7 +173,7 @@ export function HDMIStreamPanel({
       if (controllerRef.current && controllerRef.current.streaming) {
         const stats = controllerRef.current.stats;
         stats.uptime_seconds += 1;
-        stats.frames_received += fps;
+        stats.frames_received += 30;
         stats.bytes_received += Math.floor(Math.random() * 200000) + 50000;
         
         setStreamStats({ ...stats });
@@ -281,22 +222,16 @@ export function HDMIStreamPanel({
         ...sx 
       }}>
         <Typography variant={compact ? "body2" : "h6"} color="textSecondary" gutterBottom>
-          HDMI Stream Not Connected
+          AV Controller Not Connected
         </Typography>
-        {connectionConfig ? (
-          <Button
-            variant="contained"
-            onClick={handleConnect}
-            disabled={isConnecting}
-            size={compact ? "small" : "medium"}
-          >
-            {isConnecting ? <CircularProgress size={16} /> : 'Connect & Stream'}
-          </Button>
-        ) : (
-          <Typography variant="caption" color="textSecondary" textAlign="center">
-            Configure SSH connection parameters to enable HDMI streaming
-          </Typography>
-        )}
+        <Button
+          variant="contained"
+          onClick={handleConnect}
+          disabled={isConnecting}
+          size={compact ? "small" : "medium"}
+        >
+          {isConnecting ? <CircularProgress size={16} /> : 'Connect to AV Controller'}
+        </Button>
         {connectionError && (
           <Typography variant="caption" color="error" sx={{ mt: 1, textAlign: 'center' }}>
             {connectionError}
@@ -318,7 +253,7 @@ export function HDMIStreamPanel({
       {/* Stream Control Section */}
       <Box sx={{ mb: 2 }}>
         <Typography variant={compact ? "subtitle2" : "h6"} gutterBottom>
-          HDMI Stream Viewer
+          AV Stream Viewer
         </Typography>
 
         {/* Status chips */}
@@ -346,18 +281,8 @@ export function HDMIStreamPanel({
                 Stream Statistics
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                <strong>Connection:</strong> SSH
+                <strong>Connection:</strong> Abstract AV
               </Typography>
-              {controllerRef.current?.sshConnection && (
-                <>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>SSH Host:</strong> {controllerRef.current.sshConnection.video_device}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Video Device:</strong> {controllerRef.current.sshConnection.video_device}
-                  </Typography>
-                </>
-              )}
               <Typography variant="body2" sx={{ mb: 1 }}>
                 <strong>Quality:</strong> {streamStats.stream_quality}@{streamStats.stream_fps}fps
               </Typography>
@@ -391,18 +316,8 @@ export function HDMIStreamPanel({
           <Box sx={{ textAlign: 'center', color: 'success.main', p: 2 }}>
             <Settings sx={{ fontSize: compact ? 32 : 48, mb: 1 }} />
             <Typography variant={compact ? "body2" : "body1"} gutterBottom>
-              SSH Connection Active
+              Abstract AV Stream Active
             </Typography>
-            {controllerRef.current?.sshConnection && (
-              <>
-                <Typography variant="caption" display="block">
-                  Device: {controllerRef.current.sshConnection.video_device}
-                </Typography>
-                <Typography variant="caption" display="block">
-                  Output: {controllerRef.current.sshConnection.stream_path}
-                </Typography>
-              </>
-            )}
           </Box>
         </Box>
       </Box>

@@ -90,7 +90,6 @@ def register_routes(app: Flask, mode='server'):
         
         # Import server verification routes
         from .server_verification_common_routes import verification_common_bp
-        from .server_verification_control_routes import verification_control_server_bp
         from .server_verification_image_routes import verification_image_server_bp
         from .server_verification_text_routes import verification_text_server_bp
         from .server_verification_adb_routes import verification_adb_server_bp
@@ -115,7 +114,6 @@ def register_routes(app: Flask, mode='server'):
         
         # Server-side verification endpoints (proxy to hosts)
         app.register_blueprint(verification_common_bp)
-        app.register_blueprint(verification_control_server_bp)
         app.register_blueprint(verification_image_server_bp)
         app.register_blueprint(verification_text_server_bp)
         app.register_blueprint(verification_adb_server_bp)

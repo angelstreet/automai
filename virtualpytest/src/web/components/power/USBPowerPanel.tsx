@@ -23,17 +23,13 @@ import {
   FiberManualRecord,
   ExpandMore,
   ExpandLess,
-  Usb,
+  Power,
 } from '@mui/icons-material';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
-interface USBPowerPanelProps {
+interface PowerPanelProps {
   /** Custom styling */
   sx?: any;
-}
-
-interface USBConnectionForm {
-  usb_hub: string;
 }
 
 interface PowerStatus {
@@ -42,14 +38,9 @@ interface PowerStatus {
   error?: string;
 }
 
-export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
+export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
   // Use registration context for centralized URL management
   const { buildServerUrl } = useRegistration();
-
-  // Connection form state
-  const [connectionForm, setConnectionForm] = useState<USBConnectionForm>({
-    usb_hub: '1',
-  });
 
   // UI state
   const [isConnecting, setIsConnecting] = useState(false);
@@ -64,39 +55,20 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     connected: false
   });
 
-  // Fetch default values on mount
+  // Check connection status on mount
   useEffect(() => {
-    const fetchDefaults = async () => {
-      try {
-        const response = await fetch(buildServerUrl('/server/power/usb-power/defaults'));
-        const result = await response.json();
-        
-        if (result.success && result.defaults) {
-          setConnectionForm(prev => ({
-            ...prev,
-            ...result.defaults
-          }));
-          console.log('[@component:USBPowerPanel] Loaded default connection values');
-        }
-      } catch (error) {
-        console.log('[@component:USBPowerPanel] Could not load default values:', error);
-      }
-    };
-
-    fetchDefaults();
-    
     // Check if already connected
     checkConnectionStatus();
   }, [buildServerUrl]);
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(buildServerUrl('/server/power/usb-power/status'));
+      const response = await fetch(buildServerUrl('/server/power/status'));
       const result = await response.json();
       
       if (result.success && result.connected) {
         setIsConnected(true);
-        console.log('[@component:USBPowerPanel] Found existing connection');
+        console.log('[@component:USBPowerPanel] Found existing power connection');
         // Immediately check power status for existing connection
         await checkPowerStatus();
       }
@@ -110,7 +82,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     
     try {
       console.log('[@component:USBPowerPanel] Checking power status...');
-      const response = await fetch(buildServerUrl('/server/power/usb-power/power-status'));
+      const response = await fetch(buildServerUrl('/server/power/power-status'));
       const result = await response.json();
       
       if (result.success && result.power_status) {
@@ -129,53 +101,33 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     }
   };
 
-  const handleInputChange = (field: keyof USBConnectionForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setConnectionForm(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-    // Clear messages when user starts typing
-    setError(null);
-    setSuccessMessage(null);
-  };
-
   const handleConnect = async () => {
-    // Validate required fields
-    const requiredFields: (keyof USBConnectionForm)[] = ['usb_hub'];
-    const missingFields = requiredFields.filter(field => !connectionForm[field]);
-    
-    if (missingFields.length > 0) {
-      setError(`Missing required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
     setIsConnecting(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Starting USB power connection...');
+      console.log('[@component:USBPowerPanel] Starting power connection...');
 
-      const response = await fetch(buildServerUrl('/server/power/usb-power/take-control'), {
+      const response = await fetch(buildServerUrl('/server/power/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(connectionForm),
       });
 
       const result = await response.json();
       console.log('[@component:USBPowerPanel] Connection response:', result);
 
       if (result.success) {
-        console.log('[@component:USBPowerPanel] Successfully connected to USB power controller');
+        console.log('[@component:USBPowerPanel] Successfully connected to power controller');
         setIsConnected(true);
         setSuccessMessage(result.message);
         
         // Check initial power status
         setTimeout(checkPowerStatus, 1000);
       } else {
-        const errorMsg = result.error || 'Failed to connect to USB power controller';
+        const errorMsg = result.error || 'Failed to connect to power controller';
         console.error('[@component:USBPowerPanel] Connection failed:', errorMsg);
         setError(errorMsg);
       }
@@ -194,8 +146,8 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Disconnecting USB power controller...');
-      const response = await fetch(buildServerUrl('/server/power/usb-power/release-control'), {
+      console.log('[@component:USBPowerPanel] Disconnecting power controller...');
+      const response = await fetch(buildServerUrl('/server/power/release-control'), {
         method: 'POST',
       });
       
@@ -227,14 +179,11 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Toggling power...');
-      const response = await fetch(buildServerUrl('/server/power/usb-power/toggle'), {
+      const response = await fetch(buildServerUrl('/server/power/toggle'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          usb_hub: connectionForm.usb_hub
-        }),
       });
 
       const result = await response.json();
@@ -276,14 +225,11 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Rebooting device...');
-      const response = await fetch(buildServerUrl('/server/power/usb-power/reboot'), {
+      const response = await fetch(buildServerUrl('/server/power/reboot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          usb_hub: connectionForm.usb_hub
-        }),
       });
 
       const result = await response.json();
@@ -349,26 +295,13 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
         />
       </Box>
 
+      {/* Connection Controls - Simplified */}
       <Card sx={{ mb: 2 }}>
         <CardContent>
           <Typography variant="subtitle2" gutterBottom>
-            SSH Connection Settings
+            Power Controller Connection
           </Typography>
           
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="USB Hub"
-                value={connectionForm.usb_hub}
-                onChange={handleInputChange('usb_hub')}
-                size="small"
-                disabled={isConnected || isConnecting}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Connection Controls */}
           <Box sx={{ mt: 1, display: 'flex', gap: 2 }}>
             {!isConnected ? (
               <Button
@@ -378,7 +311,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
                 onClick={handleConnect}
                 disabled={isConnecting}
               >
-                {isConnecting ? 'Connecting...' : 'Connect'}
+                {isConnecting ? 'Connecting...' : 'Connect to Power Controller'}
               </Button>
             ) : (
               <Button

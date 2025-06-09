@@ -340,6 +340,33 @@ const TestCaseEditor: React.FC = () => {
     }
   };
 
+  // Execute test case using abstract test execution controller
+  const handleExecute = async (testCaseId: string, selectedDevice: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(buildApiUrl('/server/testcase/execute'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          test_case_id: testCaseId,
+          device_id: selectedDevice,
+        }),
+      });
+
+      if (response.ok) {
+        // Handle successful execution
+      } else {
+        setError('Failed to execute test case');
+      }
+    } catch (err) {
+      setError('Error executing test case');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>

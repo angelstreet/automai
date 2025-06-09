@@ -95,9 +95,9 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         
         print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
         
-        # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
-        api_controller_type = 'android-mobile'  # Default controller type
-        api_url = get_api_url(f"/api/virtualpytest/{api_controller_type}/execute-action")
+        # Call the abstract remote controller API endpoint
+        print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
+        api_url = get_api_url("/server/remote/execute-action")
         
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
@@ -556,9 +556,9 @@ def execute_action_object(action_obj: dict) -> bool:
         print(f"[@navigation:executor:execute_action_object] Action command: '{action_to_execute.get('command')}'")
         print(f"[@navigation:executor:execute_action_object] Action params: {action_to_execute.get('params')}")
         
-        # Call the virtualpytest API endpoint (same as EdgeSelectionPanel)
-        api_controller_type = 'android-mobile'  # Default controller type
-        api_url = get_api_url(f"/api/virtualpytest/{api_controller_type}/execute-action")
+        # Call the abstract remote controller API endpoint
+        print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
+        api_url = get_api_url("/server/remote/execute-action")
         
         print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
         

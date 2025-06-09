@@ -19,7 +19,7 @@ def check_controllers_available():
     """Helper function to check if controllers are available"""
     controllers_available = getattr(current_app, 'controllers_available', False)
     if not controllers_available:
-        return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
+        return jsonify({'error': ' Controllers not available'}), 503
     return None
 
 def get_team_id():

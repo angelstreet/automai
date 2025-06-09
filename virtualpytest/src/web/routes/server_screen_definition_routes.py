@@ -6,6 +6,7 @@ import subprocess
 import signal
 from pathlib import Path
 import threading
+from datetime import datetime
 
 # Create blueprint with consistent name - remove URL prefix as it's set in register_routes
 screen_definition_blueprint = Blueprint('screen_definition', __name__, url_prefix='/server/capture')
@@ -57,42 +58,42 @@ def ensure_dirs():
 def take_screenshot():
     """Take high resolution screenshot using FFmpeg from HDMI source with fixed 1920x1080 resolution."""
     try:
-        android_mobile_controller = get_android_mobile_controller()
-        
         data = request.get_json()
-        current_app.logger.info(f"[@api:screen-definition] Screenshot request: {data}")
+        device_model = data.get('device_model', 'android_mobile')
+        video_device = data.get('video_device', '/dev/video0')
+        parent_name = data.get('parent_name', 'root')
+        node_name = data.get('node_name', 'unknown')
+        upload_to_cloudflare = data.get('upload_to_cloudflare', True)  # Default to True for new screenshots
         
-        if not hasattr(android_mobile_controller, 'ssh_connection') or not android_mobile_controller.ssh_connection:
+        current_app.logger.info(f"[@api:screen-definition] Taking screenshot for device: {device_model}, parent: {parent_name}, node: {node_name}")
+        current_app.logger.info(f"[@api:screen-definition] Upload to Cloudflare: {upload_to_cloudflare}")
+        
+        # Get SSH connection
+        ssh_connection = get_android_mobile_controller()
+        if not ssh_connection:
             return jsonify({
                 'success': False,
-                'error': 'No active remote connection'
-            }), 400
-            
-        ssh_connection = android_mobile_controller.ssh_connection
+                'error': 'SSH connection not available'
+            }), 500
         
-        # Extract parameters
-        video_device = data.get('video_device', '/dev/video0')
-        device_model = data.get('device_model', 'android_mobile')
-        parent_name = data.get('parent_name', None)
-        node_name = data.get('node_name', None)
+        # Check if stream is active and stop it temporarily
+        stream_was_active = False
+        try:
+            success, stdout, stderr, exit_code = ssh_connection.execute_command("pgrep -f 'ffmpeg.*stream'")
+            if success and stdout.strip():
+                current_app.logger.info("[@api:screen-definition] Stream is active, stopping temporarily...")
+                ssh_connection.execute_command("pkill -f 'ffmpeg.*stream'")
+                stream_was_active = True
+                time.sleep(1)  # Give it a moment to stop
+        except Exception as e:
+            current_app.logger.warning(f"[@api:screen-definition] Could not check/stop stream: {e}")
         
-        # Check if stream is already stopped
-        success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl status stream")
-        stream_was_active = "Active: active (running)" in stdout
+        # Generate unique filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        remote_filename = f"screenshot_{device_model}_{timestamp}.jpg"
+        remote_temp_path = f"/tmp/{remote_filename}"
         
-        if stream_was_active:
-            # Stop the stream if it's running
-            current_app.logger.info("[@api:screen-definition] Stopping stream for capture...")
-            success, stdout, stderr, exit_code = ssh_connection.execute_command("sudo systemctl stop stream")
-            
-            if not success or exit_code != 0:
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to stop stream service: {stderr}'
-                }), 500
-        
-        # Take high-res screenshot with FFmpeg using fixed resolution
-        remote_temp_path = f"/tmp/screenshot_{int(time.time())}.jpg"
+        # Take screenshot with FFmpeg
         ffmpeg_cmd = f"ffmpeg -f v4l2 -video_size {FIXED_VIDEO_SIZE} -i {video_device} -frames:v 1 -y {remote_temp_path}"
         
         current_app.logger.info(f"[@api:screen-definition] Taking screenshot with fixed resolution {FIXED_VIDEO_SIZE}...")
@@ -148,10 +149,42 @@ def take_screenshot():
                 current_app.logger.error(f"[@api:screen-definition] Failed to create additional copy: {e}")
                 # Don't fail the entire operation if the copy fails
         
+        # Upload to Cloudflare R2 if requested
+        cloudflare_url = None
+        cloudflare_path = None
+        if upload_to_cloudflare:
+            try:
+                from utils.cloudflare_upload import CloudflareUploader
+                
+                uploader = CloudflareUploader()
+                
+                # Use the additional screenshot path if available, otherwise use the main path
+                source_path = additional_screenshot_path or local_screenshot_path
+                
+                # Create simplified path in R2: navigation/{model}/{node_name}.jpg
+                # No timestamp - always overwrite the same file for each node
+                cloudflare_path = f"navigation/{device_model}/{node_name}.jpg"
+                
+                current_app.logger.info(f"[@api:screen-definition] Uploading screenshot to Cloudflare R2: {cloudflare_path}")
+                
+                # Upload with public access (not private for navigation screenshots)
+                upload_result = uploader.upload_file(source_path, cloudflare_path, public=True)
+                
+                if upload_result.get('success'):
+                    cloudflare_url = upload_result.get('url')
+                    current_app.logger.info(f"[@api:screen-definition] Successfully uploaded to R2: {cloudflare_url}")
+                else:
+                    current_app.logger.error(f"[@api:screen-definition] R2 upload failed: {upload_result.get('error')}")
+                    # Don't fail the entire operation if R2 upload fails
+                    
+            except Exception as e:
+                current_app.logger.error(f"[@api:screen-definition] R2 upload exception: {e}")
+                # Don't fail the entire operation if R2 upload fails
+        
         # Clean up remote file
         ssh_connection.execute_command(f"rm -f {remote_temp_path}")
         
-        return jsonify({
+        response_data = {
             'success': True,
             'screenshot_path': local_screenshot_path,
             'additional_screenshot_path': additional_screenshot_path,
@@ -161,13 +194,25 @@ def take_screenshot():
             'node_name': node_name,
             'message': f'Screenshot captured successfully with resolution {FIXED_VIDEO_SIZE}. Saved to {local_screenshot_path}' + 
                       (f' with additional copy at {additional_screenshot_path}' if additional_screenshot_path else '')
-        })
+        }
+        
+        # Add Cloudflare information if uploaded
+        if cloudflare_url and cloudflare_path:
+            response_data.update({
+                'cloudflare_url': cloudflare_url,
+                'cloudflare_path': cloudflare_path,
+                'uploaded_to_cloudflare': True
+            })
+        else:
+            response_data['uploaded_to_cloudflare'] = False
+        
+        return jsonify(response_data)
         
     except Exception as e:
-        current_app.logger.error(f"[@api:screen-definition] Screenshot route error: {e}")
+        current_app.logger.error(f"[@api:screen-definition] Error taking screenshot: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Screenshot request failed: {str(e)}'
+            'error': f'Failed to take screenshot: {str(e)}'
         }), 500
 
 @screen_definition_blueprint.route('/capture/start', methods=['POST'])
@@ -804,4 +849,109 @@ def restart_stream():
         return jsonify({
             'success': False,
             'error': f'Failed to restart stream: {str(e)}'
+        }), 500
+
+@screen_definition_blueprint.route('/upload-navigation-screenshot', methods=['POST'])
+def upload_navigation_screenshot():
+    """Proxy upload request to host for uploading existing screenshot to Cloudflare R2"""
+    try:
+        data = request.get_json()
+        source_screenshot_path = data.get('source_screenshot_path')
+        device_model = data.get('device_model', 'android_mobile')
+        node_name = data.get('node_name', 'unknown')
+        
+        if not source_screenshot_path:
+            return jsonify({
+                'success': False,
+                'error': 'source_screenshot_path is required'
+            }), 400
+        
+        # Get SSH connection to proxy the upload request to the host
+        ssh_connection = get_android_mobile_controller()
+        if not ssh_connection:
+            return jsonify({
+                'success': False,
+                'error': 'SSH connection not available'
+            }), 500
+        
+        current_app.logger.info(f"[@api:screen-definition] Proxying navigation screenshot upload to host")
+        current_app.logger.info(f"[@api:screen-definition] Source: {source_screenshot_path}")
+        current_app.logger.info(f"[@api:screen-definition] Target: navigation/{device_model}/{node_name}.jpg")
+        
+        try:
+            # Prepare the upload command for the host using simplified structure
+            upload_command = f"""
+python3 -c "
+import sys
+sys.path.append('/home/pi/virtualpytest/src/utils')
+from cloudflare_upload import CloudflareUploader
+import json
+
+# Upload using simplified folder structure: navigation/{model}/{node_name}.jpg
+uploader = CloudflareUploader()
+cloudflare_path = 'navigation/{device_model}/{node_name}.jpg'
+result = uploader.upload_file('{source_screenshot_path}', cloudflare_path, public=True)
+
+print(json.dumps(result))
+"
+"""
+            
+            current_app.logger.info(f"[@api:screen-definition] Executing upload command on host")
+            
+            # Execute the upload command on the host
+            success, stdout, stderr, exit_code = ssh_connection.execute_command(upload_command)
+            
+            if not success or exit_code != 0:
+                error_msg = stderr.strip() if stderr else "Upload command failed"
+                current_app.logger.error(f"[@api:screen-definition] Host upload failed: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Host upload failed: {error_msg}'
+                }), 500
+            
+            # Parse the result from the host
+            try:
+                import json
+                upload_result = json.loads(stdout.strip())
+                
+                if upload_result.get('success'):
+                    cloudflare_url = upload_result.get('url')
+                    cloudflare_path = f"navigation/{device_model}/{node_name}.jpg"
+                    
+                    current_app.logger.info(f"[@api:screen-definition] Successfully uploaded navigation screenshot via host: {cloudflare_url}")
+                    
+                    return jsonify({
+                        'success': True,
+                        'cloudflare_url': cloudflare_url,
+                        'cloudflare_path': cloudflare_path,
+                        'source_path': source_screenshot_path,
+                        'message': 'Navigation screenshot uploaded to Cloudflare R2 successfully via host'
+                    })
+                else:
+                    error_msg = upload_result.get('error', 'Unknown upload error')
+                    current_app.logger.error(f"[@api:screen-definition] Host R2 upload failed: {error_msg}")
+                    return jsonify({
+                        'success': False,
+                        'error': f'Failed to upload to Cloudflare R2 via host: {error_msg}'
+                    }), 500
+                    
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"[@api:screen-definition] Failed to parse host response: {stdout}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to parse host response: {str(e)}'
+                }), 500
+                
+        except Exception as e:
+            current_app.logger.error(f"[@api:screen-definition] Host upload exception: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to upload via host: {str(e)}'
+            }), 500
+        
+    except Exception as e:
+        current_app.logger.error(f"[@api:screen-definition] Error proxying navigation screenshot upload: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to proxy navigation screenshot upload: {str(e)}'
         }), 500 

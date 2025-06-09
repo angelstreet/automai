@@ -1,114 +1,54 @@
 """
-Standardized Remote Control Routes (v2)
+Remote Control Routes (Abstract)
 
-This module contains the new standardized remote control API endpoints following
-the /{context}/{domain}/{action} convention with proper error handling.
+This module contains abstract remote control API endpoints that work with any 
+remote controller type (Android TV, Android Mobile, IR, Bluetooth, etc.)
 
-New route structure:
-- /server/remote/android-tv/* (configuration and status only)
-- /server/remote/android-mobile/* (configuration and status only)
-- /server/remote/ir/*
-- /server/remote/bluetooth/*
-
-Note: take-control is handled by abstract /server/take-control and /host/take-control routes
+Routes use the abstract remote controller from the host device object.
+No device-specific knowledge or configuration needed.
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import os
 import sys
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from error_handling import controller_error
-
-# Create blueprint with new standardized prefix
+# Create blueprint with abstract prefix
 remote_bp = Blueprint('remote', __name__, url_prefix='/server/remote')
 
 # =====================================================
-# ANDROID TV REMOTE CONTROL ENDPOINTS (Config Only)
+# ABSTRACT REMOTE CONTROL ENDPOINTS
 # =====================================================
 
-@remote_bp.route('/android-tv/config', methods=['GET'])
-def get_android_tv_config():
-    """Get Android TV remote configuration."""
-    try:
-        from controllers.remote.android_tv import AndroidTVRemoteController
-        config = AndroidTVRemoteController.get_remote_config()
-        
-        return jsonify({
-            'success': True,
-            'config': config
-        })
-        
-    except Exception as e:
-        return controller_error(
-            controller_type="android_tv",
-            operation="get_config",
-            error_details=str(e)
-        )
+# NOTE: Remote control actions (navigate, click, swipe, key-press) are typically
+# handled by navigation/pathfinding routes or direct controller calls.
+# 
+# If specific remote control endpoints are needed, they should be added here
+# using the abstract remote controller pattern:
+#
+# @remote_bp.route('/navigate', methods=['POST'])
+# def navigate():
+#     """Navigate using abstract remote controller."""
+#     try:
+#         host_device = getattr(current_app, 'my_host_device', None)
+#         if not host_device:
+#             return jsonify({'success': False, 'error': 'Host device not initialized'}), 500
+#         
+#         remote_controller = host_device.get('controller_objects', {}).get('remote')
+#         if not remote_controller:
+#             return jsonify({'success': False, 'error': 'Remote controller not available'}), 400
+#         
+#         data = request.get_json()
+#         result = remote_controller.navigate(data.get('direction'))
+#         return jsonify({'success': True, 'result': result})
+#     except Exception as e:
+#         return jsonify({'success': False, 'error': str(e)}), 500
 
-@remote_bp.route('/android-tv/defaults', methods=['GET'])
-def get_android_tv_defaults():
-    """Get default Android TV connection values from environment variables."""
-    try:
-        defaults = {
-            'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_TV_IP', '192.168.1.130'),
-            'device_port': os.getenv('DEVICE_PORT', '5555')
-        }
-        
-        return jsonify({
-            'success': True,
-            'defaults': defaults
-        })
-        
-    except Exception as e:
-        return controller_error(
-            controller_type="android_tv",
-            operation="get_defaults",
-            error_details=str(e)
-        )
-
-# =====================================================
-# ANDROID MOBILE REMOTE CONTROL ENDPOINTS (Config Only)
-# =====================================================
-
-@remote_bp.route('/android-mobile/config', methods=['GET'])
-def get_android_mobile_config():
-    """Get Android Mobile remote configuration including layout, buttons, and image."""
-    try:
-        from controllers.remote.android_mobile import AndroidMobileRemoteController
-        config = AndroidMobileRemoteController.get_remote_config()
-        
-        return jsonify({
-            'success': True,
-            'config': config
-        })
-        
-    except Exception as e:
-        return controller_error(
-            controller_type="android_mobile",
-            operation="get_config",
-            error_details=str(e)
-        )
-
-@remote_bp.route('/android-mobile/defaults', methods=['GET'])
-def get_android_mobile_defaults():
-    """Get default connection values for Android Mobile from environment variables."""
-    try:
-        defaults = {
-            'device_ip': os.getenv('DEVICE_IP') or os.getenv('ANDROID_MOBILE_IP', '192.168.1.29'),
-            'device_port': os.getenv('DEVICE_PORT', '5555')
-        }
-        
-        return jsonify({
-            'success': True,
-            'defaults': defaults
-        })
-        
-    except Exception as e:
-        return controller_error(
-            controller_type="android_mobile",
-            operation="get_defaults",
-            error_details=str(e)
-        ) 
+# DELETED: All device-specific /android-tv/* and /android-mobile/* endpoints
+# - /config endpoints: Configuration happens at registration
+# - /defaults endpoints: Controllers are pre-configured
+# 
+# Controllers are instantiated and configured during host registration.
+# Routes should use the abstract controller methods only. 

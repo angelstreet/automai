@@ -1,6 +1,6 @@
 import { RemoteDeviceConfig } from '../../types/remote/remoteTypes';
 
-// Android TV configuration - extracted from existing AndroidTVRemotePanel
+// Android TV configuration - uses abstract remote controller
 export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   type: 'android-tv',
   name: 'Android TV',
@@ -12,12 +12,10 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     device: '5555'
   },
   apiEndpoints: {
-    defaults: '/server/remote/android-tv/defaults',
     connect: '/server/take-control',
     disconnect: '/server/release-control',
-    screenshot: '/server/remote/android-tv/screenshot',
-    command: '/server/remote/android-tv/command',
-    config: '/server/remote/android-tv/config'
+    screenshot: '/server/remote/screenshot',  // Abstract remote controller
+    command: '/server/remote/command',        // Abstract remote controller
   },
   connectionFields: [
     { name: 'device_ip', label: 'Device IP', required: true },
@@ -25,7 +23,7 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   ]
 };
 
-// Android Mobile configuration - similar to Android TV but with mobile-specific endpoints
+// Android Mobile configuration - uses abstract remote controller
 export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   type: 'android-mobile',
   name: 'Android Mobile',
@@ -37,16 +35,13 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     device: '5555'
   },
   apiEndpoints: {
-    defaults: '/server/remote/android-mobile/defaults',
     connect: '/server/take-control',
     disconnect: '/server/release-control',
-    screenshot: '/server/remote/android-mobile/screenshot',
-    command: '/server/remote/android-mobile/command',
-    config: '/server/remote/android-mobile/config',
-    // Android Mobile specific endpoints
-    dumpUI: '/server/remote/android-mobile/screenshot-and-dump-ui',
-    getApps: '/server/remote/android-mobile/get-apps',
-    clickElement: '/server/remote/android-mobile/click-element'
+    screenshot: '/server/remote/screenshot',     // Abstract remote controller
+    command: '/server/remote/command',           // Abstract remote controller
+    dumpUI: '/server/remote/screenshot-and-dump-ui',  // Abstract remote controller
+    getApps: '/server/remote/get-apps',               // Abstract remote controller
+    clickElement: '/server/remote/click-element'      // Abstract remote controller
   },
   connectionFields: [
     { name: 'device_ip', label: 'Device IP', required: true },
@@ -54,7 +49,7 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   ]
 };
 
-// IR Remote configuration
+// IR Remote configuration - uses abstract remote controller
 export const IR_CONFIG: RemoteDeviceConfig = {
   type: 'ir',
   name: 'IR Remote',
@@ -66,11 +61,9 @@ export const IR_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/server/remote/ir-remote/defaults',
-    connect: '/server/remote/ir-remote/connect',
-    disconnect: '/server/remote/ir-remote/disconnect',
-    command: '/server/remote/ir-remote/command',
-    config: '/server/remote/ir-remote/config'
+    connect: '/server/remote/connect',      // Abstract remote controller
+    disconnect: '/server/remote/disconnect', // Abstract remote controller
+    command: '/server/remote/command',      // Abstract remote controller
   },
   connectionFields: [
     { name: 'device_path', label: 'Device Path', required: true },
@@ -79,7 +72,7 @@ export const IR_CONFIG: RemoteDeviceConfig = {
   ]
 };
 
-// Bluetooth Remote configuration
+// Bluetooth Remote configuration - uses abstract remote controller
 export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   type: 'bluetooth',
   name: 'Bluetooth Remote',
@@ -91,11 +84,9 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/server/remote/bluetooth-remote/defaults',
-    connect: '/server/remote/bluetooth-remote/connect',
-    disconnect: '/server/remote/bluetooth-remote/disconnect',
-    command: '/server/remote/bluetooth-remote/command',
-    config: '/server/remote/bluetooth-remote/config'
+    connect: '/server/remote/connect',      // Abstract remote controller
+    disconnect: '/server/remote/disconnect', // Abstract remote controller
+    command: '/server/remote/command',      // Abstract remote controller
   },
   connectionFields: [
     { name: 'device_address', label: 'Device Address', required: true },
@@ -104,7 +95,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   ]
 };
 
-// USB Power configuration
+// USB Power configuration - uses abstract power controller
 export const USB_POWER_CONFIG: RemoteDeviceConfig = {
   type: 'usb-power',
   name: 'USB Power Control',
@@ -116,14 +107,12 @@ export const USB_POWER_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/server/power/usb-power/defaults',
     connect: '',
     disconnect: '',
     command: '',
-    // USB Power specific endpoints
-    powerOn: '/server/power/usb-power/power-on',
-    powerOff: '/server/power/usb-power/power-off',
-    reboot: '/server/power/usb-power/reboot'
+    powerOn: '/server/power/power-on',    // Abstract power controller
+    powerOff: '/server/power/power-off',  // Abstract power controller
+    reboot: '/server/power/reboot'        // Abstract power controller
   },
   connectionFields: [
     { name: 'usb_hub', label: 'USB Hub', default: '1' }

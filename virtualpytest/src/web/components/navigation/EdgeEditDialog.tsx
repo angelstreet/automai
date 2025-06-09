@@ -119,16 +119,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     setActionsError(null);
     
     try {
-      const apiControllerType = controllerType.replace(/_/g, '-');
-      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildApiUrl(`/api/virtualpytest/${apiControllerType}/actions`)}`);
-      const response = await fetch(buildApiUrl(`/api/virtualpytest/${apiControllerType}/actions`));
+      // Use abstract remote controller actions endpoint instead of device-specific
+      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildApiUrl('/server/remote/actions')}`);
+      const response = await fetch(buildApiUrl('/server/remote/actions'));
       const result = await response.json();
       
       console.log(`[@component:EdgeEditDialog] API response:`, result);
       
       if (result.success) {
         setControllerActions(result.actions);
-        console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for ${controllerType}`);
+        console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for abstract remote controller`);
       } else {
         console.error(`[@component:EdgeEditDialog] API returned error:`, result.error);
         setActionsError(result.error || 'Failed to load actions');

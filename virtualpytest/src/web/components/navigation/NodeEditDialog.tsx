@@ -186,8 +186,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     setVerificationError(null);
     
     try {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildApiUrl('/api/virtualpytest/verification/actions')}`);
-      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/actions'));
+      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildApiUrl('/server/verification/actions')}`);
+      const response = await fetch(buildApiUrl('/server/verification/actions'));
       const result = await response.json();
       
       console.log(`[@component:NodeEditDialog] Verification API response:`, result);
@@ -337,7 +337,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
         
         try {
-          const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute'), {
+          const response = await fetch(buildApiUrl('/server/verification/execute'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -422,9 +422,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm.label}`);
       
       try {
-        // Execute navigation to this node
-        // This would typically involve calling the navigation API to reach this node
-        const navigationResponse = await fetch(buildApiUrl('/api/virtualpytest/navigation/goto'), {
+        // Execute navigation to this node using abstract navigation controller
+        const navigationResponse = await fetch(buildApiUrl('/server/navigation/goto'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -485,7 +484,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
           
           try {
-            const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute'), {
+            const response = await fetch(buildApiUrl('/server/verification/execute'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

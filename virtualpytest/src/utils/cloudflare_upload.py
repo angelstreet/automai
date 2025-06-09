@@ -4,6 +4,10 @@
 Simplified Cloudflare R2 Upload Utilities for VirtualPyTest Resources
 
 Simple utilities for uploading files to Cloudflare R2 and getting signed URLs.
+
+Folder Structure:
+- reference/{model}/{image_name}     # Reference images (public access)
+- navigation/{model}/{screenshot_name} # Navigation screenshots (public access)
 """
 
 import os
@@ -193,15 +197,15 @@ class CloudflareUploader:
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
     """Upload a reference image with public access (no expiration)."""
     uploader = CloudflareUploader()
-    remote_path = f"reference-images/{model}/{image_name}"
+    remote_path = f"reference/{model}/{image_name}"
     return uploader.upload_file(local_path, remote_path, public=True)
 
 
-def upload_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:
-    """Upload a navigation screenshot."""
+def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:
+    """Upload a navigation screenshot with public access."""
     uploader = CloudflareUploader()
-    remote_path = f"screenshots/{model}/{screenshot_name}"
-    return uploader.upload_file(local_path, remote_path)
+    remote_path = f"navigation/{model}/{screenshot_name}"
+    return uploader.upload_file(local_path, remote_path, public=True)
 
 
 def upload_verification_result(local_path: str, job_id: str, filename: str) -> Dict:

@@ -64,6 +64,12 @@ export function ScreenshotCapture({
     
     console.log(`[@component:ScreenshotCapture] Processing image path: ${screenshotPath}`);
     
+    // Handle Cloudflare R2 URLs (signed URLs from navigation screenshots)
+    if (screenshotPath.includes('.r2.cloudflarestorage.com') || screenshotPath.includes('r2.dev')) {
+      console.log('[@component:ScreenshotCapture] Using Cloudflare R2 URL directly');
+      return screenshotPath;
+    }
+    
     // Handle host-based capture URLs (both HTTP and HTTPS with /stream/captures/ path)
     if ((screenshotPath.startsWith('https://') || screenshotPath.startsWith('http://')) && screenshotPath.includes('/stream/captures/')) {
       console.log('[@component:ScreenshotCapture] Using host-based capture URL directly');
