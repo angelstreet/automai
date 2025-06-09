@@ -71,7 +71,7 @@ function TabPanel(props: TabPanelProps) {
 
 const TestCaseEditor: React.FC = () => {
   // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
+  const { buildServerUrl, buildApiUrl } = useRegistration();
 
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -109,7 +109,7 @@ const TestCaseEditor: React.FC = () => {
   const fetchTestCases = async () => {
     try {
       // Use abstract server test execution endpoint
-      const response = await fetch(buildApiUrl('/server/test/cases'));
+      const response = await fetch(buildServerUrl('/server/test/cases'));
       if (response.ok) {
         const data = await response.json();
         setTestCases(data);
@@ -153,8 +153,8 @@ const TestCaseEditor: React.FC = () => {
       const method = isEditing ? 'PUT' : 'POST';
       // Use abstract server test execution endpoints
       const url = isEditing
-        ? buildApiUrl(`/server/test/cases/${formData.test_id}`)
-        : buildApiUrl('/server/test/cases');
+        ? buildServerUrl(`/server/test/cases/${formData.test_id}`)
+        : buildServerUrl('/server/test/cases');
 
       const response = await fetch(url, {
         method,
@@ -181,7 +181,7 @@ const TestCaseEditor: React.FC = () => {
     try {
       setLoading(true);
       // Use abstract server test execution endpoint
-      const response = await fetch(buildApiUrl(`/server/test/cases/${testId}`), {
+      const response = await fetch(buildServerUrl(`/server/test/cases/${testId}`), {
         method: 'DELETE',
       });
 
@@ -347,7 +347,7 @@ const TestCaseEditor: React.FC = () => {
     try {
       setLoading(true);
       // Use abstract server test execution endpoint
-      const response = await fetch(buildApiUrl('/server/test/execute'), {
+      const response = await fetch(buildServerUrl('/server/test/execute'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

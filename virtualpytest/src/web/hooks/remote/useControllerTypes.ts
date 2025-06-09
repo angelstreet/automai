@@ -3,7 +3,7 @@ import { useRegistration } from '../../contexts/RegistrationContext';
 import { ControllerTypes } from '../../types/remote/types';
 
 export function useControllerTypes() {
-  const { buildServerUrl } = useRegistration();
+  const { buildApiUrl } = useRegistration();
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export function useControllerTypes() {
       console.log('🔍 Fetching controller types from backend...');
       
       // Use RegistrationContext to build URL
-      const response = await fetch(buildServerUrl('/api/controller/controller-types'));
+      const response = await fetch(buildApiUrl('/api/controller/controller-types'));
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {

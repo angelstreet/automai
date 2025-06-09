@@ -17,7 +17,7 @@ export interface ControllerTypes {
 }
 
 export function useControllers() {
-  const { buildServerUrl } = useRegistration();
+  const { buildApiUrl } = useRegistration();
   const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function useControllers() {
   const fetchControllerTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(buildServerUrl('/api/controller/controller-types'));
+      const response = await fetch(buildApiUrl('/api/controller/controller-types'));
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

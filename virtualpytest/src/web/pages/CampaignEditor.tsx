@@ -42,7 +42,7 @@ import { Campaign, TestCase, Tree } from '../type';
 
 const CampaignEditor: React.FC = () => {
   // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
+  const { buildServerUrl } = useRegistration();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -70,24 +70,28 @@ const CampaignEditor: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [campaignsRes, testCasesRes, treesRes] = await Promise.all([
-        fetch(buildApiUrl('/server/campaigns')),
-        fetch(buildApiUrl('/server/test/cases')),
-        fetch(buildApiUrl('/server/navigation/trees')),
+      const [
+        campaignsResponse,
+        testCasesResponse,
+        treesResponse,
+      ] = await Promise.all([
+        fetch(buildServerUrl('/server/campaigns')),
+        fetch(buildServerUrl('/server/test/cases')),
+        fetch(buildServerUrl('/server/navigation/trees')),
       ]);
 
-      if (campaignsRes.ok) {
-        const campaignsData = await campaignsRes.json();
+      if (campaignsResponse.ok) {
+        const campaignsData = await campaignsResponse.json();
         setCampaigns(campaignsData);
       }
 
-      if (testCasesRes.ok) {
-        const testCasesData = await testCasesRes.json();
+      if (testCasesResponse.ok) {
+        const testCasesData = await testCasesResponse.json();
         setTestCases(testCasesData);
       }
 
-      if (treesRes.ok) {
-        const treesData = await treesRes.json();
+      if (treesResponse.ok) {
+        const treesData = await treesResponse.json();
         setTrees(treesData);
       }
     } catch (err) {
@@ -101,8 +105,8 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       const url = formData.campaign_id
-        ? buildApiUrl(`/server/campaigns/${formData.campaign_id}`)
-        : buildApiUrl('/server/campaigns');
+        ? buildServerUrl(`/server/campaigns/${formData.campaign_id}`)
+        : buildServerUrl('/server/campaigns');
       const method = formData.campaign_id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -129,7 +133,7 @@ const CampaignEditor: React.FC = () => {
   const handleDelete = async (campaignId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(buildApiUrl(`/server/campaigns/${campaignId}`), {
+      const response = await fetch(buildServerUrl(`/server/campaigns/${campaignId}`), {
         method: 'DELETE',
       });
 

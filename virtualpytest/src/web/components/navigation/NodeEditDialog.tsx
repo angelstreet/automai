@@ -133,7 +133,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [gotoResult, setGotoResult] = useState<string | null>(null);
 
   // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
+  const { buildServerUrl } = useRegistration();
 
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
@@ -186,8 +186,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     setVerificationError(null);
     
     try {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildApiUrl('/server/verification/actions')}`);
-      const response = await fetch(buildApiUrl('/server/verification/actions'));
+      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildServerUrl('/server/verification/actions')}`);
+      const response = await fetch(buildServerUrl('/server/verification/actions'));
       const result = await response.json();
       
       console.log(`[@component:NodeEditDialog] Verification API response:`, result);
@@ -337,7 +337,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
         
         try {
-          const response = await fetch(buildApiUrl('/server/verification/execute'), {
+          const response = await fetch(buildServerUrl('/server/verification/execute'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -423,7 +423,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       
       try {
         // Execute navigation to this node using abstract navigation controller
-        const navigationResponse = await fetch(buildApiUrl('/server/navigation/goto'), {
+        const navigationResponse = await fetch(buildServerUrl('/server/navigation/goto'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -484,7 +484,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
           
           try {
-            const response = await fetch(buildApiUrl('/server/verification/execute'), {
+            const response = await fetch(buildServerUrl('/server/verification/execute'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

@@ -610,7 +610,7 @@ const NavigationEditorContent: React.FC = () => {
       }
 
       // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch(buildApiUrl('/take-control'), {
+      const response = await fetch(buildServerUrl('/server/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -690,7 +690,7 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
       // Step 1: Take screenshot using abstract capture controller
-      const screenshotResponse = await fetch(buildApiUrl('/server/capture/screenshot'), {
+      const screenshotResponse = await fetch(buildServerUrl('/server/capture/screenshot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -716,7 +716,7 @@ const NavigationEditorContent: React.FC = () => {
           let cloudflareUploaded = false;
           
           try {
-            const uploadResponse = await fetch(buildApiUrl('/server/capture/upload-navigation-screenshot'), {
+            const uploadResponse = await fetch(buildServerUrl('/server/capture/upload-navigation-screenshot'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -748,7 +748,7 @@ const NavigationEditorContent: React.FC = () => {
           // Fallback to local URL if Cloudflare upload failed
           if (!screenshotUrl) {
             const screenshotPath = screenshotData.additional_screenshot_path || screenshotData.screenshot_path;
-            screenshotUrl = buildApiUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}`);
+            screenshotUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}`);
             console.log(`[@component:NavigationEditor] Using local URL as fallback: ${screenshotUrl}`);
           }
           
@@ -812,7 +812,7 @@ const NavigationEditorContent: React.FC = () => {
       setLastVerifiedNodeId(nodeId);
       
       // Use abstract server verification endpoint for batch execution
-      const response = await fetch(buildApiUrl('/server/verification/execute-batch'), {
+      const response = await fetch(buildServerUrl('/server/verification/execute-batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -891,7 +891,7 @@ const NavigationEditorContent: React.FC = () => {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
       setVerificationResults([]);
     }
-  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildApiUrl, setVerificationResults, setLastVerifiedNodeId]);
+  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildServerUrl, setVerificationResults, setLastVerifiedNodeId]);
 
   // Handle node updates - callback for NodeSelectionPanel
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {

@@ -84,7 +84,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedDevice = null,
 }) => {
   // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
+  const { buildServerUrl } = useRegistration();
   
   const [controllerActions, setControllerActions] = useState<ControllerActions>({});
   const [loadingActions, setLoadingActions] = useState(false);
@@ -120,8 +120,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     
     try {
       // Use abstract remote controller actions endpoint instead of device-specific
-      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildApiUrl('/server/remote/actions')}`);
-      const response = await fetch(buildApiUrl('/server/remote/actions'));
+      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildServerUrl('/server/remote/actions')}`);
+      const response = await fetch(buildServerUrl('/server/remote/actions'));
       const result = await response.json();
       
       console.log(`[@component:EdgeEditDialog] API response:`, result);
@@ -163,7 +163,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
-        buildApiUrl,
+        buildServerUrl,
         undefined,
         edgeForm.finalWaitTime,
         edgeForm.retryActions,

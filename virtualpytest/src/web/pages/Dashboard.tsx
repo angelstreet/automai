@@ -120,6 +120,7 @@ type LogSource = 'all' | 'frontend' | 'backend';
 
 const Dashboard: React.FC = () => {
   const { 
+    buildServerUrl,
     buildApiUrl, 
     availableHosts, 
     fetchHosts, 
@@ -175,21 +176,21 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [campaignsRes, testCasesRes] = await Promise.all([
-        fetch(buildApiUrl('/server/campaigns')),
-        fetch(buildApiUrl('/server/test/cases')),
+      const [campaignsResponse, testCasesResponse] = await Promise.all([
+        fetch(buildServerUrl('/server/campaigns')),
+        fetch(buildServerUrl('/server/test/cases')),
       ]);
 
       let testCases: TestCase[] = [];
       let campaigns: Campaign[] = [];
       let trees: Tree[] = [];
 
-      if (testCasesRes.ok) {
-        testCases = await testCasesRes.json();
+      if (testCasesResponse.ok) {
+        testCases = await testCasesResponse.json();
       }
 
-      if (campaignsRes.ok) {
-        campaigns = await campaignsRes.json();
+      if (campaignsResponse.ok) {
+        campaigns = await campaignsResponse.json();
       }
 
       if (treesRes.ok) {
