@@ -43,7 +43,10 @@ export function RemoteCore({
   const handleDisconnect = async () => {
     try {
       console.log(`[@component:RemoteCore] Disconnecting ${remoteType} remote via abstract controller`);
-      await hideRemote(); // Hide remote via abstract controller
+      
+      // Abstract controller handles both backend release and frontend hiding
+      await hideRemote();
+      
       onDisconnect();
     } catch (error) {
       console.error(`[@component:RemoteCore] Error during disconnect for ${remoteType}:`, error);

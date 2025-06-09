@@ -427,12 +427,23 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, [remoteType]);
 
   const hideRemote = useCallback(async () => {
-    console.log(`[@hook:useRemoteConnection] Hiding ${remoteType} remote (frontend state only)`);
-    setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
+    console.log(`[@hook:useRemoteConnection] Hiding ${remoteType} remote and releasing control`);
+    setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
     
-    // No server call needed - frontend handles remote UI display
-    console.log(`[@hook:useRemoteConnection] Remote ${remoteType} hidden successfully (frontend)`);
-  }, [remoteType]);
+    try {
+      // First release control on the backend to avoid conflicts
+      await handleReleaseControl();
+      
+      // Then update frontend state
+      setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
+      
+      console.log(`[@hook:useRemoteConnection] Remote ${remoteType} hidden and control released successfully`);
+    } catch (error: any) {
+      console.error(`[@hook:useRemoteConnection] Error hiding remote ${remoteType}:`, error);
+      setRemoteState(prev => ({ ...prev, isLoading: false, error: error.message }));
+      // Don't throw - let the component handle the error state
+    }
+  }, [remoteType, handleReleaseControl]);
 
   const sendCommand = useCallback(async (command: string, params?: any) => {
     if (!selectedHost) {
