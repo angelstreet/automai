@@ -211,12 +211,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 }}
               >
                 {/* Show tree name from multiple possible sources */}
-                {navigationNamePath.length > 0 
-                  ? decodeURIComponent(navigationNamePath[navigationNamePath.length - 1])
-                  : viewPath.length > 0 
-                    ? viewPath[viewPath.length - 1].name
-                    : 'Navigation Tree'
-                }
+                root
                 {hasUnsavedChanges && (
                   <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
                     *
