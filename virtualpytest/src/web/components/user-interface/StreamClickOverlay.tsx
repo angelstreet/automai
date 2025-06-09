@@ -68,7 +68,8 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     try {
       console.log(`[@component:StreamClickOverlay] Sending tap command: ${x}, ${y}`);
       
-      const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/execute-action'), {
+      // Use abstract remote controller execute-action endpoint
+      const response = await fetch(buildServerUrl('/server/remote/execute-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

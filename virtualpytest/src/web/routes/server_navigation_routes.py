@@ -500,6 +500,62 @@ def get_userinterface_with_root(interface_id):
 # NAVIGATION EXECUTION ENDPOINTS (HOST)
 # =====================================================
 
+@navigation_bp.route('/goto', methods=['POST'])
+def goto_navigation_node():
+    """Navigate to a specific node using abstract navigation controller."""
+    try:
+        data = request.get_json()
+        target_node = data.get('target_node')
+        
+        print(f"[@route:goto_navigation_node] Navigating to node: {target_node}")
+        
+        if not target_node:
+            return jsonify({
+                'success': False,
+                'error': 'target_node is required'
+            }), 400
+        
+        # Get the host device object with instantiated controllers
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device not initialized'
+            }), 500
+        
+        # Get the abstract navigation controller
+        navigation_controller = host_device.get('controller_objects', {}).get('navigation')
+        if not navigation_controller:
+            # Fallback to remote controller for basic navigation
+            remote_controller = host_device.get('controller_objects', {}).get('remote')
+            if not remote_controller:
+                return jsonify({
+                    'success': False,
+                    'error': 'Navigation controller not available'
+                }), 400
+            
+            # Use remote controller for basic navigation
+            print(f"[@route:goto_navigation_node] Using remote controller for navigation to: {target_node}")
+            result = remote_controller.navigate_to_node(target_node)
+        else:
+            # Use dedicated navigation controller
+            print(f"[@route:goto_navigation_node] Using navigation controller for navigation to: {target_node}")
+            result = navigation_controller.goto_node(target_node)
+        
+        print(f"[@route:goto_navigation_node] Navigation completed successfully")
+        return jsonify({
+            'success': True,
+            'result': result,
+            'message': f'Successfully navigated to node: {target_node}'
+        })
+        
+    except Exception as e:
+        print(f"[@route:goto_navigation_node] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Navigation error: {str(e)}'
+        }), 500
+
 @navigation_bp.route('/execute/<tree_id>/<node_id>', methods=['POST'])
 def execute_navigation_host(tree_id, node_id):
     """Execute navigation to a specific node on host device"""

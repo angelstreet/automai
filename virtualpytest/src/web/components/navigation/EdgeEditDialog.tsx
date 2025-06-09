@@ -163,10 +163,11 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
-        undefined, // No updateActionResults callback needed for dialog
+        buildApiUrl,
+        undefined,
         edgeForm.finalWaitTime,
         edgeForm.retryActions,
-        undefined // No updateRetryActionResults callback needed for dialog
+        undefined
       );
       
       // Update the edge form with the updated actions

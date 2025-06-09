@@ -81,14 +81,10 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   // Fetch default stream URL from environment variables if available
   const fetchDefaultValues = async () => {
     try {
-      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
-      const result = await response.json();
-      
-      if (result.success && result.defaults) {
-        setStreamUrl(result.defaults.stream_path || streamUrl);
-        setVideoDevice(result.defaults.video_device || videoDevice);
-        console.log('[@component:HDMIStreamModal] Loaded default stream and SSH settings');
-      }
+      // Use abstract AV controller (no defaults endpoint needed - controller pre-configured)
+      // const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
+      // Controllers are pre-configured during registration, no defaults needed
+      console.log('[@component:HDMIStreamModal] Using pre-configured abstract AV controller');
     } catch (error) {
       console.log('[@component:HDMIStreamModal] Could not load default values:', error);
     }

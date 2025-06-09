@@ -233,30 +233,16 @@ export function ScreenDefinitionEditor({
   
   // Check for existing remote connection ONCE (no loops)
   useEffect(() => {
-    const checkRemoteConnection = async () => {
-      try {
-        // Simple check if android_mobile_controller exists
-        const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/config'), {
-          method: 'GET',
-        });
-        
-        if (response.ok) {
-          console.log('[@component:ScreenDefinitionEditor] Remote system is available');
-          setIsConnected(true);
-          setConnectionError(null);
-        } else {
-          setIsConnected(false);
-          setConnectionError('Remote control system not available');
-        }
-      } catch (error) {
-        setIsConnected(false);
-        setConnectionError('Remote control system not available');
-      }
-    };
+    // Use abstract remote controller (no config endpoint needed - controller pre-configured)
+    // const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/config'), {
+    // Controllers are pre-configured during registration, no config needed
+    console.log('[@component:ScreenDefinitionEditor] Using pre-configured abstract remote controller');
 
     // Check once on mount, no loops
-    checkRemoteConnection();
-  }, [buildServerUrl]);
+    setIsConnected(true);
+    setConnectionError(null);
+    setStreamStatus('running');
+  }, []);
 
   // Initial check for stream status - REMOVED: unnecessary after successful take control
   // Stream status is already confirmed during take control process
@@ -430,8 +416,8 @@ export function ScreenDefinitionEditor({
       
       console.log('[@component:ScreenDefinitionEditor] Taking screenshot via AV controller...');
       
-      // Call the AV controller endpoint with selectedHostDevice
-      const response = await fetch('/api/virtualpytest/av/take_screenshot', {
+      // Use abstract AV controller screenshot endpoint
+      const response = await fetch('/server/av/screenshot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

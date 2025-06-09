@@ -326,7 +326,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const fetchVerificationActions = async () => {
     try {
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/api/virtualpytest/verification/actions`);
+      // Use abstract server verification actions endpoint
+      const response = await fetch(`${baseUrl}/server/verification/actions`);
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
@@ -356,9 +357,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     
     if (referenceData && referenceData.type === 'image') {
       try {
-        // Use existing server route to ensure the reference is available in stream directory
+        // Use abstract server verification endpoint for stream availability
         const baseUrl = getBaseUrl();
-        const ensureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/ensure-stream-availability`, {
+        const ensureResponse = await fetch(`${baseUrl}/server/verification/ensure-stream-availability`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -492,7 +493,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       if (referenceType === 'image' && (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)) {
         console.log('[@component:VerificationEditor] Using process-area endpoint with processing options');
-        captureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/process-area`, {
+        captureResponse = await fetch(`${baseUrl}/server/verification/process-area`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -508,7 +509,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         });
       } else {
         console.log('[@component:VerificationEditor] Using standard capture endpoint');
-        captureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/capture`, {
+        captureResponse = await fetch(`${baseUrl}/server/verification/capture`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -576,7 +577,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         screenshot_path: screenshotPath
       });
 
-      const response = await fetch(buildServerUrl('/api/virtualpytest/reference/save'), {
+      // Use abstract server verification save endpoint
+      const response = await fetch(buildServerUrl('/server/verification/save'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -716,6 +718,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       // Clear previous test results
       setTestResults([]);
 
+      // Get base URL for API calls
+      const baseUrl = getBaseUrl();
+
       // Skip controller initialization since host is directly connected via ADB
       console.log('[@component:VerificationEditor] Executing verifications directly on host...');
 
@@ -739,9 +744,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       console.log('[@component:VerificationEditor] Batch execution payload:', batchPayload);
 
-      // Execute batch verification with specific capture
-      const baseUrl = getBaseUrl();
-      const batchResponse = await fetch(`${baseUrl}/api/virtualpytest/verification/execute-batch`, {
+      // Use abstract server verification batch execution endpoint
+      const batchResponse = await fetch(`${baseUrl}/server/verification/execute-batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -864,7 +868,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
       
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/auto-detect`, {
+      const response = await fetch(`${baseUrl}/server/verification/text/auto-detect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

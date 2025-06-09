@@ -95,7 +95,8 @@ export function ScreenshotCapture({
         return '';
       }
       
-      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
+      // Use abstract server capture endpoint for screenshot images
+      const finalUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:ScreenshotCapture] Generated image URL: ${finalUrl}`);
       return finalUrl;
     }
@@ -105,7 +106,8 @@ export function ScreenshotCapture({
       const filename = screenshotPath.split('?')[0];
       console.log(`[@component:ScreenshotCapture] Using filename screenshot: ${filename}`);
       
-      const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images/screenshot/${filename}?t=${timestamp}`);
+      // Use abstract server capture endpoint for screenshot images
+      const finalUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
       console.log(`[@component:ScreenshotCapture] Generated image URL from filename: ${finalUrl}`);
       return finalUrl;
     }
@@ -125,7 +127,8 @@ export function ScreenshotCapture({
     
     // Default case - convert to API endpoint URL
     const cleanPath = screenshotPath.split('?')[0];
-    const finalUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`);
+    // Use abstract server capture endpoint for images
+    const finalUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`);
     console.log(`[@component:ScreenshotCapture] Generated default URL: ${finalUrl}`);
     return finalUrl;
   }, [screenshotPath, buildServerUrl]);

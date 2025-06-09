@@ -748,7 +748,7 @@ const NavigationEditorContent: React.FC = () => {
           // Fallback to local URL if Cloudflare upload failed
           if (!screenshotUrl) {
             const screenshotPath = screenshotData.additional_screenshot_path || screenshotData.screenshot_path;
-            screenshotUrl = buildApiUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
+            screenshotUrl = buildApiUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}`);
             console.log(`[@component:NavigationEditor] Using local URL as fallback: ${screenshotUrl}`);
           }
           
@@ -811,7 +811,8 @@ const NavigationEditorContent: React.FC = () => {
       setVerificationResults([]);
       setLastVerifiedNodeId(nodeId);
       
-      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute-batch'), {
+      // Use abstract server verification endpoint for batch execution
+      const response = await fetch(buildApiUrl('/server/verification/execute-batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -408,7 +408,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       let localPath = selectedNode.data.screenshot;
       
       // If it's a URL, try to extract the path parameter
-      if (localPath.includes('/api/virtualpytest/screen-definition/images?path=')) {
+      if (localPath.includes('/server/capture/images?path=')) {
         const urlParams = new URLSearchParams(localPath.split('?')[1]);
         const pathParam = urlParams.get('path');
         if (pathParam) {
@@ -427,8 +427,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         }
       }
 
-      // Call the new dedicated upload route that proxies to host
-      const response = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/upload-navigation-screenshot'), {
+      // Call the abstract capture upload route that proxies to host
+      const response = await fetch(buildApiUrl('/server/capture/upload-navigation-screenshot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
