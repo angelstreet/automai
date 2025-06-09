@@ -14,13 +14,13 @@ import os
 from .utils import make_host_request, get_primary_host, get_host_by_model, build_host_nginx_url
 
 # Create blueprint
-verification_common_bp = Blueprint('verification_common', __name__)
+verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')
 
 # =====================================================
 # COMMON VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_common_bp.route('/api/virtualpytest/verification/actions', methods=['GET'])
+@verification_common_bp.route('/actions', methods=['GET'])
 def get_verification_actions():
     """Get available verification actions for all verification controllers."""
     try:
@@ -130,7 +130,7 @@ def get_verification_actions():
             'error': f'Error getting verification actions: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/api/virtualpytest/reference/list', methods=['GET'])
+@verification_common_bp.route('/reference/list', methods=['GET'])
 def list_references():
     """Get list of available references from host."""
     try:
@@ -177,7 +177,7 @@ def list_references():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/api/virtualpytest/verification/actions', methods=['POST'])
+@verification_common_bp.route('/verification/actions', methods=['POST'])
 def verification_actions():
     """Handle verification actions like delete, update, etc."""
     try:
@@ -238,7 +238,7 @@ def verification_actions():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/api/virtualpytest/verification/status', methods=['GET'])
+@verification_common_bp.route('/verification/status', methods=['GET'])
 def verification_status():
     """Get verification system status."""
     try:

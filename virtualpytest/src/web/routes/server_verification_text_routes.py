@@ -12,13 +12,13 @@ import urllib.parse
 import requests
 
 # Create blueprint
-verification_text_server_bp = Blueprint('verification_text_server', __name__)
+verification_text_server_bp = Blueprint('verification_text_server', __name__, url_prefix='/server/verification')
 
 # =====================================================
 # SERVER-SIDE TEXT AUTO-DETECTION (FORWARDS TO HOST)
 # =====================================================
 
-@verification_text_server_bp.route('/api/virtualpytest/reference/text/auto-detect', methods=['POST'])
+@verification_text_server_bp.route('/reference/text/auto-detect', methods=['POST'])
 def text_auto_detect():
     """Forward text auto-detection request to host for OCR processing."""
     try:
@@ -108,7 +108,7 @@ def text_auto_detect():
 # SERVER-SIDE TEXT REFERENCE SAVE (FORWARDS TO HOST)
 # =====================================================
 
-@verification_text_server_bp.route('/api/virtualpytest/reference/text/save', methods=['POST'])
+@verification_text_server_bp.route('/reference/text/save', methods=['POST'])
 def save_text_reference():
     """Forward text reference save request to host to save to git repository."""
     try:

@@ -10,9 +10,9 @@ This module contains the essential audio/video API endpoints for:
 from flask import Blueprint, request, jsonify, current_app
 
 # Create blueprint
-audiovideo_bp = Blueprint('audiovideo', __name__)
+audiovideo_bp = Blueprint('audiovideo', __name__, url_prefix='/api/av')
 
-@audiovideo_bp.route('/api/virtualpytest/av/connect', methods=['POST'])
+@audiovideo_bp.route('/connect', methods=['POST'])
 def connect():
     """Connect to AV controller using own stored host_device object"""
     try:
@@ -61,7 +61,7 @@ def connect():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/disconnect', methods=['POST'])
+@audiovideo_bp.route('/disconnect', methods=['POST'])
 def disconnect():
     """Disconnect from AV controller using own stored host_device object"""
     try:
@@ -102,7 +102,7 @@ def disconnect():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/get_status', methods=['GET'])
+@audiovideo_bp.route('/get_status', methods=['GET'])
 def get_status():
     """Get AV controller status using own stored host_device object"""
     try:
@@ -142,7 +142,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/start_capture', methods=['POST'])
+@audiovideo_bp.route('/start_capture', methods=['POST'])
 def start_capture():
     """Start video capture using own stored host_device object - COPY FROM screen_definition_routes.py"""
     try:
@@ -322,7 +322,7 @@ def start_capture():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/stop_capture', methods=['POST'])
+@audiovideo_bp.route('/stop_capture', methods=['POST'])
 def stop_capture():
     """Stop video capture using own stored host_device object - COPY FROM screen_definition_routes.py"""
     try:
@@ -445,7 +445,7 @@ def stop_capture():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/take_screenshot', methods=['POST'])
+@audiovideo_bp.route('/take_screenshot', methods=['POST'])
 def take_screenshot():
     """Take screenshot via AV controller using own stored host_device object"""
     try:
@@ -500,7 +500,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@audiovideo_bp.route('/api/virtualpytest/av/debug', methods=['GET'])
+@audiovideo_bp.route('/debug', methods=['GET'])
 def debug_context():
     """Debug endpoint to check Flask app context"""
     try:

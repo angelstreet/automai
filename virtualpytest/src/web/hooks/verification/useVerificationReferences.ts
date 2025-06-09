@@ -39,7 +39,7 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
     try {
       console.log('[@hook:useVerificationReferences] Fetching available references...');
       
-      const response = await fetch(buildServerUrl('/api/virtualpytest/reference/list'));
+      const response = await fetch(buildServerUrl('/server/verification/reference/list'));
       
       if (response.ok) {
         const result = await response.json();

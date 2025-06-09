@@ -19,14 +19,14 @@ from navigationGitManager import (
 )
 
 # Create blueprint
-navigation_config_bp = Blueprint('navigation_config', __name__)
+navigation_config_bp = Blueprint('navigation_config', __name__, url_prefix='/api/navigation/config')
 
 # Initialize lock manager
 lock_manager = NavigationLockManager()
 
 
-@navigation_config_bp.route('/api/navigation/config/trees', methods=['GET'])
-def list_navigation_trees():
+@navigation_config_bp.route('/trees', methods=['GET'])
+def get_navigation_trees():
     """
     List all available navigation trees with lock status
     
@@ -68,7 +68,7 @@ def list_navigation_trees():
         }), 500
 
 
-@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>', methods=['GET'])
+@navigation_config_bp.route('/trees/<userinterface_name>', methods=['GET'])
 def get_navigation_tree(userinterface_name):
     """
     Load a specific navigation tree by userinterface name
@@ -115,7 +115,7 @@ def get_navigation_tree(userinterface_name):
         }), 500
 
 
-@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>/lock', methods=['POST'])
+@navigation_config_bp.route('/trees/<userinterface_name>/lock', methods=['POST'])
 def lock_navigation_tree(userinterface_name):
     """
     Lock a navigation tree for editing
@@ -167,7 +167,7 @@ def lock_navigation_tree(userinterface_name):
         }), 500
 
 
-@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>/unlock', methods=['POST'])
+@navigation_config_bp.route('/trees/<userinterface_name>/unlock', methods=['POST'])
 def unlock_navigation_tree(userinterface_name):
     """
     Unlock a navigation tree
@@ -215,7 +215,7 @@ def unlock_navigation_tree(userinterface_name):
         }), 500
 
 
-@navigation_config_bp.route('/api/navigation/config/trees/<userinterface_name>', methods=['PUT'])
+@navigation_config_bp.route('/trees/<userinterface_name>', methods=['PUT'])
 def save_navigation_tree(userinterface_name):
     """
     Save a navigation tree (requires lock)

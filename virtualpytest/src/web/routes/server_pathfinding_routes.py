@@ -22,7 +22,7 @@ except ImportError as e:
     NAVIGATION_AUTOMATION_AVAILABLE = False
 
 # Create blueprint
-pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/api/navigation')
+pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/navigation')
 
 # =====================================================
 # NAVIGATION PATHFINDING & EXECUTION ROUTES

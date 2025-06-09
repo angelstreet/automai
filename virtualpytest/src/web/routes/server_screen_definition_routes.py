@@ -8,7 +8,7 @@ from pathlib import Path
 import threading
 
 # Create blueprint with consistent name - remove URL prefix as it's set in register_routes
-screen_definition_blueprint = Blueprint('screen_definition', __name__)
+screen_definition_blueprint = Blueprint('screen_definition', __name__, url_prefix='/server/capture')
 
 # Configuration
 TMP_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'tmp')

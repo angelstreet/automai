@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify, current_app
 import time
 
 # Create blueprint
-controller_bp = Blueprint('controller', __name__)
+controller_bp = Blueprint('controller', __name__, url_prefix='/api/controller')
 
 # Helper functions
 def check_controllers_available():
@@ -26,7 +26,7 @@ def check_controllers_available():
 # VIRTUALPYTEST CONTROLLER SYSTEM ENDPOINTS
 # =====================================================
 
-@controller_bp.route('/api/virtualpytest/controller-types', methods=['GET'])
+@controller_bp.route('/controller-types', methods=['GET'])
 def get_controller_types():
     """Get available controller types from VirtualPyTest system"""
     error = check_controllers_available()
@@ -108,7 +108,7 @@ def get_controller_types():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@controller_bp.route('/api/virtualpytest/controllers', methods=['GET', 'POST'])
+@controller_bp.route('/controllers', methods=['GET', 'POST'])
 def virtualpytest_controllers():
     """Manage VirtualPyTest controller instances"""
     error = check_controllers_available()
@@ -186,7 +186,7 @@ def virtualpytest_controllers():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@controller_bp.route('/api/virtualpytest/controllers/test', methods=['POST'])
+@controller_bp.route('/controllers/test', methods=['POST'])
 def test_controller():
     """Test a controller configuration"""
     error = check_controllers_available()
@@ -265,7 +265,7 @@ def test_controller():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@controller_bp.route('/api/virtualpytest/device-sets', methods=['POST'])
+@controller_bp.route('/device-sets', methods=['POST'])
 def create_device_set():
     """Create a complete device controller set"""
     error = check_controllers_available()

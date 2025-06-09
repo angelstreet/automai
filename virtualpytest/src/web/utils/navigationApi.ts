@@ -68,7 +68,7 @@ export class NavigationApi {
     if (!this.buildServerUrl) {
       throw new Error('NavigationApi not initialized. Call initialize() with buildServerUrl function first.');
     }
-    return this.buildServerUrl('api/navigation');
+    return this.buildServerUrl('server/navigation');
   }
 
   /**

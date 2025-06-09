@@ -12,12 +12,12 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     device: '5555'
   },
   apiEndpoints: {
-    defaults: '/api/virtualpytest/android-tv/defaults',
-    connect: '/api/virtualpytest/android-tv/take-control',
-    disconnect: '/api/virtualpytest/android-tv/release-control',
-    screenshot: '/api/virtualpytest/android-tv/screenshot',
-    command: '/api/virtualpytest/android-tv/command',
-    config: '/api/virtualpytest/android-tv/config'
+    defaults: '/server/remote/android-tv/defaults',
+    connect: '/server/remote/android-tv/take-control',
+    disconnect: '/server/remote/android-tv/release-control',
+    screenshot: '/server/remote/android-tv/screenshot',
+    command: '/server/remote/android-tv/command',
+    config: '/server/remote/android-tv/config'
   },
   connectionFields: [
     { name: 'device_ip', label: 'Device IP', required: true },
@@ -37,16 +37,16 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     device: '5555'
   },
   apiEndpoints: {
-    defaults: '/api/virtualpytest/android-mobile/defaults',
-    connect: '/api/virtualpytest/android-mobile/take-control',
-    disconnect: '/api/virtualpytest/android-mobile/release-control',
-    screenshot: '/api/virtualpytest/android-mobile/screenshot',
-    command: '/api/virtualpytest/android-mobile/command',
-    config: '/api/virtualpytest/android-mobile/config',
+    defaults: '/server/remote/android-mobile/defaults',
+    connect: '/server/remote/android-mobile/take-control',
+    disconnect: '/server/remote/android-mobile/release-control',
+    screenshot: '/server/remote/android-mobile/screenshot',
+    command: '/server/remote/android-mobile/command',
+    config: '/server/remote/android-mobile/config',
     // Android Mobile specific endpoints
-    dumpUI: '/api/virtualpytest/android-mobile/screenshot-and-dump-ui',
-    getApps: '/api/virtualpytest/android-mobile/get-apps',
-    clickElement: '/api/virtualpytest/android-mobile/click-element'
+    dumpUI: '/server/remote/android-mobile/screenshot-and-dump-ui',
+    getApps: '/server/remote/android-mobile/get-apps',
+    clickElement: '/server/remote/android-mobile/click-element'
   },
   connectionFields: [
     { name: 'device_ip', label: 'Device IP', required: true },
@@ -66,11 +66,11 @@ export const IR_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/api/virtualpytest/ir-remote/defaults',
-    connect: '/api/virtualpytest/ir-remote/take-control',
-    disconnect: '/api/virtualpytest/ir-remote/release-control',
-    command: '/api/virtualpytest/ir-remote/command',
-    config: '/api/virtualpytest/ir-remote/config'
+    defaults: '/server/remote/ir-remote/defaults',
+    connect: '/server/remote/ir-remote/connect',
+    disconnect: '/server/remote/ir-remote/disconnect',
+    command: '/server/remote/ir-remote/command',
+    config: '/server/remote/ir-remote/config'
   },
   connectionFields: [
     { name: 'device_path', label: 'Device Path', required: true },
@@ -91,11 +91,11 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/api/virtualpytest/bluetooth-remote/defaults',
-    connect: '/api/virtualpytest/bluetooth-remote/take-control',
-    disconnect: '/api/virtualpytest/bluetooth-remote/release-control',
-    command: '/api/virtualpytest/bluetooth-remote/command',
-    config: '/api/virtualpytest/bluetooth-remote/config'
+    defaults: '/server/remote/bluetooth-remote/defaults',
+    connect: '/server/remote/bluetooth-remote/connect',
+    disconnect: '/server/remote/bluetooth-remote/disconnect',
+    command: '/server/remote/bluetooth-remote/command',
+    config: '/server/remote/bluetooth-remote/config'
   },
   connectionFields: [
     { name: 'device_address', label: 'Device Address', required: true },
@@ -116,14 +116,14 @@ export const USB_POWER_CONFIG: RemoteDeviceConfig = {
     device: ''
   },
   apiEndpoints: {
-    defaults: '/api/virtualpytest/usb-power/defaults',
+    defaults: '/server/power/usb-power/defaults',
     connect: '',
     disconnect: '',
     command: '',
     // USB Power specific endpoints
-    powerOn: '/api/virtualpytest/usb-power/power-on',
-    powerOff: '/api/virtualpytest/usb-power/power-off',
-    reboot: '/api/virtualpytest/usb-power/reboot'
+    powerOn: '/server/power/usb-power/power-on',
+    powerOff: '/server/power/usb-power/power-off',
+    reboot: '/server/power/usb-power/reboot'
   },
   connectionFields: [
     { name: 'usb_hub', label: 'USB Hub', default: '1' }

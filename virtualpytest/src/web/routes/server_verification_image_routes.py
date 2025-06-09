@@ -12,13 +12,13 @@ import urllib.parse
 import requests
 
 # Create blueprint
-verification_image_server_bp = Blueprint('verification_image_server', __name__)
+verification_image_server_bp = Blueprint('verification_image_server', __name__, url_prefix='/server/verification')
 
 # =====================================================
 # SERVER-SIDE REFERENCE IMAGE CAPTURE (FORWARDS TO HOST)
 # =====================================================
 
-@verification_image_server_bp.route('/api/virtualpytest/reference/capture', methods=['POST'])
+@verification_image_server_bp.route('/reference/capture', methods=['POST'])
 def capture_reference_image():
     """Forward crop request to host instead of processing locally."""
     try:
@@ -101,7 +101,7 @@ def capture_reference_image():
             'error': f'Reference capture error: {str(e)}'
         }), 500
 
-@verification_image_server_bp.route('/api/virtualpytest/reference/process-area', methods=['POST'])
+@verification_image_server_bp.route('/reference/process-area', methods=['POST'])
 def process_area_reference():
     """Forward process request to host instead of processing locally."""
     try:
@@ -195,7 +195,7 @@ def process_area_reference():
 # SERVER-SIDE REFERENCE SAVE (FORWARDS TO HOST)
 # =====================================================
 
-@verification_image_server_bp.route('/api/virtualpytest/reference/save', methods=['POST'])
+@verification_image_server_bp.route('/reference/save', methods=['POST'])
 def save_reference():
     """Forward save request to host to save resource to git repository."""
     try:
@@ -289,7 +289,7 @@ def save_reference():
 # SERVER-SIDE IMAGE REFERENCE STREAM AVAILABILITY ENDPOINT
 # =====================================================
 
-@verification_image_server_bp.route('/api/virtualpytest/reference/ensure-stream-availability', methods=['POST'])
+@verification_image_server_bp.route('/reference/ensure-stream-availability', methods=['POST'])
 def ensure_reference_stream_availability():
     """Ensure reference image is available in stream directory for preview."""
     try:

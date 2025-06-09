@@ -54,7 +54,7 @@ export class CaptureApi {
     if (!this.buildServerUrl) {
       throw new Error('CaptureApi not initialized. Call initialize() with buildServerUrl function first.');
     }
-    return this.buildServerUrl('api/virtualpytest/screen-definition');
+    return this.buildServerUrl('server/capture');
   }
 
   /**

@@ -12,13 +12,13 @@ import urllib.parse
 import requests
 
 # Create blueprint
-verification_execution_server_bp = Blueprint('verification_execution_server', __name__)
+verification_execution_server_bp = Blueprint('verification_execution_server', __name__, url_prefix='/server/verification')
 
 # =====================================================
 # SERVER-SIDE VERIFICATION EXECUTION (FORWARDS TO HOST)
 # =====================================================
 
-@verification_execution_server_bp.route('/api/virtualpytest/verification/execute', methods=['POST'])
+@verification_execution_server_bp.route('/execute', methods=['POST'])
 def execute_verification():
     """Forward verification execution request to host."""
     try:
@@ -95,7 +95,7 @@ def execute_verification():
             'error': f'Verification execution error: {str(e)}'
         }), 500
 
-@verification_execution_server_bp.route('/api/virtualpytest/verification/execute-batch', methods=['POST'])
+@verification_execution_server_bp.route('/execute-batch', methods=['POST'])
 def execute_batch_verification():
     """Forward batch verification execution request to host."""
     try:

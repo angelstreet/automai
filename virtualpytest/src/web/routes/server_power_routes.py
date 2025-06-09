@@ -7,9 +7,9 @@ Session-based power control with take-control, release-control, and command exec
 from flask import Blueprint, request, jsonify
 import os
 
-power_bp = Blueprint('power', __name__)
+power_bp = Blueprint('power', __name__, url_prefix='/server/power')
 
-@power_bp.route('/api/virtualpytest/usb-power/defaults', methods=['GET'])
+@power_bp.route('/usb-power/defaults', methods=['GET'])
 def get_usb_power_defaults():
     """Get default connection values for USB Power from environment variables."""
     try:
@@ -28,7 +28,7 @@ def get_usb_power_defaults():
             'error': f'Failed to get defaults: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/take-control', methods=['POST'])
+@power_bp.route('/usb-power/take-control', methods=['POST'])
 def usb_power_take_control():
     """Take control of USB Power device."""
     try:
@@ -72,7 +72,7 @@ def usb_power_take_control():
             'error': f'Connection error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/release-control', methods=['POST'])
+@power_bp.route('/usb-power/release-control', methods=['POST'])
 def usb_power_release_control():
     """Release control of USB Power device."""
     try:
@@ -93,7 +93,7 @@ def usb_power_release_control():
             'error': f'Release error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/status', methods=['GET'])
+@power_bp.route('/usb-power/status', methods=['GET'])
 def get_usb_power_status():
     """Get USB Power session status."""
     try:
@@ -119,7 +119,7 @@ def get_usb_power_status():
             'error': f'Status check error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/power-status', methods=['GET'])
+@power_bp.route('/usb-power/power-status', methods=['GET'])
 def get_usb_power_state():
     """Get current USB hub power state."""
     try:
@@ -146,7 +146,7 @@ def get_usb_power_state():
             'error': f'Power status error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/power-on', methods=['POST'])
+@power_bp.route('/usb-power/power-on', methods=['POST'])
 def usb_power_on():
     """Turn USB power on using active session."""
     try:
@@ -179,7 +179,7 @@ def usb_power_on():
             'error': f'Power on error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/power-off', methods=['POST'])
+@power_bp.route('/usb-power/power-off', methods=['POST'])
 def usb_power_off():
     """Turn USB power off using active session."""
     try:
@@ -212,7 +212,7 @@ def usb_power_off():
             'error': f'Power off error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/reboot', methods=['POST'])
+@power_bp.route('/usb-power/reboot', methods=['POST'])
 def usb_power_reboot():
     """Reboot USB device using active session."""
     try:
@@ -245,7 +245,7 @@ def usb_power_reboot():
             'error': f'Reboot error: {str(e)}'
         }), 500
 
-@power_bp.route('/api/virtualpytest/usb-power/toggle', methods=['POST'])
+@power_bp.route('/usb-power/toggle', methods=['POST'])
 def usb_power_toggle():
     """Toggle USB power state (on->off or off->on)."""
     try:

@@ -14,7 +14,7 @@ export function useControllerTypes() {
       console.log('🔍 Fetching controller types from backend...');
       
       // Use RegistrationContext to build URL
-      const response = await fetch(buildServerUrl('/api/virtualpytest/controller-types'));
+      const response = await fetch(buildServerUrl('/api/controller/controller-types'));
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (!response.ok) {

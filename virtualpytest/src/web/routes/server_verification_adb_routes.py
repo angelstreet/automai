@@ -11,13 +11,13 @@ from flask import Blueprint, request, jsonify
 import requests
 
 # Create blueprint
-verification_adb_server_bp = Blueprint('verification_adb_server', __name__)
+verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification')
 
 # =====================================================
 # SERVER-SIDE ADB VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_adb_server_bp.route('/api/virtualpytest/verification/adb/element-lists', methods=['POST'])
+@verification_adb_server_bp.route('/adb/element-lists', methods=['POST'])
 def adb_element_lists():
     """Forward ADB element lists request to host."""
     try:
@@ -73,7 +73,7 @@ def adb_element_lists():
             'error': f'ADB element lists error: {str(e)}'
         }), 500
 
-@verification_adb_server_bp.route('/api/virtualpytest/verification/adb/wait-element-appear', methods=['POST'])
+@verification_adb_server_bp.route('/adb/wait-element-appear', methods=['POST'])
 def adb_wait_element_appear():
     """Forward ADB wait element appear request to host."""
     try:
@@ -135,7 +135,7 @@ def adb_wait_element_appear():
             'error': f'ADB wait element appear error: {str(e)}'
         }), 500
 
-@verification_adb_server_bp.route('/api/virtualpytest/verification/adb/wait-element-disappear', methods=['POST'])
+@verification_adb_server_bp.route('/adb/wait-element-disappear', methods=['POST'])
 def adb_wait_element_disappear():
     """Forward ADB wait element disappear request to host."""
     try:

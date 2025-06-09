@@ -78,6 +78,7 @@ def register_routes(app: Flask, mode='server'):
         
         # Import server-only routes
         from .server_remote_routes import remote_bp
+        from .server_remote_routes import remote_bp
         from .server_navigation_routes import navigation_bp
         from .server_campaign_routes import campaign_bp
         from .server_testcase_routes import testcase_bp
@@ -122,6 +123,7 @@ def register_routes(app: Flask, mode='server'):
         
         # Server-side functionality
         app.register_blueprint(remote_bp)
+        app.register_blueprint(remote_bp)
         app.register_blueprint(audiovideo_bp)
         app.register_blueprint(navigation_bp)
         app.register_blueprint(navigation_config_bp)
@@ -129,7 +131,7 @@ def register_routes(app: Flask, mode='server'):
         app.register_blueprint(validation_bp)
         app.register_blueprint(campaign_bp)
         app.register_blueprint(testcase_bp)
-        app.register_blueprint(screen_definition_blueprint, url_prefix='/api/virtualpytest/screen-definition')
+        app.register_blueprint(screen_definition_blueprint)
         app.register_blueprint(power_bp)
         
         print(f"[@routes:register_routes] SERVER routes registered successfully")

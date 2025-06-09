@@ -48,6 +48,10 @@ export interface RemoteDeviceConfig {
     dumpUI?: string;
     getApps?: string;
     clickElement?: string;
+    // USB Power specific endpoints
+    powerOn?: string;
+    powerOff?: string;
+    reboot?: string;
   };
   connectionFields: Array<{
     name: string; // Allow any string for field names
