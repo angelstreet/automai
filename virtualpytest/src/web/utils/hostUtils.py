@@ -121,7 +121,7 @@ def register_host_with_server():
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
     
     # Use centralized server URL building instead of manual construction
-    registration_url = build_server_url('/api/system/clients/register')
+    registration_url = build_server_url('/api/system/register')
     print(f"\n🌐 [HOST] Registration URL: {registration_url}")
     
     try:
