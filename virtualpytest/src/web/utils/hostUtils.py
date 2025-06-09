@@ -1,5 +1,16 @@
 import os
 import sys
+
+# CRITICAL: Set up import paths FIRST, before any other imports that might need them
+# Import the shared path setup function
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
+sys.path.insert(0, current_dir)  # Add utils dir temporarily to import pathUtils
+from pathUtils import log_path_setup
+
+# Set up all paths using the shared function
+log_path_setup("hostUtils")
+
+# Now proceed with other imports that need the paths
 import time
 import threading
 import signal
@@ -30,7 +41,6 @@ ping_stop_event = threading.Event()
 global_host_device = None
 
 # Import centralized URL building from routes utils
-current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 from routes.utils import build_server_url

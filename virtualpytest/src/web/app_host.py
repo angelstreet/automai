@@ -26,27 +26,12 @@ import sys
 import os
 
 # CRITICAL: Set up import paths FIRST, before any other imports
-print(f"[@host:__init__] Setting up import paths for host application...")
-current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
-src_dir = os.path.dirname(current_dir)                    # /src
-parent_dir = os.path.dirname(src_dir)                     # /
+# Import the shared path setup function
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils'))
+from pathUtils import log_path_setup
 
-# Add paths to sys.path for the entire application
-paths_to_add = [
-    os.path.join(current_dir, 'utils'),           # /src/web/utils
-    os.path.join(current_dir, 'cache'),           # /src/web/cache
-    os.path.join(current_dir, 'services'),        # /src/web/services
-    os.path.join(src_dir, 'utils'),               # /src/utils  
-    src_dir,                                      # /src
-    os.path.join(parent_dir, 'controllers'),      # /controllers
-]
-
-for path in paths_to_add:
-    if path not in sys.path:
-        sys.path.insert(0, path)
-        print(f"[@host:__init__] Added to sys.path: {path}")
-
-print(f"[@host:__init__] Import paths setup completed")
+# Set up all paths using the shared function
+log_path_setup("host")
 
 # Now import other modules after path setup
 import time
