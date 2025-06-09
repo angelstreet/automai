@@ -414,10 +414,10 @@ export function ScreenDefinitionEditor({
       
       // Get the controller directly from selectedHostDevice - take control already done
       const controllers = selectedHostDevice.controller_objects;
-      const remoteController = controllers?.remote;
+      const avController = controllers?.av;
       
-      // Call take_screenshot directly on the controller
-      const screenshot = remoteController.take_screenshot();
+      // Call take_screenshot directly on the AV controller
+      const screenshot = avController.take_screenshot();
       
       if (screenshot) {
         console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully');
@@ -507,7 +507,7 @@ export function ScreenDefinitionEditor({
   // Drag selection state
   const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Get stream URL from remote controller - no manual building
+  // Get stream URL from AV controller - no manual building
   const getStreamUrl = useCallback(() => {
     if (!selectedHostDevice) {
       return undefined;
@@ -515,20 +515,20 @@ export function ScreenDefinitionEditor({
     
     // Get the controller directly from selectedHostDevice
     const controllers = selectedHostDevice.controller_objects;
-    const remoteController = controllers?.remote;
+    const avController = controllers?.av;
     
-    if (!remoteController) {
+    if (!avController) {
       return undefined;
     }
     
-    // Get stream URL from the controller
-    const streamUrl = remoteController.get_stream_url?.() || remoteController.stream_url;
+    // Get stream URL from the AV controller (not remote controller)
+    const streamUrl = avController.get_stream_url?.() || avController.stream_url;
     
     if (streamUrl) {
-      console.log('[@component:ScreenDefinitionEditor] Got stream URL from remote controller:', streamUrl);
+      console.log('[@component:ScreenDefinitionEditor] Got stream URL from AV controller:', streamUrl);
       return streamUrl;
     } else {
-      console.log('[@component:ScreenDefinitionEditor] No stream URL available from remote controller');
+      console.log('[@component:ScreenDefinitionEditor] No stream URL available from AV controller');
       return undefined;
     }
   }, [selectedHostDevice]);

@@ -133,7 +133,20 @@ class HDMIStreamController(AVControllerInterface):
         
         return status
         
-   
+    def get_stream_url(self) -> str:
+        """
+        Get the stream URL for this HDMI controller.
+        Returns the nginx URL with the stream path.
+        """
+        if not self.nginx_url:
+            print(f"HDMI[{self.capture_source}]: No nginx_url configured")
+            return None
+            
+        # Build stream URL using nginx_url from host connection
+        stream_url = f"{self.nginx_url}/stream/output.m3u8"
+        
+        print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
+        return stream_url
         
     def take_screenshot(self, filename: str = None) -> str:
         """

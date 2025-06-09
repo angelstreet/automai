@@ -298,13 +298,13 @@ def create_device_controllers(
     device_defaults = {
         'android_tv': {
             'remote_type': 'android_tv',  # ADBAndroid TV controller
-            'av_type': 'adb',
+            'av_type': 'hdmi_stream',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl
         },
         'android_mobile': {
             'remote_type': 'android_mobile',  # ADBAndroid mobile controller
-            'av_type': 'adb',
+            'av_type': 'hdmi_stream',
             'verification_type': 'ocr',
             'power_type': 'usb',  # USB hub power control via SSH + uhubctl
         },

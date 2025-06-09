@@ -241,6 +241,11 @@ class AVControllerInterface(BaseController):
         """Stop video capture. Must be implemented by subclasses."""
         pass
     
+    @abstractmethod
+    def get_stream_url(self) -> str:
+        """Get the stream URL for this AV controller. Must be implemented by subclasses."""
+        pass
+    
     def take_control(self) -> Dict[str, Any]:
         """
         Take control of AV system and verify stream is working.
