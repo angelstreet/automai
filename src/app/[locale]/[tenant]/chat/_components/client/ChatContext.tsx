@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 import { MODEL_SELECTION } from '../../constants';
+import { getConversationById } from '@/app/actions/chatAction';
 
 // Model colors - consistent assignment
 const MODEL_COLORS = ['bg-red-500', 'bg-green-500', 'bg-blue-500'] as const;
@@ -27,6 +28,9 @@ interface ChatContextType {
   getModelColor: (modelId: string) => string;
   getModelTextColor: (modelId: string) => string;
   toggleModelFilter: (modelId: string) => void;
+  // Conversation models
+  conversationModels: string[]; // Models from the loaded conversation
+  isLoadingConversation: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -41,11 +45,57 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [openRouterApiKey, setOpenRouterApiKey] = useState<string | null>(null);
   const [hasEnvApiKey, setHasEnvApiKey] = useState<boolean>(false);
   const [filteredModels, setFilteredModels] = useState<string[]>([]);
+  const [conversationModels, setConversationModels] = useState<string[]>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState<boolean>(false);
 
   // Initialize filtered models to show all selected models
   useEffect(() => {
     setFilteredModels([...selectedModels]);
   }, [selectedModels]);
+
+  // Load conversation models when activeConversationId changes
+  useEffect(() => {
+    const loadConversationModels = async () => {
+      if (!activeConversationId) {
+        // No conversation selected - reset to default models
+        setConversationModels([]);
+        setSelectedModels([...MODEL_SELECTION.DEFAULT_MODELS]);
+        return;
+      }
+
+      try {
+        setIsLoadingConversation(true);
+        console.log(`[@context:ChatProvider] Loading models for conversation: ${activeConversationId}`);
+        
+        const result = await getConversationById(activeConversationId);
+        
+        if (result.success && result.data) {
+          const conversationModelIds = result.data.model_ids || [];
+          console.log(`[@context:ChatProvider] Found ${conversationModelIds.length} models in conversation:`, conversationModelIds);
+          
+          // Update conversation models
+          setConversationModels(conversationModelIds);
+          
+          // Update selected models to show the conversation's models
+          if (conversationModelIds.length > 0) {
+            setSelectedModels(conversationModelIds);
+            // Set active tab to first model in conversation
+            setActiveTab(conversationModelIds[0]);
+          }
+        } else {
+          console.error(`[@context:ChatProvider] Failed to load conversation: ${result.error}`);
+          setConversationModels([]);
+        }
+      } catch (error: any) {
+        console.error(`[@context:ChatProvider] Error loading conversation:`, error);
+        setConversationModels([]);
+      } finally {
+        setIsLoadingConversation(false);
+      }
+    };
+
+    loadConversationModels();
+  }, [activeConversationId]);
 
   // Get consistent color for a model based on its position in selectedModels
   const getModelColor = (modelId: string): string => {
@@ -128,6 +178,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         getModelColor,
         getModelTextColor,
         toggleModelFilter,
+        conversationModels,
+        isLoadingConversation,
       }}
     >
       {children}
