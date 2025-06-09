@@ -6,23 +6,16 @@ import {
 } from '@mui/material';
 import { RemoteInterface } from './RemoteInterface';
 import { RemoteType } from '../../types/remote/remoteTypes';
+import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { getRemoteLayout } from '../../../config/layoutConfig';
 
 interface RemoteCoreProps {
   /** The type of remote device */
   remoteType: RemoteType;
-  /** Whether device is connected */
-  isConnected: boolean;
   /** Remote configuration */
-  remoteConfig: any;
-  /** Whether connection is loading */
-  connectionLoading: boolean;
-  /** Function to handle remote commands */
-  onCommand: (command: string) => void;
+  remoteConfig?: any;
   /** Function to handle disconnect */
   onDisconnect: () => void;
-  /** Function to release control */
-  handleReleaseControl?: () => Promise<void>;
   /** Layout style for positioning */
   style?: 'panel' | 'compact';
   /** Custom styling */
@@ -31,40 +24,41 @@ interface RemoteCoreProps {
 
 export function RemoteCore({
   remoteType,
-  isConnected,
   remoteConfig,
-  connectionLoading,
-  onCommand,
   onDisconnect,
-  handleReleaseControl,
   style = 'compact',
   sx = {}
 }: RemoteCoreProps) {
   const [showOverlays, setShowOverlays] = useState(false);
 
+  // Use the simplified remote connection hook
+  const {
+    isLoading,
+    error,
+    sendCommand,
+    hideRemote,
+  } = useRemoteConnection(remoteType);
+
   // Handle disconnect with proper control release
   const handleDisconnect = async () => {
     try {
-      // Release control if the function is provided
-      if (handleReleaseControl) {
-        console.log(`[@component:RemoteCore] Releasing control before disconnect for ${remoteType}`);
-        await handleReleaseControl();
-      }
-      // Call parent disconnect callback
+      console.log(`[@component:RemoteCore] Disconnecting ${remoteType} remote via abstract controller`);
+      await hideRemote(); // Hide remote via abstract controller
       onDisconnect();
     } catch (error) {
       console.error(`[@component:RemoteCore] Error during disconnect for ${remoteType}:`, error);
-      // Still call parent disconnect even if release control fails
+      // Still call parent disconnect even if hide remote fails
       onDisconnect();
     }
   };
 
-  // Don't render if not connected
-  if (!isConnected) {
-    return null;
-  }
+  // Handle remote commands
+  const handleCommand = async (command: string, params?: any) => {
+    console.log(`[@component:RemoteCore] Sending ${remoteType} command: ${command}`, params);
+    await sendCommand(command, params);
+  };
 
-  // Use default scale from remoteConfig
+  // Use default scale from remoteConfig or fallback
   const defaultScale = remoteConfig?.remote_info?.default_scale || 1;
 
   // Get layout configuration for this remote type
@@ -149,7 +143,7 @@ export function RemoteCore({
             remoteConfig={remoteConfig || null}
             scale={defaultScale}
             showOverlays={showOverlays}
-            onCommand={onCommand}
+            onCommand={handleCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
             remoteType={remoteType}
@@ -160,7 +154,7 @@ export function RemoteCore({
           variant="contained" 
           color="error"
           onClick={handleDisconnect}
-          disabled={connectionLoading}
+          disabled={isLoading}
           size="small"
           fullWidth
           sx={{ 
@@ -172,7 +166,7 @@ export function RemoteCore({
             right: 0
           }}
         >
-          {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
+          {isLoading ? <CircularProgress size={16} /> : 'Disconnect'}
         </Button>
       </Box>
     );
@@ -221,7 +215,7 @@ export function RemoteCore({
             remoteConfig={remoteConfig || null}
             scale={defaultScale}
             showOverlays={showOverlays}
-            onCommand={onCommand}
+            onCommand={handleCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
             remoteType={remoteType}
@@ -231,7 +225,7 @@ export function RemoteCore({
           variant="contained" 
           color="error"
           onClick={handleDisconnect}
-          disabled={connectionLoading}
+          disabled={isLoading}
           size="small"
           fullWidth
           sx={{ 
@@ -243,7 +237,7 @@ export function RemoteCore({
             right: 0
           }}
         >
-          {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
+          {isLoading ? <CircularProgress size={16} /> : 'Disconnect'}
         </Button>
       </Box>
     );

@@ -66,9 +66,9 @@ export function CompactAndroidMobile({
     setTimeout(() => setLastCommand(''), 1000);
   };
 
-  // Handle disconnect
+  // Handle disconnect - updated to use abstract controller
   const handleDisconnect = async () => {
-    console.log('[@component:CompactAndroidMobile] Disconnecting remote');
+    console.log('[@component:CompactAndroidMobile] Disconnecting remote via abstract controller');
     await hideRemote(); // Hide remote via abstract controller
     if (onDisconnectComplete) {
       onDisconnectComplete();
