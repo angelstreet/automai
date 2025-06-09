@@ -11,9 +11,9 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     host: '22',
     device: '5555'
   },
-  apiEndpoints: {
-    connect: '/server/take-control',
-    disconnect: '/server/release-control',
+  serverEndpoints: {
+    connect: '/server/control/take-control',
+    disconnect: '/server/control/release-control',
     screenshot: '/server/remote/screenshot',  // Abstract remote controller
     command: '/server/remote/command',        // Abstract remote controller
   },
@@ -34,9 +34,9 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     host: '22',
     device: '5555'
   },
-  apiEndpoints: {
-    connect: '/server/take-control',
-    disconnect: '/server/release-control',
+  serverEndpoints: {
+    connect: '/server/control/take-control',
+    disconnect: '/server/control/release-control',
     screenshot: '/server/remote/screenshot',     // Abstract remote controller
     command: '/server/remote/command',           // Abstract remote controller
     dumpUI: '/server/remote/screenshot-and-dump-ui',  // Abstract remote controller
@@ -60,7 +60,7 @@ export const IR_CONFIG: RemoteDeviceConfig = {
     host: '',
     device: ''
   },
-  apiEndpoints: {
+  serverEndpoints: {
     connect: '/server/remote/connect',      // Abstract remote controller
     disconnect: '/server/remote/disconnect', // Abstract remote controller
     command: '/server/remote/command',      // Abstract remote controller
@@ -83,7 +83,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
     host: '',
     device: ''
   },
-  apiEndpoints: {
+  serverEndpoints: {
     connect: '/server/remote/connect',      // Abstract remote controller
     disconnect: '/server/remote/disconnect', // Abstract remote controller
     command: '/server/remote/command',      // Abstract remote controller
@@ -106,7 +106,7 @@ export const USB_POWER_CONFIG: RemoteDeviceConfig = {
     host: '22',
     device: ''
   },
-  apiEndpoints: {
+  serverEndpoints: {
     connect: '',
     disconnect: '',
     command: '',

@@ -60,10 +60,10 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, [remoteType]);
 
   const fetchDefaultValues = useCallback(async () => {
-    if (!deviceConfig) return;
+    if (!deviceConfig?.serverEndpoints.defaults) return;
     
     try {
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.defaults));
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.defaults));
       const result = await response.json();
       
       if (result.success && result.defaults) {
@@ -79,14 +79,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
   // Generic function to fetch remote config from backend (optional override)
   const fetchRemoteConfig = useCallback(async () => {
-    if (!deviceConfig?.apiEndpoints.config) return;
+    if (!deviceConfig?.serverEndpoints.config) return;
     
     // We're now using the imported JSON config
     console.log(`[@hook:useRemoteConnection] Using local remote configuration for ${remoteType}`);
     
     // Only fetch from backend if needed for dynamic configurations
     try {
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.config));
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.config));
       const result = await response.json();
       
       if (result.success && result.config) {
@@ -125,7 +125,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       await fetchRemoteConfig();
 
       console.log('[@hook:useRemoteConnection] Sending take-control request to backend...');
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.connect), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.connect), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
-      await fetch(buildServerUrl(deviceConfig.apiEndpoints.disconnect), {
+      await fetch(buildServerUrl(deviceConfig.serverEndpoints.disconnect), {
         method: 'POST',
       });
       
@@ -185,13 +185,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, [deviceConfig, buildServerUrl]);
 
   const handleScreenshot = useCallback(async () => {
-    if (!deviceConfig?.apiEndpoints.screenshot) {
-      throw new Error('Screenshot not supported for this device type');
+    if (!deviceConfig?.serverEndpoints.screenshot) {
+      console.error('[@hook:useRemoteConnection] Screenshot endpoint not configured for device type:', remoteType);
+      return null;
     }
     
     try {
       console.log('[@hook:useRemoteConnection] Taking screenshot...');
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.screenshot), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.screenshot), {
         method: 'POST',
       });
 
@@ -208,17 +209,18 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
-  }, [deviceConfig, buildServerUrl]);
+  }, [deviceConfig, remoteType, buildServerUrl]);
 
   // Android Mobile specific: Screenshot + UI dump
   const handleScreenshotAndDumpUI = useCallback(async () => {
-    if (!deviceConfig?.apiEndpoints.dumpUI) {
-      throw new Error('UI dump not supported for this device type');
+    if (!deviceConfig?.serverEndpoints.dumpUI) {
+      console.error('[@hook:useRemoteConnection] DumpUI endpoint not configured for device type:', remoteType);
+      return null;
     }
     
     try {
       console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements...');
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.dumpUI), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.dumpUI), {
         method: 'POST',
       });
 
@@ -241,17 +243,18 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot and UI dump error:', err);
       throw err;
     }
-  }, [deviceConfig, buildServerUrl]);
+  }, [deviceConfig, remoteType, buildServerUrl]);
 
   // Android Mobile specific: Get apps list
   const handleGetApps = useCallback(async () => {
-    if (!deviceConfig?.apiEndpoints.getApps) {
-      throw new Error('App listing not supported for this device type');
+    if (!deviceConfig?.serverEndpoints.getApps) {
+      console.error('[@hook:useRemoteConnection] GetApps endpoint not configured for device type:', remoteType);
+      return null;
     }
     
     try {
       console.log('[@hook:useRemoteConnection] Getting installed apps...');
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.getApps), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.getApps), {
         method: 'POST',
       });
 
@@ -268,17 +271,18 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Get apps error:', err);
       throw err;
     }
-  }, [deviceConfig, buildServerUrl]);
+  }, [deviceConfig, remoteType, buildServerUrl]);
 
   // Android Mobile specific: Click UI element
   const handleClickElement = useCallback(async (element: AndroidElement) => {
-    if (!deviceConfig?.apiEndpoints.clickElement) {
-      throw new Error('Element clicking not supported for this device type');
+    if (!deviceConfig?.serverEndpoints.clickElement) {
+      console.error('[@hook:useRemoteConnection] ClickElement endpoint not configured for device type:', remoteType);
+      return null;
     }
     
     try {
       console.log(`[@hook:useRemoteConnection] Clicking element: ${element.id}`);
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.clickElement), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.clickElement), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -298,7 +302,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Element click error:', err);
       throw err;
     }
-  }, [deviceConfig, buildServerUrl]);
+  }, [deviceConfig, remoteType, buildServerUrl]);
 
   // Clear UI elements
   const clearElements = useCallback(() => {
@@ -319,7 +323,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
           params: { package: params.package }
         };
         
-        const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.command), {
+        const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.command), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -343,7 +347,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
         params: { key: command }
       };
       
-      const response = await fetch(buildServerUrl(deviceConfig.apiEndpoints.command), {
+      const response = await fetch(buildServerUrl(deviceConfig.serverEndpoints.command), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

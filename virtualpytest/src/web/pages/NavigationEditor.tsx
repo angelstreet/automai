@@ -610,7 +610,7 @@ const NavigationEditorContent: React.FC = () => {
       }
 
       // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch(buildServerUrl('/server/take-control'), {
+      const response = await fetch(buildServerUrl('/server/control/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

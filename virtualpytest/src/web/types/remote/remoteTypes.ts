@@ -37,7 +37,7 @@ export interface RemoteDeviceConfig {
     host: string;
     device: string;
   };
-  apiEndpoints: {
+  serverEndpoints: {
     defaults?: string;  // Optional - removed for abstract controllers
     connect: string;
     disconnect: string;

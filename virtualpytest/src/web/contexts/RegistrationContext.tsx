@@ -301,7 +301,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       }
       
       // Call main server control endpoint to take control (which includes locking)
-      const response = await fetch(buildServerUrl('/server/take-control'), {
+      const response = await fetch(buildServerUrl('/server/control/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -22,7 +22,7 @@ from deviceLockManager import (
 )
 
 # Create blueprint
-server_control_bp = Blueprint('server_control', __name__, url_prefix='/server')
+server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
@@ -125,7 +125,7 @@ def take_control():
                 parsed = urllib.parse.urlparse(flask_url)
                 flask_url = f"https://{parsed.hostname}:{parsed.port}"
             
-            host_url = f"{flask_url}/take-control"
+            host_url = f"{flask_url}/host/take-control"
             
             print(f"[@route:server_take_control] Built URL from host connection: {host_url}")
             
