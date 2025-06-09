@@ -25,6 +25,7 @@ export interface RemoteLayoutConfig {
   containerWidth: number;
   fallbackImageWidth: number;
   fallbackImageHeight: number;
+  compactMaxWidth: number;
 }
 
 /**
@@ -98,12 +99,14 @@ export const getRemoteLayout = (remoteType?: string): RemoteLayoutConfig => {
         containerWidth: 300,
         fallbackImageWidth: 300,
         fallbackImageHeight: 400,
+        compactMaxWidth: 400,
       };
     case 'android-tv':
       return {
         containerWidth: 400,
         fallbackImageWidth: 400,
         fallbackImageHeight: 200,
+        compactMaxWidth: 500,
       };
     case 'ir':
     case 'bluetooth':
@@ -111,12 +114,14 @@ export const getRemoteLayout = (remoteType?: string): RemoteLayoutConfig => {
         containerWidth: 350,
         fallbackImageWidth: 350,
         fallbackImageHeight: 250,
+        compactMaxWidth: 400,
       };
     default:
       return {
         containerWidth: 350,
         fallbackImageWidth: 350,
         fallbackImageHeight: 250,
+        compactMaxWidth: 400,
       };
   }
 };

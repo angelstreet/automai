@@ -1,12 +1,12 @@
 import { AndroidElement } from './types';
 
-// Base remote configuration type
-export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth' | 'usb-power';
+// Base remote configuration type (removed usb-power as it belongs in power controller)
+export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
 
-// Base connection configuration interface (shared across Android remotes)
+// Base connection configuration interface (cleaned up - no SSH fields needed)
 export interface BaseConnectionConfig {
-  device_ip: string;
-  device_port?: string;
+  device_ip?: string; // Optional - abstract controller manages this
+  device_port?: string; // Optional - abstract controller manages this
 }
 
 // IR Remote connection configuration
@@ -33,10 +33,7 @@ export interface RemoteDeviceConfig {
   icon: string;
   hasScreenshot: boolean;
   hasOverlay: boolean;
-  defaultPorts: {
-    host: string;
-    device: string;
-  };
+  // Abstract controller endpoints
   serverEndpoints: {
     defaults?: string;  // Optional - removed for abstract controllers
     connect: string;
@@ -48,18 +45,7 @@ export interface RemoteDeviceConfig {
     dumpUI?: string;
     getApps?: string;
     clickElement?: string;
-    // USB Power specific endpoints
-    powerOn?: string;
-    powerOff?: string;
-    reboot?: string;
   };
-  connectionFields: Array<{
-    name: string; // Allow any string for field names
-    label: string;
-    type?: 'text' | 'password';
-    required?: boolean;
-    default?: string;
-  }>;
 }
 
 // Re-export existing types for compatibility

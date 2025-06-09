@@ -21,7 +21,7 @@ export interface TestResult {
   message: string;
 }
 
-// Session types for different controllers
+// Session types for different controllers (simplified - no SSH fields)
 export interface AndroidTVSession {
   connected: boolean;
   device_ip: string;
@@ -44,7 +44,7 @@ export interface AndroidMobileSession {
   device_ip: string;
 }
 
-// Connection form types
+// Connection form types (simplified - abstract controller handles SSH)
 export interface ConnectionForm {
   device_ip: string;
   device_port: string;
