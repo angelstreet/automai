@@ -90,7 +90,7 @@
       {
         "id": "node-1-node-1748723779677",
         "data": {
-          "to": "tvguide",
+          "to": "home_tvguide",
           "from": "home",
           "actions": [
             {
@@ -125,7 +125,7 @@
         "id": "node-1748723779677-node-1",
         "data": {
           "to": "home",
-          "from": "tvguide",
+          "from": "home_tvguide",
           "actions": [
             {
               "id": "click_element",
@@ -161,7 +161,7 @@
         "id": "node-1748723779677-node-1748862182738",
         "data": {
           "to": "tvguide_livetv",
-          "from": "tvguide",
+          "from": "home_tvguide",
           "actions": [
             {
               "id": "click_element",
@@ -194,7 +194,7 @@
       {
         "id": "node-1748862182738-node-1748723779677",
         "data": {
-          "to": "tvguide",
+          "to": "home_tvguide",
           "from": "tvguide_livetv",
           "actions": [
             {
@@ -214,7 +214,7 @@
             }
           ],
           "edgeType": "vertical",
-          "description": "Connection from tvguide_livetv to guidetv",
+          "description": "Connection from tvguide_livetv to guhome_tvguideidetv",
           "retryActions": [],
           "finalWaitTime": 0,
           "last_validation_timestamp": "2025-06-05T13:05:51.161Z"
@@ -560,13 +560,13 @@
         "data": {
           "type": "menu",
           "depth": 2,
-          "label": "tvguide",
+          "label": "home_tvguide",
           "parent": [
             "",
             "node-1"
           ],
           "menu_type": "main",
-          "screenshot": "guidetv.jpg",
+          "screenshot": "home_tvguide.jpg",
           "description": "",
           "verifications": [
             {
