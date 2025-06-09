@@ -11,14 +11,6 @@ export interface PowerDeviceConfig {
     powerOff: string;
     reboot: string;
   };
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: Array<{
-    name: string;
-    label: string;
-    type?: 'text' | 'password';
-    required?: boolean;
-    default?: string;
-  }>;
 }
 
 // USB Power configuration - uses abstract power controller
@@ -30,9 +22,7 @@ export const USB_POWER_CONFIG: PowerDeviceConfig = {
     powerOn: '/server/power/power-on',    // Abstract power controller
     powerOff: '/server/power/power-off',  // Abstract power controller
     reboot: '/server/power/reboot'        // Abstract power controller
-  },
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: []
+  }
 };
 
 // Power configuration registry

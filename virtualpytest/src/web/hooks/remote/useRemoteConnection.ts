@@ -48,6 +48,16 @@ export function useRemoteConnection(remoteType: RemoteType) {
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
   
+  // Debug logging for device configuration
+  useEffect(() => {
+    console.log(`[@hook:useRemoteConnection] Device config for ${remoteType}:`, deviceConfig);
+    if (!deviceConfig) {
+      console.error(`[@hook:useRemoteConnection] No device configuration found for remote type: ${remoteType}`);
+    } else {
+      console.log(`[@hook:useRemoteConnection] Device config endpoints:`, deviceConfig.serverEndpoints);
+    }
+  }, [remoteType, deviceConfig]);
+
   // Load the remote configuration from JSON based on remote type
   useEffect(() => {
     switch (remoteType) {
@@ -403,77 +413,46 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
   }, [deviceConfig, remoteType]);
 
-  // Abstract remote controller methods
+  // Abstract remote controller methods - Frontend state management only
   const showRemote = useCallback(async () => {
-    console.log(`[@hook:useRemoteConnection] Showing ${remoteType} remote via abstract controller`);
-    setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      const response = await fetch(buildServerUrl('/server/remote/show'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to show remote');
-      }
-
-      console.log(`[@hook:useRemoteConnection] Remote ${remoteType} shown successfully`);
-    } catch (error: any) {
-      console.error(`[@hook:useRemoteConnection] Failed to show remote:`, error);
-      setRemoteState(prev => ({ ...prev, error: error.message }));
-    } finally {
-      setRemoteState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [remoteType, buildServerUrl]);
+    console.log(`[@hook:useRemoteConnection] Showing ${remoteType} remote (frontend state only)`);
+    setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
+    
+    // No server call needed - frontend handles remote UI display
+    console.log(`[@hook:useRemoteConnection] Remote ${remoteType} shown successfully (frontend)`);
+  }, [remoteType]);
 
   const hideRemote = useCallback(async () => {
-    console.log(`[@hook:useRemoteConnection] Hiding ${remoteType} remote via abstract controller`);
-    setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      const response = await fetch(buildServerUrl('/server/remote/hide'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to hide remote');
-      }
-
-      console.log(`[@hook:useRemoteConnection] Remote ${remoteType} hidden successfully`);
-    } catch (error: any) {
-      console.error(`[@hook:useRemoteConnection] Failed to hide remote:`, error);
-      setRemoteState(prev => ({ ...prev, error: error.message }));
-    } finally {
-      setRemoteState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [remoteType, buildServerUrl]);
+    console.log(`[@hook:useRemoteConnection] Hiding ${remoteType} remote (frontend state only)`);
+    setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
+    
+    // No server call needed - frontend handles remote UI display
+    console.log(`[@hook:useRemoteConnection] Remote ${remoteType} hidden successfully (frontend)`);
+  }, [remoteType]);
 
   const sendCommand = useCallback(async (command: string, params?: any) => {
     console.log(`[@hook:useRemoteConnection] Sending command: ${command}`, params);
     setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(buildServerUrl('/server/remote/send-command'), {
+      // Format action object as expected by the server
+      const action = {
+        command,
+        params: params || {},
+      };
+
+      const response = await fetch(buildServerUrl('/server/remote/execute-action'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          command,
-          params: params || {},
+          action,
         }),
       });
 
       const data = await response.json();
       
       if (!data.success) {
-        throw new Error(data.message || 'Command failed');
+        throw new Error(data.error || 'Command failed');
       }
 
       console.log(`[@hook:useRemoteConnection] Command ${command} sent successfully`);
