@@ -29,7 +29,8 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     command: '/host/remote/command',                // Direct host communication
     dumpUI: '/host/remote/screenshot-and-dump-ui', // Direct host communication
     getApps: '/host/remote/get-apps',               // Direct host communication
-    clickElement: '/host/remote/click-element'      // Direct host communication
+    clickElement: '/host/remote/click-element',     // Direct host communication
+    tapCoordinates: '/host/remote/tap-coordinates'  // Direct host communication
   }
 };
 

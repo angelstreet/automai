@@ -43,6 +43,7 @@ export interface RemoteDeviceConfig {
     dumpUI?: string;
     getApps?: string;
     clickElement?: string;
+    tapCoordinates?: string;
   };
 }
 

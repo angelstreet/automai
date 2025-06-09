@@ -144,6 +144,7 @@ def register_routes(app: Flask, mode='server'):
         from .host_verification_adb_routes import verification_adb_host_bp
         from .host_verification_execution_routes import verification_execution_host_bp
         from .host_control_routes import host_control_bp
+        from .host_remote_routes import host_remote_bp
         
         # Host-side verification endpoints (actual execution)
         app.register_blueprint(verification_image_host_bp)
@@ -153,6 +154,9 @@ def register_routes(app: Flask, mode='server'):
         
         # Host-side control routes (controller management, device control)
         app.register_blueprint(host_control_bp)
+        
+        # Host-side remote routes (direct remote control)
+        app.register_blueprint(host_remote_bp)
         
         print(f"[@routes:register_routes] HOST routes registered successfully")
         
