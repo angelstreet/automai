@@ -1,6 +1,6 @@
 import { RemoteDeviceConfig } from '../../types/remote/remoteTypes';
 
-// Android TV configuration - uses abstract remote controller
+// Android TV configuration - uses direct host communication
 export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   type: 'android-tv',
   name: 'Android TV',
@@ -8,14 +8,14 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',
-    disconnect: '/server/control/release-control',
-    screenshot: '/server/remote/screenshot',  // Abstract remote controller
-    command: '/server/remote/command',        // Abstract remote controller
+    connect: '/server/control/take-control',        // Server handles device locking
+    disconnect: '/server/control/release-control',  // Server handles device unlocking
+    screenshot: '/host/remote/screenshot',          // Direct host communication
+    command: '/host/remote/command',                // Direct host communication
   }
 };
 
-// Android Mobile configuration - uses abstract remote controller
+// Android Mobile configuration - uses direct host communication
 export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   type: 'android-mobile',
   name: 'Android Mobile',
@@ -23,17 +23,17 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',
-    disconnect: '/server/control/release-control',
-    screenshot: '/server/remote/screenshot',     // Abstract remote controller
-    command: '/server/remote/command',           // Abstract remote controller
-    dumpUI: '/server/remote/screenshot-and-dump-ui',  // Abstract remote controller
-    getApps: '/server/remote/get-apps',               // Abstract remote controller
-    clickElement: '/server/remote/click-element'      // Abstract remote controller
+    connect: '/server/control/take-control',        // Server handles device locking
+    disconnect: '/server/control/release-control',  // Server handles device unlocking
+    screenshot: '/host/remote/screenshot',          // Direct host communication
+    command: '/host/remote/command',                // Direct host communication
+    dumpUI: '/host/remote/screenshot-and-dump-ui', // Direct host communication
+    getApps: '/host/remote/get-apps',               // Direct host communication
+    clickElement: '/host/remote/click-element'      // Direct host communication
   }
 };
 
-// IR Remote configuration - uses abstract remote controller
+// IR Remote configuration - uses direct host communication
 export const IR_CONFIG: RemoteDeviceConfig = {
   type: 'ir',
   name: 'IR Remote',
@@ -41,13 +41,13 @@ export const IR_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: false,
   hasOverlay: false,
   serverEndpoints: {
-    connect: '/server/remote/connect',      // Abstract remote controller
-    disconnect: '/server/remote/disconnect', // Abstract remote controller
-    command: '/server/remote/command',      // Abstract remote controller
+    connect: '/host/remote/connect',      // Direct host communication
+    disconnect: '/host/remote/disconnect', // Direct host communication
+    command: '/host/remote/command',      // Direct host communication
   }
 };
 
-// Bluetooth Remote configuration - uses abstract remote controller
+// Bluetooth Remote configuration - uses direct host communication
 export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   type: 'bluetooth',
   name: 'Bluetooth Remote',
@@ -55,9 +55,9 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: false,
   hasOverlay: false,
   serverEndpoints: {
-    connect: '/server/remote/connect',      // Abstract remote controller
-    disconnect: '/server/remote/disconnect', // Abstract remote controller
-    command: '/server/remote/command',      // Abstract remote controller
+    connect: '/host/remote/connect',      // Direct host communication
+    disconnect: '/host/remote/disconnect', // Direct host communication
+    command: '/host/remote/command',      // Direct host communication
   }
 };
 
