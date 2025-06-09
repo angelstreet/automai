@@ -845,6 +845,55 @@ def get_client_by_device_model(device_model):
         print(f"❌ Error finding host: {e}")
         return jsonify({'error': str(e)}), 500
 
+@system_bp.route('/api/system/environment-profiles', methods=['GET'])
+def get_environment_profiles():
+    """Get available environment profiles for test execution"""
+    try:
+        # TODO: Implement actual environment profiles from database
+        # For now, return some default profiles
+        profiles = [
+            {
+                'id': 'default',
+                'name': 'Default Environment',
+                'description': 'Standard test environment',
+                'config': {
+                    'timeout': 30000,
+                    'retry_count': 3,
+                    'screenshot_on_failure': True
+                }
+            },
+            {
+                'id': 'performance',
+                'name': 'Performance Testing',
+                'description': 'Environment optimized for performance tests',
+                'config': {
+                    'timeout': 60000,
+                    'retry_count': 1,
+                    'screenshot_on_failure': False
+                }
+            },
+            {
+                'id': 'debug',
+                'name': 'Debug Environment',
+                'description': 'Environment with extended timeouts for debugging',
+                'config': {
+                    'timeout': 120000,
+                    'retry_count': 5,
+                    'screenshot_on_failure': True,
+                    'verbose_logging': True
+                }
+            }
+        ]
+        
+        return jsonify({
+            'success': True,
+            'profiles': profiles
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error getting environment profiles: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @system_bp.route('/api/system/ping', methods=['POST'])
 def client_ping():
     """Client sends periodic health ping to server"""

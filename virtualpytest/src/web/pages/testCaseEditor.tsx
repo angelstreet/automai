@@ -108,27 +108,25 @@ const TestCaseEditor: React.FC = () => {
 
   const fetchTestCases = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(buildApiUrl('/api/testcases'));
+      // Use abstract server test execution endpoint
+      const response = await fetch(buildApiUrl('/server/test/cases'));
       if (response.ok) {
         const data = await response.json();
         setTestCases(data);
-      } else {
-        setError('Failed to fetch test cases');
       }
     } catch (err) {
-      setError('Error fetching test cases');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching test cases:', err);
     }
   };
 
   const fetchDevices = async () => {
     try {
-      const response = await fetch(buildApiUrl('/api/devices'));
+      // Use existing system clients devices endpoint
+      const response = await fetch(buildApiUrl('/api/system/clients/devices'));
       if (response.ok) {
         const data = await response.json();
-        setDevices(data);
+        // Extract devices array from the response
+        setDevices(data.devices || []);
       }
     } catch (err) {
       console.error('Error fetching devices:', err);
@@ -137,10 +135,12 @@ const TestCaseEditor: React.FC = () => {
 
   const fetchEnvironmentProfiles = async () => {
     try {
-      const response = await fetch(buildApiUrl('/api/environment-profiles'));
+      // Use abstract system environment profiles endpoint
+      const response = await fetch(buildApiUrl('/api/system/environment-profiles'));
       if (response.ok) {
         const data = await response.json();
-        setEnvironmentProfiles(data);
+        // Extract profiles array from the response
+        setEnvironmentProfiles(data.profiles || []);
       }
     } catch (err) {
       console.error('Error fetching environment profiles:', err);
@@ -151,9 +151,10 @@ const TestCaseEditor: React.FC = () => {
     try {
       setLoading(true);
       const method = isEditing ? 'PUT' : 'POST';
+      // Use abstract server test execution endpoints
       const url = isEditing
-        ? buildApiUrl(`/api/testcases/${formData.test_id}`)
-        : buildApiUrl('/api/testcases');
+        ? buildApiUrl(`/server/test/cases/${formData.test_id}`)
+        : buildApiUrl('/server/test/cases');
 
       const response = await fetch(url, {
         method,
@@ -179,7 +180,8 @@ const TestCaseEditor: React.FC = () => {
   const handleDelete = async (testId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(buildApiUrl(`/api/testcases/${testId}`), {
+      // Use abstract server test execution endpoint
+      const response = await fetch(buildApiUrl(`/server/test/cases/${testId}`), {
         method: 'DELETE',
       });
 
@@ -344,7 +346,8 @@ const TestCaseEditor: React.FC = () => {
   const handleExecute = async (testCaseId: string, selectedDevice: string) => {
     try {
       setLoading(true);
-      const response = await fetch(buildApiUrl('/server/testcase/execute'), {
+      // Use abstract server test execution endpoint
+      const response = await fetch(buildApiUrl('/server/test/execute'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

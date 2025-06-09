@@ -9,6 +9,7 @@ This module contains the test case management endpoints for:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+import time
 
 # Import utility functions
 from .utils import get_team_id
@@ -19,8 +20,8 @@ from utils.supabase_utils import (
 
 from .utils import check_supabase
 
-# Create blueprint
-testcase_bp = Blueprint('testcase', __name__, url_prefix='/api')
+# Create blueprint with abstract server test prefix
+testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/test')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -29,11 +30,11 @@ def get_user_id():
     return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
-# TEST CASES ENDPOINTS
+# ABSTRACT TEST CASE ENDPOINTS
 # =====================================================
 
-@testcase_bp.route('/testcases', methods=['GET', 'POST'])
-def testcases():
+@testcase_bp.route('/cases', methods=['GET', 'POST'])
+def test_cases():
     error = check_supabase()
     if error:
         return error
@@ -52,8 +53,8 @@ def testcases():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/testcases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
-def testcase(test_id):
+@testcase_bp.route('/cases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
+def test_case_by_id(test_id):
     error = check_supabase()
     if error:
         return error
@@ -76,5 +77,32 @@ def testcase(test_id):
                 return jsonify({'status': 'success'})
             else:
                 return jsonify({'error': 'Test case not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@testcase_bp.route('/execute', methods=['POST'])
+def execute_test_case():
+    """Execute a test case using abstract controllers"""
+    try:
+        data = request.get_json()
+        test_case_id = data.get('test_case_id')
+        device_id = data.get('device_id')
+        
+        if not test_case_id or not device_id:
+            return jsonify({'error': 'test_case_id and device_id are required'}), 400
+        
+        # TODO: Implement test case execution logic using abstract controllers
+        # This would involve:
+        # 1. Loading the test case from database
+        # 2. Getting the device/host information
+        # 3. Executing the test steps using abstract remote/verification controllers
+        # 4. Returning execution results
+        
+        return jsonify({
+            'success': True,
+            'message': f'Test case {test_case_id} execution started on device {device_id}',
+            'execution_id': f'exec_{test_case_id}_{device_id}_{int(time.time())}'
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500 

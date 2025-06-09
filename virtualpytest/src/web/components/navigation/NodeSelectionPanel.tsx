@@ -14,42 +14,16 @@ import {
   ListItemText,
   Chip,
   LinearProgress,
-  Divider,
-  Alert,
-  CircularProgress,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Grid,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Camera as CameraIcon,
   Route as RouteIcon,
   Verified as VerifiedIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  PhotoCamera as PhotoCameraIcon,
-  PlayArrow as PlayArrowIcon,
-  Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Camera as CameraIconMUI,
-  Upload as UploadIcon,
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 import { NodeGotoPanel } from './NodeGotoPanel';
 import { calculateConfidenceScore } from '../../utils/confidenceUtils';
-
-// Import registration context
-import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -96,11 +70,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   currentNodeId,
   onVerification,
   isVerificationActive = false,
-  verificationControllerStatus = { image_controller_available: false, text_controller_available: false },
+  verificationControllerStatus,
 }) => {
-  // Use registration context for centralized URL management
-  const { buildApiUrl } = useRegistration();
-
   // Don't render the panel for entry nodes
   if ((selectedNode.data.type as string) === 'entry') {
     return null;
@@ -121,7 +92,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const [showVerificationConfirm, setShowVerificationConfirm] = useState(false);
 
   // Add states for verification execution
-  const [isRunningVerification, setIsRunningVerification] = useState(false);
+  const [isRunningVerifications, setIsRunningVerifications] = useState(false);
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
   const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{[index: number]: boolean[]}>({});
 
@@ -227,7 +198,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       return;
     }
     
-    setIsRunningVerification(true);
+    setIsRunningVerifications(true);
     setVerificationResult(null);
     
     try {
@@ -242,8 +213,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         let verificationSuccess = false;
         
         try {
-          // Execute verification based on controller type using abstract verification endpoint
-          const response = await fetch(buildApiUrl('/server/verification/execute'), {
+          // Execute verification based on controller type
+          const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -291,7 +262,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
       setVerificationResult(`❌ ${err.message}`);
     } finally {
-      setIsRunningVerification(false);
+      setIsRunningVerifications(false);
     }
   };
 
@@ -325,7 +296,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                                onVerification;
 
   // Can run verifications if we have control and device (same logic as NodeEditDialog)
-  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerification;
+  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
 
   // Check if node can be deleted (protect entry points and home nodes)
   const isProtectedNode = selectedNode.data.is_root || 
@@ -367,105 +338,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   };
 
   const confidenceInfo = getNodeConfidenceInfo();
-
-  // Handle taking screenshot
-  const handleTakeScreenshot = async () => {
-    if (!selectedDevice || !isControlActive || !onTakeScreenshot) {
-      console.log('[@component:NodeSelectionPanel] Cannot take screenshot: no device selected, not in control, or no callback');
-      return;
-    }
-
-    try {
-      // Call the parent's screenshot handler
-      await onTakeScreenshot();
-      
-      // The parent component (NavigationEditor) will handle the screenshot capture and Cloudflare upload
-      console.log('[@component:NodeSelectionPanel] Screenshot request sent to parent component');
-      
-    } catch (error) {
-      console.error('[@component:NodeSelectionPanel] Error taking screenshot:', error);
-    }
-  };
-
-  // Handle uploading existing screenshot to Cloudflare
-  const handleUploadToCloudflare = async () => {
-    if (!selectedNode.data.screenshot || !onUpdateNode) {
-      console.log('[@component:NodeSelectionPanel] Cannot upload: no screenshot or no update callback');
-      return;
-    }
-
-    try {
-      // Check if screenshot is already a Cloudflare URL
-      if (selectedNode.data.screenshot.includes('.r2.cloudflarestorage.com') || 
-          selectedNode.data.screenshot.includes('r2.dev')) {
-        console.log('[@component:NodeSelectionPanel] Screenshot is already on Cloudflare R2');
-        return;
-      }
-
-      console.log('[@component:NodeSelectionPanel] Uploading existing screenshot to Cloudflare R2 via host');
-
-      // Extract local path from the screenshot URL
-      let localPath = selectedNode.data.screenshot;
-      
-      // If it's a URL, try to extract the path parameter
-      if (localPath.includes('/server/capture/images?path=')) {
-        const urlParams = new URLSearchParams(localPath.split('?')[1]);
-        const pathParam = urlParams.get('path');
-        if (pathParam) {
-          localPath = decodeURIComponent(pathParam);
-        }
-      }
-
-      // Get node and parent names for organized upload
-      const nodeName = selectedNode.data.label || 'unknown';
-      let parentName = 'root';
-      if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
-        const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1];
-        const parentNode = nodes.find(node => node.id === parentId);
-        if (parentNode) {
-          parentName = parentNode.data.label || 'unknown';
-        }
-      }
-
-      // Call the abstract capture upload route that proxies to host
-      const response = await fetch(buildApiUrl('/server/capture/upload-navigation-screenshot'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          source_screenshot_path: localPath,
-          device_model: 'android_mobile', // Could be made dynamic
-          node_name: nodeName,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.success && data.cloudflare_url) {
-          console.log('[@component:NodeSelectionPanel] Successfully uploaded to Cloudflare R2 via host:', data.cloudflare_url);
-          
-          // Update the node with the Cloudflare URL
-          const updatedNodeData = {
-            ...selectedNode.data,
-            screenshot: data.cloudflare_url
-          };
-          
-          onUpdateNode(selectedNode.id, updatedNodeData);
-          
-          console.log('[@component:NodeSelectionPanel] Updated node with Cloudflare URL');
-        } else {
-          console.error('[@component:NodeSelectionPanel] Upload failed:', data.error);
-        }
-      } else {
-        console.error('[@component:NodeSelectionPanel] Upload request failed:', response.status, response.statusText);
-      }
-      
-    } catch (error) {
-      console.error('[@component:NodeSelectionPanel] Error uploading to Cloudflare:', error);
-    }
-  };
 
   return (
     <>
@@ -561,67 +433,19 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               </Button>
             )}
 
-            {/* Screenshot Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Screenshot</Label>
-                <div className="flex gap-2">
-                  {/* Take Screenshot Button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTakeScreenshot}
-                    disabled={!selectedDevice || !isControlActive}
-                    className="text-xs"
-                  >
-                    <CameraIconMUI className="h-3 w-3 mr-1" />
-                    Take
-                  </Button>
-                  
-                  {/* Upload to Cloudflare Button - only show if screenshot exists and not already on Cloudflare */}
-                  {selectedNode.data.screenshot && 
-                   !selectedNode.data.screenshot.includes('.r2.cloudflarestorage.com') && 
-                   !selectedNode.data.screenshot.includes('r2.dev') && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUploadToCloudflare}
-                      className="text-xs"
-                    >
-                      <UploadIcon className="h-3 w-3 mr-1" />
-                      Upload
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              {selectedNode.data.screenshot ? (
-                <div className="space-y-2">
-                  <ScreenshotCapture 
-                    screenshotPath={selectedNode.data.screenshot}
-                    className="w-full max-w-xs mx-auto"
-                  />
-                  
-                  {/* Show Cloudflare status */}
-                  <div className="text-xs text-muted-foreground text-center">
-                    {selectedNode.data.screenshot.includes('.r2.cloudflarestorage.com') || 
-                     selectedNode.data.screenshot.includes('r2.dev') ? (
-                      <span className="text-green-600">📡 Stored on Cloudflare R2</span>
-                    ) : (
-                      <span className="text-orange-600">💾 Stored locally</span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CameraIconMUI className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No screenshot available</p>
-                  <p className="text-xs">Take a screenshot to capture this screen state</p>
-                </div>
-              )}
-            </div>
+            {/* Screenshot button - only shown when device is under control */}
+            {showScreenshotButton && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontSize: '0.75rem', px: 1 }}
+                onClick={() => setShowScreenshotConfirm(true)}
+                startIcon={<CameraIcon fontSize="small" />}
+              >
+                Screenshot
+              </Button>
+            )}
 
             {/* Go To button - only shown for non-root nodes when device is under control */}
             {showGoToButton && (
@@ -667,7 +491,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                     : ''
                 }
               >
-                {isRunningVerification ? 'Running...' : 'Run Verifications'}
+                {isRunningVerifications ? 'Running...' : 'Run Verifications'}
               </Button>
             )}
 
@@ -679,7 +503,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             )}
 
             {/* Linear Progress - shown when running verifications */}
-            {isRunningVerification && (
+            {isRunningVerifications && (
               <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
             )}
 
