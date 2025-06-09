@@ -48,14 +48,6 @@ export function useRemoteConnection(remoteType: RemoteType) {
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
   
-  // Centralized helper to build host URLs with validation
-  const buildHostEndpointUrl = useCallback((endpoint: string) => {
-    if (!selectedHost) {
-      throw new Error('No host selected for remote operation');
-    }
-    return buildHostUrl(selectedHost.id, endpoint);
-  }, [selectedHost, buildHostUrl]);
-  
   // Debug logging for device configuration
   useEffect(() => {
     console.log(`[@hook:useRemoteConnection] Device config for ${remoteType}:`, deviceConfig);
@@ -116,24 +108,29 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
       console.log('[@hook:useRemoteConnection] Sending take-control request to host...');
       
-      // Use abstract controller endpoint directly on host
+      // Use host endpoint for take-control (if available)
       const endpoint = deviceConfig.serverEndpoints.connect;
       if (!endpoint) {
         throw new Error('No connection endpoint available');
       }
 
-      // Call host directly instead of server
-      const hostUrl = buildHostEndpointUrl(endpoint);
-      const response = await fetch(hostUrl, {
+      // All remote endpoints should go to host
+      const requestUrl = buildHostUrl(selectedHost.id, endpoint);
+      console.log('[@hook:useRemoteConnection] Using host endpoint:', requestUrl);
+
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(connectionForm),
+        body: JSON.stringify({
+          ...connectionForm,
+          device_id: selectedHost.id,
+        }),
       });
 
       const result = await response.json();
-      console.log('[@hook:useRemoteConnection] Host response:', result);
+      console.log('[@hook:useRemoteConnection] Response:', result);
 
       if (result.success) {
         console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
@@ -157,7 +154,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } finally {
       setConnectionLoading(false);
     }
-  }, [connectionForm, deviceConfig, selectedHost, buildHostEndpointUrl]);
+  }, [connectionForm, deviceConfig, selectedHost, buildHostUrl]);
 
   const handleReleaseControl = useCallback(async () => {
     if (!deviceConfig || !selectedHost) {
@@ -171,12 +168,20 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
       
-      // Use abstract controller endpoint directly on host
+      // Use host endpoint for release-control (if available)
       const endpoint = deviceConfig.serverEndpoints.disconnect;
       if (endpoint) {
-        const hostUrl = buildHostEndpointUrl(endpoint);
-        await fetch(hostUrl, {
+        const requestUrl = buildHostUrl(selectedHost.id, endpoint);
+        console.log('[@hook:useRemoteConnection] Using host endpoint for release:', requestUrl);
+
+        await fetch(requestUrl, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_id: selectedHost.id,
+          }),
         });
       }
       
@@ -193,9 +198,13 @@ export function useRemoteConnection(remoteType: RemoteType) {
       setConnectionLoading(false);
       console.log('[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled');
     }
-  }, [deviceConfig, selectedHost, buildHostEndpointUrl]);
+  }, [deviceConfig, selectedHost, buildHostUrl]);
 
   const handleScreenshot = useCallback(async () => {
+    if (!selectedHost) {
+      throw new Error('No host selected for screenshot operation');
+    }
+    
     const endpoint = deviceConfig?.serverEndpoints.screenshot;
     if (!endpoint) {
       throw new Error('Screenshot not supported for this device type');
@@ -204,7 +213,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log('[@hook:useRemoteConnection] Taking screenshot...');
       
-      const hostUrl = buildHostEndpointUrl(endpoint);
+      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
       const response = await fetch(hostUrl, {
         method: 'POST',
       });
@@ -222,10 +231,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
-  }, [deviceConfig, buildHostEndpointUrl]);
+  }, [deviceConfig, buildHostUrl, selectedHost]);
 
   // Android Mobile specific: Screenshot + UI dump
   const handleScreenshotAndDumpUI = useCallback(async () => {
+    if (!selectedHost) {
+      throw new Error('No host selected for UI dump operation');
+    }
+    
     const endpoint = deviceConfig?.serverEndpoints.dumpUI;
     if (!endpoint) {
       throw new Error('UI dump not supported for this device type');
@@ -234,7 +247,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements...');
       
-      const hostUrl = buildHostEndpointUrl(endpoint);
+      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
       const response = await fetch(hostUrl, {
         method: 'POST',
       });
@@ -258,10 +271,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot and UI dump error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostEndpointUrl]);
+  }, [deviceConfig, buildHostUrl, selectedHost]);
 
   // Android Mobile specific: Get apps list
   const handleGetApps = useCallback(async () => {
+    if (!selectedHost) {
+      throw new Error('No host selected for apps operation');
+    }
+    
     const endpoint = deviceConfig?.serverEndpoints.getApps;
     if (!endpoint) {
       throw new Error('App listing not supported for this device type');
@@ -270,7 +287,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log('[@hook:useRemoteConnection] Getting installed apps...');
       
-      const hostUrl = buildHostEndpointUrl(endpoint);
+      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
       const response = await fetch(hostUrl, {
         method: 'POST',
       });
@@ -288,10 +305,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Get apps error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostEndpointUrl]);
+  }, [deviceConfig, buildHostUrl, selectedHost]);
 
   // Android Mobile specific: Click UI element
   const handleClickElement = useCallback(async (element: AndroidElement) => {
+    if (!selectedHost) {
+      throw new Error('No host selected for element click operation');
+    }
+    
     const endpoint = deviceConfig?.serverEndpoints.clickElement;
     if (!endpoint) {
       throw new Error('Element clicking not supported for this device type');
@@ -300,7 +321,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log(`[@hook:useRemoteConnection] Clicking element: ${element.id}`);
       
-      const hostUrl = buildHostEndpointUrl(endpoint);
+      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
       const response = await fetch(hostUrl, {
         method: 'POST',
         headers: {
@@ -321,7 +342,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Element click error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostEndpointUrl]);
+  }, [deviceConfig, buildHostUrl, selectedHost]);
 
   // Clear UI elements
   const clearElements = useCallback(() => {
@@ -330,8 +351,8 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, []);
 
   const handleRemoteCommand = useCallback(async (command: string, params: any = {}) => {
-    if (!deviceConfig) {
-      console.error('[@hook:useRemoteConnection] No device config available');
+    if (!deviceConfig || !selectedHost) {
+      console.error('[@hook:useRemoteConnection] No device config or selected host available');
       return;
     }
     
@@ -351,7 +372,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
           params: { package: params.package }
         };
         
-        const hostUrl = buildHostEndpointUrl(endpoint);
+        const hostUrl = buildHostUrl(selectedHost.id, endpoint);
         const response = await fetch(hostUrl, {
           method: 'POST',
           headers: {
@@ -376,7 +397,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
         params: { key: command }
       };
       
-      const hostUrl = buildHostEndpointUrl(endpoint);
+      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
       const response = await fetch(hostUrl, {
         method: 'POST',
         headers: {
@@ -394,7 +415,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } catch (err: any) {
       console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
     }
-  }, [deviceConfig, remoteType, buildHostEndpointUrl]);
+  }, [deviceConfig, remoteType, selectedHost, buildHostUrl]);
 
   // Abstract remote controller methods - Frontend state management only
   const showRemote = useCallback(async () => {
@@ -414,6 +435,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, [remoteType]);
 
   const sendCommand = useCallback(async (command: string, params?: any) => {
+    if (!selectedHost) {
+      console.error('[@hook:useRemoteConnection] No host selected for command');
+      setRemoteState(prev => ({ ...prev, error: 'No host selected' }));
+      return;
+    }
+
     console.log(`[@hook:useRemoteConnection] Sending command: ${command}`, params);
     setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -425,7 +452,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       };
 
       // Call host directly using /host/execute-action
-      const hostUrl = buildHostEndpointUrl('/host/execute-action');
+      const hostUrl = buildHostUrl(selectedHost.id, '/host/execute-action');
       console.log(`[@hook:useRemoteConnection] Calling host directly: ${hostUrl}`);
 
       const response = await fetch(hostUrl, {
@@ -449,7 +476,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } finally {
       setRemoteState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [buildHostEndpointUrl]);
+  }, [selectedHost, buildHostUrl]);
 
   // Convenience methods for common commands
   const pressKey = useCallback(async (key: string) => {
