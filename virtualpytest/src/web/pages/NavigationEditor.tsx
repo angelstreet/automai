@@ -483,8 +483,8 @@ const NavigationEditorContent: React.FC = () => {
         // Show remote UI if device has remote capabilities
         const remoteConfig = getDeviceRemoteConfig(device);
         if (remoteConfig) {
-          console.log('[@component:NavigationEditor] Device has remote capabilities, showing remote UI');
-          remoteConnection.showRemote();
+          console.log('[@component:NavigationEditor] Device has remote capabilities, showing remote UI via server');
+          await remoteConnection.showRemote(); // Call server to show remote
           setIsRemotePanelOpen(true);
         }
         
@@ -505,8 +505,8 @@ const NavigationEditorContent: React.FC = () => {
   const handleReleaseControl = useCallback(async () => {
     console.log('[@component:NavigationEditor] Releasing control');
     
-    // Hide remote UI
-    remoteConnection.hideRemote();
+    // Hide remote UI via server
+    await remoteConnection.hideRemote();
     setIsRemotePanelOpen(false);
     setIsControlActive(false);
     
@@ -517,9 +517,11 @@ const NavigationEditorContent: React.FC = () => {
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {
     if (isRemotePanelOpen) {
+      // Hide remote via server and close panel
       remoteConnection.hideRemote();
       setIsRemotePanelOpen(false);
     } else if (isControlActive) {
+      // Show remote via server and open panel
       remoteConnection.showRemote();
       setIsRemotePanelOpen(true);
     }
@@ -1254,8 +1256,6 @@ const NavigationEditorContent: React.FC = () => {
                 </Box>
                 
                 <CompactAndroidMobile
-                  connectionConfig={androidConnectionConfig}
-                  autoConnect={isControlActive}
                   onDisconnectComplete={handleReleaseControl}
                 />
               </Box>

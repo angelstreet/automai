@@ -35,7 +35,6 @@ export function CompactAndroidMobile({
 
   // Use the simplified remote connection hook
   const {
-    isVisible,
     isLoading,
     error,
     sendCommand,
@@ -70,16 +69,11 @@ export function CompactAndroidMobile({
   // Handle disconnect
   const handleDisconnect = async () => {
     console.log('[@component:CompactAndroidMobile] Disconnecting remote');
-    hideRemote();
+    await hideRemote(); // Hide remote via abstract controller
     if (onDisconnectComplete) {
       onDisconnectComplete();
     }
   };
-
-  // Don't render if not visible
-  if (!isVisible) {
-    return null;
-  }
 
   return (
     <Box sx={{ 
