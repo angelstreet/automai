@@ -19,7 +19,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 client_registration_state = {
     'registered': False,
     'client_id': None,
-    'server_url': None
+    'urls': {}  # Store all URLs built once during registration
 }
 
 # Ping thread for host mode
@@ -124,6 +124,19 @@ def register_host_with_server():
     registration_url = build_server_url('/api/system/register')
     print(f"\n🌐 [HOST] Registration URL: {registration_url}")
     
+    # ✅ BUILD ALL REQUIRED URLs ONCE (centralized approach)
+    server_base_url = build_server_url('')  # Get base URL without endpoint
+    urls = {
+        'registration': registration_url,
+        'ping': build_server_url('/api/system/ping'),
+        'unregister': build_server_url('/api/system/unregister'),
+        'health': build_server_url('/api/system/health')
+    }
+    
+    print(f"🔗 [HOST] Built all server URLs:")
+    for name, url in urls.items():
+        print(f"   {name}: {url}")
+    
     try:
         import socket
         
@@ -204,10 +217,10 @@ def register_host_with_server():
                 registration_response = response.json()
                 print(f"📦 [HOST] Registration response data: {registration_response}")
                 
-                # Store basic registration state
+                # Store basic registration state with centralized URLs
                 client_registration_state['registered'] = True
                 client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['server_url'] = registration_url
+                client_registration_state['urls'] = urls  # ✅ Store all URLs built once
                 
                 # ✅ DIRECTLY STORE THE HOST_DEVICE OBJECT FROM SERVER RESPONSE
                 host_device_object = registration_response.get('host_device')
@@ -356,7 +369,7 @@ def register_host_with_server():
                 # Still mark as registered for basic functionality
                 client_registration_state['registered'] = True
                 client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['server_url'] = registration_url
+                client_registration_state['urls'] = urls  # ✅ Store all URLs built once
                 start_ping_thread()
         else:
             print(f"\n❌ [HOST] Registration failed with status: {response.status_code}")
@@ -388,15 +401,15 @@ def unregister_from_server():
         return
     
     try:
-        server_url = client_registration_state['server_url']
+        unregister_url = client_registration_state['urls'].get('unregister')
         client_id = client_registration_state['client_id']
         
-        if not server_url or not client_id:
-            print(f"⚠️ [HOST] Cannot unregister: missing server URL or host ID")
+        if not unregister_url or not client_id:
+            print(f"⚠️ [HOST] Cannot unregister: missing unregister URL or host ID")
             return
         
         print(f"\n🔌 [HOST] Unregistering from server...")
-        print(f"   Server: {server_url}")
+        print(f"   Unregister URL: {unregister_url}")
         print(f"   Host ID: {client_id[:8]}...")
         
         unregister_data = {
@@ -404,7 +417,7 @@ def unregister_from_server():
         }
         
         response = requests.post(
-            server_url,
+            unregister_url,
             json=unregister_data,
             timeout=5,
             headers={'Content-Type': 'application/json'},
@@ -415,7 +428,7 @@ def unregister_from_server():
             print(f"✅ [HOST] Successfully unregistered from server")
             client_registration_state['registered'] = False
             client_registration_state['client_id'] = None
-            client_registration_state['server_url'] = None
+            client_registration_state['urls'] = {}
         else:
             print(f"⚠️ [HOST] Unregistration failed with status: {response.status_code}")
             try:
@@ -448,11 +461,11 @@ def start_ping_thread():
                     print(f"⚠️ [PING] Host not registered, stopping ping thread")
                     break
                 
-                server_url = client_registration_state['server_url']
+                ping_url = client_registration_state['urls'].get('ping')
                 client_id = client_registration_state['client_id']
                 
-                if not server_url or not client_id:
-                    print(f"⚠️ [PING] Missing server URL or client ID, stopping ping thread")
+                if not ping_url or not client_id:
+                    print(f"⚠️ [PING] Missing ping URL or client ID, stopping ping thread")
                     break
                 
                 # Prepare ping data
@@ -464,7 +477,7 @@ def start_ping_thread():
                 
                 # Send ping to server
                 response = requests.post(
-                    server_url,
+                    ping_url,
                     json=ping_data,
                     timeout=10,
                     headers={'Content-Type': 'application/json'},
