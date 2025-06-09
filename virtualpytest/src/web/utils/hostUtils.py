@@ -232,15 +232,7 @@ def register_host_with_server():
                         print(f"   Available configs: {list(controller_configs.keys())}")
                         
                         try:
-                            # Import controller factory
-                            import sys
-                            
-                            # Add controllers path
-                            current_dir = os.path.dirname(os.path.abspath(__file__))
-                            controllers_path = os.path.join(os.path.dirname(os.path.dirname(current_dir)), 'controllers')
-                            if controllers_path not in sys.path:
-                                sys.path.insert(0, controllers_path)
-                            
+                            # Controllers should be importable since app_host.py already set up paths
                             from controllers import ControllerFactory
                             
                             controller_objects = {}
