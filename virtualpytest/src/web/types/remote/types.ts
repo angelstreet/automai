@@ -22,23 +22,19 @@ export interface TestResult {
 }
 
 // Session types for different controllers (simplified - no SSH fields)
+export interface RemoteSession {
+  connected: boolean;
+  connectionInfo?: string; // Generic connection info (IP for Android, device path for IR, etc.)
+}
+
+// Legacy types for backward compatibility - deprecated
+/** @deprecated Use RemoteSession instead */
 export interface AndroidTVSession {
   connected: boolean;
   device_ip: string;
 }
 
-export interface IRRemoteSession {
-  connected: boolean;
-  device_path: string;
-  protocol: string;
-}
-
-export interface BluetoothRemoteSession {
-  connected: boolean;
-  device_address: string;
-  device_name: string;
-}
-
+/** @deprecated Use RemoteSession instead */
 export interface AndroidMobileSession {
   connected: boolean;
   device_ip: string;

@@ -35,12 +35,10 @@ export interface RemoteDeviceConfig {
   hasOverlay: boolean;
   // Abstract controller endpoints
   serverEndpoints: {
-    defaults?: string;  // Optional - removed for abstract controllers
     connect: string;
     disconnect: string;
     screenshot?: string;
     command: string;
-    config?: string;
     // Android Mobile specific endpoints
     dumpUI?: string;
     getApps?: string;
