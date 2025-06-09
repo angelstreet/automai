@@ -114,6 +114,29 @@ def take_control():
                 
                 print(f"[@route:take_control] Using remote controller: {type(remote_controller).__name__}")
                 
+                # IMPORTANT: Connect to the remote controller first before checking status
+                print(f"[@route:take_control] Connecting to remote controller...")
+                if not remote_controller.connect():
+                    print(f"[@route:take_control] Failed to connect to remote controller")
+                    return jsonify({
+                        'success': False,
+                        'status': 'remote_connection_failed',
+                        'error': f'Host ADB connection failed: Failed to connect to remote controller',
+                        'error_type': 'adb_connection_error',
+                        'device_model': device_model,
+                        'av_status': av_status,
+                        'adb_details': {
+                            'device_ip': device_ip,
+                            'device_port': device_port,
+                            'android_device_id': f'{device_ip}:{device_port}',
+                            'adb_status': 'connection_failed',
+                            'device_status': 'unknown'
+                        }
+                    })
+                
+                print(f"[@route:take_control] Successfully connected to remote controller")
+                
+                # Now check the status after connecting
                 remote_status = remote_controller.get_status()
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
                 
