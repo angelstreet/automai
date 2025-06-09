@@ -27,7 +27,6 @@ import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
 import { getVerificationEditorLayout } from '../../../config/layoutConfig';
-import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ScreenDefinitionEditorProps {
   /** Complete host+device object containing all configuration */
@@ -115,9 +114,6 @@ export function ScreenDefinitionEditor({
   sx = {},
   deviceConnection,
 }: ScreenDefinitionEditorProps) {
-  // Use registration context for centralized URL management
-  const { buildServerUrl, buildHostUrl } = useRegistration();
-
   // Extract everything from selectedHostDevice
   const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
   const deviceConfig = selectedHostDevice?.controller_configs;
@@ -406,7 +402,7 @@ export function ScreenDefinitionEditor({
     }
   };
 
-  // Take screenshot using AV controller
+  // Take screenshot using controller directly - no control logic needed
   const handleTakeScreenshot = async () => {
     if (!isConnected || !selectedHostDevice) return;
     
@@ -414,33 +410,21 @@ export function ScreenDefinitionEditor({
       setIsScreenshotLoading(true);
       setViewMode('screenshot');
       
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot via remote controller...');
+      console.log('[@component:ScreenDefinitionEditor] Taking screenshot using controller directly...');
       
-      // Use host remote controller screenshot endpoint directly
-      const hostId = selectedHostDevice.host_id || selectedHostDevice.id;
-      if (!hostId) {
-        console.error('[@component:ScreenDefinitionEditor] No host ID found in selectedHostDevice');
-        return;
-      }
+      // Get the controller directly from selectedHostDevice - take control already done
+      const controllers = selectedHostDevice.controller_objects;
+      const remoteController = controllers?.remote;
       
-      const hostUrl = buildHostUrl(hostId, '/host/remote/screenshot');
-      console.log('[@component:ScreenDefinitionEditor] Calling host screenshot endpoint:', hostUrl);
+      // Call take_screenshot directly on the controller
+      const screenshot = remoteController.take_screenshot();
       
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.screenshot) {
+      if (screenshot) {
         console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully');
-        setLastScreenshotPath(result.screenshot);
+        setLastScreenshotPath(screenshot);
         setStreamStatus('stopped');
       } else {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);
+        console.error('[@component:ScreenDefinitionEditor] Screenshot failed - no data returned');
       }
       
     } catch (error) {
@@ -464,12 +448,12 @@ export function ScreenDefinitionEditor({
       setTotalFrames(0);
       setSavedFrameCount(0);
       
-      // Log the stream URL that will be used
-      if (avConfig?.stream_url) {
-        console.log(`[@component:ScreenDefinitionEditor] Stream URL: ${avConfig.stream_url}`);
-      } else if (avConfig?.host_ip) {
-        const streamUrl = `https://${avConfig.host_ip}:444/stream/output.m3u8`;
-        console.log(`[@component:ScreenDefinitionEditor] Stream URL: ${streamUrl}`);
+      // Log the stream URL from the remote controller
+      const streamUrl = getStreamUrl();
+      if (streamUrl) {
+        console.log('[@component:ScreenDefinitionEditor] Stream URL from controller:', streamUrl);
+      } else {
+        console.log('[@component:ScreenDefinitionEditor] No stream URL available from controller');
       }
       
       console.log('[@component:ScreenDefinitionEditor] Stream player will reload automatically');
@@ -523,17 +507,24 @@ export function ScreenDefinitionEditor({
   // Drag selection state
   const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Compute the real stream URL based on config
+  // Get stream URL from remote controller - no manual building
   const getStreamUrl = useCallback(() => {
-    if (avConfig?.stream_url) {
-      // Use the configured stream URL if available
-      return avConfig.stream_url;
-    } else if (avConfig?.host_ip) {
-      // Try HTTPS URL first, but note that it might need to be HTTP depending on the server config
-      return `https://${avConfig.host_ip}:444/stream/output.m3u8`;
+    
+    // Get the controller directly from selectedHostDevice
+    const controllers = selectedHostDevice.controller_objects;
+    const remoteController = controllers?.remote;
+    
+    // Get stream URL from the controller
+    const streamUrl = remoteController.get_stream_url?.() || remoteController.stream_url;
+    
+    if (streamUrl) {
+      console.log('[@component:ScreenDefinitionEditor] Got stream URL from remote controller:', streamUrl);
+      return streamUrl;
+    } else {
+      console.log('[@component:ScreenDefinitionEditor] No stream URL available from remote controller');
+      return undefined;
     }
-    return undefined;
-  }, [avConfig]);
+  }, [selectedHostDevice]);
 
   // Initialize verification image state
   const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
