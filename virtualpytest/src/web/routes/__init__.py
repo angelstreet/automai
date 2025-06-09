@@ -4,39 +4,6 @@ Routes package for VirtualPyTest Web API
 This package contains organized route modules for the Flask application.
 """
 
-import sys
-import os
-
-# Add necessary paths for imports
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(current_dir)
-src_dir = os.path.dirname(web_dir)
-parent_dir = os.path.dirname(src_dir)
-
-print(f"[@routes:__init__] Setting up import paths...")
-print(f"[@routes:__init__] Current dir: {current_dir}")
-print(f"[@routes:__init__] Web dir: {web_dir}")
-print(f"[@routes:__init__] Src dir: {src_dir}")
-
-# Add paths to sys.path
-paths_to_add = [
-    os.path.join(web_dir, 'utils'),           # /src/web/utils
-    os.path.join(web_dir, 'cache'),           # /src/web/cache
-    os.path.join(web_dir, 'services'),        # /src/web/services
-    os.path.join(parent_dir, 'utils'),        # /src/utils  
-    src_dir,                                  # /src
-    os.path.join(parent_dir, 'controllers'),  # /controllers
-]
-
-for path in paths_to_add:
-    if path not in sys.path:
-        sys.path.insert(0, path)
-        print(f"[@routes:__init__] Added to sys.path: {path}")
-    else:
-        print(f"[@routes:__init__] Already in sys.path: {path}")
-
-print(f"[@routes:__init__] Starting route imports...")
-
 from flask import Flask
 from flask_cors import CORS
 

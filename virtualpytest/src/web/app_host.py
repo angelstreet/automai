@@ -30,7 +30,15 @@ import threading
 import signal
 import requests
 
-# Add necessary paths for imports (same as routes/__init__.py)
+# Import web package first to ensure path setup happens early
+try:
+    import web
+    print(f"✅ [HOST] Web package imported successfully - paths are now set up")
+except ImportError as e:
+    print(f"⚠️ [HOST] Could not import web package: {e}")
+    print(f"   Falling back to manual path setup...")
+
+# Add necessary paths for imports (fallback if web package import failed)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 web_dir = current_dir
 src_dir = os.path.dirname(web_dir)
