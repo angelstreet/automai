@@ -13,23 +13,15 @@ import { AndroidElement } from '../../types/remote/types';
 import { BaseConnectionConfig } from '../../types/remote/remoteTypes';
 import { getRemoteLayout } from '../../../config/layoutConfig';
 
-interface CompactAndroidMobileProps {
-  /** Optional pre-configured connection parameters */
-  connectionConfig?: BaseConnectionConfig;
-  /** Whether to auto-connect on mount if config is provided */
-  autoConnect?: boolean;
-  /** Custom styling */
-  sx?: any;
+export function CompactAndroidMobile({
+  onDisconnectComplete,
+  sx = {},
+}: {
   /** Callback when disconnect is complete */
   onDisconnectComplete?: () => void;
-}
-
-export function CompactAndroidMobile({
-  connectionConfig,
-  autoConnect = false,
-  sx = {},
-  onDisconnectComplete,
-}: CompactAndroidMobileProps) {
+  /** Custom styling */
+  sx?: any;
+}) {
   // UI state
   const [isDumpingUI, setIsDumpingUI] = useState(false);
   const [dumpError, setDumpError] = useState<string | null>(null);
@@ -45,60 +37,26 @@ export function CompactAndroidMobile({
   
   // Track if we've already initialized to prevent duplicate calls
   const isInitializedRef = useRef(false);
-  // Track if we've already attempted auto-connection to prevent retries
-  const connectionAttemptedRef = useRef(false);
 
   // Get layout configuration for android-mobile
   const remoteLayout = getRemoteLayout('android-mobile');
 
   // Use the extended remote connection hook for Android mobile
+  // Since the device is already registered and controllers instantiated,
+  // the remote should work immediately without connection setup
   const {
     session,
-    connectionForm,
-    setConnectionForm,
     connectionLoading,
     connectionError,
     androidElements,
     androidApps,
     androidScreenshot,
-    handleTakeControl,
-    handleReleaseControl,
     handleRemoteCommand,
     handleScreenshotAndDumpUI,
     handleClickElement,
     handleGetApps,
     clearElements,
-    fetchDefaultValues,
   } = useRemoteConnection('android-mobile');
-
-  // Initialize connection form with provided config or defaults
-  useEffect(() => {
-    if (connectionConfig) {
-      console.log('[@component:CompactAndroidMobile] Setting connection form from provided config:', connectionConfig);
-      setConnectionForm({
-        device_ip: connectionConfig.device_ip || '',
-        device_port: connectionConfig.device_port || '5555'
-      });
-    }
-  }, [connectionConfig, setConnectionForm]);
-
-  // Auto-connect when config is provided
-  useEffect(() => {
-    const hasRequiredFields = connectionForm.device_ip &&
-                              connectionForm.device_port;
-                             
-    if (autoConnect && 
-        connectionConfig && 
-        !session.connected && 
-        !connectionLoading && 
-        isInitializedRef.current && 
-        hasRequiredFields && 
-        !connectionAttemptedRef.current) {
-      console.log('[@component:CompactAndroidMobile] Auto-connecting to Android Mobile...');
-      handleTakeControl();
-      connectionAttemptedRef.current = true;
-    }
-  }, [autoConnect, connectionConfig, session.connected, connectionLoading, handleTakeControl, connectionForm]);
 
   // Auto-dump function that triggers after UI interactions
   const scheduleAutoDump = () => {
@@ -164,7 +122,7 @@ export function CompactAndroidMobile({
     // Note: We're NOT calling clearElements() here so the dropdown selection is preserved
   };
 
-  // Handle disconnect - updated to use abstract controller
+  // Handle disconnect - updated to work autonomously
   const handleDisconnect = async () => {
     try {
       // Clear overlay when disconnecting
@@ -176,17 +134,16 @@ export function CompactAndroidMobile({
       setShowOverlay(false);
       setDumpError(null);
       
-      // Release control first (this handles SSH disconnection and cleanup)
-      console.log('[@component:CompactAndroidMobile] Releasing control before disconnect');
-      await handleReleaseControl();
+      // Since the remote is autonomous, just call parent disconnect callback
+      console.log('[@component:CompactAndroidMobile] Disconnecting autonomous remote');
       
-      // Call parent disconnect callback after successful release
+      // Call parent disconnect callback
       if (onDisconnectComplete) {
         onDisconnectComplete();
       }
     } catch (error) {
       console.error('[@component:CompactAndroidMobile] Error during disconnect:', error);
-      // Still call parent disconnect even if release control fails
+      // Still call parent disconnect even if there's an error
       if (onDisconnectComplete) {
         onDisconnectComplete();
       }
@@ -200,115 +157,14 @@ export function CompactAndroidMobile({
     }
   }, [androidScreenshot]);
 
-  // Auto-show overlay when elements are available
+  // Mark as initialized on mount
   useEffect(() => {
-    console.log(`[@component:CompactAndroidMobile] Elements updated: ${androidElements.length} elements`);
-    if (androidElements.length > 0) {
-      console.log(`[@component:CompactAndroidMobile] Auto-showing overlay for ${androidElements.length} elements`);
-      setShowOverlay(true);
-    }
-  }, [androidElements]);
+    isInitializedRef.current = true;
+    console.log('[@component:CompactAndroidMobile] Autonomous remote initialized');
+  }, []);
 
-  // For compact view, show loading or remote directly
-  if (!session.connected) {
-    // If auto-connecting or has config, show minimal loading state
-    if (autoConnect && connectionConfig) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          height: '100%',
-          ...sx 
-        }}>
-          {connectionLoading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="info.main">
-                Connecting...
-              </Typography>
-            </Box>
-          ) : connectionError ? (
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2" color="error" gutterBottom>
-                Connection Failed
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={handleTakeControl}
-                disabled={connectionLoading}
-                size="small"
-              >
-                Retry
-              </Button>
-            </Box>
-          ) : (
-            <Typography variant="body2" color="textSecondary">
-              Initializing...
-            </Typography>
-          )}
-        </Box>
-      );
-    }
-    
-    // Manual connection display (when no auto-connect)
-    return (
-      <Box sx={{ 
-        p: 2, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        height: '100%',
-        ...sx 
-      }}>
-        <Typography variant="body2" color="textSecondary" gutterBottom>
-          Android Mobile Not Connected
-        </Typography>
-        
-        {connectionLoading ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <CircularProgress size={16} />
-            <Typography variant="caption" color="info.main">
-              Connecting...
-            </Typography>
-          </Box>
-        ) : connectionConfig ? (
-          <Button
-            variant="contained"
-            onClick={handleTakeControl}
-            disabled={connectionLoading}
-            size="small"
-            sx={{ mb: 2 }}
-          >
-            Connect
-          </Button>
-        ) : (
-          <Typography variant="caption" color="warning.main" textAlign="center" sx={{ mb: 2 }}>
-            No device configuration
-          </Typography>
-        )}
-        
-        {connectionError && (
-          <Box sx={{ 
-            mt: 1, 
-            p: 1, 
-            bgcolor: 'error.light', 
-            borderRadius: 1, 
-            maxWidth: '100%',
-            wordBreak: 'break-word'
-          }}>
-            <Typography variant="caption" color="error" textAlign="center">
-              {connectionError}
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
-  }
-
-  // Connected state - Use AndroidMobileCore with compact style
+  // Since the remote is autonomous and controllers are already instantiated,
+  // we don't need connection checks - just render the remote interface
   return (
     <Box sx={{ 
       ...sx,
@@ -316,72 +172,36 @@ export function CompactAndroidMobile({
       flexDirection: 'column', 
       height: '100%' 
     }}>
-      {/* Connection Status */}
-      {!session.connected ? (
-        <Box sx={{ 
-          p: 2, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          gap: 2,
-          flex: 1,
-          justifyContent: 'center'
-        }}>
-          <Typography variant="h6" textAlign="center">
-            {connectionConfig ? 'Auto-connecting...' : 'No Connection'}
-          </Typography>
-          
-          {connectionConfig ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2">
-                Connecting to Android Mobile
-              </Typography>
-            </Box>
-          ) : (
-            <Typography variant="body2" color="textSecondary" textAlign="center">
-              No device configuration provided for auto-connect
-            </Typography>
-          )}
-
-          {connectionError && (
-            <Alert severity="error" sx={{ width: '100%' }}>
-              {connectionError}
-            </Alert>
-          )}
-        </Box>
-      ) : (
-        <Box sx={{ 
-          p: 2, 
-          flex: 1, 
-          overflow: 'auto',
-          // Compact-specific styling - maxWidth and centered
-          maxWidth: `${remoteLayout.compactMaxWidth}px`,
-          margin: '0 auto',
-          width: '100%'
-        }}>
-          <AndroidMobileCore
-            session={session}
-            connectionLoading={connectionLoading}
-            connectionError={connectionError}
-            dumpError={dumpError}
-            androidApps={androidApps}
-            androidElements={androidElements}
-            isDumpingUI={isDumpingUI}
-            selectedApp={selectedApp}
-            selectedElement={selectedElement}
-            setSelectedApp={setSelectedApp}
-            setSelectedElement={setSelectedElement}
-            handleGetApps={handleGetApps}
-            handleDumpUIWithLoading={handleDumpUIWithLoading}
-            clearElements={handleClearOverlay}
-            handleRemoteCommand={handleRemoteCommand}
-            handleOverlayElementClick={handleOverlayElementClick}
-            onDisconnect={handleDisconnect}
-            handleReleaseControl={handleReleaseControl}
-          />
-        </Box>
-      )}
+      <Box sx={{ 
+        p: 2, 
+        flex: 1, 
+        overflow: 'auto',
+        // Compact-specific styling - maxWidth and centered
+        maxWidth: `${remoteLayout.compactMaxWidth}px`,
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        <AndroidMobileCore
+          session={{ connected: true, device_ip: 'autonomous' }} // Always connected for autonomous remote
+          connectionLoading={connectionLoading}
+          connectionError={connectionError}
+          dumpError={dumpError}
+          androidApps={androidApps}
+          androidElements={androidElements}
+          isDumpingUI={isDumpingUI}
+          selectedApp={selectedApp}
+          selectedElement={selectedElement}
+          setSelectedApp={setSelectedApp}
+          setSelectedElement={setSelectedElement}
+          handleGetApps={handleGetApps}
+          handleDumpUIWithLoading={handleDumpUIWithLoading}
+          clearElements={handleClearOverlay}
+          handleRemoteCommand={handleRemoteCommand}
+          handleOverlayElementClick={handleOverlayElementClick}
+          onDisconnect={handleDisconnect}
+          handleReleaseControl={handleDisconnect} // Use same disconnect handler
+        />
+      </Box>
 
       {/* AndroidMobileOverlay - positioned outside */}
       {showOverlay && androidElements.length > 0 && (

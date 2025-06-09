@@ -1294,7 +1294,7 @@ const NavigationEditorContent: React.FC = () => {
                 {remoteConfig.type === 'android_tv' ? (
                   <CompactRemote
                     remoteType="android-tv"
-                    connectionConfig={androidConnectionConfig}
+                    connectionConfig={androidConnectionConfig || undefined}
                     autoConnect={isControlActive}
                     showScreenshot={false}
                     onDisconnectComplete={handleReleaseControl}
@@ -1302,14 +1302,14 @@ const NavigationEditorContent: React.FC = () => {
                 ) : remoteConfig.type === 'ir_remote' ? (
                   <CompactRemote
                     remoteType="ir"
-                    connectionConfig={irConnectionConfig}
+                    connectionConfig={(irConnectionConfig || undefined) as any}
                     autoConnect={isControlActive}
                     onDisconnectComplete={handleReleaseControl}
                   />
                 ) : remoteConfig.type === 'bluetooth_remote' ? (
                   <CompactRemote
                     remoteType="bluetooth"
-                    connectionConfig={bluetoothConnectionConfig}
+                    connectionConfig={(bluetoothConnectionConfig || undefined) as any}
                     autoConnect={isControlActive}
                     onDisconnectComplete={handleReleaseControl}
                   />
