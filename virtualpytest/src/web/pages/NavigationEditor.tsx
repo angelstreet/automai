@@ -146,17 +146,18 @@ const NavigationEditorContent: React.FC = () => {
   // Get the device API service
   const deviceApi = useDeviceApi();
   
-  // Use registration context for centralized URL management and host data
+  // Use registration context for centralized URL management
   const { 
     buildApiUrl, 
     buildServerUrl,
+    buildHostUrl,
     availableHosts, 
     selectedHost, 
     setAvailableHosts, 
     setSelectedHost,
     selectHostById,
-    buildHostUrl,
-    buildNginxUrl 
+    buildNginxUrl,
+    selectedHost: registeredHost,
   } = useRegistration();
   
   // Basic remote control state
@@ -573,8 +574,14 @@ const NavigationEditorContent: React.FC = () => {
 
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
-      // Use abstract capture controller
-      const screenshotResponse = await fetch(buildServerUrl('/server/capture/screenshot'), {
+      // Use host AV controller screenshot endpoint directly
+      if (!selectedHost) {
+        console.error('[@component:NavigationEditor] No host selected for screenshot operation');
+        return;
+      }
+      
+      const hostUrl = buildHostUrl(selectedHost.id, '/host/av/screenshot');
+      const screenshotResponse = await fetch(hostUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -589,13 +596,13 @@ const NavigationEditorContent: React.FC = () => {
       if (screenshotResponse.ok) {
         const screenshotData = await screenshotResponse.json();
         if (screenshotData.success) {
-          // Create updated node with screenshot
-          const screenshotUrl = screenshotData.screenshot_path;
+          // Create updated node with screenshot - use host URL for image serving
+          const screenshotUrl = screenshotData.screenshot;
           const updatedNode = {
             ...selectedNode,
             data: {
               ...selectedNode.data,
-              screenshot: buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotUrl)}`)
+              screenshot: `data:image/png;base64,${screenshotUrl}` // Host returns base64 screenshot
             }
           };
           
@@ -616,7 +623,7 @@ const NavigationEditorContent: React.FC = () => {
     } catch (error) {
       console.error('[@component:NavigationEditor] Error taking screenshot:', error);
     }
-  }, [selectedDevice, isControlActive, selectedNode, selectedDeviceData, nodes, buildServerUrl, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges]);
+  }, [selectedDevice, isControlActive, selectedNode, selectedDeviceData, nodes, buildServerUrl, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges, selectedHost, buildHostUrl]);
 
   // Handle verification execution
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {

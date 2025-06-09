@@ -62,7 +62,7 @@ export function VideoCapture({
   sx = {}
 }: VideoCaptureProps) {
   // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
+  const { buildServerUrl, buildHostUrl, selectedHost } = useRegistration();
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentValue, setCurrentValue] = useState(currentFrame);
@@ -227,7 +227,7 @@ export function VideoCapture({
       return screenshotPath;
     }
     
-    // For file paths, use centralized server URL building
+    // For file paths, use host endpoints for controller-generated images
     const timestamp = new Date().getTime();
     let imageUrl: string;
     
@@ -238,18 +238,23 @@ export function VideoCapture({
       return '';
     }
     
-    // Use centralized buildServerUrl for all image requests
-    if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
-      // Screenshot images
-      imageUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
-    } else {
-      // General images
-      imageUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}&t=${timestamp}`);
+    // Use host endpoints for controller-generated images
+    if (!selectedHost) {
+      console.error(`[@component:VideoCapture] No host selected for image serving`);
+      return '';
     }
     
-    console.log(`[@component:VideoCapture] Generated image URL: ${imageUrl}`);
+    if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
+      // Screenshot images - use host AV controller image serving
+      imageUrl = buildHostUrl(selectedHost.id, `/host/av/images/screenshot/${filename}?t=${timestamp}`);
+    } else {
+      // General images - use host AV controller image serving
+      imageUrl = buildHostUrl(selectedHost.id, `/host/av/images?path=${encodeURIComponent(screenshotPath)}&t=${timestamp}`);
+    }
+    
+    console.log(`[@component:VideoCapture] Generated host image URL: ${imageUrl}`);
     return imageUrl;
-  }, [capturedImages, currentValue, buildServerUrl]);
+  }, [capturedImages, currentValue, buildHostUrl, selectedHost]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = capturedImages.length > 0 && onAreaSelected && imageRef.current;

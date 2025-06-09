@@ -116,7 +116,7 @@ export function ScreenDefinitionEditor({
   deviceConnection,
 }: ScreenDefinitionEditorProps) {
   // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
+  const { buildServerUrl, buildHostUrl } = useRegistration();
 
   // Extract everything from selectedHostDevice
   const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
@@ -414,24 +414,30 @@ export function ScreenDefinitionEditor({
       setIsScreenshotLoading(true);
       setViewMode('screenshot');
       
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot via AV controller...');
+      console.log('[@component:ScreenDefinitionEditor] Taking screenshot via remote controller...');
       
-      // Use abstract AV controller screenshot endpoint
-      const response = await fetch('/server/av/screenshot', {
+      // Use host remote controller screenshot endpoint directly
+      const hostId = selectedHostDevice.host_id || selectedHostDevice.id;
+      if (!hostId) {
+        console.error('[@component:ScreenDefinitionEditor] No host ID found in selectedHostDevice');
+        return;
+      }
+      
+      const hostUrl = buildHostUrl(hostId, '/host/remote/screenshot');
+      console.log('[@component:ScreenDefinitionEditor] Calling host screenshot endpoint:', hostUrl);
+      
+      const response = await fetch(hostUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          host_device: selectedHostDevice // Pass the complete host+device object
-        }),
       });
       
       const result = await response.json();
       
-      if (result.success && result.screenshot_url) {
-        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', result.screenshot_url);
-        setLastScreenshotPath(result.screenshot_url);
+      if (result.success && result.screenshot) {
+        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully');
+        setLastScreenshotPath(result.screenshot);
         setStreamStatus('stopped');
       } else {
         console.error('[@component:ScreenDefinitionEditor] Screenshot failed:', result.error);

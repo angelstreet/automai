@@ -45,7 +45,6 @@ export function RemotePanel({
   // Screenshot UI state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
-  const [screenshot, setScreenshot] = useState<string | null>(null);
 
   // Connection form state
   const [connectionForm, setConnectionForm] = useState({
@@ -68,6 +67,8 @@ export function RemotePanel({
     showRemote,
     hideRemote,
     sendCommand,
+    handleScreenshot,
+    androidScreenshot,
   } = useRemoteConnection(remoteType);
 
   // Auto-connect on mount if requested
@@ -128,7 +129,6 @@ export function RemotePanel({
       console.log(`[@component:RemotePanel] Releasing control for ${remoteType}`);
       await hideRemote(); // Hide remote via abstract controller
       setIsConnected(false);
-      setScreenshot(null);
       setScreenshotError(null);
       
       if (onDisconnectComplete) {
@@ -139,7 +139,7 @@ export function RemotePanel({
     }
   };
 
-  // Handle screenshot
+  // Handle screenshot using the hook's method
   const handleScreenshotClick = async () => {
     if (!showScreenshot) return;
     
@@ -149,22 +149,10 @@ export function RemotePanel({
     try {
       console.log(`[@component:RemotePanel] Taking screenshot for ${remoteType}`);
       
-      const response = await fetch(buildServerUrl('/server/capture/screenshot'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_model: remoteType.replace('-', '_'),
-          upload_to_cloudflare: false,
-        }),
-      });
-
-      const data = await response.json();
+      // Use the hook's handleScreenshot method which correctly calls host endpoints
+      await handleScreenshot();
       
-      if (data.success && data.screenshot_base64) {
-        setScreenshot(data.screenshot_base64);
-      } else {
-        throw new Error(data.message || 'Failed to take screenshot');
-      }
+      console.log(`[@component:RemotePanel] Screenshot taken successfully for ${remoteType}`);
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to take screenshot';
       setScreenshotError(errorMessage);
@@ -290,9 +278,9 @@ export function RemotePanel({
                   msUserSelect: 'none'
                 }}
               >
-                {screenshot ? (
+                {androidScreenshot ? (
                   <img 
-                    src={`data:image/png;base64,${screenshot}`} 
+                    src={`data:image/png;base64,${androidScreenshot}`} 
                     alt={`${remoteType} Screenshot`}
                     style={{ 
                       width: '100%',

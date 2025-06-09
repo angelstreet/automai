@@ -58,7 +58,7 @@ export function HDMIStreamPanel({
   sx = {}
 }: HDMIStreamPanelProps) {
   // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
+  const { buildServerUrl, buildHostUrl, selectedHost } = useRegistration();
 
   // Connection and streaming state
   const [isConnecting, setIsConnecting] = useState(false);
@@ -106,7 +106,12 @@ export function HDMIStreamPanel({
     try {
       console.log('[@component:HDMIStreamPanel] Starting AV controller connection...');
       
-      const response = await fetch(buildServerUrl('/server/av/connect'), {
+      if (!selectedHost) {
+        throw new Error('No host selected for AV controller connection');
+      }
+      
+      const hostUrl = buildHostUrl(selectedHost.id, '/host/av/connect');
+      const response = await fetch(hostUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +156,13 @@ export function HDMIStreamPanel({
 
     try {
       console.log('[@component:HDMIStreamPanel] Disconnecting AV controller...');
-      const response = await fetch(buildServerUrl('/server/av/disconnect'), {
+      
+      if (!selectedHost) {
+        throw new Error('No host selected for AV controller disconnection');
+      }
+      
+      const hostUrl = buildHostUrl(selectedHost.id, '/host/av/disconnect');
+      const response = await fetch(hostUrl, {
             method: 'POST',
       });
       

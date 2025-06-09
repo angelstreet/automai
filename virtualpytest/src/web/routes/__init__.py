@@ -24,11 +24,9 @@ def register_routes(app: Flask, mode='server'):
     # =====================================================
     from .common_core_routes import core_bp
     from .common_controller_routes import controller_bp
-    from .common_audiovideo_routes import audiovideo_bp
     
     app.register_blueprint(core_bp)
     app.register_blueprint(controller_bp)
-    app.register_blueprint(audiovideo_bp)
     
     if mode == 'server':
         # =====================================================
@@ -120,6 +118,7 @@ def register_routes(app: Flask, mode='server'):
         from .host_verification_execution_routes import verification_execution_host_bp
         from .host_control_routes import host_control_bp
         from .host_remote_routes import host_remote_bp
+        from .host_av_routes import host_av_bp
         
         # Host-side verification endpoints (actual execution)
         app.register_blueprint(verification_image_host_bp)
@@ -132,6 +131,9 @@ def register_routes(app: Flask, mode='server'):
         
         # Host-side remote routes (direct remote control)
         app.register_blueprint(host_remote_bp)
+        
+        # Host-side AV routes (audio/video controller operations)
+        app.register_blueprint(host_av_bp)
         
         print(f"[@routes:register_routes] HOST routes registered successfully")
         
