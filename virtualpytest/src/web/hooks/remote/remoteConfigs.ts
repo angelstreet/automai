@@ -12,9 +12,7 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     disconnect: '/server/control/release-control',
     screenshot: '/server/remote/screenshot',  // Abstract remote controller
     command: '/server/remote/command',        // Abstract remote controller
-  },
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: []
+  }
 };
 
 // Android Mobile configuration - uses abstract remote controller
@@ -32,9 +30,7 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     dumpUI: '/server/remote/screenshot-and-dump-ui',  // Abstract remote controller
     getApps: '/server/remote/get-apps',               // Abstract remote controller
     clickElement: '/server/remote/click-element'      // Abstract remote controller
-  },
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: []
+  }
 };
 
 // IR Remote configuration - uses abstract remote controller
@@ -48,9 +44,7 @@ export const IR_CONFIG: RemoteDeviceConfig = {
     connect: '/server/remote/connect',      // Abstract remote controller
     disconnect: '/server/remote/disconnect', // Abstract remote controller
     command: '/server/remote/command',      // Abstract remote controller
-  },
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: []
+  }
 };
 
 // Bluetooth Remote configuration - uses abstract remote controller
@@ -64,9 +58,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
     connect: '/server/remote/connect',      // Abstract remote controller
     disconnect: '/server/remote/disconnect', // Abstract remote controller
     command: '/server/remote/command',      // Abstract remote controller
-  },
-  // No connection fields needed - abstract controller handles everything
-  connectionFields: []
+  }
 };
 
 // Configuration registry (USB_POWER_CONFIG moved to power controller)
