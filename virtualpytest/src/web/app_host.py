@@ -24,39 +24,36 @@ Environment Variables Required (in .env.host file):
 
 import sys
 import os
-import time
-import atexit
-import threading
-import signal
-import requests
 
-# Import web package first to ensure path setup happens early
-try:
-    import web
-    print(f"✅ [HOST] Web package imported successfully - paths are now set up")
-except ImportError as e:
-    print(f"⚠️ [HOST] Could not import web package: {e}")
-    print(f"   Falling back to manual path setup...")
+# CRITICAL: Set up import paths FIRST, before any other imports
+print(f"[@host:__init__] Setting up import paths for host application...")
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
+src_dir = os.path.dirname(current_dir)                    # /src
+parent_dir = os.path.dirname(src_dir)                     # /
 
-# Add necessary paths for imports (fallback if web package import failed)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = current_dir
-src_dir = os.path.dirname(web_dir)
-parent_dir = os.path.dirname(src_dir)
-
-# Add paths to sys.path
+# Add paths to sys.path for the entire application
 paths_to_add = [
-    os.path.join(web_dir, 'utils'),           # /src/web/utils
-    os.path.join(web_dir, 'cache'),           # /src/web/cache
-    os.path.join(web_dir, 'services'),        # /src/web/services
-    os.path.join(parent_dir, 'utils'),        # /src/utils  
-    src_dir,                                  # /src
-    os.path.join(parent_dir, 'controllers'),  # /controllers
+    os.path.join(current_dir, 'utils'),           # /src/web/utils
+    os.path.join(current_dir, 'cache'),           # /src/web/cache
+    os.path.join(current_dir, 'services'),        # /src/web/services
+    os.path.join(src_dir, 'utils'),               # /src/utils  
+    src_dir,                                      # /src
+    os.path.join(parent_dir, 'controllers'),      # /controllers
 ]
 
 for path in paths_to_add:
     if path not in sys.path:
         sys.path.insert(0, path)
+        print(f"[@host:__init__] Added to sys.path: {path}")
+
+print(f"[@host:__init__] Import paths setup completed")
+
+# Now import other modules after path setup
+import time
+import atexit
+import threading
+import signal
+import requests
 
 from appUtils import (
     load_environment_variables,

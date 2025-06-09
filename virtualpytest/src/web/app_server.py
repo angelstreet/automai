@@ -17,36 +17,33 @@ Environment Variables Required (in .env.server file):
 
 import sys
 import os
-import time
-import atexit
 
-# Import web package first to ensure path setup happens early
-try:
-    import web
-    print(f"✅ [SERVER] Web package imported successfully - paths are now set up")
-except ImportError as e:
-    print(f"⚠️ [SERVER] Could not import web package: {e}")
-    print(f"   Falling back to manual path setup...")
+# CRITICAL: Set up import paths FIRST, before any other imports
+print(f"[@server:__init__] Setting up import paths for server application...")
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
+src_dir = os.path.dirname(current_dir)                    # /src
+parent_dir = os.path.dirname(src_dir)                     # /
 
-# Add necessary paths for imports (fallback if web package import failed)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = current_dir
-src_dir = os.path.dirname(web_dir)
-parent_dir = os.path.dirname(src_dir)
-
-# Add paths to sys.path
+# Add paths to sys.path for the entire application
 paths_to_add = [
-    os.path.join(web_dir, 'utils'),           # /src/web/utils
-    os.path.join(web_dir, 'cache'),           # /src/web/cache
-    os.path.join(web_dir, 'services'),        # /src/web/services
-    os.path.join(parent_dir, 'utils'),        # /src/utils  
-    src_dir,                                  # /src
-    os.path.join(parent_dir, 'controllers'),  # /controllers
+    os.path.join(current_dir, 'utils'),           # /src/web/utils
+    os.path.join(current_dir, 'cache'),           # /src/web/cache
+    os.path.join(current_dir, 'services'),        # /src/web/services
+    os.path.join(src_dir, 'utils'),               # /src/utils  
+    src_dir,                                      # /src
+    os.path.join(parent_dir, 'controllers'),      # /controllers
 ]
 
 for path in paths_to_add:
     if path not in sys.path:
         sys.path.insert(0, path)
+        print(f"[@server:__init__] Added to sys.path: {path}")
+
+print(f"[@server:__init__] Import paths setup completed")
+
+# Now import other modules after path setup
+import time
+import atexit
 
 # Try direct import from appUtils instead of utils.appUtils
 from appUtils import (

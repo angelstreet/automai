@@ -2,28 +2,16 @@
 Statistics Routes
 
 This module contains the statistics API endpoints for:
-- Dashboard statistics
+- Dashboard statistics (mock data)
 """
 
-from flask import Blueprint, request, jsonify
-
-# Import utility functions
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils.supabase_utils import (
-    get_all_test_cases, get_all_trees, get_all_campaigns, get_all_devices,
-    get_all_controllers, get_all_environment_profiles
-)
-from .utils import check_supabase, get_team_id
+from flask import Blueprint, jsonify
 
 # Create blueprint
 stats_bp = Blueprint('stats', __name__)
 
 def get_failure_rates(team_id):
-    """Get failure rates for the team (placeholder implementation)"""
-    # This would be implemented based on your actual failure tracking logic
+    """Get failure rates for the team (mock implementation)"""
     return {
         'overall': 5.2,
         'last_week': 3.8,
@@ -36,33 +24,41 @@ def get_failure_rates(team_id):
 
 @stats_bp.route('/api/stats', methods=['GET'])
 def stats():
-    """Get statistics for the dashboard"""
-    error = check_supabase()
-    if error:
-        return error
-        
-    team_id = get_team_id()
-    
+    """Get statistics for the dashboard (mock data)"""
     try:
-        test_cases = get_all_test_cases(team_id)
-        trees = get_all_trees(team_id)
-        campaigns = get_all_campaigns(team_id)
-        devices = get_all_devices(team_id)
-        controllers = get_all_controllers(team_id)
-        environment_profiles = get_all_environment_profiles(team_id)
-        failure_rates = get_failure_rates(team_id)
+        # Mock data - no database connection needed
+        team_id = "mock_team_id"
         
+        # Return hardcoded mock statistics
         return jsonify({
-            'test_cases_count': len(test_cases),
-            'trees_count': len(trees),
-            'campaigns_count': len(campaigns),
-            'devices_count': len(devices),
-            'controllers_count': len(controllers),
-            'environment_profiles_count': len(environment_profiles),
-            'failure_rates': failure_rates,
-            'recent_test_cases': test_cases[:5],  # Last 5 test cases
-            'recent_campaigns': campaigns[:5],    # Last 5 campaigns
-            'recent_devices': devices[:5]         # Last 5 devices
+            'test_cases_count': 42,
+            'trees_count': 8,
+            'campaigns_count': 15,
+            'devices_count': 6,
+            'controllers_count': 12,
+            'environment_profiles_count': 4,
+            'failure_rates': get_failure_rates(team_id),
+            'recent_test_cases': [
+                {'id': 1, 'name': 'Login Test', 'status': 'passed'},
+                {'id': 2, 'name': 'Navigation Test', 'status': 'failed'},
+                {'id': 3, 'name': 'Search Test', 'status': 'passed'},
+                {'id': 4, 'name': 'Checkout Test', 'status': 'passed'},
+                {'id': 5, 'name': 'Profile Test', 'status': 'pending'}
+            ],
+            'recent_campaigns': [
+                {'id': 1, 'name': 'Smoke Tests', 'status': 'completed'},
+                {'id': 2, 'name': 'Regression Suite', 'status': 'running'},
+                {'id': 3, 'name': 'Mobile Tests', 'status': 'completed'},
+                {'id': 4, 'name': 'API Tests', 'status': 'scheduled'},
+                {'id': 5, 'name': 'Performance Tests', 'status': 'completed'}
+            ],
+            'recent_devices': [
+                {'id': 1, 'name': 'Android TV Living Room', 'status': 'online'},
+                {'id': 2, 'name': 'Samsung Galaxy S21', 'status': 'online'},
+                {'id': 3, 'name': 'iPhone 13 Pro', 'status': 'offline'},
+                {'id': 4, 'name': 'iPad Air', 'status': 'online'},
+                {'id': 5, 'name': 'Pixel 6', 'status': 'online'}
+            ]
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500 

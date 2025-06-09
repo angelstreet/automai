@@ -1,19 +1,12 @@
 """
-Remote Control Routes (Abstract)
+Server Remote Routes
 
-This module contains abstract remote control API endpoints that work with any 
-remote controller type (Android TV, Android Mobile, IR, Bluetooth, etc.)
-
-Routes use the abstract remote controller from the host device object.
-No device-specific knowledge or configuration needed.
+This module contains the server-side remote control API endpoints.
+These endpoints provide abstract remote control functionality that works
+with any remote controller type through the abstract controller pattern.
 """
 
 from flask import Blueprint, request, jsonify, current_app
-import os
-import sys
-
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Create blueprint with abstract prefix
 remote_bp = Blueprint('remote', __name__, url_prefix='/server/remote')
