@@ -15,6 +15,9 @@ def setup_virtualpytest_paths():
     This function can be called from any module to ensure proper import paths
     are available for utils, controllers, and other core modules.
     
+    IMPORTANT: This function temporarily removes the current directory ('') from sys.path
+    to prevent import conflicts, then adds the correct paths in priority order.
+    
     Returns:
         list: List of paths that were added to sys.path
     """
@@ -24,24 +27,35 @@ def setup_virtualpytest_paths():
     src_dir = os.path.dirname(web_dir)                            # /src
     parent_dir = os.path.dirname(src_dir)                         # /
     
-    # Define all critical paths
+    # Temporarily remove current directory from sys.path to prevent conflicts
+    current_dir_removed = False
+    if '' in sys.path:
+        sys.path.remove('')
+        current_dir_removed = True
+    
+    # Define all critical paths in priority order (first = highest priority)
     paths_to_add = [
+        os.path.join(src_dir, 'utils'),               # /src/utils (HIGHEST PRIORITY - for adbUtils)
+        src_dir,                                      # /src
+        os.path.join(parent_dir, 'controllers'),      # /controllers
         os.path.join(web_dir, 'utils'),               # /src/web/utils
         os.path.join(web_dir, 'cache'),               # /src/web/cache
         os.path.join(web_dir, 'services'),            # /src/web/services
-        os.path.join(src_dir, 'utils'),               # /src/utils (for adbUtils)
-        src_dir,                                      # /src
-        os.path.join(parent_dir, 'controllers'),      # /controllers
     ]
     
     added_paths = []
     
-    for path in paths_to_add:
+    # Insert paths at the beginning in reverse order to maintain priority
+    for path in reversed(paths_to_add):
         if os.path.exists(path) and path not in sys.path:
             sys.path.insert(0, path)
             added_paths.append(path)
     
-    return added_paths
+    # Restore current directory at the end (lowest priority)
+    if current_dir_removed:
+        sys.path.append('')
+    
+    return list(reversed(added_paths))  # Return in the order they were processed
 
 def log_path_setup(context_name: str = "Unknown"):
     """
@@ -58,5 +72,6 @@ def log_path_setup(context_name: str = "Unknown"):
         print(f"[@{context_name}:pathUtils] Added to sys.path: {path}")
     
     print(f"[@{context_name}:pathUtils] Path setup completed ({len(added_paths)} paths added)")
+    print(f"[@{context_name}:pathUtils] Priority: /src/utils (highest) -> /src -> /controllers -> /src/web/* -> current dir (lowest)")
     
     return added_paths 

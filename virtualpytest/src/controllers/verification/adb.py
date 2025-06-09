@@ -7,7 +7,15 @@ It uses adbUtils for element verification.
 
 import time
 from typing import Dict, Any, List, Optional, Tuple
-from utils.adbUtils import ADBUtils, AndroidElement
+
+# Use absolute import to avoid conflicts with local utils directory
+import sys
+import os
+src_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'utils')
+if src_utils_path not in sys.path:
+    sys.path.insert(0, src_utils_path)
+
+from adbUtils import ADBUtils, AndroidElement
 
 
 class ADBVerificationController:

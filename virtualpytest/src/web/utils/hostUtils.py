@@ -5,10 +5,29 @@ import sys
 # Import the shared path setup function
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
 sys.path.insert(0, current_dir)  # Add utils dir temporarily to import pathUtils
-from pathUtils import log_path_setup
 
-# Set up all paths using the shared function
-log_path_setup("hostUtils")
+try:
+    from pathUtils import log_path_setup
+    
+    # Set up all paths using the shared function
+    log_path_setup("hostUtils")
+except Exception as e:
+    print(f"⚠️ [hostUtils] ERROR importing pathUtils: {e}")
+    # Fallback: set up paths manually
+    web_dir = os.path.dirname(current_dir)                   # /src/web
+    src_dir = os.path.dirname(web_dir)                       # /src
+    parent_dir = os.path.dirname(src_dir)                    # /
+    
+    fallback_paths = [
+        os.path.join(src_dir, 'utils'),               # /src/utils (for adbUtils)
+        src_dir,                                      # /src
+        os.path.join(parent_dir, 'controllers'),      # /controllers
+    ]
+    
+    for path in fallback_paths:
+        if os.path.exists(path) and path not in sys.path:
+            sys.path.insert(0, path)
+            print(f"⚠️ [hostUtils] FALLBACK: Added to sys.path: {path}")
 
 # Now proceed with other imports that need the paths
 import time
@@ -242,7 +261,7 @@ def register_host_with_server():
                         print(f"   Available configs: {list(controller_configs.keys())}")
                         
                         try:
-                            # Controllers should be importable since app_host.py already set up paths
+                            # Controllers should be importable since paths are now set up correctly
                             from controllers import ControllerFactory
                             
                             controller_objects = {}
