@@ -3,7 +3,7 @@
       {
         "id": "1098ffb0-6c0f-4d63-bc69-0d537f125b79",
         "data": {
-          "to": "Home",
+          "to": "home",
           "from": "ENTRY",
           "action": "",
           "edgeType": "vertical",
@@ -37,7 +37,7 @@
         "data": {
           "type": "screen",
           "depth": 0,
-          "label": "Home",
+          "label": "home",
           "parent": [],
           "is_root": true,
           "description": "Home"

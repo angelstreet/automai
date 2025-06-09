@@ -232,7 +232,7 @@ const NavigationEditorContent: React.FC = () => {
   
   // Use registration context for centralized URL management and host data
   const { 
-    buildApiUrl,
+    buildApiUrl, 
     buildServerUrl,
     availableHosts, 
     selectedHost, 
@@ -783,10 +783,10 @@ const NavigationEditorContent: React.FC = () => {
           // Log upload status
           if (cloudflareUploaded) {
             console.log(`[@component:NavigationEditor] Screenshot uploaded to Cloudflare R2 via dedicated route`);
-          } else {
-            console.log(`[@component:NavigationEditor] Screenshot saved locally only (Cloudflare upload failed)`);
-          }
         } else {
+            console.log(`[@component:NavigationEditor] Screenshot saved locally only (Cloudflare upload failed)`);
+        }
+      } else {
           console.error('[@component:NavigationEditor] Screenshot failed:', screenshotData.error);
         }
       } else {

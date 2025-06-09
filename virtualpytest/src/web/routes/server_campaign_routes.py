@@ -19,8 +19,8 @@ from utils.supabase_utils import (
 
 from .utils import check_supabase
 
-# Create blueprint
-campaign_bp = Blueprint('campaign', __name__, url_prefix='/api')
+# Create blueprint with abstract server campaign prefix
+campaign_bp = Blueprint('campaign', __name__, url_prefix='/server')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -29,7 +29,7 @@ def get_user_id():
     return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
-# CAMPAIGNS ENDPOINTS
+# ABSTRACT CAMPAIGN ENDPOINTS
 # =====================================================
 
 @campaign_bp.route('/campaigns', methods=['GET', 'POST'])

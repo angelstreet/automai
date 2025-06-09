@@ -71,10 +71,10 @@ def take_screenshot():
         # Get SSH connection
         ssh_connection = get_android_mobile_controller()
         if not ssh_connection:
-            return jsonify({
-                'success': False,
+                return jsonify({
+                    'success': False,
                 'error': 'SSH connection not available'
-            }), 500
+                }), 500
         
         # Check if stream is active and stop it temporarily
         stream_was_active = False

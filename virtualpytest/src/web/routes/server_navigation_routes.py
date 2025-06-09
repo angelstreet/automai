@@ -22,8 +22,8 @@ from navigation_utils import (
 from userinterface_utils import get_all_userinterfaces, get_userinterface
 from .utils import check_supabase, get_team_id
 
-# Create blueprint
-navigation_bp = Blueprint('navigation', __name__, url_prefix='/api/navigation')
+# Create blueprint with abstract server navigation prefix
+navigation_bp = Blueprint('navigation', __name__, url_prefix='/server/navigation')
 
 # =====================================================
 # NAVIGATION TREES ENDPOINTS

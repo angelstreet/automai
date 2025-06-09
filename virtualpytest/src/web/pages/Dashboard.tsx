@@ -175,10 +175,9 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [testCasesRes, campaignsRes, treesRes] = await Promise.all([
-        fetch(buildApiUrl('/api/testcases')),
-        fetch(buildApiUrl('/api/campaigns')),
-        fetch(buildApiUrl('/api/navigation/trees')),
+      const [campaignsRes, testCasesRes] = await Promise.all([
+        fetch(buildApiUrl('/server/campaigns')),
+        fetch(buildApiUrl('/server/test/cases')),
       ]);
 
       let testCases: TestCase[] = [];

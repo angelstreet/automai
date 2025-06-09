@@ -509,7 +509,7 @@
           ],
           "is_root": true,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Froot%2Fhome.jpg",
+          "screenshot": "home.jpg",
           "description": "root node",
           "verifications": [
             {
@@ -521,7 +521,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "Home Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -566,7 +566,7 @@
             "node-1"
           ],
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Fhome%2Fguidetv.jpg",
+          "screenshot": "guidetv.jpg",
           "description": "",
           "verifications": [
             {
@@ -578,7 +578,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "TV GUIDE Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -625,7 +625,7 @@
           ],
           "is_root": false,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Ftvguide%2Ftvguide_livetv.jpg",
+          "screenshot": "tvguide_livetv.jpg",
           "description": "",
           "verifications": [
             {
@@ -637,7 +637,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "LIVE TV Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -683,7 +683,7 @@
           ],
           "is_root": false,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Fhome%2Fhome_replay.jpg",
+          "screenshot": "home_replay.jpg",
           "description": "",
           "verifications": [
             {
@@ -695,7 +695,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "Replay Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -741,7 +741,7 @@
           ],
           "is_root": false,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Fhome%2Fhome_movies_series.jpg",
+          "screenshot": "home_movies_series.jpg",
           "description": "",
           "verifications": [
             {
@@ -753,7 +753,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "Movies &amp; Series Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -799,7 +799,7 @@
           ],
           "is_root": false,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Fhome%2Fhome_saved.jpg",
+          "screenshot": "home_saved.jpg",
           "description": "",
           "verifications": [
             {
@@ -811,7 +811,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "Saved Tab currently selected",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB ",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [
@@ -859,7 +859,7 @@
           ],
           "is_root": false,
           "menu_type": "main",
-          "screenshot": "http://localhost:5009/api/virtualpytest/screen-definition/images?path=%2FUsers%2Fcpeengineering%2Fautomai%2Fautomai%2Fvirtualpytest%2Fsrc%2Fweb%2Froutes%2F..%2F..%2Fresources%2Fandroid_mobile%2Ftvguide_livetv%2Flive.jpg",
+          "screenshot": "live.jpg",
           "description": "",
           "verifications": [
             {
@@ -871,7 +871,7 @@
               "command": "waitForElementToAppear",
               "inputLabel": "Search Term",
               "inputValue": "NOW",
-              "description": "Wait for UI element to appear using ADB (case-insensitive search across all attributes)",
+              "description": "Wait for UI element to appear using ADB",
               "requiresInput": true,
               "controller_type": "adb",
               "last_run_result": [

@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../../config/validationColors';
+import { buildScreenshotUrl } from '../../utils/cloudflareUtils';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
   data, 
   selected 
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+
+  // Build the screenshot URL using Cloudflare R2
+  const screenshotUrl = buildScreenshotUrl(data.screenshot);
 
   // Check if this node is a root node (should only be true for actual root nodes)
   const isRootNode = data.is_root === true;
@@ -96,7 +100,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
-    if (data.screenshot) {
+    if (screenshotUrl) {
       setIsScreenshotModalOpen(true);
     }
   };
@@ -355,20 +359,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       <div
         style={{
           flex: 1,
-          backgroundColor: data.screenshot ? 'transparent' : '#f5f5f5',
-          backgroundImage: data.screenshot ? `url(${data.screenshot})` : 'none',
+          backgroundColor: screenshotUrl ? 'transparent' : '#f5f5f5',
+          backgroundImage: screenshotUrl ? `url(${screenshotUrl})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          cursor: data.screenshot ? 'pointer' : (data.type === 'menu' ? 'pointer' : 'default'),
+          cursor: screenshotUrl ? 'pointer' : (data.type === 'menu' ? 'pointer' : 'default'),
         }}
         onDoubleClick={handleScreenshotDoubleClick}
-        title={data.screenshot ? 'Double-click to view full size' : (data.type === 'menu' ? 'Double-click to navigate to nested tree' : '')}
+        title={screenshotUrl ? 'Double-click to view full size' : (data.type === 'menu' ? 'Double-click to navigate to nested tree' : '')}
       >
-        {!data.screenshot && (
+        {!screenshotUrl && (
           <div style={{ 
             fontSize: '11px', 
             color: '#666',
@@ -380,7 +384,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       </div>
 
       {/* Screenshot Modal */}
-      {isScreenshotModalOpen && data.screenshot && (
+      {isScreenshotModalOpen && screenshotUrl && (
         <div
           style={{
             position: 'fixed',
@@ -412,7 +416,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           >
             {/* Full-size screenshot */}
             <img
-              src={data.screenshot}
+              src={screenshotUrl}
               alt={`Screenshot of ${data.label}`}
               style={{
                 width: 'auto',

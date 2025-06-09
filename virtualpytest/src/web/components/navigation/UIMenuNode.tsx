@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UINavigationNode } from '../../types/navigationTypes';
 import { useValidationColors } from '../../hooks/useValidationColors';
 import { UI_BADGE_COLORS, NODE_TYPE_COLORS } from '../../../config/validationColors';
+import { buildScreenshotUrl } from '../../utils/cloudflareUtils';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
   data, 
@@ -13,6 +14,9 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
   const { getNodeColors, getHandleColors } = useValidationColors(data.tree_id || 'default', currentEdges);
+
+  // Build the screenshot URL using Cloudflare R2
+  const screenshotUrl = buildScreenshotUrl(data.screenshot);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);
@@ -26,7 +30,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (data.screenshot) {
+    if (screenshotUrl) {
       setIsScreenshotModalOpen(true);
     }
   };
@@ -251,20 +255,20 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       <div
         style={{
           flex: 1,
-          backgroundColor: data.screenshot ? 'transparent' : '#f5f5f5',
-          backgroundImage: data.screenshot ? `url(${data.screenshot})` : 'none',
+          backgroundColor: screenshotUrl ? 'transparent' : '#f5f5f5',
+          backgroundImage: screenshotUrl ? `url(${screenshotUrl})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          cursor: data.screenshot ? 'pointer' : 'pointer',
+          cursor: screenshotUrl ? 'pointer' : 'pointer',
         }}
         onDoubleClick={handleScreenshotDoubleClick}
-        title={data.screenshot ? 'Double-click to view full size' : 'Menu - Double-click to explore'}
+        title={screenshotUrl ? 'Double-click to view full size' : 'Menu - Double-click to explore'}
       >
-        {!data.screenshot && (
+        {!screenshotUrl && (
           <div style={{ 
             fontSize: '11px', 
             color: '#666',
@@ -276,7 +280,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       </div>
 
       {/* Screenshot Modal */}
-      {isScreenshotModalOpen && data.screenshot && (
+      {isScreenshotModalOpen && screenshotUrl && (
         <div
           style={{
             position: 'fixed',
@@ -307,7 +311,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={data.screenshot}
+              src={screenshotUrl}
               alt={`Screenshot of ${data.label}`}
               style={{
                 width: 'auto',

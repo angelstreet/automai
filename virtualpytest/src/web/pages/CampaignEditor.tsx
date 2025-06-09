@@ -71,9 +71,9 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       const [campaignsRes, testCasesRes, treesRes] = await Promise.all([
-        fetch(buildApiUrl('/api/campaigns')),
-        fetch(buildApiUrl('/api/testcases')),
-        fetch(buildApiUrl('/api/trees')),
+        fetch(buildApiUrl('/server/campaigns')),
+        fetch(buildApiUrl('/server/test/cases')),
+        fetch(buildApiUrl('/server/navigation/trees')),
       ]);
 
       if (campaignsRes.ok) {
@@ -101,8 +101,8 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       const url = formData.campaign_id
-        ? buildApiUrl(`/api/campaigns/${formData.campaign_id}`)
-        : buildApiUrl('/api/campaigns');
+        ? buildApiUrl(`/server/campaigns/${formData.campaign_id}`)
+        : buildApiUrl('/server/campaigns');
       const method = formData.campaign_id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -129,7 +129,7 @@ const CampaignEditor: React.FC = () => {
   const handleDelete = async (campaignId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(buildApiUrl(`/api/campaigns/${campaignId}`), {
+      const response = await fetch(buildApiUrl(`/server/campaigns/${campaignId}`), {
         method: 'DELETE',
       });
 
