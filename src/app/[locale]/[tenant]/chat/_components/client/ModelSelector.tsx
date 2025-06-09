@@ -53,6 +53,26 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
     }
   }, [isOpen]);
 
+  // Clear any autofilled values when component mounts or dropdown opens
+  useEffect(() => {
+    if (searchInputRef.current && searchInputRef.current.value !== searchQuery) {
+      searchInputRef.current.value = '';
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Additional cleanup for autofill on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInputRef.current && searchInputRef.current.value && !searchQuery) {
+        searchInputRef.current.value = '';
+        setSearchQuery('');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Filter models based on search query
   const filteredModelResults = ALL_OPENROUTER_MODELS.filter((model) => {
     if (!searchQuery.trim()) return true;
@@ -207,15 +227,45 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-80 overflow-hidden">
           {/* Search Input */}
           <div className="p-3 border-b border-border">
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search models..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoComplete="off"
-              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
+              {/* Hidden dummy fields to trick browser */}
+              <input
+                type="text"
+                name="dummy-username"
+                autoComplete="username"
+                style={{ display: 'none' }}
+                tabIndex={-1}
+              />
+              <input
+                type="password"
+                name="dummy-password"
+                autoComplete="current-password"
+                style={{ display: 'none' }}
+                tabIndex={-1}
+              />
+              <input
+                ref={searchInputRef}
+                type="search"
+                name="search-models-query"
+                id="search-models-input"
+                placeholder="Search models..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-form-type="search"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bitwarden-watching="false"
+                data-dashlane-rid=""
+                data-kwift-ignore="true"
+                role="searchbox"
+                aria-label="Search models"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+              />
+            </form>
           </div>
 
           {/* Models List */}
