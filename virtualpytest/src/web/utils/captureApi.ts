@@ -54,6 +54,7 @@ export class CaptureApi {
     if (!this.buildServerUrl) {
       throw new Error('CaptureApi not initialized. Call initialize() with buildServerUrl function first.');
     }
+    // Use centralized URL building for capture endpoints
     return this.buildServerUrl('server/capture');
   }
 

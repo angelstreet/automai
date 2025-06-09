@@ -24,6 +24,9 @@ sys.path.insert(0, cache_path)
 from navigation_cache import get_cached_graph
 from navigation_graph import get_node_info
 
+# Import centralized URL building from routes utils
+from ..routes.utils import build_server_url
+
 def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
     """
     Execute navigation to a specific node
@@ -95,9 +98,11 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         
         print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
         
+        # Use centralized server URL building
+        api_url = build_server_url('/server/navigation/execute-step')
+        
         # Call the abstract remote controller API endpoint
         print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
-        api_url = get_api_url("/server/remote/execute-action")
         
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
@@ -558,7 +563,7 @@ def execute_action_object(action_obj: dict) -> bool:
         
         # Call the abstract remote controller API endpoint
         print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
-        api_url = get_api_url("/server/remote/execute-action")
+        api_url = build_server_url('/server/navigation/execute-step')
         
         print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
         
@@ -751,15 +756,4 @@ def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, curr
         'summary': f"Navigate from {start_node} to {target_node_id} in {len(transitions) if transitions else 0} transitions ({total_actions} actions)" if transitions else "No path found"
     }
     
-    return preview
-
-# Get server URL from environment (similar to registration context)
-def get_api_url(endpoint: str) -> str:
-    """Get API URL for endpoint, similar to buildApiUrl in registration context"""
-    server_port = os.getenv('SERVER_PORT', '5009')
-    server_ip = os.getenv('SERVER_IP', 'localhost') 
-    server_protocol = os.getenv('SERVER_PROTOCOL', 'http')
-    
-    base_url = f"{server_protocol}://{server_ip}:{server_port}"
-    clean_endpoint = endpoint.lstrip('/')
-    return f"{base_url}/{clean_endpoint}" 
+    return preview 

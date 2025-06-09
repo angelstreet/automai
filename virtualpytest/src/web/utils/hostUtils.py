@@ -29,6 +29,12 @@ ping_stop_event = threading.Event()
 # Global storage for host device object (used when Flask app context is not available)
 global_host_device = None
 
+# Import centralized URL building from routes utils
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+from routes.utils import build_server_url
+
 def register_host_with_server():
     """Register this host with the server
     
@@ -52,7 +58,7 @@ def register_host_with_server():
     host_protocol = os.getenv('HOST_PROTOCOL', 'http')  # Default to http
     host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
     host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port - should match internal if no port forwarding
-    HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port for images
+    HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')
     
     # Get device information from environment variables
     device_name = os.getenv('DEVICE_NAME')  # Optional - will be generated if not provided
@@ -114,18 +120,9 @@ def register_host_with_server():
         else:
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
     
-    # Smart URL construction - handle cases where SERVER_IP might already contain protocol
-    if server_ip.startswith('http://') or server_ip.startswith('https://'):
-        # SERVER_IP already contains protocol, use it as-is but add port if needed
-        if ':' in server_ip.split('://', 1)[1]:  # Already has port
-            full_server_url = server_ip
-        else:
-            full_server_url = f"{server_ip}:{server_port}"
-    else:
-        # SERVER_IP is just IP/hostname, construct URL with protocol
-        full_server_url = f"{server_protocol}://{server_ip}:{server_port}"
-    
-    print(f"\n🌐 [HOST] Full server URL: {full_server_url}")
+    # Use centralized server URL building instead of manual construction
+    registration_url = build_server_url('/api/system/clients/register')
+    print(f"\n🌐 [HOST] Registration URL: {registration_url}")
     
     try:
         import socket
@@ -168,7 +165,7 @@ def register_host_with_server():
             'nginx_port': HOST_PORT_WEB
         }
         
-        print(f"\n📤 [HOST] Sending registration request to: {full_server_url}/api/system/register")
+        print(f"\n📤 [HOST] Sending registration request to: {registration_url}")
         print(f"📦 [HOST] Host info payload:")
         for key, value in host_info.items():
             if key != 'system_stats':
@@ -176,7 +173,7 @@ def register_host_with_server():
         
         # Test server connectivity first
         try:
-            health_response = requests.get(f"{full_server_url}/api/system/health", timeout=5, verify=False)
+            health_response = requests.get(registration_url, timeout=5, verify=False)
             print(f"\n🏥 [HOST] Server health check: {health_response.status_code}")
             if health_response.status_code == 200:
                 health_data = health_response.json()
@@ -189,7 +186,7 @@ def register_host_with_server():
         
         # Send registration request
         response = requests.post(
-            f"{full_server_url}/api/system/register", 
+            registration_url, 
             json=host_info, 
             timeout=10,
             headers={'Content-Type': 'application/json'},
@@ -210,7 +207,7 @@ def register_host_with_server():
                 # Store basic registration state
                 client_registration_state['registered'] = True
                 client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['server_url'] = full_server_url
+                client_registration_state['server_url'] = registration_url
                 
                 # ✅ DIRECTLY STORE THE HOST_DEVICE OBJECT FROM SERVER RESPONSE
                 host_device_object = registration_response.get('host_device')
@@ -346,7 +343,7 @@ def register_host_with_server():
                     print(f"⚠️ [HOST] No host_device object in registration response")
                 
                 print(f"\n✅ [HOST] Successfully registered with server!")
-                print(f"   Server: {full_server_url}")
+                print(f"   Server: {registration_url}")
                 print(f"   Host ID: {host_info['client_id']}")
                 print(f"   Host Name: {host_name}")
                 
@@ -359,7 +356,7 @@ def register_host_with_server():
                 # Still mark as registered for basic functionality
                 client_registration_state['registered'] = True
                 client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['server_url'] = full_server_url
+                client_registration_state['server_url'] = registration_url
                 start_ping_thread()
         else:
             print(f"\n❌ [HOST] Registration failed with status: {response.status_code}")
@@ -372,7 +369,7 @@ def register_host_with_server():
             
     except requests.exceptions.ConnectionError as conn_error:
         print(f"\n❌ [HOST] Connection error: {conn_error}")
-        print(f"   Could not connect to server at: {full_server_url}")
+        print(f"   Could not connect to server at: {registration_url}")
         print(f"   Make sure the server is running: python3 app_server.py")
     except requests.exceptions.Timeout as timeout_error:
         print(f"\n❌ [HOST] Timeout error: {timeout_error}")
@@ -407,7 +404,7 @@ def unregister_from_server():
         }
         
         response = requests.post(
-            f"{server_url}/api/system/unregister",
+            server_url,
             json=unregister_data,
             timeout=5,
             headers={'Content-Type': 'application/json'},
@@ -467,7 +464,7 @@ def start_ping_thread():
                 
                 # Send ping to server
                 response = requests.post(
-                    f"{server_url}/api/system/ping",
+                    server_url,
                     json=ping_data,
                     timeout=10,
                     headers={'Content-Type': 'application/json'},

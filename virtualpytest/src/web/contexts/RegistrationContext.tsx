@@ -230,7 +230,23 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       throw new Error(`Host with ID ${hostId} not found`);
     }
     
-    const baseUrl = host.connection?.flask_url || `http://${host.local_ip}:${host.client_port}`;
+    // Use the host's registered protocol and connection info
+    // If flask_url is available, use it directly; otherwise build from components
+    let baseUrl: string;
+    
+    if (host.connection?.flask_url) {
+      // Use the flask_url directly from host registration
+      baseUrl = host.connection.flask_url;
+    } else {
+      // Build URL from host registration components
+      // Get protocol from current page (same as server URL logic) or fallback to https
+      const protocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
+      const hostIp = host.local_ip;
+      const hostPort = host.client_port;
+      
+      baseUrl = `${protocol}://${hostIp}:${hostPort}`;
+    }
+    
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     return `${baseUrl}/${cleanEndpoint}`;
   }, [availableHosts]);
@@ -242,7 +258,22 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       throw new Error(`Host with ID ${hostId} not found`);
     }
     
-    const baseUrl = host.connection?.nginx_url || `https://${host.local_ip}:444`;
+    // Use the host's registered nginx URL or build from components
+    let baseUrl: string;
+    
+    if (host.connection?.nginx_url) {
+      // Use the nginx_url directly from host registration
+      baseUrl = host.connection.nginx_url;
+    } else {
+      // Build nginx URL from host registration components
+      // Get protocol from current page (same as server URL logic) or fallback to https
+      const protocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
+      const hostIp = host.local_ip;
+      const nginxPort = '444'; // Standard nginx port
+      
+      baseUrl = `${protocol}://${hostIp}:${nginxPort}`;
+    }
+    
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${baseUrl}/${cleanPath}`;
   }, [availableHosts]);

@@ -7,6 +7,8 @@ This module contains common helper functions used across route modules.
 from flask import jsonify, request, current_app
 import requests
 import urllib.parse
+import os
+from typing import Dict, Any, Optional
 
 def check_supabase():
     """Helper function to check if Supabase is available"""
@@ -64,14 +66,17 @@ def get_primary_host():
         return next(iter(connected_hosts.values()))
     return None
 
-def build_host_url(host_info, endpoint, use_https=True):
+def get_protocol_from_env() -> str:
+    """Get protocol from environment, defaulting to http"""
+    return os.getenv('HOST_PROTOCOL', 'http')
+
+def build_host_url(host_info: Dict[str, Any], endpoint: str) -> str:
     """
-    Build a URL for a host endpoint
+    Build a URL for a host endpoint using the same logic as frontend RegistrationContext
     
     Args:
         host_info: Host information dict from registration system
-        endpoint: The endpoint path (e.g., '/stream/verification-status')
-        use_https: Whether to use HTTPS (default: True)
+        endpoint: The endpoint path (e.g., '/host/remote/screenshot')
     
     Returns:
         Complete URL string
@@ -79,32 +84,25 @@ def build_host_url(host_info, endpoint, use_https=True):
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get connection info from registration data
+    # Get connection info from registration data (same as frontend)
     connection = host_info.get('connection', {})
     flask_url = connection.get('flask_url')
     
-    if not flask_url:
-        # Fallback to legacy fields if connection info not available
+    if flask_url:
+        # Use the flask_url directly from host registration (same as frontend)
+        base_url = flask_url
+    else:
+        # Build URL from host registration components (same as frontend)
+        protocol = get_protocol_from_env()
         host_ip = host_info.get('local_ip')
-        # Use proper naming: host_port for server-to-host communication
-        host_port = host_info.get('host_port') or host_info.get('client_port', '5119')  # Fallback for backward compatibility
+        host_port = host_info.get('client_port', '5119')
         
         if not host_ip:
             raise ValueError("Host connection information not found in registration info")
         
-        # Build protocol
-        protocol = 'https' if use_https else 'http'
         base_url = f"{protocol}://{host_ip}:{host_port}"
-    else:
-        # Parse the flask_url to get the base URL
-        # flask_url format: "http://77.56.53.130:5119"
-        parsed = urllib.parse.urlparse(flask_url)
-        
-        # Use the protocol from use_https parameter, but keep the host and port from flask_url
-        protocol = 'https' if use_https else 'http'
-        base_url = f"{protocol}://{parsed.hostname}:{parsed.port}"
     
-    # Clean endpoint (remove leading slash if present)
+    # Clean endpoint (same as frontend)
     clean_endpoint = endpoint.lstrip('/')
     
     # Build complete URL
@@ -112,9 +110,9 @@ def build_host_url(host_info, endpoint, use_https=True):
     
     return url
 
-def build_host_nginx_url(host_info, path):
+def build_host_nginx_url(host_info: Dict[str, Any], path: str) -> str:
     """
-    Build a URL for host nginx endpoint (for media/files)
+    Build a URL for host nginx endpoint using the same logic as frontend RegistrationContext
     
     Args:
         host_info: Host information dict from registration system  
@@ -126,16 +124,18 @@ def build_host_nginx_url(host_info, path):
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get connection info from registration data
+    # Get connection info from registration data (same as frontend)
     connection = host_info.get('connection', {})
     nginx_url = connection.get('nginx_url')
     
     if nginx_url:
-        # Use the nginx_url directly from connection info
-        # nginx_url format: "https://77.56.53.130:444"
+        # Use the nginx_url directly from host registration (same as frontend)
         base_url = nginx_url
     else:
-        # Fallback: try to get host IP from flask_url or legacy fields
+        # Build nginx URL from host registration components (same as frontend)
+        protocol = get_protocol_from_env()
+        
+        # Try to get host IP from flask_url or legacy fields (same as frontend)
         flask_url = connection.get('flask_url')
         if flask_url:
             parsed = urllib.parse.urlparse(flask_url)
@@ -146,14 +146,41 @@ def build_host_nginx_url(host_info, path):
         if not host_ip:
             raise ValueError("Host IP not found in registration info")
         
-        # Build nginx URL with standard port 444
-        base_url = f"https://{host_ip}:444"
+        # Build nginx URL with standard port 444 (same as frontend)
+        nginx_port = '444'
+        base_url = f"{protocol}://{host_ip}:{nginx_port}"
     
-    # Clean path (remove leading slash if present)
+    # Clean path (same as frontend)
     clean_path = path.lstrip('/')
     
     # Build complete nginx URL
     url = f"{base_url}/{clean_path}"
+    
+    return url
+
+def build_server_url(endpoint: str) -> str:
+    """
+    Build a URL for server endpoint using the same logic as frontend RegistrationContext
+    
+    Args:
+        endpoint: The endpoint path (e.g., '/api/system/clients/devices')
+    
+    Returns:
+        Complete server URL string
+    """
+    # Get server configuration from environment (same as frontend)
+    server_port = os.getenv('SERVER_PORT', '5009')
+    server_protocol = os.getenv('SERVER_PROTOCOL', 'http')
+    server_ip = os.getenv('SERVER_IP', 'localhost')
+    
+    # Build server URL (same as frontend logic)
+    base_url = f"{server_protocol}://{server_ip}:{server_port}"
+    
+    # Clean endpoint (same as frontend)
+    clean_endpoint = endpoint.lstrip('/')
+    
+    # Build complete URL
+    url = f"{base_url}/{clean_endpoint}"
     
     return url
 
@@ -187,7 +214,7 @@ def make_host_request(endpoint, method='GET', host_id=None, device_model=None, u
             raise ValueError("No hosts available")
     
     # Build URL
-    url = build_host_url(host_info, endpoint, use_https)
+    url = build_host_url(host_info, endpoint)
     
     # Add default timeout if not specified
     if 'timeout' not in kwargs:

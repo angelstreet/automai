@@ -17,10 +17,11 @@ export class ValidationService {
     this.buildServerUrl = buildServerUrl;
   }
 
-  private getBaseUrl(): string {
+  private getApiBaseUrl(): string {
     if (!this.buildServerUrl) {
       throw new Error('ValidationService not initialized. Call initialize() with buildServerUrl function first.');
     }
+    // Use centralized URL building for validation endpoints
     return this.buildServerUrl('api/validation');
   }
 
@@ -32,7 +33,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Getting preview for tree: ${treeId}`);
     
     try {
-      const response = await fetch(`${this.getBaseUrl()}/preview/${treeId}`);
+      const response = await fetch(`${this.getApiBaseUrl()}/preview/${treeId}`);
       const data: ValidationPreviewResponse = await response.json();
       
       if (!data.success) {
@@ -68,7 +69,7 @@ export class ValidationService {
         requestBody.skipped_edges = skippedEdges;
       }
       
-      const response = await fetch(`${this.getBaseUrl()}/run/${treeId}`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/run/${treeId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Setting up progress stream for session: ${sessionId}`);
     
     try {
-      this.eventSource = new EventSource(`${this.getBaseUrl()}/progress/${sessionId}`);
+      this.eventSource = new EventSource(`${this.getApiBaseUrl()}/progress/${sessionId}`);
       
       this.eventSource.onmessage = (event) => {
         try {
@@ -161,7 +162,7 @@ export class ValidationService {
     console.log(`[@service:validationService] Exporting report for tree: ${treeId}, format: ${format}`);
     
     try {
-      const response = await fetch(`${this.getBaseUrl()}/export/${treeId}?format=${format}`);
+      const response = await fetch(`${this.getApiBaseUrl()}/export/${treeId}?format=${format}`);
       const data: ValidationExportResponse = await response.json();
       
       if (!data.success) {

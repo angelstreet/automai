@@ -77,7 +77,7 @@ export function RemotePanel({
     }
   }, [autoConnect, connectionConfig, isConnected]);
 
-  // Handle take control via server
+  // Handle take control via centralized server URL building
   const handleTakeControl = async () => {
     setIsConnecting(true);
     setConnectionError(null);
@@ -93,8 +93,9 @@ export function RemotePanel({
         deviceId = connectionForm.device_path || connectionForm.device_address || 'unknown';
       }
 
-      // Call server take-control endpoint
-      const response = await fetch(buildServerUrl('/server/control/take-control'), {
+      // Use centralized buildServerUrl for take-control endpoint
+      const takeControlUrl = buildServerUrl('/server/control/take-control');
+      const response = await fetch(takeControlUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

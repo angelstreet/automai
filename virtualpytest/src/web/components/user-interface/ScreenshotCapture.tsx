@@ -58,23 +58,11 @@ export function ScreenshotCapture({
     }
   };
 
-  // Memoize the image URL to prevent multiple re-calculations
+  // Get image URL using centralized URL building
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
     
-    console.log(`[@component:ScreenshotCapture] Processing image path: ${screenshotPath}`);
-    
-    // Handle Cloudflare R2 URLs (signed URLs from navigation screenshots)
-    if (screenshotPath.includes('.r2.cloudflarestorage.com') || screenshotPath.includes('r2.dev')) {
-      console.log('[@component:ScreenshotCapture] Using Cloudflare R2 URL directly');
-      return screenshotPath;
-    }
-    
-    // Handle host-based capture URLs (both HTTP and HTTPS with /stream/captures/ path)
-    if ((screenshotPath.startsWith('https://') || screenshotPath.startsWith('http://')) && screenshotPath.includes('/stream/captures/')) {
-      console.log('[@component:ScreenshotCapture] Using host-based capture URL directly');
-      return screenshotPath;
-    }
+    console.log(`[@component:ScreenshotCapture] Processing screenshot path: ${screenshotPath}`);
     
     // Handle data URLs (base64 from remote system) - return as is
     if (screenshotPath.startsWith('data:')) {
@@ -82,55 +70,34 @@ export function ScreenshotCapture({
       return screenshotPath;
     }
     
-    // Generate a cache-busting timestamp for file-based screenshots
-    const timestamp = new Date().getTime();
-    
-    // For FFmpeg screenshots stored locally in /tmp/screenshots/ (full path)
-    if (screenshotPath.includes('/tmp/screenshots/')) {
-      const filename = screenshotPath.split('/').pop()?.split('?')[0];
-      console.log(`[@component:ScreenshotCapture] Using FFmpeg screenshot: ${filename}`);
-      
-      if (!filename) {
-        console.error(`[@component:ScreenshotCapture] Failed to extract filename from path: ${screenshotPath}`);
-        return '';
-      }
-      
-      // Use abstract server capture endpoint for screenshot images
-      const finalUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
-      console.log(`[@component:ScreenshotCapture] Generated image URL: ${finalUrl}`);
-      return finalUrl;
-    }
-    
-    // For just a filename (like android_mobile.jpg) - assume it's in /tmp/screenshots/
-    if (!screenshotPath.includes('/') && screenshotPath.endsWith('.jpg')) {
-      const filename = screenshotPath.split('?')[0];
-      console.log(`[@component:ScreenshotCapture] Using filename screenshot: ${filename}`);
-      
-      // Use abstract server capture endpoint for screenshot images
-      const finalUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
-      console.log(`[@component:ScreenshotCapture] Generated image URL from filename: ${finalUrl}`);
-      return finalUrl;
-    }
-    
-    // If it's already a full URL (but without timestamp)
-    if (screenshotPath.startsWith('http') && !screenshotPath.includes('?t=')) {
-      const finalUrl = `${screenshotPath}?t=${timestamp}`;
-      console.log(`[@component:ScreenshotCapture] Added timestamp to URL: ${finalUrl}`);
-      return finalUrl;
-    }
-    
-    // If it's already a full URL with timestamp, return as is
-    if (screenshotPath.startsWith('http') && screenshotPath.includes('?t=')) {
-      console.log(`[@component:ScreenshotCapture] Using existing URL with timestamp: ${screenshotPath}`);
+    // Handle full URLs (already complete) - return as is
+    if (screenshotPath.startsWith('http')) {
+      console.log('[@component:ScreenshotCapture] Using complete URL');
       return screenshotPath;
     }
     
-    // Default case - convert to API endpoint URL
-    const cleanPath = screenshotPath.split('?')[0];
-    // Use abstract server capture endpoint for images
-    const finalUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(cleanPath)}&t=${timestamp}`);
-    console.log(`[@component:ScreenshotCapture] Generated default URL: ${finalUrl}`);
-    return finalUrl;
+    // For file paths, use centralized server URL building
+    const timestamp = new Date().getTime();
+    let imageUrl: string;
+    
+    // Extract filename from path
+    const filename = screenshotPath.split('/').pop()?.split('?')[0];
+    if (!filename) {
+      console.error(`[@component:ScreenshotCapture] Failed to extract filename from path: ${screenshotPath}`);
+      return '';
+    }
+    
+    // Use centralized buildServerUrl for all image requests
+    if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
+      // Screenshot images
+      imageUrl = buildServerUrl(`/server/capture/images/screenshot/${filename}?t=${timestamp}`);
+    } else {
+      // General images
+      imageUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}&t=${timestamp}`);
+    }
+    
+    console.log(`[@component:ScreenshotCapture] Generated image URL: ${imageUrl}`);
+    return imageUrl;
   }, [screenshotPath, buildServerUrl]);
 
   // Determine if drag selection should be enabled
