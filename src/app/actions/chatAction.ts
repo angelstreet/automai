@@ -471,6 +471,9 @@ async function saveMessageToDatabase({
       `[@action:chat:saveMessageToDatabase] Updated conversation: message_count=${newMessageCount}, model_ids updated, created ${messageResults.length} messages`,
     );
 
+    // Revalidate chat page cache to ensure fresh data on next fetch
+    revalidatePath('/[locale]/[tenant]/chat', 'page');
+
     console.log('[@action:chat:saveMessageToDatabase] Successfully completed background save');
   } catch (error: any) {
     console.error('[@action:chat:saveMessageToDatabase] Error:', error);

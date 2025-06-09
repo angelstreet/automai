@@ -11,7 +11,7 @@ This module contains host-side control endpoints that:
 from flask import Blueprint, request, jsonify, current_app
 
 # Create blueprint
-host_control_bp = Blueprint('host_control', __name__)
+host_control_bp = Blueprint('host_control', __name__, url_prefix='/host')
 
 # =====================================================
 # HOST-SIDE DEVICE CONTROL ENDPOINTS
@@ -19,37 +19,30 @@ host_control_bp = Blueprint('host_control', __name__)
 
 @host_control_bp.route('/take-control', methods=['POST'])
 def take_control():
-    """Host-side take control - Use own stored host_device object"""
+    """Host-side take control - Use own stored host_device object (no parameters needed)"""
     try:
-        data = request.get_json() or {}
-        device_model = data.get('device_model', 'android_mobile')
-        device_ip = data.get('device_ip')
-        device_port = data.get('device_port', 5555)
-        session_id = data.get('session_id', 'default-session')
+        print(f"[@route:take_control] Host checking controllers status using own stored host_device")
         
-        print(f"[@route:take_control] Checking controllers status using own stored host_device")
-        print(f"[@route:take_control] Device model: {device_model}")
-        print(f"[@route:take_control] Device IP: {device_ip}")
-        print(f"[@route:take_control] Device port: {device_port}")
-        print(f"[@route:take_control] Session ID: {session_id}")
-        
-        # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT
+        # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT (contains all device info)
         host_device = getattr(current_app, 'my_host_device', None)
-        
-        if host_device:
-            print(f"[@route:take_control] Host device details: {host_device.get('host_name')} - {host_device.get('device_name')}")
-            print(f"[@route:take_control] Available controllers: {list(host_device.get('controller_objects', {}).keys())}")
         
         if not host_device:
             return jsonify({
                 'success': False,
                 'status': 'host_device_not_initialized',
-                'error': 'Host device object not initialized. Host may need to re-register.',
-                'device_model': device_model,
-                'session_id': session_id
+                'error': 'Host device object not initialized. Host may need to re-register.'
             })
         
-        print(f"[@route:take_control] Using own stored host_device: {host_device.get('host_name')} with device: {host_device.get('device_name')}")
+        # Extract device info from stored host_device
+        device_model = host_device.get('device_model', 'android_mobile')
+        device_ip = host_device.get('device_ip')
+        device_port = host_device.get('device_port', 5555)
+        device_name = host_device.get('device_name')
+        host_name = host_device.get('host_name')
+        
+        print(f"[@route:take_control] Host device: {host_name} managing device: {device_name} ({device_model})")
+        print(f"[@route:take_control] Device connection: {device_ip}:{device_port}")
+        print(f"[@route:take_control] Available controllers: {list(host_device.get('controller_objects', {}).keys())}")
         
         # Step 1: Check AV controller from own host_device
         try:
@@ -59,14 +52,13 @@ def take_control():
                 return jsonify({
                     'success': False,
                     'status': 'av_controller_not_found',
-                    'error': 'No AV controller object found in own host_device',
+                    'error': 'No AV controller object found in host_device',
                     'error_type': 'configuration_error',
                     'device_model': device_model,
-                    'session_id': session_id,
                     'available_controllers': list(host_device.get('controller_objects', {}).keys())
                 })
             
-            print(f"[@route:take_control] Using own AV controller: {type(av_controller).__name__}")
+            print(f"[@route:take_control] Using AV controller: {type(av_controller).__name__}")
             
             av_status = av_controller.get_status()
             print(f"[@route:take_control] AV controller status: {av_status}")
@@ -83,15 +75,13 @@ def take_control():
                     'error': f'Host stream status failed: {error_message}',
                     'error_type': 'stream_service_error',
                     'device_model': device_model,
-                    'session_id': session_id,
                     'av_status': av_status,
                     'service_details': {
                         'service_name': service_name,
                         'service_status': service_status,
                         'systemctl_returncode': av_status.get('systemctl_returncode'),
                         'systemctl_output': av_status.get('systemctl_output')
-                    },
-                    'remote_status': 'not_checked'
+                    }
                 })
                 
         except Exception as e:
@@ -101,8 +91,7 @@ def take_control():
                 'status': 'av_controller_error',
                 'error': f'Host stream status failed: AV controller error - {str(e)}',
                 'error_type': 'av_controller_exception',
-                'device_model': device_model,
-                'session_id': session_id
+                'device_model': device_model
             })
         
         # Step 2: Check Remote controller from own host_device for Android devices
@@ -116,15 +105,14 @@ def take_control():
                     return jsonify({
                         'success': False,
                         'status': 'remote_controller_not_found',
-                        'error': 'No remote controller object found in own host_device',
+                        'error': 'No remote controller object found in host_device',
                         'error_type': 'configuration_error',
                         'device_model': device_model,
-                        'session_id': session_id,
                         'av_status': av_status,
                         'available_controllers': list(host_device.get('controller_objects', {}).keys())
                     })
                 
-                print(f"[@route:take_control] Using own remote controller: {type(remote_controller).__name__}")
+                print(f"[@route:take_control] Using remote controller: {type(remote_controller).__name__}")
                 
                 remote_status = remote_controller.get_status()
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
@@ -141,7 +129,6 @@ def take_control():
                         'error': f'Host ADB connection failed: {error_message}',
                         'error_type': 'adb_connection_error',
                         'device_model': device_model,
-                        'session_id': session_id,
                         'av_status': av_status,
                         'remote_status': remote_status,
                         'adb_details': {
@@ -161,24 +148,24 @@ def take_control():
                     'error': f'Host ADB connection failed: Remote controller error - {str(e)}',
                     'error_type': 'remote_controller_exception',
                     'device_model': device_model,
-                    'session_id': session_id,
                     'av_status': av_status
                 })
         
         # Both controllers are ready
-        print(f"[@route:take_control] All controllers ready for own device: {host_device.get('device_name')}")
+        print(f"[@route:take_control] All controllers ready for device: {device_name}")
         return jsonify({
             'success': True,
             'status': 'ready',
-            'message': f'All controllers ready for {device_model}',
+            'message': f'All controllers ready for {device_name} ({device_model})',
             'device_model': device_model,
-            'session_id': session_id,
             'av_status': av_status,
             'remote_status': remote_status,
             'host_device': {
-                'host_name': host_device.get('host_name'),
-                'device_name': host_device.get('device_name'),
-                'device_model': host_device.get('device_model')
+                'host_name': host_name,
+                'device_name': device_name,
+                'device_model': device_model,
+                'device_ip': device_ip,
+                'device_port': device_port
             }
         })
             

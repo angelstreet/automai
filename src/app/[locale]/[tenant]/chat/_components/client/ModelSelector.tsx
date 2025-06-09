@@ -59,7 +59,7 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
       searchInputRef.current.value = '';
       setSearchQuery('');
     }
-  }, [isOpen]);
+  }, [isOpen, searchQuery]);
 
   // Additional cleanup for autofill on mount
   useEffect(() => {
@@ -69,9 +69,9 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         setSearchQuery('');
       }
     }, 100);
-    
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [searchQuery]);
 
   // Filter models based on search query
   const filteredModelResults = ALL_OPENROUTER_MODELS.filter((model) => {

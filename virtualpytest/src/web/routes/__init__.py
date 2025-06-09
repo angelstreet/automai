@@ -66,6 +66,7 @@ def register_routes(app: Flask, mode='server'):
     app.register_blueprint(core_bp)
     app.register_blueprint(device_bp)
     app.register_blueprint(controller_bp)
+    app.register_blueprint(audiovideo_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(userinterface_bp)
     app.register_blueprint(devicemodel_bp)
@@ -77,7 +78,6 @@ def register_routes(app: Flask, mode='server'):
         print(f"[@routes:register_routes] Registering SERVER-specific routes")
         
         # Import server-only routes
-        from .server_remote_routes import remote_bp
         from .server_remote_routes import remote_bp
         from .server_navigation_routes import navigation_bp
         from .server_campaign_routes import campaign_bp
@@ -123,8 +123,6 @@ def register_routes(app: Flask, mode='server'):
         
         # Server-side functionality
         app.register_blueprint(remote_bp)
-        app.register_blueprint(remote_bp)
-        app.register_blueprint(audiovideo_bp)
         app.register_blueprint(navigation_bp)
         app.register_blueprint(navigation_config_bp)
         app.register_blueprint(pathfinding_bp)
@@ -157,12 +155,6 @@ def register_routes(app: Flask, mode='server'):
         
         # Host-side control routes (controller management, device control)
         app.register_blueprint(host_control_bp)
-        
-        # Host-side AV functionality (needed for /release-control endpoint)
-        app.register_blueprint(audiovideo_bp)
-        
-        # Host-side functionality (if needed)
-        # Note: Most host routes are in the verification_*_host_bp blueprints
         
         print(f"[@routes:register_routes] HOST routes registered successfully")
         

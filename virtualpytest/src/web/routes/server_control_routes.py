@@ -22,7 +22,7 @@ from deviceLockManager import (
 )
 
 # Create blueprint
-server_control_bp = Blueprint('server_control', __name__)
+server_control_bp = Blueprint('server_control', __name__, url_prefix='/server')
 
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
