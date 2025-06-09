@@ -509,10 +509,17 @@ export function ScreenDefinitionEditor({
 
   // Get stream URL from remote controller - no manual building
   const getStreamUrl = useCallback(() => {
+    if (!selectedHostDevice) {
+      return undefined;
+    }
     
     // Get the controller directly from selectedHostDevice
     const controllers = selectedHostDevice.controller_objects;
     const remoteController = controllers?.remote;
+    
+    if (!remoteController) {
+      return undefined;
+    }
     
     // Get stream URL from the controller
     const streamUrl = remoteController.get_stream_url?.() || remoteController.stream_url;
