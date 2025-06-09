@@ -145,6 +145,51 @@ def get_status():
             'error': str(e)
         }), 500
 
+@host_av_bp.route('/stream-url', methods=['GET'])
+def get_stream_url():
+    """Get stream URL from AV controller using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:stream_url] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Get stream URL from controller
+        stream_url = av_controller.get_stream_url()
+        
+        if stream_url:
+            return jsonify({
+                'success': True,
+                'stream_url': stream_url
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No stream URL available from AV controller'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @host_av_bp.route('/screenshot', methods=['POST'])
 def take_screenshot():
     """Take screenshot using own stored host_device object"""
