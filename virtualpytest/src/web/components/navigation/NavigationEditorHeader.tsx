@@ -364,7 +364,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                   value={selectedDevice || ''}
                   onChange={(e) => onDeviceSelect(e.target.value || null)}
                   label="Device"
-                  disabled={isLoading || !!error || devicesLoading}
+                  disabled={isLoading || !!error || devicesLoading || isControlActive}
                   sx={{ height: 32, fontSize: '0.75rem' }}
                 >
                   <MenuItem value="">
