@@ -142,90 +142,6 @@ const edgeTypes = {
   smoothstep: UINavigationEdge,
 };
 
-// SSH Session State Tracker Component for Android Mobile
-interface SSHSessionTrackerProps {
-  connectionConfig?: any;
-  autoConnect?: boolean;
-  onDisconnectComplete?: () => void;
-  onSessionStateChange?: (session: { connected: boolean; connectionLoading: boolean; connectionError: string | null }) => void;
-  sx?: any;
-}
-
-function CompactAndroidMobileWithSessionTracking({
-  connectionConfig,
-  autoConnect,
-  onDisconnectComplete,
-  onSessionStateChange,
-  sx
-}: SSHSessionTrackerProps) {
-  const { session, connectionLoading, connectionError } = useRemoteConnection('android-mobile');
-  
-  // Update parent component when SSH session state changes
-  useEffect(() => {
-    if (onSessionStateChange) {
-      onSessionStateChange({
-        connected: session.connected,
-        connectionLoading: connectionLoading,
-        connectionError: connectionError,
-      });
-    }
-  }, [session.connected, connectionLoading, connectionError, onSessionStateChange]);
-  
-  return (
-    <CompactAndroidMobile
-      connectionConfig={connectionConfig}
-      autoConnect={autoConnect}
-      onDisconnectComplete={onDisconnectComplete}
-      sx={sx}
-    />
-  );
-}
-
-// SSH Session State Tracker Component for Generic Remote
-interface CompactRemoteWithSessionTrackingProps {
-  remoteType: 'android-tv' | 'ir' | 'bluetooth';
-  connectionConfig?: any;
-  autoConnect?: boolean;
-  showScreenshot?: boolean;
-  onDisconnectComplete?: () => void;
-  onSessionStateChange?: (session: { connected: boolean; connectionLoading: boolean; connectionError: string | null }) => void;
-  sx?: any;
-}
-
-function CompactRemoteWithSessionTracking({
-  remoteType,
-  connectionConfig,
-  autoConnect,
-  showScreenshot = false,
-  onDisconnectComplete,
-  onSessionStateChange,
-  sx
-}: CompactRemoteWithSessionTrackingProps) {
-  const { session, connectionLoading, connectionError } = useRemoteConnection(remoteType);
-  
-  // Update parent component when SSH session state changes
-  useEffect(() => {
-    if (onSessionStateChange) {
-      onSessionStateChange({
-        connected: session.connected,
-        connectionLoading: connectionLoading,
-        connectionError: connectionError,
-      });
-    }
-  }, [session.connected, connectionLoading, connectionError, onSessionStateChange]);
-  
-  return (
-    <CompactRemote
-      remoteType={remoteType}
-      connectionConfig={connectionConfig}
-      autoConnect={autoConnect}
-      showScreenshot={showScreenshot}
-      onDisconnectComplete={onDisconnectComplete}
-      sx={sx}
-    />
-  );
-}
-
 const NavigationEditorContent: React.FC = () => {
   // Get the device API service
   const deviceApi = useDeviceApi();
@@ -248,16 +164,8 @@ const NavigationEditorContent: React.FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
   
-  // SSH session state for coordination between remote panel and screen definition editor
-  const [sshSession, setSSHSession] = useState<{
-    connected: boolean;
-    connectionLoading: boolean;
-    connectionError: string | null;
-  }>({
-    connected: false,
-    connectionLoading: false,
-    connectionError: null,
-  });
+  // Simplified remote connection hook - no SSH session management needed
+  const remoteConnection = useRemoteConnection('android-mobile'); // Default type, will be dynamic
 
   // Verification state
   const [isVerificationActive, setIsVerificationActive] = useState(false);
@@ -541,25 +449,88 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
-  // Handle remote control actions
-  const handleToggleRemotePanel = useCallback(() => {
-    setIsRemotePanelOpen(prev => !prev);
-  }, []);
-
-  const handleDeviceSelect = useCallback((device: string | null) => {
-    // If changing device while connected, disconnect first
-    if (selectedDevice && selectedDevice !== device && isControlActive) {
-      console.log('[@component:NavigationEditor] Switching devices, stopping current control');
-      setIsControlActive(false);
-    }
+  // Simplified take control handler
+  const handleTakeControl = useCallback(async () => {
+    const device = selectedDeviceData;
+    const deviceId = device?.id || device?.device_id;
     
-    // Reset SSH session state when changing devices
-    if (selectedDevice !== device) {
-      setSSHSession({
-        connected: false,
-        connectionLoading: false,
-        connectionError: null,
+    if (!deviceId) {
+      console.error('[@component:NavigationEditor] No device selected or device ID missing');
+      return;
+    }
+
+    console.log(`[@component:NavigationEditor] Taking control of device: ${deviceId}`);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call server take-control endpoint (handles device locking, host coordination)
+      const response = await fetch(buildServerUrl('/server/control/take-control'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: deviceId,
+          session_id: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        }),
       });
+
+      const data = await response.json();
+      console.log('[@component:NavigationEditor] Take control response:', data);
+
+      if (data.success) {
+        setIsControlActive(true);
+        
+        // Show remote UI if device has remote capabilities
+        const remoteConfig = getDeviceRemoteConfig(device);
+        if (remoteConfig) {
+          console.log('[@component:NavigationEditor] Device has remote capabilities, showing remote UI');
+          remoteConnection.showRemote();
+          setIsRemotePanelOpen(true);
+        }
+        
+        console.log('[@component:NavigationEditor] Control activated successfully');
+      } else {
+        throw new Error(data.message || 'Failed to take control');
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditor] Take control failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to take control');
+      setIsControlActive(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedDeviceData, remoteConnection, buildServerUrl]);
+
+  // Simplified release control handler
+  const handleReleaseControl = useCallback(async () => {
+    console.log('[@component:NavigationEditor] Releasing control');
+    
+    // Hide remote UI
+    remoteConnection.hideRemote();
+    setIsRemotePanelOpen(false);
+    setIsControlActive(false);
+    
+    // Note: Server-side cleanup happens automatically when session expires
+    console.log('[@component:NavigationEditor] Control released');
+  }, [remoteConnection]);
+
+  // Handle remote panel toggle
+  const handleToggleRemotePanel = useCallback(() => {
+    if (isRemotePanelOpen) {
+      remoteConnection.hideRemote();
+      setIsRemotePanelOpen(false);
+    } else if (isControlActive) {
+      remoteConnection.showRemote();
+      setIsRemotePanelOpen(true);
+    }
+  }, [isRemotePanelOpen, isControlActive, remoteConnection]);
+
+  // Handle device selection
+  const handleDeviceSelect = useCallback((device: string | null) => {
+    // If changing device while connected, release control first
+    if (selectedDevice && selectedDevice !== device && isControlActive) {
+      console.log('[@component:NavigationEditor] Switching devices, releasing current control');
+      handleReleaseControl();
     }
     
     setSelectedDevice(device);
@@ -574,99 +545,10 @@ const NavigationEditorContent: React.FC = () => {
     } else {
       setSelectedHost(null);
     }
-  }, [selectedDevice, isControlActive, availableHosts, setSelectedHost]);
+  }, [selectedDevice, isControlActive, availableHosts, setSelectedHost, handleReleaseControl]);
 
-  const handleTakeControl = useCallback(async () => {
-    // Use selectedDeviceData instead of expecting a parameter
-    const device = selectedDeviceData;
-    
-    // Check for device ID using multiple possible field names
-    const deviceId = device?.id || device?.device_id;
-    
-    if (!deviceId) {
-      console.error('[@component:NavigationEditor] No device selected or device ID missing');
-      console.error('[@component:NavigationEditor] selectedDeviceData:', selectedDeviceData);
-      console.error('[@component:NavigationEditor] selectedDevice:', selectedDevice);
-      console.error('[@component:NavigationEditor] Available device fields:', device ? Object.keys(device) : 'no device');
-      return;
-    }
-
-    console.log(`[@component:NavigationEditor] Taking control of device: ${deviceId}`);
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Use the complete device object we already have from the devices list
-      console.log('[@component:NavigationEditor] Using complete device object from frontend state');
-      console.log('[@component:NavigationEditor] Device object:', device);
-      
-      // Check if we should open remote panel using the device data we already have
-      const remoteConfig = getDeviceRemoteConfig(device);
-      console.log('[@component:NavigationEditor] Remote config from existing device:', remoteConfig);
-      
-      if (remoteConfig && !isRemotePanelOpen) {
-        console.log('[@component:NavigationEditor] Opening remote panel with existing device data');
-        setIsRemotePanelOpen(true);
-      }
-
-      // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch(buildServerUrl('/server/control/take-control'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          device_id: deviceId,
-          session_id: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        }),
-      });
-
-      const data = await response.json();
-      console.log('[@component:NavigationEditor] Take control response:', data);
-
-      if (data.success) {
-        setIsControlActive(true);
-        console.log('[@component:NavigationEditor] Control activated successfully');
-        
-        // Note: We don't update selectedDeviceData here because we already have the complete object
-        console.log('[@component:NavigationEditor] Using existing complete device object, no need to update from server response');
-      } else {
-        throw new Error(data.message || 'Failed to take control');
-      }
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Take control failed:', error);
-      setError(error instanceof Error ? error.message : 'Failed to take control');
-      setIsControlActive(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedDeviceData, selectedDevice, isRemotePanelOpen, generateSessionId, setIsLoading, setError, setIsControlActive, setIsRemotePanelOpen]);
-
-  // Memoize session state change handler to prevent recreating on every render
-  const handleSessionStateChange = useCallback((session: {
-    connected: boolean;
-    connectionLoading: boolean;
-    connectionError: string | null;
-  }) => {
-    setSSHSession(session);
-  }, []);
-
-  // Memoize disconnect complete handler
-  const handleDisconnectComplete = useCallback(() => {
-    // When remote component disconnects (user clicked disconnect), release control
-    console.log('[@component:NavigationEditor] Remote component disconnected, releasing control');
-    
-    // Release control state since the remote has already handled SSH disconnection
-    setIsControlActive(false);
-    
-    // Hide the remote panel if it's open
-    if (isRemotePanelOpen) {
-      handleToggleRemotePanel();
-    }
-  }, [isRemotePanelOpen, handleToggleRemotePanel]);
-
-  // Handle taking screenshot
-  const handleTakeScreenshot = async () => {
+  // Handle taking screenshot (simplified)
+  const handleTakeScreenshot = useCallback(async () => {
     if (!selectedDevice || !isControlActive || !selectedNode) {
       console.log('[@component:NavigationEditor] Cannot take screenshot: no device selected, not in control, or no node selected');
       return;
@@ -689,113 +571,50 @@ const NavigationEditorContent: React.FC = () => {
 
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
-      // Step 1: Take screenshot using abstract capture controller
+      // Use abstract capture controller
       const screenshotResponse = await fetch(buildServerUrl('/server/capture/screenshot'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           device_model: selectedDeviceData?.model || 'android_mobile',
           video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
           parent_name: parentName,
           node_name: nodeName,
-          upload_to_cloudflare: false, // Don't upload via screenshot route, we'll use dedicated route
+          upload_to_cloudflare: false,
         }),
       });
 
       if (screenshotResponse.ok) {
         const screenshotData = await screenshotResponse.json();
-        console.log('[@component:NavigationEditor] Screenshot taken successfully:', screenshotData);
-        
         if (screenshotData.success) {
-          console.log(`[@component:NavigationEditor] Screenshot saved to: ${screenshotData.screenshot_path}`);
-          
-          // Step 2: Upload to Cloudflare using dedicated route
-          let screenshotUrl;
-          let cloudflareUploaded = false;
-          
-          try {
-            const uploadResponse = await fetch(buildServerUrl('/server/capture/upload-navigation-screenshot'), {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                source_screenshot_path: screenshotData.additional_screenshot_path || screenshotData.screenshot_path,
-                device_model: selectedDeviceData?.model || 'android_mobile',
-                parent_name: parentName,
-                node_name: nodeName,
-              }),
-            });
-
-            if (uploadResponse.ok) {
-              const uploadData = await uploadResponse.json();
-              if (uploadData.success && uploadData.cloudflare_url) {
-                screenshotUrl = uploadData.cloudflare_url;
-                cloudflareUploaded = true;
-                console.log(`[@component:NavigationEditor] Successfully uploaded to Cloudflare R2: ${uploadData.cloudflare_path}`);
-              } else {
-                console.error('[@component:NavigationEditor] Cloudflare upload failed:', uploadData.error);
-              }
-            } else {
-              console.error('[@component:NavigationEditor] Cloudflare upload request failed:', uploadResponse.status, uploadResponse.statusText);
-            }
-          } catch (uploadError) {
-            console.error('[@component:NavigationEditor] Error uploading to Cloudflare:', uploadError);
-          }
-          
-          // Fallback to local URL if Cloudflare upload failed
-          if (!screenshotUrl) {
-            const screenshotPath = screenshotData.additional_screenshot_path || screenshotData.screenshot_path;
-            screenshotUrl = buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotPath)}`);
-            console.log(`[@component:NavigationEditor] Using local URL as fallback: ${screenshotUrl}`);
-          }
-          
           // Create updated node with screenshot
+          const screenshotUrl = screenshotData.screenshot_path;
           const updatedNode = {
             ...selectedNode,
             data: {
               ...selectedNode.data,
-              screenshot: screenshotUrl
+              screenshot: buildServerUrl(`/server/capture/images?path=${encodeURIComponent(screenshotUrl)}`)
             }
           };
           
-          // Create a function to update nodes consistently
+          // Update nodes
           const updateNodeFunction = (nodes: any[]) => 
             nodes.map(node => 
               node.id === selectedNode.id ? updatedNode : node
             );
           
-          // Update both filtered nodes and allNodes arrays
           setNodes(updateNodeFunction);
           setAllNodes(updateNodeFunction);
-          
-          // Update selected node so the panel reflects the change
           setSelectedNode(updatedNode);
-          
-          // Mark tree as having unsaved changes
           setHasUnsavedChanges(true);
           
-          console.log(`[@component:NavigationEditor] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`);
-          console.log(`[@component:NavigationEditor] Marked tree as having unsaved changes`);
-          
-          // Log upload status
-          if (cloudflareUploaded) {
-            console.log(`[@component:NavigationEditor] Screenshot uploaded to Cloudflare R2 via dedicated route`);
-        } else {
-            console.log(`[@component:NavigationEditor] Screenshot saved locally only (Cloudflare upload failed)`);
+          console.log(`[@component:NavigationEditor] Screenshot captured and node updated`);
         }
-      } else {
-          console.error('[@component:NavigationEditor] Screenshot failed:', screenshotData.error);
-        }
-      } else {
-        console.error('[@component:NavigationEditor] Screenshot failed:', screenshotResponse.status, screenshotResponse.statusText);
       }
     } catch (error) {
       console.error('[@component:NavigationEditor] Error taking screenshot:', error);
     }
-  };
+  }, [selectedDevice, isControlActive, selectedNode, selectedDeviceData, nodes, buildServerUrl, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges]);
 
   // Handle verification execution
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
@@ -1301,10 +1120,7 @@ const NavigationEditorContent: React.FC = () => {
                   flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
                   nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
                 }}
-                onDisconnectComplete={() => {
-                  // Called when screen definition editor disconnects
-                  console.log('[@component:NavigationEditor] Screen definition editor disconnected');
-                }}
+                onDisconnectComplete={handleReleaseControl}
               />
             )}
 
@@ -1437,12 +1253,10 @@ const NavigationEditorContent: React.FC = () => {
                   </Typography>
                 </Box>
                 
-                <CompactAndroidMobileWithSessionTracking
+                <CompactAndroidMobile
                   connectionConfig={androidConnectionConfig}
                   autoConnect={isControlActive}
-                  onDisconnectComplete={handleDisconnectComplete}
-                  onSessionStateChange={handleSessionStateChange}
-                  sx={{ flex: 1, height: '100%' }}
+                  onDisconnectComplete={handleReleaseControl}
                 />
               </Box>
             ) : (
@@ -1478,32 +1292,26 @@ const NavigationEditorContent: React.FC = () => {
                 
                 {/* Remote Panel Content - Dynamic based on device type */}
                 {remoteConfig.type === 'android_tv' ? (
-                  <CompactRemoteWithSessionTracking
+                  <CompactRemote
                     remoteType="android-tv"
                     connectionConfig={androidConnectionConfig}
                     autoConnect={isControlActive}
                     showScreenshot={false}
-                    onDisconnectComplete={handleDisconnectComplete}
-                    onSessionStateChange={handleSessionStateChange}
-                    sx={{ flex: 1, height: '100%' }}
+                    onDisconnectComplete={handleReleaseControl}
                   />
                 ) : remoteConfig.type === 'ir_remote' ? (
-                  <CompactRemoteWithSessionTracking
+                  <CompactRemote
                     remoteType="ir"
                     connectionConfig={irConnectionConfig}
                     autoConnect={isControlActive}
-                    onDisconnectComplete={handleDisconnectComplete}
-                    onSessionStateChange={handleSessionStateChange}
-                    sx={{ flex: 1, height: '100%' }}
+                    onDisconnectComplete={handleReleaseControl}
                   />
                 ) : remoteConfig.type === 'bluetooth_remote' ? (
-                  <CompactRemoteWithSessionTracking
+                  <CompactRemote
                     remoteType="bluetooth"
                     connectionConfig={bluetoothConnectionConfig}
                     autoConnect={isControlActive}
-                    onDisconnectComplete={handleDisconnectComplete}
-                    onSessionStateChange={handleSessionStateChange}
-                    sx={{ flex: 1, height: '100%' }}
+                    onDisconnectComplete={handleReleaseControl}
                   />
                 ) : (
                   <Box sx={{ p: 2, textAlign: 'center' }}>
