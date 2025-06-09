@@ -224,9 +224,12 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
       </div>
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-80 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-border rounded-md shadow-xl z-50 max-h-80 overflow-hidden backdrop-blur-none">
+          {/* Solid backdrop to prevent any transparency */}
+          <div className="absolute inset-0 bg-white dark:bg-gray-900 -z-10"></div>
+          
           {/* Search Input */}
-          <div className="p-3 border-b border-border">
+          <div className="relative p-3 border-b border-border bg-white dark:bg-gray-900">
             <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
               {/* Hidden dummy fields to trick browser */}
               <input
@@ -269,9 +272,9 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
           </div>
 
           {/* Models List */}
-          <div className="overflow-y-auto max-h-64">
+          <div className="relative overflow-y-auto max-h-64 bg-white dark:bg-gray-900">
             {filteredModelResults.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+              <div className="px-3 py-4 text-sm text-muted-foreground text-center bg-white dark:bg-gray-900">
                 No models found
               </div>
             ) : (

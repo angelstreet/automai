@@ -232,7 +232,7 @@ const NavigationEditorContent: React.FC = () => {
   
   // Use registration context for centralized URL management and host data
   const { 
-    buildApiUrl, 
+    buildServerUrl, 
     availableHosts, 
     selectedHost, 
     setAvailableHosts, 
@@ -330,11 +330,11 @@ const NavigationEditorContent: React.FC = () => {
       setDevicesLoading(true);
       
       // Use centralized URL building from registration context
-      const apiUrl = buildApiUrl('/api/system/clients/devices');
-      console.log(`[@component:NavigationEditor] Using API URL: ${apiUrl}`);
+      const serverUrl = buildServerUrl('/api/system/clients/devices');
+      console.log(`[@component:NavigationEditor] Using server URL: ${serverUrl}`);
       
       // Fetch registered clients as devices instead of using device database
-      const response = await fetch(apiUrl);
+      const response = await fetch(serverUrl);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -361,7 +361,7 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setDevicesLoading(false);
     }
-  }, [buildApiUrl, setAvailableHosts]);
+  }, [buildServerUrl, setAvailableHosts]);
 
   useEffect(() => {
     fetchDevices();
@@ -609,7 +609,7 @@ const NavigationEditorContent: React.FC = () => {
       }
 
       // Still call the server for take control (for locking, stream setup, etc.)
-      const response = await fetch(buildApiUrl('/take-control'), {
+      const response = await fetch(buildServerUrl('/server/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -689,7 +689,7 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
       
       // Call screenshot API with parent and node name parameters
-      const response = await fetch(buildApiUrl('/api/virtualpytest/screen-definition/screenshot'), {
+      const response = await fetch(buildServerUrl('/api/virtualpytest/screen-definition/screenshot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -711,7 +711,7 @@ const NavigationEditorContent: React.FC = () => {
           
           // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
           const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
-          const screenshotUrl = buildApiUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
+          const screenshotUrl = buildServerUrl(`/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`);
           
           // Create updated node with screenshot
           const updatedNode = {
@@ -770,7 +770,7 @@ const NavigationEditorContent: React.FC = () => {
       setVerificationResults([]);
       setLastVerifiedNodeId(nodeId);
       
-      const response = await fetch(buildApiUrl('/api/virtualpytest/verification/execute-batch'), {
+      const response = await fetch(buildServerUrl('/api/virtualpytest/verification/execute-batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -849,7 +849,7 @@ const NavigationEditorContent: React.FC = () => {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
       setVerificationResults([]);
     }
-  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildApiUrl, setVerificationResults, setLastVerifiedNodeId]);
+  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildServerUrl, setVerificationResults, setLastVerifiedNodeId]);
 
   // Handle node updates - callback for NodeSelectionPanel
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
@@ -1087,6 +1087,11 @@ const NavigationEditorContent: React.FC = () => {
   // Validation colors are automatically loaded from localStorage by Zustand persistence
   // No manual initialization needed
   
+  // Legacy compatibility functions (for gradual migration)
+  const buildApiUrl = useCallback((endpoint: string) => {
+    return buildServerUrl(endpoint);
+  }, [buildServerUrl]);
+  
   return (
     <Box sx={{ 
       width: '100%',
@@ -1256,8 +1261,8 @@ const NavigationEditorContent: React.FC = () => {
                 selectedHostDevice={selectedDeviceData}
                 autoConnect={true}
                 deviceConnection={{
-                  flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
-                  nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
+                  flask_url: selectedDeviceData.connection?.flask_url || buildServerUrl(''),
+                  nginx_url: selectedDeviceData.connection?.nginx_url || buildServerUrl('').replace('http:', 'https:').replace('5009', '444')
                 }}
                 onDisconnectComplete={() => {
                   // Called when screen definition editor disconnects

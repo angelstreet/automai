@@ -13,8 +13,8 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   },
   apiEndpoints: {
     defaults: '/server/remote/android-tv/defaults',
-    connect: '/server/remote/android-tv/take-control',
-    disconnect: '/server/remote/android-tv/release-control',
+    connect: '/server/take-control',
+    disconnect: '/server/release-control',
     screenshot: '/server/remote/android-tv/screenshot',
     command: '/server/remote/android-tv/command',
     config: '/server/remote/android-tv/config'
@@ -38,8 +38,8 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   },
   apiEndpoints: {
     defaults: '/server/remote/android-mobile/defaults',
-    connect: '/server/remote/android-mobile/take-control',
-    disconnect: '/server/remote/android-mobile/release-control',
+    connect: '/server/take-control',
+    disconnect: '/server/release-control',
     screenshot: '/server/remote/android-mobile/screenshot',
     command: '/server/remote/android-mobile/command',
     config: '/server/remote/android-mobile/config',

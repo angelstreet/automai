@@ -301,7 +301,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       }
       
       // Call main server control endpoint to take control (which includes locking)
-      const response = await fetch(buildServerUrl('/take-control'), {
+      const response = await fetch(buildServerUrl('/server/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -349,7 +349,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       console.log(`[@context:Registration] Attempting to release control of device: ${hostId}`);
       
       // Call main server control endpoint to release control (which includes unlocking)
-      const response = await fetch(buildServerUrl('/release-control'), {
+      const response = await fetch(buildServerUrl('/server/release-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

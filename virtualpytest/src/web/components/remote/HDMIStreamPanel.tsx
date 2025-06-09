@@ -135,7 +135,7 @@ export function HDMIStreamPanel({
 
   const fetchDefaultValues = async () => {
     try {
-      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
+      const response = await fetch(buildServerUrl('/server/remote/hdmi-stream/defaults'));
       const result = await response.json();
       
       if (result.success && result.defaults) {
@@ -158,12 +158,15 @@ export function HDMIStreamPanel({
     try {
       console.log('[@component:HDMIStreamPanel] Starting HDMI stream connection...');
       
-      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/take-control'), {
+      const response = await fetch(buildServerUrl('/server/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sshConnectionForm),
+        body: JSON.stringify({
+          device_model: 'hdmi_stream',
+          ...sshConnectionForm
+        }),
       });
 
       const result = await response.json();
@@ -177,9 +180,9 @@ export function HDMIStreamPanel({
         if (controllerRef.current) {
           controllerRef.current.connected = true;
           controllerRef.current.streaming = true;
-          controllerRef.current.streamUrl = `SSH: ${sshConnectionForm.host_ip}${sshConnectionForm.stream_path}`;
+          controllerRef.current.streamUrl = `SSH: ${sshConnectionForm.stream_path}`;
           controllerRef.current.sshConnection = { ...sshConnectionForm };
-          controllerRef.current.stats.stream_url = `SSH: ${sshConnectionForm.host_ip}${sshConnectionForm.stream_path}`;
+          controllerRef.current.stats.stream_url = `SSH: ${sshConnectionForm.stream_path}`;
           controllerRef.current.stats.is_streaming = true;
           controllerRef.current.stats.stream_quality = resolution;
           controllerRef.current.stats.stream_fps = fps;
@@ -207,7 +210,7 @@ export function HDMIStreamPanel({
 
     try {
       console.log('[@component:HDMIStreamPanel] Disconnecting HDMI stream...');
-      const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/release-control'), {
+      const response = await fetch(buildServerUrl('/server/release-control'), {
             method: 'POST',
       });
       
@@ -348,7 +351,7 @@ export function HDMIStreamPanel({
               {controllerRef.current?.sshConnection && (
                 <>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>SSH Host:</strong> {controllerRef.current.sshConnection.host_ip}:{controllerRef.current.sshConnection.host_port}
+                    <strong>SSH Host:</strong> {controllerRef.current.sshConnection.video_device}
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Video Device:</strong> {controllerRef.current.sshConnection.video_device}

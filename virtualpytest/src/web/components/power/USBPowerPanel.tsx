@@ -68,7 +68,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
   useEffect(() => {
     const fetchDefaults = async () => {
       try {
-        const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/defaults'));
+        const response = await fetch(buildServerUrl('/server/power/usb-power/defaults'));
         const result = await response.json();
         
         if (result.success && result.defaults) {
@@ -91,7 +91,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/status'));
+      const response = await fetch(buildServerUrl('/server/power/usb-power/status'));
       const result = await response.json();
       
       if (result.success && result.connected) {
@@ -110,7 +110,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     
     try {
       console.log('[@component:USBPowerPanel] Checking power status...');
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/power-status'));
+      const response = await fetch(buildServerUrl('/server/power/usb-power/power-status'));
       const result = await response.json();
       
       if (result.success && result.power_status) {
@@ -156,7 +156,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
     try {
       console.log('[@component:USBPowerPanel] Starting USB power connection...');
 
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/take-control'), {
+      const response = await fetch(buildServerUrl('/server/power/usb-power/take-control'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +195,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Disconnecting USB power controller...');
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/release-control'), {
+      const response = await fetch(buildServerUrl('/server/power/usb-power/release-control'), {
         method: 'POST',
       });
       
@@ -227,7 +227,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Toggling power...');
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/toggle'), {
+      const response = await fetch(buildServerUrl('/server/power/usb-power/toggle'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ export function USBPowerPanel({ sx = {} }: USBPowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Rebooting device...');
-      const response = await fetch(buildServerUrl('/api/virtualpytest/usb-power/reboot'), {
+      const response = await fetch(buildServerUrl('/server/power/usb-power/reboot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

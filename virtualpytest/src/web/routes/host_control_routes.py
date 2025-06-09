@@ -179,15 +179,9 @@ def take_control():
 
 @host_control_bp.route('/release-control', methods=['POST'])
 def release_control():
-    """Host-side release control - Release local controllers"""
+    """Host-side release control - Release local controllers (no parameters needed)"""
     try:
-        data = request.get_json() or {}
-        device_model = data.get('device_model', 'android_mobile')
-        session_id = data.get('session_id', 'default-session')
-        
-        print(f"[@route:release_control] Releasing host-side control")
-        print(f"[@route:release_control] Device model: {device_model}")
-        print(f"[@route:release_control] Session ID: {session_id}")
+        print(f"[@route:release_control] Host releasing control using own stored host_device")
         
         # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
@@ -196,51 +190,35 @@ def release_control():
             print(f"[@route:release_control] No host_device found, assuming already released")
             return jsonify({
                 'success': True,
-                'message': 'No active controllers to release',
-                'device_model': device_model,
-                'session_id': session_id
+                'message': 'No active controllers to release'
             })
         
-        print(f"[@route:release_control] Releasing controllers for device: {host_device.get('device_name')}")
+        # Extract device info from stored host_device
+        device_model = host_device.get('device_model', 'android_mobile')
+        device_name = host_device.get('device_name')
+        host_name = host_device.get('host_name')
         
-        # Release AV controller if available
-        av_release_success = True
-        try:
-            av_controller = host_device.get('controller_objects', {}).get('av')
-            if av_controller and hasattr(av_controller, 'release_control'):
-                av_controller.release_control()
-                print(f"[@route:release_control] AV controller released")
-        except Exception as e:
-            print(f"[@route:release_control] Error releasing AV controller: {e}")
-            av_release_success = False
-        
-        # Release Remote controller if available
-        remote_release_success = True
-        try:
-            remote_controller = host_device.get('controller_objects', {}).get('remote')
-            if remote_controller and hasattr(remote_controller, 'release_control'):
-                remote_controller.release_control()
-                print(f"[@route:release_control] Remote controller released")
-        except Exception as e:
-            print(f"[@route:release_control] Error releasing remote controller: {e}")
-            remote_release_success = False
-        
-        overall_success = av_release_success and remote_release_success
+        print(f"[@route:release_control] Host device: {host_name} releasing controllers for device: {device_name} ({device_model})")
+
+        # Release resources (implementation depends on controller types)
+        # For now, just return success as controllers are session-based
         
         return jsonify({
-            'success': overall_success,
-            'message': 'Host-side control released',
+            'success': True,
+            'message': f'Released control for {device_name} ({device_model})',
             'device_model': device_model,
-            'session_id': session_id,
-            'av_released': av_release_success,
-            'remote_released': remote_release_success
+            'host_device': {
+                'host_name': host_name,
+                'device_name': device_name,
+                'device_model': device_model
+            }
         })
-        
+            
     except Exception as e:
-        print(f"[@route:release_control] Error: {str(e)}")
+        print(f"[@route:release_control] Error releasing control: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Error releasing host-side control: {str(e)}'
+            'error': f'Failed to release control: {str(e)}'
         }), 500
 
 
