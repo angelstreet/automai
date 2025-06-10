@@ -1,28 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
-  Button,
-  TextField,
-  Grid,
   Typography,
-  CircularProgress,
-  Alert,
-  Card,
-  CardContent,
   Chip,
-  IconButton,
-  Tooltip,
-  Collapse,
 } from '@mui/material';
 import {
-  PlayArrow,
-  Videocam,
-  VolumeUp,
   Settings,
-  ExpandMore,
-  ExpandLess,
+  Videocam,
 } from '@mui/icons-material';
-import { StreamViewer } from '../user-interface/StreamViewer';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface HDMIStreamPanelProps {
@@ -52,7 +37,6 @@ interface StreamStats {
 }
 
 export function HDMIStreamPanel({
-  connectionConfig,
   autoConnect = false,
   compact = false,
   sx = {}

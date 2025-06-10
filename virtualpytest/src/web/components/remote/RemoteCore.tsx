@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -34,7 +34,6 @@ export function RemoteCore({
   // Use the simplified remote connection hook
   const {
     isLoading,
-    error,
     sendCommand,
     hideRemote,
   } = useRemoteConnection(remoteType);

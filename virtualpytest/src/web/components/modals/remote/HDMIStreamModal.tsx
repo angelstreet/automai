@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,33 +14,31 @@ import {
   CardContent,
   Chip,
   IconButton,
-  DialogActions,
 } from '@mui/material';
-import { PlayArrow, Videocam, VolumeUp, Settings, Close as CloseIcon } from '@mui/icons-material';
-import { HDMIStreamPanel } from '../../remote/HDMIStreamPanel';
+import { PlayArrow, Videocam, Close as CloseIcon } from '@mui/icons-material';
 import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface HDMIStreamModalProps {
   open: boolean;
   onClose: () => void;
+  selectedHost?: any; // RegisteredHost type from RegistrationContext
 }
 
-export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-
+export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModalProps) {
+  const { buildNginxUrl } = useRegistration();
+  
   // Stream configuration state
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
   
-  // SSH connection parameters - restored
+  // SSH connection parameters - populated from selectedHost
   const [hostIp, setHostIp] = useState('');
   const [hostPort, setHostPort] = useState(22);
   const [hostUsername, setHostUsername] = useState('');
   const [hostPassword, setHostPassword] = useState('');
   
-  // Stream connection form state
-  const [streamUrl, setStreamUrl] = useState('https://77.56.53.130:444/stream/output.m3u8');
+  // Stream connection form state - will be built dynamically
+  const [streamUrl, setStreamUrl] = useState('');
   const [videoDevice, setVideoDevice] = useState('/dev/video0');
   
   // Connection and streaming state
@@ -52,9 +50,9 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
 
-  // Load default values when modal opens
+  // Load default values when modal opens or selectedHost changes
   useEffect(() => {
-    if (open) {
+    if (open && selectedHost) {
       fetchDefaultValues();
     }
     
@@ -62,7 +60,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
     return () => {
       cleanupStream();
     };
-  }, [open]);
+  }, [open, selectedHost]);
 
   // Clean up stream resources
   const cleanupStream = () => {
@@ -78,15 +76,35 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
     }
   };
 
-  // Fetch default stream URL from environment variables if available
+  // Fetch default values from selectedHost
   const fetchDefaultValues = async () => {
     try {
-      // Use abstract AV controller (no defaults endpoint needed - controller pre-configured)
-      // const response = await fetch(buildServerUrl('/server/virtualpytest/hdmi-stream/defaults'));
-      // Controllers are pre-configured during registration, no defaults needed
-      console.log('[@component:HDMIStreamModal] Using pre-configured abstract AV controller');
+      if (!selectedHost) {
+        console.warn('[@component:HDMIStreamModal] No selected host available');
+        return;
+      }
+
+      console.log('[@component:HDMIStreamModal] Loading values from selected host:', selectedHost.name);
+      
+      // Populate SSH connection details from selected host
+      setHostIp(selectedHost.local_ip || '');
+      setHostPort(22); // Default SSH port
+      setHostUsername(''); // User needs to provide this
+      setHostPassword(''); // User needs to provide this
+      
+      // Build stream URL using the nginx URL builder from registration context
+      try {
+        const dynamicStreamUrl = buildNginxUrl(selectedHost.id, 'stream/output.m3u8');
+        setStreamUrl(dynamicStreamUrl);
+        console.log('[@component:HDMIStreamModal] Built dynamic stream URL:', dynamicStreamUrl);
+      } catch (error) {
+        console.error('[@component:HDMIStreamModal] Failed to build stream URL:', error);
+        // Fallback to manual entry
+        setStreamUrl('');
+      }
+      
     } catch (error) {
-      console.log('[@component:HDMIStreamModal] Could not load default values:', error);
+      console.error('[@component:HDMIStreamModal] Could not load default values:', error);
     }
   };
 
@@ -220,7 +238,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
     <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Typography variant="h6" component="div">
-          HDMI Stream Viewer
+          HDMI Stream Viewer {selectedHost && `- ${selectedHost.name}`}
         </Typography>
         
         {/* Close button - always visible */}
@@ -233,6 +251,22 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
         </IconButton>
       </DialogTitle>
       <DialogContent>
+        {/* Show warning if no host is selected */}
+        {!selectedHost && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            No device selected. Please select a device from the Dashboard first to use HDMI streaming.
+          </Alert>
+        )}
+        
+        {/* Show selected host info */}
+        {selectedHost && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Selected Device:</strong> {selectedHost.name} ({selectedHost.local_ip})
+            </Typography>
+          </Alert>
+        )}
+        
         <Grid container spacing={3}>
           {/* Left Column: Stream Configuration & Controls */}
           <Grid item xs={4}>

@@ -7,7 +7,7 @@
  * - Server endpoints: For orchestration (actions, routing)
  */
 
-import { BaseControllerProxy, ControllerResponse } from './BaseControllerProxy';
+import { BaseControllerProxy } from './BaseControllerProxy';
 
 // Response interfaces
 interface VerificationResponse {

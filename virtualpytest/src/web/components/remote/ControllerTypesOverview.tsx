@@ -17,10 +17,10 @@ import {
   Memory as ProcessorIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypes, ControllerType } from '../../types/remote/types';
+import { ControllerTypesResponse, ControllerItem } from '../../types/features/Remote_Types';
 
 interface ControllerTypesOverviewProps {
-  controllerTypes: ControllerTypes | null;
+  controllerTypes: ControllerTypesResponse | null;
 }
 
 export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = ({
@@ -64,16 +64,16 @@ export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = (
                   {implementations.length} types
                 </Typography>
                 <Box display="flex" justifyContent="center" gap={0.5} flexWrap="wrap">
-                  {implementations.filter((impl: ControllerType) => impl.status === 'available').length > 0 && (
+                  {implementations.filter((impl: ControllerItem) => impl.status === 'available').length > 0 && (
                     <Chip 
-                      label={`${implementations.filter((impl: ControllerType) => impl.status === 'available').length} Ready`}
+                      label={`${implementations.filter((impl: ControllerItem) => impl.status === 'available').length} Ready`}
                       color="success" 
                       size="small" 
                     />
                   )}
-                  {implementations.filter((impl: ControllerType) => impl.status === 'placeholder').length > 0 && (
+                  {implementations.filter((impl: ControllerItem) => impl.status === 'placeholder').length > 0 && (
                     <Chip 
-                      label={`${implementations.filter((impl: ControllerType) => impl.status === 'placeholder').length} Planned`}
+                      label={`${implementations.filter((impl: ControllerItem) => impl.status === 'placeholder').length} Planned`}
                       color="default" 
                       size="small" 
                     />

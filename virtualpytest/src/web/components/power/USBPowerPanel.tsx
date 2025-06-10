@@ -1,18 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  TextField,
-  Grid,
   Typography,
   CircularProgress,
   Alert,
   Card,
   CardContent,
   Chip,
-  IconButton,
-  Tooltip,
-  Collapse,
 } from '@mui/material';
 import {
   PowerSettingsNew,
@@ -21,9 +16,6 @@ import {
   Link,
   LinkOff,
   FiberManualRecord,
-  ExpandMore,
-  ExpandLess,
-  Power,
 } from '@mui/icons-material';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
@@ -147,7 +139,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Disconnecting power controller...');
-      const response = await fetch(buildServerUrl('/server/power/release-control'), {
+      await fetch(buildServerUrl('/server/power/release-control'), {
         method: 'POST',
       });
       

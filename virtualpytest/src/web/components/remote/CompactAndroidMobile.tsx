@@ -1,17 +1,16 @@
-import React, { useEffect, useState, useRef } from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
+import { useState, useRef, useEffect } from 'react';
+import { Box } from '@mui/material';
+
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from './AndroidMobileCore';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
-import { AndroidElement } from '../../types/remote/types';
-import { BaseConnectionConfig } from '../../types/features/Remote_Types';
-import { getRemoteLayout } from '../config/layoutConfig';
+import { AndroidElement } from '../../types/features/Remote_Types';
+
+// Simple layout config - create inline since the file doesn't exist
+const getRemoteLayout = () => ({
+  containerWidth: 300,
+  containerHeight: 600
+});
 
 export function CompactAndroidMobile({
   onDisconnectComplete,
@@ -31,7 +30,6 @@ export function CompactAndroidMobile({
   const [deviceResolution, setDeviceResolution] = useState({ width: 1080, height: 2340 });
 
   // Auto-dump functionality
-  const [isAutoDumpScheduled, setIsAutoDumpScheduled] = useState(false);
   const autoDumpTimerRef = useRef<NodeJS.Timeout | null>(null);
   const screenshotRef = useRef<HTMLImageElement>(null);
   
@@ -39,13 +37,12 @@ export function CompactAndroidMobile({
   const isInitializedRef = useRef(false);
 
   // Get layout configuration for android-mobile
-  const remoteLayout = getRemoteLayout('android-mobile');
+  const remoteLayout = getRemoteLayout();
 
   // Use the extended remote connection hook for Android mobile
   // Since the device is already registered and controllers instantiated,
   // the remote should work immediately without connection setup
   const {
-    session,
     connectionLoading,
     connectionError,
     androidElements,
@@ -55,7 +52,6 @@ export function CompactAndroidMobile({
     handleScreenshotAndDumpUI,
     handleClickElement,
     handleGetApps,
-    clearElements,
   } = useRemoteConnection('android-mobile');
 
   // Auto-dump function that triggers after UI interactions
@@ -66,11 +62,8 @@ export function CompactAndroidMobile({
       clearTimeout(autoDumpTimerRef.current);
     }
 
-    setIsAutoDumpScheduled(true);
-
     autoDumpTimerRef.current = setTimeout(() => {
       console.log('[@component:CompactAndroidMobile] Auto-dumping UI elements after action');
-      setIsAutoDumpScheduled(false);
       handleDumpUIWithLoading();
     }, 1200);
   };
@@ -129,7 +122,6 @@ export function CompactAndroidMobile({
       if (autoDumpTimerRef.current) {
         clearTimeout(autoDumpTimerRef.current);
         autoDumpTimerRef.current = null;
-        setIsAutoDumpScheduled(false);
       }
       setShowOverlay(false);
       setDumpError(null);
@@ -177,7 +169,7 @@ export function CompactAndroidMobile({
         flex: 1, 
         overflow: 'auto',
         // Compact-specific styling - maxWidth and centered
-        maxWidth: `${remoteLayout.compactMaxWidth}px`,
+        maxWidth: `${remoteLayout.containerWidth}px`,
         margin: '0 auto',
         width: '100%'
       }}>

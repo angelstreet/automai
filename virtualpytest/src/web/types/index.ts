@@ -1,9 +1,25 @@
 // Export all types from organized structure
 
-// Common types (including devices, controllers, and environments)
+// Common types - Base types first, then specific types
 export * from './common/Common_BaseTypes';
-export * from './common/Device_Types';
-export * from './common/Controller_Types';
+export * from './common/Common_ActionTypes';
+
+// Specific common types (avoiding conflicts)
+export type { 
+  DeviceType, 
+  DeviceEnvironment, 
+  DeviceStatus,
+  DeviceTypes,
+  DeviceEnvironments,
+  DeviceStatuses
+} from './common/Device_Types';
+
+export type {
+  ControllerImplementation,
+  ControllerConfig,
+  ControllerConfigMap
+} from './common/Controller_Types';
+
 export * from './common/Environment_Types';
 
 // Page-specific types
@@ -11,19 +27,30 @@ export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
 export * from './pages/UserInterface_Types';
 
-// Remote types (with explicit ControllerType export)
+// Feature-specific types - Remote types with explicit exports to avoid conflicts
 export type { 
   AndroidElement, 
   AndroidApp, 
   RemoteConfig, 
-  ControllerType,
+  RemoteDeviceConfig,
   ConnectionForm, 
   RemoteSession, 
   AndroidTVSession, 
   AndroidMobileSession, 
-  TestResult 
-} from './remote/types';
-export * from './features/Remote_Types';
+  TestResult,
+  RemoteType,
+  BaseConnectionConfig,
+  IRConnectionConfig,
+  BluetoothConnectionConfig,
+  AnyConnectionConfig,
+  ControllerItem,
+  ControllerTypesResponse
+} from './features/Remote_Types';
 
-// Feature-specific types
+// Export the Remote ControllerTypes with alias to avoid conflict
+export { 
+  ControllerTypes as RemoteControllerTypes,
+  ControllerType as RemoteControllerType
+} from './features/Remote_Types';
+
 export * from './features/Validation_Types'; 

@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/features/Remote_Types';
 import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
 import { getRemoteConfig } from './useRemoteConfigs';
-import { androidTVRemote, androidMobileRemote } from '../../../config/remote';
 import { useRegistration } from '../../contexts/RegistrationContext';
 import { RemoteControllerProxy } from '../../controllers/RemoteControllerProxy';
 

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   Button,
   TextField,
@@ -12,17 +11,12 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Switch,
-  FormControlLabel,
-  Chip,
-  Paper,
-  Divider,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
-import { AndroidElement, AndroidApp } from '../../../types/features/Remote_Types';
+import { AndroidElement } from '../../../types/features/Remote_Types';
 import { BaseConnectionConfig } from '../../../types/features/Remote_Types';
 
 interface AndroidMobileModalProps {
@@ -44,7 +38,6 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
   const [deviceResolution, setDeviceResolution] = useState({ width: 1080, height: 2340 });
 
   // Auto-dump functionality
-  const [isAutoDumpScheduled, setIsAutoDumpScheduled] = useState(false);
   const autoDumpTimerRef = useRef<NodeJS.Timeout | null>(null);
   const screenshotRef = useRef<HTMLImageElement>(null);
 
@@ -120,11 +113,8 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
       clearTimeout(autoDumpTimerRef.current);
     }
 
-    setIsAutoDumpScheduled(true);
-
     autoDumpTimerRef.current = setTimeout(() => {
       console.log('[@component:AndroidMobileModal] Auto-dumping UI elements after action');
-      setIsAutoDumpScheduled(false);
       handleDumpUIWithLoading();
     }, 2000);
   };
@@ -174,7 +164,6 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
     if (autoDumpTimerRef.current) {
       clearTimeout(autoDumpTimerRef.current);
       autoDumpTimerRef.current = null;
-      setIsAutoDumpScheduled(false);
     }
 
     setShowOverlay(false);
@@ -372,7 +361,7 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
           deviceWidth={deviceResolution.width}
           deviceHeight={deviceResolution.height}
           isVisible={showOverlay}
-          selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
+          selectedElementId={selectedElement ? selectedElement : undefined}
           onElementClick={handleOverlayElementClick}
         />
       )}

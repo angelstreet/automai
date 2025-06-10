@@ -2,7 +2,7 @@ import { LightMode, DarkMode, SettingsBrightness } from '@mui/icons-material';
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip } from '@mui/material';
 import React from 'react';
 
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const ThemeToggle: React.FC = () => {
   const { mode, setMode, actualMode } = useTheme();

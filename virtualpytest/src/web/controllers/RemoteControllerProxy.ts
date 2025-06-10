@@ -7,7 +7,7 @@
  * they're running locally or remotely.
  */
 
-import { BaseControllerProxy, ControllerResponse } from './BaseControllerProxy';
+import { BaseControllerProxy } from './BaseControllerProxy';
 import { AndroidElement, AndroidApp } from '../types/remote/types';
 
 // Remote Controller Types

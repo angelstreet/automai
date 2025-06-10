@@ -4,7 +4,7 @@
  * Simple proxy for audio/video controller operations.
  */
 
-import { BaseControllerProxy, ControllerResponse } from './BaseControllerProxy';
+import { BaseControllerProxy } from './BaseControllerProxy';
 
 // Type definitions for AV controller methods
 export interface ScreenshotOptions {

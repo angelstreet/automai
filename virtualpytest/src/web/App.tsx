@@ -22,9 +22,9 @@ import TestCaseEditor from './pages/TestCaseEditor';
 import NavigationEditor from './pages/NavigationEditor';
 
 // Import navigation components
-import NavigationBar from './components/navigation/NavigationBar';
-import ThemeToggle from './components/ThemeToggle';
-import Footer from './components/Footer';
+import NavigationBar from './components/navigation/Navigation_Bar';
+import ThemeToggle from './components/common/ThemeToggle';
+import Footer from './components/common/Footer';
 
 // Import registration context
 import { RegistrationProvider } from './contexts/RegistrationContext';

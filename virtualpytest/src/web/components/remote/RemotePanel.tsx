@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -9,8 +9,13 @@ import {
   Alert,
 } from '@mui/material';
 import { useRegistration } from '../../contexts/RegistrationContext';
+import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
 
 interface RemotePanelProps {
+  /** The type of remote device */
+  remoteType?: RemoteType;
+  /** Optional pre-configured connection parameters */
+  connectionConfig?: BaseConnectionConfig;
   /** Show/hide screenshot display */
   showScreenshot?: boolean;
   /** Custom styling */
@@ -22,10 +27,10 @@ interface RemotePanelProps {
 }
 
 export function RemotePanel({
-  showScreenshot = true,
+  showScreenshot = false,
+  sx = {},
   autoConnect = false,
-  onDisconnectComplete,
-  sx = {}
+  onDisconnectComplete
 }: RemotePanelProps) {
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
@@ -104,7 +109,7 @@ export function RemotePanel({
       console.log('[@component:RemotePanel] Taking screenshot via remote controller');
       
       // ✅ Use remote controller proxy for screenshot
-      const result = await selectedHost.controllerProxies.remote.take_screenshot();
+      await selectedHost.controllerProxies.remote.take_screenshot();
       
       console.log('[@component:RemotePanel] Screenshot taken successfully');
     } catch (error: any) {

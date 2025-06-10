@@ -1,29 +1,32 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import { RemoteConfig } from '../../types/remote/types';
-import { getRemoteLayout } from '../config/layoutConfig';
+import { RemoteConfig } from '../../types/features/Remote_Types';
+
+// Simple layout config - create inline since the file doesn't exist
+const getRemoteLayout = () => ({
+  containerWidth: 300,
+  containerHeight: 600
+});
 
 interface RemoteInterfaceProps {
   remoteConfig: RemoteConfig | null;
-  scale: number;
-  showOverlays: boolean;
-  onCommand: (command: string, params?: any) => void;
-  fallbackImageUrl: string;
-  fallbackName: string;
-  remoteType?: string; // Add remoteType to get proper layout config
+  scale?: number;
+  showOverlays?: boolean;
+  onCommand?: (command: string, params?: any) => void;
+  fallbackImageUrl?: string;
+  fallbackName?: string;
 }
 
-export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
+export function RemoteInterface({
   remoteConfig,
-  scale,
-  showOverlays,
+  scale = 1,
+  showOverlays = false,
   onCommand,
-  fallbackImageUrl,
-  fallbackName,
-  remoteType,
-}) => {
+  fallbackImageUrl = '/generic-remote.png',
+  fallbackName = 'Remote Control'
+}: RemoteInterfaceProps) {
   // Get layout configuration for this remote type
-  const remoteLayout = getRemoteLayout(remoteType);
+  const remoteLayout = getRemoteLayout();
 
   // Helper function to render a button from configuration
   const renderRemoteButton = (buttonId: string, config: any) => {
@@ -135,4 +138,4 @@ export const RemoteInterface: React.FC<RemoteInterfaceProps> = ({
       )}
     </Box>
   );
-}; 
+} 

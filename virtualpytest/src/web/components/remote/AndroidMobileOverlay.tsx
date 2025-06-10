@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { AndroidElement } from '../../types/remote/types';
+import { useEffect, useState, useRef } from 'react';
+import { AndroidElement } from '../../types/features/Remote_Types';
 
 interface ScaledElement {
   id: string;
@@ -179,17 +179,16 @@ export function AndroidMobileOverlay({
 
   // Update overlay position when image moves/resizes
   useEffect(() => {
-    if (!screenshotElement || !overlayRef.current || !isVisible) return;
+    if (!screenshotElement || !isVisible) return;
 
     const updatePosition = () => {
       const imageRect = screenshotElement.getBoundingClientRect();
-      const overlay = overlayRef.current;
-      if (overlay) {
+      if (overlayRef.current) {
         // Position overlay to match exactly the image element's position
-        overlay.style.left = `${imageRect.left}px`;
-        overlay.style.top = `${imageRect.top}px`;
-        overlay.style.width = `${imageRect.width}px`;
-        overlay.style.height = `${imageRect.height}px`;
+        overlayRef.current.style.left = `${imageRect.left}px`;
+        overlayRef.current.style.top = `${imageRect.top}px`;
+        overlayRef.current.style.width = `${imageRect.width}px`;
+        overlayRef.current.style.height = `${imageRect.height}px`;
 
         console.log(
           `[@component:AndroidMobileOverlay] Overlay positioned at: (${imageRect.left}, ${imageRect.top}) size: ${imageRect.width}x${imageRect.height}`,

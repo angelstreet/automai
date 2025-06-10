@@ -31,14 +31,14 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypes, ControllerType } from '../../types/remote/types';
+import { ControllerTypesResponse, ControllerItem } from '../../types/features/Remote_Types';
 import { RemoteModal } from '../modals/remote/RemoteModal';
 import { AndroidMobileModal } from '../modals/remote/AndroidMobileModal';
 import { HDMIStreamModal } from '../modals/remote/HDMIStreamModal';
 import { USBPowerPanel } from '../power/USBPowerPanel';
 
 interface ControllerImplementationsProps {
-  controllerTypes: ControllerTypes | null;
+  controllerTypes: ControllerTypesResponse | null;
 }
 
 export const ControllerImplementations: React.FC<ControllerImplementationsProps> = ({
@@ -71,7 +71,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
     }
   };
 
-  const handleControllerClick = (category: string, controller: ControllerType) => {
+  const handleControllerClick = (category: string, controller: ControllerItem) => {
     if (category === 'remote' && controller.id === 'android_tv') {
       setAndroidTVModalOpen(true);
     } else if (category === 'remote' && controller.id === 'android_mobile') {
@@ -116,7 +116,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
               </AccordionSummary>
               <AccordionDetails>
                 <List>
-                  {implementations.map((impl: ControllerType, index: number) => (
+                  {implementations.map((impl: ControllerItem, index: number) => (
                     <React.Fragment key={impl.id}>
                       <ListItem
                         onClick={() => impl.status === 'available' && handleControllerClick(type, impl)}
@@ -174,7 +174,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       />
       <HDMIStreamModal 
         open={hdmiStreamModalOpen} 
-        onClose={() => setHdmiStreamModalOpen(false)} 
+        onClose={() => setHdmiStreamModalOpen(false)}
       />
       
       {/* USB Power Control Modal */}

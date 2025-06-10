@@ -16,7 +16,7 @@ import { Box, Button } from '@mui/material';
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import NavigationDropdown from './NavigationDropdown';
+import NavigationDropdown from './Navigation_Dropdown';
 
 const NavigationBar: React.FC = () => {
   const location = useLocation();

@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
   Typography,
   CircularProgress,
-  FormControl,
-  InputLabel,
+  Alert,
   Select,
   MenuItem,
-  Alert,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
-import { AndroidElement } from '../../types/remote/types';
+import { AndroidElement } from '../../types/features/Remote_Types';
 
 interface AndroidMobileCoreProps {
   session: any;
