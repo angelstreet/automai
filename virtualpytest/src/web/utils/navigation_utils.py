@@ -1,8 +1,8 @@
 """
-Navigation Database Utilities
+Navigation Tree Database Utilities
 
-This module provides functions for managing navigation trees, nodes, and edges in the database.
-Navigation trees define the UI flow and remote control navigation for different user interfaces.
+This module provides functions for managing navigation trees in the database.
+Navigation trees define the UI structure and flow for test automation.
 """
 
 import json
@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-from utils.supabase_utils import get_supabase_client
+from supabase_utils import get_supabase_client
 
 # =====================================================
 # NAVIGATION TREES MANAGEMENT

@@ -210,7 +210,7 @@ def setup_flask_app(app_name="VirtualPyTest"):
 def setup_supabase_connection():
     """Setup Supabase connection"""
     try:
-        from utils.supabase_utils import get_supabase_client
+        from supabase_utils import get_supabase_client
         
         # Test the connection by checking if supabase client is available
         supabase_client = get_supabase_client()

@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from utils.supabase_utils import get_supabase_client
+from supabase_utils import get_supabase_client
 
 def get_all_userinterfaces(team_id: str) -> List[Dict]:
     """Retrieve all user interfaces for a team from Supabase."""

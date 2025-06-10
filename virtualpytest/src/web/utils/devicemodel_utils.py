@@ -9,7 +9,7 @@ import json
 import uuid
 from typing import Dict, List, Optional
 
-from utils.supabase_utils import get_supabase_client
+from supabase_utils import get_supabase_client
 
 def get_all_devicemodels(team_id: str) -> List[Dict]:
     """Retrieve all device models for a team from Supabase."""

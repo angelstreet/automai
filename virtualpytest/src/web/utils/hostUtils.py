@@ -1,33 +1,29 @@
 import os
 import sys
 
-# CRITICAL: Set up import paths FIRST, before any other imports that might need them
-# Import the shared path setup function
+# CRITICAL: Set up import paths FIRST, before any other imports
+print(f"[@hostUtils:__init__] Setting up import paths for hostUtils...")
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
-sys.path.insert(0, current_dir)  # Add utils dir temporarily to import pathUtils
+web_dir = os.path.dirname(current_dir)                    # /src/web
+src_dir = os.path.dirname(web_dir)                        # /src
+parent_dir = os.path.dirname(src_dir)                     # /
 
-try:
-    from pathUtils import log_path_setup
-    
-    # Set up all paths using the shared function
-    log_path_setup("hostUtils")
-except Exception as e:
-    print(f"⚠️ [hostUtils] ERROR importing pathUtils: {e}")
-    # Fallback: set up paths manually
-    web_dir = os.path.dirname(current_dir)                   # /src/web
-    src_dir = os.path.dirname(web_dir)                       # /src
-    parent_dir = os.path.dirname(src_dir)                    # /
-    
-    fallback_paths = [
-        os.path.join(src_dir, 'utils'),               # /src/utils (for adbUtils)
-        src_dir,                                      # /src
-        os.path.join(parent_dir, 'controllers'),      # /controllers
-    ]
-    
-    for path in fallback_paths:
-        if os.path.exists(path) and path not in sys.path:
-            sys.path.insert(0, path)
-            print(f"⚠️ [hostUtils] FALLBACK: Added to sys.path: {path}")
+# Add paths to sys.path for the entire application
+paths_to_add = [
+    os.path.join(web_dir, 'utils'),               # /src/web/utils
+    os.path.join(web_dir, 'cache'),               # /src/web/cache
+    os.path.join(web_dir, 'services'),            # /src/web/services
+    os.path.join(src_dir, 'utils'),               # /src/utils  
+    src_dir,                                      # /src
+    os.path.join(parent_dir, 'controllers'),      # /controllers
+]
+
+for path in paths_to_add:
+    if path not in sys.path:
+        sys.path.insert(0, path)
+        print(f"[@hostUtils:__init__] Added to sys.path: {path}")
+
+print(f"[@hostUtils:__init__] Import paths setup completed")
 
 # Now proceed with other imports that need the paths
 import time

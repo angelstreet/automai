@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from utils.supabase_utils import get_supabase_client
+from supabase_utils import get_supabase_client
 
 from typing import List, Dict, Any, Optional, Set, Tuple
 from collections import defaultdict, deque
