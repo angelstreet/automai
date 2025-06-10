@@ -1,11 +1,10 @@
 /**
  * AV Controller Proxy
  * 
- * Frontend proxy for Audio/Video controller that handles HTTP communication
- * with the host's AV controller endpoints. This provides a consistent interface
- * for frontend components to interact with AV controllers regardless of whether
- * they're running locally or remotely.
+ * Simple proxy for audio/video controller operations.
  */
+
+import { BaseControllerProxy, ControllerResponse } from './BaseControllerProxy';
 
 // Type definitions for AV controller methods
 export interface ScreenshotOptions {
@@ -51,244 +50,122 @@ export interface VideoCaptureResponse {
   error?: string;
 }
 
-/**
- * AV Controller Proxy Class
- * 
- * Provides a JavaScript interface that mirrors the Python AV controller
- * interface, but makes HTTP calls to the host endpoints instead of
- * direct method calls.
- */
-export class AVControllerProxy {
-  private hostDevice: any;
-  private buildHostUrl: (hostId: string, endpoint: string) => string;
+export class AVControllerProxy extends BaseControllerProxy {
+  constructor(host: any, buildHostUrl: (hostId: string, endpoint: string) => string) {
+    super(host, buildHostUrl, 'AV');
+    console.log(`[@controller:AVControllerProxy] AV controller initialized for host: ${host.id}`);
+  }
 
-  constructor(
-    hostDevice: any,
-    buildHostUrl: (hostId: string, endpoint: string) => string
-  ) {
-    this.hostDevice = hostDevice;
-    this.buildHostUrl = buildHostUrl;
+  /**
+   * Take a screenshot
+   */
+  async take_screenshot(): Promise<string> {
+    console.log(`[@controller:AVControllerProxy] Taking screenshot`);
     
-    console.log(`[@controller:AVControllerProxy] Created for host: ${hostDevice.name} (${hostDevice.id})`);
-  }
-
-  /**
-   * Take a screenshot using the AV controller
-   * 
-   * @param options Screenshot options (filename, etc.)
-   * @returns Promise<string> Screenshot URL or path
-   */
-  async take_screenshot(options: ScreenshotOptions = {}): Promise<string> {
-    try {
-      console.log(`[@controller:AVControllerProxy] Taking screenshot for host: ${this.hostDevice.name}`);
-      
-      const endpoint = '/host/av/screenshot';
-      const url = this.buildHostUrl(this.hostDevice.id, endpoint);
-      
-      console.log(`[@controller:AVControllerProxy] Calling screenshot endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(options),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: ScreenshotResponse = await response.json();
-      
-      if (result.success && result.screenshot_url) {
-        console.log(`[@controller:AVControllerProxy] Screenshot taken successfully: ${result.screenshot_url}`);
-        return result.screenshot_url;
-      } else {
-        throw new Error(result.error || 'Screenshot failed - no URL returned');
-      }
-
-    } catch (error: any) {
-      console.error(`[@controller:AVControllerProxy] Screenshot failed:`, error);
-      throw new Error(`Screenshot failed: ${error.message}`);
+    const url = this.buildHostUrl(this.host.id, '/host/av/screenshot');
+    const response = await this.executeRequest<{screenshot_url: string}>('POST', url);
+    
+    if (response.success && response.data?.screenshot_url) {
+      console.log(`[@controller:AVControllerProxy] Screenshot taken successfully: ${response.data.screenshot_url}`);
+      return response.data.screenshot_url;
+    } else {
+      const error = `Screenshot failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
     }
   }
 
   /**
-   * Get the current status of the AV controller
-   * 
-   * @returns Promise<AVStatus> Current controller status
+   * Start video recording
    */
-  async get_status(): Promise<AVStatus> {
-    try {
-      console.log(`[@controller:AVControllerProxy] Getting status for host: ${this.hostDevice.name}`);
-      
-      const endpoint = '/host/av/status';
-      const url = this.buildHostUrl(this.hostDevice.id, endpoint);
-      
-      console.log(`[@controller:AVControllerProxy] Calling status endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: AVStatus = await response.json();
-      
-      console.log(`[@controller:AVControllerProxy] Status retrieved:`, result);
-      return result;
-
-    } catch (error: any) {
-      console.error(`[@controller:AVControllerProxy] Get status failed:`, error);
-      throw new Error(`Get status failed: ${error.message}`);
+  async start_recording(): Promise<void> {
+    console.log(`[@controller:AVControllerProxy] Starting video recording`);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/av/start-recording');
+    const response = await this.executeRequest('POST', url);
+    
+    if (response.success) {
+      console.log(`[@controller:AVControllerProxy] Video recording started successfully`);
+    } else {
+      const error = `Start recording failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
     }
   }
 
   /**
-   * Get the stream URL from the AV controller
-   * 
-   * @returns Promise<string> Stream URL
+   * Stop video recording
+   */
+  async stop_recording(): Promise<string> {
+    console.log(`[@controller:AVControllerProxy] Stopping video recording`);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/av/stop-recording');
+    const response = await this.executeRequest<{video_path: string}>('POST', url);
+    
+    if (response.success && response.data?.video_path) {
+      console.log(`[@controller:AVControllerProxy] Video recording stopped successfully: ${response.data.video_path}`);
+      return response.data.video_path;
+    } else {
+      const error = `Stop recording failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
+    }
+  }
+
+  /**
+   * Get stream URL
    */
   async get_stream_url(): Promise<string> {
-    try {
-      console.log(`[@controller:AVControllerProxy] Getting stream URL for host: ${this.hostDevice.name}`);
-      
-      const endpoint = '/host/av/stream-url';
-      const url = this.buildHostUrl(this.hostDevice.id, endpoint);
-      
-      console.log(`[@controller:AVControllerProxy] Calling stream URL endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: StreamUrlResponse = await response.json();
-      
-      if (result.success && result.stream_url) {
-        console.log(`[@controller:AVControllerProxy] Stream URL retrieved: ${result.stream_url}`);
-        return result.stream_url;
-      } else {
-        throw new Error(result.error || 'Stream URL not available');
-      }
-
-    } catch (error: any) {
-      console.error(`[@controller:AVControllerProxy] Get stream URL failed:`, error);
-      throw new Error(`Get stream URL failed: ${error.message}`);
+    console.log(`[@controller:AVControllerProxy] Getting stream URL`);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/av/stream-url');
+    const response = await this.executeRequest<{stream_url: string}>('GET', url);
+    
+    if (response.success && response.data?.stream_url) {
+      console.log(`[@controller:AVControllerProxy] Stream URL retrieved: ${response.data.stream_url}`);
+      return response.data.stream_url;
+    } else {
+      const error = `Get stream URL failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
     }
   }
 
   /**
-   * Start video capture
-   * 
-   * @param options Video capture options (duration, filename, etc.)
-   * @returns Promise<boolean> Success status
+   * Stop video stream
    */
-  async start_video_capture(options: VideoCaptureOptions = {}): Promise<boolean> {
-    try {
-      console.log(`[@controller:AVControllerProxy] Starting video capture for host: ${this.hostDevice.name}`);
-      
-      const endpoint = '/host/av/start-capture';
-      const url = this.buildHostUrl(this.hostDevice.id, endpoint);
-      
-      console.log(`[@controller:AVControllerProxy] Calling start capture endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(options),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: VideoCaptureResponse = await response.json();
-      
-      if (result.success) {
-        console.log(`[@controller:AVControllerProxy] Video capture started successfully`);
-        if (result.session_id) {
-          console.log(`[@controller:AVControllerProxy] Capture session ID: ${result.session_id}`);
-        }
-        return true;
-      } else {
-        throw new Error(result.error || 'Video capture start failed');
-      }
-
-    } catch (error: any) {
-      console.error(`[@controller:AVControllerProxy] Start video capture failed:`, error);
-      throw new Error(`Start video capture failed: ${error.message}`);
+  async stop_stream(): Promise<void> {
+    console.log(`[@controller:AVControllerProxy] Stopping video stream`);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/av/stop-stream');
+    const response = await this.executeRequest('POST', url);
+    
+    if (response.success) {
+      console.log(`[@controller:AVControllerProxy] Video stream stopped successfully`);
+    } else {
+      const error = `Stop stream failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
     }
   }
 
   /**
-   * Stop video capture
-   * 
-   * @returns Promise<boolean> Success status
+   * Get device resolution
    */
-  async stop_video_capture(): Promise<boolean> {
-    try {
-      console.log(`[@controller:AVControllerProxy] Stopping video capture for host: ${this.hostDevice.name}`);
-      
-      const endpoint = '/host/av/stop-capture';
-      const url = this.buildHostUrl(this.hostDevice.id, endpoint);
-      
-      console.log(`[@controller:AVControllerProxy] Calling stop capture endpoint: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: VideoCaptureResponse = await response.json();
-      
-      if (result.success) {
-        console.log(`[@controller:AVControllerProxy] Video capture stopped successfully`);
-        return true;
-      } else {
-        throw new Error(result.error || 'Video capture stop failed');
-      }
-
-    } catch (error: any) {
-      console.error(`[@controller:AVControllerProxy] Stop video capture failed:`, error);
-      throw new Error(`Stop video capture failed: ${error.message}`);
+  async get_device_resolution(): Promise<{ width: number; height: number }> {
+    console.log(`[@controller:AVControllerProxy] Getting device resolution`);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/av/resolution');
+    const response = await this.executeRequest<{ width: number; height: number }>('GET', url);
+    
+    if (response.success && response.data) {
+      console.log(`[@controller:AVControllerProxy] Device resolution: ${response.data.width}x${response.data.height}`);
+      return response.data;
+    } else {
+      const error = `Get resolution failed: ${response.error || 'Unknown error'}`;
+      console.error(`[@controller:AVControllerProxy] ${error}`);
+      throw new Error(error);
     }
-  }
-
-  /**
-   * Get controller information for debugging
-   * 
-   * @returns Object with controller details
-   */
-  getControllerInfo() {
-    return {
-      hostId: this.hostDevice.id,
-      hostName: this.hostDevice.name,
-      deviceModel: this.hostDevice.model,
-      controllerType: 'av',
-      proxyType: 'AVControllerProxy'
-    };
   }
 }
 
