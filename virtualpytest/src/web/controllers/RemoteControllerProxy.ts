@@ -7,6 +7,7 @@
  * they're running locally or remotely.
  */
 
+import { BaseControllerProxy, ControllerResponse } from './BaseControllerProxy';
 import { AndroidElement, AndroidApp } from '../types/remote/types';
 
 // Remote Controller Types
@@ -53,58 +54,38 @@ export interface RemoteStatus {
   error?: string;
 }
 
-export class RemoteControllerProxy {
-  private hostDevice: any;
-  private buildHostUrl: (hostId: string, endpoint: string) => string;
-
+export class RemoteControllerProxy extends BaseControllerProxy {
   constructor(
     hostDevice: any,
     buildHostUrl: (hostId: string, endpoint: string) => string
   ) {
-    this.hostDevice = hostDevice;
-    this.buildHostUrl = buildHostUrl;
-    
-    console.log(`[@controller:RemoteControllerProxy] Created proxy for host: ${hostDevice.name} (${hostDevice.id})`);
+    super(hostDevice, buildHostUrl, 'Remote');
+    console.log(`[@controller:RemoteControllerProxy] Remote controller initialized for host: ${hostDevice.id}`);
   }
 
   /**
    * Send a remote command (key press, app launch, etc.)
    */
   async send_command(command: string, params: Record<string, any> = {}): Promise<RemoteCommandResponse> {
-    try {
-      console.log(`[@controller:RemoteControllerProxy] Sending command: ${command}`, params);
-      
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/command');
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          command,
-          params
-        }),
-      });
+    console.log(`[@controller:RemoteControllerProxy] Sending command: ${command}`, params);
+    
+    const url = this.buildHostUrl(this.host.id, '/host/remote/command');
+    
+    const response = await this.executeRequest('POST', url, {
+      body: JSON.stringify({
+        command,
+        params
+      })
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log(`[@controller:RemoteControllerProxy] Command sent successfully: ${command}`);
-      } else {
-        console.error(`[@controller:RemoteControllerProxy] Command failed: ${result.error}`);
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error(`[@controller:RemoteControllerProxy] Error sending command:`, error);
+    if (response.success) {
+      console.log(`[@controller:RemoteControllerProxy] Command sent successfully: ${command}`);
+      return { success: true };
+    } else {
+      console.error(`[@controller:RemoteControllerProxy] Command failed: ${response.error}`);
       return {
         success: false,
-        error: error.message || 'Failed to send remote command'
+        error: response.error || 'Failed to send remote command'
       };
     }
   }
