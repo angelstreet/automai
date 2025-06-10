@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/features/Remote_Types';
-import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
+import { RemoteType } from '../../types/features/Remote_Types';
 import { getRemoteConfig } from './useRemoteConfigs';
 import { useRegistration } from '../../contexts/RegistrationContext';
-import { RemoteControllerProxy } from '../../controllers/RemoteControllerProxy';
 
 // Simplified connection form - no SSH fields needed with abstract controller
 const initialConnectionForm: ConnectionForm = {
@@ -145,7 +144,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
         
         // Use controller proxy to disconnect
         try {
-          const disconnectResult = await remoteController.get_status(); // Check status to verify connection state
+          await remoteController.get_status(); // Check status to verify connection state
           console.log('[@hook:useRemoteConnection] Remote controller status checked before disconnect');
         } catch (error) {
           console.log('[@hook:useRemoteConnection] Remote controller already disconnected or unavailable');

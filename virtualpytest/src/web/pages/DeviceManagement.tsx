@@ -1,44 +1,22 @@
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  DevicesOther as DeviceIcon,
-  Search as SearchIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Typography,
+  Button,
   Card,
   CardContent,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
   IconButton,
-  Alert,
   Chip,
-  Grid,
+  Alert,
   CircularProgress,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import CreateDeviceDialog from '../components/CreateDeviceDialog';
-import EditDeviceDialog from '../components/EditDeviceDialog';
-import { useTheme } from '@mui/material/styles';
 import { Device, DeviceCreatePayload } from '../types';
+import { CreateDeviceDialog } from '../components/devicemanagement/CreateDeviceDialog';
+import { EditDeviceDialog } from '../components/devicemanagement/EditDeviceDialog';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -57,7 +35,6 @@ const DeviceManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const theme = useTheme();
 
   // Fetch devices on component mount only
   useEffect(() => {

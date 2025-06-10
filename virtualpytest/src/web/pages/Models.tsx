@@ -4,39 +4,24 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  DevicesOther as DeviceIcon,
-  Search as SearchIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Typography,
+  Button,
   Card,
   CardContent,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
   IconButton,
+  TextField,
   Alert,
-  Chip,
-  Grid,
+  CircularProgress,
+  FormControl,
   Select,
   MenuItem,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  SelectChangeEvent,
-  CircularProgress,
-  Snackbar,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { CreateModelDialog } from '../components/model/CreateModelDialog';
-import { DeviceModel, DeviceModelCreatePayload } from '../types';
+import { DeviceModel } from '../types';
 
 const modelTypes = [
   'Android Mobile',

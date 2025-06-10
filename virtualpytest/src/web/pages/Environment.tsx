@@ -26,7 +26,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface EnvironmentVariable {
   id: string;

@@ -76,7 +76,6 @@ const TestCaseEditor: React.FC = () => {
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [environmentProfiles, setEnvironmentProfiles] = useState<EnvironmentProfile[]>([]);
-  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -224,7 +223,6 @@ const TestCaseEditor: React.FC = () => {
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setSelectedTestCase(null);
     setError(null);
   };
 
@@ -294,18 +292,13 @@ const TestCaseEditor: React.FC = () => {
     }));
   };
 
-  const handleTagsChange = (event: any, newValue: string[]) => {
+  const handleTagsChange = (_event: any, newValue: string[]) => {
     setFormData((prev) => ({ ...prev, tags: newValue }));
   };
 
   const getDeviceName = (deviceId: string) => {
     const device = devices.find((d) => d.id === deviceId);
     return device ? device.name : 'Unknown Device';
-  };
-
-  const getEnvironmentProfileName = (profileId: string) => {
-    const profile = environmentProfiles.find((p) => p.id === profileId);
-    return profile ? profile.name : 'Unknown Profile';
   };
 
   const getPriorityColor = (priority: number) => {
@@ -339,34 +332,6 @@ const TestCaseEditor: React.FC = () => {
         return 'Critical';
       default:
         return 'Unknown';
-    }
-  };
-
-  // Execute test case using abstract test execution controller
-  const handleExecute = async (testCaseId: string, selectedDevice: string) => {
-    try {
-      setLoading(true);
-      // Use abstract server test execution endpoint
-      const response = await fetch(buildServerUrl('/server/test/execute'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          test_case_id: testCaseId,
-          device_id: selectedDevice,
-        }),
-      });
-
-      if (response.ok) {
-        // Handle successful execution
-      } else {
-        setError('Failed to execute test case');
-      }
-    } catch (err) {
-      setError('Error executing test case');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -481,7 +446,7 @@ const TestCaseEditor: React.FC = () => {
         <DialogTitle>{isEditing ? 'Edit Test Case' : 'Create Test Case'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tabs value={tabValue} onChange={(_e, newValue) => setTabValue(newValue)}>
               <Tab label="Basic Info" icon={<EditIcon />} />
               <Tab label="Device & Environment" icon={<DeviceIcon />} />
               <Tab label="Verification" icon={<VerifyIcon />} />
@@ -737,7 +702,7 @@ const TestCaseEditor: React.FC = () => {
                   <Typography gutterBottom>Priority</Typography>
                   <Slider
                     value={formData.priority || 1}
-                    onChange={(e, value) =>
+                    onChange={(_e, value) =>
                       setFormData((prev) => ({ ...prev, priority: value as number }))
                     }
                     min={1}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
-import { ControllerItem, ControllerTypesResponse } from '../types/features/Remote_Types';
+import { ControllerTypesResponse } from '../types/features/Remote_Types';
 
 export function useControllers() {
   const { buildApiUrl } = useRegistration();

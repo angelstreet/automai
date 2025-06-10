@@ -82,7 +82,7 @@ export const useUserInterface = () => {
   /**
    * Create a new user interface
    */
-  const createUserInterface = async (payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
+  const createUserInterface = async (): Promise<UserInterface> => {
     try {
       console.log('[@hook:useUserInterface:createUserInterface] Creating user interface via controller proxy');
       
@@ -103,7 +103,7 @@ export const useUserInterface = () => {
   /**
    * Update an existing user interface
    */
-  const updateUserInterface = async (id: string, payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
+  const updateUserInterface = async (id: string): Promise<UserInterface> => {
     try {
       console.log(`[@hook:useUserInterface:updateUserInterface] Updating user interface ${id} via controller proxy`);
       

@@ -1,24 +1,10 @@
 import {
-  PlayArrow as PlayIcon,
-  Add as AddIcon,
-  Science as TestIcon,
-  Campaign as CampaignIcon,
-  AccountTree as TreeIcon,
-  CheckCircle as SuccessIcon,
-  Error as ErrorIcon,
-  Schedule as PendingIcon,
-  Devices as DevicesIcon,
   Computer as ComputerIcon,
-  PhoneAndroid as PhoneIcon,
-  Tv as TvIcon,
-  ViewModule as GridViewIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  Pending as PendingIcon,
   TableRows as TableViewIcon,
   Refresh as RefreshIcon,
-  BugReport as DebugIcon,
-  Terminal as TerminalIcon,
-  Clear as ClearIcon,
-  Download as DownloadIcon,
-  FilterList as FilterIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -27,14 +13,12 @@ import {
   CardContent,
   Typography,
   Button,
-  Paper,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   Chip,
   Alert,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -45,36 +29,30 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Switch,
-  FormControlLabel,
-  Divider,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-import { TestCase, Campaign, Tree } from '../types';
 import { useRegistration } from '../contexts/RegistrationContext';
 
+import { TestCase, Campaign, Tree } from '../types';
+
+// Dashboard stats interface
 interface DashboardStats {
   testCases: number;
   campaigns: number;
   trees: number;
-  recentActivity: Array<{
-    id: string;
-    type: 'test' | 'campaign' | 'tree';
-    name: string;
-    status: 'success' | 'error' | 'pending';
-    timestamp: string;
-  }>;
+  recentActivity: LogEntry[];
 }
+
+// Log entry interface for debug logs
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  source: 'frontend' | 'backend';
+  message: string;
+  details?: any;
+}
+
+type ViewMode = 'grid' | 'table';
 
 interface ConnectedDevice {
   client_id: string;
@@ -106,15 +84,6 @@ interface ConnectedDevice {
   };
 }
 
-interface LogEntry {
-  timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
-  source: 'frontend' | 'backend';
-  message: string;
-  details?: any;
-}
-
-type ViewMode = 'grid' | 'table';
 type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
 type LogSource = 'all' | 'frontend' | 'backend';
 
@@ -124,10 +93,8 @@ const Dashboard: React.FC = () => {
     buildApiUrl, 
     availableHosts, 
     fetchHosts, 
-    isLoading: hostsLoading, 
-    error: hostsError 
+    isLoading: hostsLoading
   } = useRegistration();
-  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -140,11 +107,7 @@ const Dashboard: React.FC = () => {
   
   // Debug logs state
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logFilter, setLogFilter] = useState<LogLevel>('all');
-  const [logSource, setLogSource] = useState<LogSource>('all');
-  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
-  const [logSearch, setLogSearch] = useState('');
+  const [autoRefreshLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -236,8 +199,6 @@ const Dashboard: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      setLogsLoading(true);
-      
       // Fetch backend logs
       const backendLogsRes = await fetch(buildApiUrl('/server/system/logs'));
       
@@ -266,8 +227,6 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch logs:', err);
       addFrontendLog('error', 'Failed to fetch server logs', err);
-    } finally {
-      setLogsLoading(false);
     }
   };
 
@@ -288,41 +247,8 @@ const Dashboard: React.FC = () => {
     setLogs(prevLogs => [...prevLogs.slice(-99), newLog]); // Keep only last 100 logs
   };
 
-  const clearLogs = () => {
-    setLogs([]);
-    addFrontendLog('info', 'Logs cleared by user');
-  };
-
-  const downloadLogs = () => {
-    const logsText = filteredLogs.map(log => 
-      `[${log.timestamp}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${log.details ? '\n' + JSON.stringify(log.details, null, 2) : ''}`
-    ).join('\n\n');
-    
-    const blob = new Blob([logsText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `virtualpytest-logs-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    addFrontendLog('info', 'Logs downloaded by user');
-  };
-
-  const filteredLogs = logs.filter(log => {
-    const levelMatch = logFilter === 'all' || log.level === logFilter;
-    const sourceMatch = logSource === 'all' || log.source === logSource;
-    const searchMatch = logSearch === '' || 
-      log.message.toLowerCase().includes(logSearch.toLowerCase()) ||
-      (log.details && JSON.stringify(log.details).toLowerCase().includes(logSearch.toLowerCase()));
-    
-    return levelMatch && sourceMatch && searchMatch;
-  });
-
   const handleViewModeChange = (
-    event: React.MouseEvent<HTMLElement>,
+    _event: React.MouseEvent<HTMLElement>,
     newViewMode: ViewMode,
   ) => {
     if (newViewMode !== null) {
@@ -334,7 +260,7 @@ const Dashboard: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
-        return <SuccessIcon color="success" />;
+        return <CheckCircleIcon color="success" />;
       case 'error':
         return <ErrorIcon color="error" />;
       case 'pending':
@@ -368,21 +294,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const getLogLevelColor = (level: LogEntry['level']) => {
-    switch (level) {
-      case 'error':
-        return 'error';
-      case 'warn':
-        return 'warning';
-      case 'info':
-        return 'info';
-      case 'debug':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
-
   const formatLastSeen = (timestamp: number) => {
     const now = Date.now() / 1000;
     const diff = now - timestamp;
@@ -399,15 +310,6 @@ const Dashboard: React.FC = () => {
       return date.toLocaleString();
     } catch {
       return 'Unknown';
-    }
-  };
-
-  const formatLogTimestamp = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString();
-    } catch {
-      return 'Invalid time';
     }
   };
 
