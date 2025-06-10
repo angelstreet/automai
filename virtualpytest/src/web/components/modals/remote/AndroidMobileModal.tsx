@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Box,
   Button,
   TextField,
@@ -11,12 +12,17 @@ import {
   CircularProgress,
   Alert,
   IconButton,
+  Switch,
+  FormControlLabel,
+  Chip,
+  Paper,
+  Divider,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
-import { AndroidElement } from '../../../types/remote/types';
+import { AndroidElement, AndroidApp } from '../../../types/features/Remote_Types';
 import { BaseConnectionConfig } from '../../../types/features/Remote_Types';
 
 interface AndroidMobileModalProps {
@@ -62,10 +68,9 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
     handleClickElement,
     handleGetApps,
     clearElements,
-    fetchDefaultValues,
   } = useRemoteConnection('android-mobile');
 
-  // Initialize connection form with provided config or fetch defaults
+  // Initialize connection form with provided config or use defaults
   useEffect(() => {
     if (open && !isInitializedRef.current) {
       isInitializedRef.current = true;
@@ -73,12 +78,15 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
       if (connectionConfig) {
         console.log('[@component:AndroidMobileModal] Initializing with provided config');
         setConnectionForm({
-          device_ip: connectionConfig.device_ip,
+          device_ip: connectionConfig.device_ip || '',
           device_port: connectionConfig.device_port || '5555',
         });
       } else {
-        console.log('[@component:AndroidMobileModal] No config provided, fetching defaults');
-        fetchDefaultValues();
+        console.log('[@component:AndroidMobileModal] No config provided, using defaults');
+        setConnectionForm({
+          device_ip: '',
+          device_port: '5555',
+        });
       }
     }
     
@@ -86,7 +94,7 @@ export function AndroidMobileModal({ open, onClose, connectionConfig, autoConnec
     if (!open) {
       isInitializedRef.current = false;
     }
-  }, [open, connectionConfig, fetchDefaultValues, setConnectionForm]);
+  }, [open, connectionConfig, setConnectionForm]);
 
   // Auto-connect when config is provided and modal opens
   useEffect(() => {

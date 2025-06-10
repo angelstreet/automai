@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/remote/types';
+import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/features/Remote_Types';
 import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
 import { getRemoteConfig } from './useRemoteConfigs';
 import { androidTVRemote, androidMobileRemote } from '../../../config/remote';

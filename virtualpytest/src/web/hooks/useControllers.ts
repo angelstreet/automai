@@ -1,24 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
-
-export interface ControllerType {
-  id: string;
-  name: string;
-  description: string;
-  status: 'available' | 'placeholder';
-}
-
-export interface ControllerTypes {
-  remote: ControllerType[];
-  av: ControllerType[];
-  network: ControllerType[];
-  verification: ControllerType[];
-  power: ControllerType[];
-}
+import { ControllerItem, ControllerTypesResponse } from '../types/features/Remote_Types';
 
 export function useControllers() {
   const { buildApiUrl } = useRegistration();
-  const [controllerTypes, setControllerTypes] = useState<ControllerTypes | null>(null);
+  const [controllerTypes, setControllerTypes] = useState<ControllerTypesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,21 +13,22 @@ export function useControllers() {
       setLoading(true);
       console.log('[@hook:useControllers] 🔍 Fetching controller types from backend...');
       
+      // Use RegistrationContext to build URL
       const response = await fetch(buildApiUrl('/server/controller/controller-types'));
-      console.log('[@hook:useControllers] 📡 Response status:', response.status, response.statusText);
+      console.log('[@hook:useControllers] 📡 Response status:', response.status);
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('[@hook:useControllers] ✅ Controller types received:', Object.keys(data.controller_types || {}));
+      console.log('[@hook:useControllers] ✅ Successfully fetched controller types:', data);
       
-      setControllerTypes(data.controller_types);
+      setControllerTypes(data);
       setError(null);
-    } catch (err) {
-      console.error('[@hook:useControllers] ❌ Failed to fetch controller types:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+    } catch (err: any) {
+      console.error('[@hook:useControllers] ❌ Error fetching controller types:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -49,12 +36,12 @@ export function useControllers() {
 
   useEffect(() => {
     fetchControllerTypes();
-  }, []);
+  }, [buildApiUrl]);
 
   return {
     controllerTypes,
     loading,
     error,
-    refetch: fetchControllerTypes,
+    refetch: fetchControllerTypes
   };
 } 
