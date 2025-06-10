@@ -20,7 +20,7 @@ from device_lock_manager_utils import (
     get_device_lock_info,
     cleanup_expired_locks
 )
-from web.utils.device_lock_manager_utils import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
+from device_lock_manager_utils import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
 
 # Create blueprint
 server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')

@@ -15,7 +15,7 @@ src_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__
 if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
 
-from adbUtils import ADBUtils, AndroidElement
+from adb_utils import ADBUtils, AndroidElement
 
 
 class ADBVerificationController:
