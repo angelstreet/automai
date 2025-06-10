@@ -16,7 +16,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { DeviceModel } from '../../types';
-import { DeviceFormData } from '../../types/controllerConfigTypes';
+import { DeviceFormData } from '.../../../types/features/Controller_Types';
 import { ControllerConfigService } from '../../services/controllerConfigService';
 
 interface ReviewStepProps {

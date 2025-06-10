@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 import { ControllerConfigService } from '../../services/controllerConfigService';
 import { ControllerConfiguration } from '../../types/controllerConfigTypes';
-import { DynamicControllerForm } from './DeviceManagement_DynamicControllerForm';
+import { DynamicControllerForm } from './DynamicControllerForm';
 
 interface ControllerTypeSectionProps {
   controllerType: string;

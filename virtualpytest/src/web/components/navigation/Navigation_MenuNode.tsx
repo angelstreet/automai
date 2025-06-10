@@ -3,7 +3,7 @@ import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UINavigationNode } from '../../types/navigationTypes';
 import { useValidationColors } from '../../hooks/useValidationColors';
 import { UI_BADGE_COLORS, NODE_TYPE_COLORS } from '../../../config/validationColors';
-import { buildScreenshotUrl } from '../../utils/cloudflareUtils';
+import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
   data, 

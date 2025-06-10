@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { UINavigationNode, NodeForm } from '../../types/navigationTypes';
 import { NodeGotoPanel } from './NodeGotoPanel';
-import { calculateConfidenceScore } from '../../utils/confidenceUtils';
+import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;

@@ -20,7 +20,7 @@ import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './ScreenEditorOverlay';
 import { useScreenEditor } from '../../hooks/useScreenEditor';
-import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/screenEditorUtils';
+import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/userinterface/screenEditorUtils';
 import { ScreenDefinitionEditorProps } from '../../types/screenEditorTypes';
 
 export function ScreenDefinitionEditor({

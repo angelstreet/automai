@@ -55,14 +55,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
-import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
-import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
-import { UINavigationEdge } from '../components/navigation/Navigation_NavigationEdge';
-import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
-import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
-import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
-import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
+import { UINavigationNode } from '../components/navigation/UINavigationNode';
+import { UIMenuNode } from '../components/navigation/UIMenuNode';
+import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
+import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
+import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
+import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
+import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
+import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
 
 // Import NEW generic remote components instead of device-specific ones
@@ -71,10 +71,10 @@ import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile'
 import { RemotePanel } from '../components/remote/RemotePanel';
 
 // Import ScreenDefinitionEditor
-import { ScreenDefinitionEditor } from '../components/userinterface/UserInterface_ScreenDefinitionEditor';
+import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefinitionEditor';
 
 // Import device utilities
-import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
+import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/device/deviceRemoteMappingUtils';
 import { Device } from '../types';
 
 // Import the hook to access SSH session state

@@ -35,8 +35,8 @@ import {
   DialogContentText,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import CreateDeviceDialog from '../components/devicemanagement/DeviceManagement_CreateDialog';
-import EditDeviceDialog from '../components/devicemanagement/DeviceManagement_EditDialog';
+import CreateDeviceDialog from '../components/CreateDeviceDialog';
+import EditDeviceDialog from '../components/EditDeviceDialog';
 import { useTheme } from '@mui/material/styles';
 import { Device, DeviceCreatePayload } from '../types';
 

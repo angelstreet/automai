@@ -1,28 +1,13 @@
-// Model Types
-export * from './modelTypes';
+// Export all web types from organized structure
 
-// Device Types
-export * from './deviceTypes';
+// Common Types (shared across domains)
+export * from './common/Common_ActionTypes';
+export * from './common/Common_BaseTypes';
 
-// Controller Configuration Types
-export * from './controllerConfigTypes';
+// Page Types (domain-specific for pages)  
+export * from './pages/Navigation_Types';
+export * from './pages/UserInterface_Types';
 
-// Controller Session Types
-export * from './controllerSessionTypes';
-
-// Remote Types
-export * from './remoteTypes';
-
-// Navigation Types
-export * from './navigationTypes';
-
-// Action Types
-export * from './actionTypes';
-
-// Screen Editor Types
-export * from './screenEditorTypes';
-
-// Validation Types
-export * from './validationTypes';
-
-// Other types can be added here as the project grows 
+// Feature Types (domain-specific features)
+export * from './features/Remote_Types';
+export * from './features/Validation_Types'; 

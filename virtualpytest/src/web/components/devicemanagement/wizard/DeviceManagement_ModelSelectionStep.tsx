@@ -12,7 +12,7 @@ import {
   FormHelperText,
 } from '@mui/material';
 import { DeviceModel } from '../../types';
-import { DeviceFormData } from '../../types/controllerConfigTypes';
+import { DeviceFormData } from '.../../../types/features/Controller_Types';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;

@@ -40,7 +40,7 @@ import {
 } from '@mui/icons-material';
 import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
 import { EdgeActionsList } from './EdgeActionsList';
-import { executeEdgeActions } from '../../utils/navigationApi';
+import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 
 interface ControllerAction {
   id: string;

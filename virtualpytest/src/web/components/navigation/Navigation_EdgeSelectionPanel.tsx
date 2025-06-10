@@ -11,8 +11,8 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
-import { calculateConfidenceScore } from '../../utils/confidenceUtils';
-import { executeEdgeActions } from '../../utils/navigationApi';
+import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
+import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;

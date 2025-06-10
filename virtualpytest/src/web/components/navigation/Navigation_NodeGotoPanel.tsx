@@ -19,7 +19,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { UINavigationNode } from '../../types/navigationTypes';
-import { NavigationApi, NavigationStep, NavigationPreviewResponse } from '../../utils/navigationApi';
+import { NavigationApi, NavigationStep, NavigationPreviewResponse } from '../../utils/navigation/navigationUtils';
 
 interface NodeGotoPanelProps {
   selectedNode: UINavigationNode;

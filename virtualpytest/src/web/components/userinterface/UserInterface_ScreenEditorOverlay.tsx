@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { formatRecordingTime } from '../../utils/screenEditorUtils';
+import { formatRecordingTime } from '../../utils/userinterface/screenEditorUtils';
 import { RecordingTimerProps, OverlayProps, StreamStatus } from '../../types/screenEditorTypes';
 
 // Separate component for recording timer to avoid parent re-renders
