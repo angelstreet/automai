@@ -28,7 +28,7 @@ import {
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
-import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
+import { NodeVerificationsList } from '../navigation/Navigation_NodeVerificationsList';
 import { styled } from '@mui/material/styles';
 import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../../../config/layoutConfig';
 

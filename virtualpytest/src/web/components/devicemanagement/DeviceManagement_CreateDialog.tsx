@@ -26,10 +26,10 @@ import { DeviceFormData } from '../types/controllerConfigTypes';
 import { ControllerConfigService } from '../services/controllerConfigService';
 
 // Import wizard step components
-import { BasicInfoStep } from './device-wizard/BasicInfoStep';
-import { ModelSelectionStep } from './device-wizard/ModelSelectionStep';
-import { ControllerConfigurationStep } from './device-wizard/ControllerConfigurationStep';
-import { ReviewStep } from './device-wizard/ReviewStep';
+import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';
+import { ModelSelectionStep } from './wizard/DeviceManagement_ModelSelectionStep';
+import { ControllerConfigurationStep } from './wizard/DeviceManagement_ControllerConfigStep';
+import { ReviewStep } from './wizard/DeviceManagement_ReviewStep';
 
 interface Device {
   id: string;

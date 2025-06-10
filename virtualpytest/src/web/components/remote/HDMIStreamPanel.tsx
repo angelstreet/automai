@@ -22,7 +22,7 @@ import {
   ExpandMore,
   ExpandLess,
 } from '@mui/icons-material';
-import { StreamViewer } from '../user-interface/StreamViewer';
+import { StreamViewer } from '../userinterface/UserInterface_StreamViewer';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface HDMIStreamPanelProps {
