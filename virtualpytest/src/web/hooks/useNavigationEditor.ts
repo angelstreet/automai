@@ -399,7 +399,7 @@ export const useNavigationEditor = () => {
         navigationState.setIsLoadingInterface(true);
         try {
           console.log(`[@component:NavigationEditor] Fetching user interface: ${navigationState.interfaceId}`);
-          const response = await apiCall(`/api/navigation/userinterfaces/${navigationState.interfaceId}`);
+          const response = await apiCall(`/server/navigation/userinterfaces/${navigationState.interfaceId}`);
           if (response.userinterface) {
             navigationState.setUserInterface(response.userinterface);
             if (response.root_navigation_tree) {
@@ -760,7 +760,7 @@ export const useNavigationEditor = () => {
     try {
       // In a real implementation, this would call an API
       // For now, we simulate progressive loading
-      const response = await fetch(`/api/navigation/trees/${navigationState.currentTreeId}/load-depth`, {
+      const response = await fetch(`/server/navigation/trees/${navigationState.currentTreeId}/load-depth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

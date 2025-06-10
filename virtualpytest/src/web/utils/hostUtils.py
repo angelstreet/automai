@@ -150,16 +150,16 @@ def register_host_with_server():
             print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
     
     # Use centralized server URL building instead of manual construction
-    registration_url = build_server_url('/api/system/register')
+    registration_url = build_server_url('/server/system/register')
     print(f"\n🌐 [HOST] Registration URL: {registration_url}")
     
     # ✅ BUILD ALL REQUIRED URLs ONCE (centralized approach)
     server_base_url = build_server_url('')  # Get base URL without endpoint
     urls = {
         'registration': registration_url,
-        'ping': build_server_url('/api/system/ping'),
-        'unregister': build_server_url('/api/system/unregister'),
-        'health': build_server_url('/api/system/health')
+        'ping': build_server_url('/server/system/ping'),
+        'unregister': build_server_url('/server/system/unregister'),
+        'health': build_server_url('/server/system/health')
     }
     
     print(f"🔗 [HOST] Built all server URLs:")

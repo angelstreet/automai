@@ -42,9 +42,6 @@ import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTy
 import { EdgeActionsList } from './EdgeActionsList';
 import { executeEdgeActions } from '../../utils/navigationApi';
 
-// Import registration context
-import { useRegistration } from '../../contexts/RegistrationContext';
-
 interface ControllerAction {
   id: string;
   label: string;
@@ -70,6 +67,7 @@ interface EdgeEditDialogProps {
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
   selectedDevice?: string | null;
+  selectedHostDevice?: any; // Add host device prop for controller proxy access
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -82,10 +80,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedEdge,
   isControlActive = false,
   selectedDevice = null,
+  selectedHostDevice,
 }) => {
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-  
   const [controllerActions, setControllerActions] = useState<ControllerActions>({});
   const [loadingActions, setLoadingActions] = useState(false);
   const [actionsError, setActionsError] = useState<string | null>(null);
@@ -104,38 +100,41 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     // Only log when dialog is actually opened, not when closed
     if (isOpen) {
       console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
-      if (controllerTypes.length > 0) {
+      if (controllerTypes.length > 0 && selectedHostDevice?.controllerProxies?.remote) {
         console.log(`[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`);
         fetchControllerActions(controllerTypes[0]);
       } else {
-        console.log('[@component:EdgeEditDialog] No controller types provided');
-        setActionsError('No controller types available');
+        console.log('[@component:EdgeEditDialog] No controller types or remote controller proxy available');
+        setActionsError('No controller types available or remote controller not accessible');
       }
     }
-  }, [isOpen, controllerTypes]);
+  }, [isOpen, controllerTypes, selectedHostDevice]);
 
   const fetchControllerActions = async (controllerType: string) => {
+    if (!selectedHostDevice?.controllerProxies?.remote) {
+      setActionsError('Remote controller proxy not available');
+      return;
+    }
+
     setLoadingActions(true);
     setActionsError(null);
     
     try {
-      // Use abstract remote controller actions endpoint instead of device-specific
-      console.log(`[@component:EdgeEditDialog] Fetching actions from: ${buildServerUrl('/server/remote/actions')}`);
-      const response = await fetch(buildServerUrl('/server/remote/actions'));
-      const result = await response.json();
+      console.log(`[@component:EdgeEditDialog] Fetching actions using remote controller proxy`);
+      const result = await selectedHostDevice.controllerProxies.remote.getActions();
       
-      console.log(`[@component:EdgeEditDialog] API response:`, result);
+      console.log(`[@component:EdgeEditDialog] Controller proxy response:`, result);
       
       if (result.success) {
         setControllerActions(result.actions);
-        console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for abstract remote controller`);
+        console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for remote controller`);
       } else {
-        console.error(`[@component:EdgeEditDialog] API returned error:`, result.error);
+        console.error(`[@component:EdgeEditDialog] Controller proxy returned error:`, result.error);
         setActionsError(result.error || 'Failed to load actions');
       }
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error fetching actions:', err);
-      setActionsError('Failed to connect to server');
+      setActionsError('Failed to connect to remote controller');
     } finally {
       setLoadingActions(false);
     }
@@ -163,7 +162,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
-        buildServerUrl,
+        selectedHostDevice, // Pass selectedHostDevice instead of buildServerUrl
         undefined,
         edgeForm.finalWaitTime,
         edgeForm.retryActions,

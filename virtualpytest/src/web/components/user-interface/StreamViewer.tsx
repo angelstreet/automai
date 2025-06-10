@@ -17,6 +17,8 @@ interface StreamViewerProps {
   deviceResolution?: { width: number; height: number };
   deviceId?: string;
   onTap?: (x: number, y: number) => void;
+  // Host device with controller proxies
+  selectedHostDevice?: any;
 }
 
 export function StreamViewer({
@@ -31,6 +33,7 @@ export function StreamViewer({
   deviceResolution,
   deviceId,
   onTap,
+  selectedHostDevice,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -458,6 +461,7 @@ export function StreamViewer({
           deviceResolution={deviceResolution}
           deviceId={deviceId}
           onTap={onTap}
+          selectedHostDevice={selectedHostDevice}
         />
       )}
 
@@ -513,7 +517,8 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
          prevProps.layoutConfig === nextProps.layoutConfig &&
          prevProps.onTap === nextProps.onTap &&
          JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
-         JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution);
+         JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
+         prevProps.selectedHostDevice === nextProps.selectedHostDevice;
   
   if (!isEqual) {
     console.log('[@component:StreamViewer] Props changed, component will re-render:', {
@@ -527,6 +532,7 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
       onTap: prevProps.onTap !== nextProps.onTap ? { prev: 'function', next: 'function' } : 'same',
       sx: JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx) ? { prev: prevProps.sx, next: nextProps.sx } : 'same',
       deviceResolution: JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution) ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution } : 'same',
+      selectedHostDevice: prevProps.selectedHostDevice !== nextProps.selectedHostDevice ? { prev: prevProps.selectedHostDevice, next: nextProps.selectedHostDevice } : 'same',
     });
   }
   

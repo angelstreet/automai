@@ -35,10 +35,10 @@ export interface ApiResponse<T> {
 }
 
 class UserInterfaceApiService {
-  private buildUrl: (endpoint: string) => string;
+  private selectedHost: any;
 
-  constructor(buildUrl: (endpoint: string) => string) {
-    this.buildUrl = buildUrl;
+  constructor(selectedHost: any) {
+    this.selectedHost = selectedHost;
   }
 
   /**
@@ -46,21 +46,23 @@ class UserInterfaceApiService {
    */
   async getAllUserInterfaces(): Promise<UserInterface[]> {
     try {
-      const response = await fetch(this.buildUrl('/api/userinterfaces'), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('[@service:UserInterfaceApi] Getting all user interfaces via controller proxy');
+      
+      // Check if remote controller proxy is available
+      if (!this.selectedHost?.controllerProxies?.remote) {
+        throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const data = await response.json();
-      return data;
+      const result = await this.selectedHost.controllerProxies.remote.getUIElements();
+      
+      if (result.success) {
+        console.log('[@service:UserInterfaceApi] Successfully fetched user interfaces');
+        return result.data || [];
+      } else {
+        throw new Error(result.error || 'Failed to fetch user interfaces');
+      }
     } catch (error) {
-      console.error('Error fetching user interfaces:', error);
+      console.error('[@service:UserInterfaceApi] Error fetching user interfaces:', error);
       throw error;
     }
   }
@@ -70,21 +72,23 @@ class UserInterfaceApiService {
    */
   async getUserInterface(id: string): Promise<UserInterface> {
     try {
-      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log(`[@service:UserInterfaceApi] Getting user interface ${id} via controller proxy`);
+      
+      // Check if remote controller proxy is available
+      if (!this.selectedHost?.controllerProxies?.remote) {
+        throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const data = await response.json();
-      return data;
+      const result = await this.selectedHost.controllerProxies.remote.getUIElement(id);
+      
+      if (result.success) {
+        console.log(`[@service:UserInterfaceApi] Successfully fetched user interface ${id}`);
+        return result.data;
+      } else {
+        throw new Error(result.error || `Failed to fetch user interface ${id}`);
+      }
     } catch (error) {
-      console.error(`Error fetching user interface ${id}:`, error);
+      console.error(`[@service:UserInterfaceApi] Error fetching user interface ${id}:`, error);
       throw error;
     }
   }
@@ -94,27 +98,23 @@ class UserInterfaceApiService {
    */
   async createUserInterface(payload: UserInterfaceCreatePayload): Promise<UserInterface> {
     try {
-      const response = await fetch(this.buildUrl('/api/userinterfaces'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      console.log('[@service:UserInterfaceApi] Creating user interface via controller proxy');
+      
+      // Check if remote controller proxy is available
+      if (!this.selectedHost?.controllerProxies?.remote) {
+        throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const data: ApiResponse<UserInterface> = await response.json();
-      if (data.status === 'success' && data.userinterface) {
-        return data.userinterface;
+      const result = await this.selectedHost.controllerProxies.remote.createUIElement(payload);
+      
+      if (result.success) {
+        console.log('[@service:UserInterfaceApi] Successfully created user interface');
+        return result.data;
       } else {
-        throw new Error(data.error || 'Failed to create user interface');
+        throw new Error(result.error || 'Failed to create user interface');
       }
     } catch (error) {
-      console.error('Error creating user interface:', error);
+      console.error('[@service:UserInterfaceApi] Error creating user interface:', error);
       throw error;
     }
   }
@@ -124,27 +124,23 @@ class UserInterfaceApiService {
    */
   async updateUserInterface(id: string, payload: UserInterfaceCreatePayload): Promise<UserInterface> {
     try {
-      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      console.log(`[@service:UserInterfaceApi] Updating user interface ${id} via controller proxy`);
+      
+      // Check if remote controller proxy is available
+      if (!this.selectedHost?.controllerProxies?.remote) {
+        throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const data: ApiResponse<UserInterface> = await response.json();
-      if (data.status === 'success' && data.userinterface) {
-        return data.userinterface;
+      const result = await this.selectedHost.controllerProxies.remote.updateUIElement(id, payload);
+      
+      if (result.success) {
+        console.log(`[@service:UserInterfaceApi] Successfully updated user interface ${id}`);
+        return result.data;
       } else {
-        throw new Error(data.error || 'Failed to update user interface');
+        throw new Error(result.error || 'Failed to update user interface');
       }
     } catch (error) {
-      console.error(`Error updating user interface ${id}:`, error);
+      console.error(`[@service:UserInterfaceApi] Error updating user interface ${id}:`, error);
       throw error;
     }
   }
@@ -154,24 +150,22 @@ class UserInterfaceApiService {
    */
   async deleteUserInterface(id: string): Promise<void> {
     try {
-      const response = await fetch(this.buildUrl(`/api/userinterfaces/${id}`), {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      console.log(`[@service:UserInterfaceApi] Deleting user interface ${id} via controller proxy`);
+      
+      // Check if remote controller proxy is available
+      if (!this.selectedHost?.controllerProxies?.remote) {
+        throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const data = await response.json();
-      if (data.status !== 'success') {
-        throw new Error(data.error || 'Failed to delete user interface');
+      const result = await this.selectedHost.controllerProxies.remote.deleteUIElement(id);
+      
+      if (result.success) {
+        console.log(`[@service:UserInterfaceApi] Successfully deleted user interface ${id}`);
+      } else {
+        throw new Error(result.error || 'Failed to delete user interface');
       }
     } catch (error) {
-      console.error(`Error deleting user interface ${id}:`, error);
+      console.error(`[@service:UserInterfaceApi] Error deleting user interface ${id}:`, error);
       throw error;
     }
   }
@@ -179,10 +173,10 @@ class UserInterfaceApiService {
 
 // Hook to create service instance with context
 export const useUserInterfaceApi = () => {
-  const { buildServerUrl } = useRegistration();
+  const { selectedHost } = useRegistration();
   
   // Use useMemo to create a stable reference to prevent infinite loops
   return useMemo(() => {
-    return new UserInterfaceApiService(buildServerUrl);
-  }, [buildServerUrl]);
+    return new UserInterfaceApiService(selectedHost);
+  }, [selectedHost]);
 }; 

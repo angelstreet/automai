@@ -65,7 +65,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
       state.setIsLoading(true);
       state.setError(null);
       
-      const response = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
+      const response = await state.apiCall(`/server/navigation/trees/${state.currentTreeId}/complete`);
       
       if (response.success && (response.tree_info || response.tree_data)) {
         const treeInfo = response.tree_info || {};
@@ -238,7 +238,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
       console.log(`[@hook:useNavigationCRUD] Saving ${nodesToSave.length} total nodes and ${edgesToSave.length} total edges`);
       
       // Check if tree exists
-      const checkResponse = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`);
+      const checkResponse = await state.apiCall(`/server/navigation/trees/${state.currentTreeId}/complete`);
       
       if (checkResponse.success && (checkResponse.tree_info || checkResponse.tree_data)) {
         // Tree exists, update it
@@ -251,7 +251,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
           }
         };
         
-        const updateResponse = await state.apiCall(`/api/navigation/trees/${state.currentTreeId}/complete`, {
+        const updateResponse = await state.apiCall(`/server/navigation/trees/${state.currentTreeId}/complete`, {
           method: 'PUT',
           body: JSON.stringify(updateData),
         });
@@ -280,7 +280,7 @@ export const useNavigationCRUD = (state: CRUDState) => {
           }
         };
         
-        const createResponse = await state.apiCall('/api/navigation/trees', {
+        const createResponse = await state.apiCall('/server/navigation/trees', {
           method: 'POST',
           body: JSON.stringify(treeData),
         });

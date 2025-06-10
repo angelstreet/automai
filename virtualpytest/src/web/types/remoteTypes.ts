@@ -1,4 +1,4 @@
-import { AndroidElement } from './types';
+import { AndroidElement } from './controllerSessionTypes';
 
 // Base remote configuration type (removed usb-power as it belongs in power controller)
 export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
@@ -48,4 +48,4 @@ export interface RemoteDeviceConfig {
 }
 
 // Re-export existing types for compatibility
-export * from './types'; 
+export * from './controllerSessionTypes'; 

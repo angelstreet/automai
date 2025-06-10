@@ -143,26 +143,31 @@ const edgeTypes = {
 };
 
 const NavigationEditorContent: React.FC = () => {
-  // Get the device API service
-  const deviceApi = useDeviceApi();
-  
-  // Use registration context for centralized URL management
+  // Use registration context only for host management, not URL building
   const { 
-    buildApiUrl, 
-    buildServerUrl,
-    buildHostUrl,
     availableHosts, 
     selectedHost, 
-    setAvailableHosts, 
     setSelectedHost,
-    selectHostById,
-    buildNginxUrl,
-    selectedHost: registeredHost,
+    selectHost,
+    fetchHosts,
   } = useRegistration();
+  
+  // Create a wrapper for selectHost to match the expected interface
+  const handleHostSelect = useCallback((hostNameOrNull: string | null) => {
+    if (hostNameOrNull) {
+      // Find the host by name and select it
+      const host = availableHosts.find(h => h.name === hostNameOrNull);
+      if (host) {
+        selectHost(host.id);
+      }
+    } else {
+      // Clear selection by setting selectedHost to null in context
+      setSelectedHost(null);
+    }
+  }, [availableHosts, selectHost, setSelectedHost]);
   
   // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
   
   // Simplified remote connection hook - no SSH session management needed
@@ -183,115 +188,55 @@ const NavigationEditorContent: React.FC = () => {
   const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
   const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
 
-  // Device state
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
+  // Simple loading states
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Add a setter for selectedDeviceData (derived from devices and selectedDevice)
-  const setSelectedDeviceData = useCallback((device: Device | null) => {
-    if (device) {
-      // Find and select the device by name
-      setSelectedDevice(device.name);
-    } else {
-      setSelectedDevice(null);
-    }
-  }, []);
-
-  // Generate session ID function
-  const generateSessionId = useCallback(() => {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
-
-  // Memoize computed values to prevent re-renders
-  const selectedDeviceData = useMemo(() => {
-    return devices.find(d => d.name === selectedDevice) || null;
-  }, [devices, selectedDevice]);
-
+  // Memoize computed values based on selectedHost from registration context
   const remoteConfig = useMemo(() => {
-    return selectedDeviceData ? getDeviceRemoteConfig(selectedDeviceData) : null;
-  }, [selectedDeviceData]);
+    return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
+  }, [selectedHost]);
   
   const hasAVCapabilities = useMemo(() => {
-    return selectedDeviceData?.controller_configs?.av?.parameters != null;
-  }, [selectedDeviceData]);
+    return selectedHost?.controller_configs?.av?.parameters != null;
+  }, [selectedHost]);
 
   // Memoize connection configs to prevent object recreation
   const androidConnectionConfig = useMemo(() => {
-    if (!selectedDeviceData?.controller_configs?.remote) return null;
-    return extractConnectionConfigForAndroid(selectedDeviceData.controller_configs.remote);
-  }, [selectedDeviceData?.controller_configs?.remote]);
+    if (!selectedHost?.controller_configs?.remote) return null;
+    return extractConnectionConfigForAndroid(selectedHost.controller_configs.remote);
+  }, [selectedHost?.controller_configs?.remote]);
 
   const irConnectionConfig = useMemo(() => {
-    if (!selectedDeviceData?.controller_configs?.remote) return null;
-    return extractConnectionConfigForIR(selectedDeviceData.controller_configs.remote);
-  }, [selectedDeviceData?.controller_configs?.remote]);
+    if (!selectedHost?.controller_configs?.remote) return null;
+    return extractConnectionConfigForIR(selectedHost.controller_configs.remote);
+  }, [selectedHost?.controller_configs?.remote]);
 
   const bluetoothConnectionConfig = useMemo(() => {
-    if (!selectedDeviceData?.controller_configs?.remote) return null;
-    return extractConnectionConfigForBluetooth(selectedDeviceData.controller_configs.remote);
-  }, [selectedDeviceData?.controller_configs?.remote]);
+    if (!selectedHost?.controller_configs?.remote) return null;
+    return extractConnectionConfigForBluetooth(selectedHost.controller_configs.remote);
+  }, [selectedHost?.controller_configs?.remote]);
 
-  // Fetch devices
-  const fetchDevices = useCallback(async () => {
-    console.log('[@component:NavigationEditor] Fetching registered devices from server');
-    try {
-      setDevicesLoading(true);
-      
-      // Use centralized URL building from registration context
-      const apiUrl = buildApiUrl('/api/system/clients/devices');
-      console.log(`[@component:NavigationEditor] Using API URL: ${apiUrl}`);
-      
-      // Fetch registered clients as devices instead of using device database
-      const response = await fetch(apiUrl);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        const registeredDevices = result.devices || [];
-        
-        // Store devices in both local state (for compatibility) and registration context
-        setDevices(registeredDevices);
-        setAvailableHosts(registeredDevices);
-        
-        console.log(`[@component:NavigationEditor] Successfully loaded ${registeredDevices.length} registered devices`);
-      } else {
-        throw new Error(result.error || 'Server returned success: false');
-      }
-      
-    } catch (error: any) {
-      console.error('[@component:NavigationEditor] Error fetching registered devices:', error);
-      setDevices([]);
-      setAvailableHosts([]);
-    } finally {
-      setDevicesLoading(false);
-    }
-  }, [buildApiUrl, setAvailableHosts]);
-
+  // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
-    fetchDevices();
-  }, [fetchDevices]);
+    fetchHosts();
+  }, [fetchHosts]);
 
-  // Auto-populate connection form when device is selected - stabilized dependencies
+  // Auto-populate connection form when host is selected
   useEffect(() => {
-    if (!selectedDeviceData?.controller_configs?.remote) return;
+    if (!selectedHost?.controller_configs?.remote) return;
 
-    const deviceRemoteConfig = selectedDeviceData.controller_configs.remote;
+    const deviceRemoteConfig = selectedHost.controller_configs.remote;
     
-    console.log(`[@component:NavigationEditor] Auto-populating connection form for device: ${selectedDeviceData.name}`, deviceRemoteConfig);
-    console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has remote type: ${deviceRemoteConfig.type}`);
+    console.log(`[@component:NavigationEditor] Auto-populating connection form for host: ${selectedHost.name}`, deviceRemoteConfig);
+    console.log(`[@component:NavigationEditor] Host ${selectedHost.name} has remote type: ${deviceRemoteConfig.type}`);
     
     if (hasAVCapabilities) {
-      console.log(`[@component:NavigationEditor] Device ${selectedDeviceData.name} has AV capabilities for screen definition`);
+      console.log(`[@component:NavigationEditor] Host ${selectedHost.name} has AV capabilities for screen definition`);
     }
-  }, [selectedDeviceData?.name, selectedDeviceData?.controller_configs?.remote, hasAVCapabilities]);
+  }, [selectedHost?.name, selectedHost?.controller_configs?.remote, hasAVCapabilities]);
 
-  // Handle disconnection when control is released - stabilized dependencies
+  // Handle disconnection when control is released
   useEffect(() => {
     if (!remoteConfig || isControlActive) return;
 
@@ -452,8 +397,8 @@ const NavigationEditorContent: React.FC = () => {
 
   // Simplified take control handler
   const handleTakeControl = useCallback(async () => {
-    const device = selectedDeviceData;
-    const deviceId = device?.id || device?.device_id;
+    const device = selectedHost;
+    const deviceId = device?.id; // Use 'id' instead of 'device_id' for RegisteredHost
     
     if (!deviceId) {
       console.error('[@component:NavigationEditor] No device selected or device ID missing');
@@ -465,34 +410,29 @@ const NavigationEditorContent: React.FC = () => {
     setError(null);
 
     try {
-      // Call server take-control endpoint (handles device locking, host coordination)
-      const response = await fetch(buildServerUrl('/server/control/take-control'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_id: deviceId,
-          session_id: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        }),
-      });
-
-      const data = await response.json();
-      console.log('[@component:NavigationEditor] Take control response:', data);
-
-      if (data.success) {
-        setIsControlActive(true);
-        
-        // Show remote UI if device has remote capabilities
-        const remoteConfig = getDeviceRemoteConfig(device);
-        if (remoteConfig) {
-          console.log('[@component:NavigationEditor] Device has remote capabilities, showing remote UI via server');
-          await remoteConnection.showRemote(); // Call server to show remote
-          setIsRemotePanelOpen(true);
-        }
-        
-        console.log('[@component:NavigationEditor] Control activated successfully');
-      } else {
-        throw new Error(data.message || 'Failed to take control');
+      // Instead of HTTP call, just activate control and use controller proxies
+      console.log('[@component:NavigationEditor] Activating control - using controller proxies approach');
+      
+      setIsControlActive(true);
+      
+      // Show remote UI if device has remote capabilities and controller proxy exists
+      const remoteConfig = getDeviceRemoteConfig(device);
+      if (remoteConfig && device?.controllerProxies?.remote) {
+        console.log('[@component:NavigationEditor] Device has remote capabilities and controller proxy, showing remote UI');
+        setIsRemotePanelOpen(true);
       }
+      
+      // Check for verification capabilities
+      if (device?.controllerProxies?.verification) {
+        console.log('[@component:NavigationEditor] Device has verification capabilities');
+        setIsVerificationActive(true);
+        setVerificationControllerStatus({
+          image_controller_available: device.controllerProxies.verification.hasCapability('image') || device.controllerProxies.verification.hasCapability('verification'),
+          text_controller_available: device.controllerProxies.verification.hasCapability('text') || device.controllerProxies.verification.hasCapability('ocr'),
+        });
+      }
+      
+      console.log('[@component:NavigationEditor] Control activated successfully using controller proxies');
     } catch (error) {
       console.error('[@component:NavigationEditor] Take control failed:', error);
       setError(error instanceof Error ? error.message : 'Failed to take control');
@@ -500,59 +440,35 @@ const NavigationEditorContent: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDeviceData, remoteConnection, buildServerUrl]);
+  }, [selectedHost, getDeviceRemoteConfig]);
 
   // Simplified release control handler
   const handleReleaseControl = useCallback(async () => {
     console.log('[@component:NavigationEditor] Releasing control');
     
-    // Hide remote UI via server
-    await remoteConnection.hideRemote();
     setIsRemotePanelOpen(false);
     setIsControlActive(false);
+    setIsVerificationActive(false);
+    setVerificationControllerStatus({
+      image_controller_available: false,
+      text_controller_available: false,
+    });
     
-    // Note: Server-side cleanup happens automatically when session expires
     console.log('[@component:NavigationEditor] Control released');
-  }, [remoteConnection]);
+  }, []);
 
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {
     if (isRemotePanelOpen) {
-      // Hide remote via server and close panel
-      remoteConnection.hideRemote();
       setIsRemotePanelOpen(false);
     } else if (isControlActive) {
-      // Show remote via server and open panel
-      remoteConnection.showRemote();
       setIsRemotePanelOpen(true);
     }
-  }, [isRemotePanelOpen, isControlActive, remoteConnection]);
+  }, [isRemotePanelOpen, isControlActive]);
 
-  // Handle device selection
-  const handleDeviceSelect = useCallback((device: string | null) => {
-    // If changing device while connected, release control first
-    if (selectedDevice && selectedDevice !== device && isControlActive) {
-      console.log('[@component:NavigationEditor] Switching devices, releasing current control');
-      handleReleaseControl();
-    }
-    
-    setSelectedDevice(device);
-    
-    // Also update the registration context with the selected host
-    if (device) {
-      const host = availableHosts.find(h => h.name === device);
-      if (host) {
-        setSelectedHost(host);
-        console.log(`[@component:NavigationEditor] Selected host in context: ${host.name} (${host.local_ip}:${host.client_port})`);
-      }
-    } else {
-      setSelectedHost(null);
-    }
-  }, [selectedDevice, isControlActive, availableHosts, setSelectedHost, handleReleaseControl]);
-
-  // Handle taking screenshot (simplified)
+  // Handle taking screenshot using AV controller proxy
   const handleTakeScreenshot = useCallback(async () => {
-    if (!selectedDevice || !isControlActive || !selectedNode) {
+    if (!selectedHost || !isControlActive || !selectedNode) {
       console.log('[@component:NavigationEditor] Cannot take screenshot: no device selected, not in control, or no node selected');
       return;
     }
@@ -572,60 +488,52 @@ const NavigationEditorContent: React.FC = () => {
         }
       }
 
-      console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`);
+      console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedHost.name}, parent: ${parentName}, node: ${nodeName}`);
       
-      // Use host AV controller screenshot endpoint directly
-      if (!selectedHost) {
-        console.error('[@component:NavigationEditor] No host selected for screenshot operation');
-        return;
+      // Use AV controller proxy instead of direct HTTP call
+      const avControllerProxy = selectedHost?.controllerProxies?.av;
+      if (!avControllerProxy) {
+        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
       }
       
-      const hostUrl = buildHostUrl(selectedHost.id, '/host/av/screenshot');
-      const screenshotResponse = await fetch(hostUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_model: selectedDeviceData?.model || 'android_mobile',
-          video_device: selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
-          parent_name: parentName,
-          node_name: nodeName,
-          upload_to_cloudflare: false,
-        }),
-      });
-
-      if (screenshotResponse.ok) {
-        const screenshotData = await screenshotResponse.json();
-        if (screenshotData.success) {
-          // Create updated node with screenshot - use host URL for image serving
-          const screenshotUrl = screenshotData.screenshot;
-          const updatedNode = {
-            ...selectedNode,
-            data: {
-              ...selectedNode.data,
-              screenshot: `data:image/png;base64,${screenshotUrl}` // Host returns base64 screenshot
-            }
-          };
-          
-          // Update nodes
-          const updateNodeFunction = (nodes: any[]) => 
-            nodes.map(node => 
-              node.id === selectedNode.id ? updatedNode : node
-            );
-          
-          setNodes(updateNodeFunction);
-          setAllNodes(updateNodeFunction);
-          setSelectedNode(updatedNode);
-          setHasUnsavedChanges(true);
-          
-          console.log(`[@component:NavigationEditor] Screenshot captured and node updated`);
-        }
+      console.log('[@component:NavigationEditor] AV controller proxy found, calling take_screenshot...');
+      
+      // Call take_screenshot on the AV controller proxy
+      const screenshotUrl = await avControllerProxy.take_screenshot();
+      
+      if (screenshotUrl) {
+        console.log('[@component:NavigationEditor] Screenshot taken successfully:', screenshotUrl);
+        
+        // Create updated node with screenshot
+        const updatedNode = {
+          ...selectedNode,
+          data: {
+            ...selectedNode.data,
+            screenshot: `data:image/png;base64,${screenshotUrl}` // Assuming base64 format
+          }
+        };
+        
+        // Update nodes
+        const updateNodeFunction = (nodes: any[]) => 
+          nodes.map(node => 
+            node.id === selectedNode.id ? updatedNode : node
+          );
+        
+        setNodes(updateNodeFunction);
+        setAllNodes(updateNodeFunction);
+        setSelectedNode(updatedNode);
+        setHasUnsavedChanges(true);
+        
+        console.log(`[@component:NavigationEditor] Screenshot captured and node updated`);
+      } else {
+        console.error('[@component:NavigationEditor] Screenshot failed - no URL returned');
       }
     } catch (error) {
       console.error('[@component:NavigationEditor] Error taking screenshot:', error);
     }
-  }, [selectedDevice, isControlActive, selectedNode, selectedDeviceData, nodes, buildServerUrl, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges, selectedHost, buildHostUrl]);
+  }, [selectedHost, isControlActive, selectedNode, nodes, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges]);
 
-  // Handle verification execution
+  // Handle verification execution using verification controller proxy
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
     if (!isVerificationActive || !verifications || verifications.length === 0) {
       console.log('[@component:NavigationEditor] Cannot execute verifications: controllers not active or no verifications');
@@ -639,25 +547,27 @@ const NavigationEditorContent: React.FC = () => {
       setVerificationResults([]);
       setLastVerifiedNodeId(nodeId);
       
-      // Use abstract server verification endpoint for batch execution
-      const response = await fetch(buildServerUrl('/server/verification/execute-batch'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          verifications: verifications,
-          node_id: nodeId,
-          model: selectedDeviceData?.model || 'android_mobile' // Add model for proper result handling
-        }),
+      // Use verification controller proxy instead of server endpoint
+      const verificationControllerProxy = selectedHost?.controllerProxies?.verification;
+      if (!verificationControllerProxy) {
+        throw new Error('Verification controller proxy not available. Host may not have verification capabilities or proxy creation failed.');
+      }
+      
+      console.log('[@component:NavigationEditor] Verification controller proxy found, calling executeVerificationBatch...');
+      
+      // Call executeVerificationBatch on the verification controller proxy
+      const response = await verificationControllerProxy.executeVerificationBatch({
+        verifications: verifications,
+        model: selectedHost?.model || 'android_mobile',
+        node_id: nodeId,
+        source_filename: 'current_screenshot.jpg' // Default source filename
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[@component:NavigationEditor] Verification results:', data);
+      
+      if (response.success && response.data?.results) {
+        console.log('[@component:NavigationEditor] Verification results:', response.data);
         
         // Process results to match VerificationTestResult interface
-        const processedResults = data.results ? data.results.map((result: any, index: number) => {
+        const processedResults = response.data.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
           console.log(`[@component:NavigationEditor] Processing result ${index}:`, result);
@@ -694,15 +604,15 @@ const NavigationEditorContent: React.FC = () => {
           
           console.log(`[@component:NavigationEditor] Processed result ${index}:`, processedResult);
           return processedResult;
-        }) : [];
+        });
         
         console.log(`[@component:NavigationEditor] Setting verification results:`, processedResults);
         setVerificationResults(processedResults);
         
         // Show summary like in NodeVerificationsList
-        if (data.results) {
-          const passed = data.results.filter((r: any) => r.success).length;
-          const total = data.results.length;
+        if (response.data.results) {
+          const passed = response.data.results.filter((r: any) => r.success).length;
+          const total = response.data.results.length;
           console.log(`[@component:NavigationEditor] Verification completed: ${passed}/${total} passed`);
           
           // Log final result based on pass condition
@@ -712,14 +622,14 @@ const NavigationEditorContent: React.FC = () => {
           console.log(`[@component:NavigationEditor] Final result (${verificationPassCondition}): ${finalPassed ? 'PASS' : 'FAIL'}`);
         }
       } else {
-        console.error('[@component:NavigationEditor] Verification failed:', response.status, response.statusText);
+        console.error('[@component:NavigationEditor] Verification failed:', response.error);
         setVerificationResults([]);
       }
     } catch (error) {
       console.error('[@component:NavigationEditor] Error executing verifications:', error);
       setVerificationResults([]);
     }
-  }, [isVerificationActive, selectedDeviceData?.model, verificationPassCondition, buildServerUrl, setVerificationResults, setLastVerifiedNodeId]);
+  }, [isVerificationActive, selectedHost, verificationPassCondition, setVerificationResults, setLastVerifiedNodeId]);
 
   // Handle node updates - callback for NodeSelectionPanel
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
@@ -985,11 +895,10 @@ const NavigationEditorContent: React.FC = () => {
         lockInfo={lockInfo}
         sessionId={sessionId}
         userInterface={userInterface}
-        selectedDevice={selectedDevice}
+        selectedDevice={selectedHost?.name || null}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
-        devices={devices}
-        devicesLoading={devicesLoading}
+        devicesLoading={false}
         treeId={currentTreeId}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
@@ -1007,7 +916,7 @@ const NavigationEditorContent: React.FC = () => {
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
         onToggleRemotePanel={handleToggleRemotePanel}
-        onDeviceSelect={handleDeviceSelect}
+        onDeviceSelect={handleHostSelect}
         onTakeControl={handleTakeControl}
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
@@ -1121,14 +1030,10 @@ const NavigationEditorContent: React.FC = () => {
             </div>
 
             {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
-            {selectedDeviceData && hasAVCapabilities && isControlActive && (
+            {selectedHost && hasAVCapabilities && isControlActive && (
               <ScreenDefinitionEditor
-                selectedHostDevice={selectedDeviceData}
+                selectedHostDevice={selectedHost}
                 autoConnect={true}
-                deviceConnection={{
-                  flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
-                  nginx_url: selectedDeviceData.connection?.nginx_url || buildApiUrl('').replace('http:', 'https:').replace('5009', '444')
-                }}
                 onDisconnectComplete={handleReleaseControl}
               />
             )}
@@ -1200,7 +1105,7 @@ const NavigationEditorContent: React.FC = () => {
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                     onReset={resetNode}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedDevice}
+                    selectedDevice={selectedHost?.name || null}
                     onTakeScreenshot={handleTakeScreenshot}
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
@@ -1220,7 +1125,7 @@ const NavigationEditorContent: React.FC = () => {
                     setEdgeForm={setEdgeForm}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedDevice}
+                    selectedDevice={selectedHost?.name || null}
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                   />
@@ -1344,7 +1249,8 @@ const NavigationEditorContent: React.FC = () => {
         onResetNode={resetNode}
         verificationControllerTypes={['text', 'image']}
         isVerificationActive={isVerificationActive}
-        selectedDevice={selectedDevice}
+        selectedDevice={selectedHost?.name || null}
+        selectedHostDevice={selectedHost}
         isControlActive={isControlActive}
         model={userInterface?.models?.[0] || 'android_mobile'}
       />
@@ -1359,7 +1265,8 @@ const NavigationEditorContent: React.FC = () => {
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
         isControlActive={isControlActive}
-        selectedDevice={selectedDevice}
+        selectedDevice={selectedHost?.name || null}
+        selectedHostDevice={selectedHost}
       />
 
       {/* Discard Changes Confirmation Dialog */}

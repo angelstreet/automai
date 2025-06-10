@@ -122,7 +122,7 @@ const TestCaseEditor: React.FC = () => {
   const fetchDevices = async () => {
     try {
       // Use existing system clients devices endpoint
-      const response = await fetch(buildApiUrl('/api/system/clients/devices'));
+      const response = await fetch(buildApiUrl('/server/system/clients/devices'));
       if (response.ok) {
         const data = await response.json();
         // Extract devices array from the response
@@ -136,7 +136,7 @@ const TestCaseEditor: React.FC = () => {
   const fetchEnvironmentProfiles = async () => {
     try {
       // Use abstract system environment profiles endpoint
-      const response = await fetch(buildApiUrl('/api/system/environment-profiles'));
+      const response = await fetch(buildApiUrl('/server/system/environment-profiles'));
       if (response.ok) {
         const data = await response.json();
         // Extract profiles array from the response

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useValidationStore } from '../store/validationStore';
-import { validationService } from '../services/validationService';
+import { validationService } from '../../services/validationService';
 import { ValidationEvents } from '../validation/ValidationEventListener';
 import { ValidationProgress } from '../types/validationTypes';
 

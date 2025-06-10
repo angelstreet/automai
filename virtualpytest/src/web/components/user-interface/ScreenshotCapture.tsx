@@ -25,6 +25,7 @@ interface ScreenshotCaptureProps {
   onAreaSelected?: (area: DragArea) => void;
   model?: string;
   sx?: any;
+  selectedHostDevice?: any;
 }
 
 export function ScreenshotCapture({
@@ -36,11 +37,9 @@ export function ScreenshotCapture({
   selectedArea,
   onAreaSelected,
   model,
-  sx = {}
+  sx = {},
+  selectedHostDevice
 }: ScreenshotCaptureProps) {
-  // Use registration context for centralized URL management
-  const { buildServerUrl, buildHostUrl, selectedHost } = useRegistration();
-  
   const imageRef = useRef<HTMLImageElement>(null);
 
   // Get layout configuration based on model
@@ -58,7 +57,7 @@ export function ScreenshotCapture({
     }
   };
 
-  // Get image URL using centralized URL building
+  // Get image URL using AV controller proxy instead of building URLs
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
     
@@ -76,9 +75,13 @@ export function ScreenshotCapture({
       return screenshotPath;
     }
     
-    // For file paths, use host endpoints for controller-generated images
-    const timestamp = new Date().getTime();
-    let imageUrl: string;
+    // For file paths, use AV controller proxy to serve images
+    if (!selectedHostDevice?.controllerProxies?.av) {
+      console.error(`[@component:ScreenshotCapture] No AV controller proxy available for image serving`);
+      return '';
+    }
+    
+    console.log('[@component:ScreenshotCapture] Using AV controller proxy for image serving');
     
     // Extract filename from path
     const filename = screenshotPath.split('/').pop()?.split('?')[0];
@@ -87,23 +90,27 @@ export function ScreenshotCapture({
       return '';
     }
     
-    // Use host endpoints for controller-generated images
-    if (!selectedHost) {
-      console.error(`[@component:ScreenshotCapture] No host selected for image serving`);
+    // Use the AV controller proxy to get the image URL
+    // This should be synchronous URL building through the proxy
+    try {
+      const avController = selectedHostDevice.controllerProxies.av;
+      let imageUrl: string;
+      
+      if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
+        // Screenshot images - use AV controller image serving method
+        imageUrl = avController.buildImageUrl(`screenshot/${filename}`);
+      } else {
+        // General images - use AV controller general image serving
+        imageUrl = avController.buildImageUrl(screenshotPath);
+      }
+      
+      console.log(`[@component:ScreenshotCapture] Generated image URL via AV controller: ${imageUrl}`);
+      return imageUrl;
+    } catch (error) {
+      console.error(`[@component:ScreenshotCapture] Error building image URL via AV controller:`, error);
       return '';
     }
-    
-    if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
-      // Screenshot images - use host AV controller image serving
-      imageUrl = buildHostUrl(selectedHost.id, `/host/av/images/screenshot/${filename}?t=${timestamp}`);
-    } else {
-      // General images - use host AV controller image serving
-      imageUrl = buildHostUrl(selectedHost.id, `/host/av/images?path=${encodeURIComponent(screenshotPath)}&t=${timestamp}`);
-    }
-    
-    console.log(`[@component:ScreenshotCapture] Generated host image URL: ${imageUrl}`);
-    return imageUrl;
-  }, [screenshotPath, buildHostUrl, selectedHost]);
+  }, [screenshotPath, selectedHostDevice]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = screenshotPath && imageUrl && !isCapturing && onAreaSelected && imageRef.current;

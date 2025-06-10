@@ -25,7 +25,7 @@ export function useControllers() {
   const fetchControllerTypes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(buildApiUrl('/api/controller/controller-types'));
+      const response = await fetch(buildApiUrl('/server/controller/controller-types'));
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

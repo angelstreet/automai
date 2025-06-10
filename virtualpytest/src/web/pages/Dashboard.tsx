@@ -239,7 +239,7 @@ const Dashboard: React.FC = () => {
       setLogsLoading(true);
       
       // Fetch backend logs
-      const backendLogsRes = await fetch(buildApiUrl('/api/system/logs'));
+      const backendLogsRes = await fetch(buildApiUrl('/server/system/logs'));
       
       if (backendLogsRes.ok) {
         const backendLogs = await backendLogsRes.json();

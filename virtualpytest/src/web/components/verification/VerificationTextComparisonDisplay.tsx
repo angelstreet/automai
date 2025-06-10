@@ -21,8 +21,8 @@ export const VerificationTextComparisonDisplay: React.FC<VerificationTextCompari
   languageConfidence,
   onSourceImageClick
 }) => {
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
+  // Use registration context to get selected host for nginx URL
+  const { selectedHost } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
@@ -32,8 +32,14 @@ export const VerificationTextComparisonDisplay: React.FC<VerificationTextCompari
       return url;
     }
     
-    // Otherwise, build the URL using the registration context
-    return buildServerUrl(url);
+    // ✅ Use direct nginx URL from host data instead of buildServerUrl
+    if (selectedHost?.connection?.nginx_url) {
+      const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+      return `${selectedHost.connection.nginx_url}${cleanUrl}`;
+    }
+    
+    // Fallback if no host selected
+    return url;
   };
 
   const handleSourceImageClick = () => {

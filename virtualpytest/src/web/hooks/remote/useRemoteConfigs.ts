@@ -70,7 +70,34 @@ export const REMOTE_CONFIGS = {
   'bluetooth': BLUETOOTH_CONFIG,
 } as const;
 
-// Helper function to get config by type
+// Hook to get remote configurations
+export function useRemoteConfigs() {
+  // Get all available remote configurations
+  const getConfigs = () => REMOTE_CONFIGS;
+  
+  // Get config by type
+  const getConfigByType = (remoteType: string): RemoteDeviceConfig | null => {
+    return REMOTE_CONFIGS[remoteType as keyof typeof REMOTE_CONFIGS] || null;
+  };
+  
+  // Get all config types
+  const getConfigTypes = () => Object.keys(REMOTE_CONFIGS);
+  
+  // Get configs as array
+  const getConfigsArray = (): RemoteDeviceConfig[] => {
+    return Object.values(REMOTE_CONFIGS);
+  };
+
+  return {
+    configs: REMOTE_CONFIGS,
+    getConfigs,
+    getConfigByType,
+    getConfigTypes,
+    getConfigsArray,
+  };
+}
+
+// Helper function to get config by type (kept for backward compatibility)
 export function getRemoteConfig(remoteType: string): RemoteDeviceConfig | null {
   return REMOTE_CONFIGS[remoteType as keyof typeof REMOTE_CONFIGS] || null;
 } 

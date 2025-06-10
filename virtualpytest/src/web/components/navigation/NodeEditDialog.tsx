@@ -39,35 +39,8 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 
-// Import registration context
-import { useRegistration } from '../../contexts/RegistrationContext';
-
-// Remove the problematic imports and define the interfaces locally if needed
-// import { Node, Edge, VerificationAction, NavigationAction } from '../../type';
-
-interface NodeForm {
-  label: string;
-  type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
-  description: string;
-  screenshot?: string;
-  depth?: number;
-  parent?: string[];
-  verifications?: NodeVerification[];
-}
-
-interface NodeVerification {
-  id: string;
-  label: string;
-  command: string;
-  controller_type: 'text' | 'image' | 'adb';
-  params: any;
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-  last_run_result?: boolean[];
-}
+// Import proper types from navigationTypes
+import { NodeForm, NodeVerification, UINavigationNode } from '../../types/navigationTypes';
 
 interface VerificationAction {
   id: string;
@@ -82,14 +55,6 @@ interface VerificationAction {
 
 interface VerificationActions {
   [category: string]: VerificationAction[];
-}
-
-interface UINavigationNode {
-  id: string;
-  data: {
-    label: string;
-    verifications?: NodeVerification[];
-  };
 }
 
 interface NodeEditDialogProps {
@@ -108,6 +73,8 @@ interface NodeEditDialogProps {
   isControlActive?: boolean;
   // Add model prop for verification references
   model?: string;
+  // Add selectedHostDevice prop for controller proxy access
+  selectedHostDevice?: any;
 }
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -123,6 +90,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   selectedDevice = null,
   isControlActive = false,
   model,
+  selectedHostDevice,
 }) => {
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
@@ -131,9 +99,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
-
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
 
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
@@ -176,32 +141,36 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && verificationControllerTypes.length > 0 && Object.keys(verificationActions).length === 0) {
+    if (isOpen && verificationControllerTypes.length > 0 && Object.keys(verificationActions).length === 0 && selectedHostDevice?.controllerProxies?.verification) {
       fetchVerificationActions();
     }
-  }, [isOpen, verificationControllerTypes, verificationActions]);
+  }, [isOpen, verificationControllerTypes, verificationActions, selectedHostDevice]);
 
   const fetchVerificationActions = async () => {
+    if (!selectedHostDevice?.controllerProxies?.verification) {
+      setVerificationError('Verification controller proxy not available');
+      return;
+    }
+
     setLoadingVerifications(true);
     setVerificationError(null);
     
     try {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions from: ${buildServerUrl('/server/verification/actions')}`);
-      const response = await fetch(buildServerUrl('/server/verification/actions'));
-      const result = await response.json();
+      console.log(`[@component:NodeEditDialog] Fetching verification actions using controller proxy`);
+      const result = await selectedHostDevice.controllerProxies.verification.getVerificationActions();
       
-      console.log(`[@component:NodeEditDialog] Verification API response:`, result);
+      console.log(`[@component:NodeEditDialog] Verification controller proxy response:`, result);
       
       if (result.success) {
         setVerificationActions(result.verifications);
         console.log(`[@component:NodeEditDialog] Loaded verification actions`);
       } else {
-        console.error(`[@component:NodeEditDialog] Verification API returned error:`, result.error);
+        console.error(`[@component:NodeEditDialog] Verification controller proxy returned error:`, result.error);
         setVerificationError(result.error || 'Failed to load verification actions');
       }
     } catch (err: any) {
       console.error('[@component:NodeEditDialog] Error fetching verification actions:', err);
-      setVerificationError('Failed to connect to verification server');
+      setVerificationError('Failed to connect to verification controller');
     } finally {
       setLoadingVerifications(false);
     }
@@ -215,23 +184,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath = verification.params?.full_path || 
-                            verification.params?.reference_path || 
-                            verification.inputValue;
+        const hasImagePath = verification.params?.image_path;
         return Boolean(hasImagePath);
       } else if (verification.controller_type === 'text') {
         // Text verifications need text to search for
-        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        const hasText = verification.params?.text;
         return Boolean(hasText);
-      } else if (verification.controller_type === 'adb') {
-        // ADB verifications need search criteria
-        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
-        return Boolean(hasSearchTerm);
-      }
-      
-      // For other types, check if requiresInput is set and if so, validate accordingly
-      if (verification.requiresInput) {
-        return Boolean(verification.inputValue && verification.inputValue.trim() !== '');
       }
       
       return true;
@@ -258,34 +216,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       // Check if verification has required input based on controller type
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath = verification.params?.full_path || 
-                            verification.params?.reference_path || 
-                            verification.inputValue;
+        const hasImagePath = verification.params?.image_path;
         if (!hasImagePath) {
           console.log(`[@component:NodeEditDialog] Removing verification ${index}: No image reference specified`);
           return false;
         }
       } else if (verification.controller_type === 'text') {
         // Text verifications need text to search for
-        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        const hasText = verification.params?.text;
         if (!hasText) {
           console.log(`[@component:NodeEditDialog] Removing verification ${index}: No text specified`);
-          return false;
-        }
-      } else if (verification.controller_type === 'adb') {
-        // ADB verifications need search criteria
-        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
-        if (!hasSearchTerm) {
-          console.log(`[@component:NodeEditDialog] Removing verification ${index}: No search term specified`);
-          return false;
-        }
-      }
-      
-      // For other types, check if requiresInput is set and if so, validate accordingly
-      if (verification.requiresInput) {
-        const hasInput = verification.inputValue && verification.inputValue.trim() !== '';
-        if (!hasInput) {
-          console.log(`[@component:NodeEditDialog] Removing verification ${index}: Required input missing`);
           return false;
         }
       }
@@ -337,24 +277,19 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
         
         try {
-          const response = await fetch(buildServerUrl('/server/verification/execute'), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              verification: verificationToExecute
-            }),
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-            verificationSuccess = true;
-          } else {
-            results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+          if (!selectedHostDevice?.controllerProxies?.verification) {
+            results.push(`❌ Verification ${i + 1}: Verification controller not available`);
             verificationSuccess = false;
+          } else {
+            const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verificationToExecute]);
+            
+            if (result.success) {
+              results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+              verificationSuccess = true;
+            } else {
+              results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+              verificationSuccess = false;
+            }
           }
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
@@ -422,26 +357,21 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm.label}`);
       
       try {
-        // Execute navigation to this node using abstract navigation controller
-        const navigationResponse = await fetch(buildServerUrl('/server/navigation/goto'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            target_node: nodeForm.label,
-          }),
-        });
-        
-        const navigationResult = await navigationResponse.json();
-        
-        if (navigationResult.success) {
-          gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm.label}`);
-          navigationSuccess = true;
-          console.log(`[@component:NodeEditDialog] Navigation successful`);
+        // Execute navigation to this node using navigation controller proxy
+        if (!selectedHostDevice?.controllerProxies?.navigation) {
+          gotoResults.push(`❌ Navigation: Navigation controller not available`);
+          console.error(`[@component:NodeEditDialog] Navigation controller proxy not available`);
         } else {
-          gotoResults.push(`❌ Navigation: ${navigationResult.error || 'Failed to reach node'}`);
-          console.error(`[@component:NodeEditDialog] Navigation failed:`, navigationResult.error);
+          const navigationResult = await selectedHostDevice.controllerProxies.navigation.gotoNode(nodeForm.label);
+          
+          if (navigationResult.success) {
+            gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm.label}`);
+            navigationSuccess = true;
+            console.log(`[@component:NodeEditDialog] Navigation successful`);
+          } else {
+            gotoResults.push(`❌ Navigation: ${navigationResult.error || 'Failed to reach node'}`);
+            console.error(`[@component:NodeEditDialog] Navigation failed:`, navigationResult.error);
+          }
         }
       } catch (err: any) {
         gotoResults.push(`❌ Navigation: ${err.message || 'Network error'}`);
@@ -484,25 +414,21 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
           
           try {
-            const response = await fetch(buildServerUrl('/server/verification/execute'), {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                verification: verificationToExecute
-              }),
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-              gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-              individualVerificationSuccess = true;
-            } else {
-              gotoResults.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+            if (!selectedHostDevice?.controllerProxies?.verification) {
+              gotoResults.push(`❌ Verification ${i + 1}: Verification controller not available`);
               verificationSuccess = false;
               individualVerificationSuccess = false;
+            } else {
+              const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verificationToExecute]);
+              
+              if (result.success) {
+                gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+                individualVerificationSuccess = true;
+              } else {
+                gotoResults.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+                verificationSuccess = false;
+                individualVerificationSuccess = false;
+              }
             }
           } catch (err: any) {
             gotoResults.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);

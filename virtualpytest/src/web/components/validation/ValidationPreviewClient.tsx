@@ -67,7 +67,7 @@ interface OptimalPathData {
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const { showPreview, previewData, lastResult, closePreview, runValidation, viewLastResult } = useValidation(treeId);
   const { resetForNewValidation } = useValidationColors(treeId);
-  const { buildServerUrl } = useRegistration();
+  const { buildServerUrl, selectedHost } = useRegistration();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
@@ -93,24 +93,29 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
     setError(null);
     
     try {
-      const response = await fetch(buildServerUrl(`api/validation/optimal-path/${treeId}`));
+      console.log('[@component:ValidationPreviewClient] Checking verification controller availability...');
+      
+      if (!selectedHost?.controllerProxies?.verification) {
+        throw new Error('Verification controller proxy not available for selected host');
+      }
+      
+      // ✅ Verification controller proxy is available
+      console.log('[@component:ValidationPreviewClient] Verification controller proxy available');
+      
+      const response = await fetch(buildServerUrl(`server/validation/optimal-path/${treeId}`));
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch optimal path');
       }
       
       const data = await response.json();
       
-      if (data.success) {
-        setOptimalPath(data.optimal_path || []);
-        setTotalSteps(data.total_steps || 0);
-        setEstimatedTime(data.estimated_time_minutes || 0);
-      } else {
-        setError(data.error || 'Failed to fetch optimal path');
-      }
+      setOptimalPath(data);
+      setTotalSteps(data.sequence.length);
+      setEstimatedTime(data.summary.efficiency_ratio * data.sequence.length);
     } catch (err: any) {
-      console.error('[@component:ValidationPreviewClient] Error fetching optimal path:', err);
-      setError(err.message || 'Failed to fetch optimal path');
+      console.error('[@component:ValidationPreviewClient] Error:', err);
+      setError(err.message || 'Failed to access verification controller');
     } finally {
       setIsLoading(false);
     }

@@ -233,7 +233,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       setIsLoading(true);
       setError(null);
       
-      const fullUrl = `${SERVER_BASE_URL}/api/system/clients/devices`;
+      const fullUrl = `${SERVER_BASE_URL}/server/system/clients/devices`;
       console.log('[@context:Registration] Fetching hosts from server');
       console.log('[@context:Registration] SERVER_BASE_URL:', SERVER_BASE_URL);
       console.log('[@context:Registration] Full URL:', fullUrl);
@@ -315,7 +315,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
         console.error('[@context:Registration] This is likely a network connectivity issue:');
         console.error('[@context:Registration] - Check if the server is running');
-        console.error('[@context:Registration] - Check if the URL is accessible:', `${SERVER_BASE_URL}/api/system/clients/devices`);
+        console.error('[@context:Registration] - Check if the URL is accessible:', `${SERVER_BASE_URL}/server/system/clients/devices`);
         console.error('[@context:Registration] - Check for CORS issues');
         console.error('[@context:Registration] - Check for mixed content issues (HTTPS->HTTP)');
         console.error('[@context:Registration] - Check browser network tab for more details');

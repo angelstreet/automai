@@ -235,9 +235,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     type: 'image' | 'text';
   } | null>(null);
 
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-
   // Helper function to get the verification controller proxy
   const getVerificationControllerProxy = () => {
     // Use selectedHostDevice if available (new controller architecture)

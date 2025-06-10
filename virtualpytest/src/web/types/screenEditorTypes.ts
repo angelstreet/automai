@@ -1,0 +1,106 @@
+export interface ScreenDefinitionEditorProps {
+  /** Complete host+device object containing all configuration */
+  selectedHostDevice?: any;
+  /** Whether to auto-connect when device is selected */
+  autoConnect?: boolean;
+  /** Callback when disconnection is complete */
+  onDisconnectComplete?: () => void;
+  /** Custom styling */
+  sx?: any;
+}
+
+export type ViewMode = 'stream' | 'screenshot' | 'capture';
+export type StreamStatus = 'running' | 'stopped' | 'unknown';
+
+export interface LayoutConfig {
+  minHeight: string;
+  aspectRatio: string;
+  objectFit: 'cover';
+  isMobileModel: boolean;
+}
+
+export interface DeviceResolution {
+  width: number;
+  height: number;
+}
+
+export interface ResolutionInfo {
+  device: { width: number; height: number } | null;
+  capture: string | null;
+  stream: string | null;
+}
+
+export interface SelectedArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface CaptureImageState {
+  ref?: React.RefObject<HTMLImageElement>;
+  dimensions?: { width: number; height: number };
+  sourcePath?: string;
+}
+
+export interface ScreenEditorState {
+  // Connection state
+  isConnected: boolean;
+  connectionError: string | null;
+  streamStatus: StreamStatus;
+  streamUrl: string | undefined;
+  
+  // Capture state
+  lastScreenshotPath: string | undefined;
+  videoFramesPath: string | undefined;
+  currentFrame: number;
+  totalFrames: number;
+  viewMode: ViewMode;
+  isCapturing: boolean;
+  isStoppingCapture: boolean;
+  captureStartTime: Date | null;
+  captureEndTime: Date | null;
+  
+  // UI state
+  isExpanded: boolean;
+  isScreenshotLoading: boolean;
+  isSaving: boolean;
+  savedFrameCount: number;
+  
+  // Selection state
+  selectedArea: SelectedArea | null;
+  captureImageRef: React.RefObject<HTMLImageElement> | undefined;
+  captureImageDimensions: { width: number; height: number } | undefined;
+  captureSourcePath: string | undefined;
+  
+  // Resolution state
+  resolutionInfo: ResolutionInfo;
+}
+
+export interface ScreenEditorActions {
+  handleStartCapture: () => Promise<void>;
+  handleStopCapture: () => Promise<void>;
+  handleTakeScreenshot: () => Promise<void>;
+  restartStream: () => Promise<void>;
+  handleDisconnect: () => Promise<void>;
+  handleToggleExpanded: () => Promise<void>;
+  handleFrameChange: (frame: number) => void;
+  handleBackToStream: () => void;
+  handleScreenshotTaken: (path: string) => void;
+  handleImageLoad: (ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => void;
+  handleAreaSelected: (area: SelectedArea) => void;
+  handleClearSelection: () => void;
+  handleTap: (x: number, y: number) => Promise<void>;
+  getStreamUrl: () => Promise<string | undefined>;
+}
+
+export interface RecordingTimerProps {
+  isCapturing: boolean;
+}
+
+export interface OverlayProps {
+  isCapturing?: boolean;
+  isScreenshotLoading?: boolean;
+  streamStatus?: StreamStatus;
+  recordingTime?: number;
+} 

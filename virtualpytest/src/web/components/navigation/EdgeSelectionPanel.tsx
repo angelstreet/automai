@@ -26,6 +26,7 @@ interface EdgeSelectionPanelProps {
   isControlActive?: boolean;
   selectedDevice?: string | null;
   controllerTypes?: string[]; // e.g., ["android_mobile"]
+  selectedHostDevice?: any; // Add selectedHostDevice prop
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
@@ -39,6 +40,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   isControlActive = false,
   selectedDevice = null,
   controllerTypes = [],
+  selectedHostDevice, // Add selectedHostDevice parameter
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
@@ -224,6 +226,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       const result = await executeEdgeActions(
         actions,
         controllerTypes,
+        selectedHostDevice, // Pass selectedHostDevice as third parameter
         updateActionResults, // Pass the callback to update edge data
         finalWaitTime,
         retryActions,

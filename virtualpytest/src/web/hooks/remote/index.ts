@@ -7,4 +7,4 @@ export {
   ANDROID_MOBILE_CONFIG,
   IR_CONFIG,
   BLUETOOTH_CONFIG 
-} from './remoteConfigs'; 
+} from './useRemoteConfigs'; 

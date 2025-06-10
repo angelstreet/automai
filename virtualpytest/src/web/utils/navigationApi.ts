@@ -329,7 +329,7 @@ export interface ActionExecutionResult {
 export async function executeEdgeActions(
   actions: any[],
   controllerTypes: string[],
-  buildServerUrl: (endpoint: string) => string,
+  selectedHost: any,
   updateActionResults?: (index: number, success: boolean) => void,
   finalWaitTime: number = 2000,
   retryActions: any[] = [],
@@ -337,11 +337,21 @@ export async function executeEdgeActions(
 ): Promise<ActionExecutionResult> {
   console.log(`[@util:NavigationApi] Starting execution of ${actions.length} actions with ${retryActions.length} retry actions`);
   
-  const apiControllerType = controllerTypes[0]?.replace(/_/g, '-') || 'android-mobile';
   let results: string[] = [];
   let updatedActions = [...actions];
   let updatedRetryActions = [...retryActions];
   let executionStopped = false;
+  
+  // Check if remote controller proxy is available
+  if (!selectedHost?.controllerProxies?.remote) {
+    console.error('[@util:NavigationApi] Remote controller proxy not available');
+    return {
+      results: ['❌ Remote controller proxy not available for selected host'],
+      executionStopped: true,
+      updatedActions,
+      updatedRetryActions,
+    };
+  }
   
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
@@ -357,6 +367,69 @@ export async function executeEdgeActions(
   };
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Helper function to execute action via controller proxy
+  const executeActionViaProxy = async (action: any): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      console.log(`[@util:NavigationApi] Executing action via controller proxy: ${action.command}`);
+      
+      const remoteProxy = selectedHost.controllerProxies.remote;
+      
+      // Map action commands to controller proxy methods
+      switch (action.command) {
+        case 'tap':
+        case 'coordinate_tap':
+          if (action.params?.x !== undefined && action.params?.y !== undefined) {
+            const result = await remoteProxy.tap(action.params.x, action.params.y);
+            return result;
+          }
+          return { success: false, error: 'Missing coordinates for tap action' };
+          
+        case 'input_text':
+          if (action.params?.text) {
+            const result = await remoteProxy.input_text(action.params.text);
+            return result;
+          }
+          return { success: false, error: 'Missing text for input action' };
+          
+        case 'press_key':
+          if (action.params?.key) {
+            const result = await remoteProxy.press_key(action.params.key);
+            return result;
+          }
+          return { success: false, error: 'Missing key for press action' };
+          
+        case 'launch_app':
+          if (action.params?.package) {
+            const result = await remoteProxy.launch_app(action.params.package);
+            return result;
+          }
+          return { success: false, error: 'Missing package for launch app action' };
+          
+        case 'close_app':
+          if (action.params?.package) {
+            const result = await remoteProxy.close_app(action.params.package);
+            return result;
+          }
+          return { success: false, error: 'Missing package for close app action' };
+          
+        case 'click_element':
+          if (action.params?.element_id) {
+            const result = await remoteProxy.click_element(action.params.element_id);
+            return result;
+          }
+          return { success: false, error: 'Missing element_id for click element action' };
+          
+        default:
+          // For other commands, use the generic send_command method
+          const result = await remoteProxy.send_command(action.command, action.params || {});
+          return result;
+      }
+    } catch (error: any) {
+      console.error(`[@util:NavigationApi] Controller proxy error:`, error);
+      return { success: false, error: error.message || 'Controller proxy execution failed' };
+    }
+  };
 
   try {
     for (let i = 0; i < actions.length; i++) {
@@ -377,55 +450,19 @@ export async function executeEdgeActions(
       
       console.log(`[@util:NavigationApi] Executing action ${i + 1}/${actions.length}: ${action.label}`);
       
-      const actionToExecute = {
-        ...action,
-        params: { ...action.params }
-      };
-      
-      if (action.requiresInput && action.inputValue) {
-        if (action.command === 'launch_app') {
-          actionToExecute.params.package = action.inputValue;
-        } else if (action.command === 'close_app') {
-          actionToExecute.params.package = action.inputValue;
-        } else if (action.command === 'input_text') {
-          actionToExecute.params.text = action.inputValue;
-        } else if (action.command === 'click_element') {
-          actionToExecute.params.element_id = action.inputValue;
-        } else if (action.command === 'coordinate_tap') {
-          const coords = action.inputValue.split(',').map((coord: string) => parseInt(coord.trim()));
-          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            actionToExecute.params.x = coords[0];
-            actionToExecute.params.y = coords[1];
-          }
-        }
-      }
-      
-      console.log(`[@util:NavigationApi] Action ${i + 1} (${action.command}): requiresInput=${action.requiresInput}, inputValue="${action.inputValue}", final params:`, actionToExecute.params);
-      
       let actionSuccess = false;
       
       try {
-        const response = await fetch(buildServerUrl(`api/virtualpytest/${apiControllerType}/execute-action`), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: actionToExecute
-          }),
-        });
+        const result = await executeActionViaProxy(action);
         
-        const result = await response.json();
-        
-        // Check both HTTP status and result.success
-        if (response.ok && result.success) {
+        if (result.success) {
           results.push(`✅ Action ${i + 1}: ${result.message || 'Success'}`);
           actionSuccess = true;
           console.log(`[@util:NavigationApi] Action ${i + 1} SUCCESS: ${result.message || 'Success'}`);
         } else {
           results.push(`❌ Action ${i + 1}: ${result.error || result.message || 'Failed'}`);
           actionSuccess = false;
-          console.log(`[@util:NavigationApi] Action ${i + 1} FAILED: HTTP ${response.status}, Error: ${result.error || result.message || 'Failed'}`);
+          console.log(`[@util:NavigationApi] Action ${i + 1} FAILED: ${result.error || result.message || 'Failed'}`);
         }
       } catch (err: any) {
         results.push(`❌ Action ${i + 1}: ${err.message || 'Network error'}`);
@@ -496,38 +533,12 @@ export async function executeEdgeActions(
         
         console.log(`[@util:NavigationApi] Executing retry action ${i + 1}/${retryActions.length}: ${action.label}`);
         
-        const actionToExecute = { ...action, params: { ...action.params } };
-        
-        if (action.requiresInput && action.inputValue) {
-          if (action.command === 'launch_app') {
-            actionToExecute.params.package = action.inputValue;
-          } else if (action.command === 'close_app') {
-            actionToExecute.params.package = action.inputValue;
-          } else if (action.command === 'input_text') {
-            actionToExecute.params.text = action.inputValue;
-          } else if (action.command === 'click_element') {
-            actionToExecute.params.element_id = action.inputValue;
-          } else if (action.command === 'coordinate_tap') {
-            const coords = action.inputValue.split(',').map((coord: string) => parseInt(coord.trim()));
-            if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-              actionToExecute.params.x = coords[0];
-              actionToExecute.params.y = coords[1];
-            }
-          }
-        }
-        
         let actionSuccess = false;
         
         try {
-          const response = await fetch(buildServerUrl(`api/virtualpytest/${apiControllerType}/execute-action`), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: actionToExecute }),
-          });
+          const result = await executeActionViaProxy(action);
           
-          const result = await response.json();
-          
-          if (response.ok && result.success) {
+          if (result.success) {
             results.push(`✅ Retry Action ${i + 1}: ${result.message || 'Success'}`);
             actionSuccess = true;
             console.log(`[@util:NavigationApi] Retry Action ${i + 1} SUCCESS`);

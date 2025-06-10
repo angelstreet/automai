@@ -36,7 +36,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:lockNavigationTree] Attempting to lock tree: ${treeName}`);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}/lock`, {
+      const response = await state.apiCall(`/server/navigation/config/trees/${treeName}/lock`, {
         method: 'POST',
         body: JSON.stringify({
           session_id: sessionId.current
@@ -67,7 +67,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:unlockNavigationTree] Attempting to unlock tree: ${treeName}`);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}/unlock`, {
+      const response = await state.apiCall(`/server/navigation/config/trees/${treeName}/unlock`, {
         method: 'POST',
         body: JSON.stringify({
           session_id: sessionId.current
@@ -96,7 +96,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       state.setIsLoading(true);
       state.setError(null);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`);
+      const response = await state.apiCall(`/server/navigation/config/trees/${treeName}`);
       
       if (response.success && response.tree_data) {
         const treeData = response.tree_data;
@@ -161,7 +161,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         }
       };
 
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`, {
+      const response = await state.apiCall(`/server/navigation/config/trees/${treeName}`, {
         method: 'PUT',
         body: JSON.stringify(saveData),
       });
@@ -192,7 +192,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:listAvailableTrees] Fetching available trees`);
       
-      const response = await state.apiCall('/api/navigation/config/trees');
+      const response = await state.apiCall('/server/navigation/config/trees');
       
       if (response.success) {
         console.log(`[@hook:useNavigationConfig:listAvailableTrees] Found ${response.trees.length} trees`);
@@ -209,7 +209,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   // Check if tree is locked by another session
   const checkTreeLockStatus = useCallback(async (treeName: string) => {
     try {
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`);
+      const response = await state.apiCall(`/server/navigation/config/trees/${treeName}`);
       
       if (response.success) {
         setIsLocked(response.is_locked);
@@ -256,7 +256,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         // Use sendBeacon for reliable cleanup on page unload
         const unlockData = JSON.stringify({ session_id: sessionId.current });
         navigator.sendBeacon(
-          `/api/navigation/config/trees/${treeName}/unlock`,
+          `/server/navigation/config/trees/${treeName}/unlock`,
           new Blob([unlockData], { type: 'application/json' })
         );
       }

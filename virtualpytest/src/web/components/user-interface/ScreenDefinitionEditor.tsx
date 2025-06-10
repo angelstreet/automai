@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
   Typography,
-  CircularProgress,
   IconButton,
   Tooltip,
 } from '@mui/material';
@@ -19,57 +18,10 @@ import { StreamViewer } from './StreamViewer';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
-import { getVerificationEditorLayout } from '../../../config/layoutConfig';
-
-interface ScreenDefinitionEditorProps {
-  /** Complete host+device object containing all configuration */
-  selectedHostDevice?: any;
-  /** Whether to auto-connect when device is selected */
-  autoConnect?: boolean;
-  /** Callback when disconnection is complete */
-  onDisconnectComplete?: () => void;
-  /** Custom styling */
-  sx?: any;
-}
-
-// Separate component for recording timer to avoid parent re-renders
-const RecordingTimer: React.FC<{ isCapturing: boolean }> = ({ isCapturing }) => {
-  const [recordingTime, setRecordingTime] = useState(0);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isCapturing) {
-      interval = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setRecordingTime(0);
-    }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isCapturing]);
-
-  const formatRecordingTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <Typography variant="caption" sx={{ 
-      color: 'white', 
-      fontSize: '0.7rem', 
-      fontWeight: 'bold'
-    }}>
-      REC {formatRecordingTime(recordingTime)}
-    </Typography>
-  );
-};
+import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './ScreenEditorOverlay';
+import { useScreenEditor } from '../../hooks/useScreenEditor';
+import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/screenEditorUtils';
+import { ScreenDefinitionEditorProps } from '../../types/screenEditorTypes';
 
 export function ScreenDefinitionEditor({
   selectedHostDevice,
@@ -77,474 +29,60 @@ export function ScreenDefinitionEditor({
   onDisconnectComplete,
   sx = {},
 }: ScreenDefinitionEditorProps) {
-  // Extract everything from selectedHostDevice
-  const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
-  const deviceConfig = selectedHostDevice?.controller_configs;
-  
-  // Memoize layout configs to prevent new object references
-  const compactLayoutConfig = useMemo(() => ({
-    minHeight: deviceModel === 'android_mobile' ? '300px' : '250px',
-    aspectRatio: deviceModel === 'android_mobile' ? '3/5' : '8/5',
-    objectFit: 'cover' as const,
-    isMobileModel: deviceModel === 'android_mobile',
-  }), [deviceModel]);
+  const {
+    state,
+    actions,
+    deviceModel,
+    avConfig,
+    compactLayoutConfig,
+    verificationEditorLayout,
+    deviceResolution,
+    streamViewerSx,
+  } = useScreenEditor(selectedHostDevice, onDisconnectComplete);
 
-  // Get verification editor layout config for parent container sizing
-  const verificationEditorLayout = useMemo(() => {
-    const config = getVerificationEditorLayout(deviceModel);
-    return config;
-  }, [deviceModel]);
+  const {
+    isConnected,
+    streamStatus,
+    streamUrl,
+    lastScreenshotPath,
+    videoFramesPath,
+    currentFrame,
+    totalFrames,
+    viewMode,
+    isCapturing,
+    isStoppingCapture,
+    captureStartTime,
+    captureEndTime,
+    isExpanded,
+    isScreenshotLoading,
+    isSaving,
+    savedFrameCount,
+    selectedArea,
+    captureImageRef,
+    captureImageDimensions,
+    captureSourcePath,
+    resolutionInfo,
+  } = state;
 
-  // Connection state
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  
-  // Additional state for capture management
-  const [lastScreenshotPath, setLastScreenshotPath] = useState<string | undefined>(undefined);
-  const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
-  const [currentFrame, setCurrentFrame] = useState(0);
-  const [totalFrames, setTotalFrames] = useState(0);
-  const [viewMode, setViewMode] = useState<'stream' | 'screenshot' | 'capture'>('stream');
-  
-  // Memoize sx props to prevent new object references
-  const streamViewerSx = useMemo(() => ({
-    width: '100%',
-    height: '100%',
-    display: viewMode === 'stream' ? 'block' : 'none'
-  }), [viewMode]);
-  
-  // Memoize deviceResolution to prevent new object references
-  const deviceResolution = useMemo(() => ({ width: 1080, height: 2340 }), []);
-  
-  // Memoize onTap callback to prevent new function references
-  const handleTap = useCallback(async (x: number, y: number) => {
-    console.log(`🎯 [@component:ScreenDefinitionEditor] Tapped at device coordinates: ${x}, ${y}`);
-    
-    // Try to use remote controller proxy if available
-    if (selectedHostDevice?.controllerProxies?.remote) {
-      try {
-        console.log(`[@component:ScreenDefinitionEditor] Using remote controller proxy to tap at coordinates: (${x}, ${y})`);
-        const result = await selectedHostDevice.controllerProxies.remote.tap(x, y);
-        
-        if (result.success) {
-          console.log(`[@component:ScreenDefinitionEditor] Tap successful at coordinates: (${x}, ${y})`);
-        } else {
-          console.error(`[@component:ScreenDefinitionEditor] Tap failed: ${result.error}`);
-        }
-      } catch (error) {
-        console.error(`[@component:ScreenDefinitionEditor] Error during tap operation:`, error);
-      }
-    } else {
-      console.log(`[@component:ScreenDefinitionEditor] No remote controller proxy available - tap coordinates logged only`);
-    }
-  }, [selectedHostDevice]);
-  
-  // Stream status state
-  const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
-  
-  // Capture timing state
-  const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
-  const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
-  
-  // Saving state
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedFrameCount, setSavedFrameCount] = useState(0);
-  
-  // Capture state
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isStoppingCapture, setIsStoppingCapture] = useState(false);
-  
-  // UI state
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  // Stream URL state
-  const [streamUrl, setStreamUrl] = useState<string | undefined>(undefined);
-  
-  // Extract AV config for easier access
-  const avConfig = deviceConfig?.av?.parameters;
-  
-  // Screenshot loading state
-  const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
-  
-  const [resolutionInfo, setResolutionInfo] = useState<{
-    device: { width: number; height: number } | null;
-    capture: string | null;
-    stream: string | null;
-  }>({
-    device: null,
-    capture: null,
-    stream: null,
-  });
-  
-  // Check for existing remote connection ONCE (no loops)
-  useEffect(() => {
-    // Controllers are configured during registration
-    setIsConnected(true);
-    setConnectionError(null);
-    setStreamStatus('running');
-  }, []);
+  const {
+    handleStartCapture,
+    handleStopCapture,
+    handleTakeScreenshot,
+    restartStream,
+    handleToggleExpanded,
+    handleFrameChange,
+    handleBackToStream,
+    handleImageLoad,
+    handleAreaSelected,
+    handleClearSelection,
+    handleTap,
+  } = actions;
 
-  // Initialize stream status
-  useEffect(() => {
-    if (isConnected) {
-      setStreamStatus('running');
-    }
-  }, [isConnected]);
-  
-  // Start video capture - new simple logic: just record timestamp and show LED
-  const handleStartCapture = async () => {
-    console.log(`[@component:ScreenDefinitionEditor] handleStartCapture called - viewMode: ${viewMode}, isConnected: ${isConnected}, isCapturing: ${isCapturing}`);
-    
-    if (!isConnected || isCapturing) {
-      console.log(`[@component:ScreenDefinitionEditor] Early return - isConnected: ${isConnected}, isCapturing: ${isCapturing}`);
-      return;
-    }
-    
-    // If already in capture mode (viewing saved frames), restart stream first, then start capturing
-    if (viewMode === 'capture') {
-      console.log('[@component:ScreenDefinitionEditor] Already in capture mode, restarting stream first...');
-      setViewMode('stream');
-      setLastScreenshotPath(undefined);
-      setVideoFramesPath(undefined);
-      setCurrentFrame(0);
-      setTotalFrames(0);
-      setSavedFrameCount(0);
-      setCaptureStartTime(null);
-      setCaptureEndTime(null);
-      await restartStream();
-      
-      // After restart, automatically proceed with capture start
-      console.log('[@component:ScreenDefinitionEditor] Stream restarted, now starting capture...');
-    }
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Starting video capture (timestamp tracking only)...');
-      
-      // Record capture start time in Zurich timezone
-      const startTime = new Date();
-      setCaptureStartTime(startTime);
-      setCaptureEndTime(null); // Clear end time
-      
-      console.log('[@component:ScreenDefinitionEditor] Capture start time:', startTime.toISOString());
-      
-      // Reset frame count and set capturing state (just for UI)
-      setSavedFrameCount(0);
-      setIsCapturing(true);
-      
-      // If in screenshot view, restart stream first
-      if (viewMode === 'screenshot') {
-        await restartStream();
-      }
-      
-      // No backend API calls - host handles capture automatically
-      console.log('[@component:ScreenDefinitionEditor] Capture started - host will handle frame capture automatically');
-      console.log('[@component:ScreenDefinitionEditor] Showing red LED, staying in stream view');
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Failed to start capture:', error);
-      setIsCapturing(false);
-      setCaptureStartTime(null);
-    }
-  };
-
-  // Stop video capture - new simple logic: calculate duration and switch to video view
-  const handleStopCapture = async () => {
-    if (!isCapturing || isStoppingCapture) return;
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Stopping video capture (timestamp tracking only)...');
-      
-      // Record capture end time
-      const endTime = new Date();
-      setCaptureEndTime(endTime);
-      
-      console.log('[@component:ScreenDefinitionEditor] Capture end time:', endTime.toISOString());
-      
-      // Calculate duration and expected frame count (1 frame per second)
-      let expectedFrames = 0;
-      if (captureStartTime) {
-        const durationMs = endTime.getTime() - captureStartTime.getTime();
-        const durationSeconds = Math.floor(durationMs / 1000);
-        expectedFrames = Math.max(1, durationSeconds); // At least 1 frame
-        console.log(`[@component:ScreenDefinitionEditor] Capture duration: ${durationSeconds}s, expected frames: ${expectedFrames}`);
-      }
-      
-      // Disable the stop button to prevent multiple clicks
-      setIsStoppingCapture(true);
-      
-      // No backend API calls - just local state management
-      console.log('[@component:ScreenDefinitionEditor] Capture stopped - no backend calls needed');
-      
-      // Set up for viewing captured frames
-      if (expectedFrames > 0) {
-        setSavedFrameCount(expectedFrames);
-        setVideoFramesPath('/tmp/captures'); // Not used, but kept for compatibility
-        setTotalFrames(expectedFrames);
-        setCurrentFrame(0); // Start with first frame
-        setViewMode('capture'); // Switch to capture view
-        console.log(`[@component:ScreenDefinitionEditor] Switching to capture view with ${expectedFrames} frames`);
-      } else {
-        console.log('[@component:ScreenDefinitionEditor] No frames expected (duration too short), staying in stream view');
-      }
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Failed to stop capture:', error);
-      // Use expected frames as fallback
-      if (captureStartTime) {
-        const endTime = new Date();
-        const durationMs = endTime.getTime() - captureStartTime.getTime();
-        const expectedFrames = Math.max(1, Math.floor(durationMs / 1000));
-        setSavedFrameCount(expectedFrames);
-        if (expectedFrames > 0) {
-          setVideoFramesPath('/tmp/captures');
-          setTotalFrames(expectedFrames);
-          setCurrentFrame(0);
-          setViewMode('capture');
-        }
-      }
-    } finally {
-      // Always update local state
-      setIsCapturing(false);
-      
-      // Reset the stopping state
-      setIsStoppingCapture(false);
-    }
-  };
-
-  // Disconnect handler
-  const handleDisconnect = async () => {
-    try {
-      setIsConnected(false);
-      setConnectionError(null);
-      setStreamStatus('unknown');
-      
-      // Clean up any active captures
-      if (isCapturing) {
-        await handleStopCapture();
-      }
-      
-      // Reset states
-      setLastScreenshotPath(undefined);
-      setVideoFramesPath(undefined);
-      setCurrentFrame(0);
-      setTotalFrames(0);
-      setViewMode('stream');
-      
-      // Clear drag selection when disconnecting
-      setSelectedArea(null);
-      
-      if (onDisconnectComplete) {
-        onDisconnectComplete();
-      }
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Disconnect error:', error);
-    }
-  };
-
-  // Take screenshot using controller directly - no control logic needed
-  const handleTakeScreenshot = async () => {
-    if (!isConnected || !selectedHostDevice) return;
-    
-    try {
-      setIsScreenshotLoading(true);
-      setViewMode('screenshot');
-      
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot using AV controller proxy...');
-      
-      // Get the AV controller proxy from selectedHostDevice
-      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
-      
-      if (!avControllerProxy) {
-        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
-      }
-      
-      console.log('[@component:ScreenDefinitionEditor] AV controller proxy found, calling take_screenshot...');
-      
-      // Call take_screenshot on the AV controller proxy
-      const screenshotUrl = await avControllerProxy.take_screenshot();
-      
-      if (screenshotUrl) {
-        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', screenshotUrl);
-        setLastScreenshotPath(screenshotUrl);
-        setStreamStatus('stopped');
-      } else {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot failed - no URL returned');
-      }
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Screenshot operation failed:', error);
-    } finally {
-      setIsScreenshotLoading(false);
-    }
-  };
-
-  // Restart stream - simplified to just reload the player
-  const restartStream = async () => {
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Reloading stream in player...');
-      
-      // Simply switch to stream view and let the StreamViewer component handle reloading
-      setStreamStatus('running');
-      setViewMode('stream');
-      setLastScreenshotPath(undefined);
-      setVideoFramesPath(undefined);
-      setCurrentFrame(0);
-      setTotalFrames(0);
-      setSavedFrameCount(0);
-      
-      // Log the stream URL from the remote controller
-      const streamUrl = getStreamUrl();
-      if (streamUrl) {
-        console.log('[@component:ScreenDefinitionEditor] Stream URL from controller:', streamUrl);
-      } else {
-        console.log('[@component:ScreenDefinitionEditor] No stream URL available from controller');
-      }
-      
-      console.log('[@component:ScreenDefinitionEditor] Stream player will reload automatically');
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Error during stream reload:', error);
-    }
-  };
-
-  const handleToggleExpanded = async () => {
-    // If we're collapsing and currently in capture or screenshot view, restart stream
-    if (isExpanded && (viewMode === 'capture' || viewMode === 'screenshot')) {
-      console.log('[@component:ScreenDefinitionEditor] Collapsing from capture/screenshot view, restarting stream...');
-      await restartStream();
-    }
-    
-    setIsExpanded(!isExpanded);
-    // Clear drag selection when collapsing
-    if (isExpanded) {
-      setSelectedArea(null);
-    }
-  };
-
-  // Handle frame change in preview
-  const handleFrameChange = (frame: number) => {
-    setCurrentFrame(frame);
-  };
-
-  // Handle returning to stream view from capture view
-  const handleBackToStream = () => {
-    console.log('[@component:ScreenDefinitionEditor] Returning to stream view from capture view');
-    setViewMode('stream');
-    setVideoFramesPath(undefined);
-    setCurrentFrame(0);
-    setTotalFrames(0);
-    setSavedFrameCount(0);
-    // Clear drag selection when returning to stream
-    setSelectedArea(null);
-  };
-
-  // Add type safety to the onScreenshotTaken handler
-  const handleScreenshotTaken = (path: string) => {
-    setLastScreenshotPath(path);
-    setViewMode('screenshot');
-  };
-
-  // VerificationEditor integration state
-  const [captureImageRef, setCaptureImageRef] = useState<React.RefObject<HTMLImageElement> | undefined>(undefined);
-  const [captureImageDimensions, setCaptureImageDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
-  const [captureSourcePath, setCaptureSourcePath] = useState<string | undefined>(undefined);
-
-  // Drag selection state
-  const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-
-  // Get stream URL from AV controller - using controller proxy
-  const getStreamUrl = useCallback(async () => {
-    if (!selectedHostDevice) {
-      console.log('[@component:ScreenDefinitionEditor] No selectedHostDevice available');
-      return undefined;
-    }
-    
-    try {
-      console.log('[@component:ScreenDefinitionEditor] Getting stream URL from AV controller proxy...');
-      
-      // Get the AV controller proxy from selectedHostDevice
-      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
-      
-      if (!avControllerProxy) {
-        console.log('[@component:ScreenDefinitionEditor] AV controller proxy not available');
-        return undefined;
-      }
-      
-      console.log('[@component:ScreenDefinitionEditor] AV controller proxy found, calling get_stream_url...');
-      
-      // Call get_stream_url on the AV controller proxy
-      const streamUrl = await avControllerProxy.get_stream_url();
-      
-      if (streamUrl) {
-        console.log('[@component:ScreenDefinitionEditor] Got stream URL from proxy:', streamUrl);
-        return streamUrl;
-      } else {
-        console.log('[@component:ScreenDefinitionEditor] No stream URL returned from proxy');
-        return undefined;
-      }
-      
-    } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Error getting stream URL from proxy:', error);
-      return undefined;
-    }
-  }, [selectedHostDevice]);
-
-  // Fetch stream URL when component mounts and selectedHostDevice is available
-  useEffect(() => {
-    if (selectedHostDevice && isConnected) {
-      console.log('[@component:ScreenDefinitionEditor] Fetching stream URL...');
-      getStreamUrl().then((url) => {
-        setStreamUrl(url);
-      }).catch((error) => {
-        console.error('[@component:ScreenDefinitionEditor] Error fetching stream URL:', error);
-        setStreamUrl(undefined);
-      });
-    }
-  }, [selectedHostDevice, isConnected, getStreamUrl]);
-
-  // Initialize verification image state
-  const handleImageLoad = useCallback((ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => {
-    console.log('[@component:ScreenDefinitionEditor] Image loaded for verification:', { dimensions, sourcePath });
-    setCaptureImageRef(ref);
-    setCaptureImageDimensions(dimensions);
-    setCaptureSourcePath(sourcePath);
-  }, []);
-
-  // Handle area selection from drag overlay
-  const handleAreaSelected = useCallback((area: { x: number; y: number; width: number; height: number }) => {
-    console.log('[@component:ScreenDefinitionEditor] Area selected:', area);
-    setSelectedArea(area);
-  }, []);
-
-  // Handle clearing selection
-  const handleClearSelection = useCallback(() => {
-    console.log('[@component:ScreenDefinitionEditor] Clearing selection');
-    setSelectedArea(null);
-  }, []);
-
-  // Clear drag selection when view mode changes away from screenshot/capture
-  useEffect(() => {
-    if (viewMode === 'stream') {
-      setSelectedArea(null);
-    }
-  }, [viewMode]);
+  const compactDimensions = getCompactViewDimensions(deviceModel);
+  const baseContainerStyles = createBaseContainerStyles();
 
   return (
-    <Box sx={{ 
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      display: 'flex',
-      zIndex: 1000,
-      userSelect: 'none',
-      WebkitUserSelect: 'none',
-      MozUserSelect: 'none',
-      msUserSelect: 'none',
-      '& @keyframes blink': {
-        '0%, 50%': { opacity: 1 },
-        '51%, 100%': { opacity: 0.3 }
-      }
-    }}>
+    <Box sx={baseContainerStyles}>
       {isExpanded ? (
         // Expanded view with VerificationEditor side panel
         <Box sx={{
@@ -577,27 +115,7 @@ export function ScreenDefinitionEditor({
                 display: 'flex', 
                 justifyContent: 'flex-start'
               }}>
-                {/* Simple connection status - no recording/saving states here */}
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  backgroundColor: 'rgba(0,0,0,0.5)',
-                  borderRadius: 1,
-                  padding: '2px 8px',
-                  width: '70px',
-                  justifyContent: 'center'
-                }}>
-                  <Box sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: streamStatus === 'running' ? '#4caf50' : streamStatus === 'stopped' ? '#f44336' : '#9e9e9e'
-                  }} />
-                  <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem', width: '40px', textAlign: 'center' }}>
-                    {streamStatus === 'running' ? 'Live' : 'Stopped'}
-                  </Typography>
-                </Box>
+                <StatusIndicator streamStatus={streamStatus} />
               </Box>
               
               {/* Center section - action buttons */}
@@ -711,6 +229,7 @@ export function ScreenDefinitionEditor({
                 deviceResolution={deviceResolution}
                 deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
                 onTap={handleTap}
+                selectedHostDevice={selectedHostDevice}
                 sx={streamViewerSx}
               />
               
@@ -725,6 +244,7 @@ export function ScreenDefinitionEditor({
                   selectedArea={selectedArea}
                   onAreaSelected={handleAreaSelected}
                   model={deviceModel}
+                  selectedHostDevice={selectedHostDevice}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -755,6 +275,7 @@ export function ScreenDefinitionEditor({
                   captureStartTime={captureStartTime}
                   captureEndTime={captureEndTime}
                   isCapturing={isCapturing}
+                  selectedHostDevice={selectedHostDevice}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -766,56 +287,9 @@ export function ScreenDefinitionEditor({
                 />
               )}
               
-              {/* Screenshot loading overlay */}
-              {isScreenshotLoading && (
-                <Box sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                  zIndex: 20
-                }}>
-                  <CircularProgress size={40} sx={{ color: '#ffffff', mb: 2 }} />
-                  <Typography variant="body2" sx={{ color: '#ffffff' }}>
-                    Taking screenshot...
-                  </Typography>
-                </Box>
-              )}
-              
-              {/* Recording overlay - only show red dot when capturing */}
-              {isCapturing && (
-                <Box sx={{
-                  position: 'absolute',
-                  top: 8,
-                  left: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  borderRadius: 1,
-                  padding: '4px 8px',
-                  zIndex: 10
-                }}>
-                  <Box sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: '#f44336',
-                    animation: 'recordBlink 1s infinite',
-                    '@keyframes recordBlink': {
-                      '0%, 50%': { opacity: 1 },
-                      '51%, 100%': { opacity: 0.3 }
-                    }
-                  }} />
-                  <RecordingTimer isCapturing={isCapturing} />
-                </Box>
-              )}
+              {/* Overlays */}
+              <LoadingOverlay isScreenshotLoading={isScreenshotLoading} />
+              <RecordingOverlay isCapturing={isCapturing} />
             </Box>
           </Box>
 
@@ -884,8 +358,8 @@ export function ScreenDefinitionEditor({
       ) : (
         // Compact view - exact same layout as before
         <Box sx={{ 
-          width: deviceModel === 'android_mobile' ? '180px' : '400px', // Wider for landscape models
-          height: deviceModel === 'android_mobile' ? '300px' : '250',
+          width: compactDimensions.width,
+          height: compactDimensions.height,
           bgcolor: '#1E1E1E',
           border: '2px solid #1E1E1E',
           borderRadius: 1,
@@ -905,6 +379,7 @@ export function ScreenDefinitionEditor({
             deviceResolution={deviceResolution}
             deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
             onTap={handleTap}
+            selectedHostDevice={selectedHostDevice}
             sx={streamViewerSx}
           />
           
@@ -919,6 +394,7 @@ export function ScreenDefinitionEditor({
               selectedArea={selectedArea}
               onAreaSelected={handleAreaSelected}
               model={deviceModel}
+              selectedHostDevice={selectedHostDevice}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -949,6 +425,7 @@ export function ScreenDefinitionEditor({
               captureStartTime={captureStartTime}
               captureEndTime={captureEndTime}
               isCapturing={isCapturing}
+              selectedHostDevice={selectedHostDevice}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -961,20 +438,7 @@ export function ScreenDefinitionEditor({
           )}
 
           {/* Mode indicator dot */}
-          <Box sx={{ 
-            position: 'absolute',
-            top: 4,
-            left: 4,
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: 
-              viewMode === 'screenshot' || viewMode === 'capture' ? '#ff4444' : 'transparent',
-            opacity: 
-              viewMode === 'screenshot' || viewMode === 'capture' ? 1 : 0,
-            boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-            zIndex: 2
-          }} />
+          <ModeIndicatorDot viewMode={viewMode} />
 
           {/* Only the expand button - recording/saving indicators are now overlays within the stream */}
           <IconButton 

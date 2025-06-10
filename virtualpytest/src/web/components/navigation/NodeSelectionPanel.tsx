@@ -213,25 +213,19 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         let verificationSuccess = false;
         
         try {
-          // Execute verification based on controller type
-          const response = await fetch(`http://localhost:5009/api/virtualpytest/verification/execute`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              verification: verification
-            }),
-          });
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-            verificationSuccess = true;
-          } else {
-            results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+          // Execute verification using controller proxy instead of direct HTTP call
+          if (!selectedDevice) {
+            results.push(`❌ Verification ${i + 1}: No device selected`);
             verificationSuccess = false;
+          } else {
+            // Use verification controller proxy if available
+            // Note: This would need to be passed as a prop or accessed through a context
+            // For now, we'll show an error indicating the need for controller proxy
+            results.push(`❌ Verification ${i + 1}: Verification controller proxy not implemented yet`);
+            verificationSuccess = false;
+            
+            // TODO: Replace with actual controller proxy call when available:
+            // const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verification]);
           }
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);

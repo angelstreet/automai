@@ -9,7 +9,7 @@ import {
 import { Close as CloseIcon, Android, Bluetooth, Router, PhoneAndroid } from '@mui/icons-material';
 import { RemotePanel } from '../../remote/RemotePanel';
 import { RemoteType, BaseConnectionConfig } from '../../../types/remote/remoteTypes';
-import { getRemoteConfig } from '../../../hooks/remote/remoteConfigs';
+import { getRemoteConfig } from '../../../hooks/remote/useRemoteConfigs';
 
 interface RemoteModalProps {
   /** The type of remote device */

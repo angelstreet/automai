@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface StreamClickOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -8,6 +7,7 @@ interface StreamClickOverlayProps {
   deviceId?: string;
   onTap?: (x: number, y: number) => void;
   sx?: any;
+  selectedHostDevice?: any; // Add host device prop for controller proxy access
 }
 
 export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
@@ -15,11 +15,9 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   deviceResolution,
   deviceId,
   onTap,
-  sx = {}
+  sx = {},
+  selectedHostDevice
 }) => {
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-  
   const overlayRef = useRef<HTMLDivElement>(null);
   const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(null);
 
@@ -68,33 +66,23 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     try {
       console.log(`[@component:StreamClickOverlay] Sending tap command: ${x}, ${y}`);
       
-      // Use abstract remote controller execute-action endpoint
-      const response = await fetch(buildServerUrl('/server/remote/execute-action'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: {
-            id: 'coordinate_tap',
-            command: 'coordinate_tap',
-            params: {
-              x: x,
-              y: y
-            }
-          }
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log(`[@component:StreamClickOverlay] ✅ Tap successful at (${x}, ${y})`);
+      // Use remote controller proxy if available
+      if (selectedHostDevice?.controllerProxies?.remote) {
+        console.log(`[@component:StreamClickOverlay] Using remote controller proxy to tap at coordinates: (${x}, ${y})`);
+        const result = await selectedHostDevice.controllerProxies.remote.tap(x, y);
+        
+        if (result.success) {
+          console.log(`[@component:StreamClickOverlay] ✅ Tap successful at (${x}, ${y})`);
+        } else {
+          console.error(`[@component:StreamClickOverlay] ❌ Tap failed: ${result.error}`);
+        }
       } else {
-        console.error(`[@component:StreamClickOverlay] ❌ Tap failed: ${result.error}`);
+        console.log(`[@component:StreamClickOverlay] No remote controller proxy available - tap coordinates logged only`);
       }
     } catch (error) {
       console.error(`[@component:StreamClickOverlay] ❌ Tap request failed:`, error);
     }
-  }, [buildServerUrl]);
+  }, [selectedHostDevice]);
 
   const showClickAnimation = useCallback((x: number, y: number) => {
     const animationId = Date.now();
@@ -129,7 +117,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       // Show click animation at click position
       showClickAnimation(x, y);
       
-      // Send ADB tap command
+      // Send tap command via controller proxy
       sendTapCommand(deviceX, deviceY);
       
       // Call optional callback
@@ -147,10 +135,11 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     console.log('[@component:StreamClickOverlay] 🎯 Click overlay mounted and ready! Device resolution:', deviceResolution);
     console.log('[@component:StreamClickOverlay] Video ref current:', !!videoRef.current);
     console.log('[@component:StreamClickOverlay] Overlay ref current:', !!overlayRef.current);
+    console.log('[@component:StreamClickOverlay] Has remote controller proxy:', !!selectedHostDevice?.controllerProxies?.remote);
     return () => {
       console.log('[@component:StreamClickOverlay] Click overlay unmounted');
     };
-  }, [deviceResolution]);
+  }, [deviceResolution, selectedHostDevice]);
 
   // Add mouse event logging for debugging
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
