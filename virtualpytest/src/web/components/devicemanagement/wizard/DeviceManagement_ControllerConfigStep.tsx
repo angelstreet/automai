@@ -6,8 +6,7 @@ import {
   FormHelperText,
   Divider,
 } from '@mui/material';
-import { DeviceModel } from '../../types';
-import { DeviceFormData } from '../../types/controllerConfigTypes';
+import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
 import { ControllerTypeSection } from './DeviceManagement_ControllerTypeSection';
 
 interface ControllerConfigurationStepProps {

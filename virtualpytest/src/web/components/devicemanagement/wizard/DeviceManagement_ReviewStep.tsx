@@ -15,9 +15,8 @@ import {
   CheckCircle as CheckIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { DeviceModel } from '../../types';
-import { DeviceFormData } from '.../../../types/features/Controller_Types';
-import { useControllerConfig } from '../../hooks/features/useControllerConfig';
+import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { useControllerConfig } from '../../../hooks/features/useControllerConfig';
 
 interface ReviewStepProps {
   formData: DeviceFormData;

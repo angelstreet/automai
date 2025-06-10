@@ -11,8 +11,7 @@ import {
   Chip,
   FormHelperText,
 } from '@mui/material';
-import { DeviceModel } from '../../types';
-import { DeviceFormData } from '.../../../types/features/Controller_Types';
+import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;

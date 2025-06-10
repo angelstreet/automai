@@ -22,25 +22,14 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { DeviceModel } from '../types';
-import { DeviceFormData } from '../types/controllerConfigTypes';
-import { useControllerConfig } from '../hooks/features/useControllerConfig';
+import { Device, DeviceFormData } from '../../types/common/Common_BaseTypes';
+import { useControllerConfig } from '../../hooks/features/useControllerConfig';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';
 import { ModelSelectionStep } from './wizard/DeviceManagement_ModelSelectionStep';
 import { ControllerConfigurationStep } from './wizard/DeviceManagement_ControllerConfigStep';
 import { ReviewStep } from './wizard/DeviceManagement_ReviewStep';
-
-interface Device {
-  id: string;
-  name: string;
-  description: string;
-  model: string;
-  controller_configs?: any;
-  created_at: string;
-  updated_at: string;
-}
 
 interface EditDeviceDialogProps {
   open: boolean;

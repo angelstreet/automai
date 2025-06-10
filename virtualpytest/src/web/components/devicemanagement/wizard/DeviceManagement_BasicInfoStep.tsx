@@ -5,7 +5,7 @@ import {
   Typography,
   FormHelperText,
 } from '@mui/material';
-import { DeviceFormData } from '../../types/controllerConfigTypes';
+import { DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface BasicInfoStepProps {
   formData: DeviceFormData;

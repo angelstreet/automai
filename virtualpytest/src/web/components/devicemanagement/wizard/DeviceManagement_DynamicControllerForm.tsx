@@ -10,7 +10,7 @@ import {
   FormHelperText,
   Grid,
 } from '@mui/material';
-import { ControllerConfiguration, ControllerInputField } from '../../types/controllerConfigTypes';
+import { ControllerConfiguration, ControllerInputField } from '../../../types/common/Common_BaseTypes';
 
 interface DynamicControllerFormProps {
   configuration: ControllerConfiguration;
