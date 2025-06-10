@@ -5,7 +5,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { RemoteInterface } from './RemoteInterface';
-import { RemoteType } from '../../types/remote/remoteTypes';
+import { RemoteType } from '../../types/features/Remote_Types';
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { getRemoteLayout } from '../config/layoutConfig';
 

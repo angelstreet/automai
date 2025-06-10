@@ -14,4 +14,10 @@ export * from './pages/useUserInterface';
 // Feature Hooks (domain-specific features)
 export * from './features/useControllerConfig';
 export * from './features/useValidation';
-export * from './features/useValidationUI'; 
+export * from './features/useValidationUI';
+
+// Remote Hooks
+export * from './remote';
+
+// Main controller hook
+export { useControllers } from './useControllers'; 

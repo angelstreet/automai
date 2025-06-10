@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RemotePanel } from './RemotePanel';
-import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
+import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
 
 interface CompactRemoteProps {
   /** The type of remote device */

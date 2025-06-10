@@ -17,7 +17,7 @@ import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
 import { AndroidElement } from '../../../types/remote/types';
-import { BaseConnectionConfig } from '../../../types/remote/remoteTypes';
+import { BaseConnectionConfig } from '../../../types/features/Remote_Types';
 
 interface AndroidMobileModalProps {
   open: boolean;
