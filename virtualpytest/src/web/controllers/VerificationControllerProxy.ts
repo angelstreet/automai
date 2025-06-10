@@ -2,8 +2,9 @@
  * Verification Controller Proxy
  * 
  * Provides a consistent interface for verification operations.
- * Handles text verification, image verification, ADB verification, and reference management.
- * Part of the smart controller architecture migration.
+ * Routes to appropriate host or server endpoints based on verification architecture:
+ * - Host endpoints: For resource access (images, references, execution)
+ * - Server endpoints: For orchestration (actions, routing)
  */
 
 // Response interfaces
@@ -34,9 +35,17 @@ interface VerificationSaveRequest {
     height: number;
   };
   screenshot_path: string;
+  verification_type?: 'image' | 'text';
 }
 
-interface TextAutoDetectRequest {
+interface VerificationBatchRequest {
+  verifications: any[];
+  model: string;
+  node_id: string;
+  source_filename?: string;
+}
+
+interface AutoDetectTextRequest {
   model: string;
   area: {
     x: number;
@@ -48,49 +57,37 @@ interface TextAutoDetectRequest {
   image_filter?: string;
 }
 
-interface TextAutoDetectResponse {
-  success: boolean;
-  text?: string;
-  fontSize?: number;
-  confidence?: number;
-  detectedLanguage?: string;
-  detectedLanguageName?: string;
-  languageConfidence?: number;
-  error?: string;
-}
-
-interface VerificationExecuteRequest {
-  verifications: any[];
-  node_id?: string;
-  model: string;
-}
-
-interface VerificationExecuteResponse {
-  success: boolean;
-  results?: any[];
-  error?: string;
-}
-
 export class VerificationControllerProxy {
   private hostUrl: string;
+  private serverUrl: string;
   private capabilities: string[];
 
   constructor(host: any, buildHostUrl: (hostId: string, endpoint: string) => string) {
     this.hostUrl = buildHostUrl(host.id, '').replace(/\/+$/, ''); // Remove trailing slashes
+    // For server endpoints, we need to use the main server URL pattern
+    this.serverUrl = this.hostUrl.replace(/\/hosts\/[^\/]+$/, ''); // Remove host-specific part for server calls
     this.capabilities = host.capabilities || host.controller_types || [];
     
     console.log(`[@controller:VerificationControllerProxy] Initialized with host: ${this.hostUrl}`);
+    console.log(`[@controller:VerificationControllerProxy] Server URL: ${this.serverUrl}`);
     console.log(`[@controller:VerificationControllerProxy] Capabilities: ${this.capabilities.join(', ')}`);
   }
 
   /**
-   * Get available verification actions/templates
+   * Get available verification actions from server (orchestration endpoint)
+   * 
+   * @returns Promise<VerificationResponse> Available verification actions by type
    */
   async getVerificationActions(): Promise<VerificationResponse> {
     try {
-      console.log(`[@controller:VerificationControllerProxy] Getting verification actions`);
+      console.log(`[@controller:VerificationControllerProxy] Getting verification actions from server`);
       
-      const response = await fetch(`${this.hostUrl}/host/verification/actions`, {
+      // Use server endpoint for getting available actions
+      const url = `${this.serverUrl}/server/verification/actions`;
+      
+      console.log(`[@controller:VerificationControllerProxy] Calling: GET ${url}`);
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -98,293 +95,203 @@ export class VerificationControllerProxy {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Get actions failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to get verification actions: ${response.status} - ${errorText}`,
-        };
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      console.log(`[@controller:VerificationControllerProxy] Got ${result.verifications?.length || 0} verification actions`);
       
-      return {
-        success: true,
-        data: result.verifications || [],
-      };
+      if (result.success) {
+        console.log(`[@controller:VerificationControllerProxy] Successfully retrieved verification actions`);
+        return { success: true, data: result.verifications };
+      } else {
+        throw new Error(result.error || 'Failed to get verification actions');
+      }
+
     } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Get actions error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to get verification actions',
-      };
+      console.error(`[@controller:VerificationControllerProxy] Get verification actions failed:`, error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Save a verification reference (screenshot area with metadata)
+   * Save verification reference on host (resource access endpoint)
+   * 
+   * @param request Reference save request
+   * @returns Promise<VerificationResponse> Save result
    */
   async saveReference(request: VerificationSaveRequest): Promise<VerificationResponse> {
     try {
       console.log(`[@controller:VerificationControllerProxy] Saving reference: ${request.name}`);
-      console.log(`[@controller:VerificationControllerProxy] Model: ${request.model}, Area:`, request.area);
       
-      const response = await fetch(`${this.hostUrl}/host/verification/save`, {
+      // Determine verification type (default to image if not specified)
+      const verificationType = request.verification_type || 'image';
+      
+      // Use appropriate host endpoint based on verification type
+      const endpoint = verificationType === 'text' 
+        ? '/host/verification/text/save-resource'
+        : '/host/verification/image/save-resource';
+      
+      const url = `${this.hostUrl}${endpoint}`;
+      
+      console.log(`[@controller:VerificationControllerProxy] Calling: POST ${url}`);
+      
+      // Build request payload matching expected backend format
+      const payload = {
+        reference_name: request.name,
+        model: request.model,
+        area: request.area,
+        source_filename: request.screenshot_path.split('/').pop(), // Extract filename from path
+        verification_type: verificationType
+      };
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Save reference failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to save reference: ${response.status} - ${errorText}`,
-        };
-      }
-
-      const result = await response.json();
-      console.log(`[@controller:VerificationControllerProxy] Reference saved successfully: ${request.name}`);
-      
-      return {
-        success: result.success || true,
-        data: result,
-      };
-    } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Save reference error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to save reference',
-      };
-    }
-  }
-
-  /**
-   * Auto-detect text in a specified area
-   */
-  async autoDetectText(request: TextAutoDetectRequest): Promise<TextAutoDetectResponse> {
-    try {
-      console.log(`[@controller:VerificationControllerProxy] Auto-detecting text in area:`, request.area);
-      console.log(`[@controller:VerificationControllerProxy] Source: ${request.source_path}, Filter: ${request.image_filter}`);
-      
-      const response = await fetch(`${this.hostUrl}/host/verification/text/auto-detect`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Auto-detect text failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to auto-detect text: ${response.status} - ${errorText}`,
-        };
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
       
       if (result.success) {
-        console.log(`[@controller:VerificationControllerProxy] Text detected: "${result.text}" (confidence: ${result.confidence}%)`);
+        console.log(`[@controller:VerificationControllerProxy] Successfully saved reference: ${request.name}`);
+        return { success: true, data: result };
       } else {
-        console.log(`[@controller:VerificationControllerProxy] Text detection failed: ${result.error}`);
+        throw new Error(result.error || 'Failed to save reference');
       }
-      
-      return result;
+
     } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Auto-detect text error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to auto-detect text',
-      };
+      console.error(`[@controller:VerificationControllerProxy] Save reference failed:`, error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Execute verification batch (multiple verifications at once)
+   * Execute batch verification on host (execution endpoint)
+   * 
+   * @param request Batch verification request
+   * @returns Promise<VerificationResponse> Execution results
    */
-  async executeVerificationBatch(request: VerificationExecuteRequest): Promise<VerificationExecuteResponse> {
+  async executeVerificationBatch(request: VerificationBatchRequest): Promise<VerificationResponse> {
     try {
-      console.log(`[@controller:VerificationControllerProxy] Executing verification batch with ${request.verifications.length} verifications`);
-      console.log(`[@controller:VerificationControllerProxy] Model: ${request.model}, Node ID: ${request.node_id}`);
+      console.log(`[@controller:VerificationControllerProxy] Executing batch verification with ${request.verifications.length} verifications`);
       
-      const response = await fetch(`${this.hostUrl}/host/verification/execute-batch`, {
+      // Use host endpoint for batch execution (maps to existing /stream/execute-batch-verification)
+      const url = `${this.hostUrl}/stream/execute-batch-verification`;
+      
+      console.log(`[@controller:VerificationControllerProxy] Calling: POST ${url}`);
+      
+      // Build request payload matching expected backend format
+      const payload = {
+        verifications: request.verifications,
+        source_filename: request.source_filename || 'current_screenshot.jpg',
+        model: request.model
+      };
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Execute batch failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to execute verification batch: ${response.status} - ${errorText}`,
-        };
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success !== undefined) { // Can be true or false
+        console.log(`[@controller:VerificationControllerProxy] Batch verification completed: ${result.passed_count}/${result.total_count} passed`);
+        return { success: true, data: result };
+      } else {
+        throw new Error(result.error || 'Batch verification failed');
+      }
+
+    } catch (error: any) {
+      console.error(`[@controller:VerificationControllerProxy] Execute verification batch failed:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Auto-detect text in specified area using OCR on host
+   * 
+   * @param request Text auto-detection request
+   * @returns Promise<VerificationResponse> Detected text data
+   */
+  async autoDetectText(request: AutoDetectTextRequest): Promise<VerificationResponse> {
+    try {
+      console.log(`[@controller:VerificationControllerProxy] Auto-detecting text in area`);
+      
+      // Use host endpoint for text auto-detection (this endpoint exists and is correct)
+      const url = `${this.hostUrl}/host/verification/text/auto-detect`;
+      
+      console.log(`[@controller:VerificationControllerProxy] Calling: POST ${url}`);
+      
+      // Build request payload matching expected backend format
+      const payload = {
+        source_path: request.source_path,
+        area: request.area,
+        model: request.model,
+        image_filter: request.image_filter || 'none'
+      };
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
       
       if (result.success) {
-        const passedCount = result.results?.filter((r: any) => r.success).length || 0;
-        console.log(`[@controller:VerificationControllerProxy] Batch execution completed: ${passedCount}/${request.verifications.length} passed`);
+        console.log(`[@controller:VerificationControllerProxy] Text auto-detection successful`);
+        return { success: true, data: result };
       } else {
-        console.log(`[@controller:VerificationControllerProxy] Batch execution failed: ${result.error}`);
+        throw new Error(result.error || 'Text auto-detection failed');
       }
-      
-      return result;
+
     } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Execute batch error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to execute verification batch',
-      };
+      console.error(`[@controller:VerificationControllerProxy] Auto-detect text failed:`, error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Execute a single verification
+   * Get verification controller capabilities
+   * 
+   * @returns string[] List of controller capabilities
    */
-  async executeVerification(verification: any, model: string): Promise<VerificationResponse> {
-    try {
-      console.log(`[@controller:VerificationControllerProxy] Executing single verification: ${verification.id}`);
-      
-      const response = await fetch(`${this.hostUrl}/host/verification/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          verification,
-          model,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Execute verification failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to execute verification: ${response.status} - ${errorText}`,
-        };
-      }
-
-      const result = await response.json();
-      console.log(`[@controller:VerificationControllerProxy] Verification executed: ${result.success ? 'PASSED' : 'FAILED'}`);
-      
-      return result;
-    } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Execute verification error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to execute verification',
-      };
-    }
+  getCapabilities(): string[] {
+    return this.capabilities;
   }
 
   /**
-   * Get verification status/health
+   * Get controller information
+   * 
+   * @returns object Controller information
    */
-  async getStatus(): Promise<VerificationResponse> {
-    try {
-      console.log(`[@controller:VerificationControllerProxy] Getting verification status`);
-      
-      const response = await fetch(`${this.hostUrl}/host/verification/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Get status failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to get verification status: ${response.status} - ${errorText}`,
-        };
-      }
-
-      const result = await response.json();
-      console.log(`[@controller:VerificationControllerProxy] Status retrieved: ${result.status || 'unknown'}`);
-      
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Get status error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to get verification status',
-      };
-    }
-  }
-
-  /**
-   * Get list of available reference images/texts
-   */
-  async getReferences(model: string): Promise<VerificationResponse> {
-    try {
-      console.log(`[@controller:VerificationControllerProxy] Getting references for model: ${model}`);
-      
-      const response = await fetch(`${this.hostUrl}/host/verification/references?model=${encodeURIComponent(model)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[@controller:VerificationControllerProxy] Get references failed: ${response.status} - ${errorText}`);
-        return {
-          success: false,
-          error: `Failed to get references: ${response.status} - ${errorText}`,
-        };
-      }
-
-      const result = await response.json();
-      console.log(`[@controller:VerificationControllerProxy] Got ${result.references?.length || 0} references`);
-      
-      return {
-        success: true,
-        data: result.references || [],
-      };
-    } catch (error: any) {
-      console.error(`[@controller:VerificationControllerProxy] Get references error:`, error);
-      return {
-        success: false,
-        error: error.message || 'Failed to get references',
-      };
-    }
-  }
-
-  /**
-   * Get controller information for debugging
-   */
-  getControllerInfo(): Record<string, any> {
+  getControllerInfo() {
     return {
       type: 'verification',
       hostUrl: this.hostUrl,
+      serverUrl: this.serverUrl,
       capabilities: this.capabilities,
-      availableMethods: [
-        'getVerificationActions',
-        'saveReference', 
-        'autoDetectText',
-        'executeVerificationBatch',
-        'executeVerification',
-        'getStatus',
-        'getReferences',
-      ],
+      version: '1.0.0'
     };
   }
+} 
 } 
