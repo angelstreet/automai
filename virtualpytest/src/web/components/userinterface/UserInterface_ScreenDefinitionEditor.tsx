@@ -14,11 +14,11 @@ import {
   FullscreenExit,
   Refresh,
 } from '@mui/icons-material';
-import { StreamViewer } from './StreamViewer';
-import { ScreenshotCapture } from './ScreenshotCapture';
-import { VideoCapture } from './VideoCapture';
-import { VerificationEditor } from './VerificationEditor';
-import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './ScreenEditorOverlay';
+import { StreamViewer } from './UserInterface_StreamViewer';
+import { ScreenshotCapture } from './UserInterface_ScreenshotCapture';
+import { VideoCapture } from './UserInterface_VideoCapture';
+import { VerificationEditor } from './UserInterface_VerificationEditor';
+import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './UserInterface_ScreenEditorOverlay';
 import { useScreenEditor } from '../../hooks/useScreenEditor';
 import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/userinterface/screenEditorUtils';
 import { ScreenDefinitionEditorProps } from '../../types/screenEditorTypes';
