@@ -5,8 +5,8 @@ import { ValidationStatus } from '../../config/validationColors';
 
 interface ValidationStatusData {
   status: ValidationStatus;
-  confidence?: number;
-  lastTested?: Date;
+  confidence: number;
+  lastTested: Date;
 }
 
 interface ValidationStore extends ValidationState {
@@ -56,7 +56,7 @@ const deserializeValidationStatus = (data: any[]): Map<string, ValidationStatusD
     data.forEach(([key, value]) => {
       map.set(key, {
         ...value,
-        lastTested: value.lastTested ? new Date(value.lastTested) : undefined
+        lastTested: value.lastTested ? new Date(value.lastTested) : new Date()
       });
     });
   }
