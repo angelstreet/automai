@@ -13,7 +13,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useRemoteConnection } from '../../../hooks/remote/useRemoteConnection';
+import { useRemoteConnection } from '../../../hooks/controller/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
 import { AndroidElement } from '../../../types/features/Remote_Types';

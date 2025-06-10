@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box } from '@mui/material';
 
-import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
+import { useRemoteConnection } from '../../hooks/controller/useRemoteConnection';
 import { AndroidMobileCore } from './AndroidMobileCore';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 import { AndroidElement } from '../../types/features/Remote_Types';
