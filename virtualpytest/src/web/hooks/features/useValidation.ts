@@ -13,7 +13,7 @@ import {
   ValidationPreviewResponse,
   ValidationRunResponse,
   ValidationExportResponse 
-} from '../../types/validationTypes';
+} from '../../types/features/Validation_Types';
 
 export const useValidation = () => {
   const { buildServerUrl } = useRegistration();

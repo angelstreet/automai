@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import { useValidationStore } from '../../components/store/validationStore';
 import { useValidation } from './useValidation';
 import { ValidationEvents } from '../../components/validation/ValidationEventListener';
-import { ValidationProgress } from '../../types/validationTypes';
+import { ValidationProgress } from '../../types/features/Validation_Types';
 
 export function useValidationUI(treeId: string) {
   const {

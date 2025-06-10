@@ -10,7 +10,7 @@ import {
   type ValidationStatus,
   type NodeType,
   type HandlePosition
-} from '../config/validationColors';
+} from '../../config/validationColors';
 
 interface NodeColorResult {
   background: string;
@@ -261,8 +261,7 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
         // Check if this edge is an entry edge
         const sourceNode = edges?.find(e => e.source === edgeData.source);
         const isEntryEdge = edgeData.sourceHandle === 'entry-source' || 
-                           sourceNode?.data?.type === 'entry' ||
-                           edgeData.data?.isEntryEdge;
+                           edgeData.data?.from === 'entry';
         
         if (isEntryEdge) {
           isConnectedToEntryEdge = true;

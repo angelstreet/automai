@@ -33,7 +33,7 @@ import { useState, useEffect } from 'react';
 import { useValidationUI } from '../../hooks/features/useValidationUI';
 import { useValidationStore } from '../store/validationStore';
 import { useValidationColors } from '../../hooks/common/useValidationColors';
-import { getValidationStatusFromConfidence } from '../config/validationColors';
+import { getValidationStatusFromConfidence } from '../../config/validationColors';
 
 interface ValidationResultsClientProps {
   treeId: string;

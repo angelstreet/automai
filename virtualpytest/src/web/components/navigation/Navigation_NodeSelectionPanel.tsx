@@ -21,7 +21,7 @@ import {
   Route as RouteIcon,
   Verified as VerifiedIcon,
 } from '@mui/icons-material';
-import { UINavigationNode, NodeVerification } from '../../types/pages/Navigation_Types';
+import { UINavigationNode, NodeVerification, NodeForm } from '../../types/pages/Navigation_Types';
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 

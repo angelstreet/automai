@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ValidationState, ValidationResults, ValidationPreview, ValidationProgress } from '../types/validationTypes';
-import { ValidationStatus } from '../config/validationColors';
+import { ValidationState, ValidationResults, ValidationPreview, ValidationProgress } from '../../types/features/Validation_Types';
+import { ValidationStatus } from '../../config/validationColors';
 
 interface ValidationStatusData {
   status: ValidationStatus;
@@ -11,8 +11,8 @@ interface ValidationStatusData {
 
 interface ValidationStore extends ValidationState {
   lastResult: ValidationResults | null;
-  nodeValidationStatus: Map<string, ValidationStatusData>;
-  edgeValidationStatus: Map<string, ValidationStatusData>;
+  nodeValidationStatus: Map<string, { status: ValidationStatus; confidence: number; lastTested: Date }>;
+  edgeValidationStatus: Map<string, { status: ValidationStatus; confidence: number; lastTested: Date }>;
   currentTestingNode: string | null;
   currentTestingEdge: string | null;
   setShowPreview: (show: boolean) => void;
@@ -30,6 +30,13 @@ interface ValidationStore extends ValidationState {
   resetValidationColors: () => void;
   reset: () => void;
   showLastResult: () => void;
+  isValidating: boolean;
+  showPreview: boolean;
+  showResults: boolean;
+  showProgress: boolean;
+  previewData: ValidationPreview | null;
+  results: ValidationResults | null;
+  progress: ValidationProgress | null;
 }
 
 // Helper functions to serialize/deserialize Maps for localStorage

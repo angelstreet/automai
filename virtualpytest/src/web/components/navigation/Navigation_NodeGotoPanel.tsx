@@ -18,7 +18,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { UINavigationNode } from '../../types/navigationTypes';
+import { UINavigationNode } from '../../types/pages/Navigation_Types';
 import { NavigationApi, NavigationStep, NavigationPreviewResponse } from '../../utils/navigation/navigationUtils';
 
 interface NodeGotoPanelProps {
