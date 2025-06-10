@@ -215,13 +215,17 @@ def take_screenshot():
         
         print(f"[@route:host_av:screenshot] Using own AV controller: {type(av_controller).__name__}")
         
+        # Get request data for optional parameters
+        request_data = request.get_json() or {}
+        filename = request_data.get('filename')
+        
         # Take screenshot using controller
-        screenshot_result = av_controller.take_screenshot()
+        screenshot_result = av_controller.take_screenshot(filename)
         
         if screenshot_result:
             return jsonify({
                 'success': True,
-                'screenshot': screenshot_result
+                'screenshot_url': screenshot_result  # ✅ FIXED: Use screenshot_url instead of screenshot
             })
         else:
             return jsonify({
@@ -230,6 +234,117 @@ def take_screenshot():
             }), 500
             
     except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@host_av_bp.route('/start-capture', methods=['POST'])
+def start_video_capture():
+    """Start video capture using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:start_capture] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Get request data for capture options
+        request_data = request.get_json() or {}
+        duration = request_data.get('duration', 60.0)  # Default 60 seconds
+        filename = request_data.get('filename')
+        resolution = request_data.get('resolution')
+        fps = request_data.get('fps')
+        
+        print(f"[@route:host_av:start_capture] Starting capture with duration: {duration}s")
+        
+        # Start video capture using controller
+        capture_result = av_controller.start_video_capture(
+            duration=duration,
+            filename=filename,
+            resolution=resolution,
+            fps=fps
+        )
+        
+        if capture_result:
+            # Get session ID if available
+            session_id = getattr(av_controller, 'capture_session_id', None)
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'duration': duration,
+                'message': 'Video capture started successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to start video capture'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:host_av:start_capture] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@host_av_bp.route('/stop-capture', methods=['POST'])
+def stop_video_capture():
+    """Stop video capture using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = host_device.get('controller_objects', {}).get('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:stop_capture] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Stop video capture using controller
+        stop_result = av_controller.stop_video_capture()
+        
+        if stop_result:
+            return jsonify({
+                'success': True,
+                'message': 'Video capture stopped successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to stop video capture or no active capture session'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:host_av:stop_capture] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

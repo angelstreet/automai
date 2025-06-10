@@ -417,21 +417,26 @@ export function ScreenDefinitionEditor({
       setIsScreenshotLoading(true);
       setViewMode('screenshot');
       
-      console.log('[@component:ScreenDefinitionEditor] Taking screenshot using controller directly...');
+      console.log('[@component:ScreenDefinitionEditor] Taking screenshot using AV controller proxy...');
       
-      // Get the controller directly from selectedHostDevice - take control already done
-      const controllers = selectedHostDevice.controller_objects;
-      const avController = controllers?.av;
+      // Get the AV controller proxy from selectedHostDevice
+      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
       
-      // Call take_screenshot directly on the AV controller
-      const screenshot = avController.take_screenshot();
+      if (!avControllerProxy) {
+        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
+      }
       
-      if (screenshot) {
-        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully');
-        setLastScreenshotPath(screenshot);
+      console.log('[@component:ScreenDefinitionEditor] AV controller proxy found, calling take_screenshot...');
+      
+      // Call take_screenshot on the AV controller proxy
+      const screenshotUrl = await avControllerProxy.take_screenshot();
+      
+      if (screenshotUrl) {
+        console.log('[@component:ScreenDefinitionEditor] Screenshot taken successfully:', screenshotUrl);
+        setLastScreenshotPath(screenshotUrl);
         setStreamStatus('stopped');
       } else {
-        console.error('[@component:ScreenDefinitionEditor] Screenshot failed - no data returned');
+        console.error('[@component:ScreenDefinitionEditor] Screenshot failed - no URL returned');
       }
       
     } catch (error) {
@@ -514,64 +519,7 @@ export function ScreenDefinitionEditor({
   // Drag selection state
   const [selectedArea, setSelectedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Debug function to test AV controller endpoint
-  const debugAVController = useCallback(async () => {
-    if (!selectedHostDevice) {
-      console.log('[@debug:ScreenDefinitionEditor] No selectedHostDevice for debugging');
-      return;
-    }
-
-    try {
-      console.log('[@debug:ScreenDefinitionEditor] Testing AV controller endpoint...');
-      console.log('[@debug:ScreenDefinitionEditor] selectedHostDevice:', selectedHostDevice);
-      
-      // Test direct endpoint call to get AV controller status
-      const statusUrl = buildHostUrl(selectedHostDevice.id, '/host/av/status');
-      
-      console.log('[@debug:ScreenDefinitionEditor] Calling AV status endpoint:', statusUrl);
-      
-      const response = await fetch(statusUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-      console.log('[@debug:ScreenDefinitionEditor] AV status response:', result);
-      
-      // Test get stream URL endpoint if it exists
-      const streamUrlEndpoint = buildHostUrl(selectedHostDevice.id, '/host/av/stream-url');
-      console.log('[@debug:ScreenDefinitionEditor] Testing stream URL endpoint:', streamUrlEndpoint);
-      
-      const streamResponse = await fetch(streamUrlEndpoint, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (streamResponse.ok) {
-        const streamResult = await streamResponse.json();
-        console.log('[@debug:ScreenDefinitionEditor] Stream URL response:', streamResult);
-      } else {
-        console.log('[@debug:ScreenDefinitionEditor] Stream URL endpoint not available or failed:', streamResponse.status);
-      }
-      
-    } catch (error) {
-      console.error('[@debug:ScreenDefinitionEditor] Error testing AV controller:', error);
-    }
-  }, [selectedHostDevice]);
-
-  // Run debug test when component mounts and selectedHostDevice is available
-  useEffect(() => {
-    if (selectedHostDevice && isConnected) {
-      console.log('[@debug:ScreenDefinitionEditor] Running AV controller debug test...');
-      debugAVController();
-    }
-  }, [selectedHostDevice, isConnected, debugAVController]);
-
-  // Get stream URL from AV controller - using host endpoint
+  // Get stream URL from AV controller - using controller proxy
   const getStreamUrl = useCallback(async () => {
     if (!selectedHostDevice) {
       console.log('[@component:ScreenDefinitionEditor] No selectedHostDevice available');
@@ -579,40 +527,34 @@ export function ScreenDefinitionEditor({
     }
     
     try {
-      console.log('[@component:ScreenDefinitionEditor] Getting stream URL from host AV endpoint...');
+      console.log('[@component:ScreenDefinitionEditor] Getting stream URL from AV controller proxy...');
       
-      // Call host endpoint to get stream URL
-      const streamUrlEndpoint = buildHostUrl(selectedHostDevice.id, '/host/av/stream-url');
-      console.log('[@component:ScreenDefinitionEditor] Calling stream URL endpoint:', streamUrlEndpoint);
+      // Get the AV controller proxy from selectedHostDevice
+      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
       
-      const response = await fetch(streamUrlEndpoint, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        console.error('[@component:ScreenDefinitionEditor] Stream URL endpoint failed:', response.status);
+      if (!avControllerProxy) {
+        console.log('[@component:ScreenDefinitionEditor] AV controller proxy not available');
         return undefined;
       }
-
-      const result = await response.json();
-      console.log('[@component:ScreenDefinitionEditor] Stream URL response:', result);
       
-      if (result.success && result.stream_url) {
-        console.log('[@component:ScreenDefinitionEditor] Got stream URL from host:', result.stream_url);
-        return result.stream_url;
+      console.log('[@component:ScreenDefinitionEditor] AV controller proxy found, calling get_stream_url...');
+      
+      // Call get_stream_url on the AV controller proxy
+      const streamUrl = await avControllerProxy.get_stream_url();
+      
+      if (streamUrl) {
+        console.log('[@component:ScreenDefinitionEditor] Got stream URL from proxy:', streamUrl);
+        return streamUrl;
       } else {
-        console.log('[@component:ScreenDefinitionEditor] No stream URL in response:', result.error);
+        console.log('[@component:ScreenDefinitionEditor] No stream URL returned from proxy');
         return undefined;
       }
       
     } catch (error) {
-      console.error('[@component:ScreenDefinitionEditor] Error getting stream URL:', error);
+      console.error('[@component:ScreenDefinitionEditor] Error getting stream URL from proxy:', error);
       return undefined;
     }
-  }, [selectedHostDevice, buildHostUrl]);
+  }, [selectedHostDevice]);
 
   // Fetch stream URL when component mounts and selectedHostDevice is available
   useEffect(() => {

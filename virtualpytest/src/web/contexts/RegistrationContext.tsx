@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { AVControllerProxy } from '../controllers/AVControllerProxy';
 
 // Default team ID constant - centralized here for use across the application
 export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
@@ -46,6 +47,12 @@ interface RegisteredHost {
   public_ip: string;
   controller_types?: string[];
   controller_configs?: any;
+  // NEW - Controller proxies for frontend interaction
+  controllerProxies?: {
+    av?: AVControllerProxy;
+    // Future: remote?: RemoteControllerProxy;
+    // Future: verification?: VerificationControllerProxy;
+  };
 }
 
 interface RegistrationContextType {
@@ -121,6 +128,88 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
 
   const SERVER_BASE_URL = getServerBaseUrl();
 
+  // Build server URL (always goes to main server)
+  const buildServerUrl = useCallback((endpoint: string) => {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `${SERVER_BASE_URL}/${cleanEndpoint}`;
+  }, []);
+
+  // Build host URL (goes directly to specific host)
+  const buildHostUrl = useCallback((hostId: string, endpoint: string) => {
+    const host = availableHosts.find(h => h.id === hostId);
+    if (!host) {
+      throw new Error(`Host with ID ${hostId} not found`);
+    }
+    
+    // Always use the current page's protocol to avoid mixed content issues
+    const protocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
+    let baseUrl: string;
+    
+    if (host.connection?.flask_url) {
+      // Extract IP and port from flask_url but use current page's protocol
+      const flaskUrl = host.connection.flask_url;
+      console.log(`[@context:Registration] Original flask_url: ${flaskUrl}`);
+      
+      // Parse the flask_url to extract IP and port
+      try {
+        const url = new URL(flaskUrl);
+        const hostIp = url.hostname;
+        const hostPort = url.port;
+        
+        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
+        console.log(`[@context:Registration] Built host URL with current protocol: ${baseUrl}`);
+      } catch (error) {
+        console.error(`[@context:Registration] Failed to parse flask_url: ${flaskUrl}`, error);
+        // Fallback to legacy parsing
+        const hostIp = flaskUrl.replace(/https?:\/\//, '').split(':')[0];
+        const hostPort = flaskUrl.split(':')[2] || '6119';
+        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
+        console.log(`[@context:Registration] Built host URL with fallback parsing: ${baseUrl}`);
+      }
+    } else {
+      // Build URL from host registration components
+      const hostIp = host.local_ip;
+      const hostPort = host.client_port;
+      
+      baseUrl = `${protocol}://${hostIp}:${hostPort}`;
+      console.log(`[@context:Registration] Built host URL from components: ${baseUrl}`);
+    }
+    
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    const finalUrl = `${baseUrl}/${cleanEndpoint}`;
+    console.log(`[@context:Registration] Final host URL: ${finalUrl}`);
+    return finalUrl;
+  }, [availableHosts]);
+
+  // Create controller proxies for a host device
+  const createControllerProxies = useCallback((host: RegisteredHost) => {
+    console.log(`[@context:Registration] Creating controller proxies for host: ${host.name} (${host.id})`);
+    
+    const proxies: RegisteredHost['controllerProxies'] = {};
+    
+    // Create AV controller proxy if host has AV capabilities
+    if (host.controller_types?.includes('av') || host.capabilities?.includes('av')) {
+      try {
+        console.log(`[@context:Registration] Creating AV controller proxy for host: ${host.name}`);
+        proxies.av = new AVControllerProxy(host, buildHostUrl);
+        console.log(`[@context:Registration] AV controller proxy created successfully for host: ${host.name}`);
+      } catch (error) {
+        console.error(`[@context:Registration] Failed to create AV controller proxy for host ${host.name}:`, error);
+      }
+    }
+    
+    // Future controller proxies will be added here:
+    // if (host.controller_types?.includes('remote')) {
+    //   proxies.remote = new RemoteControllerProxy(host, buildHostUrl);
+    // }
+    // if (host.controller_types?.includes('verification')) {
+    //   proxies.verification = new VerificationControllerProxy(host, buildHostUrl);
+    // }
+    
+    console.log(`[@context:Registration] Created ${Object.keys(proxies).length} controller proxies for host: ${host.name}`);
+    return proxies;
+  }, [buildHostUrl]);
+
   // Fetch hosts from server
   const fetchHosts = useCallback(async () => {
     console.log('[@context:Registration] fetchHosts function called!');
@@ -184,8 +273,16 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         }));
         
         console.log('[@context:Registration] Mapped hosts:', hosts);
-        setAvailableHosts(hosts);
-        console.log(`[@context:Registration] Successfully loaded ${hosts.length} hosts`);
+        
+        // Create controller proxies for each host
+        const hostsWithProxies = hosts.map((host: RegisteredHost) => ({
+          ...host,
+          controllerProxies: createControllerProxies(host)
+        }));
+        
+        console.log('[@context:Registration] Hosts with controller proxies:', hostsWithProxies);
+        setAvailableHosts(hostsWithProxies);
+        console.log(`[@context:Registration] Successfully loaded ${hostsWithProxies.length} hosts with controller proxies`);
       } else {
         throw new Error(result.error || 'Server returned success: false');
       }
@@ -215,60 +312,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  // Build server URL (always goes to main server)
-  const buildServerUrl = useCallback((endpoint: string) => {
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    return `${SERVER_BASE_URL}/${cleanEndpoint}`;
-  }, []);
-
-  // Build host URL (goes directly to specific host)
-  const buildHostUrl = useCallback((hostId: string, endpoint: string) => {
-    const host = availableHosts.find(h => h.id === hostId);
-    if (!host) {
-      throw new Error(`Host with ID ${hostId} not found`);
-    }
-    
-    // Always use the current page's protocol to avoid mixed content issues
-    const protocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
-    let baseUrl: string;
-    
-    if (host.connection?.flask_url) {
-      // Extract IP and port from flask_url but use current page's protocol
-      const flaskUrl = host.connection.flask_url;
-      console.log(`[@context:Registration] Original flask_url: ${flaskUrl}`);
-      
-      // Parse the flask_url to extract IP and port
-      try {
-        const url = new URL(flaskUrl);
-        const hostIp = url.hostname;
-        const hostPort = url.port;
-        
-        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
-        console.log(`[@context:Registration] Built host URL with current protocol: ${baseUrl}`);
-      } catch (error) {
-        console.error(`[@context:Registration] Failed to parse flask_url: ${flaskUrl}`, error);
-        // Fallback to legacy parsing
-        const hostIp = flaskUrl.replace(/https?:\/\//, '').split(':')[0];
-        const hostPort = flaskUrl.split(':')[2] || '6119';
-        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
-        console.log(`[@context:Registration] Built host URL with fallback parsing: ${baseUrl}`);
-      }
-    } else {
-      // Build URL from host registration components
-      const hostIp = host.local_ip;
-      const hostPort = host.client_port;
-      
-      baseUrl = `${protocol}://${hostIp}:${hostPort}`;
-      console.log(`[@context:Registration] Built host URL from components: ${baseUrl}`);
-    }
-    
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    const finalUrl = `${baseUrl}/${cleanEndpoint}`;
-    console.log(`[@context:Registration] Final host URL: ${finalUrl}`);
-    return finalUrl;
-  }, [availableHosts]);
+  }, [createControllerProxies]);
 
   // Build nginx URL (for host media/files)
   const buildNginxUrl = useCallback((hostId: string, path: string) => {
