@@ -314,12 +314,12 @@ def verification_status():
 # Device locking and control is now handled exclusively by server_control_routes.py
 
 # The following endpoints have been REMOVED from verification routes:
-# - /api/virtualpytest/verification/take-control (REMOVED - use server_control_routes.py)
-# - /api/virtualpytest/verification/release-control (REMOVED - use server_control_routes.py)
-# - /api/virtualpytest/verification/lock-device (REMOVED - use server_control_routes.py)
-# - /api/virtualpytest/verification/unlock-device (REMOVED - use server_control_routes.py)
-# - /api/virtualpytest/verification/device-lock-status/<device_id> (REMOVED - use server_control_routes.py)
+# - /server/verification/take-control (REMOVED - use server_control_routes.py)
+# - /server/verification/release-control (REMOVED - use server_control_routes.py)
+# - /server/verification/lock-device (REMOVED - use server_control_routes.py)
+# - /server/verification/unlock-device (REMOVED - use server_control_routes.py)
+# - /server/verification/device-lock-status/<device_id> (REMOVED - use server_control_routes.py)
 
 # For device control, use the main server control endpoints:
-# - /take-control (POST) - Main device control with locking
-# - /release-control (POST) - Release device control and unlock 
+# - /server/control/take-control (POST) - Main device control with locking
+# - /server/control/release-control (POST) - Release device control and unlock 

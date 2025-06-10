@@ -100,36 +100,22 @@ def take_control():
                 'error': f'Failed to find host for device: {str(e)}'
             }), 500
         
-        # Forward request to host using host connection information
+        # Forward request to host using proper URL building
         try:
             host_payload = {
                 'device_id': device_id,
                 'session_id': session_id
             }
             
-            print(f"[@route:server_take_control] Forwarding to host using host connection info")
+            print(f"[@route:server_take_control] Forwarding to host using proper URL building")
             print(f"[@route:server_take_control] Payload: {host_payload}")
-            print(f"[@route:server_take_control] Host info for debugging: host_ip={host_info.get('host_ip')}, host_port={host_info.get('host_port')}")
             
-            # Use host connection information from the host device object
-            host_connection = host_info.get('connection', {})
-            flask_url = host_connection.get('flask_url')
+            # Use proper URL building function from utils
+            host_url = build_host_url(host_info, "/host/take-control")
             
-            if not flask_url:
-                # Fallback to building URL from host info if connection not available
-                host_ip = host_info.get('host_ip')
-                host_port = host_info.get('host_port')
-                flask_url = f"https://{host_ip}:{host_port}"
-            else:
-                # Use HTTPS version of the flask_url
-                parsed = urllib.parse.urlparse(flask_url)
-                flask_url = f"https://{parsed.hostname}:{parsed.port}"
+            print(f"[@route:server_take_control] Built URL using build_host_url: {host_url}")
             
-            host_url = f"{flask_url}/host/take-control"
-            
-            print(f"[@route:server_take_control] Built URL from host connection: {host_url}")
-            
-            # Make request using the connection info from host device object
+            # Make request using the properly built URL
             host_response = requests.post(
                 host_url, 
                 json=host_payload, 
@@ -245,7 +231,7 @@ def release_control():
                 print(f"[@route:server_release_control] Calling host release control")
                 
                 host_response = make_host_request(
-                    '/release-control',
+                    '/host/release-control',
                     method='POST',
                     use_https=True,
                     json={
@@ -326,17 +312,8 @@ def navigate():
                 'error': f'No online host found for device: {device_id}'
             }), 404
         
-        # Forward request to host
-        host_ip = host_info.get('host_ip')
-        host_port = host_info.get('host_port')
-        
-        if not host_ip or not host_port:
-            return jsonify({
-                'success': False,
-                'error': 'Host connection information not available'
-            }), 500
-        
-        host_url = f"http://{host_ip}:{host_port}/api/navigation/execute/{tree_id}/{target_node_id}"
+        # Forward request to host using proper URL building
+        host_url = build_host_url(host_info, f"/host/navigation/execute/{tree_id}/{target_node_id}")
         
         payload = {
             'current_node_id': current_node_id,
