@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AVControllerProxy } from '../controllers/AVControllerProxy';
+import { RemoteControllerProxy } from '../controllers/RemoteControllerProxy';
 
 // Default team ID constant - centralized here for use across the application
 export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
@@ -50,7 +51,7 @@ interface RegisteredHost {
   // NEW - Controller proxies for frontend interaction
   controllerProxies?: {
     av?: AVControllerProxy;
-    // Future: remote?: RemoteControllerProxy;
+    remote?: RemoteControllerProxy;
     // Future: verification?: VerificationControllerProxy;
   };
 }
@@ -198,10 +199,18 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       }
     }
     
+    // Create remote controller proxy if host has remote capabilities
+    if (host.controller_types?.includes('remote') || host.capabilities?.includes('remote')) {
+      try {
+        console.log(`[@context:Registration] Creating remote controller proxy for host: ${host.name}`);
+        proxies.remote = new RemoteControllerProxy(host, buildHostUrl);
+        console.log(`[@context:Registration] Remote controller proxy created successfully for host: ${host.name}`);
+      } catch (error) {
+        console.error(`[@context:Registration] Failed to create remote controller proxy for host ${host.name}:`, error);
+      }
+    }
+    
     // Future controller proxies will be added here:
-    // if (host.controller_types?.includes('remote')) {
-    //   proxies.remote = new RemoteControllerProxy(host, buildHostUrl);
-    // }
     // if (host.controller_types?.includes('verification')) {
     //   proxies.verification = new VerificationControllerProxy(host, buildHostUrl);
     // }

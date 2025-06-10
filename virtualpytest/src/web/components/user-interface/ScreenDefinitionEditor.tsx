@@ -174,9 +174,27 @@ export function ScreenDefinitionEditor({
   const deviceResolution = useMemo(() => ({ width: 1080, height: 2340 }), []);
   
   // Memoize onTap callback to prevent new function references
-  const handleTap = useCallback((x: number, y: number) => {
-    console.log(`🎯 [TEST] Tapped at device coordinates: ${x}, ${y}`);
-  }, []);
+  const handleTap = useCallback(async (x: number, y: number) => {
+    console.log(`🎯 [@component:ScreenDefinitionEditor] Tapped at device coordinates: ${x}, ${y}`);
+    
+    // Try to use remote controller proxy if available
+    if (selectedHostDevice?.controllerProxies?.remote) {
+      try {
+        console.log(`[@component:ScreenDefinitionEditor] Using remote controller proxy to tap at coordinates: (${x}, ${y})`);
+        const result = await selectedHostDevice.controllerProxies.remote.tap(x, y);
+        
+        if (result.success) {
+          console.log(`[@component:ScreenDefinitionEditor] Tap successful at coordinates: (${x}, ${y})`);
+        } else {
+          console.error(`[@component:ScreenDefinitionEditor] Tap failed: ${result.error}`);
+        }
+      } catch (error) {
+        console.error(`[@component:ScreenDefinitionEditor] Error during tap operation:`, error);
+      }
+    } else {
+      console.log(`[@component:ScreenDefinitionEditor] No remote controller proxy available - tap coordinates logged only`);
+    }
+  }, [selectedHostDevice]);
   
   // Stream status state - without polling
   const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
