@@ -19,9 +19,9 @@ import { ScreenshotCapture } from './UserInterface_ScreenshotCapture';
 import { VideoCapture } from './UserInterface_VideoCapture';
 import { VerificationEditor } from './UserInterface_VerificationEditor';
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './UserInterface_ScreenEditorOverlay';
-import { useScreenEditor } from '../../hooks/useScreenEditor';
+import { useScreenEditor } from '../../hooks/pages/useScreenEditor';
 import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/userinterface/screenEditorUtils';
-import { ScreenDefinitionEditorProps } from '../../types/screenEditorTypes';
+import { ScreenDefinitionEditorProps } from '../../types/pages/UserInterface_Types';
 
 export function ScreenDefinitionEditor({
   selectedHostDevice,

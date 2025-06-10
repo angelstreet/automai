@@ -10,18 +10,20 @@ import {
   MarkerType,
   useReactFlow
 } from 'reactflow';
-import { UINavigationNode, UINavigationEdge, NavigationTreeData, NodeForm, EdgeForm } from '../types/navigationTypes';
+import { UINavigationNode, UINavigationEdge, NavigationTreeData, NodeForm, EdgeForm } from '../../types/pages/Navigation_Types';
 
 // Import the modular hooks
-import { useNavigationState } from './navigation/useNavigationState';
-import { useConnectionRules } from './navigation/useConnectionRules';
-import { useNavigationHistory } from './navigation/useNavigationHistory';
-import { useNavigationCRUD } from './navigation/useNavigationCRUD';
-import { useNavigationConfig } from './navigation/useNavigationConfig';
-import { useNodeEdgeManagement } from './navigation/useNodeEdgeManagement';
+import { 
+  useNavigationState,
+  useConnectionRules,
+  useNavigationHistory,
+  useNavigationCRUD,
+  useNavigationConfig,
+  useNodeEdgeManagement 
+} from './useNavigationHooks';
 
 // Import registration context and default team ID
-import { useRegistration, DEFAULT_TEAM_ID } from '../contexts/RegistrationContext';
+import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
