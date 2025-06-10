@@ -25,7 +25,7 @@ from navigation_graph import get_node_info, get_entry_points
 from .utils import get_team_id, check_supabase
 
 # Create blueprint
-validation_bp = Blueprint('validation', __name__, url_prefix='/api/validation')
+validation_bp = Blueprint('validation', __name__, url_prefix='/server/validation')
 
 class ValidationService:
     """Service for comprehensive navigation tree validation"""

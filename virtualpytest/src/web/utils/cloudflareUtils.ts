@@ -23,7 +23,7 @@ export const buildScreenshotUrl = (
   }
   
   // Handle local API URLs - extract filename from path parameter
-  if (screenshotPath.includes('/api/virtualpytest/screen-definition/images?path=')) {
+  if (screenshotPath.includes('/server/virtualpytest/screen-definition/images?path=')) {
     try {
       const url = new URL(screenshotPath, 'http://localhost:5009');
       const pathParam = url.searchParams.get('path');

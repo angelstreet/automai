@@ -163,7 +163,7 @@ def build_server_url(endpoint: str) -> str:
     Build a URL for server endpoint using the same logic as frontend RegistrationContext
     
     Args:
-        endpoint: The endpoint path (e.g., '/api/system/clients/devices')
+        endpoint: The endpoint path (e.g., '/server/system/clients/devices')
     
     Returns:
         Complete server URL string

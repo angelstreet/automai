@@ -19,7 +19,7 @@ from navigationGitManager import (
 )
 
 # Create blueprint
-navigation_config_bp = Blueprint('navigation_config', __name__, url_prefix='/api/navigation/config')
+navigation_config_bp = Blueprint('navigation_config', __name__, url_prefix='/server/navigation/config')
 
 # Initialize lock manager
 lock_manager = NavigationLockManager()

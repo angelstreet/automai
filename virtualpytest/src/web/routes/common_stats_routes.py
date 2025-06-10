@@ -22,7 +22,7 @@ def get_failure_rates(team_id):
 # STATISTICS ENDPOINTS
 # =====================================================
 
-@stats_bp.route('/api/stats', methods=['GET'])
+@stats_bp.route('/server/stats', methods=['GET'])
 def stats():
     """Get statistics for the dashboard (mock data)"""
     try:

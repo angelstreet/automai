@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify, current_app
 import time
 
 # Create blueprint
-controller_bp = Blueprint('controller', __name__, url_prefix='/api/controller')
+controller_bp = Blueprint('controller', __name__, url_prefix='/server/controller')
 
 # Helper functions
 def check_controllers_available():

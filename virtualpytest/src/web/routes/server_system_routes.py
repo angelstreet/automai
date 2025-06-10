@@ -34,7 +34,7 @@ from controllerConfigFactory import (
 )
 print("[@system_routes] Successfully imported controllerConfigFactory")
 
-system_bp = Blueprint('system', __name__)
+system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
 # In-memory log storage for debug purposes
 _debug_logs = deque(maxlen=10000)  # Keep last 10000 log entries
@@ -85,7 +85,7 @@ def set_health_check_threads(threads):
     """Set health check threads in app context"""
     current_app._health_check_threads = threads
 
-@system_bp.route('/api/system/logs', methods=['GET'])
+@system_bp.route('/logs', methods=['GET'])
 def get_logs():
     """Get server logs for debug modal"""
     try:
@@ -117,7 +117,7 @@ def get_logs():
             'error': str(e)
         }), 500
 
-@system_bp.route('/api/system/logs/clear', methods=['POST'])
+@system_bp.route('/logs/clear', methods=['POST'])
 def clear_logs():
     """Clear server logs"""
     try:
@@ -143,7 +143,7 @@ def clear_logs():
             'error': str(e)
         }), 500
 
-@system_bp.route('/api/system/register', methods=['POST'])
+@system_bp.route('/register', methods=['POST'])
 def register_client():
     """Host registers with server"""
     try:
@@ -467,7 +467,7 @@ def register_client():
         traceback.print_exc()
         return jsonify({'error': error_msg}), 500
 
-@system_bp.route('/api/system/unregister', methods=['POST'])
+@system_bp.route('/unregister', methods=['POST'])
 def unregister_client():
     """Client unregisters from server"""
     try:
@@ -504,7 +504,7 @@ def unregister_client():
         print(f"❌ Error unregistering client: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/api/system/health', methods=['GET'])
+@system_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for clients"""
     system_stats = get_system_stats()
@@ -516,7 +516,7 @@ def health_check():
         'system_stats': system_stats
     }), 200
 
-@system_bp.route('/api/system/health-with-devices', methods=['GET'])
+@system_bp.route('/health-with-devices', methods=['GET'])
 def health_check_with_devices():
     """Health check endpoint that also returns connected devices"""
     try:
@@ -585,7 +585,7 @@ def health_check_with_devices():
             'error': str(e)
         }), 500
 
-@system_bp.route('/api/system/clients', methods=['GET'])
+@system_bp.route('/clients', methods=['GET'])
 def list_clients():
     """Server lists all connected clients"""
     try:
@@ -635,7 +635,7 @@ def list_clients():
         print(f"❌ Error listing clients: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/api/system/clients/devices', methods=['GET'])
+@system_bp.route('/clients/devices', methods=['GET'])
 def list_clients_as_devices():
     """Return registered devices with host references for NavigationEditor"""
     try:
@@ -701,7 +701,7 @@ def list_clients_as_devices():
         print(f"❌ [DEVICES] Error listing devices: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/api/system/device/<device_id>', methods=['GET'])
+@system_bp.route('/device/<device_id>', methods=['GET'])
 def get_device_by_id(device_id):
     """Get device information with host details by device_id"""
     try:
@@ -785,7 +785,7 @@ def get_device_by_id(device_id):
         print(f"❌ Error finding device: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/api/system/client/<device_model>', methods=['GET'])
+@system_bp.route('/client/<device_model>', methods=['GET'])
 def get_client_by_device_model(device_model):
     """Get available host for specific device model (backward compatibility)"""
     try:
@@ -845,7 +845,7 @@ def get_client_by_device_model(device_model):
         print(f"❌ Error finding host: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/api/system/environment-profiles', methods=['GET'])
+@system_bp.route('/environment-profiles', methods=['GET'])
 def get_environment_profiles():
     """Get available environment profiles for test execution"""
     try:
@@ -894,7 +894,7 @@ def get_environment_profiles():
         print(f"❌ Error getting environment profiles: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/api/system/ping', methods=['POST'])
+@system_bp.route('/ping', methods=['POST'])
 def client_ping():
     """Client sends periodic health ping to server"""
     try:
@@ -972,7 +972,7 @@ def start_health_check(client_id, client_ip, client_port):
                         break
                     
                     try:
-                        response = requests.get(f"http://{client_ip}:{client_port}/api/system/health", timeout=5)
+                        response = requests.get(f"http://{client_ip}:{client_port}/server/system/health", timeout=5)
                         if response.status_code == 200:
                             # Update last seen timestamp
                             connected_clients[client_id]['last_seen'] = time.time()

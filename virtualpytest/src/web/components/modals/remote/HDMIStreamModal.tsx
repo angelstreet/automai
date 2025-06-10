@@ -82,7 +82,7 @@ export function HDMIStreamModal({ open, onClose }: HDMIStreamModalProps) {
   const fetchDefaultValues = async () => {
     try {
       // Use abstract AV controller (no defaults endpoint needed - controller pre-configured)
-      // const response = await fetch(buildServerUrl('/api/virtualpytest/hdmi-stream/defaults'));
+      // const response = await fetch(buildServerUrl('/server/virtualpytest/hdmi-stream/defaults'));
       // Controllers are pre-configured during registration, no defaults needed
       console.log('[@component:HDMIStreamModal] Using pre-configured abstract AV controller');
     } catch (error) {

@@ -17,7 +17,7 @@ core_bp = Blueprint('core', __name__)
 # HEALTH CHECK ENDPOINT
 # =====================================================
 
-@core_bp.route('/api/health')
+@core_bp.route('/server/health')
 def health():
     """Health check endpoint"""
     supabase_status = "connected" if current_app.supabase_client else "disconnected"
