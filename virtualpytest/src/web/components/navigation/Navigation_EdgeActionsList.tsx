@@ -10,7 +10,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { EdgeActionItem } from './EdgeActionItem';
+import { EdgeActionItem } from './Navigation_EdgeActionItem';
 
 interface EdgeAction {
   id: string;
