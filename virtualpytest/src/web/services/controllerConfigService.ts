@@ -1,8 +1,8 @@
-import { 
-  ControllerConfigMap, 
-  ControllerConfiguration, 
-  ControllerInputField 
-} from '../types/controllerConfig.types';
+import {
+  ControllerConfigMap,
+  ControllerConfiguration,
+  ControllerInputField,
+} from '../types/controllerConfigTypes';
 
 /**
  * Controller Configuration Service

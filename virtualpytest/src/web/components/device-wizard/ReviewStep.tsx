@@ -15,13 +15,13 @@ import {
   CheckCircle as CheckIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { Model } from '../../services/deviceModelService';
-import { DeviceFormData } from '../../types/controllerConfig.types';
+import { DeviceModel } from '../../types';
+import { DeviceFormData } from '../../types/controllerConfigTypes';
 import { ControllerConfigService } from '../../services/controllerConfigService';
 
 interface ReviewStepProps {
   formData: DeviceFormData;
-  selectedModel: Model | null;
+  selectedModel: DeviceModel | null;
   errors?: { [key: string]: string };
 }
 

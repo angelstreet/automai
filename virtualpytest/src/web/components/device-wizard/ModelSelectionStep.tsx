@@ -11,14 +11,13 @@ import {
   Chip,
   FormHelperText,
 } from '@mui/material';
-import { useDeviceModelApi } from '../../services/deviceModelService';
-import { Model } from '../../types/model.types';
-import { DeviceFormData } from '../../types/controllerConfig.types';
+import { DeviceModel } from '../../types';
+import { DeviceFormData } from '../../types/controllerConfigTypes';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;
   onUpdate: (updates: Partial<DeviceFormData>) => void;
-  onModelSelected: (model: Model | null) => void;
+  onModelSelected: (model: DeviceModel | null) => void;
   errors?: { [key: string]: string };
 }
 
@@ -28,25 +27,27 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   onModelSelected,
   errors = {}
 }) => {
-  const [deviceModels, setDeviceModels] = useState<Model[]>([]);
+  const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [selectedModelDetails, setSelectedModelDetails] = useState<Model | null>(null);
+  const [selectedModelDetails, setSelectedModelDetails] = useState<DeviceModel | null>(null);
 
-  // Get the device model API service
-  const deviceModelApi = useDeviceModelApi();
-
-  // Fetch device models when component mounts only
-  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
+  // Fetch device models using server API
   useEffect(() => {
     const fetchModels = async () => {
       setLoadingModels(true);
       setModelsError(null);
       try {
         console.log('[@component:ModelSelectionStep] Fetching device models');
-        const models = await deviceModelApi.getAllDeviceModels();
-        setDeviceModels(models);
-        console.log(`[@component:ModelSelectionStep] Loaded ${models.length} device models`);
+        
+        const response = await fetch('/server/devicemodel/get-devicemodels');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
+        }
+        
+        const models = await response.json();
+        setDeviceModels(models || []);
+        console.log(`[@component:ModelSelectionStep] Loaded ${models?.length || 0} device models`);
       } catch (error) {
         console.error('[@component:ModelSelectionStep] Error fetching device models:', error);
         setModelsError('Failed to load device models');
@@ -57,7 +58,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     };
 
     fetchModels();
-  }, []); // Remove deviceModelApi dependency - only fetch on mount
+  }, []); // Only fetch on mount
 
   // Update selected model details when model changes
   useEffect(() => {
@@ -79,7 +80,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     onUpdate({ controllerConfigs: {} });
   };
 
-  const getControllerDisplayValue = (controllers: Model['controllers']) => {
+  const getControllerDisplayValue = (controllers: DeviceModel['controllers']) => {
     const activeControllers = Object.entries(controllers)
       .filter(([_, value]) => value && value !== '')
       .map(([type, value]) => ({ type, value }));

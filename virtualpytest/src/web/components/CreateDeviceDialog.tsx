@@ -21,8 +21,8 @@ import {
   ArrowForward as NextIcon,
   Check as CheckIcon,
 } from '@mui/icons-material';
-import { Model } from '../services/deviceModelService';
-import { DeviceFormData } from '../types/controllerConfig.types';
+import { DeviceModel } from '../types';
+import { DeviceFormData } from '../types/controllerConfigTypes';
 import { ControllerConfigService } from '../services/controllerConfigService';
 
 // Import wizard step components
@@ -59,7 +59,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   // Wizard state
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // Form data

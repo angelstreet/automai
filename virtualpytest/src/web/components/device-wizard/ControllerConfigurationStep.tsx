@@ -6,13 +6,13 @@ import {
   FormHelperText,
   Divider,
 } from '@mui/material';
-import { Model } from '../../services/deviceModelService';
-import { DeviceFormData } from '../../types/controllerConfig.types';
+import { DeviceModel } from '../../types';
+import { DeviceFormData } from '../../types/controllerConfigTypes';
 import { ControllerTypeSection } from './ControllerTypeSection';
 
 interface ControllerConfigurationStepProps {
   formData: DeviceFormData;
-  selectedModel: Model | null;
+  selectedModel: DeviceModel | null;
   onUpdate: (updates: Partial<DeviceFormData>) => void;
   errors?: { [key: string]: string };
 }

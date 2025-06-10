@@ -22,10 +22,9 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { Model } from '../types/model.types';
-import { DeviceFormData } from '../types/controllerConfig.types';
+import { DeviceModel } from '../types';
+import { DeviceFormData } from '../types/controllerConfigTypes';
 import { ControllerConfigService } from '../services/controllerConfigService';
-import { useDeviceModelApi } from '../services/deviceModelService';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './device-wizard/BasicInfoStep';
@@ -61,15 +60,12 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Get the device model API service
-  const deviceModelApi = useDeviceModelApi();
-
   // Wizard state
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [deviceModels, setDeviceModels] = useState<Model[]>([]);
+  const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
 
   // Form data
   const [formData, setFormData] = useState<DeviceFormData>({
@@ -98,15 +94,20 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     },
   ];
 
-  // Fetch device models when dialog opens
-  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
+  // Fetch device models when dialog opens using server API
   useEffect(() => {
     const fetchModels = async () => {
       try {
         console.log('[@component:EditDeviceDialog] Fetching device models');
-        const models = await deviceModelApi.getAllDeviceModels();
-        setDeviceModels(models);
-        console.log(`[@component:EditDeviceDialog] Loaded ${models.length} device models`);
+        
+        const response = await fetch('/server/devicemodel/get-devicemodels');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
+        }
+        
+        const models = await response.json();
+        setDeviceModels(models || []);
+        console.log(`[@component:EditDeviceDialog] Loaded ${models?.length || 0} device models`);
       } catch (error) {
         console.error('[@component:EditDeviceDialog] Error fetching device models:', error);
         setDeviceModels([]);
@@ -116,7 +117,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     if (open) {
       fetchModels();
     }
-  }, [open]); // Remove deviceModelApi dependency - only depend on open state
+  }, [open]); // Only depend on open state
 
   // Initialize form when device or dialog state changes
   useEffect(() => {
