@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { deviceModelService } from '../services/deviceModelService';
-import { Model } from '../types/model.types';
+import { deviceModelService } from '../../utils/device/deviceModelService';
+import { Model } from '../../types/pages/Model_Types';
 
 // Query keys for React Query
 const QUERY_KEYS = {
