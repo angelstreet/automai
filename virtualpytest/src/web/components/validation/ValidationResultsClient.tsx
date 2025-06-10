@@ -30,17 +30,18 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
-import { useValidation } from '../hooks/useValidation';
+import { useValidationUI } from '../../hooks/features/useValidationUI';
 import { useValidationStore } from '../store/validationStore';
-import { useValidationColors } from '../../hooks/useValidationColors';
+import { useValidationColors } from '../../hooks/common/useValidationColors';
 import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationResultsClientProps {
   treeId: string;
 }
 
-export default function ValidationResultsClient({ treeId }: ValidationResultsClientProps) {
-  const { showResults, results, lastResult, closeResults } = useValidation(treeId);
+const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeId }) => {
+  const validation = useValidationUI(treeId);
+  const { showResults, results, lastResult, closeResults } = validation;
   const { 
     setNodeValidationStatus,
     setEdgeValidationStatus,
@@ -550,4 +551,6 @@ export default function ValidationResultsClient({ treeId }: ValidationResultsCli
       </DialogActions>
     </Dialog>
   );
-} 
+};
+
+export default ValidationResultsClient; 

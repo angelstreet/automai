@@ -16,7 +16,7 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { useState } from 'react';
-import { useValidation } from '../hooks/useValidation';
+import { useValidationUI } from '../../hooks/features/useValidationUI';
 
 interface ValidationButtonClientProps {
   treeId: string;
@@ -24,14 +24,14 @@ interface ValidationButtonClientProps {
 }
 
 export default function ValidationButtonClient({ treeId, disabled }: ValidationButtonClientProps) {
-  const { isValidating, results, lastResult, openPreview, viewLastResult } = useValidation(treeId);
+  const validation = useValidationUI(treeId);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
   const getButtonColor = () => {
-    if (!results) return 'primary';
+    if (!validation.results) return 'primary';
     
-    switch (results.summary.overallHealth) {
+    switch (validation.results.summary.overallHealth) {
       case 'excellent':
         return 'success';
       case 'poor':
@@ -44,13 +44,13 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
   };
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (lastResult && !isValidating) {
+    if (validation.lastResult && !validation.isValidating) {
       // If there's a cached result and not validating, show dropdown
       setAnchorEl(event.currentTarget);
     } else {
       // Otherwise, just open preview directly
       console.log(`[@component:ValidationButtonClient] Validation button clicked for tree: ${treeId}`);
-      openPreview();
+      validation.openPreview();
     }
   };
 
@@ -61,26 +61,26 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
   const handleRunValidation = () => {
     console.log(`[@component:ValidationButtonClient] Run validation clicked for tree: ${treeId}`);
     handleClose();
-    openPreview();
+    validation.openPreview();
   };
 
   const handleViewLastResult = () => {
     console.log(`[@component:ValidationButtonClient] View last result clicked for tree: ${treeId}`);
     handleClose();
-    viewLastResult();
+    validation.viewLastResult();
   };
 
   // If there's a cached result and not validating, show dropdown button
-  const showDropdown = lastResult && !isValidating;
+  const showDropdown = validation.lastResult && !validation.isValidating;
 
   return (
     <Box display="inline-flex">
       <Button
-        startIcon={isValidating ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+        startIcon={validation.isValidating ? <CircularProgress size={16} /> : <CheckCircleIcon />}
         endIcon={showDropdown ? <ArrowDropDownIcon /> : undefined}
         onClick={handleClick}
         size="small"
-        disabled={disabled || isValidating}
+        disabled={disabled || validation.isValidating}
         variant="outlined"
         color={getButtonColor()}
         sx={{ 

@@ -1,10 +1,17 @@
-import { useCallback } from 'react';
-import { useValidationStore } from '../store/validationStore';
-import { validationService } from '../../services/validationService';
-import { ValidationEvents } from '../validation/ValidationEventListener';
-import { ValidationProgress } from '../types/validationTypes';
+/**
+ * Validation UI Hook
+ * 
+ * This hook provides UI state management for validation operations,
+ * built on top of the base useValidation hook.
+ */
 
-export function useValidation(treeId: string) {
+import { useCallback } from 'react';
+import { useValidationStore } from '../../components/store/validationStore';
+import { useValidation } from './useValidation';
+import { ValidationEvents } from '../../components/validation/ValidationEventListener';
+import { ValidationProgress } from '../../types/validationTypes';
+
+export function useValidationUI(treeId: string) {
   const {
     isValidating,
     showPreview,
@@ -25,26 +32,33 @@ export function useValidation(treeId: string) {
     resetValidationColors,
   } = useValidationStore();
 
+  const {
+    getPreview,
+    runValidation: baseRunValidation,
+    exportReport: baseExportReport,
+    updateProgressCallback,
+  } = useValidation();
+
   const openPreview = useCallback(async () => {
-    console.log(`[@hook:useValidation] Opening preview for tree: ${treeId}`);
+    console.log(`[@hook:useValidationUI] Opening preview for tree: ${treeId}`);
     
     try {
-      const preview = await validationService.getPreview(treeId);
+      const preview = await getPreview(treeId);
       setPreviewData(preview);
       setShowPreview(true);
       
-      console.log(`[@hook:useValidation] Preview opened successfully`);
+      console.log(`[@hook:useValidationUI] Preview opened successfully`);
     } catch (error) {
-      console.error('[@hook:useValidation] Failed to get preview:', error);
+      console.error('[@hook:useValidationUI] Failed to get preview:', error);
       // Could add toast notification here
     }
-  }, [treeId, setPreviewData, setShowPreview]);
+  }, [treeId, getPreview, setPreviewData, setShowPreview]);
 
   const runValidation = useCallback(async (skippedEdges?: Array<{ from: string; to: string }>) => {
-    console.log(`[@hook:useValidation] Starting validation for tree: ${treeId}`, skippedEdges ? `with ${skippedEdges.length} skipped edges` : '');
+    console.log(`[@hook:useValidationUI] Starting validation for tree: ${treeId}`, skippedEdges ? `with ${skippedEdges.length} skipped edges` : '');
     
     // Reset all validation colors to grey (untested) before starting validation
-    console.log(`[@hook:useValidation] Resetting all validation colors to grey (untested) before starting validation`);
+    console.log(`[@hook:useValidationUI] Resetting all validation colors to grey (untested) before starting validation`);
     resetValidationColors();
     
     setValidating(true);
@@ -69,13 +83,13 @@ export function useValidation(treeId: string) {
     
     try {
       // Set up progress callback for real-time updates
-      validationService.setProgressCallback((progressData: ValidationProgress) => {
-        console.log(`[@hook:useValidation] Real-time progress update:`, progressData);
+      updateProgressCallback((progressData: ValidationProgress) => {
+        console.log(`[@hook:useValidationUI] Real-time progress update:`, progressData);
         setProgress(progressData);
       });
       
       // Run actual validation with real-time progress updates and optional skipped edges
-      const results = await validationService.runValidation(treeId, skippedEdges);
+      const results = await baseRunValidation(treeId, skippedEdges);
       setResults(results);
       
       // Hide progress and show results
@@ -85,45 +99,54 @@ export function useValidation(treeId: string) {
       // Dispatch completion event
       window.dispatchEvent(new Event(ValidationEvents.VALIDATION_COMPLETE));
       
-      console.log(`[@hook:useValidation] Validation completed successfully`);
+      console.log(`[@hook:useValidationUI] Validation completed successfully`);
     } catch (error) {
-      console.error('[@hook:useValidation] Validation failed:', error);
+      console.error('[@hook:useValidationUI] Validation failed:', error);
       setShowProgress(false);
       // Could add toast notification here
     } finally {
       // Clear progress callback
-      validationService.setProgressCallback(null);
+      updateProgressCallback(null);
       setValidating(false);
     }
-  }, [treeId, setValidating, setShowPreview, setShowProgress, setProgress, setResults, setShowResults, previewData, resetValidationColors]);
+  }, [treeId, baseRunValidation, updateProgressCallback, setValidating, setShowPreview, setShowProgress, setProgress, setResults, setShowResults, previewData, resetValidationColors]);
 
   const exportReport = useCallback(async (format: 'json' | 'csv' = 'json') => {
-    console.log(`[@hook:useValidation] Exporting report for tree: ${treeId}, format: ${format}`);
+    console.log(`[@hook:useValidationUI] Exporting report for tree: ${treeId}, format: ${format}`);
     
     try {
-      const blob = await validationService.exportReport(treeId, format);
+      const blob = await baseExportReport(treeId, format);
       const filename = `validation-${treeId}.${format}`;
-      validationService.downloadBlob(blob, filename);
       
-      console.log(`[@hook:useValidation] Report exported successfully`);
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log(`[@hook:useValidationUI] Report exported successfully`);
     } catch (error) {
-      console.error('[@hook:useValidation] Export failed:', error);
+      console.error('[@hook:useValidationUI] Export failed:', error);
       // Could add toast notification here
     }
-  }, [treeId]);
+  }, [treeId, baseExportReport]);
 
   const closePreview = useCallback(() => {
-    console.log(`[@hook:useValidation] Closing preview`);
+    console.log(`[@hook:useValidationUI] Closing preview`);
     setShowPreview(false);
   }, [setShowPreview]);
 
   const closeResults = useCallback(() => {
-    console.log(`[@hook:useValidation] Closing results`);
+    console.log(`[@hook:useValidationUI] Closing results`);
     setShowResults(false);
   }, [setShowResults]);
 
   const viewLastResult = useCallback(() => {
-    console.log(`[@hook:useValidation] Viewing last result`);
+    console.log(`[@hook:useValidationUI] Viewing last result`);
     showLastResult();
   }, [showLastResult]);
 

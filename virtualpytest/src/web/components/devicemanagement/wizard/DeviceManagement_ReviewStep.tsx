@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import { DeviceModel } from '../../types';
 import { DeviceFormData } from '.../../../types/features/Controller_Types';
-import { ControllerConfigService } from '../../services/controllerConfigService';
+import { useControllerConfig } from '../../hooks/features/useControllerConfig';
 
 interface ReviewStepProps {
   formData: DeviceFormData;
@@ -30,10 +30,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   selectedModel,
   errors = {}
 }) => {
+  const { getConfigurationByImplementation } = useControllerConfig();
   const hasErrors = Object.keys(errors).length > 0;
 
   const renderControllerSummary = (controllerType: string, config: any) => {
-    const controllerConfig = ControllerConfigService.getConfigurationByImplementation(
+    const controllerConfig = getConfigurationByImplementation(
       controllerType as any,
       config.implementation
     );

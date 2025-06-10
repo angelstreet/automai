@@ -1,9 +1,17 @@
-// Remote/Controller Hooks
-export * from './remote';
+// Export all web hooks from organized structure
 
-// Navigation Hooks
-export * from './navigation';
+// Common Hooks (shared across domains)
+export * from './common/useCapture';
+export * from './common/useValidationColors';
 
-// Other Hooks
-export { default as useDeviceModels } from './useDeviceModels';
-export { default as useNavigationEditor } from './useNavigationEditor'; 
+// Page Hooks (domain-specific for pages)
+export * from './pages/useScreenEditor';
+export * from './pages/useNavigationEditor';  
+export * from './pages/useNavigationHooks';
+export * from './pages/useDeviceModels';
+export * from './pages/useUserInterface';
+
+// Feature Hooks (domain-specific features)
+export * from './features/useControllerConfig';
+export * from './features/useValidation';
+export * from './features/useValidationUI'; 

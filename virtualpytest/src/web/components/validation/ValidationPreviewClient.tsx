@@ -34,8 +34,8 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
-import { useValidation } from '../hooks/useValidation';
-import { useValidationColors } from '../../hooks/useValidationColors';
+import { useValidationUI } from '../../hooks/features/useValidationUI';
+import { useValidationColors } from '../../hooks/common/useValidationColors';
 import { useRegistration } from '../../contexts/RegistrationContext';
 import React from 'react';
 
@@ -65,7 +65,7 @@ interface OptimalPathData {
 }
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
-  const { showPreview, previewData, lastResult, closePreview, runValidation, viewLastResult } = useValidation(treeId);
+  const validation = useValidationUI(treeId);
   const { resetForNewValidation } = useValidationColors(treeId);
   const { buildServerUrl, selectedHost } = useRegistration();
   const [showDetails, setShowDetails] = useState(false);
@@ -81,10 +81,10 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
 
   // Load optimal path when preview opens
   useEffect(() => {
-    if (showPreview && treeId && !optimalPath) {
+    if (validation.showPreview && treeId && !optimalPath) {
       fetchOptimalPath();
     }
-  }, [showPreview, treeId]);
+  }, [validation.showPreview, treeId]);
 
   const fetchOptimalPath = async () => {
     if (!treeId) return;
@@ -179,15 +179,15 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       .filter((step: OptimalPathStep) => !selectedEdges.has(step.step_number))
       .map((step: OptimalPathStep) => ({ from: step.from_node_id, to: step.to_node_id })) || [];
     
-    runValidation(skippedEdges);
+    validation.runValidation(skippedEdges);
   };
 
-  if (!showPreview) return null;
+  if (!validation.showPreview) return null;
 
   return (
     <Dialog 
-      open={showPreview} 
-      onClose={closePreview} 
+      open={validation.showPreview} 
+      onClose={validation.closePreview} 
       maxWidth="md" 
       fullWidth
       disableEscapeKeyDown
@@ -207,7 +207,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       
       {/* Content */}
       <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 1 }}>
-        {!previewData ? (
+        {!validation.previewData ? (
           <Box display="flex" justifyContent="center" alignItems="center" p={4}>
             <CircularProgress sx={{ mr: 2 }} />
             <Typography>Loading preview...</Typography>
@@ -220,7 +220,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               <Grid item xs={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {previewData.totalNodes}
+                    {validation.previewData.totalNodes}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     Total Nodes
@@ -230,7 +230,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               <Grid item xs={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {previewData.totalEdges}
+                    {validation.previewData.totalEdges}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     Total Edges
@@ -240,7 +240,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               <Grid item xs={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="primary" fontWeight="bold">
-                    {previewData.reachableNodes.length}
+                    {validation.previewData.reachableNodes.length}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     Reachable Nodes
@@ -487,15 +487,15 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       
       {/* Footer */}
       <DialogActions sx={{ bgcolor: 'background.paper', p: 2 }}>
-        <Button onClick={closePreview} color="inherit">
+        <Button onClick={validation.closePreview} color="inherit">
           Cancel
         </Button>
         
         {/* Last Result Button - Show if there's a cached result */}
-        {lastResult && (
+        {validation.lastResult && (
           <Button 
             variant="outlined" 
-            onClick={viewLastResult}
+            onClick={validation.viewLastResult}
             startIcon={<HistoryIcon />}
             color="info"
             sx={{ mr: 1 }}
@@ -507,7 +507,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
         <Button 
           variant="contained" 
           onClick={handleRunValidation}
-          disabled={!previewData}
+          disabled={!validation.previewData}
           startIcon={<PlayArrowIcon />}
           color="primary"
         >

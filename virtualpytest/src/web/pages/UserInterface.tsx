@@ -36,12 +36,17 @@ import {
   CircularProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { useUserInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../services/userInterfaceApi';
+import { useUserInterface, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../hooks/pages/useUserInterface';
 import { Device } from '../types';
 
 const UserInterface: React.FC = () => {
-  // Get the API services
-  const userInterfaceApi = useUserInterfaceApi();
+  // Get the hook functions
+  const {
+    getAllUserInterfaces,
+    updateUserInterface,
+    deleteUserInterface,
+    createUserInterface,
+  } = useUserInterface();
   
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -99,7 +104,7 @@ const UserInterface: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const interfaces = await userInterfaceApi.getAllUserInterfaces();
+      const interfaces = await getAllUserInterfaces();
       setUserInterfaces(interfaces);
     } catch (err) {
       console.error('[@component:UserInterface] Error loading user interfaces:', err);
@@ -156,7 +161,7 @@ const UserInterface: React.FC = () => {
         max_version: editForm.max_version.trim(),
       };
 
-      const updatedInterface = await userInterfaceApi.updateUserInterface(editingId!, payload);
+      const updatedInterface = await updateUserInterface(editingId!, payload);
       
       // Update local state
       setUserInterfaces(userInterfaces.map(ui => 
@@ -186,7 +191,7 @@ const UserInterface: React.FC = () => {
 
     try {
       setError(null);
-      await userInterfaceApi.deleteUserInterface(id);
+      await deleteUserInterface(id);
       
       // Update local state
       setUserInterfaces(userInterfaces.filter(ui => ui.id !== id));
@@ -234,7 +239,7 @@ const UserInterface: React.FC = () => {
         max_version: newInterface.max_version.trim(),
       };
 
-      const createdInterface = await userInterfaceApi.createUserInterface(payload);
+      const createdInterface = await createUserInterface(payload);
       
       // Update local state
       setUserInterfaces([...userInterfaces, createdInterface]);

@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { DeviceModel } from '../types';
 import { DeviceFormData } from '../types/controllerConfigTypes';
-import { ControllerConfigService } from '../services/controllerConfigService';
+import { useControllerConfig } from '../hooks/features/useControllerConfig';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './device-wizard/BasicInfoStep';
@@ -59,6 +59,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { validateParameters } = useControllerConfig();
 
   // Wizard state
   const [activeStep, setActiveStep] = useState(0);
@@ -199,7 +200,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
         // Validate each controller configuration
         Object.entries(formData.controllerConfigs).forEach(([controllerType, config]) => {
           if (config.implementation) {
-            const validation = ControllerConfigService.validateParameters(
+            const validation = validateParameters(
               controllerType as any,
               config.implementation,
               config.parameters

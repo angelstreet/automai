@@ -17,7 +17,7 @@ import {
   Wifi as NetworkIcon,
   Power as PowerIcon,
 } from '@mui/icons-material';
-import { ControllerConfigService } from '../../services/controllerConfigService';
+import { useControllerConfig } from '../../hooks/features/useControllerConfig';
 import { ControllerConfiguration } from '../../types/controllerConfigTypes';
 import { DynamicControllerForm } from './DynamicControllerForm';
 
@@ -39,12 +39,13 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
   onConfigUpdate,
   errors = {}
 }) => {
+  const { getConfigurationsByType } = useControllerConfig();
   const [availableConfigs, setAvailableConfigs] = useState<ControllerConfiguration[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<ControllerConfiguration | null>(null);
 
   // Load available configurations for this controller type
   useEffect(() => {
-    const configs = ControllerConfigService.getConfigurationsByType(
+    const configs = getConfigurationsByType(
       controllerType as 'remote' | 'av' | 'network' | 'power'
     );
     

@@ -9,9 +9,9 @@ import {
   Chip
 } from '@mui/material';
 import { useEffect, useRef } from 'react';
-import { useValidation } from '../hooks/useValidation';
+import { useValidationUI } from '../../hooks/features/useValidationUI';
 import { useValidationStore } from '../store/validationStore';
-import { useValidationColors } from '../../hooks/useValidationColors';
+import { useValidationColors } from '../../hooks/common/useValidationColors';
 import { getValidationStatusFromConfidence } from '../../../config/validationColors';
 
 interface ValidationProgressClientProps {
@@ -21,13 +21,9 @@ interface ValidationProgressClientProps {
   onSaveToDatabase?: () => void; // Add callback to trigger auto-save
 }
 
-export default function ValidationProgressClient({ 
-  treeId, 
-  onUpdateEdge, 
-  onUpdateNode,
-  onSaveToDatabase 
-}: ValidationProgressClientProps) {
-  const { isValidating, progress, showProgress } = useValidation(treeId);
+const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ treeId, onUpdateEdge, onUpdateNode, onSaveToDatabase }) => {
+  const validation = useValidationUI(treeId);
+  const { isValidating, progress, showProgress } = validation;
   const { resetForNewValidation } = useValidationColors(treeId);
   const { 
     setCurrentTestingNode, 
@@ -329,4 +325,6 @@ export default function ValidationProgressClient({
       </Paper>
     </Fade>
   );
-} 
+};
+
+export default ValidationProgressClient; 
