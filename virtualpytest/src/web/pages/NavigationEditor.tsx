@@ -26,7 +26,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
-import { useNavigationEditor } from '../hooks/useNavigationEditor';
+import { useNavigationEditor } from '../hooks';
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
 import { UINavigationEdge } from '../components/navigation/Navigation_NavigationEdge';
@@ -42,7 +42,7 @@ import { CompactRemote } from '../components/remote/CompactRemote';
 import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile';
 
 // Import ScreenDefinitionEditor
-import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefinitionEditor';
+import { ScreenDefinitionEditor } from '../components/userinterface/UserInterface_ScreenDefinitionEditor';
 
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/device/deviceRemoteMappingUtils';

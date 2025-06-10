@@ -20,7 +20,4 @@ export * from './pages/useDeviceModels';
 export * from './pages/useUserInterface';
 
 // Remote Hooks
-export * from './remote';
-
-// Main controller hook
-export { useControllers } from './useControllers'; 
+export * from './remote'; 
