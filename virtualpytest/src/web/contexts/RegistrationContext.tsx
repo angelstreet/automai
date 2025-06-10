@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AVControllerProxy } from '../controllers/AVControllerProxy';
 import { RemoteControllerProxy } from '../controllers/RemoteControllerProxy';
+import { VerificationControllerProxy } from '../controllers/VerificationControllerProxy';
 
 // Default team ID constant - centralized here for use across the application
 export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
@@ -52,7 +53,7 @@ interface RegisteredHost {
   controllerProxies?: {
     av?: AVControllerProxy;
     remote?: RemoteControllerProxy;
-    // Future: verification?: VerificationControllerProxy;
+    verification?: VerificationControllerProxy;
   };
 }
 
@@ -210,10 +211,16 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       }
     }
     
-    // Future controller proxies will be added here:
-    // if (host.controller_types?.includes('verification')) {
-    //   proxies.verification = new VerificationControllerProxy(host, buildHostUrl);
-    // }
+    // Create verification controller proxy if host has verification capabilities
+    if (host.controller_types?.includes('verification') || host.capabilities?.includes('verification')) {
+      try {
+        console.log(`[@context:Registration] Creating verification controller proxy for host: ${host.name}`);
+        proxies.verification = new VerificationControllerProxy(host, buildHostUrl);
+        console.log(`[@context:Registration] Verification controller proxy created successfully for host: ${host.name}`);
+      } catch (error) {
+        console.error(`[@context:Registration] Failed to create verification controller proxy for host ${host.name}:`, error);
+      }
+    }
     
     console.log(`[@context:Registration] Created ${Object.keys(proxies).length} controller proxies for host: ${host.name}`);
     return proxies;
@@ -575,4 +582,4 @@ export const useRegistration = () => {
     throw new Error('useRegistration must be used within a RegistrationProvider');
   }
   return context;
-}; 
+};
