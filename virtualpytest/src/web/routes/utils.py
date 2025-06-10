@@ -11,18 +11,26 @@ import os
 from typing import Dict, Any, Optional
 
 def check_supabase():
-    """Helper function to check if Supabase is available"""
-    supabase_client = getattr(current_app, 'supabase_client', None)
-    if supabase_client is None:
+    """Helper function to check if Supabase is available (lazy loaded)"""
+    try:
+        from app_utils import lazy_load_supabase
+        supabase_client = lazy_load_supabase()
+        if supabase_client is None:
+            return jsonify({'error': 'Supabase not available'}), 503
+        return None
+    except Exception:
         return jsonify({'error': 'Supabase not available'}), 503
-    return None
 
 def check_controllers_available():
-    """Helper function to check if controllers are available"""
-    controllers_available = getattr(current_app, 'controllers_available', False)
-    if not controllers_available:
-        return jsonify({'error': ' Controllers not available'}), 503
-    return None
+    """Helper function to check if controllers are available (lazy loaded)"""
+    try:
+        from app_utils import lazy_load_controllers
+        controllers_available = lazy_load_controllers()
+        if not controllers_available:
+            return jsonify({'error': 'Controllers not available'}), 503
+        return None
+    except Exception:
+        return jsonify({'error': 'Controllers not available'}), 503
 
 def get_team_id():
     """Get team_id from request headers or use default for demo"""
@@ -301,3 +309,11 @@ def build_device_from_host_info(host_id, host_info):
         'capabilities': host_info.get('capabilities', []),
         'system_stats': host_info.get('system_stats', {})
     } 
+
+def get_supabase_client():
+    """Get Supabase client with lazy loading"""
+    try:
+        from app_utils import lazy_load_supabase
+        return lazy_load_supabase()
+    except Exception:
+        return None 

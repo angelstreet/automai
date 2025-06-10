@@ -7,7 +7,7 @@ Usage: python3 app_server.py
 Environment Variables Required (in .env.server file):
     SERVER_IP - IP address of this server
     SERVER_PORT - Port for this server (default: 5009)
-    GITHUB_TOKEN - GitHub token for authentication
+    GITHUB_TOKEN - GitHub token for authentication (loaded when needed)
     DEBUG - Set to 'true' to enable debug mode (default: false)
 """
 
@@ -27,15 +27,12 @@ sys.path.insert(0, os.path.join(current_dir, 'utils'))  # for adbUtils in web/ut
 sys.path.insert(0, os.path.join(current_dir, 'cache'))  # for navigation_cache
 sys.path.insert(0, src_dir)
 
-# Import utilities
+# Import only core utilities
 from app_utils import (
     load_environment_variables,
     kill_process_on_port,
     setup_flask_app,
-    setup_supabase_connection,
-    setup_controllers,
-    validate_environment_variables,
-    validate_all_dependencies,
+    validate_core_environment,
     initialize_global_sessions,
     initialize_server_globals,
     cleanup_server_resources,
@@ -56,61 +53,62 @@ def setup_server_cleanup():
     
     atexit.register(cleanup_on_exit)
 
+def register_core_routes(app):
+    """Register only core routes - features load lazily when accessed"""
+    try:
+        from routes import register_routes
+        register_routes(app, mode='server')
+        print("✅ Core routes registered successfully")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to register routes: {e}")
+        return False
+
 def main():
     """Main function for server application"""
     print("🖥️ VIRTUALPYTEST SERVER")
     print("Starting VirtualPyTest in SERVER mode")
     
-    # Load and validate environment - pass current script directory
+    # Step 1: Load and validate ONLY core environment
     script_dir = os.path.dirname(os.path.abspath(__file__))
     load_environment_variables(mode='server', calling_script_dir=script_dir)
-    if not validate_environment_variables(mode='server'):
-        print("❌ Environment validation failed. Please check your .env.server file")
+    if not validate_core_environment(mode='server'):
+        print("❌ Core environment validation failed. Please check your .env.server file")
         return
     
-    # Validate all dependencies EARLY before any setup
-    if not validate_all_dependencies():
-        print("❌ Dependency validation failed. Cannot start server.")
-        return
-    
-    # Clean up ports
+    # Step 2: Clean up ports
     cleanup_server_ports()
     time.sleep(1)  # Brief wait for port cleanup
     
-    # Setup Flask application
+    # Step 3: Setup minimal Flask application
     app = setup_flask_app("VirtualPyTest-Server")
     
-    # Setup connections and controllers (we know they're available now)
-    supabase_client = setup_supabase_connection()
-    controllers_available = setup_controllers()
+    # Step 4: Initialize basic server globals
     global_sessions = initialize_global_sessions()
     initialize_server_globals()
     
-    # Store in app context
+    # Store minimal context
     with app.app_context():
-        app.supabase_client = supabase_client
-        app.controllers_available = controllers_available
         app.global_sessions = global_sessions
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
+        # Features will be lazy loaded when routes are accessed
+        app._lazy_loaded = {}
     
-    # Register routes (we know routes module is available now)
-    try:
-        from routes import register_routes
-        register_routes(app, mode='server')
-        print("✅ Routes registered successfully")
-    except Exception as e:
-        print(f"❌ Unexpected error registering routes: {e}")
+    # Step 5: Register core routes (features load when routes are called)
+    if not register_core_routes(app):
+        print("❌ Failed to register routes. Cannot start server.")
         return
     
-    # Setup cleanup
+    # Step 6: Setup cleanup
     setup_server_cleanup()
     
-    # Get configuration and start server
+    # Step 7: Start server with minimal dependencies
     server_port = int(os.getenv('SERVER_PORT', '5009'))
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
-    print("🎉 All systems ready!")
+    print("🎉 Core server ready!")
+    print("📦 Features will load on-demand when accessed")
     print(f"🚀 Starting server on port {server_port}")
     print(f"🌐 Server URL: http://0.0.0.0:{server_port}")
     print(f"🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")

@@ -72,53 +72,21 @@ def setup_flask_app(app_name="VirtualPyTest"):
 
     return app
 
-def setup_supabase_connection():
-    """Setup Supabase connection"""
-    try:
-        from supabase_utils import get_supabase_client
-        supabase_client = get_supabase_client()
-        if supabase_client:
-            print("✅ Supabase connected successfully")
-            return supabase_client
-        else:
-            raise Exception("Supabase client not initialized")
-    except Exception as e:
-        print(f"⚠️ Supabase connection failed: {e}")
-        return None
-
-def setup_controllers():
-    """Setup VirtualPyTest controller system"""
-    try:
-        from controllers import ControllerFactory, CONTROLLER_REGISTRY, create_device_controllers
-        from controllers.base_controller import (
-            RemoteControllerInterface, 
-            AVControllerInterface, 
-            VerificationControllerInterface,
-            PowerControllerInterface
-        )
-        print("✅ VirtualPyTest controllers loaded")
-        return True
-    except Exception as e:
-        print(f"❌ CRITICAL: Controllers not available: {e}")
-        return False
-
-def validate_environment_variables(mode='server'):
-    """Simple environment variable validation"""
-    print(f"🔍 Validating {mode.upper()} environment variables...")
+def validate_core_environment(mode='server'):
+    """Validate only essential environment variables for startup"""
+    print(f"🔍 Validating core {mode.upper()} environment variables...")
     
     if mode == 'server':
         required_vars = {
             'SERVER_IP': 'Server IP address',
-            'SERVER_PORT': 'Server port number',
-            'GITHUB_TOKEN': 'GitHub authentication token'
+            'SERVER_PORT': 'Server port number'
         }
     elif mode == 'host':
         required_vars = {
             'SERVER_IP': 'Server IP address',
             'SERVER_PORT': 'Server port number', 
             'HOST_NAME': 'Host identifier name',
-            'HOST_IP': 'Host IP address',
-            'GITHUB_TOKEN': 'GitHub authentication token'
+            'HOST_IP': 'Host IP address'
         }
     else:
         print(f"⚠️ Unknown mode: {mode}")
@@ -134,13 +102,75 @@ def validate_environment_variables(mode='server'):
             print(f"  ✅ {var_name}: {display_value}")
     
     if missing_vars:
-        print(f"❌ Missing required variables:")
+        print(f"❌ Missing required core variables:")
         for var in missing_vars:
             print(f"   - {var}")
         return False
     
-    print(f"✅ All required {mode} environment variables are set")
+    print(f"✅ Core {mode} environment variables validated")
     return True
+
+# Lazy loading functions - only load when needed
+def lazy_load_supabase():
+    """Lazy load Supabase connection when first needed"""
+    try:
+        from supabase_utils import get_supabase_client
+        supabase_client = get_supabase_client()
+        if supabase_client:
+            print("✅ Supabase connected successfully (lazy loaded)")
+            return supabase_client
+        else:
+            raise Exception("Supabase client not initialized")
+    except Exception as e:
+        print(f"⚠️ Supabase connection failed: {e}")
+        return None
+
+def lazy_load_controllers():
+    """Lazy load controllers when first needed"""
+    try:
+        from controllers import ControllerFactory, CONTROLLER_REGISTRY, create_device_controllers
+        from controllers.base_controller import (
+            RemoteControllerInterface, 
+            AVControllerInterface, 
+            VerificationControllerInterface,
+            PowerControllerInterface
+        )
+        print("✅ Controllers loaded successfully (lazy loaded)")
+        return True
+    except Exception as e:
+        print(f"⚠️ Controllers not available: {e}")
+        return False
+
+def lazy_load_adb_utils():
+    """Lazy load ADB utilities when first needed"""
+    try:
+        import adb_utils
+        print("✅ ADB utilities loaded successfully (lazy loaded)")
+        return adb_utils
+    except Exception as e:
+        print(f"⚠️ ADB utilities not available: {e}")
+        return None
+
+def lazy_load_navigation():
+    """Lazy load navigation utilities when first needed"""
+    try:
+        import navigation_utils
+        import navigation_cache
+        print("✅ Navigation utilities loaded successfully (lazy loaded)")
+        return {'utils': navigation_utils, 'cache': navigation_cache}
+    except Exception as e:
+        print(f"⚠️ Navigation utilities not available: {e}")
+        return None
+
+def lazy_load_device_models():
+    """Lazy load device model utilities when first needed"""
+    try:
+        import devicemodel_utils
+        print("✅ Device model utilities loaded successfully (lazy loaded)")
+        return devicemodel_utils
+    except Exception as e:
+        print(f"⚠️ Device model utilities not available: {e}")
+        return None
 
 def generate_stable_host_id(host_name, host_ip):
     """Generate a stable host ID based on host name and IP"""
@@ -198,75 +228,4 @@ def cleanup_server_resources():
 
 # Constants
 DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
-DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
-
-def validate_all_dependencies():
-    """Validate all required dependencies before starting server"""
-    print("🔍 Validating all dependencies...")
-    
-    missing_dependencies = []
-    
-    # Check Supabase utilities
-    try:
-        from supabase_utils import get_supabase_client
-        print("  ✅ supabase_utils available")
-    except ImportError as e:
-        missing_dependencies.append(f"supabase_utils: {e}")
-    
-    # Check routes module
-    try:
-        from routes import register_routes
-        print("  ✅ routes module available")
-    except ImportError as e:
-        missing_dependencies.append(f"routes: {e}")
-    
-    # Check navigation_utils (exists in navigation directory)
-    try:
-        import navigation_utils
-        print("  ✅ navigation_utils available")
-    except ImportError as e:
-        missing_dependencies.append(f"navigation_utils: {e}")
-    
-    # Check navigation_cache (exists in web/cache directory)
-    try:
-        import navigation_cache
-        print("  ✅ navigation_cache available")
-    except ImportError as e:
-        missing_dependencies.append(f"navigation_cache: {e}")
-    
-    # Check devicemodel_utils (exists in models directory)
-    try:
-        import devicemodel_utils
-        print("  ✅ devicemodel_utils available")
-    except ImportError as e:
-        missing_dependencies.append(f"devicemodel_utils: {e}")
-    
-    # Check adb_utils (exists in web/utils directory)
-    try:
-        import adb_utils
-        print("  ✅ adb_utils available")
-    except ImportError as e:
-        missing_dependencies.append(f"adb_utils: {e}")
-    
-    # Check controllers
-    try:
-        from controllers import ControllerFactory, CONTROLLER_REGISTRY, create_device_controllers
-        from controllers.base_controller import (
-            RemoteControllerInterface, 
-            AVControllerInterface, 
-            VerificationControllerInterface,
-            PowerControllerInterface
-        )
-        print("  ✅ controllers available")
-    except ImportError as e:
-        missing_dependencies.append(f"controllers: {e}")
-    
-    if missing_dependencies:
-        print("❌ CRITICAL: Missing required dependencies:")
-        for dep in missing_dependencies:
-            print(f"   - {dep}")
-        print("\n💡 Please ensure all required modules are available before starting the server")
-        return False
-    
-    print("✅ All dependencies validated successfully")
-    return True 
+DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3" 
