@@ -37,13 +37,10 @@ import {
 import React, { useState, useEffect } from 'react';
 import CreateDeviceDialog from '../components/CreateDeviceDialog';
 import EditDeviceDialog from '../components/EditDeviceDialog';
-import { useDeviceApi, Device, DeviceCreatePayload } from '../services/deviceService';
 import { useTheme } from '@mui/material/styles';
+import { Device, DeviceCreatePayload } from '../types';
 
 const DeviceManagement: React.FC = () => {
-  // Get the device API service
-  const deviceApi = useDeviceApi();
-  
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,10 +60,9 @@ const DeviceManagement: React.FC = () => {
   const theme = useTheme();
 
   // Fetch devices on component mount only
-  // deviceApi is now stable thanks to useMemo in useDeviceApi hook
   useEffect(() => {
     fetchDevices();
-  }, []); // Remove deviceApi dependency - only fetch on mount
+  }, []);
 
   useEffect(() => {
     const filtered = devices.filter(device =>
@@ -82,9 +78,15 @@ const DeviceManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedDevices = await deviceApi.getAllDevices();
-      setDevices(fetchedDevices);
-      console.log(`[@component:DeviceManagement] Successfully loaded ${fetchedDevices.length} devices`);
+      
+      const response = await fetch('/server/device/get-devices');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
+      }
+      
+      const devicesData = await response.json();
+      setDevices(devicesData || []);
+      console.log('[@component:DeviceManagement] Successfully fetched devices:', devicesData?.length || 0);
     } catch (error: any) {
       console.error('[@component:DeviceManagement] Error fetching devices:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch devices');
@@ -115,12 +117,21 @@ const DeviceManagement: React.FC = () => {
 
       console.log('[@component:DeviceManagement] Creating device with full data:', newDeviceData);
 
-      const createdDevice = await deviceApi.createDevice({
-        name: newDeviceData.name.trim(),
-        description: (newDeviceData.description || '').trim(),
-        model: (newDeviceData.model || '').trim(),
-        controllerConfigs: newDeviceData.controllerConfigs || {}, // Include controller configurations
+      const response = await fetch('/server/device/create-device', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newDeviceData),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to create device: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const createdDevice: Device = result.device;
 
       // Update local state
       setDevices([...devices, createdDevice]);
@@ -139,7 +150,23 @@ const DeviceManagement: React.FC = () => {
     console.log('[@component:DeviceManagement] Updating device:', deviceId, deviceData);
     try {
       setError(null);
-      const updatedDevice = await deviceApi.updateDevice(deviceId, deviceData);
+      
+      const response = await fetch(`/server/device/update-device/${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(deviceData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update device: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const updatedDevice: Device = result.device;
+
       setDevices(prev => prev.map(device => 
         device.id === deviceId ? updatedDevice : device
       ));
@@ -160,7 +187,15 @@ const DeviceManagement: React.FC = () => {
 
     try {
       setError(null);
-      await deviceApi.deleteDevice(id);
+      
+      const response = await fetch(`/server/device/delete-device/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to delete device: ${response.status}`);
+      }
 
       // Update local state
       setDevices(devices.filter(d => d.id !== id));
@@ -189,7 +224,13 @@ const DeviceManagement: React.FC = () => {
       console.log('[@component:DeviceManagement] Loading device for editing:', device.id);
 
       // Load the device's current configuration
-      const deviceWithConfig = await deviceApi.getDevice(device.id);
+      const response = await fetch(`/server/device/get-device/${device.id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to load device: ${response.status}`);
+      }
+
+      const deviceWithConfig = await response.json();
       
       console.log('[@component:DeviceManagement] Loaded device config:', deviceWithConfig);
 
@@ -224,11 +265,25 @@ const DeviceManagement: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const updatedDevice = await deviceApi.updateDevice(editingId, {
-        name: editForm.name.trim(),
-        description: editForm.description.trim(),
-        model: editForm.model.trim(),
+      const response = await fetch(`/server/device/update-device/${editingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          description: editForm.description.trim(),
+          model: editForm.model.trim(),
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update device: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const updatedDevice: Device = result.device;
 
       // Update local state
       setDevices(devices.map(d => d.id === editingId ? updatedDevice : d));

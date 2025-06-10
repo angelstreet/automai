@@ -1,6 +1,9 @@
 // Model Types
 export * from './modelTypes';
 
+// Device Types
+export * from './deviceTypes';
+
 // Controller Configuration Types
 export * from './controllerConfigTypes';
 

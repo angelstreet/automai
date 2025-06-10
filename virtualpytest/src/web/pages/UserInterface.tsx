@@ -37,13 +37,11 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { useUserInterfaceApi, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../services/userInterfaceApi';
-import { useDeviceApi, Device } from '../services/deviceService';
-
+import { Device } from '../types';
 
 const UserInterface: React.FC = () => {
   // Get the API services
   const userInterfaceApi = useUserInterfaceApi();
-  const deviceApi = useDeviceApi();
   
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -74,7 +72,6 @@ const UserInterface: React.FC = () => {
   )).sort();
 
   // Load data on component mount only
-  // deviceApi is now stable thanks to useMemo in useDeviceApi hook
   useEffect(() => {
     loadUserInterfaces();
     loadDevices();
@@ -83,9 +80,13 @@ const UserInterface: React.FC = () => {
   const loadDevices = async () => {
     try {
       setDevicesLoading(true);
-      const fetchedDevices = await deviceApi.getAllDevices();
-      setDevices(fetchedDevices);
-      console.log(`[@component:UserInterface] Successfully loaded ${fetchedDevices.length} devices`);
+      const response = await fetch('/server/device/get-devices');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
+      }
+      const fetchedDevices = await response.json();
+      setDevices(fetchedDevices || []);
+      console.log(`[@component:UserInterface] Successfully loaded ${fetchedDevices?.length || 0} devices`);
     } catch (err) {
       console.error('[@component:UserInterface] Error loading devices:', err);
       setDevices([]);

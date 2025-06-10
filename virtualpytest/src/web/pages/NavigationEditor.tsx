@@ -75,7 +75,7 @@ import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefin
 
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/deviceRemoteMapping';
-import { useDeviceApi, Device } from '../services/deviceService';
+import { Device } from '../types';
 
 // Import the hook to access SSH session state
 import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';

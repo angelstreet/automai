@@ -4,7 +4,8 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Memory as ModelIcon,
+  DevicesOther as DeviceIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -22,23 +23,20 @@ import {
   TextField,
   IconButton,
   Alert,
+  Chip,
+  Grid,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Chip,
   OutlinedInput,
   SelectChangeEvent,
-  Checkbox,
-  ListItemText,
-  Grid,
   CircularProgress,
   Snackbar,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { CreateModelDialog } from '../components/model/CreateModelDialog';
-import { useDeviceModelApi } from '../services/deviceModelService';
-import { Model } from '../types/model.types';
+import { DeviceModel, DeviceModelCreatePayload } from '../types';
 
 const modelTypes = [
   'Android Mobile',
@@ -68,10 +66,7 @@ const MenuProps = {
 };
 
 const Models: React.FC = () => {
-  // Get the device model API service
-  const deviceModelApi = useDeviceModelApi();
-  
-  const [models, setModels] = useState<Model[]>([]);
+  const [models, setModels] = useState<DeviceModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,17 +87,23 @@ const Models: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Load device models on component mount only
-  // deviceModelApi is now stable thanks to useMemo in useDeviceModelApi hook
   useEffect(() => {
     loadDeviceModels();
-  }, []); // Remove deviceModelApi dependency - only load on mount
+  }, []);
 
   const loadDeviceModels = async () => {
     try {
       setLoading(true);
       setError(null);
-      const models = await deviceModelApi.getAllDeviceModels();
-      setModels(models);
+      
+      const response = await fetch('/server/devicemodel/get-devicemodels');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
+      }
+      
+      const modelsData = await response.json();
+      setModels(modelsData || []);
+      console.log('[@component:Models] Successfully loaded device models:', modelsData?.length || 0);
     } catch (err) {
       console.error('[@component:Models] Error loading device models:', err);
       setError(err instanceof Error ? err.message : 'Failed to load device models');
@@ -111,7 +112,7 @@ const Models: React.FC = () => {
     }
   };
 
-  const handleEdit = (model: Model) => {
+  const handleEdit = (model: DeviceModel) => {
     setEditingId(model.id);
     setEditForm({
       name: model.name,
@@ -149,13 +150,27 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const updatedModel = await deviceModelApi.updateDeviceModel(editingId, {
-        name: editForm.name.trim(),
-        types: editForm.types,
-        controllers: editForm.controllers,
-        version: editForm.version.trim(),
-        description: editForm.description.trim(),
+      const response = await fetch(`/server/devicemodel/update-devicemodel/${editingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          types: editForm.types,
+          controllers: editForm.controllers,
+          version: editForm.version.trim(),
+          description: editForm.description.trim(),
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update device model: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const updatedModel: DeviceModel = result.model;
 
       // Update local state
       setModels(models.map(m => m.id === editingId ? updatedModel : m));
@@ -194,7 +209,15 @@ const Models: React.FC = () => {
 
     try {
       setError(null);
-      await deviceModelApi.deleteDeviceModel(id);
+      
+      const response = await fetch(`/server/devicemodel/delete-devicemodel/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to delete device model: ${response.status}`);
+      }
 
       // Update local state
       setModels(models.filter(m => m.id !== id));
@@ -206,7 +229,7 @@ const Models: React.FC = () => {
     }
   };
 
-  const handleAddNew = async (newModelData: Omit<Model, 'id'>) => {
+  const handleAddNew = async (newModelData: Omit<DeviceModel, 'id'>) => {
     if (!newModelData.name.trim() || newModelData.types.length === 0) {
       setError('Name and at least one Type are required');
       return;
@@ -226,13 +249,21 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const createdModel = await deviceModelApi.createDeviceModel({
-        name: newModelData.name.trim(),
-        types: newModelData.types,
-        controllers: newModelData.controllers,
-        version: newModelData.version.trim(),
-        description: newModelData.description.trim(),
+      const response = await fetch('/server/devicemodel/create-devicemodel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newModelData),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to create device model: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const createdModel: DeviceModel = result.model;
 
       // Update local state
       setModels([...models, createdModel]);
@@ -261,7 +292,7 @@ const Models: React.FC = () => {
   };
 
   // Helper function to get controller display names
-  const getControllerDisplayValue = (controllers: Model['controllers']) => {
+  const getControllerDisplayValue = (controllers: DeviceModel['controllers']) => {
     const activeControllers = Object.entries(controllers)
       .filter(([_, value]) => value && value !== '')
       .map(([type, value]) => ({ type, value }));
@@ -300,7 +331,7 @@ const Models: React.FC = () => {
         textAlign: 'center'
       }}
     >
-      <ModelIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+      <DeviceIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
         No Models Created
       </Typography>
