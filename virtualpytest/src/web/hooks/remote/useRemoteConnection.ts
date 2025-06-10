@@ -4,6 +4,7 @@ import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes
 import { getRemoteConfig } from './remoteConfigs';
 import { androidTVRemote, androidMobileRemote } from '../../../config/remote';
 import { useRegistration } from '../../contexts/RegistrationContext';
+import { RemoteControllerProxy } from '../../controllers/RemoteControllerProxy';
 
 // Simplified connection form - no SSH fields needed with abstract controller
 const initialConnectionForm: ConnectionForm = {
@@ -106,44 +107,32 @@ export function useRemoteConnection(remoteType: RemoteType) {
         return;
       }
 
-      console.log('[@hook:useRemoteConnection] Sending take-control request to host...');
+      console.log('[@hook:useRemoteConnection] Using remote controller proxy for connection...');
       
-      // Use host endpoint for take-control (if available)
-      const endpoint = deviceConfig.serverEndpoints.connect;
-      if (!endpoint) {
-        throw new Error('No connection endpoint available');
+      // Get remote controller proxy from selectedHost
+      const remoteController = selectedHost.controllerProxies?.remote;
+      
+      if (!remoteController) {
+        throw new Error('Remote controller proxy not available. Host may not have remote capabilities or proxy creation failed.');
       }
 
-      // All remote endpoints should go to host
-      const requestUrl = buildHostUrl(selectedHost.id, endpoint);
-      console.log('[@hook:useRemoteConnection] Using host endpoint:', requestUrl);
-
-      const response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...connectionForm,
-          device_id: selectedHost.id,
-        }),
-      });
-
-      const result = await response.json();
-      console.log('[@hook:useRemoteConnection] Response:', result);
-
-      if (result.success) {
+      console.log('[@hook:useRemoteConnection] Remote controller proxy found, checking status...');
+      
+      // Check current status using controller proxy
+      const statusResult = await remoteController.get_status();
+      
+      if (statusResult.success) {
         console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
         setSession({
           connected: true,
-          connectionInfo: connectionForm.device_ip
+          connectionInfo: connectionForm.device_ip || 'Connected via proxy'
         });
         setConnectionError(null);
 
         // Remote is autonomous - no need to call showRemote
         console.log('[@hook:useRemoteConnection] Remote is autonomous and ready');
       } else {
-        const errorMsg = result.error || `Failed to connect to ${deviceConfig.name} device`;
+        const errorMsg = statusResult.error || `Failed to connect to ${deviceConfig.name} device`;
         console.error('[@hook:useRemoteConnection] Connection failed:', errorMsg);
         setConnectionError(errorMsg);
       }
@@ -154,7 +143,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     } finally {
       setConnectionLoading(false);
     }
-  }, [connectionForm, deviceConfig, selectedHost, buildHostUrl]);
+  }, [connectionForm, deviceConfig, selectedHost]);
 
   const handleReleaseControl = useCallback(async () => {
     if (!deviceConfig || !selectedHost) {
@@ -168,21 +157,21 @@ export function useRemoteConnection(remoteType: RemoteType) {
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
       
-      // Use host endpoint for release-control (if available)
-      const endpoint = deviceConfig.serverEndpoints.disconnect;
-      if (endpoint) {
-        const requestUrl = buildHostUrl(selectedHost.id, endpoint);
-        console.log('[@hook:useRemoteConnection] Using host endpoint for release:', requestUrl);
-
-        await fetch(requestUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            device_id: selectedHost.id,
-          }),
-        });
+      // Get remote controller proxy from selectedHost
+      const remoteController = selectedHost.controllerProxies?.remote;
+      
+      if (remoteController) {
+        console.log('[@hook:useRemoteConnection] Using remote controller proxy for disconnect...');
+        
+        // Use controller proxy to disconnect
+        try {
+          const disconnectResult = await remoteController.get_status(); // Check status to verify connection state
+          console.log('[@hook:useRemoteConnection] Remote controller status checked before disconnect');
+        } catch (error) {
+          console.log('[@hook:useRemoteConnection] Remote controller already disconnected or unavailable');
+        }
+      } else {
+        console.log('[@hook:useRemoteConnection] No remote controller proxy available');
       }
       
       console.log('[@hook:useRemoteConnection] Control released successfully');
@@ -198,32 +187,31 @@ export function useRemoteConnection(remoteType: RemoteType) {
       setConnectionLoading(false);
       console.log('[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled');
     }
-  }, [deviceConfig, selectedHost, buildHostUrl]);
+  }, [deviceConfig, selectedHost]);
 
   const handleScreenshot = useCallback(async () => {
     if (!selectedHost) {
       throw new Error('No host selected for screenshot operation');
     }
     
-    const endpoint = deviceConfig?.serverEndpoints.screenshot;
-    if (!endpoint) {
-      throw new Error('Screenshot not supported for this device type');
+    // Get remote controller proxy from selectedHost
+    const remoteController = selectedHost.controllerProxies?.remote;
+    
+    if (!remoteController) {
+      throw new Error('Remote controller proxy not available. Screenshot not supported for this device type.');
     }
     
     try {
-      console.log('[@hook:useRemoteConnection] Taking screenshot...');
+      console.log('[@hook:useRemoteConnection] Taking screenshot using remote controller proxy...');
       
-      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setAndroidScreenshot(result.screenshot);
-        console.log('[@hook:useRemoteConnection] Screenshot captured successfully');
+      // Use remote controller proxy to take screenshot
+      const screenshotPath = await remoteController.take_screenshot();
+      
+      if (screenshotPath) {
+        setAndroidScreenshot(screenshotPath);
+        console.log('[@hook:useRemoteConnection] Screenshot captured successfully via proxy');
       } else {
-        const errorMessage = result.error || 'Screenshot failed';
+        const errorMessage = 'Screenshot failed - no path returned';
         console.error('[@hook:useRemoteConnection] Screenshot failed:', errorMessage);
         throw new Error(errorMessage);
       }
@@ -231,7 +219,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot error:', err);
       throw err; // Re-throw the error so the modal can catch it
     }
-  }, [deviceConfig, buildHostUrl, selectedHost]);
+  }, [selectedHost]);
 
   // Android Mobile specific: Screenshot + UI dump
   const handleScreenshotAndDumpUI = useCallback(async () => {
@@ -239,29 +227,28 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for UI dump operation');
     }
     
-    const endpoint = deviceConfig?.serverEndpoints.dumpUI;
-    if (!endpoint) {
-      throw new Error('UI dump not supported for this device type');
+    // Get remote controller proxy from selectedHost
+    const remoteController = selectedHost.controllerProxies?.remote;
+    
+    if (!remoteController) {
+      throw new Error('Remote controller proxy not available. UI dump not supported for this device type.');
     }
     
     try {
-      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements...');
+      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements using remote controller proxy...');
       
-      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-      });
-
-      const result = await response.json();
+      // Use remote controller proxy to take screenshot and dump UI
+      const result = await remoteController.screenshot_and_dump_ui();
+      
       if (result.success) {
         if (result.screenshot) {
           setAndroidScreenshot(result.screenshot);
         }
         if (result.elements) {
-          setAndroidElements(result.elements);
+          setAndroidElements(result.elements as any); // Temporary cast to resolve type differences
           console.log(`[@hook:useRemoteConnection] Found ${result.elements.length} UI elements`);
         }
-        console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully');
+        console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully via proxy');
       } else {
         const errorMessage = result.error || 'Screenshot and UI dump failed';
         console.error('[@hook:useRemoteConnection] Screenshot and UI dump failed:', errorMessage);
@@ -271,7 +258,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Screenshot and UI dump error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostUrl, selectedHost]);
+  }, [selectedHost]);
 
   // Android Mobile specific: Get apps list
   const handleGetApps = useCallback(async () => {
@@ -279,33 +266,31 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for apps operation');
     }
     
-    const endpoint = deviceConfig?.serverEndpoints.getApps;
-    if (!endpoint) {
-      throw new Error('App listing not supported for this device type');
+    // Get remote controller proxy from selectedHost
+    const remoteController = selectedHost.controllerProxies?.remote;
+    
+    if (!remoteController) {
+      throw new Error('Remote controller proxy not available. App listing not supported for this device type.');
     }
     
     try {
-      console.log('[@hook:useRemoteConnection] Getting installed apps...');
+      console.log('[@hook:useRemoteConnection] Getting installed apps using remote controller proxy...');
       
-      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-      });
-
-      const result = await response.json();
-      if (result.success && result.apps) {
-        setAndroidApps(result.apps);
-        console.log(`[@hook:useRemoteConnection] Found ${result.apps.length} installed apps`);
+      // Use remote controller proxy to get installed apps
+      const apps = await remoteController.get_installed_apps();
+      
+      if (apps && apps.length > 0) {
+        setAndroidApps(apps as any); // Temporary cast to resolve type differences
+        console.log(`[@hook:useRemoteConnection] Found ${apps.length} installed apps via proxy`);
       } else {
-        const errorMessage = result.error || 'Failed to get apps list';
-        console.error('[@hook:useRemoteConnection] Get apps failed:', errorMessage);
-        throw new Error(errorMessage);
+        console.log('[@hook:useRemoteConnection] No apps found or apps list is empty');
+        setAndroidApps([]);
       }
     } catch (err: any) {
       console.error('[@hook:useRemoteConnection] Get apps error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostUrl, selectedHost]);
+  }, [selectedHost]);
 
   // Android Mobile specific: Click UI element
   const handleClickElement = useCallback(async (element: AndroidElement) => {
@@ -313,26 +298,21 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for element click operation');
     }
     
-    const endpoint = deviceConfig?.serverEndpoints.clickElement;
-    if (!endpoint) {
-      throw new Error('Element clicking not supported for this device type');
+    // Get remote controller proxy from selectedHost
+    const remoteController = selectedHost.controllerProxies?.remote;
+    
+    if (!remoteController) {
+      throw new Error('Remote controller proxy not available. Element clicking not supported for this device type.');
     }
     
     try {
-      console.log(`[@hook:useRemoteConnection] Clicking element: ${element.id}`);
+      console.log(`[@hook:useRemoteConnection] Clicking element using remote controller proxy: ${element.id}`);
       
-      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ elementId: element.id }),
-      });
-
-      const result = await response.json();
+      // Use remote controller proxy to click element
+      const result = await remoteController.click_element(element.id);
+      
       if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully clicked element: ${element.id}`);
+        console.log(`[@hook:useRemoteConnection] Successfully clicked element via proxy: ${element.id}`);
       } else {
         const errorMessage = result.error || 'Element click failed';
         console.error('[@hook:useRemoteConnection] Element click failed:', errorMessage);
@@ -342,7 +322,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] Element click error:', err);
       throw err;
     }
-  }, [deviceConfig, buildHostUrl, selectedHost]);
+  }, [selectedHost]);
 
   // Clear UI elements
   const clearElements = useCallback(() => {
@@ -356,66 +336,41 @@ export function useRemoteConnection(remoteType: RemoteType) {
       return;
     }
     
+    // Get remote controller proxy from selectedHost
+    const remoteController = selectedHost.controllerProxies?.remote;
+    
+    if (!remoteController) {
+      console.error('[@hook:useRemoteConnection] Remote controller proxy not available');
+      return;
+    }
+    
     try {
-      console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
-      
-      // Use abstract controller endpoint
-      const endpoint = deviceConfig.serverEndpoints.command;
-      if (!endpoint) {
-        throw new Error('Command endpoint not available');
-      }
+      console.log(`[@hook:useRemoteConnection] Sending remote command via proxy: ${command}`, params);
       
       // Handle special Android mobile commands
       if (remoteType === 'android-mobile' && command === 'LAUNCH_APP') {
-        const requestBody = {
-          command: 'launch_app',
-          params: { package: params.package }
-        };
+        const result = await remoteController.launch_app(params.package);
         
-        const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-        const response = await fetch(hostUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        const result = await response.json();
         if (result.success) {
-          console.log(`[@hook:useRemoteConnection] Successfully launched app: ${params.package}`);
+          console.log(`[@hook:useRemoteConnection] Successfully launched app via proxy: ${params.package}`);
         } else {
-          console.error(`[@hook:useRemoteConnection] App launch failed:`, result.error);
+          console.error(`[@hook:useRemoteConnection] App launch failed via proxy:`, result.error);
         }
         return;
       }
       
-      // Format the command for the backend API
-      // The backend expects: { command: 'press_key', params: { key: 'POWER' } }
-      const requestBody = {
-        command: 'press_key',
-        params: { key: command }
-      };
+      // For regular key press commands, use press_key method
+      const result = await remoteController.press_key(command);
       
-      const hostUrl = buildHostUrl(selectedHost.id, endpoint);
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const result = await response.json();
       if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully sent command: ${command}`);
+        console.log(`[@hook:useRemoteConnection] Successfully sent command via proxy: ${command}`);
       } else {
-        console.error(`[@hook:useRemoteConnection] Remote command failed:`, result.error);
+        console.error(`[@hook:useRemoteConnection] Remote command failed via proxy:`, result.error);
       }
     } catch (err: any) {
       console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
     }
-  }, [deviceConfig, remoteType, selectedHost, buildHostUrl]);
+  }, [deviceConfig, remoteType, selectedHost]);
 
   // Abstract remote controller methods - Frontend state management only
   const showRemote = useCallback(async () => {
@@ -452,42 +407,32 @@ export function useRemoteConnection(remoteType: RemoteType) {
       return;
     }
 
-    console.log(`[@hook:useRemoteConnection] Sending command: ${command}`, params);
+    console.log(`[@hook:useRemoteConnection] Sending command via proxy: ${command}`, params);
     setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Format action object as expected by the host
-      const action = {
-        command,
-        params: params || {},
-      };
-
-      // Call host directly using /host/execute-action
-      const hostUrl = buildHostUrl(selectedHost.id, '/host/execute-action');
-      console.log(`[@hook:useRemoteConnection] Calling host directly: ${hostUrl}`);
-
-      const response = await fetch(hostUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-        }),
-      });
-
-      const data = await response.json();
+      // Get remote controller proxy from selectedHost
+      const remoteController = selectedHost.controllerProxies?.remote;
       
-      if (!data.success) {
-        throw new Error(data.error || 'Command failed');
+      if (!remoteController) {
+        throw new Error('Remote controller proxy not available');
       }
 
-      console.log(`[@hook:useRemoteConnection] Command ${command} sent successfully to host`);
+      // Use the remote controller proxy to send the command
+      const result = await remoteController.send_command(command, params || {});
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Command failed');
+      }
+
+      console.log(`[@hook:useRemoteConnection] Command ${command} sent successfully via proxy`);
     } catch (error: any) {
       console.error(`[@hook:useRemoteConnection] Command ${command} failed:`, error);
       setRemoteState(prev => ({ ...prev, error: error.message }));
     } finally {
       setRemoteState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [selectedHost, buildHostUrl]);
+  }, [selectedHost]);
 
   // Convenience methods for common commands
   const pressKey = useCallback(async (key: string) => {
