@@ -24,7 +24,7 @@ import {
   Tv as TvIcon,
   Lock as LockIcon,
 } from '@mui/icons-material';
-import { TreeFilterControls } from './TreeFilterControls';
+import { TreeFilterControls } from './Navigation_TreeFilterControls';
 import { useRegistration } from '../../contexts/RegistrationContext';
 import { 
   ValidationButtonClient,

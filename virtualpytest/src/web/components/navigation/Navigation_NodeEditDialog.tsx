@@ -40,7 +40,7 @@ import {
 } from '@mui/icons-material';
 
 // Import proper types from navigationTypes
-import { NodeForm, NodeVerification, UINavigationNode } from '../../types/navigationTypes';
+import { UINavigationNode, NodeForm, NodeVerification } from '../../types/pages/Navigation_Types';
 
 interface VerificationAction {
   id: string;

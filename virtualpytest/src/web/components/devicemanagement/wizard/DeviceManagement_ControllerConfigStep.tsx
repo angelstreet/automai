@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { DeviceModel } from '../../types';
 import { DeviceFormData } from '../../types/controllerConfigTypes';
-import { ControllerTypeSection } from './ControllerTypeSection';
+import { ControllerTypeSection } from './DeviceManagement_ControllerTypeSection';
 
 interface ControllerConfigurationStepProps {
   formData: DeviceFormData;

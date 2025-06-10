@@ -10,7 +10,7 @@ import {
 import {
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
+import { UINavigationEdge, EdgeAction } from '../../types/pages/Navigation_Types';
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 

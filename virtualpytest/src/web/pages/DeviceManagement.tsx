@@ -1,6 +1,11 @@
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Settings as SettingsIcon,
+  Search as SearchIcon,
+  Devices as DeviceIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -12,11 +17,20 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Snackbar,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { Device, DeviceCreatePayload } from '../types';
-import { CreateDeviceDialog } from '../components/devicemanagement/CreateDeviceDialog';
-import { EditDeviceDialog } from '../components/devicemanagement/EditDeviceDialog';
+import CreateDeviceDialog from '../components/devicemanagement/DeviceManagement_CreateDialog';
+import EditDeviceDialog from '../components/devicemanagement/DeviceManagement_EditDialog';
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -277,14 +291,14 @@ const DeviceManagement: React.FC = () => {
 
   // Helper function to get controller count and summary
   const getControllerSummary = (device: Device) => {
-    if (!device.controller_configs) {
+    if (!device.controllerConfigs) {
       return { count: 0, summary: 'No controllers configured', types: [] };
     }
 
-    const configuredControllers = Object.keys(device.controller_configs).filter(
-      key => device.controller_configs[key] && 
-             typeof device.controller_configs[key] === 'object' && 
-             device.controller_configs[key].implementation
+    const configuredControllers = Object.keys(device.controllerConfigs).filter(
+      key => device.controllerConfigs[key] && 
+             typeof device.controllerConfigs[key] === 'object' && 
+             device.controllerConfigs[key].implementation
     );
 
     const count = configuredControllers.length;

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect, useRef } from 'react';
-import { useValidationStore } from '../components/store/validationStore';
-import { UINavigationEdge } from '../types/navigationTypes';
+import { useValidationStore } from '../../components/store/validationStore';
+import { UINavigationEdge } from '../../types/pages/Navigation_Types';
 import {
   NODE_TYPE_COLORS,
   VALIDATION_STATUS_COLORS,

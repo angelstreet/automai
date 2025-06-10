@@ -1,7 +1,7 @@
 import React from 'react';
 import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
-import { UINavigationEdge as UINavigationEdgeType } from '../../types/navigationTypes';
-import { useValidationColors } from '../../hooks/useValidationColors';
+import { UINavigationEdge, EdgeAction } from '../../types/pages/Navigation_Types';
+import { useValidationColors } from '../../hooks/common/useValidationColors';
 
 export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>> = ({
   id,

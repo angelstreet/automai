@@ -38,8 +38,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
-import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/navigationTypes';
-import { EdgeActionsList } from './EdgeActionsList';
+import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/pages/Navigation_Types';
+import { EdgeActionsList } from './Navigation_EdgeActionsList';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 
 interface ControllerAction {

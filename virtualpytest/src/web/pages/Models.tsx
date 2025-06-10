@@ -4,6 +4,7 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  Devices as DeviceIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -18,9 +19,22 @@ import {
   FormControl,
   Select,
   MenuItem,
+  Chip,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Snackbar,
+  SelectChangeEvent,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { CreateModelDialog } from '../components/model/CreateModelDialog';
+import CreateModelDialog from '../components/models/Models_CreateDialog';
 import { DeviceModel } from '../types';
 
 const modelTypes = [

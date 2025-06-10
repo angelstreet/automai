@@ -4,50 +4,133 @@ import ReactFlow, {
   Controls, 
   ReactFlowProvider,
   MiniMap,
+  MarkerType,
   ConnectionLineType,
   BackgroundVariant,
+  Handle,
+  Position,
+  getBezierPath,
+  Node,
+  Edge,
+  addEdge,
+  Connection,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  NodeChange,
+  EdgeChange,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
   Box,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Paper,
   Snackbar,
   Alert,
+  Container,
   Typography,
   Button,
   IconButton
 } from '@mui/material';
 import {
+  Add as AddIcon,
+  FitScreen as FitScreenIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
   Close as CloseIcon,
+  ArrowBack as ArrowBackIcon,
+  Error as ErrorIcon,
+  CloudUpload as CloudUploadIcon,
+  CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
+import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
-import { UINavigationNode } from '../components/navigation/UINavigationNode';
-import { UIMenuNode } from '../components/navigation/UIMenuNode';
-import { UINavigationEdge } from '../components/navigation/UINavigationEdge';
-import { NodeEditDialog } from '../components/navigation/NodeEditDialog';
-import { EdgeEditDialog } from '../components/navigation/EdgeEditDialog';
-import { EdgeSelectionPanel } from '../components/navigation/EdgeSelectionPanel';
-import { NodeSelectionPanel } from '../components/navigation/NodeSelectionPanel';
-import { NavigationEditorHeader } from '../components/navigation/NavigationEditorHeader';
+import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
+import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
+import { UINavigationEdge } from '../components/navigation/Navigation_NavigationEdge';
+import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
+import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
+import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
+import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
 
 // Import NEW generic remote components instead of device-specific ones
 import { CompactRemote } from '../components/remote/CompactRemote';
 import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile';
+import { RemotePanel } from '../components/remote/RemotePanel';
 
 // Import ScreenDefinitionEditor
 import { ScreenDefinitionEditor } from '../components/user-interface/ScreenDefinitionEditor';
 
 // Import device utilities
 import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/device/deviceRemoteMappingUtils';
+import { Device } from '../types';
+
+// Import the hook to access SSH session state
+import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
+
+// Import the useValidationColors hook
+import { useValidationColors } from '../hooks/common/useValidationColors';
+import { useValidationUI } from '../hooks/features/useValidationUI';
 
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
+
+// Local interface for verification test results including ADB fields
+interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  detectedLanguage?: string;
+  languageConfidence?: number;
+  ocrConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
+}
 
 // Node types for React Flow
 const nodeTypes = {
@@ -89,7 +172,7 @@ const NavigationEditorContent: React.FC = () => {
   const [isControlActive, setIsControlActive] = useState(false);
   
   // Simplified remote connection hook - no SSH session management needed
-  // const remoteConnection = useRemoteConnection('android-mobile'); // Default type, will be dynamic
+  const remoteConnection = useRemoteConnection('android-mobile'); // Default type, will be dynamic
 
   // Verification state
   const [isVerificationActive, setIsVerificationActive] = useState(false);
@@ -181,6 +264,7 @@ const NavigationEditorContent: React.FC = () => {
     // State
     nodes,
     edges,
+    treeName,
     isLoadingInterface,
     selectedNode,
     selectedEdge,
@@ -202,6 +286,7 @@ const NavigationEditorContent: React.FC = () => {
     hasUnsavedChanges,
     isDiscardDialogOpen,
     userInterface,
+    rootTree,
     
     // History state
     history,
@@ -237,23 +322,30 @@ const NavigationEditorContent: React.FC = () => {
     onPaneClick,
     
     // Actions
+    loadFromDatabase,
     saveToDatabase,
     loadFromConfig,
     saveToConfig,
+    listAvailableTrees,
+    createEmptyTreeConfig,
     isLocked,
     lockInfo,
     sessionId,
     lockNavigationTree,
     unlockNavigationTree,
+    checkTreeLockStatus,
     setupAutoUnlock,
     handleNodeFormSubmit,
     handleEdgeFormSubmit,
+    handleDeleteNode,
+    handleDeleteEdge,
     navigateToParent,
     addNewNode,
     cancelNodeChanges,
     discardChanges,
     performDiscardChanges,
     navigateToTreeLevel,
+    goBackToParent,
     closeSelectionPanel,
     undo,
     redo,
@@ -269,6 +361,12 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges,
     setEdges,
     setSelectedEdge,
+    
+    // Configuration
+    defaultEdgeOptions,
+    
+    // Connection rules and debugging
+    getConnectionRulesSummary,
   } = useNavigationEditor();
   
   // Track the last loaded tree ID to prevent unnecessary reloads
