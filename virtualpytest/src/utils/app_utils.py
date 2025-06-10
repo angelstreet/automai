@@ -4,6 +4,7 @@ import time
 import subprocess
 import psutil
 import hashlib
+import platform
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -228,4 +229,26 @@ def cleanup_server_resources():
 
 # Constants
 DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
-DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3" 
+DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
+
+def get_host_system_stats():
+    """Get basic system statistics for host registration"""
+    try:
+        return {
+            'cpu_percent': psutil.cpu_percent(interval=1),
+            'memory_percent': psutil.virtual_memory().percent,
+            'disk_percent': psutil.disk_usage('/').percent,
+            'platform': platform.system(),
+            'architecture': platform.machine(),
+            'python_version': platform.python_version()
+        }
+    except Exception as e:
+        print(f"⚠️ Error getting system stats: {e}")
+        return {
+            'cpu_percent': 0,
+            'memory_percent': 0,
+            'disk_percent': 0,
+            'platform': 'unknown',
+            'architecture': 'unknown',
+            'python_version': 'unknown'
+        } 
