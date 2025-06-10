@@ -50,6 +50,9 @@ import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnec
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
+// Import NavigationEdgeComponent
+import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
+
 // Node types for React Flow
 const nodeTypes = {
   uiScreen: UINavigationNode,
@@ -57,8 +60,8 @@ const nodeTypes = {
 };
 
 const edgeTypes = {
-  uiNavigation: UINavigationEdge,
-  smoothstep: UINavigationEdge,
+  uiNavigation: NavigationEdgeComponent,
+  smoothstep: NavigationEdgeComponent,
 };
 
 const NavigationEditorContent: React.FC = () => {

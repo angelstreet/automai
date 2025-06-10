@@ -1,9 +1,9 @@
 import React from 'react';
 import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
-import { UINavigationEdge, EdgeAction } from '../../types/pages/Navigation_Types';
+import { UINavigationEdge as UINavigationEdgeType, EdgeAction } from '../../types/pages/Navigation_Types';
 import { useValidationColors } from '../../hooks/validation';
 
-export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>> = ({
+export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = ({
   id,
   sourceX,
   sourceY,
@@ -28,7 +28,7 @@ export const UINavigationEdge: React.FC<EdgeProps<UINavigationEdgeType['data']>>
   const targetNode = currentNodes.find(node => node.id === target);
   
   if (!sourceNode || !targetNode) {
-    console.warn(`[@component:UINavigationEdge] Edge ${id} references non-existent nodes - source: ${!!sourceNode}, target: ${!!targetNode}`);
+    console.warn(`[@component:NavigationEdgeComponent] Edge ${id} references non-existent nodes - source: ${!!sourceNode}, target: ${!!targetNode}`);
     return null;
   }
 
