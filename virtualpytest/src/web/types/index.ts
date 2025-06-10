@@ -1,13 +1,23 @@
-// Export all web types from organized structure
+// Export all types from organized structure
 
-// Common Types (shared across domains)
-export * from './common/Common_ActionTypes';
+// Common types (excluding ControllerType to avoid conflict)
 export * from './common/Common_BaseTypes';
 
-// Page Types (domain-specific for pages)  
+// Page-specific types
 export * from './pages/Navigation_Types';
-export * from './pages/UserInterface_Types';
+export * from './pages/TestCaseTypes';
+export type { Device, Controller, EnvironmentProfile } from './pages/DeviceTypes';
 
-// Feature Types (domain-specific features)
-export * from './features/Remote_Types';
-export * from './features/Validation_Types'; 
+// Remote types (with explicit ControllerType export)
+export type { 
+  AndroidElement, 
+  AndroidApp, 
+  RemoteConfig, 
+  ControllerType,
+  ConnectionForm, 
+  RemoteSession, 
+  AndroidTVSession, 
+  AndroidMobileSession, 
+  TestResult 
+} from './remote/types';
+export * from './remote/remoteTypes'; 

@@ -38,7 +38,7 @@ import React, { useState, useEffect } from 'react';
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
-import { Campaign, TestCase, Tree } from '../type';
+import { Campaign, TestCase, Tree } from '../types';
 
 const CampaignEditor: React.FC = () => {
   // Use registration context for centralized URL management

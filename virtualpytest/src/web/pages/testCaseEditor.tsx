@@ -46,7 +46,7 @@ import React, { useState, useEffect } from 'react';
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
-import { TestCase, Device, EnvironmentProfile, VerificationCondition } from '../type';
+import { TestCase, Device, EnvironmentProfile, VerificationCondition } from '../types';
 
 interface TabPanelProps {
   children?: React.ReactNode;

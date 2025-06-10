@@ -60,7 +60,7 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { TestCase, Campaign, Tree } from '../type';
+import { TestCase, Campaign, Tree } from '../types';
 import { useRegistration } from '../contexts/RegistrationContext';
 
 interface DashboardStats {

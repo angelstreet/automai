@@ -38,7 +38,6 @@ export const CONTROLLER_TYPES = [
 ] as const;
 
 export type ModelType = typeof MODEL_TYPES[number];
-export type ControllerType = typeof CONTROLLER_TYPES[number];
 
 // Device types
 export interface Device extends DeviceFormData {
@@ -190,7 +189,4 @@ export interface WizardStep {
   component: React.ComponentType<any>;
   isValid: boolean;
   isComplete: boolean;
-}
-
-// Re-export DeviceFormData for backward compatibility
-export { DeviceFormData }; 
+} 
