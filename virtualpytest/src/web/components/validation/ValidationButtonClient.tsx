@@ -16,7 +16,7 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { useState } from 'react';
-import { useValidationUI } from '../../hooks/features/useValidationUI';
+import { useValidationUI } from '../../hooks/validation';
 
 interface ValidationButtonClientProps {
   treeId: string;

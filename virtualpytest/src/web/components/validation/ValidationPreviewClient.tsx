@@ -34,8 +34,8 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
-import { useValidationUI } from '../../hooks/features/useValidationUI';
-import { useValidationColors } from '../../hooks/common/useValidationColors';
+import { useValidationUI } from '../../hooks/validation';
+import { useValidationColors } from '../../hooks/validation';
 import { useRegistration } from '../../contexts/RegistrationContext';
 import React from 'react';
 

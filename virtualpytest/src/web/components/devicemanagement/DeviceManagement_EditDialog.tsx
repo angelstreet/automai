@@ -23,7 +23,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { Device, DeviceFormData } from '../../types/common/Common_BaseTypes';
-import { useControllerConfig } from '../../hooks/features/useControllerConfig';
+import { useControllerConfig } from '../../hooks/controller';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';

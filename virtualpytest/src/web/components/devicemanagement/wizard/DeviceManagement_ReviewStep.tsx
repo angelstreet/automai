@@ -16,7 +16,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
-import { useControllerConfig } from '../../../hooks/features/useControllerConfig';
+import { useControllerConfig } from '../../../hooks/controller';
 
 interface ReviewStepProps {
   formData: DeviceFormData;

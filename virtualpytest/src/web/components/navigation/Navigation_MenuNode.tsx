@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
-import { useValidationColors } from '../../hooks/common/useValidationColors';
+import { useValidationColors } from '../../hooks/validation';
 import { NodeType, UI_BADGE_COLORS, NODE_TYPE_COLORS } from '../../config/validationColors';
 import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 

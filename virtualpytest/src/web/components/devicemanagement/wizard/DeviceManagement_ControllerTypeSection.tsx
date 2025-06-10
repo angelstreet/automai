@@ -17,7 +17,7 @@ import {
   Wifi as NetworkIcon,
   Power as PowerIcon,
 } from '@mui/icons-material';
-import { useControllerConfig } from '../../../hooks/features/useControllerConfig';
+import { useControllerConfig } from '../../../hooks/controller';
 import { ControllerConfiguration } from '../../../types/common/Common_BaseTypes';
 import { DynamicControllerForm } from './DeviceManagement_DynamicControllerForm';
 

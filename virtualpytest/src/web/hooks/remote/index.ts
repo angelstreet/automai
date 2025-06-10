@@ -1,4 +1,3 @@
-export { useControllerTypes } from './useControllerTypes';
 export { useRemoteConnection } from './useRemoteConnection';
 export { 
   getRemoteConfig, 

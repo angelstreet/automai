@@ -22,7 +22,7 @@ import {
   Check as CheckIcon,
 } from '@mui/icons-material';
 import { Device } from '../../types';
-import { useControllerConfig } from '../../hooks/features/useControllerConfig';
+import { useControllerConfig } from '../../hooks/controller';
 
 // Import wizard step components
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';

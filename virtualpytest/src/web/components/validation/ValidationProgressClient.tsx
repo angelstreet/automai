@@ -9,9 +9,9 @@ import {
   Chip
 } from '@mui/material';
 import { useEffect, useRef } from 'react';
-import { useValidationUI } from '../../hooks/features/useValidationUI';
+import { useValidationUI } from '../../hooks/validation';
 import { useValidationStore } from '../store/validationStore';
-import { useValidationColors } from '../../hooks/common/useValidationColors';
+import { useValidationColors } from '../../hooks/validation';
 import { getValidationStatusFromConfidence } from '../../config/validationColors';
 
 interface ValidationProgressClientProps {
