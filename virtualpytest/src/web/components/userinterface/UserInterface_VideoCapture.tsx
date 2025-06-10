@@ -9,8 +9,8 @@ import {
   PlayArrow,
   Pause,
 } from '@mui/icons-material';
-import { DragSelectionOverlay } from './DragSelectionOverlay';
-import { getStreamViewerLayout } from '../config/layoutConfig';
+import { DragSelectionOverlay } from './UserInterface_DragSelectionOverlay';
+import { getStreamViewerLayout } from '../../config/layoutConfig';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface DragArea {

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
-import { DragSelectionOverlay } from './DragSelectionOverlay';
-import { getStreamViewerLayout } from '../config/layoutConfig';
+import { DragSelectionOverlay } from './UserInterface_DragSelectionOverlay';
+import { getStreamViewerLayout } from '../../config/layoutConfig';
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface DragArea {
