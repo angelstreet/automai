@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Button,
@@ -7,7 +7,12 @@ import {
 import { RemoteInterface } from './RemoteInterface';
 import { RemoteType } from '../../types/features/Remote_Types';
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
-import { getRemoteLayout } from '../config/layoutConfig';
+
+// Simple layout config - create inline since the file doesn't exist
+const getRemoteLayout = () => ({
+  containerWidth: 300,
+  containerHeight: 600
+});
 
 interface RemoteCoreProps {
   /** The type of remote device */
@@ -33,23 +38,23 @@ export function RemoteCore({
 
   // Use the simplified remote connection hook
   const {
-    isLoading,
-    sendCommand,
-    hideRemote,
+    connectionLoading,
+    handleRemoteCommand,
+    handleReleaseControl,
   } = useRemoteConnection(remoteType);
 
   // Handle disconnect with proper control release
   const handleDisconnect = async () => {
     try {
-      console.log(`[@component:RemoteCore] Disconnecting ${remoteType} remote via abstract controller`);
+      console.log(`[@component:RemoteCore] Disconnecting ${remoteType} remote via hook`);
       
-      // Abstract controller handles both backend release and frontend hiding
-      await hideRemote();
+      // Use the hook's release control method
+      await handleReleaseControl();
       
       onDisconnect();
     } catch (error) {
       console.error(`[@component:RemoteCore] Error during disconnect for ${remoteType}:`, error);
-      // Still call parent disconnect even if hide remote fails
+      // Still call parent disconnect even if release control fails
       onDisconnect();
     }
   };
@@ -57,14 +62,14 @@ export function RemoteCore({
   // Handle remote commands
   const handleCommand = async (command: string, params?: any) => {
     console.log(`[@component:RemoteCore] Sending ${remoteType} command: ${command}`, params);
-    await sendCommand(command, params);
+    await handleRemoteCommand(command, params);
   };
 
   // Use default scale from remoteConfig or fallback
   const defaultScale = remoteConfig?.remote_info?.default_scale || 1;
 
   // Get layout configuration for this remote type
-  const remoteLayout = getRemoteLayout(remoteType);
+  const remoteLayout = getRemoteLayout();
   const containerWidth = remoteLayout.containerWidth * defaultScale;
 
   // Get fallback values based on remote type
@@ -148,7 +153,6 @@ export function RemoteCore({
             onCommand={handleCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
-            remoteType={remoteType}
           />
         </Box>
 
@@ -156,7 +160,7 @@ export function RemoteCore({
           variant="contained" 
           color="error"
           onClick={handleDisconnect}
-          disabled={isLoading}
+          disabled={connectionLoading}
           size="small"
           fullWidth
           sx={{ 
@@ -168,7 +172,7 @@ export function RemoteCore({
             right: 0
           }}
         >
-          {isLoading ? <CircularProgress size={16} /> : 'Disconnect'}
+          {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
         </Button>
       </Box>
     );
@@ -220,14 +224,13 @@ export function RemoteCore({
             onCommand={handleCommand}
             fallbackImageUrl={fallbackValues.imageUrl}
             fallbackName={fallbackValues.name}
-            remoteType={remoteType}
           />
         </Box>
         <Button 
           variant="contained" 
           color="error"
           onClick={handleDisconnect}
-          disabled={isLoading}
+          disabled={connectionLoading}
           size="small"
           fullWidth
           sx={{ 
@@ -239,7 +242,7 @@ export function RemoteCore({
             right: 0
           }}
         >
-          {isLoading ? <CircularProgress size={16} /> : 'Disconnect'}
+          {connectionLoading ? <CircularProgress size={16} /> : 'Disconnect'}
         </Button>
       </Box>
     );

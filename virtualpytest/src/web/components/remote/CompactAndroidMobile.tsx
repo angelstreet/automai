@@ -214,7 +214,7 @@ export function CompactAndroidMobile({
             deviceWidth={deviceResolution.width}
             deviceHeight={deviceResolution.height}
             isVisible={showOverlay}
-            selectedElementId={selectedElement ? parseInt(selectedElement) : undefined}
+            selectedElementId={selectedElement ? selectedElement : undefined}
             onElementClick={handleOverlayElementClick}
           />
         </div>

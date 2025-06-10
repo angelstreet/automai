@@ -8,7 +8,7 @@
  */
 
 import { BaseControllerProxy } from './BaseControllerProxy';
-import { AndroidElement, AndroidApp } from '../types/remote/types';
+import { AndroidElement, AndroidApp } from '../types/features/Remote_Types';
 
 // Remote Controller Types
 export interface RemoteCommandOptions {
@@ -97,7 +97,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Taking screenshot`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/screenshot');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/screenshot');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -132,7 +132,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Taking screenshot and dumping UI`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/screenshot-and-dump-ui');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/screenshot-and-dump-ui');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -173,7 +173,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Getting installed apps`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/get-apps');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/get-apps');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -208,7 +208,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Clicking element: ${elementId}`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/click-element');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/click-element');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -249,7 +249,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Tapping at coordinates: (${x}, ${y})`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/tap-coordinates');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/tap-coordinates');
       
       const response = await fetch(url, {
         method: 'POST',
@@ -291,7 +291,7 @@ export class RemoteControllerProxy extends BaseControllerProxy {
     try {
       console.log(`[@controller:RemoteControllerProxy] Getting remote controller status`);
       
-      const url = this.buildHostUrl(this.hostDevice.id, '/host/remote/status');
+      const url = this.buildHostUrl(this.host.id, '/host/remote/status');
       
       const response = await fetch(url, {
         method: 'GET',
@@ -367,9 +367,9 @@ export class RemoteControllerProxy extends BaseControllerProxy {
   getControllerInfo(): any {
     return {
       hostDevice: {
-        id: this.hostDevice.id,
-        name: this.hostDevice.name,
-        model: this.hostDevice.model
+        id: this.host.id,
+        name: this.host.name,
+        model: this.host.model
       },
       capabilities: [
         'send_command',

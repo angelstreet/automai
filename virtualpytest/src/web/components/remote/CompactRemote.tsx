@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { RemotePanel } from './RemotePanel';
 import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
 

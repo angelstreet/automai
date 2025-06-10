@@ -214,11 +214,11 @@ export function AndroidMobileCore({
               const getElementDisplayName = (el: AndroidElement) => {
                 let displayName = '';
                 if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-                  displayName = `"${el.text}" (${el.className.split('.').pop()})`;
+                  displayName = `"${el.text}" (${el.className?.split('.').pop() || 'Unknown'})`;
                 } else if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
-                  displayName = `${el.package.split('.').pop()} (${el.className.split('.').pop()})`;
+                  displayName = `${el.package.split('.').pop()} (${el.className?.split('.').pop() || 'Unknown'})`;
                 } else {
-                  displayName = `${el.className.split('.').pop()} #${el.id}`;
+                  displayName = `${el.className?.split('.').pop() || 'Unknown'} #${el.id}`;
                 }
                 
                 // Limit display name length

@@ -26,16 +26,6 @@ interface HDMIStreamPanelProps {
   sx?: any;
 }
 
-interface StreamStats {
-  stream_url: string;
-  is_streaming: boolean;
-  uptime_seconds: number;
-  frames_received: number;
-  bytes_received: number;
-  stream_quality: string;
-  stream_fps: number;
-}
-
 export function HDMIStreamPanel({
   autoConnect = false,
   compact = false,

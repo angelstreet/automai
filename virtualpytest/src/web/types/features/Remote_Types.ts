@@ -1,6 +1,4 @@
-import { AndroidElement } from './controllerSessionTypes';
-
-// Android Element interface for UI interaction
+// Android Element interface for UI interaction (web interface version)
 export interface AndroidElement {
   id: string;
   text?: string;
@@ -18,40 +16,12 @@ export interface AndroidElement {
   selected: boolean;
 }
 
-// Android App interface
+// Android App interface (web interface version)
 export interface AndroidApp {
-  package: string;
-  name: string;
+  packageName: string;
+  label: string;
   version?: string;
   icon?: string;
-}
-
-// Controller types
-export const ControllerTypes = {
-  REMOTE: 'remote',
-  AV: 'av',
-  VERIFICATION: 'verification',
-  POWER: 'power',
-  NETWORK: 'network'
-} as const;
-
-export type ControllerType = typeof ControllerTypes[keyof typeof ControllerTypes];
-
-// Controller item interface for API responses
-export interface ControllerItem {
-  id: string;
-  name: string;
-  description: string;
-  status: 'available' | 'placeholder';
-}
-
-// Controller types structure for API responses
-export interface ControllerTypesResponse {
-  remote: ControllerItem[];
-  av: ControllerItem[];
-  network: ControllerItem[];
-  verification: ControllerItem[];
-  power: ControllerItem[];
 }
 
 // Base remote configuration type (removed usb-power as it belongs in power controller)
@@ -126,6 +96,23 @@ export interface RemoteDeviceConfig {
   };
 }
 
+// Controller item interface for API responses
+export interface ControllerItem {
+  id: string;
+  name: string;
+  description: string;
+  status: 'available' | 'placeholder';
+}
+
+// Controller types structure for API responses
+export interface ControllerTypesResponse {
+  remote: ControllerItem[];
+  av: ControllerItem[];
+  network: ControllerItem[];
+  verification: ControllerItem[];
+  power: ControllerItem[];
+}
+
 // Session types for different controllers
 export interface RemoteSession {
   connected: boolean;
@@ -151,5 +138,6 @@ export interface TestResult {
   details?: any;
 }
 
-// Re-export existing types for compatibility
-export * from './controllerSessionTypes'; 
+// Export aliases for compatibility with useControllerTypes hook
+export type ControllerTypes = ControllerTypesResponse;
+export type ControllerType = ControllerItem; 

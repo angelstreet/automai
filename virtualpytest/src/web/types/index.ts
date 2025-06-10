@@ -48,7 +48,7 @@ export type {
 } from './features/Remote_Types';
 
 // Export the Remote ControllerTypes with alias to avoid conflict
-export { 
+export type { 
   ControllerTypes as RemoteControllerTypes,
   ControllerType as RemoteControllerType
 } from './features/Remote_Types';

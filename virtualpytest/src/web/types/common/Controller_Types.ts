@@ -34,4 +34,11 @@ export interface ControllerCapability {
   description: string;
   supported_devices: string[]; // Device types this controller supports
   required_config: string[]; // Required configuration fields
-} 
+}
+
+// Re-export controller configuration types from Common_BaseTypes
+export type { 
+  ControllerConfiguration as ControllerImplementation,
+  ControllerConfiguration as ControllerConfig,
+  ControllerConfigMap 
+} from './Common_BaseTypes'; 

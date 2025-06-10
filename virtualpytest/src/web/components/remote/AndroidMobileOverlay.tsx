@@ -69,7 +69,7 @@ export function AndroidMobileOverlay({
           if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
             return el.package.split('.').pop()?.substring(0, 20) || '';
           }
-          return el.className.split('.').pop()?.substring(0, 20) || 'Element';
+          return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
         };
 
         return {
@@ -159,7 +159,7 @@ export function AndroidMobileOverlay({
           if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
             return el.package.split('.').pop()?.substring(0, 20) || '';
           }
-          return el.className.split('.').pop()?.substring(0, 20) || 'Element';
+          return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
         };
 
         return {

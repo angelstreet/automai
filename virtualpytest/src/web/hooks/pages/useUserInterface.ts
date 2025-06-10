@@ -49,14 +49,9 @@ export const useUserInterface = () => {
         throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const result = await selectedHost.controllerProxies.remote.getUIElements();
-      
-      if (result.success) {
-        console.log('[@hook:useUserInterface:getAllUserInterfaces] Successfully fetched user interfaces');
-        return result.data || [];
-      } else {
-        throw new Error(result.error || 'Failed to fetch user interfaces');
-      }
+      // Note: UI Elements management is not currently supported by RemoteControllerProxy
+      // This would need to be implemented as a separate controller or service
+      throw new Error('UI Elements management not supported by remote controller');
     } catch (error) {
       console.error('[@hook:useUserInterface:getAllUserInterfaces] Error fetching user interfaces:', error);
       throw error;
@@ -75,14 +70,9 @@ export const useUserInterface = () => {
         throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const result = await selectedHost.controllerProxies.remote.getUIElement(id);
-      
-      if (result.success) {
-        console.log(`[@hook:useUserInterface:getUserInterface] Successfully fetched user interface ${id}`);
-        return result.data;
-      } else {
-        throw new Error(result.error || `Failed to fetch user interface ${id}`);
-      }
+      // Note: UI Elements management is not currently supported by RemoteControllerProxy
+      // This would need to be implemented as a separate controller or service
+      throw new Error('UI Elements management not supported by remote controller');
     } catch (error) {
       console.error(`[@hook:useUserInterface:getUserInterface] Error fetching user interface ${id}:`, error);
       throw error;
@@ -101,14 +91,9 @@ export const useUserInterface = () => {
         throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const result = await selectedHost.controllerProxies.remote.createUIElement(payload);
-      
-      if (result.success) {
-        console.log('[@hook:useUserInterface:createUserInterface] Successfully created user interface');
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Failed to create user interface');
-      }
+      // Note: UI Elements management is not currently supported by RemoteControllerProxy
+      // This would need to be implemented as a separate controller or service
+      throw new Error('UI Elements management not supported by remote controller');
     } catch (error) {
       console.error('[@hook:useUserInterface:createUserInterface] Error creating user interface:', error);
       throw error;
@@ -127,14 +112,9 @@ export const useUserInterface = () => {
         throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const result = await selectedHost.controllerProxies.remote.updateUIElement(id, payload);
-      
-      if (result.success) {
-        console.log(`[@hook:useUserInterface:updateUserInterface] Successfully updated user interface ${id}`);
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Failed to update user interface');
-      }
+      // Note: UI Elements management is not currently supported by RemoteControllerProxy
+      // This would need to be implemented as a separate controller or service
+      throw new Error('UI Elements management not supported by remote controller');
     } catch (error) {
       console.error(`[@hook:useUserInterface:updateUserInterface] Error updating user interface ${id}:`, error);
       throw error;
@@ -153,13 +133,9 @@ export const useUserInterface = () => {
         throw new Error('Remote controller proxy not available for selected host');
       }
 
-      const result = await selectedHost.controllerProxies.remote.deleteUIElement(id);
-      
-      if (result.success) {
-        console.log(`[@hook:useUserInterface:deleteUserInterface] Successfully deleted user interface ${id}`);
-      } else {
-        throw new Error(result.error || 'Failed to delete user interface');
-      }
+      // Note: UI Elements management is not currently supported by RemoteControllerProxy
+      // This would need to be implemented as a separate controller or service
+      throw new Error('UI Elements management not supported by remote controller');
     } catch (error) {
       console.error(`[@hook:useUserInterface:deleteUserInterface] Error deleting user interface ${id}:`, error);
       throw error;
