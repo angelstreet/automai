@@ -193,10 +193,10 @@ export function AndroidMobileCore({
               }
             }}
             onChange={(e) => {
-              const elementId = parseInt(e.target.value as string);
+              const elementId = e.target.value as string;
               const element = androidElements.find(el => el.id === elementId);
               if (element) {
-                setSelectedElement(element.id.toString());
+                setSelectedElement(element.id);
                 handleOverlayElementClick(element);
               }
             }}
@@ -213,12 +213,10 @@ export function AndroidMobileCore({
             {androidElements.map((element) => {
               const getElementDisplayName = (el: AndroidElement) => {
                 let displayName = '';
-                if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-                  displayName = `${el.contentDesc} (${el.className.split('.').pop()})`;
-                } else if (el.text && el.text !== '<no text>') {
+                if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
                   displayName = `"${el.text}" (${el.className.split('.').pop()})`;
-                } else if (el.resourceId && el.resourceId !== '<no resource-id>') {
-                  displayName = `${el.resourceId.split('/').pop()} (${el.className.split('.').pop()})`;
+                } else if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+                  displayName = `${el.package.split('.').pop()} (${el.className.split('.').pop()})`;
                 } else {
                   displayName = `${el.className.split('.').pop()} #${el.id}`;
                 }

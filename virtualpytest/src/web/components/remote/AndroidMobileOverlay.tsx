@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { AndroidElement } from '../../types/remote/types';
 
 interface ScaledElement {
-  id: number;
+  id: string;
   x: number;
   y: number;
   width: number;
@@ -17,7 +17,7 @@ interface AndroidMobileOverlayProps {
   deviceWidth: number;
   deviceHeight: number;
   isVisible: boolean;
-  selectedElementId?: number;
+  selectedElementId?: string;
   onElementClick?: (element: AndroidElement) => void;
 }
 
@@ -38,31 +38,13 @@ export function AndroidMobileOverlay({
   const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Parse bounds string like "[0,0][1080,2340]" - same as UIElementsOverlay
-  const parseBounds = (bounds: string) => {
-    // Try bracket format first: [0,0][1080,2340]
-    const bracketMatch = bounds.match(/\[(\d+),(\d+)\]\[(\d+),(\d+)\]/);
-    if (bracketMatch) {
-      return {
-        x: parseInt(bracketMatch[1]),
-        y: parseInt(bracketMatch[2]),
-        width: parseInt(bracketMatch[3]) - parseInt(bracketMatch[1]),
-        height: parseInt(bracketMatch[4]) - parseInt(bracketMatch[2]),
-      };
-    }
-
-    // Try comma format: 0,0,1080,2340
-    const commaMatch = bounds.match(/(\d+),(\d+),(\d+),(\d+)/);
-    if (commaMatch) {
-      return {
-        x: parseInt(commaMatch[1]),
-        y: parseInt(commaMatch[2]),
-        width: parseInt(commaMatch[3]) - parseInt(commaMatch[1]),
-        height: parseInt(commaMatch[4]) - parseInt(commaMatch[2]),
-      };
-    }
-
-    return null;
+  const parseBounds = (bounds: { left: number; top: number; right: number; bottom: number }) => {
+    return {
+      x: bounds.left,
+      y: bounds.top,
+      width: bounds.right - bounds.left,
+      height: bounds.bottom - bounds.top,
+    };
   };
 
   // Calculate scaled coordinates - same logic as UIElementsOverlay
@@ -81,16 +63,13 @@ export function AndroidMobileOverlay({
         if (!bounds) return null;
 
         const getElementLabel = (el: AndroidElement) => {
-          if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-            return el.contentDesc.substring(0, 20);
-          }
-          if (el.text && el.text !== '<no text>') {
+          if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
             return el.text.substring(0, 20);
           }
-          if (el.resourceId && el.resourceId !== '<no resource-id>') {
-            return el.resourceId.split('/').pop()?.substring(0, 20) || '';
+          if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+            return el.package.split('.').pop()?.substring(0, 20) || '';
           }
-          return el.tag.substring(0, 20);
+          return el.className.split('.').pop()?.substring(0, 20) || 'Element';
         };
 
         return {
@@ -174,16 +153,13 @@ export function AndroidMobileOverlay({
         }
 
         const getElementLabel = (el: AndroidElement) => {
-          if (el.contentDesc && el.contentDesc !== '<no content-desc>') {
-            return el.contentDesc.substring(0, 20);
-          }
-          if (el.text && el.text !== '<no text>') {
+          if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
             return el.text.substring(0, 20);
           }
-          if (el.resourceId && el.resourceId !== '<no resource-id>') {
-            return el.resourceId.split('/').pop()?.substring(0, 20) || '';
+          if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+            return el.package.split('.').pop()?.substring(0, 20) || '';
           }
-          return el.tag.substring(0, 20);
+          return el.className.split('.').pop()?.substring(0, 20) || 'Element';
         };
 
         return {

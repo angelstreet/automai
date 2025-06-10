@@ -4,9 +4,6 @@ import {
   Button,
   Typography,
   CircularProgress,
-  Card,
-  CardContent,
-  Chip,
   IconButton,
   Tooltip,
 } from '@mui/material';
@@ -16,10 +13,6 @@ import {
   StopCircle,
   Fullscreen,
   FullscreenExit,
-  Settings,
-  Videocam,
-  PlayArrow,
-  Stop,
   Refresh,
 } from '@mui/icons-material';
 import { StreamViewer } from './StreamViewer';
@@ -27,7 +20,6 @@ import { ScreenshotCapture } from './ScreenshotCapture';
 import { VideoCapture } from './VideoCapture';
 import { VerificationEditor } from './VerificationEditor';
 import { getVerificationEditorLayout } from '../../../config/layoutConfig';
-import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ScreenDefinitionEditorProps {
   /** Complete host+device object containing all configuration */
@@ -38,35 +30,6 @@ interface ScreenDefinitionEditorProps {
   onDisconnectComplete?: () => void;
   /** Custom styling */
   sx?: any;
-  /** Device connection information for dynamic endpoints */
-  deviceConnection?: {
-    flask_url: string;    // e.g., "http://192.168.1.67:5119"
-    nginx_url: string;    // e.g., "https://192.168.1.67:444"
-  };
-}
-
-interface CaptureStats {
-  is_connected: boolean;
-  is_capturing: boolean;
-  frame_count: number;
-  uptime_seconds: number;
-  capture_time_seconds?: number;
-  last_screenshot?: string;
-}
-
-// Update interface for strongly typed screenshot handler
-interface ScreenshotResponse {
-  success: boolean;
-  screenshot_path: string;
-  message: string;
-  error?: string;
-  device_resolution?: {
-    width: number;
-    height: number;
-  };
-  capture_resolution?: string;
-  stream_resolution?: string;
-  stream_was_active?: boolean;
 }
 
 // Separate component for recording timer to avoid parent re-renders
@@ -113,27 +76,11 @@ export function ScreenDefinitionEditor({
   autoConnect = false,
   onDisconnectComplete,
   sx = {},
-  deviceConnection,
 }: ScreenDefinitionEditorProps) {
   // Extract everything from selectedHostDevice
   const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
   const deviceConfig = selectedHostDevice?.controller_configs;
   
-  // Get registration context
-  const { buildHostUrl } = useRegistration();
-  
-  console.log(`[@component:ScreenDefinitionEditor] Using host_device: ${selectedHostDevice?.host_name} with device: ${selectedHostDevice?.device_name} (${deviceModel})`);
-
-  // Debug parent component re-renders
-  useEffect(() => {
-    console.log('[@component:ScreenDefinitionEditor] Component mounted/re-rendered with props:', {
-      deviceModel,
-      autoConnect,
-      hasSelectedHostDevice: !!selectedHostDevice,
-      hasOnDisconnectComplete: !!onDisconnectComplete
-    });
-  });
-
   // Memoize layout configs to prevent new object references
   const compactLayoutConfig = useMemo(() => ({
     minHeight: deviceModel === 'android_mobile' ? '300px' : '250px',
@@ -145,14 +92,10 @@ export function ScreenDefinitionEditor({
   // Get verification editor layout config for parent container sizing
   const verificationEditorLayout = useMemo(() => {
     const config = getVerificationEditorLayout(deviceModel);
-    console.log('[@component:ScreenDefinitionEditor] Verification editor layout config:', {
-      deviceModel,
-      config
-    });
     return config;
   }, [deviceModel]);
 
-  // Connection state - simplified
+  // Connection state
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
@@ -196,13 +139,10 @@ export function ScreenDefinitionEditor({
     }
   }, [selectedHostDevice]);
   
-  // Stream status state - without polling
+  // Stream status state
   const [streamStatus, setStreamStatus] = useState<'running' | 'stopped' | 'unknown'>('running');
   
-  // Video capture state - simplified for new timestamp-only logic
-  const [captureFrames, setCaptureFrames] = useState<string[]>([]);
-  
-  // Capture timing state - core of new simple logic
+  // Capture timing state
   const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
   const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
   
@@ -214,27 +154,11 @@ export function ScreenDefinitionEditor({
   const [isCapturing, setIsCapturing] = useState(false);
   const [isStoppingCapture, setIsStoppingCapture] = useState(false);
   
-  // Remove obsolete capture stats and polling
-  const [captureStats, setCaptureStats] = useState<any>(null);
-  
   // UI state
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Stream URL state
   const [streamUrl, setStreamUrl] = useState<string | undefined>(undefined);
-  
-  // Debug key state changes that might cause re-renders
-  useEffect(() => {
-    console.log('[@component:ScreenDefinitionEditor] viewMode changed:', viewMode);
-  }, [viewMode]);
-
-  useEffect(() => {
-    console.log('[@component:ScreenDefinitionEditor] isExpanded changed:', isExpanded);
-  }, [isExpanded]);
-
-  useEffect(() => {
-    console.log('[@component:ScreenDefinitionEditor] isCapturing changed:', isCapturing);
-  }, [isCapturing]);
   
   // Extract AV config for easier access
   const avConfig = deviceConfig?.av?.parameters;
@@ -254,23 +178,15 @@ export function ScreenDefinitionEditor({
   
   // Check for existing remote connection ONCE (no loops)
   useEffect(() => {
-    // Use abstract remote controller (no config endpoint needed - controller pre-configured)
-    // const response = await fetch(buildServerUrl('/api/virtualpytest/android-mobile/config'), {
-    // Controllers are pre-configured during registration, no config needed
-    console.log('[@component:ScreenDefinitionEditor] Using pre-configured abstract remote controller');
-
-    // Check once on mount, no loops
+    // Controllers are configured during registration
     setIsConnected(true);
     setConnectionError(null);
     setStreamStatus('running');
   }, []);
 
-  // Initial check for stream status - REMOVED: unnecessary after successful take control
-  // Stream status is already confirmed during take control process
+  // Initialize stream status
   useEffect(() => {
     if (isConnected) {
-      // Assume stream is running since we got here after successful take control
-      console.log('[@component:ScreenDefinitionEditor] Connected after take control, assuming stream is running');
       setStreamStatus('running');
     }
   }, [isConnected]);
@@ -389,7 +305,6 @@ export function ScreenDefinitionEditor({
     } finally {
       // Always update local state
       setIsCapturing(false);
-      setCaptureStats(null);
       
       // Reset the stopping state
       setIsStoppingCapture(false);
@@ -921,7 +836,6 @@ export function ScreenDefinitionEditor({
               videoFramesPath={videoFramesPath}
               totalFrames={totalFrames}
               currentFrame={currentFrame}
-              deviceConnection={deviceConnection}
               sx={{
                 backgroundColor: '#1E1E1E',
                 borderRadius: '0 1px 1px 0',

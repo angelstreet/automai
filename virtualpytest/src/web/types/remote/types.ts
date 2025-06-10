@@ -27,19 +27,6 @@ export interface RemoteSession {
   connectionInfo?: string; // Generic connection info (IP for Android, device path for IR, etc.)
 }
 
-// Legacy types for backward compatibility - deprecated
-/** @deprecated Use RemoteSession instead */
-export interface AndroidTVSession {
-  connected: boolean;
-  device_ip: string;
-}
-
-/** @deprecated Use RemoteSession instead */
-export interface AndroidMobileSession {
-  connected: boolean;
-  device_ip: string;
-}
-
 // Connection form types (simplified - abstract controller handles SSH)
 export interface ConnectionForm {
   device_ip: string;
@@ -94,13 +81,20 @@ export interface RemoteConfig {
 
 // Android Mobile specific types
 export interface AndroidElement {
-  id: number;
-  tag: string;
+  id: string;
   text: string;
-  resourceId: string;
-  contentDesc: string;
   className: string;
-  bounds: string;
+  package: string;
+  bounds: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
+  clickable: boolean;
+  enabled: boolean;
+  focused: boolean;
+  selected: boolean;
 }
 
 export interface AndroidApp {

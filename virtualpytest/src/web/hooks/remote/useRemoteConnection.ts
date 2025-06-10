@@ -18,18 +18,8 @@ const initialSession: RemoteSession = {
   connectionInfo: ''
 };
 
-interface RemoteState {
-  isLoading: boolean;
-  error: string | null;
-}
-
-const initialState: RemoteState = {
-  isLoading: false,
-  error: null,
-};
-
 export function useRemoteConnection(remoteType: RemoteType) {
-  const { buildServerUrl, buildHostUrl, selectedHost } = useRegistration();
+  const { selectedHost } = useRegistration();
   
   // Original interface state
   const [session, setSession] = useState<RemoteSession>(initialSession);
@@ -42,9 +32,6 @@ export function useRemoteConnection(remoteType: RemoteType) {
   // Android Mobile specific state
   const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
   const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
-
-  // Simple state management for abstract controller
-  const [remoteState, setRemoteState] = useState<RemoteState>(initialState);
 
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
@@ -245,7 +232,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
           setAndroidScreenshot(result.screenshot);
         }
         if (result.elements) {
-          setAndroidElements(result.elements as any); // Temporary cast to resolve type differences
+          setAndroidElements(result.elements);
           console.log(`[@hook:useRemoteConnection] Found ${result.elements.length} UI elements`);
         }
         console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully via proxy');
@@ -280,7 +267,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       const apps = await remoteController.get_installed_apps();
       
       if (apps && apps.length > 0) {
-        setAndroidApps(apps as any); // Temporary cast to resolve type differences
+        setAndroidApps(apps);
         console.log(`[@hook:useRemoteConnection] Found ${apps.length} installed apps via proxy`);
       } else {
         console.log('[@hook:useRemoteConnection] No apps found or apps list is empty');
@@ -309,7 +296,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.log(`[@hook:useRemoteConnection] Clicking element using remote controller proxy: ${element.id}`);
       
       // Use remote controller proxy to click element
-      const result = await remoteController.click_element(element.id);
+      const result = await remoteController.click_element(String(element.id));
       
       if (result.success) {
         console.log(`[@hook:useRemoteConnection] Successfully clicked element via proxy: ${element.id}`);
@@ -372,97 +359,8 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
   }, [deviceConfig, remoteType, selectedHost]);
 
-  // Abstract remote controller methods - Frontend state management only
-  const showRemote = useCallback(async () => {
-    console.log(`[@hook:useRemoteConnection] Showing ${remoteType} remote (frontend state only)`);
-    setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
-    
-    // No server call needed - frontend handles remote UI display
-    console.log(`[@hook:useRemoteConnection] Remote ${remoteType} shown successfully (frontend)`);
-  }, [remoteType]);
-
-  const hideRemote = useCallback(async () => {
-    console.log(`[@hook:useRemoteConnection] Hiding ${remoteType} remote and releasing control`);
-    setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      // First release control on the backend to avoid conflicts
-      await handleReleaseControl();
-      
-      // Then update frontend state
-      setRemoteState(prev => ({ ...prev, isLoading: false, error: null }));
-      
-      console.log(`[@hook:useRemoteConnection] Remote ${remoteType} hidden and control released successfully`);
-    } catch (error: any) {
-      console.error(`[@hook:useRemoteConnection] Error hiding remote ${remoteType}:`, error);
-      setRemoteState(prev => ({ ...prev, isLoading: false, error: error.message }));
-      // Don't throw - let the component handle the error state
-    }
-  }, [remoteType, handleReleaseControl]);
-
-  const sendCommand = useCallback(async (command: string, params?: any) => {
-    if (!selectedHost) {
-      console.error('[@hook:useRemoteConnection] No host selected for command');
-      setRemoteState(prev => ({ ...prev, error: 'No host selected' }));
-      return;
-    }
-
-    console.log(`[@hook:useRemoteConnection] Sending command via proxy: ${command}`, params);
-    setRemoteState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // Get remote controller proxy from selectedHost
-      const remoteController = selectedHost.controllerProxies?.remote;
-      
-      if (!remoteController) {
-        throw new Error('Remote controller proxy not available');
-      }
-
-      // Use the remote controller proxy to send the command
-      const result = await remoteController.send_command(command, params || {});
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Command failed');
-      }
-
-      console.log(`[@hook:useRemoteConnection] Command ${command} sent successfully via proxy`);
-    } catch (error: any) {
-      console.error(`[@hook:useRemoteConnection] Command ${command} failed:`, error);
-      setRemoteState(prev => ({ ...prev, error: error.message }));
-    } finally {
-      setRemoteState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [selectedHost]);
-
-  // Convenience methods for common commands
-  const pressKey = useCallback(async (key: string) => {
-    await sendCommand('press_key', { key });
-  }, [sendCommand]);
-
-  const navigate = useCallback(async (direction: 'up' | 'down' | 'left' | 'right') => {
-    const keyMap = {
-      up: 'DPAD_UP',
-      down: 'DPAD_DOWN', 
-      left: 'DPAD_LEFT',
-      right: 'DPAD_RIGHT'
-    };
-    await pressKey(keyMap[direction]);
-  }, [pressKey]);
-
-  const select = useCallback(async () => {
-    await pressKey('DPAD_CENTER');
-  }, [pressKey]);
-
-  const back = useCallback(async () => {
-    await pressKey('BACK');
-  }, [pressKey]);
-
-  const home = useCallback(async () => {
-    await pressKey('HOME');
-  }, [pressKey]);
-
   return {
-    // Original interface
+    // Interface
     session,
     connectionForm,
     setConnectionForm,
@@ -471,11 +369,11 @@ export function useRemoteConnection(remoteType: RemoteType) {
     remoteConfig,
     androidScreenshot,
     
-    // Android Mobile specific
+    // Android Mobile specific state
     androidElements,
     androidApps,
     
-    // Generic methods
+    // Core methods
     handleTakeControl,
     handleReleaseControl,
     handleScreenshot,
@@ -487,18 +385,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     handleClickElement,
     clearElements,
     
+    // Device configuration
     deviceConfig,
-
-    // Abstract remote controller methods (for backward compatibility)
-    isLoading: remoteState.isLoading,
-    error: remoteState.error,
-    showRemote,
-    hideRemote,
-    sendCommand,
-    pressKey,
-    navigate,
-    select,
-    back,
-    home,
   };
 }

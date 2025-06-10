@@ -7,32 +7,12 @@
  * they're running locally or remotely.
  */
 
-// Type definitions for remote controller methods
+import { AndroidElement, AndroidApp } from '../types/remote/types';
+
+// Remote Controller Types
 export interface RemoteCommandOptions {
   command: string;
   params?: Record<string, any>;
-}
-
-export interface AndroidElement {
-  id: string;
-  text: string;
-  className: string;
-  package: string;
-  bounds: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  };
-  clickable: boolean;
-  enabled: boolean;
-  focused: boolean;
-  selected: boolean;
-}
-
-export interface AndroidApp {
-  packageName: string;
-  label: string;
 }
 
 export interface RemoteScreenshotResponse {
