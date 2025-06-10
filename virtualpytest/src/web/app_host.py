@@ -53,8 +53,8 @@ import time
 import atexit
 import threading
 
-# Try direct import from appUtils instead of utils.appUtils
-from appUtils import (
+# Try direct import from app_utils instead of utils.app_utils
+from app_utils import (
     load_environment_variables,
     kill_process_on_port,
     setup_flask_app,
@@ -68,11 +68,14 @@ from appUtils import (
     DEFAULT_USER_ID
 )
 
-from hostUtils import (
+from host_utils import (
     register_host_with_server,
     start_ping_thread,
     cleanup_on_exit
 )
+
+# Import host_utils module to access global storage
+import host_utils
 
 def cleanup_host_ports():
     """Clean up ports for host mode"""
@@ -190,17 +193,14 @@ def main():
         try:
             print(f"\n🔧 [HOST] Initializing host device object in Flask app context...")
             
-            # Import hostUtils module to access global storage
-            import hostUtils
-            
-            if hostUtils.global_host_device:
+            if host_utils.global_host_device:
                 # Create a Flask app context and store the host device object
                 with app.app_context():
-                    app.my_host_device = hostUtils.global_host_device
+                    app.my_host_device = host_utils.global_host_device
                     print(f"✅ [HOST] Host device initialization completed successfully")
-                    print(f"   Host: {hostUtils.global_host_device.get('host_name')}")
-                    print(f"   Device: {hostUtils.global_host_device.get('device_name')}")
-                    print(f"   Controllers: {list(hostUtils.global_host_device.get('controller_objects', {}).keys())}")
+                    print(f"   Host: {host_utils.global_host_device.get('host_name')}")
+                    print(f"   Device: {host_utils.global_host_device.get('device_name')}")
+                    print(f"   Controllers: {list(host_utils.global_host_device.get('controller_objects', {}).keys())}")
             else:
                 print(f"⚠️ [HOST] No global host device found yet (registration may still be in progress)")
                 

@@ -27,12 +27,12 @@ if os.path.exists(utils_dir) and utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
 
 # Import directly from the module file
-from controllerConfigFactory import (
+from controller_config_factory import (
     create_controller_configs_from_device_info,
     get_device_capabilities_from_model,
     get_controller_types_from_model
 )
-print("[@system_routes] Successfully imported controllerConfigFactory")
+print("[@system_routes] Successfully imported controller_config_factory")
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 

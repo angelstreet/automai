@@ -9,7 +9,7 @@ for each device type, providing maximum flexibility.
 """
 
 from typing import Dict, Any, Optional, Type, Union
-from .base_controllers import (
+from .base_controller import (
     BaseController,
     RemoteControllerInterface,
     AVControllerInterface,

@@ -283,7 +283,7 @@ def save_resource():
         
         # Upload directly to Cloudflare R2
         try:
-            from utils.cloudflare_upload import CloudflareUploader
+            from utils.cloudflare_upload_utils import CloudflareUploader
             
             uploader = CloudflareUploader()
             

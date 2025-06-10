@@ -12,7 +12,7 @@ import time
 import json
 import os
 from pathlib import Path
-from ..base_controllers import RemoteControllerInterface
+from ..base_controller import RemoteControllerInterface
 
 # Use absolute import to avoid conflicts with local utils directory
 import sys
@@ -20,7 +20,7 @@ src_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__
 if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
 
-from adbUtils import ADBUtils, AndroidElement, AndroidApp
+from adb_utils import ADBUtils, AndroidElement, AndroidApp
 
 
 class AndroidMobileRemoteController(RemoteControllerInterface):

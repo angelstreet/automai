@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ValidationState, ValidationResults, ValidationPreview, ValidationProgress } from '../types/validationTypes';
-import { ValidationStatus } from '../../../config/validationColors';
+import { ValidationStatus } from '../config/validationColors';
 
 interface ValidationStatusData {
   status: ValidationStatus;

@@ -35,7 +35,7 @@ import uuid
 import psutil
 import platform
 from typing import Dict, Any
-from appUtils import get_host_system_stats, generate_stable_host_id
+from app_utils import get_host_system_stats, generate_stable_host_id
 
 # Disable SSL warnings for self-signed certificates
 import urllib3

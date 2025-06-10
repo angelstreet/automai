@@ -6,14 +6,14 @@ Uses simple userinterface name mapping: {userinterface_name}.json
 """
 
 from flask import Blueprint, request, jsonify
-from navigationLockManager import NavigationLockManager
-from navigationConfigManager import (
+from navigation_lock_manager import NavigationLockManager
+from navigation_config_manager import (
     list_available_navigation_trees,
     load_navigation_tree_from_config,
     save_navigation_tree_to_config,
     validate_navigation_tree_structure
 )
-from navigationGitManager import (
+from navigation_git_manager import (
     pull_latest_navigation_config,
     commit_and_push_navigation_config
 )

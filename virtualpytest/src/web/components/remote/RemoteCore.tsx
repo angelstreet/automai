@@ -7,7 +7,7 @@ import {
 import { RemoteInterface } from './RemoteInterface';
 import { RemoteType } from '../../types/remote/remoteTypes';
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
-import { getRemoteLayout } from '../../../config/layoutConfig';
+import { getRemoteLayout } from '../config/layoutConfig';
 
 interface RemoteCoreProps {
   /** The type of remote device */

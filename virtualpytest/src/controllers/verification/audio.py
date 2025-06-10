@@ -14,7 +14,7 @@ import wave
 import numpy as np
 from typing import Dict, Any, Optional, Union
 from pathlib import Path
-from ..base_controllers import VerificationControllerInterface
+from ..base_controller import VerificationControllerInterface
 
 
 class AudioVerificationController(VerificationControllerInterface):

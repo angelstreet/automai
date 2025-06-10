@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { UINavigationNode as UINavigationNodeType } from '../../types/navigationTypes';
-import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../../config/validationColors';
+import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../config/validationColors';
 import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 

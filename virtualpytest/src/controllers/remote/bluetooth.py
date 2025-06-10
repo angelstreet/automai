@@ -11,7 +11,7 @@ import time
 import json
 import os
 from pathlib import Path
-from ..base_controllers import RemoteControllerInterface
+from ..base_controller import RemoteControllerInterface
 
 
 class BluetoothRemoteController(RemoteControllerInterface):

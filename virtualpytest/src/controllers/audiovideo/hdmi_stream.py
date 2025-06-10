@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 from datetime import datetime, timedelta
 import pytz
-from ..base_controllers import AVControllerInterface
+from ..base_controller import AVControllerInterface
 
 
 class HDMIStreamController(AVControllerInterface):

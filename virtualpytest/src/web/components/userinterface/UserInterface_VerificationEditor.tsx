@@ -30,7 +30,7 @@ import {
 } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/Navigation_NodeVerificationsList';
 import { styled } from '@mui/material/styles';
-import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../../../config/layoutConfig';
+import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../config/layoutConfig';
 
 // Import registration context
 import { useRegistration } from '../../contexts/RegistrationContext';

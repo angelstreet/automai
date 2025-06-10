@@ -11,11 +11,11 @@ import time
 import json
 import os
 from pathlib import Path
-from ..base_controllers import RemoteControllerInterface
+from ..base_controller import RemoteControllerInterface
 
 # Import ADB utilities
 try:
-    from utils.adbUtils import ADBUtils
+    from utils.adb_utils import ADBUtils
     ADB_AVAILABLE = True
 except ImportError:
     print("Warning: ADB utilities not available. ADB functionality will be limited.")

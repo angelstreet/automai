@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 from typing import Dict, Any, Optional, Union, Tuple
 from pathlib import Path
-from ..base_controllers import VerificationControllerInterface
+from ..base_controller import VerificationControllerInterface
 
 
 class VideoVerificationController(VerificationControllerInterface):

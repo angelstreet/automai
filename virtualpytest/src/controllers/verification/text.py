@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
-from ..base_controllers import VerificationControllerInterface
+from ..base_controller import VerificationControllerInterface
 from .image import apply_image_filter
 
 

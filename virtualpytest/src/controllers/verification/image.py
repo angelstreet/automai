@@ -14,7 +14,7 @@ import numpy as np
 import requests
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
-from ..base_controllers import VerificationControllerInterface
+from ..base_controller import VerificationControllerInterface
 
 
 def crop_reference_image(source_path, target_path, area, create_filtered_versions=True):

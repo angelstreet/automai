@@ -13,13 +13,14 @@ import requests
 import urllib.parse
 
 from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
-from deviceLockManager import (
+from device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
     is_device_locked_in_registry,
     get_device_lock_info,
     cleanup_expired_locks
 )
+from web.utils.device_lock_manager_utils import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
 
 # Create blueprint
 server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
@@ -45,10 +46,8 @@ def take_control():
                 'error': 'Missing device_id'
             }), 400
         
-        # Lock the device using deviceLockManager
+        # Lock the device using device_lock_manager_utils
         try:
-            from web.utils.deviceLockManager import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
-            
             # Try to acquire lock for the device
             lock_acquired = lock_device_in_registry(device_id, session_id)
             

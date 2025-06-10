@@ -1,5 +1,5 @@
 import { LayoutConfig, DeviceResolution } from '../types/screenEditorTypes';
-import { getVerificationEditorLayout } from '../../config/layoutConfig';
+import { getVerificationEditorLayout } from '../config/layoutConfig';
 
 /**
  * Creates layout configuration for compact view based on device model

@@ -228,7 +228,7 @@ def setup_controllers():
     """Setup VirtualPyTest controller system"""
     try:
         from controllers import ControllerFactory, CONTROLLER_REGISTRY, create_device_controllers
-        from controllers.base_controllers import (
+        from controllers.base_controller import (
             RemoteControllerInterface, 
             AVControllerInterface, 
             VerificationControllerInterface,

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import time
 import os
 import subprocess
-from ..base_controllers import PowerControllerInterface
+from ..base_controller import PowerControllerInterface
 
 
 class USBPowerController(PowerControllerInterface):

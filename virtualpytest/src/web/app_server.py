@@ -45,8 +45,8 @@ print(f"[@server:__init__] Import paths setup completed")
 import time
 import atexit
 
-# Try direct import from appUtils instead of utils.appUtils
-from appUtils import (
+# Try direct import from app_utils instead of utils.app_utils
+from app_utils import (
     load_environment_variables,
     kill_process_on_port,
     setup_flask_app,
@@ -58,7 +58,7 @@ from appUtils import (
     DEFAULT_USER_ID
 )
 
-from serverUtils import (
+from server_utils import (
     initialize_server_globals,
     cleanup_server_resources
 )

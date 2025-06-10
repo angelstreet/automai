@@ -11,7 +11,7 @@ import { AndroidMobileCore } from './AndroidMobileCore';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 import { AndroidElement } from '../../types/remote/types';
 import { BaseConnectionConfig } from '../../types/remote/remoteTypes';
-import { getRemoteLayout } from '../../../config/layoutConfig';
+import { getRemoteLayout } from '../config/layoutConfig';
 
 export function CompactAndroidMobile({
   onDisconnectComplete,

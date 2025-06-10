@@ -10,7 +10,7 @@ import {
   type ValidationStatus,
   type NodeType,
   type HandlePosition
-} from '../../config/validationColors';
+} from '../config/validationColors';
 
 interface NodeColorResult {
   background: string;

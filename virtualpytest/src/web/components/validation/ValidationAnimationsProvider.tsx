@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { getAnimationCSS } from '../../../config/validationColors';
+import { getAnimationCSS } from '../config/validationColors';
 
 export const ValidationAnimationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
