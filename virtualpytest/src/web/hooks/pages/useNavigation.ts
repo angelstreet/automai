@@ -155,60 +155,7 @@ export const useConnectionRules = () => {
 
 
 
-export const useNavigationConfig = (props: any) => {
-  const loadFromConfig = useCallback((treeName: string) => {
-    console.log(`Load from config: ${treeName}`);
-  }, []);
-
-  const saveToConfig = useCallback((treeName: string) => {
-    console.log(`Save to config: ${treeName}`);
-  }, []);
-
-  const listAvailableTrees = useCallback(() => {
-    console.log("List available trees");
-    return [];
-  }, []);
-
-  const createEmptyTree = useCallback(() => {
-    console.log("Create empty tree config");
-  }, []);
-
-  // Lock management
-  const isLocked = false;
-  const lockInfo = null;
-  const sessionId = "dummy-session-id";
-
-  const lockNavigationTree = useCallback((treeName: string) => {
-    console.log(`Lock navigation tree: ${treeName}`);
-  }, []);
-
-  const unlockNavigationTree = useCallback((treeName: string) => {
-    console.log(`Unlock navigation tree: ${treeName}`);
-  }, []);
-
-  const checkTreeLockStatus = useCallback((treeName: string) => {
-    console.log(`Check tree lock status: ${treeName}`);
-  }, []);
-
-  const setupAutoUnlock = useCallback((treeName: string) => {
-    console.log("Setup auto unlock for tree:", treeName);
-    return () => {}; // Return cleanup function
-  }, []);
-
-  return {
-    loadFromConfig,
-    saveToConfig,
-    listAvailableTrees,
-    createEmptyTree,
-    isLocked,
-    lockInfo,
-    sessionId,
-    lockNavigationTree,
-    unlockNavigationTree,
-    checkTreeLockStatus,
-    setupAutoUnlock
-  };
-};
+// useNavigationConfig removed - use the real one from '../navigation/useNavigationConfig'
 
 // Main navigation editor hook is now in Navigation_Editor.ts
 // Import from there if needed:

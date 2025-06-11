@@ -16,9 +16,11 @@ import { UINavigationNode, UINavigationEdge, NavigationTreeData, NodeForm, EdgeF
 import { 
   useNavigationState,
   useConnectionRules,
-  useNavigationConfig,
   useNodeEdgeManagement 
 } from './useNavigation';
+
+// Import the real navigation config hook
+import { useNavigationConfig } from '../navigation/useNavigationConfig';
 
 // Import connection result type
 import { ConnectionResult } from '../navigation/useConnectionRules';
@@ -96,6 +98,7 @@ export const useNavigationEditor = () => {
     setSaveError: navigationState.setSaveError,
     setSaveSuccess: navigationState.setSaveSuccess,
     setIsSaving: navigationState.setIsSaving,
+    setUserInterface: navigationState.setUserInterface,
     nodes: navigationState.nodes,
     edges: navigationState.edges,
     isSaving: navigationState.isSaving,

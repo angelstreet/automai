@@ -94,6 +94,13 @@ def get_navigation_tree(userinterface_name):
                 'error': f'Navigation tree not found: {userinterface_name}'
             }), 404
         
+        # Extract userInterface metadata from tree_data if it exists
+        userinterface = tree_data.get('userInterface', None)
+        if userinterface:
+            print(f"[@route:navigation_config:get_navigation_tree] Found userInterface: {userinterface.get('name')} with models: {userinterface.get('models', [])}")
+        else:
+            print(f"[@route:navigation_config:get_navigation_tree] No userInterface metadata found in tree: {userinterface_name}")
+        
         # Get lock information
         lock_info = lock_manager.get_lock_info(userinterface_name)
         
@@ -103,6 +110,7 @@ def get_navigation_tree(userinterface_name):
             'success': True,
             'tree_data': tree_data,
             'tree_name': userinterface_name,
+            'userinterface': userinterface,
             'is_locked': lock_info is not None,
             'lock_info': lock_info
         })

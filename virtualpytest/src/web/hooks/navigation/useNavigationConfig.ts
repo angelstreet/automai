@@ -21,6 +21,7 @@ interface NavigationConfigState {
   // allNodes/allEdges removed - using single source of truth
   isSaving: boolean;
   apiCall: (endpoint: string, options?: RequestInit) => Promise<any>;
+  setUserInterface: (userInterface: any | null) => void;
 }
 
 export const useNavigationConfig = (state: NavigationConfigState) => {
@@ -108,6 +109,15 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         state.setNodes(nodes);
         state.setEdges(edges);
         // setAllNodes/setAllEdges removed - using single source of truth
+        
+        // Set userInterface data from response if available
+        if (response.userinterface) {
+          console.log(`[@hook:useNavigationConfig:loadFromConfig] Setting userInterface: ${response.userinterface.name} with models: ${response.userinterface.models?.join(', ') || 'none'}`);
+          state.setUserInterface(response.userinterface);
+        } else {
+          console.log(`[@hook:useNavigationConfig:loadFromConfig] No userInterface data found in response`);
+          state.setUserInterface(null);
+        }
         
         // Set initial state for change tracking
         state.setInitialState({ nodes: [...nodes], edges: [...edges] });

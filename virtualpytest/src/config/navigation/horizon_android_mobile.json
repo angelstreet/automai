@@ -1,0 +1,915 @@
+{
+    "userInterface": {
+        "name": "horizon_android_mobile",
+        "models": ["Android Mobile"],
+        "min_version": "",
+        "max_version": ""
+    },
+    "edges": [
+      {
+        "id": "385b44d1-983a-4528-8f61-00adbee3da3a",
+        "data": {
+          "to": "home",
+          "from": "ENTRY",
+          "action": {
+            "id": "launch_app",
+            "label": "Launch App",
+            "params": {
+              "package": "com.lgi.upcch"
+            },
+            "command": "launch_app",
+            "inputValue": "com.lgi.upcch",
+            "description": "Launch a specific app by package name",
+            "requiresInput": true
+          },
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Home Tab"
+              },
+              "command": "click_element",
+              "waitTime": 1000,
+              "inputValue": "Home Tab",
+              "requiresInput": true,
+              "last_run_result": [
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Go to home",
+          "retryActions": [
+            {
+              "id": "close_app",
+              "label": "Close App",
+              "params": {
+                "package": ""
+              },
+              "command": "close_app",
+              "waitTime": 5000,
+              "inputValue": "com.lgi.upcch",
+              "requiresInput": true,
+              "last_run_result": [
+                false,
+                false
+              ]
+            },
+            {
+              "id": "launch_app",
+              "label": "Launch App",
+              "params": {
+                "package": "com.lgi.upcch"
+              },
+              "command": "launch_app",
+              "waitTime": 5000,
+              "inputValue": "com.lgi.upcch",
+              "requiresInput": true
+            },
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Home Tab"
+              },
+              "command": "click_element",
+              "waitTime": 2000,
+              "inputValue": "Home Tab",
+              "requiresInput": true,
+              "last_run_result": [
+                false,
+                false,
+                false,
+                false
+              ]
+            }
+          ],
+          "finalWaitTime": 500
+        },
+        "type": "smoothstep",
+        "source": "3059c47f-f8ef-4a5e-a3c7-2e25ea10fce2",
+        "target": "node-1",
+        "sourceHandle": "entry-source",
+        "targetHandle": "left-target"
+      },
+      {
+        "id": "node-1-node-1748723779677",
+        "data": {
+          "to": "home_tvguide",
+          "from": "home",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "TV Guide Tab"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "TV Guide Tab",
+              "requiresInput": true,
+              "last_run_result": [
+                true,
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home to guidetv",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:05:14.915Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1",
+        "target": "node-1748723779677",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1748723779677-node-1",
+        "data": {
+          "to": "home",
+          "from": "home_tvguide",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Home"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Home",
+              "requiresInput": true,
+              "last_run_result": [
+                true,
+                false,
+                false,
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from guidetv to home",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:06:00.226Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1748723779677",
+        "target": "node-1",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      },
+      {
+        "id": "node-1748723779677-node-1748862182738",
+        "data": {
+          "to": "tvguide_livetv",
+          "from": "home_tvguide",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "LIVE TV Tab"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "LIVE TV Tab",
+              "requiresInput": true,
+              "last_run_result": [
+                true,
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from guidetv to tvguide_livetv",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:05:23.497Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1748723779677",
+        "target": "node-1748862182738",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1748862182738-node-1748723779677",
+        "data": {
+          "to": "home_tvguide",
+          "from": "tvguide_livetv",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "TV GUIDE TAB"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "TV GUIDE TAB",
+              "requiresInput": true,
+              "last_run_result": [
+                true,
+                false
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from tvguide_livetv to guhome_tvguideidetv",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:05:51.161Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1748862182738",
+        "target": "node-1748723779677",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      },
+      {
+        "id": "node-1-node-1749014380799",
+        "data": {
+          "to": "home_replay",
+          "from": "home",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Replay Tab"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Replay Tab",
+              "requiresInput": true
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home to home_replay",
+          "retryActions": [],
+          "finalWaitTime": 0
+        },
+        "type": "uiNavigation",
+        "source": "node-1",
+        "target": "node-1749014380799",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1749014380799-node-1",
+        "data": {
+          "to": "home",
+          "from": "home_replay",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Home"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Home",
+              "requiresInput": true,
+              "last_run_result": [
+                true,
+                true,
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home_replay to home",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:04:32.018Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1749014380799",
+        "target": "node-1",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      },
+      {
+        "id": "node-1-node-1749014425463",
+        "data": {
+          "to": "home_movies_series",
+          "from": "home",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Movies &amp; Series Tab"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Movies &amp; Series Tab",
+              "requiresInput": true
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home to home_movies_series",
+          "retryActions": [],
+          "finalWaitTime": 0
+        },
+        "type": "uiNavigation",
+        "source": "node-1",
+        "target": "node-1749014425463",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1-node-1749014440260",
+        "data": {
+          "to": "home_saved",
+          "from": "home",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Saved"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Saved",
+              "requiresInput": true
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home to home_saved",
+          "retryActions": [],
+          "finalWaitTime": 0
+        },
+        "type": "uiNavigation",
+        "source": "node-1",
+        "target": "node-1749014440260",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1749014425463-node-1",
+        "data": {
+          "to": "home",
+          "from": "home_movies_series",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Home"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Home",
+              "requiresInput": true,
+              "last_run_result": [
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home_movies_series to home",
+          "retryActions": [],
+          "finalWaitTime": 0
+        },
+        "type": "uiNavigation",
+        "source": "node-1749014425463",
+        "target": "node-1",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      },
+      {
+        "id": "node-1749014440260-node-1",
+        "data": {
+          "to": "home",
+          "from": "home_saved",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "Movies &amp; Series Tab"
+              },
+              "command": "click_element",
+              "waitTime": 500,
+              "inputValue": "Movies &amp; Series Tab",
+              "requiresInput": true
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from home_saved to home",
+          "retryActions": [],
+          "finalWaitTime": 0
+        },
+        "type": "uiNavigation",
+        "source": "node-1749014440260",
+        "target": "node-1",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      },
+      {
+        "id": "node-1748862182738-node-1749036265480",
+        "data": {
+          "to": "live",
+          "from": "tvguide_livetv",
+          "actions": [
+            {
+              "id": "click_element",
+              "label": "Click Element",
+              "params": {
+                "element_id": "BBC ONE | SRF 1 | RTS 1 | RSI LA 1"
+              },
+              "command": "click_element",
+              "waitTime": 1000,
+              "inputValue": "BBC ONE | SRF 1 | RTS 1 | RSI LA 1",
+              "requiresInput": true,
+              "last_run_result": [
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from tvguide_livetv to live",
+          "retryActions": [],
+          "finalWaitTime": 5000
+        },
+        "type": "uiNavigation",
+        "source": "node-1748862182738",
+        "target": "node-1749036265480",
+        "sourceHandle": "bottom-right-menu-source",
+        "targetHandle": "top-right-menu-target"
+      },
+      {
+        "id": "node-1749036265480-node-1748862182738",
+        "data": {
+          "to": "tvguide_livetv",
+          "from": "live",
+          "actions": [
+            {
+              "id": "back",
+              "label": "Back",
+              "params": {},
+              "command": "BACK",
+              "waitTime": 500,
+              "inputValue": "",
+              "last_run_result": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ]
+            }
+          ],
+          "edgeType": "vertical",
+          "description": "Connection from live to tvguide_livetv",
+          "retryActions": [],
+          "finalWaitTime": 0,
+          "last_validation_timestamp": "2025-06-05T13:05:44.100Z"
+        },
+        "type": "uiNavigation",
+        "source": "node-1749036265480",
+        "target": "node-1748862182738",
+        "sourceHandle": "top-left-menu-source",
+        "targetHandle": "bottom-left-menu-target"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "3059c47f-f8ef-4a5e-a3c7-2e25ea10fce2",
+        "data": {
+          "type": "entry",
+          "depth": -1,
+          "label": "ENTRY",
+          "parent": [],
+          "description": "System entry point"
+        },
+        "type": "uiScreen",
+        "width": 40,
+        "height": 40,
+        "position": {
+          "x": 150,
+          "y": 50
+        }
+      },
+      {
+        "id": "node-1",
+        "data": {
+          "type": "menu",
+          "depth": 0,
+          "label": "home",
+          "parent": [
+            ""
+          ],
+          "is_root": true,
+          "menu_type": "main",
+          "screenshot": "home.jpg",
+          "description": "root node",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "Home Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:25:50.474Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": false,
+        "position": {
+          "x": 255,
+          "y": 15
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 255,
+          "y": 15
+        }
+      },
+      {
+        "id": "node-1748723779677",
+        "data": {
+          "type": "menu",
+          "depth": 2,
+          "label": "home_tvguide",
+          "parent": [
+            "",
+            "node-1"
+          ],
+          "menu_type": "main",
+          "screenshot": "home_tvguide.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "TV GUIDE Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:25:41.770Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": false,
+        "position": {
+          "x": -120,
+          "y": 270
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 390,
+          "y": 210
+        }
+      },
+      {
+        "id": "node-1748862182738",
+        "data": {
+          "type": "menu",
+          "depth": 3,
+          "label": "tvguide_livetv",
+          "parent": [
+            "",
+            "node-1",
+            "node-1748723779677"
+          ],
+          "is_root": false,
+          "menu_type": "main",
+          "screenshot": "tvguide_livetv.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "LIVE TV Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:25:34.028Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": true,
+        "position": {
+          "x": -120,
+          "y": 480
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": 375,
+          "y": 480
+        }
+      },
+      {
+        "id": "node-1749014380799",
+        "data": {
+          "type": "menu",
+          "depth": 2,
+          "label": "home_replay",
+          "parent": [
+            "",
+            "node-1"
+          ],
+          "is_root": false,
+          "menu_type": "main",
+          "screenshot": "home_replay.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "Replay Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:24:17.304Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": true,
+        "position": {
+          "x": 105,
+          "y": 270
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": -45,
+          "y": 240
+        }
+      },
+      {
+        "id": "node-1749014425463",
+        "data": {
+          "type": "menu",
+          "depth": 2,
+          "label": "home_movies_series",
+          "parent": [
+            "",
+            "node-1"
+          ],
+          "is_root": false,
+          "menu_type": "main",
+          "screenshot": "home_movies_series.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "Movies &amp; Series Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:24:33.991Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": true,
+        "position": {
+          "x": 330,
+          "y": 270
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": 165,
+          "y": 240
+        }
+      },
+      {
+        "id": "node-1749014440260",
+        "data": {
+          "type": "menu",
+          "depth": 2,
+          "label": "home_saved",
+          "parent": [
+            "",
+            "node-1"
+          ],
+          "is_root": false,
+          "menu_type": "main",
+          "screenshot": "home_saved.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "Saved Tab currently selected",
+              "description": "Wait for UI element to appear using ADB ",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:24:51.102Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": true,
+        "position": {
+          "x": 555,
+          "y": 270
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": 735,
+          "y": 270
+        }
+      },
+      {
+        "id": "node-1749036265480",
+        "data": {
+          "type": "menu",
+          "depth": 4,
+          "label": "live",
+          "parent": [
+            "",
+            "node-1",
+            "node-1748723779677",
+            "node-1748862182738"
+          ],
+          "is_root": false,
+          "menu_type": "main",
+          "screenshot": "live.jpg",
+          "description": "",
+          "verifications": [
+            {
+              "id": "wait_for_element_appear",
+              "label": "Wait for Element to Appear",
+              "params": {
+                "timeout": 10
+              },
+              "command": "waitForElementToAppear",
+              "inputLabel": "Search Term",
+              "inputValue": "NOW",
+              "description": "Wait for UI element to appear using ADB",
+              "requiresInput": true,
+              "controller_type": "adb",
+              "last_run_result": [
+                true,
+                true,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+              ],
+              "inputPlaceholder": "HOME"
+            }
+          ],
+          "last_validation_timestamp": "2025-06-06T09:25:28.884Z"
+        },
+        "type": "uiMenu",
+        "width": 200,
+        "height": 180,
+        "dragging": true,
+        "position": {
+          "x": -120,
+          "y": 690
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": 375,
+          "y": 690
+        }
+      }
+    ]
+  }
