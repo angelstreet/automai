@@ -18,10 +18,10 @@ interface ValidationProgressClientProps {
   treeId: string;
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
-  onSaveToDatabase?: () => void; // Add callback to trigger auto-save
+
 }
 
-const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ treeId, onUpdateEdge, onUpdateNode, onSaveToDatabase }) => {
+const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ treeId, onUpdateEdge, onUpdateNode }) => {
   const validation = useValidationUI(treeId);
   const { isValidating, progress, showProgress } = validation;
   const { resetForNewValidation } = useValidationColors(treeId);
@@ -221,19 +221,12 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
     // Update the ref for next time
     prevIsValidatingRef.current = isValidating;
     
-    // Check if validation just completed (was validating, now not validating)
-    // AND we haven't already triggered auto-save for this session
-    if (wasValidating && !isNowValidating && onSaveToDatabase && !autoSaveTriggeredRef.current) {
-      console.log('[@component:ValidationProgressClient] Validation just completed - auto-saving confidence updates to database (ONCE)');
-      
-      // Mark that we've triggered auto-save for this session
+    // Auto-save removed - validation completes without database save
+    if (wasValidating && !isNowValidating && !autoSaveTriggeredRef.current) {
+      console.log('[@component:ValidationProgressClient] Validation completed');
       autoSaveTriggeredRef.current = true;
-      
-      // Trigger save immediately - no delay to prevent session cleanup issues
-      onSaveToDatabase();
-      console.log('[@component:ValidationProgressClient] Auto-save triggered immediately after validation completion');
     }
-  }, [isValidating, onSaveToDatabase]);
+  }, [isValidating]);
 
   if (!showProgress || !isValidating) return null;
 

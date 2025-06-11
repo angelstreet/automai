@@ -62,9 +62,9 @@ interface NodeEditDialogProps {
   nodeForm: NodeForm;
   nodes: UINavigationNode[];
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
-  onSubmit: () => void;
+  onSubmit: (formData: any) => void;
   onClose: () => void;
-  onResetNode?: () => void;
+  onResetNode?: (nodeId: string) => void;
   // Verification-related props
   verificationControllerTypes?: string[];
   isVerificationActive?: boolean;
@@ -611,7 +611,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         <Button onClick={onClose}>Cancel</Button>
         {onResetNode && (
           <Button 
-            onClick={onResetNode}
+            onClick={() => onResetNode(nodeForm.id)}
             variant="outlined"
             color="warning"
           >

@@ -5,7 +5,7 @@ import {
   useEdgesState, 
   ReactFlowInstance
 } from 'reactflow';
-import { UINavigationNode, UINavigationEdge, NodeForm, EdgeForm } from '../../types/navigationTypes';
+import { UINavigationNode, UINavigationEdge, UINavigationNodeData, UINavigationEdgeData, NodeForm, EdgeForm } from '../../types/pages/Navigation_Types';
 
 export const useNavigationState = () => {
   const { treeId, treeName, interfaceId } = useParams<{ treeId?: string, treeName: string, interfaceId?: string }>();
@@ -33,14 +33,10 @@ export const useNavigationState = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   
-  // History state
-  const [history, setHistory] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] }[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  // History state removed - using page reload for cancel changes
   const [initialState, setInitialState] = useState<{ nodes: UINavigationNode[], edges: UINavigationEdge[] } | null>(null);
 
-  // View state for single-level navigation
-  const [allNodes, setAllNodes] = useState<UINavigationNode[]>([]);
-  const [allEdges, setAllEdges] = useState<UINavigationEdge[]>([]);
+  // Dual arrays removed - using single source of truth
   const [currentViewRootId, setCurrentViewRootId] = useState<string | null>(null);
   const [viewPath, setViewPath] = useState<{id: string, name: string}[]>([]);
 
@@ -71,10 +67,7 @@ export const useNavigationState = () => {
   const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(5);
   const [availableFocusNodes, setAvailableFocusNodes] = useState<{id: string, label: string, depth: number}[]>([]);
 
-  // Progressive loading state
-  const [loadedDepth, setLoadedDepth] = useState(2);
-  const [maxDepth, setMaxDepth] = useState(0);
-  const [isProgressiveLoading, setIsProgressiveLoading] = useState(false);
+  // Progressive loading removed - loading all nodes at once
 
   // React Flow refs
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -124,19 +117,11 @@ export const useNavigationState = () => {
     setEdges,
     onEdgesChange,
     
-    // History state
-    history,
-    setHistory,
-    historyIndex,
-    setHistoryIndex,
+    // History state removed - using page reload for cancel changes
     initialState,
     setInitialState,
     
-    // View state
-    allNodes,
-    setAllNodes,
-    allEdges,
-    setAllEdges,
+    // Dual arrays removed - using single source of truth
     currentViewRootId,
     setCurrentViewRootId,
     viewPath,
@@ -172,13 +157,7 @@ export const useNavigationState = () => {
     availableFocusNodes,
     setAvailableFocusNodes,
     
-    // Progressive loading state
-    loadedDepth,
-    setLoadedDepth,
-    maxDepth,
-    setMaxDepth,
-    isProgressiveLoading,
-    setIsProgressiveLoading,
+    // Progressive loading removed - loading all nodes at once
     
     // React Flow refs
     reactFlowWrapper,

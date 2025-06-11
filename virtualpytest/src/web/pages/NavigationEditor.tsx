@@ -35,21 +35,17 @@ import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSele
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
 
-// Import NEW generic remote components instead of device-specific ones
-import { CompactRemote } from '../components/remote/CompactRemote';
-import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile';
-
-// Import ScreenDefinitionEditor
-import { ScreenDefinitionEditor } from '../components/userinterface/UserInterface_ScreenDefinitionEditor';
-
 // Import device utilities
-import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/device/deviceRemoteMappingUtils';
+import { getDeviceRemoteConfig } from '../utils/device/deviceRemoteMappingUtils';
 
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
 // Import NavigationEdgeComponent
 import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
+
+// Import device control component
+import { NavigationEditorDeviceControl, createDeviceControlHandlers } from './NavigationEditorDeviceControl';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -117,22 +113,6 @@ const NavigationEditorContent: React.FC = () => {
   const hasAVCapabilities = useMemo(() => {
     return selectedHost?.controller_configs?.av?.parameters != null;
   }, [selectedHost]);
-
-  // Memoize connection configs to prevent object recreation
-  const androidConnectionConfig = useMemo(() => {
-    if (!selectedHost?.controller_configs?.remote) return null;
-    return extractConnectionConfigForAndroid(selectedHost.controller_configs.remote);
-  }, [selectedHost?.controller_configs?.remote]);
-
-  const irConnectionConfig = useMemo(() => {
-    if (!selectedHost?.controller_configs?.remote) return null;
-    return extractConnectionConfigForIR(selectedHost.controller_configs.remote);
-  }, [selectedHost?.controller_configs?.remote]);
-
-  const bluetoothConnectionConfig = useMemo(() => {
-    if (!selectedHost?.controller_configs?.remote) return null;
-    return extractConnectionConfigForBluetooth(selectedHost.controller_configs.remote);
-  }, [selectedHost?.controller_configs?.remote]);
 
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
@@ -202,9 +182,7 @@ const NavigationEditorContent: React.FC = () => {
     isDiscardDialogOpen,
     userInterface,
     
-    // History state
-    history,
-    historyIndex,
+    // History state removed - using page reload for cancel changes
     
     // View state for single-level navigation
     viewPath,
@@ -236,7 +214,6 @@ const NavigationEditorContent: React.FC = () => {
     onPaneClick,
     
     // Actions
-    saveToDatabase,
     loadFromConfig,
     saveToConfig,
     isLocked,
@@ -254,8 +231,7 @@ const NavigationEditorContent: React.FC = () => {
     performDiscardChanges,
     navigateToTreeLevel,
     closeSelectionPanel,
-    undo,
-    redo,
+    // undo/redo removed - using page reload for cancel changes
     fitView,
     deleteSelected,
     resetNode,
@@ -264,7 +240,6 @@ const NavigationEditorContent: React.FC = () => {
     setNodes,
     setSelectedNode,
     setReactFlowInstance,
-    setAllNodes,
     setHasUnsavedChanges,
     setEdges,
     setSelectedEdge,
@@ -369,72 +344,34 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [isRemotePanelOpen, isControlActive]);
 
-  // Handle taking screenshot using AV controller proxy
-  const handleTakeScreenshot = useCallback(async () => {
-    if (!selectedHost || !isControlActive || !selectedNode) {
-      console.log('[@component:NavigationEditor] Cannot take screenshot: no device selected, not in control, or no node selected');
-      return;
-    }
-
-    try {
-      // Get node name from selected node
-      const nodeName = selectedNode.data.label || 'unknown';
-      
-      // Get parent name from selected node
-      let parentName = 'root';
-      if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
-        // Find the parent node by ID
-        const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1]; // Get the immediate parent
-        const parentNode = nodes.find(node => node.id === parentId);
-        if (parentNode) {
-          parentName = parentNode.data.label || 'unknown';
-        }
-      }
-
-      console.log(`[@component:NavigationEditor] Taking screenshot for device: ${selectedHost.name}, parent: ${parentName}, node: ${nodeName}`);
-      
-      // Use AV controller proxy instead of direct HTTP call
-      const avControllerProxy = selectedHost?.controllerProxies?.av;
-      if (!avControllerProxy) {
-        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
-      }
-      
-      console.log('[@component:NavigationEditor] AV controller proxy found, calling take_screenshot...');
-      
-      // Call take_screenshot on the AV controller proxy
-      const screenshotUrl = await avControllerProxy.take_screenshot();
-      
-      if (screenshotUrl) {
-        console.log('[@component:NavigationEditor] Screenshot taken successfully:', screenshotUrl);
-        
-        // Create updated node with screenshot
-        const updatedNode = {
-          ...selectedNode,
-          data: {
-            ...selectedNode.data,
-            screenshot: `data:image/png;base64,${screenshotUrl}` // Assuming base64 format
-          }
-        };
-        
-        // Update nodes
-        const updateNodeFunction = (nodes: any[]) => 
-          nodes.map(node => 
-            node.id === selectedNode.id ? updatedNode : node
-          );
-        
-        setNodes(updateNodeFunction);
-        setAllNodes(updateNodeFunction);
-        setSelectedNode(updatedNode);
-        setHasUnsavedChanges(true);
-        
-        console.log(`[@component:NavigationEditor] Screenshot captured and node updated`);
-      } else {
-        console.error('[@component:NavigationEditor] Screenshot failed - no URL returned');
-      }
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Error taking screenshot:', error);
-    }
-  }, [selectedHost, isControlActive, selectedNode, nodes, setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges]);
+  // Create device control handlers using the extracted utility
+  const deviceControlHandlers = useMemo(() => {
+    return createDeviceControlHandlers(
+      selectedHost,
+      isControlActive,
+      selectedNode,
+      nodes,
+      setNodes,
+      setSelectedNode,
+      setHasUnsavedChanges,
+      isVerificationActive,
+      verificationPassCondition,
+      setVerificationResults,
+      setLastVerifiedNodeId
+    );
+  }, [
+    selectedHost,
+    isControlActive,
+    selectedNode,
+    nodes,
+    setNodes,
+    setSelectedNode,
+    setHasUnsavedChanges,
+    isVerificationActive,
+    verificationPassCondition,
+    setVerificationResults,
+    setLastVerifiedNodeId
+  ]);
 
   // Handle verification execution using verification controller proxy
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
@@ -586,7 +523,6 @@ const NavigationEditorContent: React.FC = () => {
       
       // Update both filtered nodes and allNodes arrays
       setNodes(updateNodeFunction);
-      setAllNodes(updateNodeFunction);
       
       // Update selected node if it's the one being updated
       if (selectedNode && selectedNode.id === nodeId) {
@@ -604,7 +540,6 @@ const NavigationEditorContent: React.FC = () => {
       
       // Update both filtered nodes and allNodes arrays
       setNodes(updateNodeFunction);
-      setAllNodes(updateNodeFunction);
       
       // Update selected node if it's the one being updated
       if (selectedNode && selectedNode.id === nodeId) {
@@ -619,7 +554,7 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges(true);
     
     console.log(`[@component:NavigationEditor] Updated node ${nodeId} and marked tree as having unsaved changes`);
-  }, [setNodes, setAllNodes, setSelectedNode, setHasUnsavedChanges, selectedNode]);
+  }, [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode]);
 
   // Handle edge updates - callback for EdgeSelectionPanel
   const handleUpdateEdge = useCallback((edgeId: string, updatedData: any) => {
@@ -792,8 +727,7 @@ const NavigationEditorContent: React.FC = () => {
         visibleNodes={nodes.length}
         isLoading={isLoading}
         error={error}
-        historyIndex={historyIndex}
-        historyLength={history.length}
+        // History props removed - using page reload for cancel changes
         isLocked={isLocked}
         lockInfo={lockInfo}
         sessionId={sessionId}
@@ -808,9 +742,8 @@ const NavigationEditorContent: React.FC = () => {
         onNavigateToParentView={navigateToParentView}
         onAddNewNode={addNewNode}
         onFitView={fitView}
-        onUndo={undo}
-        onRedo={redo}
-        onSaveToDatabase={saveToDatabase}
+        // onUndo/onRedo removed - using page reload for cancel changes
+
         onSaveToConfig={() => saveToConfig(currentTreeName)}
         onLockTree={() => lockNavigationTree(currentTreeName)}
         onUnlockTree={() => unlockNavigationTree(currentTreeName)}
@@ -932,66 +865,29 @@ const NavigationEditorContent: React.FC = () => {
               </ReactFlow>
             </div>
 
-            {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
-            {selectedHost && hasAVCapabilities && isControlActive && (
-              <ScreenDefinitionEditor
-                selectedHostDevice={selectedHost}
-                autoConnect={true}
-                onDisconnectComplete={handleReleaseControl}
-              />
-            )}
-
-            {/* Verification Results Display - Show when there are verification results */}
-            {(() => {
-              const shouldShow = verificationResults.length > 0 && lastVerifiedNodeId;
-              console.log(`[@component:NavigationEditor] Verification display check: results.length=${verificationResults.length}, lastVerifiedNodeId=${lastVerifiedNodeId}, shouldShow=${shouldShow}`);
-              if (shouldShow) {
-                console.log(`[@component:NavigationEditor] Rendering verification results for node:`, nodes.find(n => n.id === lastVerifiedNodeId)?.data.label);
-              }
-              return shouldShow;
-            })() && (
-              <Box sx={{
-                position: 'absolute',
-                bottom: 16,
-                left: 16,
-                right: selectedNode || selectedEdge ? '220px' : '16px', // Account for selection panel
-                maxWidth: '800px',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                p: 2,
-                zIndex: 900,
-                maxHeight: '300px',
-                overflow: 'auto',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1 }}>
-                    Verification Results - Node: {nodes.find(n => n.id === lastVerifiedNodeId)?.data.label || lastVerifiedNodeId}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setVerificationResults([]);
-                      setLastVerifiedNodeId(null);
-                    }}
-                    sx={{ p: 0.25 }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                
-                <VerificationResultsDisplay
-                  testResults={verificationResults}
-                  verifications={nodes.find(n => n.id === lastVerifiedNodeId)?.data.verifications || []}
-                  passCondition={verificationPassCondition}
-                  onPassConditionChange={setVerificationPassCondition}
-                  showPassConditionSelector={true}
-                  compact={false}
-                />
-              </Box>
-            )}
+            {/* Device Control Component - Handles all device/remote/verification logic */}
+            <NavigationEditorDeviceControl
+              selectedHost={selectedHost}
+              isControlActive={isControlActive}
+              isRemotePanelOpen={isRemotePanelOpen}
+              isVerificationActive={isVerificationActive}
+              verificationControllerStatus={verificationControllerStatus}
+              verificationResults={verificationResults}
+              verificationPassCondition={verificationPassCondition}
+              lastVerifiedNodeId={lastVerifiedNodeId}
+              nodes={nodes}
+              selectedNode={selectedNode}
+              selectedEdge={selectedEdge}
+              userInterface={userInterface}
+              onReleaseControl={handleReleaseControl}
+              onUpdateNode={handleUpdateNode}
+              onSetVerificationResults={setVerificationResults}
+              onSetLastVerifiedNodeId={setLastVerifiedNodeId}
+              onSetVerificationPassCondition={setVerificationPassCondition}
+              onSetNodes={setNodes}
+              onSetSelectedNode={setSelectedNode}
+              onSetHasUnsavedChanges={setHasUnsavedChanges}
+            />
 
             {/* Selection Info Panel */}
             {(selectedNode || selectedEdge) ? (
@@ -1009,10 +905,10 @@ const NavigationEditorContent: React.FC = () => {
                     onReset={resetNode}
                     isControlActive={isControlActive}
                     selectedDevice={selectedHost?.name || null}
-                    onTakeScreenshot={handleTakeScreenshot}
+                    onTakeScreenshot={deviceControlHandlers.handleTakeScreenshot}
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
-                    onVerification={handleVerification}
+                    onVerification={deviceControlHandlers.handleVerification}
                     isVerificationActive={isVerificationActive}
                     verificationControllerStatus={verificationControllerStatus}
                     onUpdateNode={handleUpdateNode}
@@ -1038,107 +934,7 @@ const NavigationEditorContent: React.FC = () => {
           </>
         </Box>
 
-        {/* Remote Control Panel - Only show if device has remote capabilities */}
-        {isRemotePanelOpen && remoteConfig && (
-          <>
-            {/* Android Mobile uses compact component instead of modal */}
-            {remoteConfig.type === 'android_mobile' ? (
-              <Box sx={{
-                position: 'fixed',
-                right: 0,
-                top: '130px',
-                width: '320px',
-                height: 'calc(100vh - 130px)',
-                bgcolor: 'background.paper',
-                borderLeft: '1px solid',
-                borderColor: 'divider',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
-              }}>
-                <Box sx={{ 
-                  p: 1, 
-                  borderBottom: '1px solid', 
-                  borderColor: 'divider',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="h6" component="div">
-                    Android Mobile Remote
-                  </Typography>
-                </Box>
-                
-                <CompactAndroidMobile
-                  onDisconnectComplete={handleReleaseControl}
-                />
-              </Box>
-            ) : (
-              <Box sx={{
-                position: 'fixed',
-                right: 0,
-                top: '130px',
-                width: '320px',
-                height: 'calc(100vh - 130px)',
-                bgcolor: 'background.paper',
-                borderLeft: '1px solid',
-                borderColor: 'divider',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)'
-              }}>
-                <Box sx={{ 
-                  p: 0, 
-                  borderBottom: '1px solid', 
-                  borderColor: 'divider',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="h6" component="div">
-                    {remoteConfig.type === 'android_tv' ? 'Android TV Remote' :
-                     remoteConfig.type === 'ir_remote' ? 'IR Remote' :
-                     remoteConfig.type === 'bluetooth_remote' ? 'Bluetooth Remote' :
-                     'Remote Control'}
-                  </Typography>
-                </Box>
-                
-                {/* Remote Panel Content - Dynamic based on device type */}
-                {remoteConfig.type === 'android_tv' ? (
-                  <CompactRemote
-                    remoteType="android-tv"
-                    connectionConfig={androidConnectionConfig || undefined}
-                    autoConnect={isControlActive}
-                    showScreenshot={false}
-                    onDisconnectComplete={handleReleaseControl}
-                  />
-                ) : remoteConfig.type === 'ir_remote' ? (
-                  <CompactRemote
-                    remoteType="ir"
-                    connectionConfig={(irConnectionConfig || undefined) as any}
-                    autoConnect={isControlActive}
-                    onDisconnectComplete={handleReleaseControl}
-                  />
-                ) : remoteConfig.type === 'bluetooth_remote' ? (
-                  <CompactRemote
-                    remoteType="bluetooth"
-                    connectionConfig={(bluetoothConnectionConfig || undefined) as any}
-                    autoConnect={isControlActive}
-                    onDisconnectComplete={handleReleaseControl}
-                  />
-                ) : (
-                  <Box sx={{ p: 2, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary">
-                      Unsupported remote type: {remoteConfig.type}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-          </>
-        )}
+        {/* Remote Control Panel is now handled by NavigationEditorDeviceControl component */}
       </Box>
 
       {/* Node Edit Dialog */}

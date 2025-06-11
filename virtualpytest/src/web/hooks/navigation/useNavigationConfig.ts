@@ -1,13 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
-import { UINavigationNode, UINavigationEdge } from '../../types/navigationTypes';
+import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
 
 interface NavigationConfigState {
   currentTreeName: string;
   setCurrentTreeName: (name: string) => void;
   setNodes: (nodes: UINavigationNode[]) => void;
   setEdges: (edges: UINavigationEdge[]) => void;
-  setAllNodes: (nodes: UINavigationNode[]) => void;
-  setAllEdges: (edges: UINavigationEdge[]) => void;
+  // setAllNodes/setAllEdges removed - using single source of truth
   setInitialState: (state: { nodes: UINavigationNode[], edges: UINavigationEdge[] } | null) => void;
   setHistory: (history: { nodes: UINavigationNode[], edges: UINavigationEdge[] }[]) => void;
   setHistoryIndex: (index: number) => void;
@@ -19,8 +18,7 @@ interface NavigationConfigState {
   setIsSaving: (saving: boolean) => void;
   nodes: UINavigationNode[];
   edges: UINavigationEdge[];
-  allNodes: UINavigationNode[];
-  allEdges: UINavigationEdge[];
+  // allNodes/allEdges removed - using single source of truth
   isSaving: boolean;
   apiCall: (endpoint: string, options?: RequestInit) => Promise<any>;
 }
@@ -109,8 +107,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         
         state.setNodes(nodes);
         state.setEdges(edges);
-        state.setAllNodes(nodes);
-        state.setAllEdges(edges);
+        // setAllNodes/setAllEdges removed - using single source of truth
         
         // Set initial state for change tracking
         state.setInitialState({ nodes: [...nodes], edges: [...edges] });

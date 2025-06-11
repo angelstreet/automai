@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { Connection } from 'reactflow';
-import { UINavigationNode } from '../../types/navigationTypes';
+import { UINavigationNode } from '../../types/pages/Navigation_Types';
 
-interface ConnectionResult {
+export interface ConnectionResult {
   isAllowed: boolean;
   reason?: string;
   edgeType: 'horizontal' | 'vertical';
@@ -69,9 +69,9 @@ const establishConnectionRules = (
       console.log('[@hook:establishConnectionRules] VERTICAL: Both nodes have parents - preserving existing relationships');
       return {
         isAllowed: true,
-        edgeType: 'vertical'
+        edgeType: 'vertical' as const
         // No node updates - preserve existing parents
-      };
+      } as ConnectionResult;
     }
     
     // Issue 1 Fix: For vertical connections, also prioritize menu nodes when both are orphans
@@ -84,7 +84,7 @@ const establishConnectionRules = (
         console.log('[@hook:establishConnectionRules] VERTICAL: Both orphans - menu source becomes parent of target');
         return {
           isAllowed: true,
-          edgeType: 'vertical',
+          edgeType: 'vertical' as const,
           targetNodeUpdates: {
             parent: [sourceNode.id],
             depth: 1
@@ -95,7 +95,7 @@ const establishConnectionRules = (
         console.log('[@hook:establishConnectionRules] VERTICAL: Both orphans - menu target becomes parent of source');
         return {
           isAllowed: true,
-          edgeType: 'vertical',
+          edgeType: 'vertical' as const,
           sourceNodeUpdates: {
             parent: [targetNode.id],
             depth: 1
@@ -113,7 +113,7 @@ const establishConnectionRules = (
       
       return {
         isAllowed: true,
-        edgeType: 'vertical',
+        edgeType: 'vertical' as const,
         sourceNodeUpdates: {
           parent: newParentChain,
           depth: newParentChain.length
@@ -128,7 +128,7 @@ const establishConnectionRules = (
       
       return {
         isAllowed: true,
-        edgeType: 'vertical',
+        edgeType: 'vertical' as const,
         targetNodeUpdates: {
           parent: newParentChain,
           depth: newParentChain.length
@@ -140,8 +140,8 @@ const establishConnectionRules = (
       console.log('[@hook:establishConnectionRules] VERTICAL: Unexpected case - both nodes have parents');
       return {
         isAllowed: true,
-        edgeType: 'vertical'
-      };
+        edgeType: 'vertical' as const
+      } as ConnectionResult;
     }
   } else if (isHorizontal) {
     // HORIZONTAL = SIBLINGS (same parent level)
@@ -157,9 +157,9 @@ const establishConnectionRules = (
       console.log('[@hook:establishConnectionRules] Both nodes have parents - preserving existing relationships');
       return {
         isAllowed: true,
-        edgeType: 'horizontal'
+        edgeType: 'horizontal' as const
         // No node updates - preserve existing parents
-      };
+      } as ConnectionResult;
     }
     
     // If only one is orphan, adopt the other's parent
@@ -167,7 +167,7 @@ const establishConnectionRules = (
       console.log('[@hook:establishConnectionRules] Source is orphan - adopting target\'s parent');
       return {
         isAllowed: true,
-        edgeType: 'horizontal',
+        edgeType: 'horizontal' as const,
         sourceNodeUpdates: {
           parent: targetNode.data.parent || [],
           depth: targetNode.data.depth || 0
@@ -179,7 +179,7 @@ const establishConnectionRules = (
       console.log('[@hook:establishConnectionRules] Target is orphan - adopting source\'s parent');
       return {
         isAllowed: true,
-        edgeType: 'horizontal',
+        edgeType: 'horizontal' as const,
         targetNodeUpdates: {
           parent: sourceNode.data.parent || [],
           depth: sourceNode.data.depth || 0
@@ -197,7 +197,7 @@ const establishConnectionRules = (
         console.log('[@hook:establishConnectionRules] Both orphans - menu source becomes parent of target');
         return {
           isAllowed: true,
-          edgeType: 'horizontal',
+          edgeType: 'horizontal' as const,
           targetNodeUpdates: {
             parent: [sourceNode.id],
             depth: 1
@@ -208,7 +208,7 @@ const establishConnectionRules = (
         console.log('[@hook:establishConnectionRules] Both orphans - menu target becomes parent of source');
         return {
           isAllowed: true,
-          edgeType: 'horizontal',
+          edgeType: 'horizontal' as const,
           sourceNodeUpdates: {
             parent: [targetNode.id],
             depth: 1
@@ -219,9 +219,9 @@ const establishConnectionRules = (
         console.log('[@hook:establishConnectionRules] Both orphans, no menu priority - creating sibling connection');
         return {
           isAllowed: true,
-          edgeType: 'horizontal'
+          edgeType: 'horizontal' as const
           // Both remain orphans at same level
-        };
+        } as ConnectionResult;
       }
     }
   } else {
@@ -241,7 +241,7 @@ const establishConnectionRules = (
       
       return {
         isAllowed: true,
-        edgeType: 'vertical',
+        edgeType: 'vertical' as const,
         sourceNodeUpdates: {
           parent: newParentChain,
           depth: newParentChain.length
@@ -256,7 +256,7 @@ const establishConnectionRules = (
       
       return {
         isAllowed: true,
-        edgeType: 'vertical',
+        edgeType: 'vertical' as const,
         targetNodeUpdates: {
           parent: newParentChain,
           depth: newParentChain.length

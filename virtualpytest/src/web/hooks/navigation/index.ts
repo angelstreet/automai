@@ -1,8 +1,8 @@
 // Export all navigation-related hooks
 export { useNavigationState } from './useNavigationState';
 export { useConnectionRules } from './useConnectionRules';
-export { useNavigationHistory } from './useNavigationHistory';
-export { useNavigationCRUD } from './useNavigationCRUD';
+// useNavigationHistory removed - using page reload for cancel changes
+
 export { useNodeEdgeManagement } from './useNodeEdgeManagement';
 
 // Main orchestrator hook

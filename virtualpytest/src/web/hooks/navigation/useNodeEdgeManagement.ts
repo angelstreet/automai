@@ -19,8 +19,7 @@ interface NodeEdgeManagementProps {
   setIsEdgeDialogOpen: (isOpen: boolean) => void;
   setIsNewNode: (isNew: boolean) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
-  setAllNodes: (nodes: UINavigationNode[]) => void;
-  setAllEdges: (edges: UINavigationEdge[]) => void;
+  // setAllNodes/setAllEdges removed - using single source of truth
 }
 
 export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
@@ -42,8 +41,7 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
     setIsEdgeDialogOpen,
     setIsNewNode,
     setHasUnsavedChanges,
-    setAllNodes,
-    setAllEdges
+    // setAllNodes/setAllEdges removed - using single source of truth
   } = props;
   
   // Save node changes
@@ -58,9 +56,8 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
         position: formData.position || { x: 100, y: 100 }
       };
       
-      // Add node to both node arrays
+      // Add node to nodes array (single source of truth)
       setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
-      setAllNodes((nds: UINavigationNode[]) => [...nds, newNode]);
       
       console.log('[@hook:useNodeEdgeManagement] Created new node:', newNode);
     } else if (selectedNode) {
@@ -72,16 +69,8 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
         return node;
       });
       
-      // Update allNodes as well
-      const updatedAllNodes = nodes.map((node) => {
-        if (node.id === selectedNode.id) {
-          return { ...node, ...formData };
-        }
-        return node;
-      });
-      
+      // Update nodes (single source of truth)
       setNodes(updatedNodes);
-      setAllNodes(updatedAllNodes);
       
       console.log('[@hook:useNodeEdgeManagement] Updated node:', selectedNode.id);
     }
@@ -97,7 +86,6 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
     selectedNode,
     nodes,
     setNodes,
-    setAllNodes,
     setSelectedNode,
     setNodeForm,
     setIsNodeDialogOpen,
@@ -118,16 +106,8 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
         return edge;
       });
       
-      // Update allEdges as well
-      const updatedAllEdges = edges.map((edge) => {
-        if (edge.id === selectedEdge.id) {
-          return { ...edge, ...formData };
-        }
-        return edge;
-      });
-      
+      // Update edges (single source of truth)
       setEdges(updatedEdges);
-      setAllEdges(updatedAllEdges);
       
       console.log('[@hook:useNodeEdgeManagement] Updated edge:', selectedEdge.id);
     }
@@ -141,7 +121,6 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
     selectedEdge,
     edges,
     setEdges,
-    setAllEdges,
     setSelectedEdge,
     setEdgeForm,
     setIsEdgeDialogOpen,
@@ -158,20 +137,14 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
       
       // Filter out the node
       const updatedNodes = nodes.filter((node) => node.id !== nodeId);
-      const updatedAllNodes = nodes.filter((node) => node.id !== nodeId);
       
       // Filter out any edges connected to this node
       const updatedEdges = edges.filter(
         (edge) => edge.source !== nodeId && edge.target !== nodeId
       );
-      const updatedAllEdges = edges.filter(
-        (edge) => edge.source !== nodeId && edge.target !== nodeId
-      );
       
       setNodes(updatedNodes);
-      setAllNodes(updatedAllNodes);
       setEdges(updatedEdges);
-      setAllEdges(updatedAllEdges);
       
       console.log(`[@hook:useNodeEdgeManagement] Deleted node: ${nodeId}`);
     } else if (selectedEdge) {
@@ -180,10 +153,8 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
       
       // Filter out the edge
       const updatedEdges = edges.filter((edge) => edge.id !== edgeId);
-      const updatedAllEdges = edges.filter((edge) => edge.id !== edgeId);
       
       setEdges(updatedEdges);
-      setAllEdges(updatedAllEdges);
       
       console.log(`[@hook:useNodeEdgeManagement] Deleted edge: ${edgeId}`);
     }
@@ -203,8 +174,6 @@ export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
     edges,
     setNodes,
     setEdges,
-    setAllNodes,
-    setAllEdges,
     setSelectedNode,
     setSelectedEdge,
     setNodeForm,

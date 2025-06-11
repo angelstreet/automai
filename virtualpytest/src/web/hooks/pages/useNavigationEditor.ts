@@ -16,11 +16,12 @@ import { UINavigationNode, UINavigationEdge, NavigationTreeData, NodeForm, EdgeF
 import { 
   useNavigationState,
   useConnectionRules,
-  useNavigationHistory,
-  useNavigationCRUD,
   useNavigationConfig,
   useNodeEdgeManagement 
 } from './useNavigation';
+
+// Import connection result type
+import { ConnectionResult } from '../navigation/useConnectionRules';
 
 // Import registration context and default team ID
 import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
@@ -71,46 +72,21 @@ export const useNavigationEditor = () => {
   // Connection rules hook
   const { validateConnection, getRulesSummary } = useConnectionRules();
   
-  // CRUD operations hook (legacy database operations)
-  const crudHook = useNavigationCRUD({
-    currentTreeId: navigationState.currentTreeId,
-    currentTreeName: navigationState.currentTreeName,
-    setCurrentTreeId: navigationState.setCurrentTreeId,
-    setCurrentTreeName: navigationState.setCurrentTreeName,
-    setNavigationPath: navigationState.setNavigationPath,
-    setNavigationNamePath: navigationState.setNavigationNamePath,
-    setNodes: navigationState.setNodes,
-    setEdges: navigationState.setEdges,
-    setAllNodes: navigationState.setAllNodes,
-    setAllEdges: navigationState.setAllEdges,
-    setInitialState: navigationState.setInitialState,
-    setHistory: navigationState.setHistory,
-    setHistoryIndex: navigationState.setHistoryIndex,
-    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-    setIsLoading: navigationState.setIsLoading,
-    setError: navigationState.setError,
-    setSaveError: navigationState.setSaveError,
-    setSaveSuccess: navigationState.setSaveSuccess,
-    setIsSaving: navigationState.setIsSaving,
-    setCurrentViewRootId: navigationState.setCurrentViewRootId,
-    setViewPath: navigationState.setViewPath,
-    setUserInterface: navigationState.setUserInterface,
-    nodes: navigationState.nodes,
-    edges: navigationState.edges,
-    allNodes: navigationState.allNodes,
-    allEdges: navigationState.allEdges,
-    isSaving: navigationState.isSaving,
-    apiCall, // Pass the apiCall function
-  });
+  // Explicitly type the validateConnection function to ensure proper type inference
+  const typedValidateConnection = useCallback((
+    sourceNode: UINavigationNode,
+    targetNode: UINavigationNode,
+    params: Connection
+  ): ConnectionResult => {
+    return validateConnection(sourceNode, targetNode, params) as ConnectionResult;
+  }, [validateConnection]);
   
-  // Navigation config operations hook (new JSON config file operations)
+  // Navigation config operations hook
   const configHook = useNavigationConfig({
     currentTreeName: navigationState.currentTreeName,
     setCurrentTreeName: navigationState.setCurrentTreeName,
     setNodes: navigationState.setNodes,
     setEdges: navigationState.setEdges,
-    setAllNodes: navigationState.setAllNodes,
-    setAllEdges: navigationState.setAllEdges,
     setInitialState: navigationState.setInitialState,
     setHistory: navigationState.setHistory,
     setHistoryIndex: navigationState.setHistoryIndex,
@@ -122,28 +98,9 @@ export const useNavigationEditor = () => {
     setIsSaving: navigationState.setIsSaving,
     nodes: navigationState.nodes,
     edges: navigationState.edges,
-    allNodes: navigationState.allNodes,
-    allEdges: navigationState.allEdges,
     isSaving: navigationState.isSaving,
-    apiCall, // Pass the apiCall function
+    apiCall,
   });
-  
-  // History management hook
-  const historyHook = useNavigationHistory(
-    {
-      history: navigationState.history,
-      historyIndex: navigationState.historyIndex,
-      setHistory: navigationState.setHistory,
-      setHistoryIndex: navigationState.setHistoryIndex,
-    },
-    {
-      nodes: navigationState.nodes,
-      edges: navigationState.edges,
-      setNodes: navigationState.setNodes,
-      setEdges: navigationState.setEdges,
-      setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-    }
-  );
   
   // Node/Edge management hook
   const nodeEdgeHook = useNodeEdgeManagement({
@@ -164,101 +121,43 @@ export const useNavigationEditor = () => {
     setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
     setIsNewNode: navigationState.setIsNewNode,
     setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-    setAllNodes: navigationState.setAllNodes,
-    setAllEdges: navigationState.setAllEdges,
   });
 
   // Additional state that might need local management
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
 
-  // Override onNodesChange to prevent automatic position changes
+  // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback((changes: any[]) => {
     console.log('[@hook:useNavigationEditor] onNodesChange called with changes:', changes);
     
-    // Track position changes separately to update allNodes as well
-    const positionChanges = changes.filter(change => change.type === 'position');
+    // Apply changes to nodes (single source of truth)
+    navigationState.onNodesChange(changes);
     
-    // Filter out position changes that might be caused by auto-layout
-    const filteredChanges = changes.filter(change => {
-      // Allow user-initiated changes (drag, select, etc.)
-      if (change.type === 'select' || change.type === 'remove') {
-        return true;
-      }
-      
-      // For position changes, only allow if they're user-initiated (dragging = true)
-      if (change.type === 'position') {
-        // Allow position changes when user is actively dragging
-        const isUserDrag = change.dragging === true || change.dragging === undefined;
-        if (isUserDrag) {
-          console.log('[@hook:useNavigationEditor] Allowing user-initiated position change for node:', change.id);
-          return true;
-        } else {
-          console.log('[@hook:useNavigationEditor] Filtered out automatic position change for node:', change.id);
-          return false;
-        }
-      }
-      
-      // Allow dimension changes
-      if (change.type === 'dimensions') {
-        return true;
-      }
-      
-      // Allow other change types
-      return true;
-    });
+    // Mark as having unsaved changes for meaningful changes
+    const hasMeaningfulChange = changes.some(change => 
+      change.type === 'position' || change.type === 'remove'
+    );
     
-    // Apply changes to the filtered nodes
-    if (filteredChanges.length > 0) {
-      navigationState.onNodesChange(filteredChanges);
+    if (hasMeaningfulChange) {
+      navigationState.setHasUnsavedChanges(true);
     }
-    
-    // Also apply position changes to allNodes to keep them in sync
-    if (positionChanges.length > 0) {
-      const userPositionChanges = positionChanges.filter(change => 
-        change.dragging === true || change.dragging === undefined
-      );
-      
-      if (userPositionChanges.length > 0) {
-        navigationState.setAllNodes(prevAllNodes => {
-          const updatedAllNodes = [...prevAllNodes];
-          userPositionChanges.forEach(change => {
-            const nodeIndex = updatedAllNodes.findIndex(node => node.id === change.id);
-            if (nodeIndex !== -1 && change.position) {
-              console.log('[@hook:useNavigationEditor] Updating position in allNodes for node:', change.id, 'to:', change.position);
-              updatedAllNodes[nodeIndex] = {
-                ...updatedAllNodes[nodeIndex],
-                position: change.position
-              };
-            }
-          });
-          return updatedAllNodes;
-        });
-        
-        // Mark as having unsaved changes when positions change
-        navigationState.setHasUnsavedChanges(true);
-      }
-    }
-  }, [navigationState.onNodesChange, navigationState.setAllNodes, navigationState.setHasUnsavedChanges]);
+  }, [navigationState.onNodesChange, navigationState.setHasUnsavedChanges]);
 
-  // Override onEdgesChange to save to history and track changes
-  const onEdgesChangeWithHistory = useCallback((changes: any[]) => {
+  // Handle edge changes and track modifications
+  const onEdgesChange = useCallback((changes: any[]) => {
     navigationState.onEdgesChange(changes);
-    // Only save to history for meaningful changes (not just selection)
     const hasMeaningfulChange = changes.some(change => 
       change.type === 'add' || 
       change.type === 'remove'
     );
     
     if (hasMeaningfulChange) {
-      setTimeout(() => {
-        historyHook.saveToHistory();
-        navigationState.setHasUnsavedChanges(true);
-      }, 0);
+      navigationState.setHasUnsavedChanges(true);
     }
-  }, [navigationState.onEdgesChange, historyHook.saveToHistory, navigationState.setHasUnsavedChanges]);
+  }, [navigationState.onEdgesChange, navigationState.setHasUnsavedChanges]);
 
-  // Override onConnect to save to history and track changes
-  const onConnectHistory = useCallback((params: Connection) => {
+  // Handle new connections
+  const onConnect = useCallback((params: Connection) => {
     console.log('[@component:NavigationEditor] onConnectHistory called with params:', params);
     
     if (!params.source || !params.target) return;
@@ -292,7 +191,7 @@ export const useNavigationEditor = () => {
     });
     
     // Use the new connection rules function
-    const connectionResult = validateConnection(sourceNode, targetNode, params);
+    const connectionResult = typedValidateConnection(sourceNode, targetNode, params);
     
     // Check if connection is allowed
     if (!connectionResult.isAllowed) {
@@ -308,7 +207,7 @@ export const useNavigationEditor = () => {
 
     // Apply node updates if any
     if (connectionResult.sourceNodeUpdates || connectionResult.targetNodeUpdates) {
-      // Update both filtered nodes and allNodes
+      // Update nodes (single source of truth)
       const updateNodeFunction = (nds: UINavigationNode[]) => nds.map((node) => {
         if (node.id === sourceNode.id && connectionResult.sourceNodeUpdates) {
           console.log(`[@component:NavigationEditor] Updating source node ${sourceNode.data.label}:`, connectionResult.sourceNodeUpdates);
@@ -338,7 +237,6 @@ export const useNavigationEditor = () => {
       });
       
       navigationState.setNodes(updateNodeFunction);
-      navigationState.setAllNodes(updateNodeFunction);
     }
 
     // Create the edge
@@ -358,30 +256,8 @@ export const useNavigationEditor = () => {
       },
     };
 
-    // Add edge using history-aware setter
+    // Add edge (single source of truth)
     navigationState.setEdges((eds) => addEdge(newEdge, eds));
-    
-    // Also add edge to allEdges (complete dataset) - with debugging
-    console.log('[@component:NavigationEditor] Before adding edge to allEdges, current allEdges count:', navigationState.allEdges.length);
-    navigationState.setAllEdges((allEds) => {
-      const updatedEdges = addEdge(newEdge, allEds);
-      console.log('[@component:NavigationEditor] After adding edge to allEdges, new count:', updatedEdges.length);
-      return updatedEdges;
-    });
-    
-    // Ensure allEdges update persists after any potential filter resets
-    setTimeout(() => {
-      navigationState.setAllEdges((allEds) => {
-        // Check if the edge is already there, if not add it
-        const edgeExists = allEds.some(edge => edge.id === newEdge.id);
-        if (!edgeExists) {
-          console.log('[@component:NavigationEditor] Edge missing from allEdges after timeout, re-adding:', newEdge.id);
-          return addEdge(newEdge, allEds);
-        }
-        console.log('[@component:NavigationEditor] Edge confirmed in allEdges after timeout:', newEdge.id);
-        return allEds;
-      });
-    }, 100);
     
     // Mark as having unsaved changes
     navigationState.setHasUnsavedChanges(true);
@@ -392,7 +268,7 @@ export const useNavigationEditor = () => {
       sourceLabel: sourceNode.data.label,
       targetLabel: targetNode.data.label
     });
-  }, [navigationState.nodes, navigationState.setNodes, navigationState.setAllNodes, navigationState.setEdges, navigationState.setAllEdges, navigationState.setHasUnsavedChanges, validateConnection]);
+  }, [navigationState.nodes, navigationState.setNodes, navigationState.setEdges, navigationState.setHasUnsavedChanges, typedValidateConnection]);
 
   // Fetch user interface and root tree if interfaceId is provided
   useEffect(() => {
@@ -589,134 +465,59 @@ export const useNavigationEditor = () => {
 
   // Get filtered nodes based on focus node and depth
   const filteredNodes = useMemo(() => {
-    console.log(`[@hook:useNavigationEditor] Filtering nodes - focusNodeId: ${navigationState.focusNodeId}, maxDisplayDepth: ${navigationState.maxDisplayDepth}, total nodes: ${navigationState.allNodes.length}`);
-    
-    // Preserve previous filtered nodes for reference equality check
-    const prevFilteredNodes = navigationState.nodes;
+    const allNodes = navigationState.nodes;
     
     if (!navigationState.focusNodeId) {
-      // No focus node selected (All option) - apply depth filtering to all nodes
-      console.log(`[@hook:useNavigationEditor] No focus node - applying depth filter (max depth: ${navigationState.maxDisplayDepth}) to all ${navigationState.allNodes.length} nodes`);
-      const depthFiltered = navigationState.allNodes.filter(node => {
+      // No focus node - apply depth filtering to all nodes
+      return allNodes.filter(node => {
         const nodeDepth = node.data.depth || 0;
-        const shouldInclude = nodeDepth <= navigationState.maxDisplayDepth;
-        console.log(`[@hook:useNavigationEditor] Node ${node.data.label} - depth: ${nodeDepth}, max: ${navigationState.maxDisplayDepth}, include: ${shouldInclude}`);
-        return shouldInclude;
+        return nodeDepth <= navigationState.maxDisplayDepth;
       });
-      console.log(`[@hook:useNavigationEditor] Depth filtering complete - showing ${depthFiltered.length} of ${navigationState.allNodes.length} nodes`);
-      
-      // Preserve object references if the filtered set is the same
-      const prevIds = new Set(prevFilteredNodes.map(n => n.id));
-      const newIds = new Set(depthFiltered.map(n => n.id));
-      if (prevFilteredNodes.length === depthFiltered.length && 
-          [...newIds].every(id => prevIds.has(id))) {
-        // Same set of nodes, return previous array to maintain reference equality
-        console.log(`[@hook:useNavigationEditor] Filtered nodes unchanged, preserving references`);
-        return prevFilteredNodes;
-      }
-      
-      return depthFiltered;
     }
 
     // Find the focus node
-    const focusNode = navigationState.allNodes.find(n => n.id === navigationState.focusNodeId);
+    const focusNode = allNodes.find(n => n.id === navigationState.focusNodeId);
     if (!focusNode) {
-      console.log(`[@hook:useNavigationEditor] Focus node ${navigationState.focusNodeId} not found, showing all nodes`);
-      
-      // Check if we can preserve previous references
-      const prevIds = new Set(prevFilteredNodes.map(n => n.id));
-      const allIds = new Set(navigationState.allNodes.map(n => n.id));
-      if (prevFilteredNodes.length === navigationState.allNodes.length && 
-          [...allIds].every(id => prevIds.has(id))) {
-        console.log(`[@hook:useNavigationEditor] All nodes unchanged, preserving references`);
-        return prevFilteredNodes;
-      }
-      
-      return navigationState.allNodes;
+      console.warn(`[@hook:useNavigationEditor] Focus node ${navigationState.focusNodeId} not found`);
+      return allNodes;
     }
 
     const focusDepth = focusNode.data.depth || 0;
-    // Calculate the maximum absolute depth to show (focus depth + relative depth levels)
     const maxAbsoluteDepth = focusDepth + navigationState.maxDisplayDepth;
-    console.log(`[@hook:useNavigationEditor] Focus node found: ${focusNode.data.label} at depth ${focusDepth}, max absolute depth: ${maxAbsoluteDepth} (focus + ${navigationState.maxDisplayDepth} levels)`);
     
-    // Show focus node, its siblings, and its descendants up to maxDisplayDepth levels deep from the focus node
-    const filtered = navigationState.allNodes.filter(node => {
+    // Show focus node, its siblings, and its descendants
+    return allNodes.filter(node => {
       const nodeDepth = node.data.depth || 0;
       
       // Include the focus node itself
       if (node.id === navigationState.focusNodeId) {
-        console.log(`[@hook:useNavigationEditor] Including focus node: ${node.data.label} at depth ${nodeDepth}`);
         return true;
       }
       
-      // Check if this node is a descendant of the focus node first
-      const isDescendant = isNodeDescendantOf(node, navigationState.focusNodeId!, navigationState.allNodes);
-      if (isDescendant) {
-        // For descendants, check against the maximum absolute depth
-        const shouldInclude = nodeDepth <= maxAbsoluteDepth;
-        console.log(`[@hook:useNavigationEditor] Descendant ${node.data.label} - depth: ${nodeDepth}, max absolute: ${maxAbsoluteDepth}, include: ${shouldInclude}`);
-        return shouldInclude;
+      // Include descendants within depth limit
+      const isDescendant = isNodeDescendantOf(node, navigationState.focusNodeId!, allNodes);
+      if (isDescendant && nodeDepth <= maxAbsoluteDepth) {
+        return true;
       }
       
-      // Include true siblings (nodes at the same depth with the same parent, but not descendants)
+      // Include siblings (same depth and parent)
       if (nodeDepth === focusDepth) {
         const focusParent = focusNode.data.parent || [];
         const nodeParent = node.data.parent || [];
-        
-        // Check if they have the same parent chain (true siblings)
-        const areSiblings = JSON.stringify(focusParent) === JSON.stringify(nodeParent);
-        if (areSiblings) {
-          console.log(`[@hook:useNavigationEditor] Including true sibling: ${node.data.label} (same depth: ${nodeDepth}, same parent)`);
-          return true;
-        }
+        return JSON.stringify(focusParent) === JSON.stringify(nodeParent);
       }
       
       return false;
     });
-    
-    console.log(`[@hook:useNavigationEditor] Focus filtering complete - showing ${filtered.length} nodes (depths ${focusDepth} to ${maxAbsoluteDepth})`);
-    
-    // Preserve object references if the filtered set is the same
-    const prevIds = new Set(prevFilteredNodes.map(n => n.id));
-    const newIds = new Set(filtered.map(n => n.id));
-    if (prevFilteredNodes.length === filtered.length && 
-        [...newIds].every(id => prevIds.has(id))) {
-      // Same set of nodes, return previous array to maintain reference equality
-      console.log(`[@hook:useNavigationEditor] Focus filtered nodes unchanged, preserving references`);
-      return prevFilteredNodes;
-    }
-    
-    return filtered;
-  }, [navigationState.allNodes, navigationState.focusNodeId, navigationState.maxDisplayDepth, navigationState.nodes, isNodeDescendantOf]);
+  }, [navigationState.nodes, navigationState.focusNodeId, navigationState.maxDisplayDepth, isNodeDescendantOf]);
 
   // Get filtered edges (only between visible nodes)
   const filteredEdges = useMemo(() => {
     const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
-    
-    // Preserve previous filtered edges for reference equality check
-    const prevFilteredEdges = navigationState.edges;
-    
-    const newFilteredEdges = navigationState.allEdges.filter(edge => 
+    return navigationState.edges.filter(edge => 
       visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
     );
-    
-    // Preserve object references if the filtered set is the same
-    const prevIds = new Set(prevFilteredEdges.map(e => e.id));
-    const newIds = new Set(newFilteredEdges.map(e => e.id));
-    if (prevFilteredEdges.length === newFilteredEdges.length && 
-        [...newIds].every(id => prevIds.has(id))) {
-      // Same set of edges, return previous array to maintain reference equality
-      console.log(`[@hook:useNavigationEditor] Filtered edges unchanged, preserving references`);
-      return prevFilteredEdges;
-    }
-    
-    return newFilteredEdges;
-  }, [navigationState.allEdges, filteredNodes, navigationState.edges]);
-
-  // Keep the getFilteredNodes and getFilteredEdges functions for backward compatibility
-  const getFilteredNodes = useCallback(() => filteredNodes, [filteredNodes]);
-  const getFilteredEdges = useCallback(() => filteredEdges, [filteredEdges]);
+  }, [navigationState.edges, filteredNodes]);
 
   // Navigate to parent view (breadcrumb click)
   const navigateToParentView = useCallback((targetIndex: number) => {
@@ -728,110 +529,9 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Navigated to parent view: ${targetView.name}`);
   }, [navigationState]);
 
-  // Update the ReactFlow nodes and edges based on filtering
+  // Update available focus nodes when nodes change
   useEffect(() => {
-    // Don't filter while loading data to prevent loops
-    if (navigationState.isLoading || navigationState.isSaving) {
-      return;
-    }
-    
-    // Only update if the arrays have actually changed (reference equality check)
-    if (navigationState.nodes !== filteredNodes) {
-      console.log(`[@hook:useNavigationEditor] Updating ReactFlow nodes - ${filteredNodes.length} nodes`);
-      navigationState.setNodes(filteredNodes);
-    }
-    
-    if (navigationState.edges !== filteredEdges) {
-      console.log(`[@hook:useNavigationEditor] Updating ReactFlow edges - ${filteredEdges.length} edges`);
-      navigationState.setEdges(filteredEdges);
-    }
-    
-    // Only log if something actually changed
-    if (navigationState.nodes !== filteredNodes || navigationState.edges !== filteredEdges) {
-      console.log(`[@hook:useNavigationEditor] Applied filter - showing ${filteredNodes.length} nodes, ${filteredEdges.length} edges`);
-    }
-  }, [filteredNodes, filteredEdges, navigationState.setNodes, navigationState.setEdges, navigationState.isLoading, navigationState.isSaving, navigationState.nodes, navigationState.edges]);
-
-  // Progressive loading function for TV menus
-  const loadChildrenAtDepth = useCallback(async (nodeId: string, targetDepth: number) => {
-    if (navigationState.isProgressiveLoading || targetDepth <= navigationState.loadedDepth) return;
-    
-    navigationState.setIsProgressiveLoading(true);
-    console.log(`[@hook:useNavigationEditor] Loading children at depth ${targetDepth} for node ${nodeId}`);
-    
-    try {
-      // In a real implementation, this would call an API
-      // For now, we simulate progressive loading
-      const response = await fetch(`/server/navigation/trees/${navigationState.currentTreeId}/load-depth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          node_id: nodeId,
-          depth: targetDepth,
-          load_children: true
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Add new nodes and edges to existing ones
-        navigationState.setNodes(prevNodes => {
-          const existingIds = new Set(prevNodes.map(n => n.id));
-          const newNodes = data.nodes.filter((n: UINavigationNode) => !existingIds.has(n.id));
-          return [...prevNodes, ...newNodes];
-        });
-        
-        navigationState.setEdges(prevEdges => {
-          const existingIds = new Set(prevEdges.map(e => e.id));
-          const newEdges = data.edges.filter((e: UINavigationEdge) => !existingIds.has(e.id));
-          return [...prevEdges, ...newEdges];
-        });
-        
-        navigationState.setLoadedDepth(targetDepth);
-        navigationState.setMaxDepth(data.max_depth || targetDepth);
-        
-        console.log(`[@hook:useNavigationEditor] Successfully loaded depth ${targetDepth}, max depth: ${data.max_depth}`);
-      }
-    } catch (error) {
-      console.error(`[@hook:useNavigationEditor] Error loading children at depth ${targetDepth}:`, error);
-    } finally {
-      navigationState.setIsProgressiveLoading(false);
-    }
-  }, [navigationState]);
-
-  // Handle menu node entry (when user "enters" a menu)
-  const handleMenuEntry = useCallback(async (menuNode: UINavigationNode) => {
-    console.log(`[@hook:useNavigationEditor] Entering menu: ${menuNode.data.label}`);
-    
-    const currentDepth = menuNode.data.depth || 0;
-    const nextDepth = currentDepth + 1;
-    
-    // If we need to load more depth, do it progressively
-    if (nextDepth > navigationState.loadedDepth) {
-      await loadChildrenAtDepth(menuNode.id, nextDepth);
-    }
-    
-    // Filter nodes to show only relevant ones for current context
-    const relevantNodes = navigationState.allNodes.filter(node => {
-      const nodeDepth = node.data.depth || 0;
-      // Show current menu and its immediate children
-      return nodeDepth <= nextDepth && 
-             (nodeDepth <= currentDepth || (node.data.parent && node.data.parent.includes(menuNode.id)));
-    });
-    
-    navigationState.setNodes(relevantNodes);
-  }, [navigationState, loadChildrenAtDepth]);
-
-  // Update available focus nodes when all nodes change
-  useEffect(() => {
-    console.log(`[@hook:useNavigationEditor] All nodes updated - ${navigationState.allNodes.length} total nodes:`);
-    navigationState.allNodes.forEach(node => {
-      const parentChain = node.data.parent ? node.data.parent.join(' > ') : 'none';
-      console.log(`[@hook:useNavigationEditor] Node: ${node.data.label} (id: ${node.id}, depth: ${node.data.depth || 0}, parent: ${parentChain}, type: ${node.data.type})`);
-    });
-    
-    const focusableNodes = navigationState.allNodes
+    const focusableNodes = navigationState.nodes
       .filter(node => node.data.type === 'menu' || node.data.is_root)
       .map(node => ({
         id: node.id,
@@ -841,37 +541,18 @@ export const useNavigationEditor = () => {
       .sort((a, b) => a.depth - b.depth || a.label.localeCompare(b.label));
     
     navigationState.setAvailableFocusNodes(focusableNodes);
-  }, [navigationState.allNodes]);
-
-  // Debug: Track changes to edges arrays
-  useEffect(() => {
-    console.log(`[@hook:useNavigationEditor] Filtered edges changed - count: ${navigationState.edges.length}`);
-    navigationState.edges.forEach((edge, index) => {
-      console.log(`[@hook:useNavigationEditor] Filtered edge ${index}: ${edge.id} (${edge.source} → ${edge.target})`);
-    });
-  }, [navigationState.edges]);
-
-  useEffect(() => {
-    console.log(`[@hook:useNavigationEditor] All edges changed - count: ${navigationState.allEdges.length}`);
-    navigationState.allEdges.forEach((edge, index) => {
-      console.log(`[@hook:useNavigationEditor] All edge ${index}: ${edge.id} (${edge.source} → ${edge.target})`);
-    });
-  }, [navigationState.allEdges]);
+  }, [navigationState.nodes]);
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback((nodeId: string | null) => {
     console.log(`[@hook:useNavigationEditor] Setting focus node: ${nodeId}`);
     navigationState.setFocusNodeId(nodeId);
-    
-    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   // Set max display depth (dropdown selection)
   const setDisplayDepth = useCallback((depth: number) => {
     console.log(`[@hook:useNavigationEditor] Setting display depth: ${depth}`);
     navigationState.setMaxDisplayDepth(depth);
-    
-    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   // Reset focus to show all root level nodes
@@ -879,14 +560,15 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Resetting focus to All and D1`);
     navigationState.setFocusNodeId(null);
     navigationState.setMaxDisplayDepth(5);
-    
-    // Removed auto-fit view - let user manually fit view if needed
   }, [navigationState]);
 
   return {
-    // State
-    nodes: navigationState.nodes,
-    edges: navigationState.edges,
+    // State (filtered views for ReactFlow display)
+    nodes: filteredNodes,
+    edges: filteredEdges,
+    // Raw data (single source of truth)
+    allNodes: navigationState.nodes,
+    allEdges: navigationState.edges,
     treeName: navigationState.currentTreeName,
     isLoadingInterface: navigationState.isLoadingInterface,
     selectedNode: navigationState.selectedNode,
@@ -914,13 +596,7 @@ export const useNavigationEditor = () => {
     userInterface: navigationState.userInterface,
     rootTree: navigationState.rootTree,
     
-    // History state
-    history: navigationState.history,
-    historyIndex: navigationState.historyIndex,
-    
-    // All nodes and edges (for filtering)
-    allNodes: navigationState.allNodes,
-    allEdges: navigationState.allEdges,
+    // History state removed - using page reload for cancel changes
     
     // View state for single-level navigation
     viewPath: navigationState.viewPath,
@@ -929,24 +605,14 @@ export const useNavigationEditor = () => {
     focusNodeId: navigationState.focusNodeId,
     maxDisplayDepth: navigationState.maxDisplayDepth,
     availableFocusNodes: navigationState.availableFocusNodes,
-    getFilteredNodes,
     isNodeDescendantOf,
-    getFilteredEdges,
     setFocusNode,
     setDisplayDepth,
     resetFocus,
     
-    // Progressive loading state and functions
-    loadedDepth: navigationState.loadedDepth,
-    maxDepth: navigationState.maxDepth,
-    isProgressiveLoading: navigationState.isProgressiveLoading,
-    loadChildrenAtDepth,
-    handleMenuEntry,
-    
-    // Setters
+    // Setters (work with raw data, filtering happens automatically)
     setNodes: navigationState.setNodes,
     setEdges: navigationState.setEdges,
-    setAllNodes: navigationState.setAllNodes,
     setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
     setTreeName: navigationState.setCurrentTreeName,
     setIsLoadingInterface: navigationState.setIsLoadingInterface,
@@ -963,22 +629,16 @@ export const useNavigationEditor = () => {
     setReactFlowInstance: navigationState.setReactFlowInstance,
     setIsDiscardDialogOpen: navigationState.setIsDiscardDialogOpen,
     
-    // Event handlers
+    // Event handlers (work with raw data)
     onNodesChange: customOnNodesChange,
-    onEdgesChange: onEdgesChangeWithHistory,
-    onConnect: onConnectHistory,
+    onEdgesChange,
+    onConnect,
     onNodeClick,
     onEdgeClick,
     onNodeDoubleClick: onNodeDoubleClickUpdated,
     onPaneClick,
     
-    // Actions from CRUD hook (legacy database operations)
-    loadFromDatabase: crudHook.loadFromDatabase,
-    saveToDatabase: crudHook.saveToDatabase,
-    createEmptyTree: crudHook.createEmptyTree,
-    convertTreeData: crudHook.convertToNavigationTreeData,
-    
-    // Actions from Config hook (new JSON config file operations)
+    // Config operations (single source of truth)
     loadFromConfig: configHook.loadFromConfig,
     saveToConfig: configHook.saveToConfig,
     listAvailableTrees: configHook.listAvailableTrees,
@@ -1004,9 +664,7 @@ export const useNavigationEditor = () => {
     deleteSelected: nodeEdgeHook.deleteSelected,
     resetNode: nodeEdgeHook.resetNode,
     
-    // Actions from History hook
-    undo: historyHook.undo,
-    redo: historyHook.redo,
+    // History actions removed
     
     // Additional actions
     discardChanges,

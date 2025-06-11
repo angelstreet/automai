@@ -61,7 +61,7 @@ interface EdgeEditDialogProps {
   isOpen: boolean;
   edgeForm: EdgeForm;
   setEdgeForm: React.Dispatch<React.SetStateAction<EdgeForm>>;
-  onSubmit: () => void;
+  onSubmit: (formData: any) => void;
   onClose: () => void;
   controllerTypes?: string[];
   selectedEdge?: UINavigationEdge | null;
@@ -256,7 +256,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button 
-          onClick={onSubmit} 
+          onClick={() => onSubmit(edgeForm)} 
           variant="contained"
           disabled={!isFormValid()}
         >

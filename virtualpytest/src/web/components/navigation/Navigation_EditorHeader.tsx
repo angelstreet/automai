@@ -15,8 +15,7 @@ import {
 import {
   Add as AddIcon,
   FitScreen as FitScreenIcon,
-  Undo as UndoIcon,
-  Redo as RedoIcon,
+  // Undo/Redo icons removed
   Save as SaveIcon,
   Cancel as CancelIcon,
   ArrowBack as ArrowBackIcon,
@@ -50,8 +49,7 @@ interface NavigationEditorHeaderProps {
   // Loading and error states
   isLoading: boolean;
   error: string | null;
-  historyIndex: number;
-  historyLength: number;
+  // History props removed - using page reload for cancel changes
   
   // Lock management props
   isLocked?: boolean;
@@ -76,14 +74,13 @@ interface NavigationEditorHeaderProps {
   onNavigateToParent: () => void;
   onNavigateToTreeLevel: (index: number) => void;
   onNavigateToParentView: (index: number) => void;
-  onAddNewNode: () => void;
+  onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
   onFitView: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
-  onSaveToDatabase: () => void;
-  onSaveToConfig?: () => void;
-  onLockTree?: () => void;
-  onUnlockTree?: () => void;
+  // onUndo/onRedo removed - using page reload for cancel changes
+
+  onSaveToConfig?: (treeName: string) => void;
+  onLockTree?: (treeName: string) => void;
+  onUnlockTree?: (treeName: string) => void;
   onDiscardChanges: () => void;
   
   // Tree filtering handlers
@@ -113,8 +110,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   visibleNodes,
   isLoading,
   error,
-  historyIndex,
-  historyLength,
+  // History props removed
   isLocked,
   lockInfo,
   sessionId,
@@ -129,9 +125,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onNavigateToParentView,
   onAddNewNode,
   onFitView,
-  onUndo,
-  onRedo,
-  onSaveToDatabase,
+  // onUndo/onRedo functions removed
   onSaveToConfig,
   onLockTree,
   onUnlockTree,
@@ -276,7 +270,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               
               <Button
                 startIcon={<AddIcon />}
-                onClick={onAddNewNode}
+                onClick={() => onAddNewNode('node', { x: 0, y: 0 })}
                 size="small"
                 disabled={isLoading || !!error}
                 variant="outlined"
@@ -298,31 +292,12 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 <FitScreenIcon />
               </IconButton>
               
-              <IconButton 
-                onClick={onUndo} 
-                size="small" 
-                title="Undo" 
-                disabled={historyIndex <= 0 || isLoading || !!error}
-              >
-                <UndoIcon />
-              </IconButton>
-              
-              <IconButton 
-                onClick={onRedo} 
-                size="small" 
-                title="Redo" 
-                disabled={historyIndex >= historyLength - 1 || isLoading || !!error}
-              >
-                <RedoIcon />
-              </IconButton>
+                            {/* Undo/Redo buttons removed - using page reload for cancel changes */}
               
               <IconButton 
                 onClick={() => {
-                  // Use config save if available, otherwise fallback to database save
                   if (onSaveToConfig) {
-                    onSaveToConfig();
-                  } else {
-                    onSaveToDatabase();
+                    onSaveToConfig('root');
                   }
                 }} 
                 size="small" 
@@ -461,7 +436,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
         <>
           <ValidationPreviewClient treeId={treeId} />
           <ValidationResultsClient treeId={treeId} />
-          <ValidationProgressClient treeId={treeId} onUpdateNode={onUpdateNode} onUpdateEdge={onUpdateEdge} onSaveToDatabase={onSaveToDatabase} />
+          <ValidationProgressClient treeId={treeId} onUpdateNode={onUpdateNode} onUpdateEdge={onUpdateEdge} />
         </>
       )}
     </>

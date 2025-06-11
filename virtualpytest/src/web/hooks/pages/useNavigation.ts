@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
-import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
+import { UINavigationNode, UINavigationEdge, UINavigationNodeData, UINavigationEdgeData } from '../../types/pages/Navigation_Types';
 
 // Import the hook from the correct path
 export { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
@@ -13,12 +13,11 @@ export { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 // Implement minimal versions of the missing hooks
 export const useNavigationState = () => {
   // Node and edge state
-  const [nodes, setNodes, onNodesChange] = useNodesState<UINavigationNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<UINavigationEdge>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<UINavigationNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<UINavigationEdgeData>([]);
   
   // Complete node and edge state (unfiltered)
-  const [allNodes, setAllNodes] = useState<UINavigationNode[]>([]);
-  const [allEdges, setAllEdges] = useState<UINavigationEdge[]>([]);
+  // Dual arrays removed - using single source of truth
   
   // Tree state
   const [currentTreeId, setCurrentTreeId] = useState<string>('');
@@ -72,17 +71,13 @@ export const useNavigationState = () => {
   const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(5);
   const [availableFocusNodes, setAvailableFocusNodes] = useState<any[]>([]);
   
-  // Progressive loading state
-  const [loadedDepth, setLoadedDepth] = useState<number>(1);
-  const [maxDepth, setMaxDepth] = useState<number>(5);
-  const [isProgressiveLoading, setIsProgressiveLoading] = useState<boolean>(false);
+  // Progressive loading removed - loading all nodes at once
   
   return {
     // Node and edge state
     nodes, setNodes, onNodesChange,
     edges, setEdges, onEdgesChange,
-    allNodes, setAllNodes,
-    allEdges, setAllEdges,
+    // Dual arrays removed - using single source of truth
     
     // Tree state
     currentTreeId, setCurrentTreeId,
@@ -136,10 +131,7 @@ export const useNavigationState = () => {
     maxDisplayDepth, setMaxDisplayDepth,
     availableFocusNodes, setAvailableFocusNodes,
     
-    // Progressive loading state
-    loadedDepth, setLoadedDepth,
-    maxDepth, setMaxDepth,
-    isProgressiveLoading, setIsProgressiveLoading
+    // Progressive loading removed - loading all nodes at once
   };
 };
 
@@ -159,55 +151,17 @@ export const useConnectionRules = () => {
   return { validateConnection, getRulesSummary };
 };
 
-export const useNavigationHistory = (historyState: any, nodeEdgeState: any) => {
-  const undo = useCallback(() => {
-    console.log("Undo operation");
-  }, []);
+// useNavigationHistory removed - using page reload for cancel changes
 
-  const redo = useCallback(() => {
-    console.log("Redo operation");
-  }, []);
 
-  const saveToHistory = useCallback(() => {
-    console.log("Save to history");
-  }, []);
-
-  return { undo, redo, saveToHistory };
-};
-
-export const useNavigationCRUD = (props: any) => {
-  const loadFromDatabase = useCallback(() => {
-    console.log("Load from database");
-  }, []);
-
-  const saveToDatabase = useCallback(() => {
-    console.log("Save to database");
-  }, []);
-
-  const createEmptyTree = useCallback(() => {
-    console.log("Create empty tree");
-  }, []);
-
-  const convertToNavigationTreeData = useCallback(() => {
-    console.log("Convert to navigation tree data");
-    return {};
-  }, []);
-
-  return {
-    loadFromDatabase,
-    saveToDatabase,
-    createEmptyTree,
-    convertToNavigationTreeData
-  };
-};
 
 export const useNavigationConfig = (props: any) => {
   const loadFromConfig = useCallback((treeName: string) => {
     console.log(`Load from config: ${treeName}`);
   }, []);
 
-  const saveToConfig = useCallback(() => {
-    console.log("Save to config");
+  const saveToConfig = useCallback((treeName: string) => {
+    console.log(`Save to config: ${treeName}`);
   }, []);
 
   const listAvailableTrees = useCallback(() => {
@@ -224,20 +178,21 @@ export const useNavigationConfig = (props: any) => {
   const lockInfo = null;
   const sessionId = "dummy-session-id";
 
-  const lockNavigationTree = useCallback(() => {
-    console.log("Lock navigation tree");
+  const lockNavigationTree = useCallback((treeName: string) => {
+    console.log(`Lock navigation tree: ${treeName}`);
   }, []);
 
-  const unlockNavigationTree = useCallback(() => {
-    console.log("Unlock navigation tree");
+  const unlockNavigationTree = useCallback((treeName: string) => {
+    console.log(`Unlock navigation tree: ${treeName}`);
   }, []);
 
-  const checkTreeLockStatus = useCallback(() => {
-    console.log("Check tree lock status");
+  const checkTreeLockStatus = useCallback((treeName: string) => {
+    console.log(`Check tree lock status: ${treeName}`);
   }, []);
 
-  const setupAutoUnlock = useCallback(() => {
-    console.log("Setup auto unlock");
+  const setupAutoUnlock = useCallback((treeName: string) => {
+    console.log("Setup auto unlock for tree:", treeName);
+    return () => {}; // Return cleanup function
   }, []);
 
   return {

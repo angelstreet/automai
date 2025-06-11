@@ -11,8 +11,7 @@ import {
 import {
   Add as AddIcon,
   FitScreen as FitScreenIcon,
-  Undo as UndoIcon,
-  Redo as RedoIcon,
+  // Undo/Redo icons removed
   Save as SaveIcon,
   Cancel as CancelIcon,
   ArrowBack as ArrowBackIcon,
@@ -29,9 +28,7 @@ interface NavigationToolbarProps {
   isLoading: boolean;
   error: string | null;
   
-  // History state
-  historyIndex: number;
-  historyLength: number;
+  // History state removed - using page reload for cancel changes
   
   // Event handlers
   navigateToParent: () => void;
@@ -39,9 +36,7 @@ interface NavigationToolbarProps {
   navigateToParentView: (index: number) => void;
   addNewNode: () => void;
   fitView: () => void;
-  undo: () => void;
-  redo: () => void;
-  saveToDatabase: () => void;
+  // undo/redo removed - using page reload for cancel changes
   discardChanges: () => void;
 }
 
@@ -52,16 +47,13 @@ export const NavigationToolbar: React.FC<NavigationToolbarProps> = ({
   hasUnsavedChanges,
   isLoading,
   error,
-  historyIndex,
-  historyLength,
+  // History props removed
   navigateToParent,
   navigateToTreeLevel,
   navigateToParentView,
   addNewNode,
   fitView,
-  undo,
-  redo,
-  saveToDatabase,
+  // undo/redo functions removed
   discardChanges,
 }) => {
   return (
@@ -165,33 +157,9 @@ export const NavigationToolbar: React.FC<NavigationToolbarProps> = ({
           <FitScreenIcon />
         </IconButton>
         
-        <IconButton 
-          onClick={undo} 
-          size="small" 
-          title="Undo" 
-          disabled={historyIndex <= 0 || isLoading || !!error}
-        >
-          <UndoIcon />
-        </IconButton>
+                {/* Undo/Redo buttons removed - using page reload for cancel changes */}
         
-        <IconButton 
-          onClick={redo} 
-          size="small" 
-          title="Redo" 
-          disabled={historyIndex >= historyLength - 1 || isLoading || !!error}
-        >
-          <RedoIcon />
-        </IconButton>
-        
-        <IconButton 
-          onClick={saveToDatabase} 
-          size="small" 
-          title={hasUnsavedChanges ? "Save Changes to Database" : "Save"}
-          disabled={isLoading || !!error}
-          color={hasUnsavedChanges ? "primary" : "default"}
-        >
-          {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
-        </IconButton>
+
         
         <IconButton 
           onClick={discardChanges} 
