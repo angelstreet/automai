@@ -85,7 +85,7 @@ const UserInterface: React.FC = () => {
   const loadDevices = async () => {
     try {
       setDevicesLoading(true);
-      const response = await fetch('/server/devices/get-devices');
+      const response = await fetch('/server/devices/getAllDevices');
       if (!response.ok) {
         throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
       }

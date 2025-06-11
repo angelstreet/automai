@@ -58,7 +58,7 @@ device_bp = Blueprint('server_device', __name__, url_prefix='/server/devices')
 # DEVICE ENDPOINTS
 # =====================================================
 
-@device_bp.route('/get-devices', methods=['GET'])
+@device_bp.route('/getAllDevices', methods=['GET'])
 def get_devices():
     """Get all devices for the team"""
     error = check_supabase()

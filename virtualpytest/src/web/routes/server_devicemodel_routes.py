@@ -26,7 +26,7 @@ devicemodel_bp = Blueprint('server_devicemodel', __name__, url_prefix='/server/d
 # DEVICE MODELS ENDPOINTS
 # =====================================================
 
-@devicemodel_bp.route('/get-devicemodels', methods=['GET'])
+@devicemodel_bp.route('/getAllModels', methods=['GET'])
 def get_devicemodels():
     """Get all device models for the team"""
     error = check_supabase()

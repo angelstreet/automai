@@ -82,9 +82,9 @@ export const useUserInterface = () => {
   /**
    * Create a new user interface
    */
-  const createUserInterface = async (): Promise<UserInterface> => {
+  const createUserInterface = async (payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
     try {
-      console.log('[@hook:useUserInterface:createUserInterface] Creating user interface via controller proxy');
+      console.log('[@hook:useUserInterface:createUserInterface] Creating user interface via controller proxy', payload);
       
       // Check if remote controller proxy is available
       if (!selectedHost?.controllerProxies?.remote) {
@@ -103,9 +103,9 @@ export const useUserInterface = () => {
   /**
    * Update an existing user interface
    */
-  const updateUserInterface = async (id: string): Promise<UserInterface> => {
+  const updateUserInterface = async (id: string, payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
     try {
-      console.log(`[@hook:useUserInterface:updateUserInterface] Updating user interface ${id} via controller proxy`);
+      console.log(`[@hook:useUserInterface:updateUserInterface] Updating user interface ${id} via controller proxy`, payload);
       
       // Check if remote controller proxy is available
       if (!selectedHost?.controllerProxies?.remote) {

@@ -70,7 +70,7 @@ const DeviceManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/server/devices/get-devices');
+      const response = await fetch('/server/devices/getAllDevices');
       
       console.log('[@component:DeviceManagement] Response status:', response.status);
       console.log('[@component:DeviceManagement] Response headers:', response.headers.get('content-type'));

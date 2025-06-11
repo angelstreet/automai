@@ -21,36 +21,25 @@ def save_device(device: Dict, team_id: str, creator_id: str = None) -> None:
     
     supabase = get_supabase()
     try:
-        supabase.table('devices').insert({
+        supabase.table('device').insert({
             'id': device_id,
             'name': device['name'],
-            'type': device['type'],
             'model': device.get('model', ''),
-            'version': device.get('version', ''),
-            'environment': device.get('environment', 'dev'),
-            'connection_config': device.get('connection_config', {}),
-            'status': device.get('status', 'offline'),
             'team_id': team_id
         }).execute()
     except Exception:
         # Update existing device
-        supabase.table('devices').update({
+        supabase.table('device').update({
             'name': device['name'],
-            'type': device['type'],
             'model': device.get('model', ''),
-            'version': device.get('version', ''),
-            'environment': device.get('environment', 'dev'),
-            'connection_config': device.get('connection_config', {}),
-            'status': device.get('status', 'offline'),
             'updated_at': datetime.now().isoformat()
         }).eq('id', device_id).eq('team_id', team_id).execute()
 
 def get_device(device_id: str, team_id: str) -> Optional[Dict]:
     """Retrieve device by device_id from Supabase."""
     supabase = get_supabase()
-    result = supabase.table('devices').select(
-        'id', 'name', 'type', 'model', 'version', 'environment', 
-        'connection_config', 'status', 'created_at', 'updated_at'
+    result = supabase.table('device').select(
+        'id', 'name', 'model','created_at', 'updated_at'
     ).eq('id', device_id).eq('team_id', team_id).execute()
     
     if result.data:
@@ -60,9 +49,8 @@ def get_device(device_id: str, team_id: str) -> Optional[Dict]:
 def get_all_devices(team_id: str) -> List[Dict]:
     """Retrieve all devices for a team from Supabase."""
     supabase = get_supabase()
-    result = supabase.table('devices').select(
-        'id', 'name', 'type', 'model', 'version', 'environment', 
-        'connection_config', 'status', 'created_at', 'updated_at'
+    result = supabase.table('device').select(
+        'id', 'name', 'model', 'created_at', 'updated_at'
     ).eq('team_id', team_id).order('created_at', desc=True).execute()
     
     return [dict(device) for device in result.data]
@@ -70,5 +58,5 @@ def get_all_devices(team_id: str) -> List[Dict]:
 def delete_device(device_id: str, team_id: str) -> bool:
     """Delete device from Supabase."""
     supabase = get_supabase()
-    result = supabase.table('devices').delete().eq('id', device_id).eq('team_id', team_id).execute()
+    result = supabase.table('device').delete().eq('id', device_id).eq('team_id', team_id).execute()
     return len(result.data) > 0 

@@ -95,7 +95,7 @@ const Models: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/server/devicemodel/get-devicemodels');
+      const response = await fetch('/server/devicemodel/getAllModels');
       if (!response.ok) {
         throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
       }

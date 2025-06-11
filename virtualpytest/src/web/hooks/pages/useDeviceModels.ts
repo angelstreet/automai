@@ -37,7 +37,7 @@ class DeviceModelServerService {
   async getAllDeviceModels(): Promise<Model[]> {
     try {
       console.log('[@hook:useDeviceModels:getAllDeviceModels] Fetching all device models');
-      const response = await fetch(this.buildUrl('/server/devicemodels'), {
+      const response = await fetch(this.buildUrl('/server/devicemodel/getAllModels'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ class DeviceModelServerService {
   async getDeviceModel(id: string): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:getDeviceModel] Fetching device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodels/${id}`), {
+      const response = await fetch(this.buildUrl(`/server/devicemodel/get-devicemodel/${id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -86,15 +86,15 @@ class DeviceModelServerService {
   /**
    * Create a new device model
    */
-  async createDeviceModel(payload: ModelCreateData): Promise<Model> {
+  async createDeviceModel(model: Omit<Model, 'id' | 'created_at' | 'updated_at'>): Promise<Model> {
     try {
-      console.log(`[@hook:useDeviceModels:createDeviceModel] Creating device model: ${payload.name}`);
-      const response = await fetch(this.buildUrl('/server/devicemodels'), {
+      console.log('[@hook:useDeviceModels:createDeviceModel] Creating device model:', model);
+      const response = await fetch(this.buildUrl('/server/devicemodel/create-devicemodel'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(model),
       });
 
       if (!response.ok) {
@@ -102,13 +102,10 @@ class DeviceModelServerService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ServerResponse<Model> = await response.json();
-      if (data.status === 'success' && data.devicemodel) {
-        console.log(`[@hook:useDeviceModels:createDeviceModel] Successfully created device model: ${data.devicemodel.id}`);
-        return data.devicemodel;
-      } else {
-        throw new Error(data.error || 'Failed to create device model');
-      }
+      const result = await response.json();
+      const createdModel = result.model;
+      console.log(`[@hook:useDeviceModels:createDeviceModel] Successfully created device model: ${createdModel.name}`);
+      return createdModel;
     } catch (error) {
       console.error('[@hook:useDeviceModels:createDeviceModel] Error creating device model:', error);
       throw error;
@@ -118,15 +115,15 @@ class DeviceModelServerService {
   /**
    * Update an existing device model
    */
-  async updateDeviceModel(id: string, payload: ModelCreateData): Promise<Model> {
+  async updateDeviceModel(id: string, model: Partial<Omit<Model, 'id' | 'created_at' | 'updated_at'>>): Promise<Model> {
     try {
-      console.log(`[@hook:useDeviceModels:updateDeviceModel] Updating device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodels/${id}`), {
+      console.log(`[@hook:useDeviceModels:updateDeviceModel] Updating device model: ${id}`, model);
+      const response = await fetch(this.buildUrl(`/server/devicemodel/update-devicemodel/${id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(model),
       });
 
       if (!response.ok) {
@@ -134,13 +131,10 @@ class DeviceModelServerService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data: ServerResponse<Model> = await response.json();
-      if (data.status === 'success' && data.devicemodel) {
-        console.log(`[@hook:useDeviceModels:updateDeviceModel] Successfully updated device model: ${id}`);
-        return data.devicemodel;
-      } else {
-        throw new Error(data.error || 'Failed to update device model');
-      }
+      const result = await response.json();
+      const updatedModel = result.model;
+      console.log(`[@hook:useDeviceModels:updateDeviceModel] Successfully updated device model: ${id}`);
+      return updatedModel;
     } catch (error) {
       console.error(`[@hook:useDeviceModels:updateDeviceModel] Error updating device model ${id}:`, error);
       throw error;
@@ -153,7 +147,7 @@ class DeviceModelServerService {
   async deleteDeviceModel(id: string): Promise<void> {
     try {
       console.log(`[@hook:useDeviceModels:deleteDeviceModel] Deleting device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodels/${id}`), {
+      const response = await fetch(this.buildUrl(`/server/devicemodel/delete-devicemodel/${id}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -165,11 +159,6 @@ class DeviceModelServerService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      if (data.status !== 'success') {
-        throw new Error(data.error || 'Failed to delete device model');
-      }
-      
       console.log(`[@hook:useDeviceModels:deleteDeviceModel] Successfully deleted device model: ${id}`);
     } catch (error) {
       console.error(`[@hook:useDeviceModels:deleteDeviceModel] Error deleting device model ${id}:`, error);

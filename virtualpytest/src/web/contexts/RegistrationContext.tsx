@@ -38,12 +38,6 @@ interface RegistrationContextType {
   // Convenience getters
   getHostById: (hostId: string) => DeviceWithProxies | null;
   getAvailableHosts: () => DeviceWithProxies[];
-  
-  // Legacy compatibility (for gradual migration)
-  buildApiUrl: (endpoint: string) => string;
-  setAvailableHosts: (hosts: DeviceWithProxies[]) => void;
-  setSelectedHost: (host: DeviceWithProxies | null) => void;
-  selectHostById: (hostId: string) => void;
 }
 
 const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined);
@@ -306,15 +300,6 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     return availableHosts;
   }, [availableHosts]);
 
-  // Legacy compatibility functions (for gradual migration)
-  const buildApiUrl = useCallback((endpoint: string) => {
-    return buildServerUrl(endpoint);
-  }, [buildServerUrl]);
-
-  const selectHostById = useCallback((hostId: string) => {
-    selectHost(hostId);
-  }, [selectHost]);
-
   // Device Lock Management Functions
   const lockDevice = useCallback(async (hostId: string, sessionId?: string): Promise<boolean> => {
     try {
@@ -462,12 +447,6 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     // Convenience getters
     getHostById,
     getAvailableHosts,
-    
-    // Legacy compatibility
-    buildApiUrl,
-    setAvailableHosts,
-    setSelectedHost,
-    selectHostById,
   };
 
   return (
