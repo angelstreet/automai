@@ -20,7 +20,7 @@ import {
   useNavigationCRUD,
   useNavigationConfig,
   useNodeEdgeManagement 
-} from './useNavigationHooks';
+} from './useNavigation';
 
 // Import registration context and default team ID
 import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';

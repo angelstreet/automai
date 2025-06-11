@@ -9,10 +9,10 @@ import {
 } from '@mui/material';
 
 import { ControllerTypesOverview, ControllerImplementations } from '../components/remote';
-import { useControllerTypes } from '../hooks/controller';
+import { useControllers } from '../hooks/controller';
 
 const ControllerPage: React.FC = () => {
-  const { controllerTypes, loading, error, refetch } = useControllerTypes();
+  const { controllerTypes, loading, error, refetch } = useControllers();
 
   if (loading) {
     return (

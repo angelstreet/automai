@@ -23,13 +23,11 @@ import {
 import {
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks';
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
-import { UINavigationEdge } from '../components/navigation/Navigation_NavigationEdge';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';

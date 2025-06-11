@@ -5,6 +5,16 @@ import {
   Pending as PendingIcon,
   TableRows as TableViewIcon,
   Refresh as RefreshIcon,
+  Assignment as TestIcon,
+  Campaign as CampaignIcon,
+  AccountTree as TreeIcon,
+  Devices as DevicesIcon,
+  Add as AddIcon,
+  PlayArrow as PlayIcon,
+  GridView as GridViewIcon,
+  Phone as PhoneIcon,
+  Tv as TvIcon,
+  CheckCircle as SuccessIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -29,63 +39,21 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
+  CircularProgress,
+  Paper,
 } from '@mui/material';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRegistration } from '../contexts/RegistrationContext';
-
 import { TestCase, Campaign, Tree } from '../types';
-
-// Dashboard stats interface
-interface DashboardStats {
-  testCases: number;
-  campaigns: number;
-  trees: number;
-  recentActivity: LogEntry[];
-}
-
-// Log entry interface for debug logs
-interface LogEntry {
-  timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
-  source: 'frontend' | 'backend';
-  message: string;
-  details?: any;
-}
-
-type ViewMode = 'grid' | 'table';
-
-interface ConnectedDevice {
-  client_id: string;
-  name: string;
-  device_model: string;
-  local_ip: string;
-  client_port: string;
-  public_ip: string;
-  capabilities: string[];
-  status: string;
-  registered_at: string;
-  last_seen: number;
-  system_stats: {
-    cpu: {
-      percent: number;
-    };
-    memory: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    disk: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    timestamp: number;
-    error?: string;
-  };
-}
-
-type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
-type LogSource = 'all' | 'frontend' | 'backend';
+import {
+  DashboardStats,
+  RecentActivity,
+  LogEntry,
+  ViewMode,
+  ConnectedDevice,
+  LogLevel,
+  LogSource,
+} from '../types/pages/Dashboard_Types';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -110,13 +78,18 @@ const Dashboard: React.FC = () => {
   const [autoRefreshLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // Use useCallback to prevent fetchHosts from changing on every render
+  const memoizedFetchHosts = useCallback(() => {
+    fetchHosts();
+  }, [fetchHosts]);
+
   useEffect(() => {
     fetchDashboardData();
-    fetchHosts(); // Use centralized host fetching
+    memoizedFetchHosts();
     // Set up auto-refresh for hosts every 30 seconds
-    const interval = setInterval(fetchHosts, 30000);
+    const interval = setInterval(memoizedFetchHosts, 30000);
     return () => clearInterval(interval);
-  }, [fetchHosts]);
+  }, []); // Empty dependency array to prevent infinite loop
 
   // Auto-refresh logs
   useEffect(() => {
@@ -139,9 +112,10 @@ const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [campaignsResponse, testCasesResponse] = await Promise.all([
+      const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
         fetch(buildServerUrl('/server/campaigns')),
         fetch(buildServerUrl('/server/test/cases')),
+        fetch(buildServerUrl('/server/navigation/trees')), // Fixed: added the missing trees API call
       ]);
 
       let testCases: TestCase[] = [];
@@ -156,24 +130,24 @@ const Dashboard: React.FC = () => {
         campaigns = await campaignsResponse.json();
       }
 
-      if (treesRes.ok) {
-        const treesResponse = await treesRes.json();
+      if (treesResponse.ok) {
+        const treesData = await treesResponse.json();
         // The navigation API returns { success: true, data: [...] }
-        if (treesResponse.success && treesResponse.data) {
-          trees = treesResponse.data;
+        if (treesData.success && treesData.data) {
+          trees = treesData.data;
         }
       }
 
-      // Generate mock recent activity
-      const recentActivity = [
-        ...testCases.slice(0, 3).map((tc) => ({
+      // Generate mock recent activity with proper RecentActivity type
+      const recentActivity: RecentActivity[] = [
+        ...testCases.slice(0, 3).map((tc): RecentActivity => ({
           id: tc.test_id,
           type: 'test' as const,
           name: tc.name,
           status: 'success' as const,
           timestamp: new Date().toISOString(),
         })),
-        ...campaigns.slice(0, 2).map((c) => ({
+        ...campaigns.slice(0, 2).map((c): RecentActivity => ({
           id: c.campaign_id,
           type: 'campaign' as const,
           name: c.campaign_name,
@@ -816,7 +790,7 @@ const Dashboard: React.FC = () => {
             </ToggleButtonGroup>
             <Tooltip title="Refresh Devices">
               <IconButton 
-                onClick={fetchHosts} 
+                onClick={memoizedFetchHosts} 
                 disabled={hostsLoading}
                 size="small"
               >
