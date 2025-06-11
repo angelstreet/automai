@@ -108,8 +108,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     return finalUrl;
   }, [availableHosts]);
 
-  // Create controller proxies for a host device
-  const createControllerProxies = useCallback((host: DeviceWithProxies) => {
+  // Create controller proxies for a host device - REMOVED from useCallback to break circular dependency
+  const createControllerProxies = (host: DeviceWithProxies) => {
     console.log(`[@context:Registration] Creating controller proxies for host: ${host.name} (${host.id})`);
     
     const proxies: DeviceWithProxies['controllerProxies'] = {};
@@ -118,10 +118,20 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     if (host.controller_types?.includes('av') || host.capabilities?.includes('av')) {
       try {
         console.log(`[@context:Registration] Creating AV controller proxy for host: ${host.name}`);
-        proxies.av = new AVControllerProxy(host, buildHostUrl);
+        // Create a local buildHostUrl function to avoid dependency issues
+        const localBuildHostUrl = (hostName: string, endpoint: string) => {
+          if (!host.connection?.flask_url) {
+            throw new Error(`Host ${hostName} does not have a flask_url in connection data`);
+          }
+          const baseUrl = host.connection.flask_url;
+          const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+          return `${baseUrl}/${cleanEndpoint}`;
+        };
+        proxies.av = new AVControllerProxy(host, localBuildHostUrl);
         console.log(`[@context:Registration] AV controller proxy created successfully for host: ${host.name}`);
       } catch (error) {
         console.error(`[@context:Registration] Failed to create AV controller proxy for host ${host.name}:`, error);
+        // Don't throw - just log and continue
       }
     }
     
@@ -129,10 +139,20 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     if (host.controller_types?.includes('remote') || host.capabilities?.includes('remote')) {
       try {
         console.log(`[@context:Registration] Creating remote controller proxy for host: ${host.name}`);
-        proxies.remote = new RemoteControllerProxy(host, buildHostUrl);
+        // Create a local buildHostUrl function to avoid dependency issues
+        const localBuildHostUrl = (hostName: string, endpoint: string) => {
+          if (!host.connection?.flask_url) {
+            throw new Error(`Host ${hostName} does not have a flask_url in connection data`);
+          }
+          const baseUrl = host.connection.flask_url;
+          const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+          return `${baseUrl}/${cleanEndpoint}`;
+        };
+        proxies.remote = new RemoteControllerProxy(host, localBuildHostUrl);
         console.log(`[@context:Registration] Remote controller proxy created successfully for host: ${host.name}`);
       } catch (error) {
         console.error(`[@context:Registration] Failed to create remote controller proxy for host ${host.name}:`, error);
+        // Don't throw - just log and continue
       }
     }
     
@@ -140,18 +160,28 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     if (host.controller_types?.includes('verification') || host.capabilities?.includes('verification')) {
       try {
         console.log(`[@context:Registration] Creating verification controller proxy for host: ${host.name}`);
-        proxies.verification = new VerificationControllerProxy(host, buildHostUrl);
+        // Create a local buildHostUrl function to avoid dependency issues
+        const localBuildHostUrl = (hostName: string, endpoint: string) => {
+          if (!host.connection?.flask_url) {
+            throw new Error(`Host ${hostName} does not have a flask_url in connection data`);
+          }
+          const baseUrl = host.connection.flask_url;
+          const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+          return `${baseUrl}/${cleanEndpoint}`;
+        };
+        proxies.verification = new VerificationControllerProxy(host, localBuildHostUrl);
         console.log(`[@context:Registration] Verification controller proxy created successfully for host: ${host.name}`);
       } catch (error) {
         console.error(`[@context:Registration] Failed to create verification controller proxy for host ${host.name}:`, error);
+        // Don't throw - just log and continue
       }
     }
     
     console.log(`[@context:Registration] Created ${Object.keys(proxies).length} controller proxies for host: ${host.name}`);
     return proxies;
-  }, [buildHostUrl]);
+  };
 
-  // Fetch hosts from server
+  // Fetch hosts from server - FIXED: Removed createControllerProxies from dependency array
   const fetchHosts = useCallback(async () => {
     console.log('[@context:Registration] fetchHosts function called!');
     try {
@@ -209,14 +239,22 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         
         console.log('[@context:Registration] Mapped hosts:', hosts);
         
-        // First set the available hosts
-        setAvailableHosts(hosts);
-        
-        // Then create controller proxies for each host (after availableHosts is populated)
-        const hostsWithProxies = hosts.map((host: DeviceWithProxies) => ({
-          ...host,
-          controllerProxies: createControllerProxies(host)
-        }));
+        // Create controller proxies for each host safely (without causing re-renders)
+        const hostsWithProxies = hosts.map((host: DeviceWithProxies) => {
+          try {
+            return {
+              ...host,
+              controllerProxies: createControllerProxies(host)
+            };
+          } catch (error) {
+            console.error(`[@context:Registration] Failed to create controller proxies for host ${host.name}:`, error);
+            // Return host without proxies instead of failing
+            return {
+              ...host,
+              controllerProxies: {}
+            };
+          }
+        });
         
         console.log('[@context:Registration] Hosts with controller proxies:', hostsWithProxies);
         setAvailableHosts(hostsWithProxies);
@@ -250,7 +288,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     } finally {
       setIsLoading(false);
     }
-  }, [createControllerProxies]);
+  }, []); // FIXED: Empty dependency array to prevent infinite loop
 
   // Build nginx URL (for host media/files)
   const buildNginxUrl = useCallback((hostId: string, path: string) => {

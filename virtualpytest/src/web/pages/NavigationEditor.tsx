@@ -137,7 +137,7 @@ const NavigationEditorContent: React.FC = () => {
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
     fetchHosts();
-  }, [fetchHosts]);
+  }, []);
 
   // Auto-populate connection form when host is selected
   useEffect(() => {

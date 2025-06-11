@@ -88,7 +88,12 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
-  const canRunActions = isControlActive && selectedDevice && edgeForm.actions.length > 0 && !isRunningActions;
+  // Early return if edgeForm is null or undefined
+  if (!edgeForm) {
+    return null;
+  }
+
+  const canRunActions = isControlActive && selectedDevice && edgeForm?.actions?.length > 0 && !isRunningActions;
 
   useEffect(() => {
     if (!isOpen) {
@@ -141,13 +146,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   const isFormValid = () => {
-    return edgeForm.actions.every(action => 
+    return edgeForm?.actions?.every(action => 
       !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim())
-    );
+    ) ?? true;
   };
 
   const handleRunActions = async () => {
-    if (edgeForm.actions.length === 0) return;
+    if (!edgeForm?.actions || edgeForm.actions.length === 0) return;
     
     if (isRunningActions) {
       console.log('[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request');
@@ -156,7 +161,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     
     setIsRunningActions(true);
     setActionResult(null);
-    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm.retryActions.length} retry actions`);
+    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`);
     
     try {
       const result = await executeEdgeActions(
@@ -164,8 +169,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         controllerTypes,
         selectedHostDevice, // Pass selectedHostDevice instead of buildServerUrl
         undefined,
-        edgeForm.finalWaitTime,
-        edgeForm.retryActions,
+        edgeForm?.finalWaitTime,
+        edgeForm?.retryActions,
         undefined
       );
       
@@ -173,7 +178,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       setEdgeForm(prev => ({
         ...prev,
         actions: result.updatedActions,
-        retryActions: result.updatedRetryActions || prev.retryActions
+        retryActions: result.updatedRetryActions || prev?.retryActions || []
       }));
       
       setActionResult(result.results.join('\n'));
@@ -214,16 +219,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           
           <TextField
             label="Edge Description"
-            value={edgeForm.description}
+            value={edgeForm?.description || ''}
             onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
             fullWidth
             size="small"
           />
           
           <EdgeActionsList
-            actions={edgeForm.actions}
-            retryActions={edgeForm.retryActions}
-            finalWaitTime={edgeForm.finalWaitTime}
+            actions={edgeForm?.actions || []}
+            retryActions={edgeForm?.retryActions || []}
+            finalWaitTime={edgeForm?.finalWaitTime}
             availableActions={controllerActions}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
             onRetryActionsChange={(newRetryActions) => setEdgeForm({ ...edgeForm, retryActions: newRetryActions })}

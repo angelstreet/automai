@@ -100,6 +100,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
 
+  // Early return if nodeForm is null or undefined
+  if (!nodeForm) {
+    return null;
+  }
+
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
     const updatedResults = [newResult, ...results];
@@ -115,7 +120,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   // Use same logic as EdgeEditDialog
   const canRunVerifications = isControlActive && selectedDevice && 
-    nodeForm.verifications && nodeForm.verifications.length > 0 && !isRunningVerifications;
+    nodeForm?.verifications && nodeForm.verifications.length > 0 && !isRunningVerifications;
 
   // Can run goto if we have control and device, and not already running goto
   const canRunGoto = isControlActive && selectedDevice && !isRunningGoto && !isRunningVerifications;
@@ -177,8 +182,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   };
 
   const isFormValid = () => {
-    const basicFormValid = nodeForm.label.trim();
-    const verificationsValid = !nodeForm.verifications || nodeForm.verifications.every(verification => {
+    const basicFormValid = nodeForm?.label?.trim();
+    const verificationsValid = !nodeForm?.verifications || nodeForm.verifications.every(verification => {
       // Skip verifications that don't have an id (not configured yet)
       if (!verification.id) return true;
       
@@ -200,7 +205,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const handleRunVerifications = async () => {
-    if (!nodeForm.verifications || nodeForm.verifications.length === 0) return;
+    if (!nodeForm?.verifications || nodeForm.verifications.length === 0) return;
     
     console.log('[@component:NodeEditDialog] === VERIFICATION TEST DEBUG ===');
     console.log('[@component:NodeEditDialog] Number of verifications before filtering:', nodeForm.verifications.length);
@@ -354,7 +359,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       
       // Step 1: Execute Navigation Steps
       gotoResults.push('🚀 Starting navigation to node...');
-      console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm.label}`);
+      console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm?.label || 'unknown'}`);
       
       try {
         // Execute navigation to this node using navigation controller proxy
@@ -362,10 +367,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           gotoResults.push(`❌ Navigation: Navigation controller not available`);
           console.error(`[@component:NodeEditDialog] Navigation controller proxy not available`);
         } else {
-          const navigationResult = await selectedHostDevice.controllerProxies.navigation.gotoNode(nodeForm.label);
+          const navigationResult = await selectedHostDevice.controllerProxies.navigation.gotoNode(nodeForm?.label || '');
           
           if (navigationResult.success) {
-            gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm.label}`);
+            gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm?.label || 'unknown'}`);
             navigationSuccess = true;
             console.log(`[@component:NodeEditDialog] Navigation successful`);
           } else {
@@ -381,7 +386,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       // Step 2: Execute Verifications (only if navigation succeeded)
       let verificationSuccess = true;
       
-      if (navigationSuccess && nodeForm.verifications && nodeForm.verifications.length > 0) {
+      if (navigationSuccess && nodeForm?.verifications && nodeForm.verifications.length > 0) {
         gotoResults.push('\n🔍 Running node verifications...');
         console.log(`[@component:NodeEditDialog] Starting verifications after successful navigation`);
         
@@ -460,7 +465,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           verifications: updatedVerifications
         }));
         
-      } else if (navigationSuccess && (!nodeForm.verifications || nodeForm.verifications.length === 0)) {
+      } else if (navigationSuccess && (!nodeForm?.verifications || nodeForm.verifications.length === 0)) {
         gotoResults.push('ℹ️ No verifications configured for this node');
       }
       
@@ -471,7 +476,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       if (overallSuccess) {
         gotoResults.push('🎉 Goto operation completed successfully!');
         gotoResults.push(`✅ Navigation: Success`);
-        gotoResults.push(`✅ Verifications: ${nodeForm.verifications?.length || 0} passed`);
+        gotoResults.push(`✅ Verifications: ${nodeForm?.verifications?.length || 0} passed`);
       } else {
         gotoResults.push('⚠️ Goto operation completed with issues:');
         gotoResults.push(`${navigationSuccess ? '✅' : '❌'} Navigation: ${navigationSuccess ? 'Success' : 'Failed'}`);
@@ -498,17 +503,17 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               label="Node Name"
-              value={nodeForm.label}
+              value={nodeForm?.label || ''}
               onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
               fullWidth
               required
-              error={!nodeForm.label.trim()}
+              error={!nodeForm?.label?.trim()}
               size="small"
             />
             <FormControl fullWidth size="small">
               <InputLabel>Type</InputLabel>
               <Select
-                value={nodeForm.type}
+                value={nodeForm?.type || 'screen'}
                 label="Type"
                 onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
               >
@@ -523,7 +528,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               label="Depth"
-              value={nodeForm.depth || 0}
+              value={nodeForm?.depth || 0}
               fullWidth
               InputProps={{ readOnly: true }}
               variant="outlined"
@@ -531,7 +536,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
             <TextField
               label="Parent"
-              value={getParentNames(nodeForm.parent || [])}
+              value={getParentNames(nodeForm?.parent || [])}
               fullWidth
               InputProps={{ readOnly: true }}
               variant="outlined"
@@ -542,17 +547,17 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           {/* Single line description */}
           <TextField
             label="Description"
-            value={nodeForm.description}
+            value={nodeForm?.description || ''}
             onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
             fullWidth
             size="small"
           />
           
           {/* Screenshot URL Field - only show for non-entry nodes */}
-          {nodeForm.type !== 'entry' && (
+          {nodeForm?.type !== 'entry' && (
             <TextField
               label="Screenshot URL"
-              value={nodeForm.screenshot || ''}
+              value={nodeForm?.screenshot || ''}
               onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
               fullWidth
               size="small"
@@ -595,7 +600,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           )}
           
           {/* Entry node note */}
-          {nodeForm.type === 'entry' && (
+          {nodeForm?.type === 'entry' && (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
               Entry points are automatically positioned. Edit the connecting edge to change entry method and details.
             </Typography>

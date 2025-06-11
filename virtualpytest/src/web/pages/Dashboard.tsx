@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
   // Use useCallback to prevent fetchHosts from changing on every render
   const memoizedFetchHosts = useCallback(() => {
     fetchHosts();
-  }, [fetchHosts]);
+  }, []); // FIXED: Empty dependency array since fetchHosts is now stable
 
   useEffect(() => {
     fetchDashboardData();
