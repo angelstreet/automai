@@ -1,5 +1,5 @@
 """
-Routes package for VirtualPyTest Web API
+Routes package for VirtualPyTest Web API - Fail Fast Version
 
 This package contains organized route modules for the Flask application.
 """
@@ -8,130 +8,109 @@ from flask import Flask
 from flask_cors import CORS
 
 def register_routes(app: Flask, mode='server'):
-    """
-    Register application routes based on mode
-    
-    Args:
-        app: Flask application instance
-        mode: 'server' or 'host' - determines which routes to register
-    """
+    """Register ALL routes for the specified mode - FAIL FAST"""
     CORS(app)
     
-    print(f"[@routes:register_routes] Registering routes for mode: {mode}")
+    print(f"[@routes:register_routes] Loading ALL routes for mode: {mode}")
     
-    # =====================================================
-    # COMMON ROUTES (registered on both server and host)
-    # =====================================================
-    from .common_core_routes import core_bp
-    from .common_controller_routes import controller_bp
-    
-    app.register_blueprint(core_bp)
-    app.register_blueprint(controller_bp)
+    # Common routes (must succeed)
+    _register_common_routes(app)
     
     if mode == 'server':
-        # =====================================================
-        # SERVER-ONLY ROUTES (port 5009)
-        # =====================================================
-        print(f"[@routes:register_routes] Registering SERVER-specific routes")
-        
-        # Import server-only routes
-        from .server_remote_routes import remote_bp
-        from .server_navigation_routes import navigation_bp
-        from .server_campaign_routes import campaign_bp
-        from .server_testcase_routes import testcase_bp
-        from .server_screen_definition_routes import screen_definition_blueprint
-        from .server_pathfinding_routes import pathfinding_bp
-        from .server_validation_routes import validation_bp
-        from .server_navigation_config_routes import navigation_config_bp
-        from .server_power_routes import power_bp
-        
-        # Import database management routes (moved from common)
-        from .common_device_routes import device_bp
-        from .common_userinterface_routes import userinterface_bp
-        from .common_devicemodel_routes import devicemodel_bp
-        
-        # Import server verification routes
-        from .server_verification_common_routes import verification_common_bp
-        from .server_verification_image_routes import verification_image_server_bp
-        from .server_verification_text_routes import verification_text_server_bp
-        from .server_verification_adb_routes import verification_adb_server_bp
-        from .server_verification_execution_routes import verification_execution_server_bp
-        
-        # Import server control routes
-        from .server_control_routes import server_control_bp
-        
-        # Import system routes with error handling
-        try:
-            from .server_system_routes import system_bp
-            print(f"[@routes:register_routes] Successfully imported server_system_routes")
-        except ImportError as e:
-            print(f"[@routes:register_routes] CRITICAL: Failed to import server_system_routes: {e}")
-            raise ImportError(f"Cannot import server_system_routes: {e}")
-        
-        # System management (server manages host registrations)
-        app.register_blueprint(system_bp)
-        
-        # Server-side control routes (device locking, host coordination)
-        app.register_blueprint(server_control_bp)
-        
-        # Server-side verification endpoints (proxy to hosts)
-        app.register_blueprint(verification_common_bp)
-        app.register_blueprint(verification_image_server_bp)
-        app.register_blueprint(verification_text_server_bp)
-        app.register_blueprint(verification_adb_server_bp)
-        app.register_blueprint(verification_execution_server_bp)
-        
-        # Server-side functionality
-        app.register_blueprint(remote_bp)
-        app.register_blueprint(navigation_bp)
-        app.register_blueprint(navigation_config_bp)
-        app.register_blueprint(pathfinding_bp)
-        app.register_blueprint(validation_bp)
-        app.register_blueprint(campaign_bp)
-        app.register_blueprint(testcase_bp)
-        app.register_blueprint(screen_definition_blueprint)
-        app.register_blueprint(power_bp)
-        
-        # Database management (server-only)
-        app.register_blueprint(device_bp)
-        app.register_blueprint(userinterface_bp)
-        app.register_blueprint(devicemodel_bp)
-        
-        print(f"[@routes:register_routes] SERVER routes registered successfully")
-        
+        _register_server_routes(app)
     elif mode == 'host':
-        # =====================================================
-        # HOST-ONLY ROUTES (port 5119)
-        # =====================================================
-        print(f"[@routes:register_routes] Registering HOST-specific routes")
-        
-        # Import host-only routes
-        from .host_verification_image_routes import verification_image_host_bp
-        from .host_verification_text_routes import verification_text_host_bp
-        from .host_verification_adb_routes import verification_adb_host_bp
-        from .host_verification_execution_routes import verification_execution_host_bp
-        from .host_control_routes import host_control_bp
-        from .host_remote_routes import host_remote_bp
-        from .host_av_routes import host_av_bp
-        
-        # Host-side verification endpoints (actual execution)
-        app.register_blueprint(verification_image_host_bp)
-        app.register_blueprint(verification_text_host_bp)
-        app.register_blueprint(verification_adb_host_bp)
-        app.register_blueprint(verification_execution_host_bp)
-        
-        # Host-side control routes (controller management, device control)
-        app.register_blueprint(host_control_bp)
-        
-        # Host-side remote routes (direct remote control)
-        app.register_blueprint(host_remote_bp)
-        
-        # Host-side AV routes (audio/video controller operations)
-        app.register_blueprint(host_av_bp)
-        
-        print(f"[@routes:register_routes] HOST routes registered successfully")
-        
+        _register_host_routes(app)
     else:
-        raise ValueError(f"Invalid mode: {mode}. Must be 'server' or 'host'")
+        raise ValueError(f"Invalid mode: {mode}")
     
-    print(f"[@routes:register_routes] Route registration completed for mode: {mode}") 
+    print(f"[@routes:register_routes] ALL routes loaded successfully for mode: {mode}")
+
+def _register_common_routes(app):
+    """Register truly common routes - FAIL FAST"""
+    print("📋 Loading common routes...")
+    
+    try:
+        from .common_core_routes import core_bp
+        from .common_controller_routes import controller_bp
+        
+        app.register_blueprint(core_bp)
+        app.register_blueprint(controller_bp)
+        print("✅ Common routes registered")
+        
+    except ImportError as e:
+        print(f"❌ CRITICAL: Failed to import common routes: {e}")
+        raise
+
+def _register_server_routes(app):
+    """Register ALL server routes - FAIL FAST"""
+    print("📋 Loading ALL server-specific routes...")
+    
+    # Server-only routes (including former "common" routes that are actually server-only)
+    server_route_modules = [
+        ('server_remote_routes', 'remote_bp'),
+        ('server_navigation_routes', 'navigation_bp'),
+        ('server_campaign_routes', 'campaign_bp'),
+        ('server_testcase_routes', 'testcase_bp'),
+        ('server_screen_definition_routes', 'screen_definition_blueprint'),
+        ('server_pathfinding_routes', 'pathfinding_bp'),
+        ('server_validation_routes', 'validation_bp'),
+        ('server_navigation_config_routes', 'navigation_config_bp'),
+        ('server_power_routes', 'power_bp'),
+        ('server_device_routes', 'server_device_bp'),  # ✅ Renamed from common_device_routes
+        ('server_userinterface_routes', 'server_userinterface_bp'),  # ✅ Renamed from common_userinterface_routes
+        ('server_devicemodel_routes', 'server_devicemodel_bp'),  # ✅ Renamed from common_devicemodel_routes
+        ('server_verification_common_routes', 'verification_common_bp'),
+        ('server_verification_image_routes', 'verification_image_server_bp'),
+        ('server_verification_text_routes', 'verification_text_server_bp'),
+        ('server_verification_adb_routes', 'verification_adb_server_bp'),
+        ('server_verification_execution_routes', 'verification_execution_server_bp'),
+        ('server_control_routes', 'server_control_bp'),
+        ('server_system_routes', 'system_bp'),
+    ]
+    
+    # Import and register each module (FAIL FAST)
+    for module_name, blueprint_name in server_route_modules:
+        try:
+            module = __import__(f'routes.{module_name}', fromlist=[blueprint_name])
+            blueprint = getattr(module, blueprint_name)
+            app.register_blueprint(blueprint)
+            print(f"   ✅ {module_name} -> {blueprint_name}")
+            
+        except ImportError as e:
+            print(f"   ❌ CRITICAL: Failed to import {module_name}: {e}")
+            raise
+        except AttributeError as e:
+            print(f"   ❌ CRITICAL: Blueprint {blueprint_name} not found in {module_name}: {e}")
+            raise
+    
+    print("✅ ALL server routes registered successfully")
+
+def _register_host_routes(app):
+    """Register ALL host routes - FAIL FAST"""
+    print("📋 Loading ALL host-specific routes...")
+    
+    host_route_modules = [
+        ('host_verification_image_routes', 'verification_image_host_bp'),
+        ('host_verification_text_routes', 'verification_text_host_bp'),
+        ('host_verification_adb_routes', 'verification_adb_host_bp'),
+        ('host_verification_execution_routes', 'verification_execution_host_bp'),
+        ('host_control_routes', 'host_control_bp'),
+        ('host_remote_routes', 'host_remote_bp'),
+        ('host_av_routes', 'host_av_bp'),
+    ]
+    
+    for module_name, blueprint_name in host_route_modules:
+        try:
+            module = __import__(f'routes.{module_name}', fromlist=[blueprint_name])
+            blueprint = getattr(module, blueprint_name)
+            app.register_blueprint(blueprint)
+            print(f"   ✅ {module_name} -> {blueprint_name}")
+            
+        except ImportError as e:
+            print(f"   ❌ CRITICAL: Failed to import {module_name}: {e}")
+            raise
+        except AttributeError as e:
+            print(f"   ❌ CRITICAL: Blueprint {blueprint_name} not found in {module_name}: {e}")
+            raise
+    
+    print("✅ ALL host routes registered successfully") 

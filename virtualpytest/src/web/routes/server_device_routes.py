@@ -9,7 +9,7 @@ This module contains the device management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-# Import from specific database module (direct import)
+# Import database functions from src/lib/supabase (uses absolute import)
 from src.lib.supabase.devices_db import (
     get_all_devices, get_device, save_device as create_device, 
     delete_device
@@ -52,13 +52,13 @@ def update_device(device_id, device_data, team_id):
         return None
 
 # Create blueprint
-device_bp = Blueprint('device', __name__, url_prefix='/server/device')
+server_device_bp = Blueprint('server_device', __name__, url_prefix='/server/devices')
 
 # =====================================================
 # DEVICE ENDPOINTS
 # =====================================================
 
-@device_bp.route('/get-devices', methods=['GET'])
+@server_device_bp.route('/get-devices', methods=['GET'])
 def get_devices():
     """Get all devices for the team"""
     error = check_supabase()
@@ -73,7 +73,7 @@ def get_devices():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@device_bp.route('/create-device', methods=['POST'])
+@server_device_bp.route('/create-device', methods=['POST'])
 def create_device_endpoint():
     """Create a new device"""
     error = check_supabase()
@@ -103,7 +103,7 @@ def create_device_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@device_bp.route('/get-device/<device_id>', methods=['GET'])
+@server_device_bp.route('/get-device/<device_id>', methods=['GET'])
 def get_device_endpoint(device_id):
     """Get a specific device by ID"""
     error = check_supabase()
@@ -121,7 +121,7 @@ def get_device_endpoint(device_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@device_bp.route('/update-device/<device_id>', methods=['PUT'])
+@server_device_bp.route('/update-device/<device_id>', methods=['PUT'])
 def update_device_endpoint(device_id):
     """Update a specific device"""
     error = check_supabase()
@@ -150,7 +150,7 @@ def update_device_endpoint(device_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@device_bp.route('/delete-device/<device_id>', methods=['DELETE'])
+@server_device_bp.route('/delete-device/<device_id>', methods=['DELETE'])
 def delete_device_endpoint(device_id):
     """Delete a specific device"""
     error = check_supabase()

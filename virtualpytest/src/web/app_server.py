@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VirtualPyTest Server Application
+VirtualPyTest Server Application - Simplified Fail-Fast Version
 
 Usage: python3 app_server.py
 
@@ -16,99 +16,104 @@ import os
 import time
 import atexit
 
-# Simple path setup - add essential directories to Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.dirname(current_dir)
-sys.path.insert(0, os.path.join(src_dir, 'utils'))
-sys.path.insert(0, os.path.join(src_dir, 'navigation'))
-sys.path.insert(0, os.path.join(src_dir, 'controllers'))
-sys.path.insert(0, os.path.join(src_dir, 'models'))  # for devicemodel_utils
-sys.path.insert(0, os.path.join(current_dir, 'utils'))  # for adbUtils in web/utils
-sys.path.insert(0, os.path.join(current_dir, 'cache'))  # for navigation_cache
-sys.path.insert(0, src_dir)
+# CLEAN PATH SETUP - Only add what's absolutely necessary
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
+src_dir = os.path.dirname(current_dir)  # /src
 
-# Import only core utilities
-from app_utils import (
-    load_environment_variables,
-    kill_process_on_port,
-    setup_flask_app,
-    validate_core_environment,
-    initialize_global_sessions,
-    initialize_server_globals,
-    cleanup_server_resources,
-    DEFAULT_TEAM_ID,
-    DEFAULT_USER_ID
-)
+# Add src directory to path (contains utils, navigation, etc.)
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
-def cleanup_server_ports():
-    """Clean up ports for server mode"""
-    server_port = int(os.getenv('SERVER_PORT', '5009'))
-    kill_process_on_port(server_port)
+# Import from utils (which is in src/utils)
+try:
+    from utils.app_utils import (
+        load_environment_variables,
+        kill_process_on_port,
+        setup_flask_app,
+        validate_core_environment,
+        initialize_global_sessions,
+        initialize_server_globals,
+        cleanup_server_resources,
+        DEFAULT_TEAM_ID,
+        DEFAULT_USER_ID
+    )
+except ImportError as e:
+    print(f"❌ CRITICAL: Cannot import app_utils: {e}")
+    print("   Make sure app_utils.py exists in the utils directory")
+    sys.exit(1)
 
-def setup_server_cleanup():
-    """Setup cleanup handlers for server shutdown"""
-    def cleanup_on_exit():
-        print(f"🧹 Performing cleanup on exit...")
-        cleanup_server_resources()
+def validate_startup_requirements():
+    """Validate all requirements before starting - FAIL FAST"""
+    print("🔍 Validating startup requirements...")
     
-    atexit.register(cleanup_on_exit)
-
-def register_core_routes(app):
-    """Register only core routes - features load lazily when accessed"""
-    try:
-        from routes import register_routes
-        register_routes(app, mode='server')
-        print("✅ Core routes registered successfully")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to register routes: {e}")
-        return False
-
-def main():
-    """Main function for server application"""
-    print("🖥️ VIRTUALPYTEST SERVER")
-    print("Starting VirtualPyTest in SERVER mode")
-    
-    # Step 1: Load and validate ONLY core environment
+    # Check environment
     script_dir = os.path.dirname(os.path.abspath(__file__))
     load_environment_variables(mode='server', calling_script_dir=script_dir)
+    
     if not validate_core_environment(mode='server'):
-        print("❌ Core environment validation failed. Please check your .env.server file")
-        return
+        print("❌ CRITICAL: Environment validation failed")
+        sys.exit(1)
     
-    # Step 2: Clean up ports
-    cleanup_server_ports()
-    time.sleep(1)  # Brief wait for port cleanup
+    # Check routes can be imported
+    try:
+        from routes import register_routes
+        print("✅ Routes module can be imported")
+    except ImportError as e:
+        print(f"❌ CRITICAL: Cannot import routes: {e}")
+        sys.exit(1)
     
-    # Step 3: Setup minimal Flask application
+    print("✅ All startup requirements validated")
+
+def setup_and_cleanup():
+    """Setup Flask app and cleanup handlers"""
+    # Clean ports
+    server_port = int(os.getenv('SERVER_PORT', '5009'))
+    kill_process_on_port(server_port)
+    time.sleep(1)
+    
+    # Setup Flask app
     app = setup_flask_app("VirtualPyTest-Server")
     
-    # Step 4: Initialize basic server globals
+    # Initialize globals
     global_sessions = initialize_global_sessions()
     initialize_server_globals()
     
-    # Store minimal context
+    # Store context
     with app.app_context():
         app.global_sessions = global_sessions
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
-        # Features will be lazy loaded when routes are accessed
-        app._lazy_loaded = {}
     
-    # Step 5: Register core routes (features load when routes are called)
-    if not register_core_routes(app):
-        print("❌ Failed to register routes. Cannot start server.")
-        return
+    # Setup cleanup
+    def cleanup_on_exit():
+        print("🧹 Performing cleanup on exit...")
+        cleanup_server_resources()
     
-    # Step 6: Setup cleanup
-    setup_server_cleanup()
+    atexit.register(cleanup_on_exit)
     
-    # Step 7: Start server with minimal dependencies
+    return app
+
+def register_all_server_routes(app):
+    """Register ALL server routes - FAIL FAST if any fail"""
+    print("📋 Loading ALL server routes...")
+    
+    try:
+        from routes import register_routes
+        register_routes(app, mode='server')
+        print("✅ ALL server routes loaded successfully")
+        return True
+    except Exception as e:
+        print(f"❌ CRITICAL: Failed to load server routes: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def start_server(app):
+    """Start the Flask server"""
     server_port = int(os.getenv('SERVER_PORT', '5009'))
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
-    print("🎉 Core server ready!")
-    print("📦 Features will load on-demand when accessed")
+    print("🎉 Server ready!")
     print(f"🚀 Starting server on port {server_port}")
     print(f"🌐 Server URL: http://0.0.0.0:{server_port}")
     print(f"🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
@@ -116,11 +121,31 @@ def main():
     try:
         app.run(host='0.0.0.0', port=server_port, debug=debug_mode, use_reloader=debug_mode)
     except KeyboardInterrupt:
-        print(f"🛑 Server shutting down...")
+        print("🛑 Server shutting down...")
     except Exception as e:
         print(f"❌ Error starting server: {e}")
+        sys.exit(1)
     finally:
-        print(f"👋 Server stopped")
+        print("👋 Server stopped")
+
+def main():
+    """Main function"""
+    print("🖥️ VIRTUALPYTEST SERVER")
+    print("Starting VirtualPyTest in SERVER mode")
+    
+    # STEP 1: Validate requirements
+    validate_startup_requirements()
+    
+    # STEP 2: Setup Flask app and cleanup
+    app = setup_and_cleanup()
+    
+    # STEP 3: Register ALL routes
+    if not register_all_server_routes(app):
+        print("❌ CRITICAL: Cannot start server without all routes")
+        sys.exit(1)
+    
+    # STEP 4: Start server
+    start_server(app)
 
 if __name__ == '__main__':
     main() 

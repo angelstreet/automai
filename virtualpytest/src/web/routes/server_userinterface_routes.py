@@ -8,10 +8,13 @@ This module contains the user interface management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-# Import from specific database modules (direct imports)
+# Import database functions from src/lib/supabase (uses absolute import)
 from src.lib.supabase.userinterface_db import (
-    get_all_userinterfaces, get_userinterface, create_userinterface, 
-    update_userinterface, delete_userinterface, check_userinterface_name_exists
+    get_all_user_interfaces as get_all_userinterfaces, 
+    get_user_interface as get_userinterface, 
+    save_user_interface as save_userinterface, 
+    delete_user_interface as delete_userinterface,
+    check_userinterface_name_exists
 )
 from src.lib.supabase.navigation_trees_db import (
     get_root_tree_for_interface
@@ -20,13 +23,13 @@ from src.lib.supabase.navigation_trees_db import (
 from .utils import check_supabase, get_team_id
 
 # Create blueprint
-userinterface_bp = Blueprint('userinterface', __name__, url_prefix='/server/userinterface')
+server_userinterface_bp = Blueprint('server_userinterface', __name__, url_prefix='/server/userinterface')
 
 # =====================================================
 # USER INTERFACES ENDPOINTS
 # =====================================================
 
-@userinterface_bp.route('/get-userinterfaces', methods=['GET'])
+@server_userinterface_bp.route('/get-userinterfaces', methods=['GET'])
 def get_userinterfaces():
     """Get all user interfaces for the team"""
     error = check_supabase()
@@ -51,7 +54,7 @@ def get_userinterfaces():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/create-userinterface', methods=['POST'])
+@server_userinterface_bp.route('/create-userinterface', methods=['POST'])
 def create_userinterface_endpoint():
     """Create a new user interface"""
     error = check_supabase()
@@ -75,7 +78,7 @@ def create_userinterface_endpoint():
             return jsonify({'error': 'A user interface with this name already exists'}), 400
         
         # Create the user interface
-        created_interface = create_userinterface(interface_data, team_id)
+        created_interface = save_userinterface(interface_data, team_id)
         if created_interface:
             return jsonify({'status': 'success', 'userinterface': created_interface}), 201
         else:
@@ -83,7 +86,7 @@ def create_userinterface_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/get-userinterface/<interface_id>', methods=['GET'])
+@server_userinterface_bp.route('/get-userinterface/<interface_id>', methods=['GET'])
 def get_userinterface_endpoint(interface_id):
     """Get a specific user interface by ID"""
     error = check_supabase()
@@ -105,7 +108,7 @@ def get_userinterface_endpoint(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/update-userinterface/<interface_id>', methods=['PUT'])
+@server_userinterface_bp.route('/update-userinterface/<interface_id>', methods=['PUT'])
 def update_userinterface_endpoint(interface_id):
     """Update a specific user interface"""
     error = check_supabase()
@@ -129,7 +132,7 @@ def update_userinterface_endpoint(interface_id):
             return jsonify({'error': 'A user interface with this name already exists'}), 400
         
         # Update the user interface
-        updated_interface = update_userinterface(interface_id, interface_data, team_id)
+        updated_interface = save_userinterface(interface_id, interface_data, team_id)
         if updated_interface:
             return jsonify({'status': 'success', 'userinterface': updated_interface})
         else:
@@ -137,7 +140,7 @@ def update_userinterface_endpoint(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/delete-userinterface/<interface_id>', methods=['DELETE'])
+@server_userinterface_bp.route('/delete-userinterface/<interface_id>', methods=['DELETE'])
 def delete_userinterface_endpoint(interface_id):
     """Delete a specific user interface"""
     error = check_supabase()

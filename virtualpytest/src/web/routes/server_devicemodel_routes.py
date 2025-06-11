@@ -1,15 +1,13 @@
 """
-Device Model Management Routes
+Device Model Routes (Server-Only)
 
-This module contains the device model management API endpoints for:
-- Device models management
-- Hardware specifications management
-- Controller configurations management
+API endpoints for device model management operations.
 """
 
 from flask import Blueprint, request, jsonify
+import json
 
-# Import from specific database module (direct import)
+# Import database functions from src/lib/supabase (uses absolute import)
 from src.lib.supabase.devicemodel_db import (
     get_all_device_models as get_all_devicemodels, 
     get_device_model as get_devicemodel, 
@@ -22,13 +20,13 @@ from src.lib.supabase.devicemodel_db import (
 from .utils import check_supabase, get_team_id
 
 # Create blueprint
-devicemodel_bp = Blueprint('devicemodel', __name__, url_prefix='/server/devicemodel')
+server_devicemodel_bp = Blueprint('server_devicemodel', __name__, url_prefix='/server/devicemodel')
 
 # =====================================================
 # DEVICE MODELS ENDPOINTS
 # =====================================================
 
-@devicemodel_bp.route('/get-devicemodels', methods=['GET'])
+@server_devicemodel_bp.route('/get-devicemodels', methods=['GET'])
 def get_devicemodels():
     """Get all device models for the team"""
     error = check_supabase()
@@ -43,7 +41,7 @@ def get_devicemodels():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/create-devicemodel', methods=['POST'])
+@server_devicemodel_bp.route('/create-devicemodel', methods=['POST'])
 def create_devicemodel_endpoint():
     """Create a new device model"""
     error = check_supabase()
@@ -75,7 +73,7 @@ def create_devicemodel_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/get-devicemodel/<model_id>', methods=['GET'])
+@server_devicemodel_bp.route('/get-devicemodel/<model_id>', methods=['GET'])
 def get_devicemodel_endpoint(model_id):
     """Get a specific device model by ID"""
     error = check_supabase()
@@ -93,7 +91,7 @@ def get_devicemodel_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/update-devicemodel/<model_id>', methods=['PUT'])
+@server_devicemodel_bp.route('/update-devicemodel/<model_id>', methods=['PUT'])
 def update_devicemodel_endpoint(model_id):
     """Update a specific device model"""
     error = check_supabase()
@@ -125,7 +123,7 @@ def update_devicemodel_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/delete-devicemodel/<model_id>', methods=['DELETE'])
+@server_devicemodel_bp.route('/delete-devicemodel/<model_id>', methods=['DELETE'])
 def delete_devicemodel_endpoint(model_id):
     """Delete a specific device model"""
     error = check_supabase()
