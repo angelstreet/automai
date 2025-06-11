@@ -71,8 +71,38 @@ const DeviceManagement: React.FC = () => {
       setError(null);
       
       const response = await fetch('/server/devices/get-devices');
+      
+      console.log('[@component:DeviceManagement] Response status:', response.status);
+      console.log('[@component:DeviceManagement] Response headers:', response.headers.get('content-type'));
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
+        // Try to get error message from response
+        let errorMessage = `Failed to fetch devices: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.text();
+          console.log('[@component:DeviceManagement] Error response body:', errorData);
+          
+          // Check if it's JSON
+          if (response.headers.get('content-type')?.includes('application/json')) {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.error || errorMessage;
+          } else {
+            // It's HTML or other content, likely a proxy/server issue
+            if (errorData.includes('<!doctype') || errorData.includes('<html')) {
+              errorMessage = 'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
+            }
+          }
+        } catch (parseError) {
+          console.log('[@component:DeviceManagement] Could not parse error response');
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`);
       }
       
       const devicesData = await response.json();
