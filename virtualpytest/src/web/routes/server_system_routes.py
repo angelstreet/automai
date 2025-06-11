@@ -23,6 +23,12 @@ from src.controllers.controller_config_factory import (
 )
 print("[@system_routes] Successfully imported controller_config_factory")
 
+# Import URL builders from app_utils following the pattern like useRegistration
+from utils.app_utils import (
+    build_host_connection_info,
+    build_host_url
+)
+
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
 # In-memory log storage for debug purposes
@@ -223,11 +229,12 @@ def register_client():
         print(f"[@route:register_client] Instantiating controller objects...")
         controller_objects = {}
         
-        # Build connection information early so it can be passed to controllers
-        host_connection = {
-            'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",  # Use external port for server access
-            'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"      # Use web port for HTTPS
-        }
+        # Build connection information using URL builder instead of manual construction
+        host_connection = build_host_connection_info(
+            host_info['host_ip'], 
+            host_port_external, 
+            host_port_web
+        )
         
         try:
             from src.controllers import ControllerFactory
@@ -798,9 +805,9 @@ def start_health_check(client_id, client_ip, client_port):
                         flask_url = connection.get('flask_url')
                         
                         if not flask_url:
-                            # Fallback to manual URL building if connection info is missing (legacy support)
-                            health_url = f"http://{client_ip}:{client_port}/server/system/health"
-                            print(f"⚠️ [HEALTH] No flask_url in connection data for {client_id[:8]}..., using fallback: {health_url}")
+                            # Use URL builder for fallback instead of manual construction
+                            health_url = build_host_url(host_info, "/server/system/health")
+                            print(f"⚠️ [HEALTH] No flask_url in connection data for {client_id[:8]}..., using URL builder fallback: {health_url}")
                         else:
                             health_url = f"{flask_url}/server/system/health"
                         

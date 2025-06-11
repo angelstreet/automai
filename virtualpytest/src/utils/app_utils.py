@@ -5,9 +5,10 @@ import subprocess
 import psutil
 import hashlib
 import platform
-from flask import Flask
+from flask import Flask, current_app, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+import requests
 
 def load_environment_variables(mode='server', calling_script_dir=None):
     """Load environment variables from mode-specific .env file"""
@@ -112,20 +113,6 @@ def validate_core_environment(mode='server'):
     return True
 
 # Lazy loading functions - only load when needed
-def lazy_load_supabase():
-    """Lazy load Supabase connection when first needed"""
-    try:
-        from utils.supabase_utils import get_supabase_client
-        supabase_client = get_supabase_client()
-        if supabase_client:
-            print("✅ Supabase connected successfully (lazy loaded)")
-            return supabase_client
-        else:
-            raise Exception("Supabase client not initialized")
-    except Exception as e:
-        print(f"⚠️ Supabase connection failed: {e}")
-        return None
-
 def lazy_load_controllers():
     """Lazy load controllers when first needed"""
     try:
@@ -199,8 +186,8 @@ def initialize_server_globals():
     print("🖥️ Server mode: Ready to accept host registrations")
 
 def get_connected_clients():
-    """Get the dictionary of connected clients"""
-    return connected_clients
+    """Alias for get_host_registry - for backward compatibility"""
+    return get_host_registry()
 
 def add_connected_client(client_id, client_info):
     """Add a client to the connected clients registry"""
@@ -231,6 +218,92 @@ def cleanup_server_resources():
 DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
 DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
 
+# =====================================================
+# URL BUILDER FUNCTIONS (Used by Routes)
+# =====================================================
+
+def build_server_url(endpoint: str) -> str:
+    """Build a URL for server endpoints using environment configuration"""
+    server_host = os.getenv('SERVER_HOST', '127.0.0.1')
+    server_port = os.getenv('SERVER_PORT', '5119')
+    protocol = os.getenv('SERVER_PROTOCOL', 'http')
+    
+    # Clean endpoint
+    clean_endpoint = endpoint.lstrip('/')
+    
+    return f"{protocol}://{server_host}:{server_port}/{clean_endpoint}"
+
+def build_host_url(host_info: dict, endpoint: str) -> str:
+    """
+    Build a URL for host endpoints using pre-built connection data from registry
+    
+    Args:
+        host_info: Host information from the registry containing connection data
+        endpoint: The endpoint path to append
+    
+    Returns:
+        Complete URL to the host endpoint
+    """
+    # Use pre-built flask_url from host connection data
+    connection = host_info.get('connection', {})
+    flask_url = connection.get('flask_url')
+    
+    if not flask_url:
+        # Fallback to manual building if connection data is missing (legacy support)
+        host_ip = host_info.get('host_ip')
+        host_port = host_info.get('host_port_external') or host_info.get('host_port') or '6119'
+        flask_url = f"http://{host_ip}:{host_port}"
+        print(f"⚠️ [build_host_url] No flask_url in connection data, using fallback: {flask_url}")
+    
+    # Clean endpoint
+    clean_endpoint = endpoint.lstrip('/')
+    
+    return f"{flask_url}/{clean_endpoint}"
+
+def build_host_nginx_url(host_info: dict, path: str) -> str:
+    """
+    Build a URL for host nginx endpoints using pre-built connection data from registry
+    
+    Args:
+        host_info: Host information from the registry containing connection data
+        path: The path to append
+    
+    Returns:
+        Complete nginx URL to the host resource
+    """
+    # Use pre-built nginx_url from host connection data
+    connection = host_info.get('connection', {})
+    nginx_url = connection.get('nginx_url')
+    
+    if not nginx_url:
+        # Fallback to manual building if connection data is missing (legacy support)
+        host_ip = host_info.get('host_ip')
+        host_port_web = host_info.get('host_port_web') or '444'
+        nginx_url = f"https://{host_ip}:{host_port_web}"
+        print(f"⚠️ [build_host_nginx_url] No nginx_url in connection data, using fallback: {nginx_url}")
+    
+    # Clean path
+    clean_path = path.lstrip('/')
+    
+    return f"{nginx_url}/{clean_path}"
+
+def build_host_connection_info(host_ip: str, host_port_external: str, host_port_web: str) -> dict:
+    """
+    Build standardized connection information for a host
+    
+    Args:
+        host_ip: The host IP address
+        host_port_external: The external port for server communication
+        host_port_web: The web port for HTTPS/nginx
+    
+    Returns:
+        Dictionary with flask_url and nginx_url
+    """
+    return {
+        'flask_url': f"http://{host_ip}:{host_port_external}",
+        'nginx_url': f"https://{host_ip}:{host_port_web}"
+    }
+
 def get_host_system_stats():
     """Get basic system statistics for host registration"""
     try:
@@ -251,4 +324,120 @@ def get_host_system_stats():
             'platform': 'unknown',
             'architecture': 'unknown',
             'python_version': 'unknown'
-        } 
+        }
+
+# =====================================================
+# HOST REGISTRY FUNCTIONS (Single Source of Truth)
+# =====================================================
+
+def get_host_registry():
+    """Get the host registry from Flask app context"""
+    return getattr(current_app, '_connected_clients', {})
+
+def get_host_by_id(host_id):
+    """Get a specific host by ID from the registry"""
+    host_registry = get_host_registry()
+    return host_registry.get(host_id)
+
+def get_host_by_model(device_model):
+    """Get the first available host with the specified device model"""
+    host_registry = get_host_registry()
+    for host_id, host_info in host_registry.items():
+        if host_info.get('model') == device_model or host_info.get('device_model') == device_model:
+            return host_info
+    return None
+
+def get_primary_host():
+    """Get the first available host (fallback when no specific host is needed)"""
+    host_registry = get_host_registry()
+    if host_registry:
+        return next(iter(host_registry.values()))
+    return None
+
+# =====================================================
+# URL BUILDING FUNCTIONS (Single Source of Truth)
+# =====================================================
+
+def make_host_request(endpoint, method='GET', host_id=None, device_model=None, use_https=True, **kwargs):
+    """
+    Make a request to a host endpoint with automatic host discovery
+    
+    Args:
+        endpoint: The endpoint path (e.g., '/stream/verification-status')
+        method: HTTP method ('GET', 'POST', etc.)
+        host_id: Specific host ID to use (optional)
+        device_model: Device model to find host for (optional)
+        use_https: Whether to use HTTPS (default: True)
+        **kwargs: Additional arguments passed to requests.request()
+    
+    Returns:
+        requests.Response object
+    """
+    # Find the appropriate host
+    if host_id:
+        host_info = get_host_by_id(host_id)
+        if not host_info:
+            raise ValueError(f"Host with ID {host_id} not found")
+    elif device_model:
+        host_info = get_host_by_model(device_model)
+        if not host_info:
+            raise ValueError(f"No host found with device model {device_model}")
+    else:
+        host_info = get_primary_host()
+        if not host_info:
+            raise ValueError("No hosts available")
+    
+    # Build URL using the URL builder
+    url = build_host_url(host_info, endpoint)
+    
+    # Add default timeout if not specified
+    if 'timeout' not in kwargs:
+        kwargs['timeout'] = 30
+    
+    # Add SSL verification disable for self-signed certificates
+    if use_https and 'verify' not in kwargs:
+        kwargs['verify'] = False
+    
+    # Make the request
+    print(f"[@utils:make_host_request] Making {method} request to {url}")
+    
+    response = requests.request(method, url, **kwargs)
+    print(f"[@utils:make_host_request] Response: {response.status_code}")
+    
+    return response
+
+# =====================================================
+# FLASK-SPECIFIC HELPER FUNCTIONS
+# =====================================================
+
+def check_controllers_available():
+    """Helper function to check if controllers are available (lazy loaded)"""
+    try:
+        controllers_available = lazy_load_controllers()
+        if not controllers_available:
+            return jsonify({'error': 'Controllers not available'}), 503
+        return None
+    except Exception:
+        return jsonify({'error': 'Controllers not available'}), 503
+
+def get_team_id():
+    """Get team_id from request headers or use default for demo"""
+    default_team_id = getattr(current_app, 'default_team_id', 'default-team-id')
+    return request.headers.get('X-Team-ID', default_team_id)
+
+def get_user_id():
+    """Get user_id from request headers or use default for demo"""
+    default_user_id = getattr(current_app, 'default_user_id', 'default-user-id')
+    return request.headers.get('X-User-ID', default_user_id)
+
+# =====================================================
+# BACKWARD COMPATIBILITY ALIASES
+# =====================================================
+
+def get_connected_hosts():
+    """Alias for get_host_registry - for backward compatibility"""
+    return get_host_registry()
+
+def get_connected_clients():
+    """Alias for get_host_registry - for backward compatibility"""
+    return get_host_registry() 
