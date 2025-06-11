@@ -12,10 +12,10 @@ These endpoints run on the host and use the host's own stored device object.
 from flask import Blueprint, request, jsonify, current_app, send_file
 import os
 
-# Create blueprint with host prefix
-host_av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
+# Create blueprint
+av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
 
-@host_av_bp.route('/connect', methods=['POST'])
+@av_bp.route('/connect', methods=['POST'])
 def connect():
     """Connect to AV controller using own stored host_device object"""
     try:
@@ -64,7 +64,7 @@ def connect():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/disconnect', methods=['POST'])
+@av_bp.route('/disconnect', methods=['POST'])
 def disconnect():
     """Disconnect from AV controller using own stored host_device object"""
     try:
@@ -105,7 +105,7 @@ def disconnect():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/status', methods=['GET'])
+@av_bp.route('/status', methods=['GET'])
 def get_status():
     """Get AV controller status using own stored host_device object"""
     try:
@@ -145,7 +145,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/stream-url', methods=['GET'])
+@av_bp.route('/stream-url', methods=['GET'])
 def get_stream_url():
     """Get stream URL from AV controller using own stored host_device object"""
     try:
@@ -190,7 +190,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/screenshot', methods=['POST'])
+@av_bp.route('/screenshot', methods=['POST'])
 def take_screenshot():
     """Take screenshot using own stored host_device object"""
     try:
@@ -239,7 +239,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/start-capture', methods=['POST'])
+@av_bp.route('/start-capture', methods=['POST'])
 def start_video_capture():
     """Start video capture using own stored host_device object"""
     try:
@@ -304,7 +304,7 @@ def start_video_capture():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/stop-capture', methods=['POST'])
+@av_bp.route('/stop-capture', methods=['POST'])
 def stop_video_capture():
     """Stop video capture using own stored host_device object"""
     try:
@@ -350,7 +350,7 @@ def stop_video_capture():
             'error': str(e)
         }), 500
 
-@host_av_bp.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
+@av_bp.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
 def serve_screenshot(filename):
     """Serve a screenshot image by filename from host"""
     # Handle OPTIONS request for CORS
@@ -400,7 +400,7 @@ def serve_screenshot(filename):
         print(f"[@route:host_av:serve_screenshot] Error serving screenshot: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@host_av_bp.route('/images', methods=['GET', 'OPTIONS'])
+@av_bp.route('/images', methods=['GET', 'OPTIONS'])
 def serve_image_by_path():
     """Serve an image from a specified path on host"""
     # Handle OPTIONS request for CORS

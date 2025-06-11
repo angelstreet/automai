@@ -8,8 +8,8 @@ from pathlib import Path
 import threading
 from datetime import datetime
 
-# Create blueprint with consistent name - remove URL prefix as it's set in register_routes
-screen_definition_blueprint = Blueprint('screen_definition', __name__, url_prefix='/server/capture')
+# Create blueprint
+screen_definition_bp = Blueprint('screen_definition', __name__, url_prefix='/server/capture')
 
 # Configuration
 TMP_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'tmp')
@@ -54,7 +54,7 @@ def ensure_dirs():
     except Exception as e:
         current_app.logger.error(f"Error ensuring directories: {str(e)}")
 
-@screen_definition_blueprint.route('/screenshot', methods=['POST'])
+@screen_definition_bp.route('/screenshot', methods=['POST'])
 def take_screenshot():
     """Take high resolution screenshot using FFmpeg from HDMI source with fixed 1920x1080 resolution."""
     try:
@@ -215,7 +215,7 @@ def take_screenshot():
             'error': f'Failed to take screenshot: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/capture/start', methods=['POST'])
+@screen_definition_bp.route('/capture/start', methods=['POST'])
 def start_capture():
     """Start video capture using FFmpeg from HDMI source with fixed resolution and rolling buffer."""
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
@@ -361,7 +361,7 @@ def start_capture():
             'error': f'Capture start failed: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/capture/stop', methods=['POST'])
+@screen_definition_bp.route('/capture/stop', methods=['POST'])
 def stop_capture():
     """Stop video capture and download captured frames."""
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
@@ -461,7 +461,7 @@ def stop_capture():
             'error': f'Capture stop failed: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/capture/status', methods=['GET'])
+@screen_definition_bp.route('/capture/status', methods=['GET'])
 def get_capture_status():
     """Get the current status of video capture."""
     global capture_process, capture_pid, remote_capture_dir, stream_was_active_before_capture
@@ -513,7 +513,7 @@ def get_capture_status():
             'error': f'Failed to get capture status: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/capture/latest-frame', methods=['GET'])
+@screen_definition_bp.route('/capture/latest-frame', methods=['GET'])
 def get_latest_frame():
     """Get the path to the latest captured frame."""
     global remote_capture_dir
@@ -609,7 +609,7 @@ def get_latest_frame():
             'error': f'Failed to get latest frame: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
+@screen_definition_bp.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
 def serve_screenshot(filename):
     """Serve a screenshot image by filename"""
     # Handle OPTIONS request for CORS
@@ -660,7 +660,7 @@ def serve_screenshot(filename):
         current_app.logger.error(f"Error serving screenshot: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@screen_definition_blueprint.route('/images', methods=['GET', 'OPTIONS'])
+@screen_definition_bp.route('/images', methods=['GET', 'OPTIONS'])
 def serve_image_by_path():
     """Serve an image from a specified path"""
     # Handle OPTIONS request for CORS
@@ -735,7 +735,7 @@ def serve_image_by_path():
         current_app.logger.error(f"Error serving image: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@screen_definition_blueprint.route('/stream/status', methods=['GET'])
+@screen_definition_bp.route('/stream/status', methods=['GET'])
 def get_stream_status():
     """Get the current status of the stream service."""
     try:
@@ -779,7 +779,7 @@ def get_stream_status():
             'error': f'Failed to check stream status: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/stream/stop', methods=['POST'])
+@screen_definition_bp.route('/stream/stop', methods=['POST'])
 def stop_stream():
     """Stop the stream service."""
     try:
@@ -815,7 +815,7 @@ def stop_stream():
             'error': f'Failed to stop stream: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/stream/restart', methods=['POST'])
+@screen_definition_bp.route('/stream/restart', methods=['POST'])
 def restart_stream():
     """Restart the stream service."""
     try:
@@ -851,7 +851,7 @@ def restart_stream():
             'error': f'Failed to restart stream: {str(e)}'
         }), 500
 
-@screen_definition_blueprint.route('/upload-navigation-screenshot', methods=['POST'])
+@screen_definition_bp.route('/upload-navigation-screenshot', methods=['POST'])
 def upload_navigation_screenshot():
     """Proxy upload request to host for uploading existing screenshot to Cloudflare R2"""
     try:

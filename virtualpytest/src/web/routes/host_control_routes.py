@@ -11,13 +11,13 @@ This module contains host-side control endpoints that:
 from flask import Blueprint, request, jsonify, current_app
 
 # Create blueprint
-host_control_bp = Blueprint('host_control', __name__, url_prefix='/host')
+control_bp = Blueprint('host_control', __name__, url_prefix='/host')
 
 # =====================================================
 # HOST-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@host_control_bp.route('/take-control', methods=['POST'])
+@control_bp.route('/take-control', methods=['POST'])
 def take_control():
     """Host-side take control - Use own stored host_device object (no parameters needed)"""
     try:
@@ -200,7 +200,7 @@ def take_control():
         }), 500
 
 
-@host_control_bp.route('/release-control', methods=['POST'])
+@control_bp.route('/release-control', methods=['POST'])
 def release_control():
     """Host-side release control - Release local controllers (no parameters needed)"""
     try:
@@ -245,7 +245,7 @@ def release_control():
         }), 500
 
 
-@host_control_bp.route('/controller-status', methods=['GET'])
+@control_bp.route('/controller-status', methods=['GET'])
 def controller_status():
     """Get status of all controllers on this host"""
     try:

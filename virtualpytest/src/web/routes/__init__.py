@@ -61,7 +61,7 @@ def _register_server_routes(app):
         ('server_navigation_routes', 'navigation_bp'),
         ('server_campaign_routes', 'campaign_bp'),
         ('server_testcase_routes', 'testcase_bp'),
-        ('server_screen_definition_routes', 'screen_definition_blueprint'),
+        ('server_screen_definition_routes', 'screen_definition_bp'),  # ✅ Unified naming
         ('server_pathfinding_routes', 'pathfinding_bp'),
         ('server_validation_routes', 'validation_bp'),
         ('server_navigation_config_routes', 'navigation_config_bp'),
@@ -104,9 +104,9 @@ def _register_host_routes(app):
         ('host_verification_text_routes', 'verification_text_host_bp'),
         ('host_verification_adb_routes', 'verification_adb_host_bp'),
         ('host_verification_execution_routes', 'verification_execution_host_bp'),
-        ('host_control_routes', 'host_control_bp'),
-        ('host_remote_routes', 'host_remote_bp'),
-        ('host_av_routes', 'host_av_bp'),
+        ('host_control_routes', 'control_bp'),  # ✅ Unified naming
+        ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
+        ('host_av_routes', 'av_bp'),  # ✅ Unified naming
     ]
     
     for module_name, blueprint_name in host_route_modules:

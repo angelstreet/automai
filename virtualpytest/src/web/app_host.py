@@ -106,7 +106,10 @@ def initialize_host_device(app):
                     app.my_host_device = host_utils.global_host_device
                     print(f"[@host:main:initialize_host_device] Host device initialization completed")
                     print(f"[@host:main:initialize_host_device] Host: {host_utils.global_host_device.get('host_name')}")
-                    print(f"[@host:main:initialize_host_device] Device Model: {host_utils.global_host_device.get('device_model')}")
+                    print(f"[@host:main:initialize_host_device] Device Name: {host_utils.global_host_device.get('name')}")
+                    print(f"[@host:main:initialize_host_device] Device Model: {host_utils.global_host_device.get('model')}")
+                    print(f"[@host:main:initialize_host_device] Device IP: {host_utils.global_host_device.get('device_ip')}")
+                    print(f"[@host:main:initialize_host_device] Device Port: {host_utils.global_host_device.get('device_port')}")
             else:
                 print(f"[@host:main:initialize_host_device] No global host device found yet (registration may still be in progress)")
                 
@@ -192,7 +195,6 @@ def main():
     # Start Flask application
     print("[@host:main:main] 🎉 Host ready!")
     print(f"[@host:main:main] 🚀 Starting host on port {host_port_internal}")
-    print(f"[@host:main:main] �� Host URL: http://0.0.0.0:{host_port_internal}")
     print(f"[@host:main:main] 📡 Attempting to register with server...")
     print(f"[@host:main:main] 🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     

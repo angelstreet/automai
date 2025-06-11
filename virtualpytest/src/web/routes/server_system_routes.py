@@ -189,20 +189,16 @@ def register_client():
         print(f"   External Port: {host_port_external} (Server access)")
         print(f"   Web Port: {host_port_web} (HTTPS/nginx)")
         
-        # Set device defaults if not provided - simplified approach
-        device_name = host_info.get('device_name')
-        if not device_name:
-            # Generate device_name if not provided
-            device_name = f"{host_info['device_model'].replace('_', ' ').title()}"
+        # Use provided device information (host now sends complete device data)
+        device_name = host_info.get('device_name', f"{host_info['device_model'].replace('_', ' ').title()}")
+        device_ip = host_info.get('device_ip', host_info['host_ip'])  # Fallback to host IP if not provided
+        device_port = host_info.get('device_port', '5555')  # Fallback to default ADB port
         
-        device_ip = host_info.get('device_ip', host_info['host_ip'])  # Default to host IP
-        device_port = host_info.get('device_port', '5555')  # Default ADB port
-        
-        print(f"[@route:register_client] Device information:")
-        print(f"   Device Name: {device_name} ({'from host' if host_info.get('device_name') else 'generated'})")
+        print(f"[@route:register_client] Device information received:")
+        print(f"   Device Name: {device_name} ({'provided' if host_info.get('device_name') else 'generated from model'})")
         print(f"   Device Model: {host_info['device_model']}")
-        print(f"   Device IP: {device_ip}")
-        print(f"   Device Port: {device_port}")
+        print(f"   Device IP: {device_ip} ({'provided' if host_info.get('device_ip') else 'using host IP'})")
+        print(f"   Device Port: {device_port} ({'provided' if host_info.get('device_port') else 'default ADB port'})")
         
         # Build complete controller configs using factory
         print(f"[@route:register_client] Building controller configs using factory...")

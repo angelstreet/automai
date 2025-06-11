@@ -79,25 +79,32 @@ def register_host_with_server():
         host_port_external = os.getenv('HOST_PORT_EXTERNAL', host_port_internal)  # For server communication (may be port-forwarded)
         host_port_web = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port
         
-        # Get device model from environment with proper fallback
+        # Get device model info
         device_model = os.getenv('DEVICE_MODEL', os.getenv('HOST_DEVICE_MODEL', platform.system().lower()))
+        device_name = os.getenv('DEVICE_NAME', os.getenv('HOST_DEVICE_NAME', f"{device_model.replace('_', ' ').title()}"))
+        device_ip = os.getenv('DEVICE_IP', os.getenv('HOST_DEVICE_IP', host_ip))  # Default to host IP if not specified
+        device_port = os.getenv('DEVICE_PORT', os.getenv('HOST_DEVICE_PORT', '5555'))  # Default ADB port
         
         print(f"   Server: {server_host}:{server_port}")
         print(f"   Host Name: {host_name}")
         print(f"   Host IP: {host_ip}")
-        print(f"   Host Port Internal: {host_port_internal} (Flask app)")
-        print(f"   Host Port External: {host_port_external} (Server access)")
-        print(f"   Host Port Web: {host_port_web} (HTTPS/nginx)")
+        print(f"   Host Ports: Internal={host_port_internal}, External={host_port_external}, Web={host_port_web}")
+        print(f"   Device Name: {device_name}")
         print(f"   Device Model: {device_model}")
+        print(f"   Device IP: {device_ip}")
+        print(f"   Device Port: {device_port}")
         
-        # Create complete host info payload - everything the server needs
+        # Create registration payload with complete device information
         host_info = {
-            'host_name': host_name,                # ✅ Primary identifier
+            'host_name': host_name,
             'host_ip': host_ip,
-            'host_port_internal': host_port_internal,  # Where Flask runs
-            'host_port_external': host_port_external,  # For server communication
-            'host_port_web': host_port_web,       # HTTPS/nginx port
+            'host_port_internal': int(host_port_internal),
+            'host_port_external': int(host_port_external),
+            'host_port_web': int(host_port_web),
+            'device_name': device_name,           # Send actual device name
             'device_model': device_model,         # Dynamic device model detection
+            'device_ip': device_ip,               # Send actual device IP
+            'device_port': device_port,           # Send actual device port
             'system_stats': get_host_system_stats(),
         }
         

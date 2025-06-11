@@ -11,13 +11,13 @@ This module contains host-side remote control endpoints that:
 from flask import Blueprint, request, jsonify, current_app
 
 # Create blueprint
-host_remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
+remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
 
 # =====================================================
-# HOST-SIDE REMOTE CONTROL ENDPOINTS
+# REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
-@host_remote_bp.route('/screenshot', methods=['POST'])
+@remote_bp.route('/screenshot', methods=['POST'])
 def take_screenshot():
     """Take a screenshot using the remote controller."""
     try:
@@ -60,7 +60,7 @@ def take_screenshot():
             'error': f'Screenshot error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/command', methods=['POST'])
+@remote_bp.route('/command', methods=['POST'])
 def execute_command():
     """Execute a remote command using the remote controller."""
     try:
@@ -171,7 +171,7 @@ def execute_command():
             'error': f'Command execution error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/screenshot-and-dump-ui', methods=['POST'])
+@remote_bp.route('/screenshot-and-dump-ui', methods=['POST'])
 def screenshot_and_dump_ui():
     """Take screenshot and dump UI elements (Android Mobile specific)."""
     try:
@@ -247,7 +247,7 @@ def screenshot_and_dump_ui():
             'error': f'Screenshot and UI dump error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/get-apps', methods=['POST'])
+@remote_bp.route('/get-apps', methods=['POST'])
 def get_installed_apps():
     """Get list of installed apps (Android Mobile specific)."""
     try:
@@ -299,7 +299,7 @@ def get_installed_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/click-element', methods=['POST'])
+@remote_bp.route('/click-element', methods=['POST'])
 def click_element():
     """Click on a UI element (Android Mobile specific)."""
     try:
@@ -371,7 +371,7 @@ def click_element():
             'error': f'Element click error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/tap-coordinates', methods=['POST'])
+@remote_bp.route('/tap-coordinates', methods=['POST'])
 def tap_coordinates():
     """Tap at specific screen coordinates."""
     try:
@@ -431,7 +431,7 @@ def tap_coordinates():
             'error': f'Coordinate tap error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/connect', methods=['POST'])
+@remote_bp.route('/connect', methods=['POST'])
 def connect_remote():
     """Connect to remote device (IR/Bluetooth specific)."""
     try:
@@ -474,7 +474,7 @@ def connect_remote():
             'error': f'Remote connection error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/disconnect', methods=['POST'])
+@remote_bp.route('/disconnect', methods=['POST'])
 def disconnect_remote():
     """Disconnect from remote device (IR/Bluetooth specific)."""
     try:
@@ -517,7 +517,7 @@ def disconnect_remote():
             'error': f'Remote disconnection error: {str(e)}'
         }), 500
 
-@host_remote_bp.route('/status', methods=['GET'])
+@remote_bp.route('/status', methods=['GET'])
 def get_remote_status():
     """Get remote controller status."""
     try:
