@@ -11,8 +11,8 @@ export function useControllers() {
       setLoading(true);
       console.log('[@hook:useControllers] 🔍 Fetching controller types from backend...');
       
-      // Simple direct API call like in testCaseEditor.tsx
-      const response = await fetch('/server/controller/controller-types');
+      // Updated API endpoint to use server/control route
+      const response = await fetch('/server/control/getAllControllers');
       console.log('[@hook:useControllers] 📡 Response status:', response.status);
       
       if (!response.ok) {

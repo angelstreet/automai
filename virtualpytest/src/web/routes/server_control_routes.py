@@ -6,6 +6,7 @@ This module contains server-side control endpoints that:
 - Coordinate with hosts for device control operations
 - Forward requests to appropriate hosts
 - Manage device registry and host discovery
+- Provide controller type information
 """
 
 from flask import Blueprint, request, jsonify
@@ -23,6 +24,61 @@ from src.utils.device_lock_manager_utils import (
 
 # Create blueprint
 control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
+
+# Helper functions
+def get_controller_metadata():
+    """Get enhanced controller metadata"""
+    return {
+        'remote': [
+            {'id': 'android_tv', 'name': 'Android TV Remote', 'description': 'ADB Android TV controller', 'status': 'available'},
+            {'id': 'android_mobile', 'name': 'Android Mobile Remote', 'description': 'ADB Android Mobile controller', 'status': 'available'},
+            {'id': 'ir_remote', 'name': 'IR Remote', 'description': 'Infrared remote controller', 'status': 'available'},
+            {'id': 'bluetooth_remote', 'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote controller', 'status': 'available'},
+        ],
+        'av': [
+            {'id': 'hdmi_stream', 'name': 'HDMI Stream', 'description': 'HDMI stream URL capture', 'status': 'available'},
+        ],
+        'network': [
+            {'id': 'network', 'name': 'Network Stream', 'description': 'Network-based audio/video streaming', 'status': 'placeholder'},
+            {'id': 'rtsp', 'name': 'RTSP Stream', 'description': 'Real-Time Streaming Protocol capture', 'status': 'placeholder'},
+            {'id': 'http_stream', 'name': 'HTTP Stream', 'description': 'HTTP-based video streaming', 'status': 'placeholder'},
+            {'id': 'webrtc', 'name': 'WebRTC', 'description': 'Web Real-Time Communication', 'status': 'placeholder'},
+        ],
+        'verification': [
+            {'id': 'ocr', 'name': 'Text Verification', 'description': 'Text matching verification', 'status': 'available'},
+            {'id': 'image', 'name': 'Image Verification', 'description': 'Image matching verification', 'status': 'available'},
+            {'id': 'adb', 'name': 'ADB Verification', 'description': 'Direct ADB element verification via SSH', 'status': 'available'},
+            {'id': 'audio', 'name': 'Audio Verification', 'description': 'Audio content verification', 'status': 'placeholder'},
+            {'id': 'video', 'name': 'Video Verification', 'description': 'Video content verification', 'status': 'placeholder'},
+            {'id': 'ai', 'name': 'AI Verification', 'description': 'AI-based verification', 'status': 'placeholder'},
+        ],
+        'power': [
+            {'id': 'usb', 'name': 'USB Power Control', 'description': 'USB hub power control via SSH + uhubctl', 'status': 'available'},
+        ]
+    }
+
+# =====================================================
+# CONTROLLER INFORMATION ENDPOINTS
+# =====================================================
+
+@control_bp.route('/getAllControllers', methods=['GET'])
+def getAllControllers():
+    """Get all available controller types from the system"""
+    try:
+        from controllers import ControllerFactory
+        
+        # Get available controllers from factory
+        available_controllers = ControllerFactory.list_available_controllers()
+        
+        # Get enhanced controller information
+        enhanced_controllers = get_controller_metadata()
+        
+        return jsonify({
+            'controller_types': enhanced_controllers,
+            'total_types': sum(len(impls) for impls in available_controllers.values())
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS

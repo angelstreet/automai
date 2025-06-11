@@ -41,10 +41,8 @@ def _register_common_routes(app):
     
     try:
         from .common_core_routes import core_bp
-        from .common_controller_routes import controller_bp
         
         app.register_blueprint(core_bp)
-        app.register_blueprint(controller_bp)
         print("✅ Common routes registered")
         
     except ImportError as e:
