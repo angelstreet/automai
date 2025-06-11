@@ -15,7 +15,7 @@ from ..base_controller import RemoteControllerInterface
 
 # Import ADB utilities
 try:
-    from utils.adb_utils import ADBUtils
+    from src.utils.adb_utils import ADBUtils
     ADB_AVAILABLE = True
 except ImportError:
     print("Warning: ADB utilities not available. ADB functionality will be limited.")

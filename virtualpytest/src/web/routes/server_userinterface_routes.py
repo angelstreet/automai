@@ -10,10 +10,11 @@ from flask import Blueprint, request, jsonify
 
 # Import database functions from src/lib/supabase (uses absolute import)
 from src.lib.supabase.userinterface_db import (
-    get_all_user_interfaces as get_all_userinterfaces, 
-    get_user_interface as get_userinterface, 
-    save_user_interface as save_userinterface, 
-    delete_user_interface as delete_userinterface,
+    get_all_userinterfaces, 
+    get_userinterface, 
+    create_userinterface, 
+    delete_userinterface,
+    update_userinterface,
     check_userinterface_name_exists
 )
 from src.lib.supabase.navigation_trees_db import (
@@ -78,7 +79,7 @@ def create_userinterface_endpoint():
             return jsonify({'error': 'A user interface with this name already exists'}), 400
         
         # Create the user interface
-        created_interface = save_userinterface(interface_data, team_id)
+        created_interface = create_userinterface(interface_data, team_id)
         if created_interface:
             return jsonify({'status': 'success', 'userinterface': created_interface}), 201
         else:
@@ -132,7 +133,7 @@ def update_userinterface_endpoint(interface_id):
             return jsonify({'error': 'A user interface with this name already exists'}), 400
         
         # Update the user interface
-        updated_interface = save_userinterface(interface_id, interface_data, team_id)
+        updated_interface = update_userinterface(interface_id, interface_data, team_id)
         if updated_interface:
             return jsonify({'status': 'success', 'userinterface': updated_interface})
         else:

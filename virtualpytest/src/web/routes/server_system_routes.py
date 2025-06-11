@@ -27,7 +27,7 @@ if os.path.exists(utils_dir) and utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
 
 # Import directly from the module file
-from controller_config_factory import (
+from src.controllers.controller_config_factory import (
     create_controller_configs_from_device_info,
     get_device_capabilities_from_model,
     get_controller_types_from_model

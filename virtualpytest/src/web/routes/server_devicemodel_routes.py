@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 import json
 
 # Import database functions from src/lib/supabase (uses absolute import)
-from src.lib.supabase.devicemodel_db import (
+from src.lib.supabase.device_models_db import (
     get_all_device_models as get_all_devicemodels, 
     get_device_model as get_devicemodel, 
     create_device_model as create_devicemodel,

@@ -13,14 +13,13 @@ import requests
 import urllib.parse
 
 from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
-from device_lock_manager_utils import (
+from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
     is_device_locked_in_registry,
     get_device_lock_info,
     cleanup_expired_locks
 )
-from device_lock_manager_utils import lock_device_in_registry, unlock_device_in_registry, get_device_lock_info
 
 # Create blueprint
 server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
