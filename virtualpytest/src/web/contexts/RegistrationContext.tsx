@@ -33,7 +33,7 @@ interface RegistrationContextType {
   // URL Builders (NO hardcoded values)
   buildServerUrl: (endpoint: string) => string;        // Always to main server
   buildHostUrl: (hostName: string, endpoint: string) => string;   // To specific host
-  buildNginxUrl: (hostName: string, path: string) => string;      // To host's nginx
+  buildNginxUrl: (hostId: string, path: string) => string;      // To host's nginx
   
   // Convenience getters
   getHostById: (hostId: string) => DeviceWithProxies | null;
@@ -105,29 +105,33 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     let baseUrl: string;
     
     if (host.connection?.flask_url) {
-      // Use the flask_url directly but with current protocol
+      // Extract IP and port from flask_url but use current page's protocol
       const flaskUrl = host.connection.flask_url;
-      console.log(`[@context:Registration] Using flask_url: ${flaskUrl}`);
+      console.log(`[@context:Registration] Original flask_url: ${flaskUrl}`);
       
+      // Parse the flask_url to extract IP and port
       try {
         const url = new URL(flaskUrl);
-        baseUrl = `${protocol}://${url.hostname}:${url.port}`;
+        const hostIp = url.hostname;
+        const hostPort = url.port;
+        
+        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
         console.log(`[@context:Registration] Built host URL with current protocol: ${baseUrl}`);
       } catch (error) {
         console.error(`[@context:Registration] Failed to parse flask_url: ${flaskUrl}`, error);
-        // Fallback to host IP and external port
-        const hostIp = host.host_ip;
-        const hostPort = host.host_port_external || host.host_port || '6119';
+        // Fallback to legacy parsing
+        const hostIp = flaskUrl.replace(/https?:\/\//, '').split(':')[0];
+        const hostPort = flaskUrl.split(':')[2] || '6119';
         baseUrl = `${protocol}://${hostIp}:${hostPort}`;
-        console.log(`[@context:Registration] Built host URL with fallback: ${baseUrl}`);
+        console.log(`[@context:Registration] Built host URL with fallback parsing: ${baseUrl}`);
       }
     } else {
-      // Build URL from host registration data - use external port for server communication
-      const hostIp = host.host_ip;
-      const hostPort = host.host_port_external || host.host_port || '6119';  // External port for server access
+      // Build URL from host registration components
+      const hostIp = host.local_ip;
+      const hostPort = host.client_port;
       
       baseUrl = `${protocol}://${hostIp}:${hostPort}`;
-      console.log(`[@context:Registration] Built host URL from host data: ${baseUrl}`);
+      console.log(`[@context:Registration] Built host URL from components: ${baseUrl}`);
     }
     
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
@@ -281,10 +285,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   }, [createControllerProxies]);
 
   // Build nginx URL (for host media/files)
-  const buildNginxUrl = useCallback((hostName: string, path: string) => {
-    const host = availableHosts.find(h => h.host_name === hostName);
+  const buildNginxUrl = useCallback((hostId: string, path: string) => {
+    const host = availableHosts.find(h => h.id === hostId);
     if (!host) {
-      throw new Error(`Host with name ${hostName} not found`);
+      throw new Error(`Host with ID ${hostId} not found`);
     }
     
     // Always use the current page's protocol to avoid mixed content issues
@@ -292,29 +296,33 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     let baseUrl: string;
     
     if (host.connection?.nginx_url) {
-      // Use the nginx_url directly but with current protocol
+      // Extract IP and port from nginx_url but use current page's protocol
       const nginxUrl = host.connection.nginx_url;
-      console.log(`[@context:Registration] Using nginx_url: ${nginxUrl}`);
+      console.log(`[@context:Registration] Original nginx_url: ${nginxUrl}`);
       
+      // Parse the nginx_url to extract IP and port
       try {
         const url = new URL(nginxUrl);
-        baseUrl = `${protocol}://${url.hostname}:${url.port}`;
+        const hostIp = url.hostname;
+        const hostPort = url.port;
+        
+        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
         console.log(`[@context:Registration] Built nginx URL with current protocol: ${baseUrl}`);
       } catch (error) {
         console.error(`[@context:Registration] Failed to parse nginx_url: ${nginxUrl}`, error);
-        // Fallback to host IP and web port
-        const hostIp = host.host_ip;
-        const webPort = host.host_port_web || '444';  // Use web port for nginx
-        baseUrl = `${protocol}://${hostIp}:${webPort}`;
-        console.log(`[@context:Registration] Built nginx URL with fallback: ${baseUrl}`);
+        // Fallback to legacy parsing
+        const hostIp = nginxUrl.replace(/https?:\/\//, '').split(':')[0];
+        const hostPort = nginxUrl.split(':')[2] || '444';
+        baseUrl = `${protocol}://${hostIp}:${hostPort}`;
+        console.log(`[@context:Registration] Built nginx URL with fallback parsing: ${baseUrl}`);
       }
     } else {
-      // Build nginx URL from host registration data - use web port for HTTPS/nginx
-      const hostIp = host.host_ip;
-      const webPort = host.host_port_web || '444';  // Web port for nginx/HTTPS
+      // Build nginx URL from host registration components
+      const hostIp = host.local_ip;
+      const nginxPort = '444'; // Standard nginx port
       
-      baseUrl = `${protocol}://${hostIp}:${webPort}`;
-      console.log(`[@context:Registration] Built nginx URL from host data: ${baseUrl}`);
+      baseUrl = `${protocol}://${hostIp}:${nginxPort}`;
+      console.log(`[@context:Registration] Built nginx URL from components: ${baseUrl}`);
     }
     
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
