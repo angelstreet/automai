@@ -284,7 +284,7 @@ def save_resource():
         # Upload directly to Cloudflare R2
         try:
             # Lazy import - only load CloudflareUploader when actually needed
-            from utils.cloudflare_upload_utils import CloudflareUploader
+            from src.utils.cloudflare_upload_utils import CloudflareUploader
             
             uploader = CloudflareUploader()
             

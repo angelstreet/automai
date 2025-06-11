@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VirtualPyTest Host Application
+VirtualPyTest Host Application - Simplified Fail-Fast Version
 
 This application runs in host mode and connects to a VirtualPyTest server.
 It registers itself with the server and provides device control capabilities.
@@ -28,165 +28,182 @@ import time
 import atexit
 import threading
 
-# Simple path setup - add essential directories to Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.dirname(current_dir)
-sys.path.insert(0, os.path.join(src_dir, 'utils'))
-sys.path.insert(0, os.path.join(current_dir, 'utils'))
-sys.path.insert(0, os.path.join(current_dir, 'cache'))
-sys.path.insert(0, os.path.join(current_dir, 'services'))
-sys.path.insert(0, src_dir)
+# CLEAN PATH SETUP - Single addition to make src a package
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
+src_dir = os.path.dirname(current_dir)  # /src
+project_root = os.path.dirname(src_dir)  # /virtualpytest
 
-# Import only core utilities
-from app_utils import (
-    load_environment_variables,
-    kill_process_on_port,
-    setup_flask_app,
-    validate_core_environment,
-    initialize_global_sessions,
-    generate_stable_host_id,
-    DEFAULT_TEAM_ID,
-    DEFAULT_USER_ID
-)
+# Add project root to path so we can import src as a package
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from host_utils import (
-    register_host_with_server,
-    start_ping_thread,
-    cleanup_on_exit
-)
-
-# Import host_utils module to access global storage
-import host_utils
+# Import using consistent src. prefix (fail fast if missing)
+try:
+    from src.utils.app_utils import (
+        load_environment_variables,
+        kill_process_on_port,
+        setup_flask_app,
+        validate_core_environment,
+        initialize_global_sessions,
+        generate_stable_host_id,
+        DEFAULT_TEAM_ID,
+        DEFAULT_USER_ID
+    )
+    from src.utils.host_utils import (
+        register_host_with_server,
+        start_ping_thread,
+        cleanup_on_exit
+    )
+except ImportError as e:
+    print(f"❌ Failed to import required modules: {e}")
+    print("❌ Please ensure you're running from the correct directory and src.utils modules exist")
+    sys.exit(1)
 
 def cleanup_host_ports():
     """Clean up ports for host mode"""
+    print("[@host:main:cleanup_host_ports] Cleaning up host ports...")
     host_port_internal = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
     host_port_web = int(os.getenv('HOST_PORT_WEB', '444'))
     
     kill_process_on_port(host_port_internal)
     kill_process_on_port(host_port_web)
+    print("[@host:main:cleanup_host_ports] Port cleanup completed")
 
 def setup_host_cleanup():
     """Setup cleanup handlers for host shutdown"""
     def cleanup_on_exit_wrapper():
-        print(f"🧹 Host cleanup on exit...")
+        print(f"[@host:main:cleanup_on_exit_wrapper] Host cleanup on exit...")
         cleanup_on_exit()
-        print(f"✅ Host cleanup completed")
+        print(f"[@host:main:cleanup_on_exit_wrapper] Host cleanup completed")
     
     atexit.register(cleanup_on_exit_wrapper)
 
-def register_core_routes(app):
-    """Register only core routes - features load lazily when accessed"""
+def register_host_routes(app):
+    """Register host routes - FAIL FAST"""
+    print("[@host:main:register_host_routes] Loading host routes...")
     try:
         from routes import register_routes
         register_routes(app, mode='host')
-        print("✅ Core routes registered successfully")
+        print("[@host:main:register_host_routes] Host routes registered successfully")
         return True
     except Exception as e:
-        print(f"❌ Failed to register routes: {e}")
+        print(f"[@host:main:register_host_routes] ❌ Failed to register routes: {e}")
         return False
 
-def main():
-    """Main function for host application"""
-    print("🏠 VIRTUALPYTEST HOST")
-    print("Starting VirtualPyTest in HOST mode")
+def initialize_host_device(app):
+    """Initialize host device after startup"""
+    def delayed_init():
+        time.sleep(5)  # Give Flask app time to start
+        
+        try:
+            print(f"[@host:main:initialize_host_device] Initializing host device object...")
+            
+            # Import host_utils to access global storage
+            import src.utils.host_utils as host_utils
+            
+            if hasattr(host_utils, 'global_host_device') and host_utils.global_host_device:
+                with app.app_context():
+                    app.my_host_device = host_utils.global_host_device
+                    print(f"[@host:main:initialize_host_device] Host device initialization completed")
+                    print(f"[@host:main:initialize_host_device] Host: {host_utils.global_host_device.get('host_name')}")
+                    print(f"[@host:main:initialize_host_device] Device: {host_utils.global_host_device.get('device_name')}")
+            else:
+                print(f"[@host:main:initialize_host_device] No global host device found yet (registration may still be in progress)")
+                
+        except Exception as e:
+            print(f"[@host:main:initialize_host_device] ⚠️ Error during host device initialization: {e}")
     
-    # Step 1: Load and validate ONLY core environment
-    calling_script_dir = os.path.dirname(os.path.abspath(__file__))
-    env_path = load_environment_variables(mode='host', calling_script_dir=calling_script_dir)
-    if not validate_core_environment(mode='host'):
-        print("❌ Core environment validation failed. Please check your .env.host file")
-        return
+    init_thread = threading.Thread(target=delayed_init, daemon=True)
+    init_thread.start()
+
+def start_background_services():
+    """Start background services for host registration and health checks"""
+    print("[@host:main:start_background_services] Starting background services...")
     
-    # Step 2: Clean up ports
-    cleanup_host_ports()
-    time.sleep(1)  # Brief wait for port cleanup
-    
-    # Step 3: Setup minimal Flask application
-    app = setup_flask_app("VirtualPyTest-Host")
-    
-    # Step 4: Initialize basic host globals
-    global_sessions = initialize_global_sessions()
-    
-    # Store minimal context
-    with app.app_context():
-        app.global_sessions = global_sessions
-        app.default_team_id = DEFAULT_TEAM_ID
-        app.default_user_id = DEFAULT_USER_ID
-        # Features will be lazy loaded when routes are accessed
-        app._lazy_loaded = {}
-    
-    # Step 5: Register core routes (features load when routes are called)
-    if not register_core_routes(app):
-        print("❌ Failed to register routes. Cannot start host.")
-        return
-    
-    # Step 6: Setup cleanup
-    setup_host_cleanup()
-    
-    # Step 7: Get configuration and generate host ID
-    host_port_internal = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
-    debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
-    host_name = os.getenv('HOST_NAME', 'unknown-host')
-    host_ip = os.getenv('HOST_IP', '127.0.0.1')
-    host_id = generate_stable_host_id(host_name, host_ip)
-    
-    print(f"🏠 Host Information:")
-    print(f"   Host ID: {host_id}")
-    print(f"   Host Name: {host_name}")
-    print(f"   Host IP: {host_ip}")
-    print(f"   Internal Port: {host_port_internal}")
-    
-    # Step 8: Start background services
+    # Host registration thread
     registration_thread = threading.Thread(
         target=register_host_with_server,
         daemon=True
     )
     registration_thread.start()
     
+    # Ping/health check thread
     start_ping_thread()
     
-    # Step 9: Initialize host device after startup (lazy)
-    def initialize_host_device_after_startup():
-        time.sleep(5)  # Give Flask app time to start
-        
-        try:
-            print(f"🔧 Initializing host device object...")
-            
-            if host_utils.global_host_device:
-                with app.app_context():
-                    app.my_host_device = host_utils.global_host_device
-                    print(f"✅ Host device initialization completed")
-                    print(f"   Host: {host_utils.global_host_device.get('host_name')}")
-                    print(f"   Device: {host_utils.global_host_device.get('device_name')}")
-            else:
-                print(f"⚠️ No global host device found yet (registration may still be in progress)")
-                
-        except Exception as e:
-            print(f"⚠️ Error during host device initialization: {e}")
+    print("[@host:main:start_background_services] Background services started")
+
+def main():
+    """Main function for host application - Simplified 4-Step Workflow"""
+    print("🏠 VIRTUALPYTEST HOST")
+    print("Starting VirtualPyTest in HOST mode")
     
-    init_thread = threading.Thread(
-        target=initialize_host_device_after_startup,
-        daemon=True
-    )
-    init_thread.start()
+    # STEP 1: Validate Environment (FAIL FAST)
+    print("[@host:main:main] Step 1: Validating environment...")
+    calling_script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = load_environment_variables(mode='host', calling_script_dir=calling_script_dir)
     
-    # Step 10: Start server with minimal dependencies
-    print("🎉 Core host ready!")
-    print("📦 Features will load on-demand when accessed")
-    print(f"🚀 Starting host on port {host_port_internal}")
-    print(f"🌐 Host URL: http://0.0.0.0:{host_port_internal}")
-    print(f"📡 Attempting to register with server...")
-    print(f"🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
+    if not validate_core_environment(mode='host'):
+        print("[@host:main:main] ❌ Core environment validation failed. Please check your .env.host file")
+        sys.exit(1)
+    
+    # STEP 2: Setup Flask App and Clean Ports
+    print("[@host:main:main] Step 2: Setting up Flask application...")
+    cleanup_host_ports()
+    time.sleep(1)  # Brief wait for port cleanup
+    
+    app = setup_flask_app("VirtualPyTest-Host")
+    
+    # Initialize app context
+    global_sessions = initialize_global_sessions()
+    with app.app_context():
+        app.global_sessions = global_sessions
+        app.default_team_id = DEFAULT_TEAM_ID
+        app.default_user_id = DEFAULT_USER_ID
+    
+    # STEP 3: Register Routes (FAIL FAST)
+    print("[@host:main:main] Step 3: Registering routes...")
+    if not register_host_routes(app):
+        print("[@host:main:main] ❌ Failed to register routes. Cannot start host.")
+        sys.exit(1)
+    
+    # STEP 4: Start Host Services
+    print("[@host:main:main] Step 4: Starting host services...")
+    setup_host_cleanup()
+    
+    # Get configuration
+    host_port_internal = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
+    debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
+    host_name = os.getenv('HOST_NAME', 'unknown-host')
+    host_ip = os.getenv('HOST_IP', '127.0.0.1')
+    host_id = generate_stable_host_id(host_name, host_ip)
+    
+    print(f"[@host:main:main] Host Information:")
+    print(f"[@host:main:main]    Host ID: {host_id}")
+    print(f"[@host:main:main]    Host Name: {host_name}")
+    print(f"[@host:main:main]    Host IP: {host_ip}")
+    print(f"[@host:main:main]    Internal Port: {host_port_internal}")
+    
+    # Start background services
+    start_background_services()
+    
+    # Initialize host device (async)
+    initialize_host_device(app)
+    
+    # Start Flask application
+    print("[@host:main:main] 🎉 Host ready!")
+    print(f"[@host:main:main] 🚀 Starting host on port {host_port_internal}")
+    print(f"[@host:main:main] 🌐 Host URL: http://0.0.0.0:{host_port_internal}")
+    print(f"[@host:main:main] 📡 Attempting to register with server...")
+    print(f"[@host:main:main] 🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     
     try:
         app.run(host='0.0.0.0', port=host_port_internal, debug=debug_mode, use_reloader=debug_mode)
     except KeyboardInterrupt:
-        print(f"🛑 Host shutting down...")
+        print(f"[@host:main:main] 🛑 Host shutting down...")
     except Exception as e:
-        print(f"❌ Error starting host: {e}")
+        print(f"[@host:main:main] ❌ Error starting host: {e}")
     finally:
-        print(f"👋 Host application stopped")
+        print(f"[@host:main:main] 👋 Host application stopped")
 
 if __name__ == '__main__':
     main() 

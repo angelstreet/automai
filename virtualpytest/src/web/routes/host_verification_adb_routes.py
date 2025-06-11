@@ -42,11 +42,6 @@ def adb_element_lists():
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import SSHConnection
-        
-        # Create SSH connection (localhost since we're on the host)
-        ssh_connection = SSHConnection()
-        ssh_connection.connect('localhost', 22, 'root', password='your_password')  # Adjust credentials as needed
         
         # Get device ID from model (you may need to adjust this mapping)
         device_id = get_device_id_from_model(model)
@@ -56,8 +51,8 @@ def adb_element_lists():
                 'error': f'No ADB device configured for model: {model}'
             }), 400
         
-        # Initialize ADB controller
-        adb_controller = ADBVerificationController(ssh_connection, device_id, model)
+        # Initialize ADB controller (no SSH connection needed for local operations)
+        adb_controller = ADBVerificationController(device_id, model)
         
         if search_term:
             # Use smart search functionality
@@ -124,11 +119,6 @@ def adb_wait_element_appear():
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import SSHConnection
-        
-        # Create SSH connection (localhost since we're on the host)
-        ssh_connection = SSHConnection()
-        ssh_connection.connect('localhost', 22, 'root', password='your_password')  # Adjust credentials as needed
         
         # Get device ID from model
         device_id = get_device_id_from_model(model)
@@ -138,8 +128,8 @@ def adb_wait_element_appear():
                 'error': f'No ADB device configured for model: {model}'
             }), 400
         
-        # Initialize ADB controller
-        adb_controller = ADBVerificationController(ssh_connection, device_id, model)
+        # Initialize ADB controller (no SSH connection needed for local operations)
+        adb_controller = ADBVerificationController(device_id, model)
         
         # Wait for element to appear
         success, message, result_data = adb_controller.waitForElementToAppear(search_term, timeout)
@@ -196,11 +186,6 @@ def adb_wait_element_disappear():
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import SSHConnection
-        
-        # Create SSH connection (localhost since we're on the host)
-        ssh_connection = SSHConnection()
-        ssh_connection.connect('localhost', 22, 'root', password='your_password')  # Adjust credentials as needed
         
         # Get device ID from model
         device_id = get_device_id_from_model(model)
@@ -210,8 +195,8 @@ def adb_wait_element_disappear():
                 'error': f'No ADB device configured for model: {model}'
             }), 400
         
-        # Initialize ADB controller
-        adb_controller = ADBVerificationController(ssh_connection, device_id, model)
+        # Initialize ADB controller (no SSH connection needed for local operations)
+        adb_controller = ADBVerificationController(device_id, model)
         
         # Wait for element to disappear
         success, message, result_data = adb_controller.waitForElementToDisappear(search_term, timeout)
@@ -267,11 +252,6 @@ def execute_adb_verification_host(verification, source_path, model, verification
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import SSHConnection
-        
-        # Create SSH connection (localhost since we're on the host)
-        ssh_connection = SSHConnection()
-        ssh_connection.connect('localhost', 22, 'root', password='your_password')  # Adjust credentials as needed
         
         # Get device ID from model
         device_id = get_device_id_from_model(model)
@@ -282,8 +262,8 @@ def execute_adb_verification_host(verification, source_path, model, verification
                 'verification_type': 'adb'
             }
         
-        # Initialize ADB controller
-        adb_controller = ADBVerificationController(ssh_connection, device_id, model)
+        # Initialize ADB controller (no SSH connection needed for local operations)
+        adb_controller = ADBVerificationController(device_id, model)
         
         # Execute verification based on command
         if command == 'adb_element_appear':

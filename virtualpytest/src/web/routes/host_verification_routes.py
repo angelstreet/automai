@@ -23,7 +23,7 @@ def execute_adb_verification_host(verification, source_path, model, verification
         
         # Import ADB controller
         from controllers.verification.adb import ADBVerificationController
-        from utils.sshUtils import SSHConnection
+        from src.utils.sshUtils import SSHConnection
         
         # Create SSH connection (localhost since we're on the host)
         ssh_connection = SSHConnection()
