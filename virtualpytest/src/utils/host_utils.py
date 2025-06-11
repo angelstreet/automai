@@ -68,10 +68,6 @@ def register_host_with_server():
     print("🔗 [HOST] Starting registration with server...")
     
     try:
-        # Get environment configuration
-        server_host = os.getenv('SERVER_HOST', 'localhost')
-        server_port = os.getenv('SERVER_PORT', '5119')
-        
         # Get host information from environment - ALL ports included
         host_name = os.getenv('HOST_NAME', 'default-host')
         host_ip = os.getenv('HOST_IP', '127.0.0.1')
@@ -85,7 +81,6 @@ def register_host_with_server():
         device_ip = os.getenv('DEVICE_IP', os.getenv('HOST_DEVICE_IP', host_ip))  # Default to host IP if not specified
         device_port = os.getenv('DEVICE_PORT', os.getenv('HOST_DEVICE_PORT', '5555'))  # Default ADB port
         
-        print(f"   Server: {server_host}:{server_port}")
         print(f"   Host Name: {host_name}")
         print(f"   Host IP: {host_ip}")
         print(f"   Host Ports: Internal={host_port_internal}, External={host_port_external}, Web={host_port_web}")
@@ -108,17 +103,15 @@ def register_host_with_server():
             'system_stats': get_host_system_stats(),
         }
         
-        # Build server URLs
-        server_base_url = f"http://{server_host}:{server_port}"
-        registration_url = f"{server_base_url}/server/system/register"
+        # Build server URLs using unified URL builder system
+        registration_url = buildServerUrl('/server/system/register')
         
-        # Store URLs for later use
+        # Store URLs for later use - all built with the unified system
         urls = {
-            'server_base': server_base_url,
             'register': registration_url,
-            'unregister': f"{server_base_url}/server/system/unregister",
-            'ping': f"{server_base_url}/server/system/ping",
-            'health': f"{server_base_url}/server/system/health"
+            'unregister': buildServerUrl('/server/system/unregister'),
+            'ping': buildServerUrl('/server/system/ping'),
+            'health': buildServerUrl('/server/system/health')
         }
         
         print(f"\n📡 [HOST] Sending registration request...")

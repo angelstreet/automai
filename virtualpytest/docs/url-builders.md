@@ -2,13 +2,13 @@
 
 ## Overview
 
-Three clean functions for building URLs in the VirtualPyTest system.
+Three clean functions for building URLs in the VirtualPyTest system. These functions are used consistently throughout the entire codebase, including host registration, server communication, and all API calls.
 
 ## Functions
 
 ### 1. `buildServerUrl(endpoint)`
 
-Build URLs for **server endpoints**.
+Build URLs for **server endpoints** using environment configuration.
 
 ```python
 from src.utils.app_utils import buildServerUrl
@@ -18,7 +18,12 @@ url = buildServerUrl('/server/verification/status')
 # Returns: http://127.0.0.1:5119/server/verification/status
 ```
 
-**When to use:** Calling server API endpoints from any component.
+**Environment Variables Used:**
+- `SERVER_HOST` (default: '127.0.0.1')
+- `SERVER_PORT` (default: '5119') 
+- `SERVER_PROTOCOL` (default: 'http')
+
+**When to use:** Calling server API endpoints from any component, including host registration and ping operations.
 
 ### 2. `buildHostUrl(host_info, endpoint)`
 
@@ -50,13 +55,30 @@ url = buildHostWebUrl(host_info, '/screenshots/image.png')
 
 **When to use:** Accessing static files, images, or web resources from hosts.
 
+## System-Wide Usage
+
+The URL builder functions are used consistently throughout the codebase:
+
+- **Host Registration**: `host_utils.py` uses `buildServerUrl()` for all server communication
+- **Route Controllers**: All route files use the appropriate URL builders
+- **Navigation System**: `navigation_executor.py` uses `buildServerUrl()` for server calls
+- **Verification Routes**: All verification routes use `buildHostUrl()` and `buildHostWebUrl()`
+
 ## Quick Reference
 
-| Function | Protocol | Port | Use Case |
-|----------|----------|------|----------|
-| `buildServerUrl` | HTTP | 5119 | Server API calls |
-| `buildHostUrl` | HTTP | 6119 | Host API calls |
-| `buildHostWebUrl` | HTTPS | 444 | Host static files |
+| Function | Protocol | Port | Use Case | Environment Variables |
+|----------|----------|------|----------|----------------------|
+| `buildServerUrl` | HTTP/HTTPS | 5119 | Server API calls | SERVER_HOST, SERVER_PORT, SERVER_PROTOCOL |
+| `buildHostUrl` | HTTP | 6119 | Host API calls | Uses host_info from registry |
+| `buildHostWebUrl` | HTTPS | 444 | Host static files | Uses host_info from registry |
+
+## Benefits
+
+- **Centralized Configuration**: All URLs respect environment variables
+- **Protocol Flexibility**: Easy to switch between HTTP/HTTPS via environment
+- **Port Consistency**: No hardcoded ports throughout the codebase
+- **Error Prevention**: No manual URL construction that could introduce typos
+- **Environment Aware**: Automatically adapts to different deployment environments
 
 ## Error Handling
 
