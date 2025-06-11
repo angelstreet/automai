@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
 
-// Only import the hook that actually exists
+// Import the hook from the correct path
 export { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 
 // Implement minimal versions of the missing hooks
