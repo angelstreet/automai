@@ -140,4 +140,6 @@ __all__ = [
     'create_device_model',
     'update_device_model',
     'delete_device_model',
+    'check_device_model_name_exists'
+]
  
