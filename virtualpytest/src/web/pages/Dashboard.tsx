@@ -59,7 +59,6 @@ import { ConnectedDevice } from '../types/pages/Device_Types';
 const Dashboard: React.FC = () => {
   const { 
     buildServerUrl,
-    buildApiUrl, 
     availableHosts, 
     fetchHosts, 
     isLoading: hostsLoading
@@ -175,7 +174,7 @@ const Dashboard: React.FC = () => {
   const fetchLogs = async () => {
     try {
       // Fetch backend logs
-      const backendLogsRes = await fetch(buildApiUrl('/server/system/logs'));
+      const backendLogsRes = await fetch(buildServerUrl('/server/system/logs'));
       
       if (backendLogsRes.ok) {
         const backendLogs = await backendLogsRes.json();

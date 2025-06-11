@@ -60,16 +60,16 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
 
   // Server configuration - ALWAYS use VITE_SERVER_PORT for API calls
   const getServerBaseUrl = () => {
-    // For API calls, we ALWAYS need to use the actual server port from environment
-    // regardless of whether we're in development or production mode
+    // For API calls, we need to use the correct server host from environment
+    // NOT the window.location.hostname which could be the device IP
     
     // Get server configuration from environment
     const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
+    const serverHost = (import.meta as any).env.VITE_SERVER_HOST || 'localhost'; // Host from env with localhost fallback
     const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
-    const serverIp = window.location.hostname; // Get IP from current URL
     
-    // Build server URL using same protocol and IP as frontend, but with server port
-    const baseUrl = `${serverProtocol}://${serverIp}:${serverPort}`;
+    // Build server URL using environment configuration
+    const baseUrl = `${serverProtocol}://${serverHost}:${serverPort}`;
     
     console.log('[@context:Registration] API Server Configuration:');
     console.log('[@context:Registration] Frontend URL:', window.location.href);
@@ -77,6 +77,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     console.log('[@context:Registration] Frontend hostname:', window.location.hostname);
     console.log('[@context:Registration] Frontend port:', window.location.port);
     console.log('[@context:Registration] VITE_SERVER_PORT from env:', (import.meta as any).env.VITE_SERVER_PORT);
+    console.log('[@context:Registration] VITE_SERVER_HOST from env:', (import.meta as any).env.VITE_SERVER_HOST);
+    console.log('[@context:Registration] Using API server host:', serverHost);
     console.log('[@context:Registration] Using API server port:', serverPort);
     console.log('[@context:Registration] Built API server URL:', baseUrl);
     
