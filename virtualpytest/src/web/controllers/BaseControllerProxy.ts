@@ -22,11 +22,11 @@ export abstract class BaseControllerProxy {
     protected buildHostUrl: (hostId: string, endpoint: string) => string,
     protected controllerType: string
   ) {
-    this.hostUrl = buildHostUrl(host.id, '').replace(/\/+$/, '');
+    this.hostUrl = buildHostUrl(host.host_name, '').replace(/\/+$/, '');
     this.serverUrl = this.hostUrl.replace(/\/hosts\/[^\/]+$/, '');
     this.capabilities = host.capabilities || host.controller_types || [];
 
-    console.log(`[@controller:BaseControllerProxy] ${controllerType} controller initialized for host: ${host.id}`);
+    console.log(`[@controller:BaseControllerProxy] ${controllerType} controller initialized for host: ${host.host_name}`);
   }
 
   /**

@@ -25,20 +25,12 @@ interface RegisteredHost {
   registered_at: string;
   capabilities: string[];
   system_stats: {
-    cpu: {
-      percent: number;
-    };
-    memory: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    disk: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    timestamp: number;
+    cpu_percent: number;
+    memory_percent: number;
+    disk_percent: number;
+    platform: string;
+    architecture: string;
+    python_version: string;
     error?: string;
   };
   // Legacy fields for compatibility with Dashboard
@@ -77,7 +69,7 @@ interface RegistrationContextType {
   
   // URL Builders (NO hardcoded values)
   buildServerUrl: (endpoint: string) => string;        // Always to main server
-  buildHostUrl: (hostId: string, endpoint: string) => string;   // To specific host
+  buildHostUrl: (hostName: string, endpoint: string) => string;   // To specific host
   buildNginxUrl: (hostId: string, path: string) => string;      // To host's nginx
   
   // Convenience getters
@@ -137,10 +129,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   }, []);
 
   // Build host URL (goes directly to specific host)
-  const buildHostUrl = useCallback((hostId: string, endpoint: string) => {
-    const host = availableHosts.find(h => h.id === hostId);
+  const buildHostUrl = useCallback((hostName: string, endpoint: string) => {
+    const host = availableHosts.find(h => h.host_name === hostName);
     if (!host) {
-      throw new Error(`Host with ID ${hostId} not found`);
+      throw new Error(`Host with name ${hostName} not found`);
     }
     
     // Always use the current page's protocol to avoid mixed content issues
@@ -259,38 +251,35 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         const rawHosts = result.devices || [];
         console.log('[@context:Registration] Raw hosts from server:', rawHosts);
         
-        // Map server response to include legacy fields for Dashboard compatibility
+        // Simply use the server response as-is, just add required legacy fields for Dashboard
         const hosts = rawHosts.map((host: any) => ({
+          // Use server data directly - no transformation
           ...host,
+          // Remove confusing id field - just use clear field names
+          // Legacy field mappings ONLY for Dashboard compatibility
+          client_id: host.id || host.device_id,
+          device_model: host.model,
+          local_ip: host.connection?.flask_url ? 
+            host.connection.flask_url.replace(/https?:\/\//, '').split(':')[0] : 
+            host.device_ip || 'unknown',
+          client_port: host.connection?.flask_url ? 
+            host.connection.flask_url.split(':')[2] || '5119' : 
+            host.device_port || '5119',
+          public_ip: host.connection?.flask_url ? 
+            host.connection.flask_url.replace(/https?:\/\//, '').split(':')[0] : 
+            host.device_ip || 'unknown',
           // Device lock properties (with defaults if not provided by server)
           isLocked: host.isLocked || false,
           lockedBy: host.lockedBy || undefined,
           lockedAt: host.lockedAt || undefined,
-          // Legacy field mappings for Dashboard compatibility
-          client_id: host.id,
-          device_model: host.model,
-          local_ip: host.connection?.flask_url ? 
-            host.connection.flask_url.replace('http://', '').split(':')[0] : 
-            'unknown',
-          client_port: host.connection?.flask_url ? 
-            host.connection.flask_url.split(':')[2] || '5119' : 
-            '5119',
-          public_ip: host.connection?.flask_url ? 
-            host.connection.flask_url.replace('http://', '').split(':')[0] : 
-            'unknown',
-          // Ensure system_stats has default structure if missing
-          system_stats: host.system_stats || {
-            cpu: { percent: 0 },
-            memory: { percent: 0, used_gb: 0, total_gb: 0 },
-            disk: { percent: 0, used_gb: 0, total_gb: 0 },
-            timestamp: Date.now() / 1000,
-            error: 'Stats not available'
-          }
         }));
         
         console.log('[@context:Registration] Mapped hosts:', hosts);
         
-        // Create controller proxies for each host
+        // First set the available hosts
+        setAvailableHosts(hosts);
+        
+        // Then create controller proxies for each host (after availableHosts is populated)
         const hostsWithProxies = hosts.map((host: RegisteredHost) => ({
           ...host,
           controllerProxies: createControllerProxies(host)

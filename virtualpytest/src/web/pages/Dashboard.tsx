@@ -295,11 +295,21 @@ const Dashboard: React.FC = () => {
   };
 
   const SystemStatsDisplay: React.FC<{ stats: ConnectedDevice['system_stats'] }> = ({ stats: systemStats }) => {
+    if (!systemStats) {
+      return (
+        <Box>
+          <Typography variant="caption" color="error">
+            No system stats available
+          </Typography>
+        </Box>
+      );
+    }
+
     if (systemStats.error) {
       return (
         <Box>
           <Typography variant="caption" color="error">
-            Stats unavailable: {systemStats.error}
+            {systemStats.error}
           </Typography>
         </Box>
       );
@@ -312,7 +322,7 @@ const Dashboard: React.FC = () => {
             CPU
           </Typography>
           <Typography variant="caption" fontWeight="bold">
-            {systemStats.cpu.percent}%
+            {systemStats.cpu_percent}%
           </Typography>
         </Box>
         <Box 
@@ -326,9 +336,9 @@ const Dashboard: React.FC = () => {
         >
           <Box
             sx={{
-              width: `${Math.min(systemStats.cpu.percent, 100)}%`,
+              width: `${Math.min(systemStats.cpu_percent, 100)}%`,
               height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.cpu.percent)}.main`,
+              backgroundColor: `${getUsageColor(systemStats.cpu_percent)}.main`,
               borderRadius: 1,
             }}
           />
@@ -336,10 +346,10 @@ const Dashboard: React.FC = () => {
 
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
           <Typography variant="caption" color="textSecondary">
-            RAM
+            Memory
           </Typography>
           <Typography variant="caption" fontWeight="bold">
-            {systemStats.memory.percent}% ({systemStats.memory.used_gb}GB/{systemStats.memory.total_gb}GB)
+            {systemStats.memory_percent}%
           </Typography>
         </Box>
         <Box 
@@ -353,9 +363,9 @@ const Dashboard: React.FC = () => {
         >
           <Box
             sx={{
-              width: `${Math.min(systemStats.memory.percent, 100)}%`,
+              width: `${Math.min(systemStats.memory_percent, 100)}%`,
               height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.memory.percent)}.main`,
+              backgroundColor: `${getUsageColor(systemStats.memory_percent)}.main`,
               borderRadius: 1,
             }}
           />
@@ -366,7 +376,7 @@ const Dashboard: React.FC = () => {
             Disk
           </Typography>
           <Typography variant="caption" fontWeight="bold">
-            {systemStats.disk.percent}% ({systemStats.disk.used_gb}GB/{systemStats.disk.total_gb}GB)
+            {systemStats.disk_percent}%
           </Typography>
         </Box>
         <Box 
@@ -380,16 +390,16 @@ const Dashboard: React.FC = () => {
         >
           <Box
             sx={{
-              width: `${Math.min(systemStats.disk.percent, 100)}%`,
+              width: `${Math.min(systemStats.disk_percent, 100)}%`,
               height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.disk.percent)}.main`,
+              backgroundColor: `${getUsageColor(systemStats.disk_percent)}.main`,
               borderRadius: 1,
             }}
           />
         </Box>
 
         <Typography variant="caption" color="textSecondary">
-          Updated: {formatLastSeen(systemStats.timestamp)}
+          {systemStats.platform} ({systemStats.architecture})
         </Typography>
       </Box>
     );
@@ -513,7 +523,7 @@ const Dashboard: React.FC = () => {
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.cpu.percent}%
+                    {device.system_stats.cpu_percent}%
                   </Typography>
                   <Box 
                     sx={{ 
@@ -525,9 +535,9 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.cpu.percent, 100)}%`,
+                        width: `${Math.min(device.system_stats.cpu_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.cpu.percent)}.main`,
+                        backgroundColor: `${getUsageColor(device.system_stats.cpu_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
@@ -537,7 +547,7 @@ const Dashboard: React.FC = () => {
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.memory.percent}%
+                    {device.system_stats.memory_percent}%
                   </Typography>
                   <Box 
                     sx={{ 
@@ -549,22 +559,19 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.memory.percent, 100)}%`,
+                        width: `${Math.min(device.system_stats.memory_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.memory.percent)}.main`,
+                        backgroundColor: `${getUsageColor(device.system_stats.memory_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
                   </Box>
                 </Box>
-                <Typography variant="caption" color="textSecondary">
-                  {device.system_stats.memory.used_gb}GB/{device.system_stats.memory.total_gb}GB
-                </Typography>
               </TableCell>
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.disk.percent}%
+                    {device.system_stats.disk_percent}%
                   </Typography>
                   <Box 
                     sx={{ 
@@ -576,17 +583,14 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.disk.percent, 100)}%`,
+                        width: `${Math.min(device.system_stats.disk_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.disk.percent)}.main`,
+                        backgroundColor: `${getUsageColor(device.system_stats.disk_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
                   </Box>
                 </Box>
-                <Typography variant="caption" color="textSecondary">
-                  {device.system_stats.disk.used_gb}GB/{device.system_stats.disk.total_gb}GB
-                </Typography>
               </TableCell>
               <TableCell>
                 <Box display="flex" flexWrap="wrap" gap={0.5}>

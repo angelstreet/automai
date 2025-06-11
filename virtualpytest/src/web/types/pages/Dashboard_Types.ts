@@ -38,20 +38,12 @@ export interface ConnectedDevice {
   registered_at: string;
   last_seen: number;
   system_stats: {
-    cpu: {
-      percent: number;
-    };
-    memory: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    disk: {
-      percent: number;
-      used_gb: number;
-      total_gb: number;
-    };
-    timestamp: number;
+    cpu_percent: number;
+    memory_percent: number;
+    disk_percent: number;
+    platform: string;
+    architecture: string;
+    python_version: string;
     error?: string;
   };
 }
