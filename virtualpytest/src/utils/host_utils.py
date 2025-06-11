@@ -35,7 +35,7 @@ import uuid
 import psutil
 import platform
 from typing import Dict, Any
-from app_utils import get_host_system_stats
+from src.controllers.system.system_info import get_host_system_stats
 
 # Disable SSL warnings for self-signed certificates
 import urllib3
