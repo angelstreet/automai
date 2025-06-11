@@ -23,8 +23,8 @@ def health():
     """Health check endpoint with lazy-loaded feature status"""
     # Try to get Supabase (will load if not already loaded)
     try:
-        from src.utils.app_utils import lazy_load_supabase
-        supabase_client = lazy_load_supabase()
+        from src.utils.supabase_utils import get_supabase_client
+        supabase_client = get_supabase_client()
         supabase_status = "connected" if supabase_client else "disconnected"
     except Exception:
         supabase_status = "unavailable"
@@ -39,18 +39,18 @@ def health():
 def features():
     """Get status of all available features"""
     from src.utils.app_utils import (
-        lazy_load_supabase, 
         lazy_load_controllers, 
         lazy_load_adb_utils, 
         lazy_load_navigation, 
         lazy_load_device_models
     )
+    from src.utils.supabase_utils import get_supabase_client
     
     features_status = {}
     
     # Check each feature
     try:
-        features_status['supabase'] = lazy_load_supabase() is not None
+        features_status['supabase'] = get_supabase_client() is not None
     except Exception:
         features_status['supabase'] = False
         
@@ -76,15 +76,4 @@ def features():
     
     return jsonify({
         'features': features_status
-    })
-
-def check_supabase():
-    """Helper function to check if Supabase is available (lazy loaded)"""
-    try:
-        from src.utils.app_utils import lazy_load_supabase
-        supabase_client = lazy_load_supabase()
-        if supabase_client is None:
-            return jsonify({'error': 'Supabase not available'}), 503
-        return None
-    except Exception:
-        return jsonify({'error': 'Supabase not available'}), 503 
+    }) 

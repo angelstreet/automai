@@ -160,23 +160,12 @@ def lazy_load_device_models():
         print(f"⚠️ Device model utilities not available: {e}")
         return None
 
-def lazy_load_supabase():
-    """Lazy load Supabase client when first needed"""
-    try:
-        from src.utils.supabase_utils import get_supabase_client
-        client = get_supabase_client()
-        if client:
-            print("✅ Supabase client loaded successfully (lazy loaded)")
-        return client
-    except Exception as e:
-        print(f"⚠️ Supabase client not available: {e}")
-        return None
-
 def check_supabase():
-    """Helper function to check if Supabase is available (lazy loaded)"""
+    """Helper function to check if Supabase is available"""
     try:
         from flask import jsonify
-        supabase_client = lazy_load_supabase()
+        from src.utils.supabase_utils import get_supabase_client
+        supabase_client = get_supabase_client()
         if supabase_client is None:
             return jsonify({'error': 'Supabase not available'}), 503
         return None
