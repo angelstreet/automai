@@ -19,14 +19,15 @@ import atexit
 # CLEAN PATH SETUP - Only add what's absolutely necessary
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
 src_dir = os.path.dirname(current_dir)  # /src
+project_root = os.path.dirname(src_dir)  # /virtualpytest
 
-# Add src directory to path (contains utils, navigation, etc.)
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
+# Add project root to path so we can import src as a package
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # Import from utils (which is in src/utils)
 try:
-    from utils.app_utils import (
+    from src.utils.app_utils import (
         load_environment_variables,
         kill_process_on_port,
         setup_flask_app,

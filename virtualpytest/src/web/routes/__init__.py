@@ -4,8 +4,20 @@ Routes package for VirtualPyTest Web API - Fail Fast Version
 This package contains organized route modules for the Flask application.
 """
 
+import sys
+import os
 from flask import Flask
 from flask_cors import CORS
+
+# Ensure src is available as a package for route imports
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/routes
+web_dir = os.path.dirname(current_dir)  # /src/web
+src_dir = os.path.dirname(web_dir)  # /src
+project_root = os.path.dirname(src_dir)  # /virtualpytest
+
+# Add project root to path so we can import src as a package
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 def register_routes(app: Flask, mode='server'):
     """Register ALL routes for the specified mode - FAIL FAST"""

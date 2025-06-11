@@ -11,7 +11,7 @@ import json
 from flask import Blueprint, request, jsonify
 
 # Import existing pathfinding utilities
-from navigation_pathfinding import (
+from src.navigation.navigation_pathfinding import (
     get_reachable_nodes,
     find_shortest_path,
     get_navigation_transitions,
@@ -20,8 +20,8 @@ from navigation_pathfinding import (
 )
 
 # Import navigation cache
-from navigation_cache import get_cached_graph
-from navigation_graph import get_node_info, get_entry_points
+from src.web.cache.navigation_cache import get_cached_graph
+from src.web.cache.navigation_graph import get_node_info, get_entry_points
 from .utils import get_team_id, check_supabase
 
 # Create blueprint

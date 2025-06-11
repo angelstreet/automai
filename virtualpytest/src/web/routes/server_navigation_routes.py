@@ -574,9 +574,9 @@ def execute_navigation_host(tree_id, node_id):
         print(f"[@route:execute_navigation_host] Tree: {tree_id}, Target: {node_id}")
         print(f"[@route:execute_navigation_host] Current: {current_node_id}, Execute: {execute_flag}")
         
-        # Import navigation pathfinding
-        from navigation_pathfinding import find_shortest_path
-        from navigation_cache import get_cached_graph
+        # Import navigation modules using consistent src. prefix
+        from src.navigation.navigation_pathfinding import find_shortest_path
+        from src.web.cache.navigation_cache import get_cached_graph
         
         # Get the navigation graph
         team_id = get_team_id()
