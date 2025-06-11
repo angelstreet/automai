@@ -114,26 +114,4 @@ def delete_campaign_route(campaign_id):
         else:
             return jsonify({'error': 'Campaign not found'}), 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# LEGACY ENDPOINTS (for backward compatibility)
-# =====================================================
-
-@campaign_bp.route('/', methods=['GET', 'POST'])
-def campaigns_legacy():
-    """Legacy endpoint - redirects to new endpoints"""
-    if request.method == 'GET':
-        return get_all_campaigns_route()
-    elif request.method == 'POST':
-        return create_campaign_route()
-
-@campaign_bp.route('/<campaign_id>', methods=['GET', 'PUT', 'DELETE'])
-def campaign_legacy(campaign_id):
-    """Legacy endpoint - redirects to new endpoints"""
-    if request.method == 'GET':
-        return get_campaign_route(campaign_id)
-    elif request.method == 'PUT':
-        return update_campaign_route(campaign_id)
-    elif request.method == 'DELETE':
-        return delete_campaign_route(campaign_id) 
+        return jsonify({'error': str(e)}), 500 

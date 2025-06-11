@@ -142,31 +142,4 @@ def execute_test_case():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================
-# LEGACY ENDPOINTS (for backward compatibility)
-# =====================================================
-
-@testcase_bp.route('/cases', methods=['GET', 'POST'])
-def test_cases_legacy():
-    """Legacy endpoint - redirects to new endpoints"""
-    if request.method == 'GET':
-        return get_all_test_cases_route()
-    elif request.method == 'POST':
-        return create_test_case_route()
-
-@testcase_bp.route('/cases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
-def test_case_by_id_legacy(test_id):
-    """Legacy endpoint - redirects to new endpoints"""
-    if request.method == 'GET':
-        return get_test_case_route(test_id)
-    elif request.method == 'PUT':
-        return update_test_case_route(test_id)
-    elif request.method == 'DELETE':
-        return delete_test_case_route(test_id)
-
-@testcase_bp.route('/execute', methods=['POST'])
-def execute_legacy():
-    """Legacy endpoint - redirects to new endpoint"""
-    return execute_test_case() 
+        return jsonify({'error': str(e)}), 500 

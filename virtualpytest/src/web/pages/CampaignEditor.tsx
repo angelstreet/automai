@@ -10,10 +10,6 @@ import {
   Typography,
   TextField,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Grid,
   IconButton,
   Alert,
@@ -31,22 +27,19 @@ import {
   Chip,
   FormControlLabel,
   Switch,
-  Autocomplete,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
-import { Campaign, TestCase, Tree } from '../types';
+import { Campaign } from '../types';
 
 const CampaignEditor: React.FC = () => {
   // Use registration context for centralized URL management
   const { buildServerUrl } = useRegistration();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [trees, setTrees] = useState<Tree[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -70,32 +63,17 @@ const CampaignEditor: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [
-        campaignsResponse,
-        testCasesResponse,
-        treesResponse,
-      ] = await Promise.all([
-        fetch(buildServerUrl('/server/campaigns')),
-        fetch(buildServerUrl('/server/test/cases')),
-        fetch(buildServerUrl('/server/navigation/trees')),
-      ]);
+      const campaignsResponse = await fetch(buildServerUrl('/server/campaigns'));
 
       if (campaignsResponse.ok) {
         const campaignsData = await campaignsResponse.json();
-        setCampaigns(campaignsData);
-      }
-
-      if (testCasesResponse.ok) {
-        const testCasesData = await testCasesResponse.json();
-        setTestCases(testCasesData);
-      }
-
-      if (treesResponse.ok) {
-        const treesData = await treesResponse.json();
-        setTrees(treesData);
+        setCampaigns(Array.isArray(campaignsData) ? campaignsData : []);
+      } else {
+        setCampaigns([]);
       }
     } catch (err) {
-      setError('Error fetching data');
+      setError('Error fetching campaigns');
+      setCampaigns([]);
     } finally {
       setLoading(false);
     }
@@ -174,16 +152,6 @@ const CampaignEditor: React.FC = () => {
     setError(null);
   };
 
-  const getTreeName = (treeId: string) => {
-    const tree = trees.find((t) => t.tree_id === treeId);
-    return tree ? `${tree.device} (${tree.version})` : treeId;
-  };
-
-  const getTestCaseName = (testId: string) => {
-    const testCase = testCases.find((t) => t.test_id === testId);
-    return testCase ? testCase.name : testId;
-  };
-
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -213,37 +181,19 @@ const CampaignEditor: React.FC = () => {
             <TableRow>
               <TableCell>Campaign ID</TableCell>
               <TableCell>Name</TableCell>
-              <TableCell>Navigation Tree</TableCell>
-              <TableCell>Test Cases</TableCell>
+              <TableCell>Navigation Tree ID</TableCell>
+              <TableCell>Remote Controller</TableCell>
               <TableCell>Prioritize</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {campaigns.map((campaign) => (
+            {(campaigns || []).map((campaign) => (
               <TableRow key={campaign.campaign_id}>
                 <TableCell>{campaign.campaign_id}</TableCell>
                 <TableCell>{campaign.campaign_name}</TableCell>
-                <TableCell>{getTreeName(campaign.navigation_tree_id)}</TableCell>
-                <TableCell>
-                  <Box display="flex" flexWrap="wrap" gap={0.5}>
-                    {campaign.test_case_ids.slice(0, 3).map((testId) => (
-                      <Chip
-                        key={testId}
-                        label={getTestCaseName(testId)}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                    {campaign.test_case_ids.length > 3 && (
-                      <Chip
-                        label={`+${campaign.test_case_ids.length - 3} more`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                </TableCell>
+                <TableCell>{campaign.navigation_tree_id}</TableCell>
+                <TableCell>{campaign.remote_controller}</TableCell>
                 <TableCell>
                   <Chip
                     label={campaign.prioritize ? 'Yes' : 'No'}
@@ -296,22 +246,14 @@ const CampaignEditor: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Navigation Tree</InputLabel>
-                  <Select
-                    value={formData.navigation_tree_id}
-                    label="Navigation Tree"
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, navigation_tree_id: e.target.value }))
-                    }
-                  >
-                    {trees.map((tree) => (
-                      <MenuItem key={tree.tree_id} value={tree.tree_id}>
-                        {tree.device} ({tree.version})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Navigation Tree ID"
+                  value={formData.navigation_tree_id}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, navigation_tree_id: e.target.value }))
+                  }
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -347,30 +289,15 @@ const CampaignEditor: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <Autocomplete
-                  multiple
-                  options={testCases}
-                  getOptionLabel={(option) => `${option.name} (${option.test_id})`}
-                  value={testCases.filter((tc) => formData.test_case_ids.includes(tc.test_id))}
-                  onChange={(_, newValue) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      test_case_ids: newValue.map((tc) => tc.test_id),
-                    }));
+                <TextField
+                  fullWidth
+                  label="Test Case IDs (comma-separated)"
+                  value={(formData.test_case_ids || []).join(', ')}
+                  onChange={(e) => {
+                    const ids = e.target.value.split(',').map(id => id.trim()).filter(id => id);
+                    setFormData((prev) => ({ ...prev, test_case_ids: ids }));
                   }}
-                  renderInput={(params) => (
-                    <TextField {...params} label="Test Cases" placeholder="Select test cases" />
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option.name}
-                        {...getTagProps({ index })}
-                        key={option.test_id}
-                      />
-                    ))
-                  }
+                  placeholder="Enter test case IDs separated by commas"
                 />
               </Grid>
             </Grid>
