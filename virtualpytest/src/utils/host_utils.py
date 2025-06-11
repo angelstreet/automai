@@ -95,9 +95,6 @@ def register_host_with_server():
             'host_port_web': host_port_web,       # HTTPS/nginx port
             'device_model': 'linux',              # Default device model for hosts
             'system_stats': get_host_system_stats(),
-            
-            # Legacy compatibility fields
-            'host_port': host_port_external,      # Legacy field points to external port
         }
         
         # Build server URLs

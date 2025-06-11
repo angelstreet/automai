@@ -80,7 +80,7 @@ def get_protocol_from_env() -> str:
 
 def build_host_url(host_info: Dict[str, Any], endpoint: str) -> str:
     """
-    Build a URL for a host endpoint using the same logic as frontend RegistrationContext
+    Build a URL for a host endpoint using pre-built connection URLs from registration
     
     Args:
         host_info: Host information dict from registration system
@@ -92,35 +92,24 @@ def build_host_url(host_info: Dict[str, Any], endpoint: str) -> str:
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get connection info from registration data (same as frontend)
+    # Use the pre-built flask_url from host registration
     connection = host_info.get('connection', {})
     flask_url = connection.get('flask_url')
     
-    if flask_url:
-        # Use the flask_url directly from host registration (same as frontend)
-        base_url = flask_url
-    else:
-        # Build URL from host registration components (same as frontend)
-        protocol = get_protocol_from_env()
-        host_ip = host_info.get('local_ip')
-        host_port = host_info.get('client_port', '5119')
-        
-        if not host_ip:
-            raise ValueError("Host connection information not found in registration info")
-        
-        base_url = f"{protocol}://{host_ip}:{host_port}"
+    if not flask_url:
+        raise ValueError(f"Host does not have a flask_url in connection data: {host_info.get('host_name', 'unknown')}")
     
-    # Clean endpoint (same as frontend)
+    # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
-    # Build complete URL
-    url = f"{base_url}/{clean_endpoint}"
+    # Build complete URL using pre-built flask_url
+    url = f"{flask_url}/{clean_endpoint}"
     
     return url
 
 def build_host_nginx_url(host_info: Dict[str, Any], path: str) -> str:
     """
-    Build a URL for host nginx endpoint using the same logic as frontend RegistrationContext
+    Build a URL for host nginx endpoint using pre-built connection URLs from registration
     
     Args:
         host_info: Host information dict from registration system  
@@ -132,37 +121,18 @@ def build_host_nginx_url(host_info: Dict[str, Any], path: str) -> str:
     if not host_info:
         raise ValueError("Host information is required")
     
-    # Get connection info from registration data (same as frontend)
+    # Use the pre-built nginx_url from host registration
     connection = host_info.get('connection', {})
     nginx_url = connection.get('nginx_url')
     
-    if nginx_url:
-        # Use the nginx_url directly from host registration (same as frontend)
-        base_url = nginx_url
-    else:
-        # Build nginx URL from host registration components (same as frontend)
-        protocol = get_protocol_from_env()
-        
-        # Try to get host IP from flask_url or legacy fields (same as frontend)
-        flask_url = connection.get('flask_url')
-        if flask_url:
-            parsed = urllib.parse.urlparse(flask_url)
-            host_ip = parsed.hostname
-        else:
-            host_ip = host_info.get('local_ip')
-        
-        if not host_ip:
-            raise ValueError("Host IP not found in registration info")
-        
-        # Build nginx URL with standard port 444 (same as frontend)
-        nginx_port = '444'
-        base_url = f"{protocol}://{host_ip}:{nginx_port}"
+    if not nginx_url:
+        raise ValueError(f"Host does not have a nginx_url in connection data: {host_info.get('host_name', 'unknown')}")
     
-    # Clean path (same as frontend)
+    # Clean path
     clean_path = path.lstrip('/')
     
-    # Build complete nginx URL
-    url = f"{base_url}/{clean_path}"
+    # Build complete nginx URL using pre-built nginx_url
+    url = f"{nginx_url}/{clean_path}"
     
     return url
 

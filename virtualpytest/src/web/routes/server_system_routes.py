@@ -13,20 +13,9 @@ import tempfile
 import psutil
 from datetime import datetime
 from collections import deque
-import sys
 import json
 
-# Add the web/utils directory to sys.path if not already there
-# Use absolute path calculation to be robust regardless of current working directory
-routes_dir = os.path.dirname(os.path.abspath(__file__))
-web_dir = os.path.dirname(routes_dir)
-utils_dir = os.path.join(web_dir, 'utils')
-
-# Ensure the utils directory exists before adding to path
-if os.path.exists(utils_dir) and utils_dir not in sys.path:
-    sys.path.insert(0, utils_dir)
-
-# Import directly from the module file
+# Import using consistent src. prefix (project root is already in sys.path from app startup)
 from src.controllers.controller_config_factory import (
     create_controller_configs_from_device_info,
     get_device_capabilities_from_model,
@@ -85,7 +74,7 @@ def set_health_check_threads(threads):
     """Set health check threads in app context"""
     current_app._health_check_threads = threads
 
-@system_bp.route('/system/logs', methods=['GET'])
+@system_bp.route('/logs', methods=['GET'])
 def get_logs():
     """Get server logs for debug modal"""
     try:
@@ -117,7 +106,7 @@ def get_logs():
             'error': str(e)
         }), 500
 
-@system_bp.route('/system/logs/clear', methods=['POST'])
+@system_bp.route('/logs/clear', methods=['POST'])
 def clear_logs():
     """Clear server logs"""
     try:
@@ -143,7 +132,7 @@ def clear_logs():
             'error': str(e)
         }), 500
 
-@system_bp.route('/system/register', methods=['POST'])
+@system_bp.route('/register', methods=['POST'])
 def register_client():
     """Host registers with server"""
     try:
@@ -230,7 +219,7 @@ def register_client():
         print(f"   Capabilities: {capabilities}")
         print(f"   Controller types: {controller_types}")
         
-        # Instantiate actual controller objects from configs
+        # Instantiate controller objects from configs
         print(f"[@route:register_client] Instantiating controller objects...")
         controller_objects = {}
         
@@ -241,9 +230,10 @@ def register_client():
         }
         
         try:
-            from controllers import ControllerFactory
+            from src.controllers import ControllerFactory
             
-            # Instantiate AV controller
+            # STEP 1: Create AV controller FIRST (required by verification controllers)
+            av_controller = None
             if 'av' in controller_configs:
                 av_config = controller_configs['av']
                 av_params = av_config['parameters']
@@ -261,7 +251,7 @@ def register_client():
                 controller_objects['av'] = av_controller
                 print(f"[@route:register_client] AV controller created successfully with connection: {host_connection['nginx_url']}")
             
-            # Instantiate Remote controller
+            # STEP 2: Create Remote controller (independent)
             if 'remote' in controller_configs:
                 remote_config = controller_configs['remote']
                 remote_params = remote_config['parameters']
@@ -277,7 +267,7 @@ def register_client():
                 controller_objects['remote'] = remote_controller
                 print(f"[@route:register_client] Remote controller created successfully")
             
-            # Instantiate Verification controller
+            # STEP 3: Create Verification controller (AFTER AV controller, pass av_controller if needed)
             if 'verification' in controller_configs:
                 verification_config = controller_configs['verification']
                 verification_params = verification_config['parameters']
@@ -294,17 +284,29 @@ def register_client():
                         connection_timeout=verification_params.get('connection_timeout', 10)
                     )
                 else:
-                    # For other verification types, pass parameters as-is
-                    verification_controller = ControllerFactory.create_verification_controller(
-                        verification_type=verification_config['implementation'],
-                        device_name=device_name,
-                        **verification_params
-                    )
+                    # For text/image verification controllers, they need the AV controller
+                    if verification_config['implementation'] in ['ocr', 'text', 'image']:
+                        if not av_controller:
+                            raise ValueError(f"AV controller is required for {verification_config['implementation']} verification but was not created")
+                        
+                        verification_controller = ControllerFactory.create_verification_controller(
+                            verification_type=verification_config['implementation'],
+                            av_controller=av_controller,  # Pass AV controller for screenshot capture
+                            device_name=device_name,
+                            **verification_params
+                        )
+                    else:
+                        # For other verification types, pass parameters as-is
+                        verification_controller = ControllerFactory.create_verification_controller(
+                            verification_type=verification_config['implementation'],
+                            device_name=device_name,
+                            **verification_params
+                        )
                 
                 controller_objects['verification'] = verification_controller
                 print(f"[@route:register_client] Verification controller created successfully")
             
-            # Instantiate Power controller
+            # STEP 4: Create Power controller (independent)
             if 'power' in controller_configs:
                 power_config = controller_configs['power']
                 power_params = power_config['parameters']
@@ -318,7 +320,7 @@ def register_client():
                 )
                 controller_objects['power'] = power_controller
                 print(f"[@route:register_client] Power controller created successfully")
-                
+            
             print(f"[@route:register_client] All controller objects instantiated: {list(controller_objects.keys())}")
             
         except Exception as e:
@@ -425,7 +427,7 @@ def register_client():
         traceback.print_exc()
         return jsonify({'error': error_msg}), 500
 
-@system_bp.route('/system/unregister', methods=['POST'])
+@system_bp.route('/unregister', methods=['POST'])
 def unregister_client():
     """Client unregisters from server"""
     try:
@@ -466,7 +468,7 @@ def unregister_client():
         print(f"❌ Error unregistering host: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/system/health', methods=['GET'])
+@system_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for clients"""
     system_stats = get_system_stats()
@@ -478,7 +480,7 @@ def health_check():
         'system_stats': system_stats
     }), 200
 
-@system_bp.route('/system/health-with-devices', methods=['GET'])
+@system_bp.route('/health-with-devices', methods=['GET'])
 def health_check_with_devices():
     """Health check endpoint that also returns connected devices"""
     try:
@@ -547,7 +549,7 @@ def health_check_with_devices():
             'error': str(e)
         }), 500
 
-@system_bp.route('/system/clients', methods=['GET'])
+@system_bp.route('/clients', methods=['GET'])
 def list_clients():
     """Server lists all connected hosts"""
     try:
@@ -598,7 +600,7 @@ def list_clients():
         print(f"❌ Error listing hosts: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/system/clients/devices', methods=['GET'])
+@system_bp.route('/clients/devices', methods=['GET'])
 def list_clients_as_devices():
     """Return registered devices with clean, consistent structure"""
     try:
@@ -661,7 +663,7 @@ def list_clients_as_devices():
         print(f"❌ [DEVICES] Error listing devices: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/system/environment-profiles', methods=['GET'])
+@system_bp.route('/environment-profiles', methods=['GET'])
 def get_environment_profiles():
     """Get available environment profiles for test execution"""
     try:
@@ -710,7 +712,7 @@ def get_environment_profiles():
         print(f"❌ Error getting environment profiles: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/system/ping', methods=['POST'])
+@system_bp.route('/ping', methods=['POST'])
 def client_ping():
     """Client sends periodic health ping to server"""
     try:
