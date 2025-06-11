@@ -18,11 +18,7 @@ import {
   Alert,
   Typography,
   Button,
-  IconButton
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-} from '@mui/icons-material';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks';
@@ -33,7 +29,9 @@ import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDial
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
-import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
+
+// Import device control component
+import { NavigationEditorDeviceControl } from './NavigationEditorDeviceControl';
 
 // Import device utilities
 import { getDeviceRemoteConfig } from '../utils/device/deviceRemoteMappingUtils';
@@ -43,9 +41,6 @@ import { useRegistration } from '../contexts/RegistrationContext';
 
 // Import NavigationEdgeComponent
 import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
-
-// Import device control component
-import { NavigationEditorDeviceControl, createDeviceControlHandlers } from './NavigationEditorDeviceControl';
 
 // Node types for React Flow
 const nodeTypes = {
@@ -82,11 +77,9 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [availableHosts, selectHost, clearSelection]);
   
-  // Basic remote control state
+  // Device control state is now managed by NavigationEditorDeviceControl component
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [isControlActive, setIsControlActive] = useState(false);
-  
-  // Verification state
   const [isVerificationActive, setIsVerificationActive] = useState(false);
   const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
     image_controller_available: boolean;
@@ -95,15 +88,9 @@ const NavigationEditorContent: React.FC = () => {
     image_controller_available: false,
     text_controller_available: false,
   });
-  
-  // Add verification results state 
   const [verificationResults, setVerificationResults] = useState<any[]>([]);
   const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
   const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
-
-  // Simple loading states
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Memoize computed values based on selectedHost from registration context
   const remoteConfig = useMemo(() => {
@@ -119,42 +106,7 @@ const NavigationEditorContent: React.FC = () => {
     fetchHosts();
   }, []);
 
-  // Auto-populate connection form when host is selected
-  useEffect(() => {
-    if (!selectedHost?.controller_configs?.remote) return;
-
-    const deviceRemoteConfig = selectedHost.controller_configs.remote;
-    
-    console.log(`[@component:NavigationEditor] Auto-populating connection form for host: ${selectedHost.name}`, deviceRemoteConfig);
-    console.log(`[@component:NavigationEditor] Host ${selectedHost.name} has remote type: ${deviceRemoteConfig.type}`);
-    
-    if (hasAVCapabilities) {
-      console.log(`[@component:NavigationEditor] Host ${selectedHost.name} has AV capabilities for screen definition`);
-    }
-  }, [selectedHost?.name, selectedHost?.controller_configs?.remote, hasAVCapabilities]);
-
-  // Handle disconnection when control is released
-  useEffect(() => {
-    if (!remoteConfig || isControlActive) return;
-
-    console.log(`[@component:NavigationEditor] Control released, disconnecting from ${remoteConfig.type} device`);
-    console.log(`[@component:NavigationEditor] Disconnection will be handled by the generic remote component`);
-  }, [isControlActive, remoteConfig?.type]);
-
-  // Auto-open/close remote panel when control state changes
-  useEffect(() => {
-    console.log(`[@component:NavigationEditor] Auto-open useEffect triggered: isControlActive=${isControlActive}, remoteConfig=${remoteConfig ? 'available' : 'null'}, isRemotePanelOpen=${isRemotePanelOpen}`);
-    
-    if (isControlActive && remoteConfig && !isRemotePanelOpen) {
-      console.log('[@component:NavigationEditor] Control activated, automatically opening remote panel');
-      setIsRemotePanelOpen(true);
-    } else if (!isControlActive && isRemotePanelOpen) {
-      console.log('[@component:NavigationEditor] Control released, automatically closing remote panel');
-      setIsRemotePanelOpen(false);
-    } else if (isControlActive && !remoteConfig) {
-      console.log('[@component:NavigationEditor] Control is active but remoteConfig is null - device data may not be refreshed yet');
-    }
-  }, [isControlActive, remoteConfig, isRemotePanelOpen]);
+  // Device control effects are now handled by NavigationEditorDeviceControl component
 
   const {
     // State
@@ -273,437 +225,34 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
-  // Simplified take control handler
-  const handleTakeControl = useCallback(async () => {
-    const device = selectedHost;
-    const deviceId = device?.id; // Use 'id' instead of 'device_id' for RegisteredHost
-    
-    if (!deviceId) {
-      console.error('[@component:NavigationEditor] No device selected or device ID missing');
-      return;
-    }
+  // Device control handlers are now managed by NavigationEditorDeviceControl component
 
-    console.log(`[@component:NavigationEditor] Taking control of device: ${deviceId}`);
-    setIsLoading(true);
-    setError(null);
+  // Device control handlers are created within NavigationEditorDeviceControl component
 
-    try {
-      // Instead of HTTP call, just activate control and use controller proxies
-      console.log('[@component:NavigationEditor] Activating control - using controller proxies approach');
-      
-      setIsControlActive(true);
-      
-      // Show remote UI if device has remote capabilities and controller proxy exists
-      const remoteConfig = getDeviceRemoteConfig(device);
-      if (remoteConfig && device?.controllerProxies?.remote) {
-        console.log('[@component:NavigationEditor] Device has remote capabilities and controller proxy, showing remote UI');
-        setIsRemotePanelOpen(true);
-      }
-      
-      // Check for verification capabilities
-      if (device?.controllerProxies?.verification) {
-        console.log('[@component:NavigationEditor] Device has verification capabilities');
-        setIsVerificationActive(true);
-        setVerificationControllerStatus({
-          image_controller_available: device.controllerProxies.verification.hasCapability('image') || device.controllerProxies.verification.hasCapability('verification'),
-          text_controller_available: device.controllerProxies.verification.hasCapability('text') || device.controllerProxies.verification.hasCapability('ocr'),
-        });
-      }
-      
-      console.log('[@component:NavigationEditor] Control activated successfully using controller proxies');
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Take control failed:', error);
-      setError(error instanceof Error ? error.message : 'Failed to take control');
-      setIsControlActive(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedHost, getDeviceRemoteConfig]);
+  // Verification is now handled by NavigationEditorDeviceControl component
 
-  // Simplified release control handler
-  const handleReleaseControl = useCallback(async () => {
-    console.log('[@component:NavigationEditor] Releasing control');
-    
-    setIsRemotePanelOpen(false);
-    setIsControlActive(false);
-    setIsVerificationActive(false);
-    setVerificationControllerStatus({
-      image_controller_available: false,
-      text_controller_available: false,
-    });
-    
-    console.log('[@component:NavigationEditor] Control released');
-  }, []);
-
-  // Handle remote panel toggle
-  const handleToggleRemotePanel = useCallback(() => {
-    if (isRemotePanelOpen) {
-      setIsRemotePanelOpen(false);
-    } else if (isControlActive) {
-      setIsRemotePanelOpen(true);
-    }
-  }, [isRemotePanelOpen, isControlActive]);
-
-  // Create device control handlers using the extracted utility
-  const deviceControlHandlers = useMemo(() => {
-    return createDeviceControlHandlers(
-      selectedHost,
-      isControlActive,
-      selectedNode,
-      nodes,
-      setNodes,
-      setSelectedNode,
-      setHasUnsavedChanges,
-      isVerificationActive,
-      verificationPassCondition,
-      setVerificationResults,
-      setLastVerifiedNodeId
-    );
-  }, [
-    selectedHost,
-    isControlActive,
-    selectedNode,
-    nodes,
-    setNodes,
-    setSelectedNode,
-    setHasUnsavedChanges,
-    isVerificationActive,
-    verificationPassCondition,
-    setVerificationResults,
-    setLastVerifiedNodeId
-  ]);
-
-  // Handle verification execution using verification controller proxy
-  const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
-    if (!isVerificationActive || !verifications || verifications.length === 0) {
-      console.log('[@component:NavigationEditor] Cannot execute verifications: controllers not active or no verifications');
-      return;
-    }
-
-    try {
-      console.log(`[@component:NavigationEditor] Executing ${verifications.length} verifications for node: ${nodeId}`);
-      
-      // Clear previous results and set current node
-      setVerificationResults([]);
-      setLastVerifiedNodeId(nodeId);
-      
-      // Use verification controller proxy instead of server endpoint
-      const verificationControllerProxy = selectedHost?.controllerProxies?.verification;
-      if (!verificationControllerProxy) {
-        throw new Error('Verification controller proxy not available. Host may not have verification capabilities or proxy creation failed.');
-      }
-      
-      console.log('[@component:NavigationEditor] Verification controller proxy found, calling executeVerificationBatch...');
-      
-      // Call executeVerificationBatch on the verification controller proxy
-      const response = await verificationControllerProxy.executeVerificationBatch({
-        verifications: verifications,
-        model: selectedHost?.model || 'android_mobile',
-        node_id: nodeId,
-        source_filename: 'current_screenshot.jpg' // Default source filename
-      });
-      
-      if (response.success && response.data?.results) {
-        console.log('[@component:NavigationEditor] Verification results:', response.data);
-        
-        // Process results to match VerificationTestResult interface
-        const processedResults = response.data.results.map((result: any, index: number) => {
-          const verification = verifications[index];
-          
-          console.log(`[@component:NavigationEditor] Processing result ${index}:`, result);
-          console.log(`[@component:NavigationEditor] Verification ${index}:`, verification);
-          
-          // Determine result type
-          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
-          if (result.success) {
-            resultType = 'PASS';
-          } else if (result.error && !result.message) {
-            resultType = 'ERROR';
-          }
-          
-          const processedResult = {
-            success: result.success,
-            message: result.message,
-            error: result.error,
-            threshold: result.threshold,
-            resultType: resultType,
-            sourceImageUrl: result.source_image_url,
-            referenceImageUrl: result.reference_image_url,
-            extractedText: result.extracted_text,
-            searchedText: result.searched_text,
-            imageFilter: result.image_filter,
-            detectedLanguage: result.detected_language,
-            languageConfidence: result.language_confidence,
-            ocrConfidence: result.ocr_confidence,
-            // Add ADB-specific fields
-            search_term: result.search_term,
-            wait_time: result.wait_time,
-            total_matches: result.total_matches,
-            matches: result.matches,
-          };
-          
-          console.log(`[@component:NavigationEditor] Processed result ${index}:`, processedResult);
-          return processedResult;
-        });
-        
-        console.log(`[@component:NavigationEditor] Setting verification results:`, processedResults);
-        setVerificationResults(processedResults);
-        
-        // Show summary like in NodeVerificationsList
-        if (response.data.results) {
-          const passed = response.data.results.filter((r: any) => r.success).length;
-          const total = response.data.results.length;
-          console.log(`[@component:NavigationEditor] Verification completed: ${passed}/${total} passed`);
-          
-          // Log final result based on pass condition
-          const finalPassed = verificationPassCondition === 'all'
-            ? passed === total
-            : passed > 0;
-          console.log(`[@component:NavigationEditor] Final result (${verificationPassCondition}): ${finalPassed ? 'PASS' : 'FAIL'}`);
-        }
-      } else {
-        console.error('[@component:NavigationEditor] Verification failed:', response.error);
-        setVerificationResults([]);
-      }
-    } catch (error) {
-      console.error('[@component:NavigationEditor] Error executing verifications:', error);
-      setVerificationResults([]);
-    }
-  }, [isVerificationActive, selectedHost, verificationPassCondition, setVerificationResults, setLastVerifiedNodeId]);
-
-  // Handle node updates - callback for NodeSelectionPanel
+  // Simple update handlers - complex validation logic moved to device control component
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
-    console.log(`[@component:NavigationEditor] Updating node ${nodeId} with data:`, updatedData);
-    
-    // Check if this is a validation update that needs special handling
-    if (updatedData._validation_update && updatedData._validation_result) {
-      const validationResult = updatedData._validation_result.success;
-      
-      // Create a function to update nodes with validation results
-      const updateNodeFunction = (nodes: any[]) => 
-        nodes.map(node => {
-          if (node.id === nodeId) {
-            const existingData = node.data || {};
-            const existingVerifications = existingData.verifications || [];
-            
-            // Update verifications with validation result
-            let updatedVerifications;
-            if (existingVerifications.length > 0) {
-              // Update the first verification's last_run_result
-              updatedVerifications = existingVerifications.map((verification: any, index: number) => {
-                if (index === 0) {
-                  const existingResults = verification.last_run_result || [];
-                  const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
-                  return {
-                    ...verification,
-                    last_run_result: updatedResults
-                  };
-                }
-                return verification;
-              });
-            } else {
-              // Create a default verification with the validation result
-              updatedVerifications = [{
-                type: 'validation',
-                last_run_result: [validationResult]
-              }];
-            }
-            
-            return {
-              ...node,
-              data: {
-                ...existingData,
-                verifications: updatedVerifications,
-                last_validation_timestamp: updatedData._validation_result.timestamp
-              }
-            };
-          }
-          return node;
-        });
-      
-      // Update both filtered nodes and allNodes arrays
-      setNodes(updateNodeFunction);
-      
-      // Update selected node if it's the one being updated
-      if (selectedNode && selectedNode.id === nodeId) {
-        const updatedNodeData = updateNodeFunction([selectedNode])[0];
-        setSelectedNode(updatedNodeData);
-      }
-      
-      console.log(`[@component:NavigationEditor] Updated node ${nodeId} with validation result: ${validationResult}`);
-    } else {
-      // Regular update - use simple object spread
-      const updateNodeFunction = (nodes: any[]) => 
-        nodes.map(node => 
-          node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
-        );
-      
-      // Update both filtered nodes and allNodes arrays
-      setNodes(updateNodeFunction);
-      
-      // Update selected node if it's the one being updated
-      if (selectedNode && selectedNode.id === nodeId) {
-        const updatedNode = { ...selectedNode, data: { ...selectedNode.data, ...updatedData } };
-        setSelectedNode(updatedNode);
-      }
-      
-      console.log(`[@component:NavigationEditor] Updated node ${nodeId} with regular data`);
+    setNodes(nodes => nodes.map(node => 
+      node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
+    ));
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(node => node ? { ...node, data: { ...node.data, ...updatedData } } : node);
     }
-    
-    // Mark tree as having unsaved changes
     setHasUnsavedChanges(true);
-    
-    console.log(`[@component:NavigationEditor] Updated node ${nodeId} and marked tree as having unsaved changes`);
   }, [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode]);
 
-  // Handle edge updates - callback for EdgeSelectionPanel
   const handleUpdateEdge = useCallback((edgeId: string, updatedData: any) => {
-    console.log(`[@component:NavigationEditor] Updating edge ${edgeId} with data:`, updatedData);
-    
-    // Check if this is a validation update that needs special handling
-    if (updatedData._validation_update && updatedData._validation_result) {
-      const validationResult = updatedData._validation_result.success;
-      
-      // Update edges array with validation results
-      setEdges(prevEdges => 
-        prevEdges.map(edge => {
-          if (edge.id === edgeId) {
-            const existingData = edge.data || {};
-            const existingActions = existingData.actions || [];
-            
-            // Update actions with validation result
-            let updatedActions;
-            if (existingActions.length > 0) {
-              // Update the first action's last_run_result
-              updatedActions = existingActions.map((action: any, index: number) => {
-                if (index === 0) {
-                  const existingResults = action.last_run_result || [];
-                  const updatedResults = [validationResult, ...existingResults].slice(0, 10); // Keep last 10
-                  return {
-                    ...action,
-                    last_run_result: updatedResults
-                  };
-                }
-                return action;
-              });
-            } else {
-              // Create a default action with the validation result
-              updatedActions = [{
-                type: 'validation',
-                last_run_result: [validationResult]
-              }];
-            }
-            
-            return {
-              ...edge,
-              data: {
-                ...existingData,
-                actions: updatedActions,
-                last_validation_timestamp: updatedData._validation_result.timestamp
-              }
-            };
-          }
-          return edge;
-        })
-      );
-      
-      // Update selected edge if it's the one being updated
-      if (selectedEdge && selectedEdge.id === edgeId) {
-        setSelectedEdge(prevEdge => {
-          if (!prevEdge || prevEdge.id !== edgeId) return prevEdge;
-          
-          const existingData = prevEdge.data || {};
-          const existingActions = existingData.actions || [];
-          
-          let updatedActions;
-          if (existingActions.length > 0) {
-            updatedActions = existingActions.map((action: any, index: number) => {
-              if (index === 0) {
-                const existingResults = action.last_run_result || [];
-                const updatedResults = [validationResult, ...existingResults].slice(0, 10);
-                return {
-                  ...action,
-                  last_run_result: updatedResults
-                };
-              }
-              return action;
-            });
-          } else {
-            updatedActions = [{
-              type: 'validation',
-              last_run_result: [validationResult]
-            }];
-          }
-          
-          return {
-            ...prevEdge,
-            data: {
-              ...existingData,
-              actions: updatedActions,
-              last_validation_timestamp: updatedData._validation_result.timestamp
-            }
-          };
-        });
-      }
-      
-      console.log(`[@component:NavigationEditor] Updated edge ${edgeId} with validation result: ${validationResult}`);
-    } else {
-      // Regular update - use simple object spread
-      setEdges(prevEdges => 
-        prevEdges.map(edge => 
-          edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
-        )
-      );
-      
-      // Update selected edge if it's the one being updated
-      if (selectedEdge && selectedEdge.id === edgeId) {
-        const updatedEdge = { ...selectedEdge, data: { ...selectedEdge.data, ...updatedData } };
-        setSelectedEdge(updatedEdge);
-      }
-      
-      console.log(`[@component:NavigationEditor] Updated edge ${edgeId} with regular data`);
+    setEdges(edges => edges.map(edge => 
+      edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
+    ));
+    if (selectedEdge?.id === edgeId) {
+      setSelectedEdge(edge => edge ? { ...edge, data: { ...edge.data, ...updatedData } } : edge);
     }
-    
-    // Mark tree as having unsaved changes
     setHasUnsavedChanges(true);
-    
-    console.log(`[@component:NavigationEditor] Updated edge ${edgeId} and marked tree as having unsaved changes`);
   }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
 
-  // Show message if tree ID is missing
-  useEffect(() => {
-    if (!treeId && !interfaceId) {
-      console.log('[@component:NavigationEditor] Missing tree ID in URL');
-    }
-  }, [treeId, interfaceId]);
-  
-  // Load tree data when component mounts or treeId changes
-  useEffect(() => {
-    if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
-      lastLoadedTreeId.current = currentTreeName;
-      
-      // Load from config instead of database
-      loadFromConfig(currentTreeName);
-      
-      // Setup auto-unlock for this tree
-      const cleanup = setupAutoUnlock(currentTreeName);
-      
-      // Return cleanup function
-      return cleanup;
-    }
-  }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
-
-  // Clear verification results when a different node is selected
-  useEffect(() => {
-    if (selectedNode?.id && lastVerifiedNodeId && selectedNode.id !== lastVerifiedNodeId) {
-      setVerificationResults([]);
-      setLastVerifiedNodeId(null);
-    }
-  }, [selectedNode?.id, lastVerifiedNodeId]);
-
-  // Validation colors are automatically loaded from localStorage by Zustand persistence
-  // No manual initialization needed
+  // Verification state management is now handled by NavigationEditorDeviceControl component
   
   return (
     <Box sx={{ 
@@ -725,8 +274,8 @@ const NavigationEditorContent: React.FC = () => {
         maxDisplayDepth={maxDisplayDepth}
         totalNodes={allNodes.length}
         visibleNodes={nodes.length}
-        isLoading={isLoading}
-        error={error}
+        isLoading={false} // Loading handled by device control component
+        error={null} // Error handling moved to device control component
         // History props removed - using page reload for cancel changes
         isLocked={isLocked}
         lockInfo={lockInfo}
@@ -751,9 +300,9 @@ const NavigationEditorContent: React.FC = () => {
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
-        onToggleRemotePanel={handleToggleRemotePanel}
+        onToggleRemotePanel={() => {}} // Handled by device control component
         onDeviceSelect={handleHostSelect}
-        onTakeControl={handleTakeControl}
+        onTakeControl={() => {}} // Handled by device control component
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
       />
@@ -879,7 +428,7 @@ const NavigationEditorContent: React.FC = () => {
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
               userInterface={userInterface}
-              onReleaseControl={handleReleaseControl}
+              onReleaseControl={() => {}} // Handled by device control component
               onUpdateNode={handleUpdateNode}
               onSetVerificationResults={setVerificationResults}
               onSetLastVerifiedNodeId={setLastVerifiedNodeId}
@@ -905,10 +454,10 @@ const NavigationEditorContent: React.FC = () => {
                     onReset={resetNode}
                     isControlActive={isControlActive}
                     selectedDevice={selectedHost?.name || null}
-                    onTakeScreenshot={deviceControlHandlers.handleTakeScreenshot}
+                    onTakeScreenshot={() => {}} // Handled by device control component
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
-                    onVerification={deviceControlHandlers.handleVerification}
+                    onVerification={() => {}} // Handled by device control component
                     isVerificationActive={isVerificationActive}
                     verificationControllerStatus={verificationControllerStatus}
                     onUpdateNode={handleUpdateNode}
