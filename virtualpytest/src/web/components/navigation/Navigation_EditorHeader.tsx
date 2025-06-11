@@ -22,6 +22,7 @@ import {
   ControlCamera as ControlCameraIcon,
   Tv as TvIcon,
   Lock as LockIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { TreeFilterControls } from './Navigation_TreeFilterControls';
 import { useRegistration } from '../../contexts/RegistrationContext';
@@ -93,6 +94,10 @@ interface NavigationEditorHeaderProps {
   onDeviceSelect: (device: string | null) => void;
   onTakeControl: () => void;
   
+  // User Interface Editor props
+  isUserInterfaceEditorOpen?: boolean;
+  onToggleUserInterfaceEditor?: () => void;
+  
   // Update handlers for validation confidence tracking
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
@@ -136,6 +141,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onToggleRemotePanel,
   onDeviceSelect,
   onTakeControl,
+  isUserInterfaceEditorOpen = false,
+  onToggleUserInterfaceEditor,
   onUpdateNode,
   onUpdateEdge,
 }) => {
@@ -379,53 +386,49 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 </Select>
               </FormControl>
 
-              {/* Combined Take Control & Remote Panel Button */}
+              {/* Remote Panel Toggle Button */}
               <Button
-                variant={isControlActive ? "contained" : "outlined"}
+                variant={isRemotePanelOpen ? "contained" : "outlined"}
                 size="small"
-                onClick={() => {
-                  // Handle both take control and remote panel toggle
-                  onTakeControl();
-                  // If taking control, show the remote panel; if releasing, hide it
-                  if (!isControlActive && selectedDevice) {
-                    // Taking control - ensure remote panel is open
-                    if (!isRemotePanelOpen) {
-                      onToggleRemotePanel();
-                    }
-                  } else if (isControlActive) {
-                    // Releasing control - hide remote panel
-                    if (isRemotePanelOpen) {
-                      onToggleRemotePanel();
-                    }
-                  }
-                }}
-                disabled={
-                  !selectedDevice || 
-                  isLoading || 
-                  !!error || 
-                  devicesLoading || 
-                  isSelectedDeviceLocked
-                }
-                startIcon={isControlActive ? <TvIcon /> : <TvIcon />}
-                color={isControlActive ? "success" : "primary"}
+                onClick={onToggleRemotePanel}
+                disabled={isLoading || !!error}
+                startIcon={<TvIcon />}
+                color={isRemotePanelOpen ? "success" : "primary"}
                 sx={{ 
                   height: 32, 
                   fontSize: '0.7rem', 
-                  minWidth: 110,
-                  maxWidth: 110,
+                  minWidth: 80,
+                  maxWidth: 80,
                   whiteSpace: 'nowrap',
-                  px: 1.5
+                  px: 1
                 }}
-                title={
-                  isSelectedDeviceLocked 
-                    ? `Device is locked by ${selectedDeviceHost?.lockedBy || 'another user'}`
-                    : isControlActive 
-                      ? "Release Control" 
-                      : "Take Control"
-                }
+                title={isRemotePanelOpen ? "Hide Remote Panel" : "Show Remote Panel"}
               >
-                {isControlActive ? 'Release' : 'Control'}
+                Remote
               </Button>
+
+              {/* UserInterface Editor Toggle Button */}
+              {onToggleUserInterfaceEditor && (
+                <Button
+                  variant={isUserInterfaceEditorOpen ? "contained" : "outlined"}
+                  size="small"
+                  onClick={onToggleUserInterfaceEditor}
+                  disabled={isLoading || !!error}
+                  startIcon={<SettingsIcon />}
+                  color={isUserInterfaceEditorOpen ? "success" : "primary"}
+                  sx={{ 
+                    height: 32, 
+                    fontSize: '0.7rem', 
+                    minWidth: 80,
+                    maxWidth: 80,
+                    whiteSpace: 'nowrap',
+                    px: 1
+                  }}
+                  title={isUserInterfaceEditorOpen ? "Hide UI Editor" : "Show UI Editor"}
+                >
+                  UI Edit
+                </Button>
+              )}
             </Box>
           </Box>
         </Toolbar>
