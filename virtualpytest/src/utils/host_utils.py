@@ -35,7 +35,7 @@ import uuid
 import psutil
 import platform
 from typing import Dict, Any
-from app_utils import get_host_system_stats, generate_stable_host_id
+from app_utils import get_host_system_stats
 
 # Disable SSL warnings for self-signed certificates
 import urllib3
@@ -44,7 +44,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Client registration state for host mode
 client_registration_state = {
     'registered': False,
-    'client_id': None,
+    'host_name': None,
     'urls': {}  # Store all URLs built once during registration
 }
 
@@ -79,20 +79,15 @@ def register_host_with_server():
         host_port_external = os.getenv('HOST_PORT_EXTERNAL', host_port_internal)  # For server communication (may be port-forwarded)
         host_port_web = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port
         
-        # Generate stable host ID
-        host_id = generate_stable_host_id()
-        
         print(f"   Server: {server_host}:{server_port}")
         print(f"   Host Name: {host_name}")
         print(f"   Host IP: {host_ip}")
         print(f"   Host Port Internal: {host_port_internal} (Flask app)")
         print(f"   Host Port External: {host_port_external} (Server access)")
         print(f"   Host Port Web: {host_port_web} (HTTPS/nginx)")
-        print(f"   Host ID: {host_id}")
         
         # Create complete host info payload - everything the server needs
         host_info = {
-            'host_id': host_id,                    # For legacy compatibility
             'host_name': host_name,                # ✅ Primary identifier
             'host_ip': host_ip,
             'host_port_internal': host_port_internal,  # Where Flask runs
@@ -142,8 +137,7 @@ def register_host_with_server():
                 
                 # Mark as registered
                 client_registration_state['registered'] = True
-                client_registration_state['host_name'] = host_name    # ✅ Store host_name
-                client_registration_state['client_id'] = host_id     # Legacy compatibility
+                client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
                 client_registration_state['urls'] = urls
                 
                 # Store global host device object
@@ -160,8 +154,7 @@ def register_host_with_server():
                 print(f"   Raw response: {response.text}")
                 # Still mark as registered for basic functionality
                 client_registration_state['registered'] = True
-                client_registration_state['host_name'] = host_name    # ✅ Store host_name
-                client_registration_state['client_id'] = host_id
+                client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
                 client_registration_state['urls'] = urls
                 start_ping_thread()
         else:
@@ -172,21 +165,12 @@ def register_host_with_server():
             except Exception as json_error:
                 print(f"   Could not parse error response as JSON: {json_error}")
                 print(f"   Raw response: {response.text}")
-            
-    except requests.exceptions.ConnectionError as conn_error:
-        print(f"\n❌ [HOST] Connection error: {conn_error}")
-        print(f"   Could not connect to server at: {registration_url}")
-        print(f"   Make sure the server is running: python3 app_server.py")
-    except requests.exceptions.Timeout as timeout_error:
-        print(f"\n❌ [HOST] Timeout error: {timeout_error}")
-        print(f"   Server did not respond within 10 seconds")
+        
     except Exception as e:
         print(f"\n❌ [HOST] Unexpected error during registration: {e}")
-        import traceback
         print(f"   Full traceback:")
+        import traceback
         traceback.print_exc()
-    
-    print("=" * 50)
 
 def send_ping_to_server():
     """Send a health ping to the server"""
@@ -196,15 +180,13 @@ def send_ping_to_server():
     try:
         ping_url = client_registration_state['urls'].get('ping')
         host_name = client_registration_state.get('host_name')
-        client_id = client_registration_state.get('client_id')  # Legacy fallback
         
-        if not ping_url or not (host_name or client_id):
+        if not ping_url or not host_name:
             print(f"⚠️ [HOST] Cannot ping: missing ping URL or host identifier")
             return
         
         ping_data = {
             'host_name': host_name,                 # ✅ Primary identifier
-            'client_id': client_id,                 # Legacy compatibility
             'system_stats': get_host_system_stats(),
             'status': 'online'
         }
@@ -249,7 +231,6 @@ def unregister_from_server():
     try:
         unregister_url = client_registration_state['urls'].get('unregister')
         host_name = client_registration_state.get('host_name')
-        client_id = client_registration_state.get('client_id')  # Legacy fallback
         
         if not unregister_url:
             print(f"⚠️ [HOST] Cannot unregister: missing unregister URL")
@@ -261,7 +242,6 @@ def unregister_from_server():
         
         unregister_data = {
             'host_name': host_name,     # ✅ Primary identifier
-            'client_id': client_id      # Legacy compatibility
         }
         
         response = requests.post(
@@ -276,7 +256,6 @@ def unregister_from_server():
             print(f"✅ [HOST] Successfully unregistered from server")
             client_registration_state['registered'] = False
             client_registration_state['host_name'] = None
-            client_registration_state['client_id'] = None
             client_registration_state['urls'] = {}
         else:
             print(f"⚠️ [HOST] Unregistration failed with status: {response.status_code}")
