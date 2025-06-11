@@ -70,7 +70,7 @@ const DeviceManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/server/device/get-devices');
+      const response = await fetch('/server/devices/get-devices');
       if (!response.ok) {
         throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
       }
@@ -108,7 +108,7 @@ const DeviceManagement: React.FC = () => {
 
       console.log('[@component:DeviceManagement] Creating device with full data:', newDeviceData);
 
-      const response = await fetch('/server/device/create-device', {
+      const response = await fetch('/server/devices/create-device', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ const DeviceManagement: React.FC = () => {
     try {
       setError(null);
       
-      const response = await fetch(`/server/device/update-device/${deviceId}`, {
+      const response = await fetch(`/server/devices/update-device/${deviceId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const DeviceManagement: React.FC = () => {
     try {
       setError(null);
       
-      const response = await fetch(`/server/device/delete-device/${id}`, {
+      const response = await fetch(`/server/devices/delete-device/${id}`, {
         method: 'DELETE',
       });
 
@@ -215,7 +215,7 @@ const DeviceManagement: React.FC = () => {
       console.log('[@component:DeviceManagement] Loading device for editing:', device.id);
 
       // Load the device's current configuration
-      const response = await fetch(`/server/device/get-device/${device.id}`);
+      const response = await fetch(`/server/devices/get-device/${device.id}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to load device: ${response.status}`);
@@ -256,7 +256,7 @@ const DeviceManagement: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await fetch(`/server/device/update-device/${editingId}`, {
+      const response = await fetch(`/server/devices/update-device/${editingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

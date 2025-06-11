@@ -67,8 +67,8 @@ const NavigationEditorContent: React.FC = () => {
   const { 
     availableHosts, 
     selectedHost, 
-    setSelectedHost,
     selectHost,
+    clearSelection,
     fetchHosts,
   } = useRegistration();
   
@@ -81,10 +81,10 @@ const NavigationEditorContent: React.FC = () => {
         selectHost(host.id);
       }
     } else {
-      // Clear selection by setting selectedHost to null in context
-      setSelectedHost(null);
+      // Clear selection using the modern clearSelection function
+      clearSelection();
     }
-  }, [availableHosts, selectHost, setSelectedHost]);
+  }, [availableHosts, selectHost, clearSelection]);
   
   // Basic remote control state
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
