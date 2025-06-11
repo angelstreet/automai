@@ -10,7 +10,7 @@ import {
   ControllerConfigMap,
   ControllerConfiguration,
   ControllerInputField,
-} from '../../types/controllerConfigTypes';
+} from '../../types/controller/Controller_Types';
 
 // Helper function to create device IP fields
 const createDeviceIPFields = (): ControllerInputField[] => [

@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 import { useRemoteConnection } from '../../hooks/controller/useRemoteConnection';
 import { AndroidMobileCore } from './AndroidMobileCore';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
-import { AndroidElement } from '../../types/features/Remote_Types';
+import { AndroidElement } from '../../types/controller/Remote_Types';
 
 // Simple layout config - create inline since the file doesn't exist
 const getRemoteLayout = () => ({

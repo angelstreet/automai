@@ -10,7 +10,7 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { AndroidElement } from '../../types/features/Remote_Types';
+import { AndroidElement } from '../../types/controller/Remote_Types';
 
 interface AndroidMobileCoreProps {
   session: any;

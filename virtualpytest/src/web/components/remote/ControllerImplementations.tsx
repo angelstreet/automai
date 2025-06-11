@@ -31,7 +31,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypesResponse, ControllerItem } from '../../types/features/Remote_Types';
+import { ControllerTypesResponse, ControllerItem } from '../../types/controller/Remote_Types';
 import { RemoteModal } from '../modals/remote/RemoteModal';
 import { AndroidMobileModal } from '../modals/remote/AndroidMobileModal';
 import { HDMIStreamModal } from '../modals/remote/HDMIStreamModal';

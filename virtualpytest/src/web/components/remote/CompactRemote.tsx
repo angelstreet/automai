@@ -1,5 +1,5 @@
 import { RemotePanel } from './RemotePanel';
-import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
+import { RemoteType, BaseConnectionConfig } from '../../types/controller/Remote_Types';
 
 interface CompactRemoteProps {
   /** The type of remote device */

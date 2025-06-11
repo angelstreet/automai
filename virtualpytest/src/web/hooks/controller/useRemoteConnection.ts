@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/features/Remote_Types';
-import { RemoteType } from '../../types/features/Remote_Types';
+import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/controller/Remote_Types';
+import { RemoteType } from '../../types/controller/Remote_Types';
 import { getRemoteConfig } from './useRemoteConfigs';
 import { useRegistration } from '../../contexts/RegistrationContext';
 

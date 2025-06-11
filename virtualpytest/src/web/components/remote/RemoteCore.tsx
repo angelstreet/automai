@@ -5,7 +5,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { RemoteInterface } from './RemoteInterface';
-import { RemoteType } from '../../types/features/Remote_Types';
+import { RemoteType } from '../../types/controller/Remote_Types';
 import { useRemoteConnection } from '../../hooks/controller/useRemoteConnection';
 
 // Simple layout config - create inline since the file doesn't exist

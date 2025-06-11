@@ -12,15 +12,15 @@ export type {
   DeviceTypes,
   DeviceEnvironments,
   DeviceStatuses
-} from './common/Device_Types';
+} from './pages/Device_Types';
 
 export type {
   ControllerImplementation,
   ControllerConfig,
   ControllerConfigMap
-} from './common/Controller_Types';
+} from './controller/Controller_Types';
 
-export * from './common/Environment_Types';
+export * from './pages/Environment_Types';
 
 // Page-specific types
 export * from './pages/Navigation_Types';
@@ -45,12 +45,12 @@ export type {
   AnyConnectionConfig,
   ControllerItem,
   ControllerTypesResponse
-} from './features/Remote_Types';
+} from './controller/Remote_Types';
 
 // Export the Remote ControllerTypes with alias to avoid conflict
 export type { 
   ControllerTypes as RemoteControllerTypes,
   ControllerType as RemoteControllerType
-} from './features/Remote_Types';
+} from './controller/Remote_Types';
 
 export * from './features/Validation_Types'; 

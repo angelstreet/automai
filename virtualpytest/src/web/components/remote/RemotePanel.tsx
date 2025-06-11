@@ -9,7 +9,7 @@ import {
   Alert,
 } from '@mui/material';
 import { useRegistration } from '../../contexts/RegistrationContext';
-import { RemoteType, BaseConnectionConfig } from '../../types/features/Remote_Types';
+import { RemoteType, BaseConnectionConfig } from '../../types/controller/Remote_Types';
 
 interface RemotePanelProps {
   /** The type of remote device */

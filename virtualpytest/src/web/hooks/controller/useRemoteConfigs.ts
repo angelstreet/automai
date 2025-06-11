@@ -1,4 +1,4 @@
-import { RemoteDeviceConfig } from '../../types/features/Remote_Types';
+import { RemoteDeviceConfig } from '../../types/controller/Remote_Types';
 
 // Android TV configuration - uses direct host communication
 export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {

@@ -36,9 +36,25 @@ export interface ControllerCapability {
   required_config: string[]; // Required configuration fields
 }
 
-// Re-export controller configuration types from Common_BaseTypes
+// Device form data interface for device management
+export interface DeviceFormData {
+  name: string;
+  description: string;
+  model: string;
+  controllerConfigs: { [key: string]: any };
+}
+
+// Re-export controller configuration types from Common_BaseTypes with correct path
 export type { 
-  ControllerConfiguration as ControllerImplementation,
-  ControllerConfiguration as ControllerConfig,
-  ControllerConfigMap 
-} from './Common_BaseTypes'; 
+  ControllerConfiguration,
+  ControllerInputField,
+  ControllerConfigMap,
+  DeviceFormData as CommonDeviceFormData // Alias to avoid conflict with local DeviceFormData
+} from '../common/Common_BaseTypes';
+
+// Import types for creating aliases
+import type { ControllerConfiguration } from '../common/Common_BaseTypes';
+
+// Additional type aliases for backward compatibility
+export type ControllerImplementation = ControllerConfiguration;
+export type ControllerConfig = ControllerConfiguration; 

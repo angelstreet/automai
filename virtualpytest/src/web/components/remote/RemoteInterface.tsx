@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { RemoteConfig } from '../../types/features/Remote_Types';
+import { RemoteConfig } from '../../types/controller/Remote_Types';
 
 interface RemoteInterfaceProps {
   remoteConfig: RemoteConfig | null;

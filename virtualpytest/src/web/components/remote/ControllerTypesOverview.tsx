@@ -17,7 +17,7 @@ import {
   Memory as ProcessorIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypesResponse, ControllerItem } from '../../types/features/Remote_Types';
+import { ControllerTypesResponse, ControllerItem } from '../../types/controller/Remote_Types';
 
 interface ControllerTypesOverviewProps {
   controllerTypes: ControllerTypesResponse | null;

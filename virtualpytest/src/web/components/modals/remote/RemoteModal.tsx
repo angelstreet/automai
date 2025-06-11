@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, Android, Bluetooth, Router, PhoneAndroid } from '@mui/icons-material';
 import { RemotePanel } from '../../remote/RemotePanel';
-import { RemoteType, BaseConnectionConfig } from '../../../types/features/Remote_Types';
+import { RemoteType, BaseConnectionConfig } from '../../../types/controller/Remote_Types';
 import { getRemoteConfig } from '../../../hooks/controller/useRemoteConfigs';
 
 interface RemoteModalProps {

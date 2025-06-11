@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { AndroidElement } from '../../types/features/Remote_Types';
+import { AndroidElement } from '../../types/controller/Remote_Types';
 
 interface ScaledElement {
   id: string;

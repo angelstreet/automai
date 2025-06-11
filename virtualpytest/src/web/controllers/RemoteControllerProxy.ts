@@ -8,7 +8,7 @@
  */
 
 import { BaseControllerProxy } from './BaseControllerProxy';
-import { AndroidElement, AndroidApp } from '../types/features/Remote_Types';
+import { AndroidElement, AndroidApp } from '../types/controller/Remote_Types';
 
 // Remote Controller Types
 export interface RemoteCommandOptions {

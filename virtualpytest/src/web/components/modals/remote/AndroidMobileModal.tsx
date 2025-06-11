@@ -16,8 +16,8 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { useRemoteConnection } from '../../../hooks/controller/useRemoteConnection';
 import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
 import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
-import { AndroidElement } from '../../../types/features/Remote_Types';
-import { BaseConnectionConfig } from '../../../types/features/Remote_Types';
+import { AndroidElement } from '../../../types/controller/Remote_Types';
+import { BaseConnectionConfig } from '../../../types/controller/Remote_Types';
 
 interface AndroidMobileModalProps {
   open: boolean;
