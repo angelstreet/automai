@@ -10,6 +10,7 @@ This module contains the server-side verification execution endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
+from .utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
 
 # Create blueprint
 verification_execution_server_bp = Blueprint('verification_execution_server', __name__, url_prefix='/server/verification')
@@ -23,41 +24,52 @@ def execute_verification():
     """Forward verification execution request to host."""
     try:
         data = request.get_json()
-        verification = data.get('verification')
-        source_path = data.get('source_path')
+        verification_params = data.get('verification_params', {})
         model = data.get('model', 'default')
         
-        print(f"[@route:execute_verification] Forwarding verification execution to host")
-        print(f"[@route:execute_verification] Source: {source_path}, Model: {model}")
-        print(f"[@route:execute_verification] Verification type: {verification.get('type') if verification else 'unknown'}")
+        print(f"[@route:execute_verification] Forwarding verification execution to host for model: {model}")
+        print(f"[@route:execute_verification] Verification params: {verification_params}")
         
         # Validate required parameters
-        if not verification or not source_path:
+        if not verification_params:
             return jsonify({
                 'success': False,
-                'error': 'verification and source_path are required'
+                'error': 'verification_params is required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
         
-        # Extract filename from source_path URL
-        parsed_url = urllib.parse.urlparse(source_path)
-        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
-        print(f"[@route:execute_verification] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        verification = verification_params.get('verification')
+        source_path = verification_params.get('source_path')
         
-        # Forward execution request to host
-        host_execute_url = f'http://{host_ip}:{host_port}/stream/execute-verification'
+        print(f"[@route:execute_verification] Verification type: {verification.get('type') if verification else 'unknown'}")
+        
+        # Extract filename from source_path URL if provided
+        if source_path:
+            parsed_url = urllib.parse.urlparse(source_path)
+            source_filename = parsed_url.path.split('/')[-1]  # Extract filename
+        else:
+            source_filename = 'no_source'
+        
+        print(f"[@route:execute_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
+        
+        # Use pre-built URL from host registry
+        host_execute_url = build_host_url(host_info, '/stream/execute-verification')
         
         execute_payload = {
-            'verification': verification,
             'source_filename': source_filename,
+            'verification': verification,
             'model': model
         }
         
-        print(f"[@route:execute_verification] Sending request to {host_execute_url}")
+        print(f"[@route:execute_verification] Sending request to {host_execute_url} with payload: {execute_payload}")
         
         try:
             host_response = requests.post(host_execute_url, json=execute_payload, timeout=60, verify=False)
@@ -65,15 +77,15 @@ def execute_verification():
             
             if host_result.get('success'):
                 verification_result = host_result.get('verification_result', {})
-                print(f"[@route:execute_verification] Host execution completed: {verification_result.get('success')}")
+                print(f"[@route:execute_verification] Host verification successful")
                 
-                # Convert host URLs to nginx-exposed URLs
+                # Convert host URLs to nginx-exposed URLs using registry-based URL builder
                 if verification_result.get('source_image_url'):
-                    verification_result['source_image_url'] = f'https://77.56.53.130:444{verification_result["source_image_url"]}'
+                    verification_result['source_image_url'] = build_host_nginx_url(host_info, verification_result['source_image_url'])
                 if verification_result.get('result_overlay_url'):
-                    verification_result['result_overlay_url'] = f'https://77.56.53.130:444{verification_result["result_overlay_url"]}'
+                    verification_result['result_overlay_url'] = build_host_nginx_url(host_info, verification_result['result_overlay_url'])
                 if verification_result.get('reference_image_url'):
-                    verification_result['reference_image_url'] = f'https://77.56.53.130:444{verification_result["reference_image_url"]}'
+                    verification_result['reference_image_url'] = build_host_nginx_url(host_info, verification_result['reference_image_url'])
                 
                 return jsonify(host_result)
             else:
@@ -115,50 +127,52 @@ def execute_batch_verification():
                 'error': 'verifications and source_path are required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:execute_batch_verification] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        print(f"[@route:execute_batch_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
-        # Forward batch execution request to host
-        host_batch_url = f'http://{host_ip}:{host_port}/stream/execute-batch-verification'
+        # Use pre-built URL from host registry
+        host_batch_url = build_host_url(host_info, '/stream/execute-batch-verification')
         
         batch_payload = {
-            'verifications': verifications,
             'source_filename': source_filename,
+            'verifications': verifications,
             'model': model
         }
         
-        print(f"[@route:execute_batch_verification] Sending batch request to {host_batch_url}")
+        print(f"[@route:execute_batch_verification] Sending request to {host_batch_url} with {len(verifications)} verifications")
         
         try:
-            # Use longer timeout for batch operations
-            host_response = requests.post(host_batch_url, json=batch_payload, timeout=300, verify=False)
+            host_response = requests.post(host_batch_url, json=batch_payload, timeout=120, verify=False)
             host_result = host_response.json()
             
-            if host_result.get('success') is not None:  # Can be True or False
-                passed_count = host_result.get('passed_count', 0)
-                total_count = host_result.get('total_count', 0)
-                print(f"[@route:execute_batch_verification] Host batch execution completed: {passed_count}/{total_count} passed")
-                
-                # Convert host URLs to nginx-exposed URLs for all results
+            if host_result.get('success'):
                 results = host_result.get('results', [])
+                print(f"[@route:execute_batch_verification] Host batch verification successful: {len(results)} results")
+                
+                # Convert all host URLs to nginx-exposed URLs using registry-based URL builder
                 for result in results:
                     if result.get('source_image_url'):
-                        result['source_image_url'] = f'https://77.56.53.130:444{result["source_image_url"]}'
+                        result['source_image_url'] = build_host_nginx_url(host_info, result['source_image_url'])
                     if result.get('result_overlay_url'):
-                        result['result_overlay_url'] = f'https://77.56.53.130:444{result["result_overlay_url"]}'
+                        result['result_overlay_url'] = build_host_nginx_url(host_info, result['result_overlay_url'])
                     if result.get('reference_image_url'):
-                        result['reference_image_url'] = f'https://77.56.53.130:444{result["reference_image_url"]}'
+                        result['reference_image_url'] = build_host_nginx_url(host_info, result['reference_image_url'])
                 
                 # Convert results directory URL
                 if host_result.get('results_directory'):
-                    host_result['results_directory_url'] = f'https://77.56.53.130:444{host_result["results_directory"]}'
+                    host_result['results_directory_url'] = build_host_nginx_url(host_info, host_result['results_directory'])
                 
                 return jsonify(host_result)
             else:

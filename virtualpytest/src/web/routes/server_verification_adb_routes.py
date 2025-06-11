@@ -9,6 +9,7 @@ This module contains the server-side ADB verification API endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
+from .utils import get_host_by_model, get_primary_host, build_host_url
 
 # Create blueprint
 verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification')
@@ -29,14 +30,19 @@ def adb_element_lists():
         if search_term:
             print(f"[@route:adb_element_lists] With search term: '{search_term}'")
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
         
-        print(f"[@route:adb_element_lists] Using hardcoded host: {host_ip}:{host_port}")
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
-        # Forward ADB element lists request to host
-        host_adb_url = f'http://{host_ip}:{host_port}/stream/adb-element-lists'
+        print(f"[@route:adb_element_lists] Using registered host: {host_info.get('host_name', 'unknown')}")
+        
+        # Use pre-built URL from host registry
+        host_adb_url = build_host_url(host_info, '/stream/adb-element-lists')
         
         adb_payload = {
             'model': model,
@@ -91,14 +97,19 @@ def adb_wait_element_appear():
                 'error': 'search_term is required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
         
-        print(f"[@route:adb_wait_element_appear] Using hardcoded host: {host_ip}:{host_port}")
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
-        # Forward ADB wait element appear request to host
-        host_adb_url = f'http://{host_ip}:{host_port}/stream/adb-wait-element-appear'
+        print(f"[@route:adb_wait_element_appear] Using registered host: {host_info.get('host_name', 'unknown')}")
+        
+        # Use pre-built URL from host registry
+        host_adb_url = build_host_url(host_info, '/stream/adb-wait-element-appear')
         
         adb_payload = {
             'search_term': search_term,
@@ -153,14 +164,19 @@ def adb_wait_element_disappear():
                 'error': 'search_term is required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
         
-        print(f"[@route:adb_wait_element_disappear] Using hardcoded host: {host_ip}:{host_port}")
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
-        # Forward ADB wait element disappear request to host
-        host_adb_url = f'http://{host_ip}:{host_port}/stream/adb-wait-element-disappear'
+        print(f"[@route:adb_wait_element_disappear] Using registered host: {host_info.get('host_name', 'unknown')}")
+        
+        # Use pre-built URL from host registry
+        host_adb_url = build_host_url(host_info, '/stream/adb-wait-element-disappear')
         
         adb_payload = {
             'search_term': search_term,

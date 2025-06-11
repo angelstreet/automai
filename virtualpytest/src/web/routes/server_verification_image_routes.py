@@ -10,6 +10,7 @@ This module contains the server-side image verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
+from .utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
 
 # Create blueprint
 verification_image_server_bp = Blueprint('verification_image_server', __name__, url_prefix='/server/verification')
@@ -37,24 +38,28 @@ def capture_reference_image():
                 'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        server_ip = "192.168.1.67"  # Server IP
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:capture_reference_image] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        print(f"[@route:capture_reference_image] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
-        # Forward crop request to host
-        host_crop_url = f'http://{host_ip}:{host_port}/stream/crop-area'
+        # Use pre-built URL from host registry
+        host_crop_url = build_host_url(host_info, '/stream/crop-area')
         
         crop_payload = {
             'source_filename': source_filename,
             'area': area,
-            'reference_name': reference_name
+            'model': model
         }
         
         print(f"[@route:capture_reference_image] Sending request to {host_crop_url} with payload: {crop_payload}")
@@ -65,10 +70,10 @@ def capture_reference_image():
             
             if host_result.get('success'):
                 cropped_path = host_result.get('cropped_path')
-                print(f"[@route:capture_reference_image] Host cropping successful: {cropped_path}")
+                print(f"[@route:capture_reference_image] Host crop successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = f'https://77.56.53.130:444{cropped_path}'
+                full_image_url = build_host_nginx_url(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -123,24 +128,28 @@ def process_area_reference():
                 'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
-        server_ip = "192.168.1.67"  # Server IP
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:process_area_reference] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        print(f"[@route:process_area_reference] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
-        # Forward process request to host
-        host_process_url = f'http://{host_ip}:{host_port}/stream/process-area'
+        # Use pre-built URL from host registry
+        host_process_url = build_host_url(host_info, '/stream/process-area')
         
         process_payload = {
             'source_filename': source_filename,
             'area': area,
-            'reference_name': reference_name,
+            'model': model,
             'autocrop': autocrop,
             'remove_background': remove_background
         }
@@ -157,7 +166,7 @@ def process_area_reference():
                 print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = f'https://77.56.53.130:444{cropped_path}'
+                full_image_url = build_host_nginx_url(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -218,31 +227,33 @@ def save_reference():
                 'error': 'Missing required parameters: reference_name, model_name, and area are all required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model_name) if model_name != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model_name}'
+            }), 404
         
         # Use provided cropped_filename or build it from source_path (fallback)
-        if not cropped_filename and source_path:
-            parsed_url = urllib.parse.urlparse(source_path)
-            source_filename = parsed_url.path.split('/')[-1]  # Extract filename
-            # Build the expected cropped filename: cropped_{reference_name}_{source_filename}
-            cropped_filename = f'cropped_{reference_name}_{source_filename}'
-        elif not cropped_filename:
-            # Fallback pattern if no source_path provided
-            cropped_filename = f'cropped_{reference_name}.jpg'
+        if not cropped_filename:
+            if source_path:
+                parsed_url = urllib.parse.urlparse(source_path)
+                source_filename = parsed_url.path.split('/')[-1]
+                cropped_filename = f"cropped_{source_filename}"
+            else:
+                cropped_filename = f'cropped_{reference_name}.jpg'
         
-        print(f"[@route:save_reference] Using hardcoded host: {host_ip}:{host_port}, cropped filename: {cropped_filename}")
+        print(f"[@route:save_reference] Using registered host: {host_info.get('host_name', 'unknown')}, cropped filename: {cropped_filename}")
         
-        # Forward save request to host
-        host_save_url = f'http://{host_ip}:{host_port}/stream/save-resource'
+        # Use pre-built URL from host registry
+        host_save_url = build_host_url(host_info, '/stream/save-resource')
         
         save_payload = {
-            'cropped_filename': cropped_filename,
-            'reference_name': reference_name,
+            'name': reference_name,
             'model': model_name,
-            'area': area,
-            'reference_type': reference_type
+            'cropped_filename': cropped_filename
         }
         
         print(f"[@route:save_reference] Sending request to {host_save_url} with payload: {save_payload}")
@@ -255,8 +266,8 @@ def save_reference():
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
-                # Build full URL with nginx-exposed URL
-                full_public_url = f'https://77.56.53.130:444{public_url}'
+                # Use pre-built nginx URL from host registry
+                full_public_url = build_host_nginx_url(host_info, public_url)
                 
                 return jsonify({
                     'success': True,
@@ -306,18 +317,29 @@ def ensure_reference_stream_availability():
                 'error': 'reference_name and model are required'
             }), 400
         
-        # Hardcode IPs for testing (same as other functions)
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
+        
+        print(f"[@route:ensure_reference_availability] Using registered host: {host_info.get('host_name', 'unknown')}")
+        
+        # Use pre-built URL from host registry
+        ensure_url = build_host_url(host_info, '/stream/ensure-reference-availability')
         
         # Forward request to host
         host_response = requests.post(
-            f'http://{host_ip}:{host_port}/stream/ensure-reference-availability',
+            ensure_url,
             json={
                 'reference_name': reference_name,
                 'model': model
             },
-            timeout=30
+            timeout=30,
+            verify=False
         )
         
         if host_response.status_code == 200:

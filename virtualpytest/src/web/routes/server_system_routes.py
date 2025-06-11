@@ -792,7 +792,19 @@ def start_health_check(client_id, client_ip, client_port):
                         break
                     
                     try:
-                        response = requests.get(f"http://{client_ip}:{client_port}/server/system/health", timeout=5)
+                        # Use pre-built flask_url from host connection instead of manual URL building
+                        host_info = connected_clients[client_id]
+                        connection = host_info.get('connection', {})
+                        flask_url = connection.get('flask_url')
+                        
+                        if not flask_url:
+                            # Fallback to manual URL building if connection info is missing (legacy support)
+                            health_url = f"http://{client_ip}:{client_port}/server/system/health"
+                            print(f"⚠️ [HEALTH] No flask_url in connection data for {client_id[:8]}..., using fallback: {health_url}")
+                        else:
+                            health_url = f"{flask_url}/server/system/health"
+                        
+                        response = requests.get(health_url, timeout=5)
                         if response.status_code == 200:
                             # Update last seen timestamp
                             connected_clients[client_id]['last_seen'] = time.time()

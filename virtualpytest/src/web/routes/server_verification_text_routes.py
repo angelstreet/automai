@@ -10,6 +10,7 @@ This module contains the server-side text verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
+from .utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
 
 # Create blueprint
 verification_text_server_bp = Blueprint('verification_text_server', __name__, url_prefix='/server/verification')
@@ -38,18 +39,23 @@ def text_auto_detect():
                 'error': 'source_path and area are required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model}'
+            }), 404
         
         # Extract filename from source_path URL
         parsed_url = urllib.parse.urlparse(source_path)
         source_filename = parsed_url.path.split('/')[-1]  # Extract filename
         
-        print(f"[@route:text_auto_detect] Using hardcoded host: {host_ip}:{host_port}, filename: {source_filename}")
+        print(f"[@route:text_auto_detect] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
-        # Forward text auto-detection request to host
-        host_text_url = f'http://{host_ip}:{host_port}/stream/text-auto-detect'
+        # Use pre-built URL from host registry
+        host_text_url = build_host_url(host_info, '/stream/text-auto-detect')
         
         text_payload = {
             'source_filename': source_filename,
@@ -73,7 +79,7 @@ def text_auto_detect():
                 
                 # Convert relative preview URL to full nginx-exposed URL
                 if preview_url:
-                    full_preview_url = f'https://77.56.53.130:444{preview_url}'
+                    full_preview_url = build_host_nginx_url(host_info, preview_url)
                     host_result['preview_url'] = full_preview_url
                 
                 return jsonify(host_result)
@@ -85,7 +91,7 @@ def text_auto_detect():
                 
                 # Convert preview URL even for failures (user can still see the cropped area)
                 if preview_url:
-                    full_preview_url = f'https://77.56.53.130:444{preview_url}'
+                    full_preview_url = build_host_nginx_url(host_info, preview_url)
                     host_result['preview_url'] = full_preview_url
                 
                 return jsonify(host_result), 400
@@ -130,14 +136,19 @@ def save_text_reference():
                 'error': 'reference_name, model_name, and text are required'
             }), 400
         
-        # Hardcode IPs for testing
-        host_ip = "77.56.53.130"  # Host IP
-        host_port = "5119"        # Host internal port
+        # Find appropriate host using registry
+        host_info = get_host_by_model(model_name) if model_name != 'default' else get_primary_host()
         
-        print(f"[@route:save_text_reference] Using hardcoded host: {host_ip}:{host_port}")
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': f'No available host found for model: {model_name}'
+            }), 404
         
-        # Forward text save request to host
-        host_save_url = f'http://{host_ip}:{host_port}/stream/save-text-resource'
+        print(f"[@route:save_text_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
+        
+        # Use pre-built URL from host registry
+        host_save_url = build_host_url(host_info, '/stream/save-text-resource')
         
         # Note: Host expects 'name' instead of 'reference_name' and 'model' instead of 'model_name'
         save_payload = {
@@ -159,8 +170,8 @@ def save_text_reference():
                 public_url = host_result.get('public_url')
                 print(f"[@route:save_text_reference] Host text save successful: {public_url}")
                 
-                # Build full URL with nginx-exposed URL (though text references don't have specific files)
-                full_public_url = f'https://77.56.53.130:444{public_url}' if public_url else None
+                # Use pre-built nginx URL from host registry
+                full_public_url = build_host_nginx_url(host_info, public_url) if public_url else None
                 
                 return jsonify({
                     'success': True,
