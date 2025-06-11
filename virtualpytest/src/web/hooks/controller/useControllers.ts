@@ -9,42 +9,21 @@ export function useControllers() {
   const fetchControllerTypes = async () => {
     try {
       setLoading(true);
-      console.log('[@hook:useControllers] 🔍 Fetching controller types from backend...');
+      console.log('[@hook:useControllers] Fetching controller types');
       
-      // Updated API endpoint to use server/control route
       const response = await fetch('/server/control/getAllControllers');
-      console.log('[@hook:useControllers] 📡 Response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('[@hook:useControllers] ✅ Successfully fetched controller types:', data);
       
-      // Extract the controller_types from the API response
-      let controllerTypesData = data.controller_types || data;
-      
-      // Validate that we have the expected structure
-      if (!controllerTypesData || typeof controllerTypesData !== 'object') {
-        throw new Error('Invalid API response: missing controller types data');
-      }
-      
-      // Ensure all expected controller type arrays exist
-      const expectedTypes = ['remote', 'av', 'network', 'verification', 'power'];
-      for (const type of expectedTypes) {
-        if (!Array.isArray(controllerTypesData[type])) {
-          console.warn(`[@hook:useControllers] ⚠️ Missing or invalid ${type} controllers, initializing as empty array`);
-          controllerTypesData[type] = [];
-        }
-      }
-      
-      console.log('[@hook:useControllers] 📋 Validated controller types data:', controllerTypesData);
-      
-      setControllerTypes(controllerTypesData);
+      // Extract controller_types from API response
+      setControllerTypes(data.controller_types || data);
       setError(null);
     } catch (err: any) {
-      console.error('[@hook:useControllers] ❌ Error fetching controller types:', err);
+      console.error('[@hook:useControllers] Error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
