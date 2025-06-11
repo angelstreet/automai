@@ -101,7 +101,6 @@ def register_all_server_routes(app):
     try:
         from routes import register_routes
         register_routes(app, mode='server')
-        print("✅ ALL server routes loaded successfully")
         return True
     except Exception as e:
         print(f"❌ CRITICAL: Failed to load server routes: {e}")
