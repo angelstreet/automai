@@ -25,7 +25,7 @@ import {
 import React, { useState, useEffect } from 'react';
 import CreateModelDialog from '../components/models/Models_CreateDialog';
 
-// Simple model interface matching what we expect from the database
+// Simple model interface matching database
 interface Model {
   id: string;
   name: string;
@@ -52,34 +52,34 @@ const Models: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load device models on component mount only
+  // Load models on component mount
   useEffect(() => {
-    loadDeviceModels();
+    loadModels();
   }, []);
 
-  const loadDeviceModels = async () => {
+  const loadModels = async () => {
     try {
       setLoading(true);
       setError(null);
       
       const response = await fetch('/server/devicemodel/getAllModels');
       if (!response.ok) {
-        throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch models: ${response.status}`);
       }
       
       const modelsData = await response.json();
       setModels(modelsData || []);
-      console.log('[@component:Models] Successfully loaded device models:', modelsData?.length || 0);
+      console.log('[@component:Models] Loaded models:', modelsData?.length || 0);
     } catch (err) {
-      console.error('[@component:Models] Error loading device models:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load device models');
+      console.error('[@component:Models] Error loading models:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load models');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this device model?')) {
+    if (!window.confirm('Are you sure you want to delete this model?')) {
       return;
     }
 
@@ -92,40 +92,25 @@ const Models: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to delete device model: ${response.status}`);
+        throw new Error(errorData.error || `Failed to delete model: ${response.status}`);
       }
 
       // Update local state
       setModels(models.filter(m => m.id !== id));
-      setSuccessMessage('Device model deleted successfully');
-      console.log('[@component:Models] Successfully deleted device model');
+      setSuccessMessage('Model deleted successfully');
+      console.log('[@component:Models] Deleted model');
     } catch (err) {
-      console.error('[@component:Models] Error deleting device model:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete device model');
+      console.error('[@component:Models] Error deleting model:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete model');
     }
   };
 
   const handleAddNew = async (newModelData: ModelCreatePayload) => {
-    if (!newModelData.name.trim() || newModelData.types.length === 0) {
-      setError('Name and at least one Type are required');
-      return;
-    }
-
-    // Check for duplicate names
-    const isDuplicate = models.some(
-      (m) => m.name.toLowerCase() === newModelData.name.toLowerCase().trim()
-    );
-    
-    if (isDuplicate) {
-      setError('A model with this name already exists');
-      return;
-    }
-
     try {
       setSubmitting(true);
       setError(null);
 
-      console.log('[@component:Models] Creating model with data:', newModelData);
+      console.log('[@component:Models] Creating model:', newModelData);
 
       const response = await fetch('/server/devicemodel/createDeviceModel', {
         method: 'POST',
@@ -137,7 +122,7 @@ const Models: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to create device model: ${response.status}`);
+        throw new Error(errorData.error || `Failed to create model: ${response.status}`);
       }
 
       const result = await response.json();
@@ -146,11 +131,11 @@ const Models: React.FC = () => {
       // Update local state
       setModels([...models, createdModel]);
       setOpenDialog(false);
-      setSuccessMessage('Device model created successfully');
-      console.log('[@component:Models] Successfully created device model:', createdModel.name);
+      setSuccessMessage('Model created successfully');
+      console.log('[@component:Models] Created model:', createdModel.name);
     } catch (err) {
-      console.error('[@component:Models] Error creating device model:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create device model');
+      console.error('[@component:Models] Error creating model:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create model');
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +146,7 @@ const Models: React.FC = () => {
     setError(null);
   };
 
-  // Loading state component
+  // Loading state
   const LoadingState = () => (
     <Box 
       sx={{ 
@@ -175,12 +160,12 @@ const Models: React.FC = () => {
     >
       <CircularProgress size={40} sx={{ mb: 2 }} />
       <Typography variant="h6" color="text.secondary">
-        Loading Device Models...
+        Loading Models...
       </Typography>
     </Box>
   );
 
-  // Empty state component
+  // Empty state
   const EmptyState = () => (
     <Box 
       sx={{ 
@@ -194,10 +179,10 @@ const Models: React.FC = () => {
     >
       <DeviceIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
-        No Models Created
+        No Models Found
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
-        Create your first device model to define hardware specifications and capabilities for your test automation.
+        Create your first device model to get started.
       </Typography>
       <Button
         variant="contained"
@@ -205,7 +190,7 @@ const Models: React.FC = () => {
         onClick={() => setOpenDialog(true)}
         disabled={submitting}
       >
-        Create Your First Model
+        Add Model
       </Button>
     </Box>
   );
@@ -218,7 +203,7 @@ const Models: React.FC = () => {
             Device Models
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            Manage device models and their specifications for test automation.
+            Manage device models and their specifications.
           </Typography>
         </Box>
         <Button
@@ -228,7 +213,7 @@ const Models: React.FC = () => {
           size="small"
           disabled={submitting || loading}
         >
-          {submitting ? 'Creating...' : 'Add Model'}
+          Add Model
         </Button>
       </Box>
 
@@ -303,7 +288,7 @@ const Models: React.FC = () => {
       {/* Summary */}
       <Box mt={2}>
         <Typography variant="body2" color="text.secondary">
-          Showing {models.length} device models
+          Showing {models.length} models
         </Typography>
       </Box>
 
@@ -315,7 +300,7 @@ const Models: React.FC = () => {
         error={error}
       />
 
-      {/* Success Message Snackbar */}
+      {/* Success Message */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={6000}
