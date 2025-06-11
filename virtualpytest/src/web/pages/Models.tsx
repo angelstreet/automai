@@ -1,9 +1,6 @@
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
   Devices as DeviceIcon,
 } from '@mui/icons-material';
 import {
@@ -13,16 +10,9 @@ import {
   Card,
   CardContent,
   IconButton,
-  TextField,
+  Chip,
   Alert,
   CircularProgress,
-  FormControl,
-  Select,
-  MenuItem,
-  Chip,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
   Table,
   TableBody,
   TableCell,
@@ -31,56 +21,15 @@ import {
   TableRow,
   Paper,
   Snackbar,
-  SelectChangeEvent,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import CreateModelDialog from '../components/models/Models_CreateDialog';
 import { DeviceModel } from '../types';
 
-const modelTypes = [
-  'Android Mobile',
-  'Android TV',
-  'Android Tablet',
-  'iOs Phone',
-  'iOs Tablet',
-  'Fire TV',
-  'Nvidia Shield',
-  'Apple TV',
-  'STB',
-  'Linux',
-  'Windows',
-  'Tizen TV',
-  'LG TV',
-];
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
-
 const Models: React.FC = () => {
   const [models, setModels] = useState<DeviceModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ 
-    name: '', 
-    types: [] as string[], 
-    controllers: {
-      remote: '',
-      av: '',
-      network: '',
-      power: '',
-    },
-    version: '', 
-    description: '' 
-  });
   const [openDialog, setOpenDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -111,96 +60,6 @@ const Models: React.FC = () => {
     }
   };
 
-  const handleEdit = (model: DeviceModel) => {
-    setEditingId(model.id);
-    setEditForm({
-      name: model.name,
-      types: model.types,
-      controllers: {
-        remote: model.controllers.remote || '',
-        av: model.controllers.av || '',
-        network: model.controllers.network || '',
-        power: model.controllers.power || '',
-      },
-      version: model.version,
-      description: model.description,
-    });
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId) return;
-    
-    if (!editForm.name.trim() || editForm.types.length === 0) {
-      setError('Name and at least one Type are required');
-      return;
-    }
-
-    // Check for duplicate names (excluding current item)
-    const isDuplicate = models.some(
-      (m) => m.id !== editingId && m.name.toLowerCase() === editForm.name.toLowerCase().trim()
-    );
-    
-    if (isDuplicate) {
-      setError('A model with this name already exists');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      const response = await fetch(`/server/devicemodel/update-devicemodel/${editingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: editForm.name.trim(),
-          types: editForm.types,
-          controllers: editForm.controllers,
-          version: editForm.version.trim(),
-          description: editForm.description.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to update device model: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const updatedModel: DeviceModel = result.model;
-
-      // Update local state
-      setModels(models.map(m => m.id === editingId ? updatedModel : m));
-      setEditingId(null);
-      setSuccessMessage('Device model updated successfully');
-      console.log('[@component:Models] Successfully updated device model:', updatedModel.name);
-    } catch (err) {
-      console.error('[@component:Models] Error updating device model:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update device model');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditForm({ 
-      name: '', 
-      types: [], 
-      controllers: {
-        remote: '',
-        av: '',
-        network: '',
-        power: '',
-      }, 
-      version: '', 
-      description: '' 
-    });
-    setError(null);
-  };
-
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this device model?')) {
       return;
@@ -209,7 +68,7 @@ const Models: React.FC = () => {
     try {
       setError(null);
       
-      const response = await fetch(`/server/devicemodel/delete-devicemodel/${id}`, {
+      const response = await fetch(`/server/devicemodel/deleteDeviceModel/${id}`, {
         method: 'DELETE',
       });
 
@@ -248,7 +107,7 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await fetch('/server/devicemodel/create-devicemodel', {
+      const response = await fetch('/server/devicemodel/createDeviceModel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,23 +139,6 @@ const Models: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setError(null);
-  };
-
-  const handleTypeChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    setEditForm({
-      ...editForm,
-      types: typeof value === 'string' ? value.split(',') : value,
-    });
-  };
-
-  // Helper function to get controller display names
-  const getControllerDisplayValue = (controllers: DeviceModel['controllers']) => {
-    const activeControllers = Object.entries(controllers)
-      .filter(([_, value]) => value && value !== '')
-      .map(([type, value]) => ({ type, value }));
-    
-    return activeControllers;
   };
 
   // Loading state component
@@ -400,7 +242,6 @@ const Models: React.FC = () => {
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
                     <TableCell><strong>Types</strong></TableCell>
-                    <TableCell><strong>Controllers</strong></TableCell>
                     <TableCell><strong>Version</strong></TableCell>
                     <TableCell><strong>Description</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
@@ -409,150 +250,26 @@ const Models: React.FC = () => {
                 <TableBody>
                   {models.map((model) => (
                     <TableRow key={model.id}>
+                      <TableCell>{model.name}</TableCell>
                       <TableCell>
-                        {editingId === model.id ? (
-                          <TextField
-                            size="small"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          model.name
-                        )}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {model.types.map((type) => (
+                            <Chip key={type} label={type} size="small" variant="outlined" />
+                          ))}
+                        </Box>
                       </TableCell>
-                      <TableCell>
-                        {editingId === model.id ? (
-                          <FormControl size="small" fullWidth>
-                            <Select
-                              multiple
-                              value={editForm.types}
-                              onChange={handleTypeChange}
-                              input={<OutlinedInput />}
-                              renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                  {selected.map((value) => (
-                                    <Chip key={value} label={value} size="small" />
-                                  ))}
-                                </Box>
-                              )}
-                              MenuProps={MenuProps}
-                              sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
-                            >
-                              {modelTypes.map((type) => (
-                                <MenuItem key={type} value={type}>
-                                  <Checkbox checked={editForm.types.indexOf(type) > -1} />
-                                  <ListItemText primary={type} />
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        ) : (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {model.types.map((type) => (
-                              <Chip key={type} label={type} size="small" variant="outlined" />
-                            ))}
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === model.id ? (
-                          <Typography variant="body2" color="text.secondary">
-                            Edit controllers in create dialog
-                          </Typography>
-                        ) : (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {getControllerDisplayValue(model.controllers).length > 0 ? (
-                              getControllerDisplayValue(model.controllers).map(({ type, value }) => (
-                                <Chip 
-                                  key={type} 
-                                  label={`${type}: ${value}`} 
-                                  size="small" 
-                                  color="primary" 
-                                  variant="outlined" 
-                                />
-                              ))
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">No controllers</Typography>
-                            )}
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === model.id ? (
-                          <TextField
-                            size="small"
-                            value={editForm.version}
-                            onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            placeholder="e.g., 12.0"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          model.version || 'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingId === model.id ? (
-                          <TextField
-                            size="small"
-                            value={editForm.description}
-                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                            fullWidth
-                            variant="outlined"
-                            sx={{ '& .MuiInputBase-root': { height: '32px' } }}
-                          />
-                        ) : (
-                          model.description || 'N/A'
-                        )}
-                      </TableCell>
+                      <TableCell>{model.version || 'N/A'}</TableCell>
+                      <TableCell>{model.description || 'N/A'}</TableCell>
                       <TableCell align="center">
-                        {editingId === model.id ? (
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={handleSaveEdit}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="secondary"
-                              onClick={handleCancelEdit}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        ) : (
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleEdit(model)}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDelete(model.id)}
-                              sx={{ p: 0.5 }}
-                              disabled={submitting}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        )}
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(model.id)}
+                          sx={{ p: 0.5 }}
+                          disabled={submitting}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}

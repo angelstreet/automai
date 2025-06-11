@@ -30,7 +30,7 @@ userinterface_bp = Blueprint('server_userinterface', __name__, url_prefix='/serv
 # USER INTERFACES ENDPOINTS
 # =====================================================
 
-@userinterface_bp.route('/get-userinterfaces', methods=['GET'])
+@userinterface_bp.route('/getAllUserInterfaces', methods=['GET'])
 def get_userinterfaces():
     """Get all user interfaces for the team"""
     error = check_supabase()
@@ -55,7 +55,7 @@ def get_userinterfaces():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/create-userinterface', methods=['POST'])
+@userinterface_bp.route('/createUserInterface', methods=['POST'])
 def create_userinterface_endpoint():
     """Create a new user interface"""
     error = check_supabase()
@@ -87,7 +87,7 @@ def create_userinterface_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/get-userinterface/<interface_id>', methods=['GET'])
+@userinterface_bp.route('/getUserInterface/<interface_id>', methods=['GET'])
 def get_userinterface_endpoint(interface_id):
     """Get a specific user interface by ID"""
     error = check_supabase()
@@ -109,7 +109,7 @@ def get_userinterface_endpoint(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/update-userinterface/<interface_id>', methods=['PUT'])
+@userinterface_bp.route('/updateUserInterface/<interface_id>', methods=['PUT'])
 def update_userinterface_endpoint(interface_id):
     """Update a specific user interface"""
     error = check_supabase()
@@ -141,7 +141,7 @@ def update_userinterface_endpoint(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/delete-userinterface/<interface_id>', methods=['DELETE'])
+@userinterface_bp.route('/deleteUserInterface/<interface_id>', methods=['DELETE'])
 def delete_userinterface_endpoint(interface_id):
     """Delete a specific user interface"""
     error = check_supabase()

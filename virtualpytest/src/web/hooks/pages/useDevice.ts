@@ -63,7 +63,7 @@ class DeviceModelServerService {
   async getDeviceModel(id: string): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:getDeviceModel] Fetching device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/get-devicemodel/${id}`), {
+      const response = await fetch(this.buildUrl(`/server/devicemodel/getDeviceModel/${id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ class DeviceModelServerService {
   async createDeviceModel(model: Omit<Model, 'id' | 'created_at' | 'updated_at'>): Promise<Model> {
     try {
       console.log('[@hook:useDeviceModels:createDeviceModel] Creating device model:', model);
-      const response = await fetch(this.buildUrl('/server/devicemodel/create-devicemodel'), {
+      const response = await fetch(this.buildUrl('/server/devicemodel/createDeviceModel'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ class DeviceModelServerService {
   async updateDeviceModel(id: string, model: Partial<Omit<Model, 'id' | 'created_at' | 'updated_at'>>): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:updateDeviceModel] Updating device model: ${id}`, model);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/update-devicemodel/${id}`), {
+      const response = await fetch(this.buildUrl(`/server/devicemodel/updateDeviceModel/${id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ class DeviceModelServerService {
   async deleteDeviceModel(id: string): Promise<void> {
     try {
       console.log(`[@hook:useDeviceModels:deleteDeviceModel] Deleting device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/delete-devicemodel/${id}`), {
+      const response = await fetch(this.buildUrl(`/server/devicemodel/deleteDeviceModel/${id}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

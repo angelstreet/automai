@@ -16,23 +16,12 @@ import {
   SelectChangeEvent,
   Checkbox,
   ListItemText,
-  Grid,
-  Typography,
-  CircularProgress,
-  Alert,
 } from '@mui/material';
-import { useControllers } from '../../hooks/controller';
 
 interface Model {
   id: string;
   name: string;
   types: string[];
-  controllers: {
-    remote: string;
-    av: string;
-    network: string;
-    power: string;
-  };
   version: string;
   description: string;
 }
@@ -77,17 +66,9 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
   onSubmit,
   error,
 }) => {
-  const { controllerTypes, loading: controllersLoading, error: controllersError } = useControllers();
-  
   const [formData, setFormData] = useState({
     name: '',
     types: [] as string[],
-    controllers: {
-      remote: '',
-      av: '',
-      network: '',
-      power: '',
-    },
     version: '',
     description: '',
   });
@@ -96,12 +77,6 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     setFormData({
       name: '',
       types: [],
-      controllers: {
-        remote: '',
-        av: '',
-        network: '',
-        power: '',
-      },
       version: '',
       description: '',
     });
@@ -117,16 +92,6 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     setFormData({
       ...formData,
       types: typeof value === 'string' ? value.split(',') : value,
-    });
-  };
-
-  const handleControllerChange = (controllerType: string) => (event: SelectChangeEvent<string>) => {
-    setFormData({
-      ...formData,
-      controllers: {
-        ...formData.controllers,
-        [controllerType]: event.target.value,
-      },
     });
   };
 
@@ -182,109 +147,6 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
             </Select>
           </FormControl>
 
-          {/* Controllers Section */}
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2, fontWeight: 'bold' }}>
-            Controllers (Optional)
-          </Typography>
-          
-          {controllersError && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              Unable to load controllers: {controllersError}
-            </Alert>
-          )}
-
-          {controllersLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : (
-            <Grid container spacing={2}>
-              {/* Remote Controller */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Remote Controller</InputLabel>
-                  <Select
-                    value={formData.controllers.remote}
-                    onChange={handleControllerChange('remote')}
-                    label="Remote Controller"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {controllerTypes?.remote
-                      ?.filter(controller => controller.status === 'available')
-                      .map((controller) => (
-                        <MenuItem key={controller.id} value={controller.id}>
-                          {controller.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Audio/Video Controller */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Audio/Video Controller</InputLabel>
-                  <Select
-                    value={formData.controllers.av}
-                    onChange={handleControllerChange('av')}
-                    label="Audio/Video Controller"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {controllerTypes?.av
-                      ?.filter(controller => controller.status === 'available')
-                      .map((controller) => (
-                        <MenuItem key={controller.id} value={controller.id}>
-                          {controller.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Network Controller */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Network Controller</InputLabel>
-                  <Select
-                    value={formData.controllers.network}
-                    onChange={handleControllerChange('network')}
-                    label="Network Controller"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {controllerTypes?.network
-                      ?.filter(controller => controller.status === 'available')
-                      .map((controller) => (
-                        <MenuItem key={controller.id} value={controller.id}>
-                          {controller.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Power Controller */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Power Controller</InputLabel>
-                  <Select
-                    value={formData.controllers.power}
-                    onChange={handleControllerChange('power')}
-                    label="Power Controller"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {controllerTypes?.power
-                      ?.filter(controller => controller.status === 'available')
-                      .map((controller) => (
-                        <MenuItem key={controller.id} value={controller.id}>
-                          {controller.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          )}
-
           <TextField
             margin="dense"
             label="Version"
@@ -292,7 +154,7 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
             variant="outlined"
             value={formData.version}
             onChange={handleInputChange('version')}
-            sx={{ mb: 1.5, mt: 2 }}
+            sx={{ mb: 1.5 }}
             size="small"
             placeholder="e.g., 12.0, Android 11"
           />

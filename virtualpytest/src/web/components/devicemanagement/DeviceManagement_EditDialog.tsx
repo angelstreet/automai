@@ -22,7 +22,7 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { Device, DeviceFormData } from '../../types/common/Common_BaseTypes';
+import { Device, DeviceFormData, DeviceModel } from '../../types/common/Common_BaseTypes';
 import { useControllerConfig } from '../../hooks/controller';
 
 // Import wizard step components - reuse the same ones as creation
@@ -119,7 +119,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
         name: device.name || '',
         description: device.description || '',
         model: device.model || '',
-        controllerConfigs: device.controller_configs || {}
+        controllerConfigs: device.controllerConfigs || {}
       });
       setFormErrors({});
       setIsSubmitting(false);

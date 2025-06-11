@@ -9,12 +9,12 @@ import json
 
 # Import database functions from src/lib/supabase (uses absolute import)
 from src.lib.supabase.device_models_db import (
-    get_all_device_models as get_all_devicemodels, 
-    get_device_model as get_devicemodel, 
-    create_device_model as create_devicemodel,
-    update_device_model as update_devicemodel, 
-    delete_device_model as delete_devicemodel, 
-    check_device_model_name_exists as check_devicemodel_name_exists
+    get_all_device_models,
+    get_device_model,
+    create_device_model,
+    update_device_model, 
+    delete_device_model,
+    check_device_model_name_exists
 )
 
 from src.utils.app_utils import check_supabase, get_team_id
@@ -27,7 +27,7 @@ devicemodel_bp = Blueprint('server_devicemodel', __name__, url_prefix='/server/d
 # =====================================================
 
 @devicemodel_bp.route('/getAllModels', methods=['GET'])
-def get_devicemodels():
+def get_device_models():
     """Get all device models for the team"""
     error = check_supabase()
     if error:
@@ -36,13 +36,13 @@ def get_devicemodels():
     team_id = get_team_id()
     
     try:
-        models = get_all_devicemodels(team_id)
+        models = get_all_device_models(team_id)
         return jsonify(models)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/create-devicemodel', methods=['POST'])
-def create_devicemodel_endpoint():
+@devicemodel_bp.route('/createDeviceModel', methods=['POST'])
+def create_device_model_endpoint():
     """Create a new device model"""
     error = check_supabase()
     if error:
@@ -65,7 +65,7 @@ def create_devicemodel_endpoint():
             return jsonify({'error': 'A device model with this name already exists'}), 400
         
         # Create the device model
-        created_model = create_devicemodel(model_data, team_id)
+        created_model = create_device_model(model_data, team_id)
         if created_model:
             return jsonify({'status': 'success', 'model': created_model}), 201
         else:
@@ -73,8 +73,8 @@ def create_devicemodel_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/get-devicemodel/<model_id>', methods=['GET'])
-def get_devicemodel_endpoint(model_id):
+@devicemodel_bp.route('/getDeviceModel/<model_id>', methods=['GET'])
+def get_device_model_endpoint(model_id):
     """Get a specific device model by ID"""
     error = check_supabase()
     if error:
@@ -83,7 +83,7 @@ def get_devicemodel_endpoint(model_id):
     team_id = get_team_id()
     
     try:
-        model = get_devicemodel(model_id, team_id)
+        model = get_device_model(model_id, team_id)
         if model:
             return jsonify(model)
         else:
@@ -91,8 +91,8 @@ def get_devicemodel_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/update-devicemodel/<model_id>', methods=['PUT'])
-def update_devicemodel_endpoint(model_id):
+@devicemodel_bp.route('/updateDeviceModel/<model_id>', methods=['PUT'])
+def update_device_model_endpoint(model_id):
     """Update a specific device model"""
     error = check_supabase()
     if error:
@@ -115,7 +115,7 @@ def update_devicemodel_endpoint(model_id):
             return jsonify({'error': 'A device model with this name already exists'}), 400
         
         # Update the device model
-        updated_model = update_devicemodel(model_id, model_data, team_id)
+        updated_model = update_device_model(model_id, model_data, team_id)
         if updated_model:
             return jsonify({'status': 'success', 'model': updated_model})
         else:
@@ -123,8 +123,8 @@ def update_devicemodel_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/delete-devicemodel/<model_id>', methods=['DELETE'])
-def delete_devicemodel_endpoint(model_id):
+@devicemodel_bp.route('/deleteDeviceModel/<model_id>', methods=['DELETE'])
+def delete_device_model_endpoint(model_id):
     """Delete a specific device model"""
     error = check_supabase()
     if error:
@@ -133,7 +133,7 @@ def delete_devicemodel_endpoint(model_id):
     team_id = get_team_id()
     
     try:
-        success = delete_devicemodel(model_id, team_id)
+        success = delete_device_model(model_id, team_id)
         if success:
             return jsonify({'status': 'success'})
         else:

@@ -19,7 +19,7 @@ def get_all_device_models(team_id: str) -> List[Dict]:
     supabase = get_supabase()
     try:
         result = supabase.table('device_models').select(
-            'id', 'name', 'description', 'device_type', 'capabilities', 'team_id', 'created_at', 'updated_at'
+            'id', 'name', 'type', 'controllers', 'updated_at'
         ).eq('team_id', team_id).order('created_at', desc=False).execute()
         
         models = []
@@ -27,9 +27,8 @@ def get_all_device_models(team_id: str) -> List[Dict]:
             models.append({
                 'id': model['id'],
                 'name': model['name'],
-                'description': model['description'] or '',
-                'device_type': model['device_type'],
-                'capabilities': model.get('capabilities', []),
+                'type': model['type'],
+                'controllers': model.get('controllers', []),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -53,9 +52,8 @@ def get_device_model(model_id: str, team_id: str) -> Optional[Dict]:
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'description': model['description'] or '',
-                'device_type': model['device_type'],
-                'capabilities': model.get('capabilities', []),
+                'type': model['type'],
+                'controllers': model.get('controllers', []),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -71,9 +69,8 @@ def create_device_model(model_data: Dict, team_id: str, creator_id: str = None) 
     try:
         insert_data = {
             'name': model_data['name'],
-            'description': model_data.get('description', ''),
-            'device_type': model_data['device_type'],
-            'capabilities': model_data.get('capabilities', []),
+            'type': model_data['type'],
+            'controllers': model_data.get('controllers', []),
             'team_id': team_id,
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
@@ -86,9 +83,8 @@ def create_device_model(model_data: Dict, team_id: str, creator_id: str = None) 
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'description': model['description'] or '',
-                'device_type': model['device_type'],
-                'capabilities': model.get('capabilities', []),
+                'type': model['type'],
+                'controllers': model.get('controllers', []),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -108,12 +104,10 @@ def update_device_model(model_id: str, model_data: Dict, team_id: str) -> Option
         
         if 'name' in model_data:
             update_data['name'] = model_data['name']
-        if 'description' in model_data:
-            update_data['description'] = model_data.get('description', '')
-        if 'device_type' in model_data:
-            update_data['device_type'] = model_data['device_type']
-        if 'capabilities' in model_data:
-            update_data['capabilities'] = model_data['capabilities']
+        if 'type' in model_data:
+            update_data['type'] = model_data['type']
+        if 'controllers' in model_data:
+            update_data['controllers'] = model_data['controllers']
         
         result = supabase.table('device_models').update(update_data).eq('id', model_id).eq('team_id', team_id).execute()
         
@@ -122,9 +116,8 @@ def update_device_model(model_id: str, model_data: Dict, team_id: str) -> Option
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'description': model['description'] or '',
-                'device_type': model['device_type'],
-                'capabilities': model.get('capabilities', []),
+                'type': model['type'],
+                'controllers': model.get('controllers', []),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
