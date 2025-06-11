@@ -61,320 +61,95 @@ sys.path.insert(0, parent_dir)
 from routes.utils import build_server_url
 
 def register_host_with_server():
-    """Register this host with the server
+    """Register this host with the server"""
+    global client_registration_state, global_host_device
     
-    Port Architecture:
-    - SERVER_PORT (5009): Where the main Flask server runs and serves API endpoints to frontend
-    - HOST_PORT_INTERNAL: Where Flask app runs locally on host (e.g., 5119)
-    - HOST_PORT_EXTERNAL: Port server uses to communicate with host (e.g., 5119 or forwarded port)
-    - HOST_PORT_WEB: HTTPS port for nginx/images (e.g., 444)
-    
-    The server will use HOST_PORT_EXTERNAL (host_port) for all server-to-host communication.
-    """
-    print("\n🔗 STARTING HOST REGISTRATION")
     print("=" * 50)
-    
-    # Get environment variables with validation
-    server_ip = os.getenv('SERVER_IP')  # Changed from SERVER_URL to SERVER_IP
-    server_port = os.getenv('SERVER_PORT', '5009')
-    server_protocol = os.getenv('SERVER_PROTOCOL', 'http')  # Default to http
-    host_name = os.getenv('HOST_NAME')
-    host_ip = os.getenv('HOST_IP')
-    host_protocol = os.getenv('HOST_PROTOCOL', 'http')  # Default to http
-    host_port_internal = os.getenv('HOST_PORT_INTERNAL', '5119')  # Flask app port
-    host_port_external = os.getenv('HOST_PORT_EXTERNAL', '5119')  # Server communication port - should match internal if no port forwarding
-    HOST_PORT_WEB = os.getenv('HOST_PORT_WEB', '444')
-    
-    # Get device information from environment variables
-    device_name = os.getenv('DEVICE_NAME')  # Optional - will be generated if not provided
-    device_model = os.getenv('DEVICE_MODEL', 'android_mobile')  # Default to android_mobile if not specified
-    device_ip = os.getenv('DEVICE_IP', host_ip)  # Default to host IP if not specified
-    device_port = os.getenv('DEVICE_PORT', '5555')  # Default ADB port
-    
-    print(f"🔍 [HOST] Registration Debug Info:")
-    print(f"   SERVER_IP env: '{server_ip}'")  # Changed from SERVER_URL
-    print(f"   SERVER_PORT env: '{server_port}'")
-    print(f"   SERVER_PROTOCOL env: '{server_protocol}'")
-    print(f"   HOST_NAME env: '{host_name}'")
-    print(f"   HOST_IP env: '{host_ip}'")
-    print(f"   HOST_PROTOCOL env: '{host_protocol}'")
-    print(f"   HOST_PORT_INTERNAL env: '{host_port_internal}'")
-    print(f"   HOST_PORT_EXTERNAL env: '{host_port_external}'")
-    print(f"   HOST_PORT_WEB env: '{HOST_PORT_WEB}'")
-    print(f"   DEVICE_NAME env: '{device_name}'")
-    print(f"   DEVICE_MODEL env: '{device_model}'")
-    print(f"   DEVICE_IP env: '{device_ip}'")
-    print(f"   DEVICE_PORT env: '{device_port}'")
-    
-    # Validate critical environment variables
-    validation_errors = []
-    
-    if not server_ip:  # Changed from server_url
-        validation_errors.append("SERVER_IP is required but not set")
-    
-    if not host_name:
-        validation_errors.append("HOST_NAME is required but not set")
-        
-    if not host_ip:
-        validation_errors.append("HOST_IP is required but not set")
-    
-    if not device_model:
-        validation_errors.append("DEVICE_MODEL is required but not set")
-    
-    if validation_errors:
-        print(f"\n⚠️ [HOST] Environment Variable Issues:")
-        for error in validation_errors:
-            print(f"   - {error}")
-        
-        # Check if we have critical missing vars
-        critical_missing = [error for error in validation_errors if any(x in error for x in ["SERVER_IP", "HOST_NAME", "HOST_IP", "DEVICE_MODEL"])]
-        if critical_missing:
-            print(f"\n❌ [HOST] Cannot proceed with registration due to critical missing variables:")
-            for error in critical_missing:
-                print(f"   - {error}")
-            print(f"\n💡 [HOST] Set the missing variables and try again:")
-            if not server_ip:  # Changed from server_url
-                print(f"   export SERVER_IP=192.168.1.67")
-            if not host_name:
-                print(f"   export HOST_NAME=sunri-pi1")
-            if not host_ip:
-                print(f"   export HOST_IP=192.168.1.67")
-            if not device_model:
-                print(f"   export DEVICE_MODEL=android_mobile")
-            return
-        else:
-            print(f"\n⚠️ [HOST] Proceeding with warnings (using defaults where possible)")
-    
-    # Use centralized server URL building instead of manual construction
-    registration_url = build_server_url('/server/system/register')
-    print(f"\n🌐 [HOST] Registration URL: {registration_url}")
-    
-    # ✅ BUILD ALL REQUIRED URLs ONCE (centralized approach)
-    server_base_url = build_server_url('')  # Get base URL without endpoint
-    urls = {
-        'registration': registration_url,
-        'ping': build_server_url('/server/system/ping'),
-        'unregister': build_server_url('/server/system/unregister'),
-        'health': build_server_url('/server/system/health')
-    }
-    
-    print(f"🔗 [HOST] Built all server URLs:")
-    for name, url in urls.items():
-        print(f"   {name}: {url}")
+    print("🔗 [HOST] Starting registration with server...")
     
     try:
-        import socket
+        # Get environment configuration
+        server_host = os.getenv('SERVER_HOST', 'localhost')
+        server_port = os.getenv('SERVER_PORT', '5119')
         
-        # Generate a stable host ID based on host name and IP
-        # This ensures the same host gets the same ID on reconnection
-        stable_host_id = generate_stable_host_id(host_name, host_ip)
+        # Get host information from environment - ALL ports included
+        host_name = os.getenv('HOST_NAME', 'default-host')
+        host_ip = os.getenv('HOST_IP', '127.0.0.1')
+        host_port_internal = os.getenv('HOST_PORT_INTERNAL', '6119')  # Where Flask actually runs
+        host_port_external = os.getenv('HOST_PORT_EXTERNAL', host_port_internal)  # For server communication (may be port-forwarded)
+        host_port_web = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port
         
-        # Generate device_id dynamically based on host_id and device_model
-        device_id = f"{stable_host_id}_device_{device_model}"
-        print(f"🔧 [HOST] Generated device_id: {device_id}")
+        # Generate stable host ID
+        host_id = generate_stable_host_id()
         
-        # Generate device_name if not provided in environment
-        if not device_name:
-            device_name = f"{device_model.replace('_', ' ').title()}"
-            print(f"🔧 [HOST] Generated device_name: {device_name}")
-        else:
-            print(f"📋 [HOST] Using device_name from environment: {device_name}")
+        print(f"   Server: {server_host}:{server_port}")
+        print(f"   Host Name: {host_name}")
+        print(f"   Host IP: {host_ip}")
+        print(f"   Host Port Internal: {host_port_internal} (Flask app)")
+        print(f"   Host Port External: {host_port_external} (Server access)")
+        print(f"   Host Port Web: {host_port_web} (HTTPS/nginx)")
+        print(f"   Host ID: {host_id}")
         
+        # Create complete host info payload - everything the server needs
         host_info = {
-            'client_id': stable_host_id,  # Keep as client_id for API compatibility
-            'public_ip': host_ip,
-            'local_ip': host_ip,
-            'protocol': host_protocol,  # HOST protocol (http or https)
-            'host_port': host_port_external,  # HOST_PORT - server uses this to communicate with host
-            'internal_port': host_port_internal,  # INTERNAL port - where Flask app actually runs
-            'https_port': HOST_PORT_WEB,  # HTTPS port - for nginx/images (port forwarding)
-            'name': host_name,
-            'device_model': device_model,  # Now from environment variable
-            'device_id': device_id,  # From environment or generated
-            'device_name': device_name,  # From environment or generated
-            'device_ip': device_ip,  # From environment or defaults to host_ip
-            'device_port': device_port,  # From environment or defaults to 5555
-            'controller_types': ['remote', 'av', 'verification'],
-            'capabilities': ['stream', 'capture', 'verification'],
-            'status': 'online',
+            'host_id': host_id,                    # For legacy compatibility
+            'host_name': host_name,                # ✅ Primary identifier
+            'host_ip': host_ip,
+            'host_port_internal': host_port_internal,  # Where Flask runs
+            'host_port_external': host_port_external,  # For server communication
+            'host_port_web': host_port_web,       # HTTPS/nginx port
+            'device_model': 'linux',              # Default device model for hosts
             'system_stats': get_host_system_stats(),
-            # Legacy fields for backward compatibility
-            'client_port': host_port_external,  # Deprecated: use host_port instead
-            'nginx_port': HOST_PORT_WEB
+            
+            # Legacy compatibility fields
+            'host_port': host_port_external,      # Legacy field points to external port
         }
         
-        print(f"\n📤 [HOST] Sending registration request to: {registration_url}")
-        print(f"📦 [HOST] Host info payload:")
-        for key, value in host_info.items():
-            if key != 'system_stats':
-                print(f"     {key}: '{value}' (type: {type(value).__name__})")
+        # Build server URLs
+        server_base_url = f"http://{server_host}:{server_port}"
+        registration_url = f"{server_base_url}/server/system/register"
         
-        # Test server connectivity first
-        try:
-            health_response = requests.get(registration_url, timeout=5, verify=False)
-            print(f"\n🏥 [HOST] Server health check: {health_response.status_code}")
-            if health_response.status_code == 200:
-                health_data = health_response.json()
-                print(f"     Server health data: {health_data}")
-            else:
-                print(f"     Server health response: {health_response.text}")
-        except Exception as health_error:
-            print(f"\n⚠️ [HOST] Server health check failed: {health_error}")
-            print(f"   This might indicate the server is not running or not accessible")
+        # Store URLs for later use
+        urls = {
+            'server_base': server_base_url,
+            'register': registration_url,
+            'unregister': f"{server_base_url}/server/system/unregister",
+            'ping': f"{server_base_url}/server/system/ping",
+            'health': f"{server_base_url}/server/system/health"
+        }
+        
+        print(f"\n📡 [HOST] Sending registration request...")
+        print(f"   URL: {registration_url}")
+        print(f"   Payload: {host_info}")
         
         # Send registration request
         response = requests.post(
-            registration_url, 
-            json=host_info, 
+            registration_url,
+            json=host_info,
             timeout=10,
             headers={'Content-Type': 'application/json'},
             verify=False
         )
         
-        print(f"\n📨 [HOST] Registration response:")
+        print(f"\n📨 [HOST] Registration response received:")
         print(f"   Status Code: {response.status_code}")
         print(f"   Headers: {dict(response.headers)}")
-        print(f"   Response Text: {response.text}")
         
         if response.status_code == 200:
-            # Parse the registration response
             try:
-                registration_response = response.json()
-                print(f"📦 [HOST] Registration response data: {registration_response}")
+                response_data = response.json()
+                print(f"   Response: {response_data}")
                 
-                # Store basic registration state with centralized URLs
+                # Mark as registered
                 client_registration_state['registered'] = True
-                client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['urls'] = urls  # ✅ Store all URLs built once
+                client_registration_state['host_name'] = host_name    # ✅ Store host_name
+                client_registration_state['client_id'] = host_id     # Legacy compatibility
+                client_registration_state['urls'] = urls
                 
-                # ✅ DIRECTLY STORE THE HOST_DEVICE OBJECT FROM SERVER RESPONSE
-                host_device_object = registration_response.get('host_device')
-                if host_device_object:
-                    # ✅ INSTANTIATE CONTROLLERS LOCALLY using controller_configs from server
-                    controller_configs = host_device_object.get('controller_configs', {})
-                    if controller_configs:
-                        print(f"✅ [HOST] Instantiating controllers locally using configs from server:")
-                        print(f"   Available configs: {list(controller_configs.keys())}")
-                        
-                        try:
-                            # Controllers should be importable since paths are now set up correctly
-                            from controllers import ControllerFactory
-                            
-                            controller_objects = {}
-                            
-                            # Instantiate AV controller
-                            if 'av' in controller_configs:
-                                av_config = controller_configs['av']
-                                av_params = av_config['parameters']
-                                
-                                print(f"   Creating AV controller: {av_config['implementation']}")
-                                av_controller = ControllerFactory.create_av_controller(
-                                    capture_type=av_config['implementation'],
-                                    device_name=host_device_object.get('device_name'),
-                                    video_device='/dev/video0',
-                                    output_path='/var/www/html/stream/',
-                                    host_ip=av_params.get('host_ip'),
-                                    host_port=av_params.get('host_port'),
-                                    host_connection=host_device_object.get('connection', {}),
-                                    service_name=av_params.get('service_name', 'hdmi-stream')
-                                )
-                                controller_objects['av'] = av_controller
-                                print(f"   ✅ AV controller created successfully")
-                            
-                            # Instantiate Remote controller
-                            if 'remote' in controller_configs:
-                                remote_config = controller_configs['remote']
-                                remote_params = remote_config['parameters']
-                                
-                                print(f"   Creating Remote controller: {remote_config['implementation']}")
-                                remote_controller = ControllerFactory.create_remote_controller(
-                                    device_type=remote_config['implementation'],
-                                    device_name=host_device_object.get('device_name'),
-                                    device_ip=remote_params.get('device_ip'),
-                                    device_port=remote_params.get('device_port'),
-                                    adb_port=remote_params.get('device_port')
-                                )
-                                controller_objects['remote'] = remote_controller
-                                print(f"   ✅ Remote controller created successfully")
-                            
-                            # Instantiate Verification controller
-                            if 'verification' in controller_configs:
-                                verification_config = controller_configs['verification']
-                                verification_params = verification_config['parameters']
-                                
-                                print(f"   Creating Verification controller: {verification_config['implementation']}")
-                                
-                                # For ADB verification, construct device_id from device_ip and device_port
-                                if verification_config['implementation'] == 'adb':
-                                    device_id = f"{verification_params.get('device_ip')}:{verification_params.get('device_port')}"
-                                    verification_controller = ControllerFactory.create_verification_controller(
-                                        verification_type=verification_config['implementation'],
-                                        device_name=host_device_object.get('device_name'),
-                                        device_id=device_id,
-                                        av_controller=controller_objects.get('av'),
-                                        connection_timeout=verification_params.get('connection_timeout', 10)
-                                    )
-                                else:
-                                    # For other verification types, pass parameters as-is
-                                    verification_controller = ControllerFactory.create_verification_controller(
-                                        verification_type=verification_config['implementation'],
-                                        device_name=host_device_object.get('device_name'),
-                                        av_controller=controller_objects.get('av'),
-                                        **verification_params
-                                    )
-                                
-                                controller_objects['verification'] = verification_controller
-                                print(f"   ✅ Verification controller created successfully")
-                            
-                            # Instantiate Power controller
-                            if 'power' in controller_configs:
-                                power_config = controller_configs['power']
-                                power_params = power_config['parameters']
-                                
-                                print(f"   Creating Power controller: {power_config['implementation']}")
-                                power_controller = ControllerFactory.create_power_controller(
-                                    power_type=power_config['implementation'],
-                                    device_name=host_device_object.get('device_name'),
-                                    hub_location=power_params.get('hub_location'),
-                                    port_number=power_params.get('port_number')
-                                )
-                                controller_objects['power'] = power_controller
-                                print(f"   ✅ Power controller created successfully")
-                            
-                            # Add the instantiated controllers to the host_device object
-                            host_device_object['controller_objects'] = controller_objects
-                            print(f"   ✅ All controllers instantiated locally: {list(controller_objects.keys())}")
-                            
-                        except Exception as controller_error:
-                            print(f"   ⚠️ Error instantiating controllers locally: {controller_error}")
-                            import traceback
-                            traceback.print_exc()
-                            # Continue without controllers - host will still be registered
-                            host_device_object['controller_objects'] = {}
-                    else:
-                        print(f"   ⚠️ No controller_configs received from server")
-                        host_device_object['controller_objects'] = {}
-                    
-                    # Store in Flask app context
-                    try:
-                        from flask import current_app
-                        current_app.my_host_device = host_device_object
-                        print(f"✅ [HOST] Stored host_device object in Flask app context:")
-                        print(f"   Host: {host_device_object.get('host_name')}")
-                        print(f"   Device: {host_device_object.get('device_name')} ({host_device_object.get('device_model')})")
-                        print(f"   Controllers: {list(host_device_object.get('controller_objects', {}).keys())}")
-                    except RuntimeError:
-                        # Flask app context not available during registration - this is expected
-                        print(f"⚠️ [HOST] Flask app context not available during registration")
-                        print(f"   Host device will be available when Flask routes are accessed")
-                        global global_host_device
-                        global_host_device = host_device_object
-                else:
-                    print(f"⚠️ [HOST] No host_device object in registration response")
+                # Store global host device object
+                global_host_device = response_data.get('host_data', {})
                 
-                print(f"\n✅ [HOST] Successfully registered with server!")
-                print(f"   Server: {registration_url}")
-                print(f"   Host ID: {host_info['client_id']}")
+                print(f"\n✅ [HOST] Registration successful!")
                 print(f"   Host Name: {host_name}")
                 
                 # Start periodic ping thread
@@ -385,8 +160,9 @@ def register_host_with_server():
                 print(f"   Raw response: {response.text}")
                 # Still mark as registered for basic functionality
                 client_registration_state['registered'] = True
-                client_registration_state['client_id'] = host_info['client_id']
-                client_registration_state['urls'] = urls  # ✅ Store all URLs built once
+                client_registration_state['host_name'] = host_name    # ✅ Store host_name
+                client_registration_state['client_id'] = host_id
+                client_registration_state['urls'] = urls
                 start_ping_thread()
         else:
             print(f"\n❌ [HOST] Registration failed with status: {response.status_code}")
@@ -412,6 +188,59 @@ def register_host_with_server():
     
     print("=" * 50)
 
+def send_ping_to_server():
+    """Send a health ping to the server"""
+    if not client_registration_state['registered']:
+        return
+    
+    try:
+        ping_url = client_registration_state['urls'].get('ping')
+        host_name = client_registration_state.get('host_name')
+        client_id = client_registration_state.get('client_id')  # Legacy fallback
+        
+        if not ping_url or not (host_name or client_id):
+            print(f"⚠️ [HOST] Cannot ping: missing ping URL or host identifier")
+            return
+        
+        ping_data = {
+            'host_name': host_name,                 # ✅ Primary identifier
+            'client_id': client_id,                 # Legacy compatibility
+            'system_stats': get_host_system_stats(),
+            'status': 'online'
+        }
+        
+        response = requests.post(
+            ping_url,
+            json=ping_data,
+            timeout=5,
+            headers={'Content-Type': 'application/json'},
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            ping_response = response.json()
+            if ping_response.get('status') == 'success':
+                print(f"💓 [HOST] Ping successful - host: {host_name}")
+            elif ping_response.get('status') == 'not_registered':
+                print(f"📍 [HOST] Server says we're not registered - re-registering...")
+                client_registration_state['registered'] = False
+                register_host_with_server()
+            else:
+                print(f"⚠️ [HOST] Ping response: {ping_response}")
+        else:
+            print(f"⚠️ [HOST] Ping failed with status: {response.status_code}")
+            if response.status_code == 404:
+                print(f"📍 [HOST] Server doesn't recognize us - re-registering...")
+                client_registration_state['registered'] = False
+                register_host_with_server()
+            
+    except requests.exceptions.ConnectionError:
+        print(f"⚠️ [HOST] Could not connect to server for ping")
+    except requests.exceptions.Timeout:
+        print(f"⚠️ [HOST] Ping request timed out")
+    except Exception as e:
+        print(f"❌ [HOST] Unexpected error during ping: {e}")
+
 def unregister_from_server():
     """Unregister this host from the server"""
     if not client_registration_state['registered']:
@@ -419,18 +248,20 @@ def unregister_from_server():
     
     try:
         unregister_url = client_registration_state['urls'].get('unregister')
-        client_id = client_registration_state['client_id']
+        host_name = client_registration_state.get('host_name')
+        client_id = client_registration_state.get('client_id')  # Legacy fallback
         
-        if not unregister_url or not client_id:
-            print(f"⚠️ [HOST] Cannot unregister: missing unregister URL or host ID")
+        if not unregister_url:
+            print(f"⚠️ [HOST] Cannot unregister: missing unregister URL")
             return
         
         print(f"\n🔌 [HOST] Unregistering from server...")
         print(f"   Unregister URL: {unregister_url}")
-        print(f"   Host ID: {client_id[:8]}...")
+        print(f"   Host Name: {host_name}")
         
         unregister_data = {
-            'client_id': client_id
+            'host_name': host_name,     # ✅ Primary identifier
+            'client_id': client_id      # Legacy compatibility
         }
         
         response = requests.post(
@@ -444,6 +275,7 @@ def unregister_from_server():
         if response.status_code == 200:
             print(f"✅ [HOST] Successfully unregistered from server")
             client_registration_state['registered'] = False
+            client_registration_state['host_name'] = None
             client_registration_state['client_id'] = None
             client_registration_state['urls'] = {}
         else:
@@ -479,15 +311,15 @@ def start_ping_thread():
                     break
                 
                 ping_url = client_registration_state['urls'].get('ping')
-                client_id = client_registration_state['client_id']
+                host_name = client_registration_state.get('host_name')
                 
-                if not ping_url or not client_id:
-                    print(f"⚠️ [PING] Missing ping URL or client ID, stopping ping thread")
+                if not ping_url or not host_name:
+                    print(f"⚠️ [PING] Missing ping URL or host name, stopping ping thread")
                     break
                 
                 # Prepare ping data
                 ping_data = {
-                    'client_id': client_id,
+                    'host_name': host_name,
                     'system_stats': get_host_system_stats(),
                     'timestamp': time.time()
                 }

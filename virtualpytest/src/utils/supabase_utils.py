@@ -6,7 +6,7 @@ from typing import Optional
 _supabase_client: Optional[Client] = None
 
 def get_supabase_client() -> Optional[Client]:
-    """Get the Supabase client instance with lazy loading."""
+    """Get the Supabase client instance with lazy loading and HTTP options."""
     global _supabase_client
     
     if _supabase_client is None:
@@ -16,8 +16,29 @@ def get_supabase_client() -> Optional[Client]:
             key: str = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
             
             if url and key:
-                _supabase_client = create_client(url, key)
-                print(f"[@supabase_utils] Supabase client initialized successfully")
+                # Create Supabase client with HTTP options to prevent connection issues
+                _supabase_client = create_client(
+                    url, 
+                    key,
+                    options={
+                        'postgrest': {
+                            'timeout': 30,
+                            'headers': {
+                                'Connection': 'keep-alive',
+                                'Keep-Alive': 'timeout=30, max=100'
+                            }
+                        },
+                        'auth': {
+                            'timeout': 30
+                        },
+                        'global': {
+                            'headers': {
+                                'User-Agent': 'virtualpytest-server/1.0'
+                            }
+                        }
+                    }
+                )
+                print(f"[@supabase_utils] Supabase client initialized with HTTP options")
             else:
                 print(f"[@supabase_utils] Supabase environment variables not set, client not available")
                 return None

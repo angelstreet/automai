@@ -91,17 +91,24 @@ export interface DeviceRegistration {
   capabilities: string[];       // Device capabilities
   system_stats: SystemStats;   // System resource usage (imported from Dashboard_Types)
   
+  // === COMPLETE HOST NETWORKING ===
+  host_ip: string;             // Host IP address
+  host_port_internal: string;  // Where Flask actually runs
+  host_port_external: string;  // For server communication (may be port-forwarded)
+  host_port_web: string;       // HTTPS/nginx port
+  
   // Device lock management
   isLocked: boolean;            // Device lock status
   lockedBy?: string;           // Session/user who locked it
   lockedAt?: number;           // Timestamp when locked
   
-  // Legacy compatibility fields (for Dashboard)
+  // Legacy compatibility fields (for Dashboard and backward compatibility)
   client_id: string;           // Maps to id field
   device_model: string;        // Maps to model field
   local_ip: string;           // Extracted from connection.flask_url
   client_port: string;        // Extracted from connection.flask_url
   public_ip: string;          // Same as local_ip for now
+  host_port: string;          // Legacy field - maps to host_port_external
   
   // Controller configuration
   controller_types?: string[];  // Available controller types

@@ -17,13 +17,13 @@ def get_connected_clients() -> Dict[str, Any]:
     return current_app._connected_clients
 
 
-def lock_device_in_registry(device_id: str, session_id: str = "default-session") -> bool:
+def lock_device_in_registry(device_id: str, session_id: str) -> bool:
     """
     Lock a device in the connected clients registry
     
     Args:
         device_id: The device ID to lock
-        session_id: Session ID that will own the lock
+        session_id: The session ID taking the lock
         
     Returns:
         bool: True if successfully locked, False if device not found or already locked
@@ -33,12 +33,12 @@ def lock_device_in_registry(device_id: str, session_id: str = "default-session")
         
         connected_clients = get_connected_clients()
         
-        # Find the host that owns this device
-        host_id = None
+        # Find the host that owns this device (search by device_id)
+        host_name = None
         device_host = None
         for host_key, host_data in connected_clients.items():
             if host_data.get('device_id') == device_id:
-                host_id = host_key
+                host_name = host_key
                 device_host = host_data
                 break
         
@@ -46,13 +46,13 @@ def lock_device_in_registry(device_id: str, session_id: str = "default-session")
             print(f"[@utils:deviceLockManager:lock_device_in_registry] Device {device_id} not found in registry")
             return False
         
-        # Check if already locked
+        # Check if device is already locked
         if device_host.get('isLocked', False):
             locked_by = device_host.get('lockedBy', 'unknown')
-            print(f"[@utils:deviceLockManager:lock_device_in_registry] Device {device_id} already locked by: {locked_by}")
+            print(f"[@utils:deviceLockManager:lock_device_in_registry] Device {device_id} is already locked by: {locked_by}")
             return False
         
-        # Lock the device (modify the host object that owns this device)
+        # Lock the device
         device_host['isLocked'] = True
         device_host['lockedBy'] = session_id
         device_host['lockedAt'] = time.time()
@@ -81,12 +81,12 @@ def unlock_device_in_registry(device_id: str, session_id: Optional[str] = None) 
         
         connected_clients = get_connected_clients()
         
-        # Find the host that owns this device
-        host_id = None
+        # Find the host that owns this device (search by device_id)
+        host_name = None
         device_host = None
         for host_key, host_data in connected_clients.items():
             if host_data.get('device_id') == device_id:
-                host_id = host_key
+                host_name = host_key
                 device_host = host_data
                 break
         
@@ -131,7 +131,7 @@ def is_device_locked_in_registry(device_id: str) -> bool:
     try:
         connected_clients = get_connected_clients()
         
-        # Find the host that owns this device
+        # Find the host that owns this device (search by device_id)
         for host_key, host_data in connected_clients.items():
             if host_data.get('device_id') == device_id:
                 return host_data.get('isLocked', False)
@@ -193,11 +193,11 @@ def cleanup_expired_locks(timeout_seconds: int = 300) -> int:
         current_time = time.time()
         cleaned_count = 0
         
-        for host_id, host_data in connected_clients.items():
+        for host_name, host_data in connected_clients.items():
             if host_data.get('isLocked', False):
                 locked_at = host_data.get('lockedAt', 0)
                 if current_time - locked_at > timeout_seconds:
-                    device_id = host_data.get('device_id', host_id)
+                    device_id = host_data.get('device_id', host_name)
                     print(f"[@utils:deviceLockManager:cleanup_expired_locks] Cleaning up expired lock for device: {device_id}")
                     host_data['isLocked'] = False
                     host_data.pop('lockedBy', None)
@@ -259,14 +259,16 @@ def get_all_locked_devices() -> Dict[str, Dict[str, Any]]:
         connected_clients = get_connected_clients()
         locked_devices = {}
         
-        for device_id, device in connected_clients.items():
-            if device.get('isLocked', False):
+        for host_name, host_data in connected_clients.items():
+            if host_data.get('isLocked', False):
+                device_id = host_data.get('device_id', host_name)
                 locked_devices[device_id] = {
-                    'lockedBy': device.get('lockedBy'),
-                    'lockedAt': device.get('lockedAt'),
-                    'lockedDuration': time.time() - device.get('lockedAt', 0) if device.get('lockedAt') else 0,
-                    'deviceName': device.get('name', 'Unknown'),
-                    'deviceModel': device.get('device_model', 'Unknown')
+                    'lockedBy': host_data.get('lockedBy'),
+                    'lockedAt': host_data.get('lockedAt'),
+                    'lockedDuration': time.time() - host_data.get('lockedAt', 0) if host_data.get('lockedAt') else 0,
+                    'deviceName': host_data.get('name', 'Unknown'),
+                    'deviceModel': host_data.get('model', 'Unknown'),
+                    'hostName': host_name
                 }
         
         return locked_devices
