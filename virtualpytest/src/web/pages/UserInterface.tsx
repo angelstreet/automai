@@ -36,10 +36,15 @@ import {
   CircularProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { useUserInterface, UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../hooks/pages/useUserInterface';
+import { useNavigate } from 'react-router-dom';
+import { useUserInterface } from '../hooks/pages/useUserInterface';
+import { UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../types/pages/UserInterface_Types';
 import { Device } from '../types';
 
 const UserInterface: React.FC = () => {
+  // Get navigation hook
+  const navigate = useNavigate();
+  
   // Get the hook functions
   const {
     getAllUserInterfaces,
@@ -119,8 +124,8 @@ const UserInterface: React.FC = () => {
     setEditForm({
       name: userInterface.name,
       models: userInterface.models,
-      min_version: userInterface.min_version,
-      max_version: userInterface.max_version,
+      min_version: userInterface.min_version || '',
+      max_version: userInterface.max_version || '',
     });
   };
 
@@ -294,10 +299,10 @@ const UserInterface: React.FC = () => {
         interfaceName: userInterface.name,
       });
       
-      // Navigate to navigation editor using the userinterface name directly
+      // Navigate to navigation editor using React Router navigation
       // This matches our simplified config system: {userinterface_name}.json
       const url = `/navigation-editor/${encodeURIComponent(userInterface.name)}`;
-      window.location.href = url;
+      navigate(url);
     } catch (err) {
       console.error('[@component:UserInterface] Error opening navigation editor:', err);
       setError('Failed to open navigation editor. Please try again.');
@@ -396,8 +401,8 @@ const UserInterface: React.FC = () => {
                   <TableRow>
                     <TableCell><strong>Name</strong></TableCell>
                     <TableCell><strong>Models</strong></TableCell>
-                    <TableCell align="center"><strong>Min Version</strong></TableCell>
-                    <TableCell align="center"><strong>Max Version</strong></TableCell>
+                    <TableCell><strong>Min Version</strong></TableCell>
+                    <TableCell><strong>Max Version</strong></TableCell>
                     <TableCell align="center"><strong>Navigation</strong></TableCell>
                     <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
@@ -500,7 +505,7 @@ const UserInterface: React.FC = () => {
                           </Box>
                         )}
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell>
                         {editingId === userInterface.id ? (
                           <TextField
                             size="small"
@@ -514,7 +519,7 @@ const UserInterface: React.FC = () => {
                           userInterface.min_version || 'N/A'
                         )}
                       </TableCell>
-                      <TableCell align="center">
+                      <TableCell>
                         {editingId === userInterface.id ? (
                           <TextField
                             size="small"
@@ -691,9 +696,9 @@ const UserInterface: React.FC = () => {
               onChange={(e) => setNewInterface({ ...newInterface, min_version: e.target.value })}
               sx={{ mb: 1.5 }}
               size="small"
-              placeholder="e.g., 1.0.0"
+              placeholder="e.g., 1.0"
             />
-            
+
             <TextField
               margin="dense"
               label="Max Version"
@@ -701,8 +706,9 @@ const UserInterface: React.FC = () => {
               variant="outlined"
               value={newInterface.max_version}
               onChange={(e) => setNewInterface({ ...newInterface, max_version: e.target.value })}
+              sx={{ mb: 1.5 }}
               size="small"
-              placeholder="e.g., 2.0.0"
+              placeholder="e.g., 2.0"
             />
           </Box>
         </DialogContent>

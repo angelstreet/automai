@@ -5,53 +5,58 @@
  */
 
 import { useMemo } from 'react';
-import { useRegistration } from '../../contexts/RegistrationContext';
-
-export interface UserInterface {
-  id: string;
-  name: string;
-  models: string[];
-  min_version: string;
-  max_version: string;
-  created_at: string;
-  updated_at: string;
-  root_tree?: {
-    id: string;
-    name: string;
-  } | null;
-}
-
-export interface UserInterfaceCreatePayload {
-  name: string;
-  models: string[];
-  min_version?: string;
-  max_version?: string;
-}
-
-export interface ApiResponse<T> {
-  status: string;
-  userinterface?: T;
-  error?: string;
-}
+import { 
+  UserInterface, 
+  UserInterfaceCreatePayload, 
+  ApiResponse 
+} from '../types/pages/UserInterface_Types';
 
 export const useUserInterface = () => {
-  const { selectedHost } = useRegistration();
-
   /**
    * Get all user interfaces
    */
   const getAllUserInterfaces = async (): Promise<UserInterface[]> => {
     try {
-      console.log('[@hook:useUserInterface:getAllUserInterfaces] Getting all user interfaces via controller proxy');
+      console.log('[@hook:useUserInterface:getAllUserInterfaces] Fetching all user interfaces from server');
       
-      // Check if remote controller proxy is available
-      if (!selectedHost?.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      const response = await fetch('/server/userinterface/getAllUserInterfaces');
+      
+      console.log('[@hook:useUserInterface:getAllUserInterfaces] Response status:', response.status);
+      console.log('[@hook:useUserInterface:getAllUserInterfaces] Response headers:', response.headers.get('content-type'));
+      
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage = `Failed to fetch user interfaces: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.text();
+          console.log('[@hook:useUserInterface:getAllUserInterfaces] Error response body:', errorData);
+          
+          // Check if it's JSON
+          if (response.headers.get('content-type')?.includes('application/json')) {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.error || errorMessage;
+          } else {
+            // It's HTML or other content, likely a proxy/server issue
+            if (errorData.includes('<!doctype') || errorData.includes('<html')) {
+              errorMessage = 'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
+            }
+          }
+        } catch (parseError) {
+          console.log('[@hook:useUserInterface:getAllUserInterfaces] Could not parse error response');
+        }
+        
+        throw new Error(errorMessage);
       }
-
-      // Note: UI Elements management is not currently supported by RemoteControllerProxy
-      // This would need to be implemented as a separate controller or service
-      throw new Error('UI Elements management not supported by remote controller');
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`);
+      }
+      
+      const userInterfaces = await response.json();
+      console.log(`[@hook:useUserInterface:getAllUserInterfaces] Successfully loaded ${userInterfaces?.length || 0} user interfaces`);
+      return userInterfaces || [];
     } catch (error) {
       console.error('[@hook:useUserInterface:getAllUserInterfaces] Error fetching user interfaces:', error);
       throw error;
@@ -63,16 +68,19 @@ export const useUserInterface = () => {
    */
   const getUserInterface = async (id: string): Promise<UserInterface> => {
     try {
-      console.log(`[@hook:useUserInterface:getUserInterface] Getting user interface ${id} via controller proxy`);
+      console.log(`[@hook:useUserInterface:getUserInterface] Fetching user interface ${id} from server`);
       
-      // Check if remote controller proxy is available
-      if (!selectedHost?.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      const response = await fetch(`/server/userinterface/getUserInterface/${id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('User interface not found');
+        }
+        throw new Error(`Failed to fetch user interface: ${response.status} ${response.statusText}`);
       }
-
-      // Note: UI Elements management is not currently supported by RemoteControllerProxy
-      // This would need to be implemented as a separate controller or service
-      throw new Error('UI Elements management not supported by remote controller');
+      
+      const userInterface = await response.json();
+      console.log(`[@hook:useUserInterface:getUserInterface] Successfully loaded user interface: ${userInterface.name}`);
+      return userInterface;
     } catch (error) {
       console.error(`[@hook:useUserInterface:getUserInterface] Error fetching user interface ${id}:`, error);
       throw error;
@@ -84,16 +92,28 @@ export const useUserInterface = () => {
    */
   const createUserInterface = async (payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
     try {
-      console.log('[@hook:useUserInterface:createUserInterface] Creating user interface via controller proxy', payload);
+      console.log('[@hook:useUserInterface:createUserInterface] Creating user interface:', payload);
       
-      // Check if remote controller proxy is available
-      if (!selectedHost?.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      const response = await fetch('/server/userinterface/createUserInterface', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to create user interface: ${response.status} ${response.statusText}`);
       }
-
-      // Note: UI Elements management is not currently supported by RemoteControllerProxy
-      // This would need to be implemented as a separate controller or service
-      throw new Error('UI Elements management not supported by remote controller');
+      
+      if (result.status === 'success' && result.userinterface) {
+        console.log(`[@hook:useUserInterface:createUserInterface] Successfully created user interface: ${result.userinterface.name}`);
+        return result.userinterface;
+      } else {
+        throw new Error(result.error || 'Failed to create user interface');
+      }
     } catch (error) {
       console.error('[@hook:useUserInterface:createUserInterface] Error creating user interface:', error);
       throw error;
@@ -105,16 +125,28 @@ export const useUserInterface = () => {
    */
   const updateUserInterface = async (id: string, payload: UserInterfaceCreatePayload): Promise<UserInterface> => {
     try {
-      console.log(`[@hook:useUserInterface:updateUserInterface] Updating user interface ${id} via controller proxy`, payload);
+      console.log(`[@hook:useUserInterface:updateUserInterface] Updating user interface ${id}:`, payload);
       
-      // Check if remote controller proxy is available
-      if (!selectedHost?.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      const response = await fetch(`/server/userinterface/updateUserInterface/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to update user interface: ${response.status} ${response.statusText}`);
       }
-
-      // Note: UI Elements management is not currently supported by RemoteControllerProxy
-      // This would need to be implemented as a separate controller or service
-      throw new Error('UI Elements management not supported by remote controller');
+      
+      if (result.status === 'success' && result.userinterface) {
+        console.log(`[@hook:useUserInterface:updateUserInterface] Successfully updated user interface: ${result.userinterface.name}`);
+        return result.userinterface;
+      } else {
+        throw new Error(result.error || 'Failed to update user interface');
+      }
     } catch (error) {
       console.error(`[@hook:useUserInterface:updateUserInterface] Error updating user interface ${id}:`, error);
       throw error;
@@ -126,16 +158,23 @@ export const useUserInterface = () => {
    */
   const deleteUserInterface = async (id: string): Promise<void> => {
     try {
-      console.log(`[@hook:useUserInterface:deleteUserInterface] Deleting user interface ${id} via controller proxy`);
+      console.log(`[@hook:useUserInterface:deleteUserInterface] Deleting user interface ${id}`);
       
-      // Check if remote controller proxy is available
-      if (!selectedHost?.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      const response = await fetch(`/server/userinterface/deleteUserInterface/${id}`, {
+        method: 'DELETE',
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to delete user interface: ${response.status} ${response.statusText}`);
       }
-
-      // Note: UI Elements management is not currently supported by RemoteControllerProxy
-      // This would need to be implemented as a separate controller or service
-      throw new Error('UI Elements management not supported by remote controller');
+      
+      if (result.status === 'success') {
+        console.log(`[@hook:useUserInterface:deleteUserInterface] Successfully deleted user interface ${id}`);
+      } else {
+        throw new Error(result.error || 'Failed to delete user interface');
+      }
     } catch (error) {
       console.error(`[@hook:useUserInterface:deleteUserInterface] Error deleting user interface ${id}:`, error);
       throw error;
@@ -149,5 +188,5 @@ export const useUserInterface = () => {
     createUserInterface,
     updateUserInterface,
     deleteUserInterface,
-  }), [selectedHost]);
+  }), []);
 }; 

@@ -19,7 +19,7 @@ def get_all_userinterfaces(team_id: str) -> List[Dict]:
     supabase = get_supabase()
     try:
         result = supabase.table('userinterfaces').select(
-            'id', 'name', 'description', 'models', 'team_id', 'created_at', 'updated_at'
+            'id', 'name', 'models', 'min_version', 'max_version', 'team_id', 'created_at', 'updated_at'
         ).eq('team_id', team_id).order('created_at', desc=False).execute()
         
         userinterfaces = []
@@ -27,8 +27,9 @@ def get_all_userinterfaces(team_id: str) -> List[Dict]:
             userinterfaces.append({
                 'id': ui['id'],
                 'name': ui['name'],
-                'description': ui['description'] or '',
                 'models': ui.get('models', []),
+                'min_version': ui.get('min_version', ''),
+                'max_version': ui.get('max_version', ''),
                 'team_id': ui['team_id'],
                 'created_at': ui['created_at'],
                 'updated_at': ui['updated_at']
@@ -44,7 +45,7 @@ def get_userinterface(interface_id: str, team_id: str) -> Optional[Dict]:
     supabase = get_supabase()
     try:
         result = supabase.table('userinterfaces').select(
-            'id', 'name', 'description', 'models', 'team_id', 'created_at', 'updated_at'
+            'id', 'name', 'models', 'min_version', 'max_version', 'team_id', 'created_at', 'updated_at'
         ).eq('id', interface_id).eq('team_id', team_id).single().execute()
         
         if result.data:
@@ -52,8 +53,9 @@ def get_userinterface(interface_id: str, team_id: str) -> Optional[Dict]:
             return {
                 'id': ui['id'],
                 'name': ui['name'],
-                'description': ui['description'] or '',
                 'models': ui.get('models', []),
+                'min_version': ui.get('min_version', ''),
+                'max_version': ui.get('max_version', ''),
                 'team_id': ui['team_id'],
                 'created_at': ui['created_at'],
                 'updated_at': ui['updated_at']
@@ -69,8 +71,9 @@ def create_userinterface(interface_data: Dict, team_id: str, creator_id: str = N
     try:
         insert_data = {
             'name': interface_data['name'],
-            'description': interface_data.get('description', ''),
             'models': interface_data.get('models', []),
+            'min_version': interface_data.get('min_version', ''),
+            'max_version': interface_data.get('max_version', ''),
             'team_id': team_id,
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
@@ -83,8 +86,9 @@ def create_userinterface(interface_data: Dict, team_id: str, creator_id: str = N
             return {
                 'id': ui['id'],
                 'name': ui['name'],
-                'description': ui['description'] or '',
                 'models': ui.get('models', []),
+                'min_version': ui.get('min_version', ''),
+                'max_version': ui.get('max_version', ''),
                 'team_id': ui['team_id'],
                 'created_at': ui['created_at'],
                 'updated_at': ui['updated_at']
@@ -104,8 +108,10 @@ def update_userinterface(interface_id: str, interface_data: Dict, team_id: str) 
         
         if 'name' in interface_data:
             update_data['name'] = interface_data['name']
-        if 'description' in interface_data:
-            update_data['description'] = interface_data.get('description', '')
+        if 'min_version' in interface_data:
+            update_data['min_version'] = interface_data.get('min_version', '')
+        if 'max_version' in interface_data:
+            update_data['max_version'] = interface_data.get('max_version', '')
         if 'models' in interface_data:
             update_data['models'] = interface_data['models']
         
@@ -116,8 +122,9 @@ def update_userinterface(interface_id: str, interface_data: Dict, team_id: str) 
             return {
                 'id': ui['id'],
                 'name': ui['name'],
-                'description': ui['description'] or '',
                 'models': ui.get('models', []),
+                'min_version': ui.get('min_version', ''),
+                'max_version': ui.get('max_version', ''),
                 'team_id': ui['team_id'],
                 'created_at': ui['created_at'],
                 'updated_at': ui['updated_at']

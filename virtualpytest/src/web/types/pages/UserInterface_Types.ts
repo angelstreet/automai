@@ -103,4 +103,32 @@ export interface OverlayProps {
   isScreenshotLoading?: boolean;
   streamStatus?: StreamStatus;
   recordingTime?: number;
+}
+
+// User Interface Types
+export interface UserInterface {
+  id: string;
+  name: string;
+  models: string[];
+  min_version: string;
+  max_version: string;
+  created_at: string;
+  updated_at: string;
+  root_tree?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface UserInterfaceCreatePayload {
+  name: string;
+  models: string[];
+  min_version?: string;
+  max_version?: string;
+}
+
+export interface ApiResponse<T> {
+  status: string;
+  userinterface?: T;
+  error?: string;
 } 
