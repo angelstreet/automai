@@ -25,7 +25,7 @@ from navigation_cache import get_cached_graph
 from navigation_graph import get_node_info
 
 # Import centralized URL building from routes utils
-from src.utils.app_utils import build_server_url
+from src.utils.app_utils import buildServerUrl
 
 def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
     """
@@ -99,7 +99,7 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
         
         # Use centralized server URL building
-        api_url = build_server_url('/server/navigation/execute-step')
+        api_url = buildServerUrl('/server/navigation/execute-step')
         
         # Call the abstract remote controller API endpoint
         print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
@@ -563,7 +563,7 @@ def execute_action_object(action_obj: dict) -> bool:
         
         # Call the abstract remote controller API endpoint
         print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
-        api_url = build_server_url('/server/navigation/execute-step')
+        api_url = buildServerUrl('/server/navigation/execute-step')
         
         print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
         

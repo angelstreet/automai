@@ -240,11 +240,19 @@ DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
 DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
 
 # =====================================================
-# URL BUILDER FUNCTIONS (Used by Routes)
+# URL BUILDER FUNCTIONS (Clean, Simplified API)
 # =====================================================
 
-def build_server_url(endpoint: str) -> str:
-    """Build a URL for server endpoints using environment configuration"""
+def buildServerUrl(endpoint: str) -> str:
+    """
+    Build a URL for server endpoints using environment configuration
+    
+    Args:
+        endpoint: The endpoint path to append
+        
+    Returns:
+        Complete URL to the server endpoint
+    """
     server_host = os.getenv('SERVER_HOST', '127.0.0.1')
     server_port = os.getenv('SERVER_PORT', '5119')
     protocol = os.getenv('SERVER_PROTOCOL', 'http')
@@ -254,76 +262,57 @@ def build_server_url(endpoint: str) -> str:
     
     return f"{protocol}://{server_host}:{server_port}/{clean_endpoint}"
 
-def build_host_url(host_info: dict, endpoint: str) -> str:
+def buildHostUrl(host_info: dict, endpoint: str) -> str:
     """
-    Build a URL for host endpoints using pre-built connection data from registry
+    Build a URL for host Flask/API endpoints (HTTP)
     
     Args:
         host_info: Host information from the registry containing connection data
         endpoint: The endpoint path to append
-    
+        
     Returns:
-        Complete URL to the host endpoint
+        Complete HTTP URL to the host endpoint
     """
     # Use pre-built flask_url from host connection data
     connection = host_info.get('connection', {})
     flask_url = connection.get('flask_url')
     
     if not flask_url:
-        # Fallback to manual building if connection data is missing (legacy support)
+        # Build manually if connection data is missing
         host_ip = host_info.get('host_ip')
         host_port = host_info.get('host_port_external') or host_info.get('host_port') or '6119'
         flask_url = f"http://{host_ip}:{host_port}"
-        print(f"⚠️ [build_host_url] No flask_url in connection data, using fallback: {flask_url}")
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
     return f"{flask_url}/{clean_endpoint}"
 
-def build_host_nginx_url(host_info: dict, path: str) -> str:
+def buildHostWebUrl(host_info: dict, path: str) -> str:
     """
-    Build a URL for host nginx endpoints using pre-built connection data from registry
+    Build a URL for host web/nginx endpoints (HTTPS)
     
     Args:
         host_info: Host information from the registry containing connection data
         path: The path to append
-    
+        
     Returns:
-        Complete nginx URL to the host resource
+        Complete HTTPS URL to the host web resource
     """
     # Use pre-built nginx_url from host connection data
     connection = host_info.get('connection', {})
     nginx_url = connection.get('nginx_url')
     
     if not nginx_url:
-        # Fallback to manual building if connection data is missing (legacy support)
+        # Build manually if connection data is missing
         host_ip = host_info.get('host_ip')
         host_port_web = host_info.get('host_port_web') or '444'
         nginx_url = f"https://{host_ip}:{host_port_web}"
-        print(f"⚠️ [build_host_nginx_url] No nginx_url in connection data, using fallback: {nginx_url}")
     
     # Clean path
     clean_path = path.lstrip('/')
     
     return f"{nginx_url}/{clean_path}"
-
-def build_host_connection_info(host_ip: str, host_port_external: str, host_port_web: str) -> dict:
-    """
-    Build standardized connection information for a host
-    
-    Args:
-        host_ip: The host IP address
-        host_port_external: The external port for server communication
-        host_port_web: The web port for HTTPS/nginx
-    
-    Returns:
-        Dictionary with flask_url and nginx_url
-    """
-    return {
-        'flask_url': f"http://{host_ip}:{host_port_external}",
-        'nginx_url': f"https://{host_ip}:{host_port_web}"
-    }
 
 # =====================================================
 # HOST REGISTRY FUNCTIONS (Single Source of Truth)
@@ -352,58 +341,6 @@ def get_primary_host():
     if host_registry:
         return next(iter(host_registry.values()))
     return None
-
-# =====================================================
-# URL BUILDING FUNCTIONS (Single Source of Truth)
-# =====================================================
-
-def make_host_request(endpoint, method='GET', host_id=None, device_model=None, use_https=True, **kwargs):
-    """
-    Make a request to a host endpoint with automatic host discovery
-    
-    Args:
-        endpoint: The endpoint path (e.g., '/stream/verification-status')
-        method: HTTP method ('GET', 'POST', etc.)
-        host_id: Specific host ID to use (optional)
-        device_model: Device model to find host for (optional)
-        use_https: Whether to use HTTPS (default: True)
-        **kwargs: Additional arguments passed to requests.request()
-    
-    Returns:
-        requests.Response object
-    """
-    # Find the appropriate host
-    if host_id:
-        host_info = get_host_by_id(host_id)
-        if not host_info:
-            raise ValueError(f"Host with ID {host_id} not found")
-    elif device_model:
-        host_info = get_host_by_model(device_model)
-        if not host_info:
-            raise ValueError(f"No host found with device model {device_model}")
-    else:
-        host_info = get_primary_host()
-        if not host_info:
-            raise ValueError("No hosts available")
-    
-    # Build URL using the URL builder
-    url = build_host_url(host_info, endpoint)
-    
-    # Add default timeout if not specified
-    if 'timeout' not in kwargs:
-        kwargs['timeout'] = 30
-    
-    # Add SSL verification disable for self-signed certificates
-    if use_https and 'verify' not in kwargs:
-        kwargs['verify'] = False
-    
-    # Make the request
-    print(f"[@utils:make_host_request] Making {method} request to {url}")
-    
-    response = requests.request(method, url, **kwargs)
-    print(f"[@utils:make_host_request] Response: {response.status_code}")
-    
-    return response
 
 # =====================================================
 # FLASK-SPECIFIC HELPER FUNCTIONS

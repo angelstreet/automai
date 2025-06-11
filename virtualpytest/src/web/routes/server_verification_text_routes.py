@@ -10,7 +10,7 @@ This module contains the server-side text verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
+from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostWebUrl
 
 # Create blueprint
 verification_text_server_bp = Blueprint('verification_text_server', __name__, url_prefix='/server/verification')
@@ -40,7 +40,7 @@ def text_auto_detect():
             }), 400
         
         # Find appropriate host using registry
-        host_info = get_host_by_model(model) if model != 'default' else get_primary_host()
+        host_info = get_host_by_model(model)
         
         if not host_info:
             return jsonify({
@@ -55,7 +55,7 @@ def text_auto_detect():
         print(f"[@route:text_auto_detect] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_text_url = build_host_url(host_info, '/stream/text-auto-detect')
+        host_text_url = buildHostUrl(host_info, '/stream/text-auto-detect')
         
         text_payload = {
             'source_filename': source_filename,
@@ -79,7 +79,7 @@ def text_auto_detect():
                 
                 # Convert relative preview URL to full nginx-exposed URL
                 if preview_url:
-                    full_preview_url = build_host_nginx_url(host_info, preview_url)
+                    full_preview_url = buildHostWebUrl(host_info, preview_url)
                     host_result['preview_url'] = full_preview_url
                 
                 return jsonify(host_result)
@@ -91,7 +91,7 @@ def text_auto_detect():
                 
                 # Convert preview URL even for failures (user can still see the cropped area)
                 if preview_url:
-                    full_preview_url = build_host_nginx_url(host_info, preview_url)
+                    full_preview_url = buildHostWebUrl(host_info, preview_url)
                     host_result['preview_url'] = full_preview_url
                 
                 return jsonify(host_result), 400
@@ -137,7 +137,7 @@ def save_text_reference():
             }), 400
         
         # Find appropriate host using registry
-        host_info = get_host_by_model(model_name) if model_name != 'default' else get_primary_host()
+        host_info = get_host_by_model(model_name)
         
         if not host_info:
             return jsonify({
@@ -148,7 +148,7 @@ def save_text_reference():
         print(f"[@route:save_text_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_save_url = build_host_url(host_info, '/stream/save-text-resource')
+        host_save_url = buildHostUrl(host_info, '/stream/save-text-resource')
         
         # Note: Host expects 'name' instead of 'reference_name' and 'model' instead of 'model_name'
         save_payload = {
@@ -171,7 +171,7 @@ def save_text_reference():
                 print(f"[@route:save_text_reference] Host text save successful: {public_url}")
                 
                 # Use pre-built nginx URL from host registry
-                full_public_url = build_host_nginx_url(host_info, public_url) if public_url else None
+                full_public_url = buildHostWebUrl(host_info, public_url) if public_url else None
                 
                 return jsonify({
                     'success': True,

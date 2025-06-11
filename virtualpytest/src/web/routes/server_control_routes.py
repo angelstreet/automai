@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import urllib.parse
 
-from src.utils.app_utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_host_registry
+from src.utils.app_utils import get_host_by_model, buildHostUrl, get_team_id, get_host_registry
 from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -109,7 +109,7 @@ def take_control():
             print(f"[@route:server_take_control] Payload: {host_payload}")
             
             # Use proper URL building function from utils
-            host_url = build_host_url(host_info, "/host/take-control")
+            host_url = buildHostUrl(host_info, "/host/take-control")
             
             print(f"[@route:server_take_control] Built URL using build_host_url: {host_url}")
             
@@ -228,15 +228,15 @@ def release_control():
             try:
                 print(f"[@route:server_release_control] Calling host release control")
                 
-                host_response = make_host_request(
-                    '/host/release-control',
-                    method='POST',
-                    use_https=True,
+                host_url = buildHostUrl(host_info, '/host/release-control')
+                host_response = requests.post(
+                    host_url,
                     json={
                         'device_model': device_model,
                         'session_id': session_id
                     },
-                    timeout=30
+                    timeout=30,
+                    verify=False
                 )
                 
                 if host_response.status_code == 200:
@@ -311,7 +311,7 @@ def navigate():
             }), 404
         
         # Forward request to host using proper URL building
-        host_url = build_host_url(host_info, f"/host/navigation/execute/{tree_id}/{target_node_id}")
+        host_url = buildHostUrl(host_info, f"/host/navigation/execute/{tree_id}/{target_node_id}")
         
         payload = {
             'current_node_id': current_node_id,

@@ -24,8 +24,13 @@ from src.controllers.controller_config_factory import (
 
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
-    build_host_connection_info,
-    build_host_url
+    get_host_registry,
+    get_host_by_id,
+    get_primary_host,
+    generate_stable_host_id,
+    add_connected_client,
+    remove_connected_client,
+    buildHostUrl
 )
 
 print("✅ [@system_routes] Successfully imported controller_config_factory")
@@ -65,17 +70,9 @@ root_logger.setLevel(logging.DEBUG)
 flask_logger = logging.getLogger('werkzeug')
 flask_logger.addHandler(debug_handler)
 
-def get_host_registry():
-    """Get connected clients from app context"""
-    return getattr(current_app, '_connected_clients', {})
-
 def get_health_check_threads():
     """Get health check threads from app context"""
     return getattr(current_app, '_health_check_threads', {})
-
-def set_connected_clients(clients):
-    """Set connected clients in app context"""
-    current_app._connected_clients = clients
 
 def set_health_check_threads(threads):
     """Set health check threads in app context"""
@@ -230,12 +227,11 @@ def register_client():
         print(f"[@route:register_client] Instantiating controller objects...")
         controller_objects = {}
         
-        # Build connection information using URL builder instead of manual construction
-        host_connection = build_host_connection_info(
-            host_info['host_ip'], 
-            host_port_external, 
-            host_port_web
-        )
+        # Build connection information manually since we removed build_host_connection_info
+        host_connection = {
+            'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
+            'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
+        }
         
         try:
             from src.controllers import ControllerFactory
@@ -404,13 +400,13 @@ def register_client():
             
             # Update with new data
             connected_clients[host_info['host_name']] = host_object
-            set_connected_clients(connected_clients)
+            set_health_check_threads(get_health_check_threads())
             
             print(f"✅ [SERVER] Host registration updated successfully")
         else:
             # New host registration
             connected_clients[host_info['host_name']] = host_object
-            set_connected_clients(connected_clients)
+            set_health_check_threads(get_health_check_threads())
             
             print(f"✅ [SERVER] New host registered successfully:")
             print(f"   Host Name: {host_info['host_name']}")
@@ -454,13 +450,7 @@ def unregister_client():
             
             # Remove host
             del connected_clients[host_name]
-            set_connected_clients(connected_clients)
-            
-            # Stop health check thread (if any exists)
-            health_check_threads = get_health_check_threads()
-            if host_name in health_check_threads:
-                del health_check_threads[host_name]
-                set_health_check_threads(health_check_threads)
+            set_health_check_threads(get_health_check_threads())
             
             print(f"🔌 Host unregistered: {host_name}")
             
@@ -575,7 +565,7 @@ def list_clients():
         for host_name in stale_hosts:
             if host_name in connected_clients:
                 del connected_clients[host_name]
-                set_connected_clients(connected_clients)
+                set_health_check_threads(get_health_check_threads())
         
         # Return current hosts
         hosts_list = []
@@ -626,7 +616,7 @@ def list_clients_as_devices():
         for host_name in stale_hosts:
             if host_name in connected_clients:
                 del connected_clients[host_name]
-                set_connected_clients(connected_clients)
+                set_health_check_threads(get_health_check_threads())
         
         # Convert hosts to clean device format
         devices = []
@@ -761,7 +751,7 @@ def client_ping():
             if field in ping_data:
                 host_to_update[field] = ping_data[field]
         
-        set_connected_clients(connected_clients)
+        set_health_check_threads(get_health_check_threads())
         
         print(f"💓 [PING] Host {host_name} ping received - status updated")
         
@@ -807,7 +797,7 @@ def start_health_check(client_id, client_ip, client_port):
                         
                         if not flask_url:
                             # Use URL builder for fallback instead of manual construction
-                            health_url = build_host_url(host_info, "/server/system/health")
+                            health_url = buildHostUrl(host_info, "/server/system/health")
                             print(f"⚠️ [HEALTH] No flask_url in connection data for {client_id[:8]}..., using URL builder fallback: {health_url}")
                         else:
                             health_url = f"{flask_url}/server/system/health"
@@ -916,8 +906,8 @@ def remove_client(client_id):
             
             # Update the app state
             try:
-                set_connected_clients(connected_clients)
-                print(f"🗑️ [CLEANUP] Updated connected clients list")
+                set_health_check_threads(get_health_check_threads())
+                print(f"��️ [CLEANUP] Updated connected clients list")
             except RuntimeError:
                 # Direct update if context not available
                 try:

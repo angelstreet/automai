@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 import os
-from src.utils.app_utils import make_host_request, get_primary_host, get_host_by_model, build_host_nginx_url
+from src.utils.app_utils import get_host_by_model, buildHostWebUrl, buildHostUrl
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')
@@ -140,13 +140,24 @@ def list_references():
         
         # Use dynamic host discovery instead of hardcoded values
         try:
-            host_response = make_host_request(
-                '/stream/references',
-                method='GET',
+            # Find appropriate host using registry
+            host_info = get_host_by_model(model)
+            
+            if not host_info:
+                print(f"[@route:list_references] No hosts available for model: {model}")
+                return jsonify({
+                    'success': False,
+                    'error': f'No hosts available for model: {model}'
+                }), 503
+            
+            host_url = buildHostUrl(host_info, '/stream/references')
+            host_response = requests.get(
+                host_url,
                 params={'model': model},
-                use_https=True
+                timeout=30,
+                verify=False
             )
-        except ValueError as e:
+        except Exception as e:
             print(f"[@route:list_references] Host discovery error: {str(e)}")
             return jsonify({
                 'success': False,
@@ -197,17 +208,28 @@ def verification_actions():
         
         # Use dynamic host discovery instead of hardcoded values
         try:
-            host_response = make_host_request(
-                '/stream/reference-actions',
-                method='POST',
+            # Find appropriate host using registry
+            host_info = get_host_by_model(model)
+            
+            if not host_info:
+                print(f"[@route:verification_actions] No hosts available for model: {model}")
+                return jsonify({
+                    'success': False,
+                    'error': f'No hosts available for model: {model}'
+                }), 503
+            
+            host_url = buildHostUrl(host_info, '/stream/reference-actions')
+            host_response = requests.post(
+                host_url,
                 json={
                     'action': action,
                     'reference_name': reference_name,
                     'model': model
                 },
-                use_https=True
+                timeout=30,
+                verify=False
             )
-        except ValueError as e:
+        except Exception as e:
             print(f"[@route:verification_actions] Host discovery error: {str(e)}")
             return jsonify({
                 'success': False,
@@ -245,7 +267,7 @@ def verification_status():
         print(f"[@route:verification_status] Getting verification system status")
         
         # Check if any hosts are available
-        host_info = get_primary_host()
+        host_info = get_host_by_model('default')
         if not host_info:
             print(f"[@route:verification_status] No hosts available")
             return jsonify({
@@ -256,10 +278,11 @@ def verification_status():
         
         # Try to get status from host (but this endpoint might not exist yet)
         try:
-            host_response = make_host_request(
-                '/stream/verification-status',
-                method='GET',
-                use_https=True
+            host_url = buildHostUrl(host_info, '/stream/verification-status')
+            host_response = requests.get(
+                host_url,
+                timeout=30,
+                verify=False
             )
             
             if host_response.status_code == 200:
