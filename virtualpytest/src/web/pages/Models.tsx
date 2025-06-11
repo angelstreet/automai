@@ -24,10 +24,28 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import CreateModelDialog from '../components/models/Models_CreateDialog';
-import { DeviceModel } from '../types';
+
+// Simple model interface matching what we expect from the database
+interface Model {
+  id: string;
+  name: string;
+  types: string[];
+  version: string;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Create payload type
+export interface ModelCreatePayload {
+  name: string;
+  types: string[];
+  version: string;
+  description: string;
+}
 
 const Models: React.FC = () => {
-  const [models, setModels] = useState<DeviceModel[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
@@ -87,7 +105,7 @@ const Models: React.FC = () => {
     }
   };
 
-  const handleAddNew = async (newModelData: Omit<DeviceModel, 'id'>) => {
+  const handleAddNew = async (newModelData: ModelCreatePayload) => {
     if (!newModelData.name.trim() || newModelData.types.length === 0) {
       setError('Name and at least one Type are required');
       return;
@@ -107,6 +125,8 @@ const Models: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
+      console.log('[@component:Models] Creating model with data:', newModelData);
+
       const response = await fetch('/server/devicemodel/createDeviceModel', {
         method: 'POST',
         headers: {
@@ -121,7 +141,7 @@ const Models: React.FC = () => {
       }
 
       const result = await response.json();
-      const createdModel: DeviceModel = result.model;
+      const createdModel: Model = result.model;
 
       // Update local state
       setModels([...models, createdModel]);
@@ -279,6 +299,13 @@ const Models: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Summary */}
+      <Box mt={2}>
+        <Typography variant="body2" color="text.secondary">
+          Showing {models.length} device models
+        </Typography>
+      </Box>
 
       {/* Create Model Dialog */}
       <CreateModelDialog

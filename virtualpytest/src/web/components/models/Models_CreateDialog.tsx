@@ -18,18 +18,13 @@ import {
   ListItemText,
 } from '@mui/material';
 
-interface Model {
-  id: string;
-  name: string;
-  types: string[];
-  version: string;
-  description: string;
-}
+// Import the simplified interface from Models.tsx
+import { ModelCreatePayload } from '../../pages/Models';
 
 interface CreateModelDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (model: Omit<Model, 'id'>) => void;
+  onSubmit: (model: ModelCreatePayload) => void;
   error?: string | null;
 }
 
@@ -66,9 +61,9 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
   onSubmit,
   error,
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ModelCreatePayload>({
     name: '',
-    types: [] as string[],
+    types: [],
     version: '',
     description: '',
   });
@@ -95,7 +90,7 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     });
   };
 
-  const handleInputChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (field: keyof ModelCreatePayload) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [field]: event.target.value,
