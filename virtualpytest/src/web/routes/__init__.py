@@ -34,8 +34,6 @@ def register_routes(app: Flask, mode='server'):
         _register_host_routes(app)
     else:
         raise ValueError(f"Invalid mode: {mode}")
-    
-    print(f"[@routes:register_routes] ALL routes loaded successfully for mode: {mode}")
 
 def _register_common_routes(app):
     """Register truly common routes - FAIL FAST"""
