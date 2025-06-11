@@ -61,7 +61,7 @@ def create_device_model_endpoint():
             return jsonify({'error': 'At least one type must be selected'}), 400
         
         # Check for duplicate names
-        if check_devicemodel_name_exists(model_data['name'], team_id):
+        if check_device_model_name_exists(model_data['name'], team_id):
             return jsonify({'error': 'A device model with this name already exists'}), 400
         
         # Create the device model
@@ -111,7 +111,7 @@ def update_device_model_endpoint(model_id):
             return jsonify({'error': 'At least one type must be selected'}), 400
         
         # Check for duplicate names (excluding current model)
-        if check_devicemodel_name_exists(model_data['name'], team_id, model_id):
+        if check_device_model_name_exists(model_data['name'], team_id, model_id):
             return jsonify({'error': 'A device model with this name already exists'}), 400
         
         # Update the device model

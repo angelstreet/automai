@@ -347,7 +347,7 @@ def check_controllers_available():
 
 def get_team_id():
     """Get team_id from request headers or use default for demo"""
-    default_team_id = getattr(current_app, 'default_team_id', 'default-team-id')
+    default_team_id = getattr(current_app, 'default_team_id', DEFAULT_TEAM_ID)
     return request.headers.get('X-Team-ID', default_team_id)
 
 def get_user_id():

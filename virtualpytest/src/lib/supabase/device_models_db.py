@@ -19,7 +19,7 @@ def get_all_device_models(team_id: str) -> List[Dict]:
     supabase = get_supabase()
     try:
         result = supabase.table('device_models').select(
-            'id', 'name', 'type', 'controllers', 'updated_at'
+            'id', 'name', 'types', 'version', 'description', 'controllers', 'team_id', 'created_at', 'updated_at'
         ).eq('team_id', team_id).order('created_at', desc=False).execute()
         
         models = []
@@ -27,8 +27,10 @@ def get_all_device_models(team_id: str) -> List[Dict]:
             models.append({
                 'id': model['id'],
                 'name': model['name'],
-                'type': model['type'],
-                'controllers': model.get('controllers', []),
+                'types': model['types'],
+                'version': model.get('version', ''),
+                'description': model.get('description', ''),
+                'controllers': model.get('controllers', {}),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -44,7 +46,7 @@ def get_device_model(model_id: str, team_id: str) -> Optional[Dict]:
     supabase = get_supabase()
     try:
         result = supabase.table('device_models').select(
-            'id', 'name', 'description', 'device_type', 'capabilities', 'team_id', 'created_at', 'updated_at'
+            'id', 'name', 'types', 'version', 'description', 'controllers', 'team_id', 'created_at', 'updated_at'
         ).eq('id', model_id).eq('team_id', team_id).single().execute()
         
         if result.data:
@@ -52,8 +54,10 @@ def get_device_model(model_id: str, team_id: str) -> Optional[Dict]:
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'type': model['type'],
-                'controllers': model.get('controllers', []),
+                'types': model['types'],
+                'version': model.get('version', ''),
+                'description': model.get('description', ''),
+                'controllers': model.get('controllers', {}),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -69,8 +73,10 @@ def create_device_model(model_data: Dict, team_id: str, creator_id: str = None) 
     try:
         insert_data = {
             'name': model_data['name'],
-            'type': model_data['type'],
-            'controllers': model_data.get('controllers', []),
+            'types': model_data['types'],
+            'version': model_data.get('version', ''),
+            'description': model_data.get('description', ''),
+            'controllers': model_data.get('controllers', {}),
             'team_id': team_id,
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
@@ -83,8 +89,10 @@ def create_device_model(model_data: Dict, team_id: str, creator_id: str = None) 
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'type': model['type'],
-                'controllers': model.get('controllers', []),
+                'types': model['types'],
+                'version': model.get('version', ''),
+                'description': model.get('description', ''),
+                'controllers': model.get('controllers', {}),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
@@ -104,8 +112,12 @@ def update_device_model(model_id: str, model_data: Dict, team_id: str) -> Option
         
         if 'name' in model_data:
             update_data['name'] = model_data['name']
-        if 'type' in model_data:
-            update_data['type'] = model_data['type']
+        if 'types' in model_data:
+            update_data['types'] = model_data['types']
+        if 'version' in model_data:
+            update_data['version'] = model_data['version']
+        if 'description' in model_data:
+            update_data['description'] = model_data['description']
         if 'controllers' in model_data:
             update_data['controllers'] = model_data['controllers']
         
@@ -116,8 +128,10 @@ def update_device_model(model_id: str, model_data: Dict, team_id: str) -> Option
             return {
                 'id': model['id'],
                 'name': model['name'],
-                'type': model['type'],
-                'controllers': model.get('controllers', []),
+                'types': model['types'],
+                'version': model.get('version', ''),
+                'description': model.get('description', ''),
+                'controllers': model.get('controllers', {}),
                 'team_id': model['team_id'],
                 'created_at': model['created_at'],
                 'updated_at': model['updated_at']
