@@ -22,7 +22,7 @@ from src.navigation.navigation_pathfinding import (
 # Import navigation cache
 from src.web.cache.navigation_cache import get_cached_graph
 from src.web.cache.navigation_graph import get_node_info, get_entry_points
-from .utils import get_team_id, check_supabase
+from src.utils.app_utils import get_team_id, check_supabase
 
 # Create blueprint
 validation_bp = Blueprint('validation', __name__, url_prefix='/server/validation')

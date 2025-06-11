@@ -10,7 +10,7 @@ This module contains the server-side verification execution endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
-from .utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
+from src.utils.app_utils import get_host_by_model, get_primary_host, build_host_url, build_host_nginx_url
 
 # Create blueprint
 verification_execution_server_bp = Blueprint('verification_execution_server', __name__, url_prefix='/server/verification')

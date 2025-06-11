@@ -10,7 +10,7 @@ from flask import current_app
 from typing import Optional, Dict, Any
 
 
-def get_connected_clients() -> Dict[str, Any]:
+def get_host_registry() -> Dict[str, Any]:
     """Get the connected clients registry from Flask app"""
     if not hasattr(current_app, '_connected_clients'):
         current_app._connected_clients = {}
@@ -31,7 +31,7 @@ def lock_device_in_registry(device_id: str, session_id: str) -> bool:
     try:
         print(f"[@utils:deviceLockManager:lock_device_in_registry] Attempting to lock device: {device_id}")
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find the host that owns this device (search by device_id)
         host_name = None
@@ -79,7 +79,7 @@ def unlock_device_in_registry(device_id: str, session_id: Optional[str] = None) 
     try:
         print(f"[@utils:deviceLockManager:unlock_device_in_registry] Attempting to unlock device: {device_id}")
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find the host that owns this device (search by device_id)
         host_name = None
@@ -129,7 +129,7 @@ def is_device_locked_in_registry(device_id: str) -> bool:
         bool: True if device is locked, False otherwise
     """
     try:
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find the host that owns this device (search by device_id)
         for host_key, host_data in connected_clients.items():
@@ -154,7 +154,7 @@ def get_device_lock_info(device_id: str) -> Optional[Dict[str, Any]]:
         dict: Lock information or None if device not found/not locked
     """
     try:
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find the host that owns this device
         for host_key, host_data in connected_clients.items():
@@ -189,7 +189,7 @@ def cleanup_expired_locks(timeout_seconds: int = 300) -> int:
     try:
         print(f"[@utils:deviceLockManager:cleanup_expired_locks] Cleaning up locks older than {timeout_seconds} seconds")
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         current_time = time.time()
         cleaned_count = 0
         
@@ -227,7 +227,7 @@ def force_unlock_device(device_id: str) -> bool:
     try:
         print(f"[@utils:deviceLockManager:force_unlock_device] Force unlocking device: {device_id}")
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find the host that owns this device
         for host_key, host_data in connected_clients.items():
@@ -256,7 +256,7 @@ def get_all_locked_devices() -> Dict[str, Dict[str, Any]]:
         dict: Dictionary of locked devices with their lock info
     """
     try:
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         locked_devices = {}
         
         for host_name, host_data in connected_clients.items():

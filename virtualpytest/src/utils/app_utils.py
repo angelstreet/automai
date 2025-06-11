@@ -160,6 +160,30 @@ def lazy_load_device_models():
         print(f"⚠️ Device model utilities not available: {e}")
         return None
 
+def lazy_load_supabase():
+    """Lazy load Supabase client when first needed"""
+    try:
+        from src.utils.supabase_utils import get_supabase_client
+        client = get_supabase_client()
+        if client:
+            print("✅ Supabase client loaded successfully (lazy loaded)")
+        return client
+    except Exception as e:
+        print(f"⚠️ Supabase client not available: {e}")
+        return None
+
+def check_supabase():
+    """Helper function to check if Supabase is available (lazy loaded)"""
+    try:
+        from flask import jsonify
+        supabase_client = lazy_load_supabase()
+        if supabase_client is None:
+            return jsonify({'error': 'Supabase not available'}), 503
+        return None
+    except Exception:
+        from flask import jsonify
+        return jsonify({'error': 'Supabase not available'}), 503
+
 def generate_stable_host_id(host_name, host_ip):
     """Generate a stable host ID based on host name and IP"""
     stable_id_string = f"{host_name}-{host_ip}"
@@ -185,9 +209,6 @@ def initialize_server_globals():
     health_check_threads = {}
     print("🖥️ Server mode: Ready to accept host registrations")
 
-def get_connected_clients():
-    """Alias for get_host_registry - for backward compatibility"""
-    return get_host_registry()
 
 def add_connected_client(client_id, client_info):
     """Add a client to the connected clients registry"""
@@ -431,13 +452,3 @@ def get_user_id():
     return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
-# BACKWARD COMPATIBILITY ALIASES
-# =====================================================
-
-def get_connected_hosts():
-    """Alias for get_host_registry - for backward compatibility"""
-    return get_host_registry()
-
-def get_connected_clients():
-    """Alias for get_host_registry - for backward compatibility"""
-    return get_host_registry() 

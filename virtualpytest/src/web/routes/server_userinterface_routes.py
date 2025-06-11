@@ -21,7 +21,7 @@ from src.lib.supabase.navigation_trees_db import (
     get_root_tree_for_interface
 )
 
-from .utils import check_supabase, get_team_id
+from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
 server_userinterface_bp = Blueprint('server_userinterface', __name__, url_prefix='/server/userinterface')

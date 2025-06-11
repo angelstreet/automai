@@ -27,7 +27,7 @@ from src.lib.supabase.userinterface_db import (
     get_all_userinterfaces, 
     get_userinterface
 )
-from .utils import check_supabase, get_team_id
+from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint with abstract server navigation prefix
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/server/navigation')

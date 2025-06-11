@@ -15,7 +15,7 @@ from src.lib.supabase.devices_db import (
     delete_device
 )
 
-from .utils import check_supabase, get_team_id
+from src.utils.app_utils import check_supabase, get_team_id
 
 # =====================================================
 # HELPER FUNCTIONS

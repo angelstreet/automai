@@ -58,7 +58,7 @@ global_host_device = None
 # Import centralized URL building from routes utils
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
-from routes.utils import build_server_url
+from app_utils import build_server_url
 
 def register_host_with_server():
     """Register this host with the server"""

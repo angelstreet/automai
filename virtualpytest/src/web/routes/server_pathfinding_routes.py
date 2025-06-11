@@ -11,7 +11,7 @@ This module contains the API endpoints for:
 import time
 from flask import Blueprint, request, jsonify
 
-from .utils import check_supabase, get_team_id
+from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
 pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/navigation')

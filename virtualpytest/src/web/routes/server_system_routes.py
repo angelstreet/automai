@@ -24,7 +24,7 @@ from src.controllers.controller_config_factory import (
 print("[@system_routes] Successfully imported controller_config_factory")
 
 # Import URL builders from app_utils following the pattern like useRegistration
-from utils.app_utils import (
+from src.utils.app_utils import (
     build_host_connection_info,
     build_host_url
 )
@@ -64,7 +64,7 @@ root_logger.setLevel(logging.DEBUG)
 flask_logger = logging.getLogger('werkzeug')
 flask_logger.addHandler(debug_handler)
 
-def get_connected_clients():
+def get_host_registry():
     """Get connected clients from app context"""
     return getattr(current_app, '_connected_clients', {})
 
@@ -386,7 +386,7 @@ def register_client():
         }
         
         # Store host by host_name (primary key)
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Check if host is already registered (by host_name)
         existing_host = connected_clients.get(host_info['host_name'])
@@ -445,7 +445,7 @@ def unregister_client():
         if not host_name:
             return jsonify({'error': 'Missing host_name'}), 400
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find host by host_name
         if host_name in connected_clients:
@@ -494,7 +494,7 @@ def health_check_with_devices():
         system_stats = get_system_stats()
         
         # Get connected clients and clean up stale ones
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Clean up stale clients (not seen for more than 2 minutes)
         current_time = time.time()
@@ -509,7 +509,7 @@ def health_check_with_devices():
             remove_client(client_id)
         
         # Get updated clients list after cleanup
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Format clients list
         clients_list = []
@@ -560,7 +560,7 @@ def health_check_with_devices():
 def list_clients():
     """Server lists all connected hosts"""
     try:
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Clean up stale hosts (not seen for more than 2 minutes)
         current_time = time.time()
@@ -611,7 +611,7 @@ def list_clients():
 def list_clients_as_devices():
     """Return registered devices with clean, consistent structure"""
     try:
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Clean up stale hosts (not seen for more than 2 minutes)
         current_time = time.time()
@@ -733,7 +733,7 @@ def client_ping():
         if not host_name:
             return jsonify({'error': 'Missing host_name in ping'}), 400
         
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         
         # Find host by host_name
         if host_name not in connected_clients:
@@ -895,7 +895,7 @@ def remove_client(client_id):
         
         # Try to get app context, if not available use direct access
         try:
-            connected_clients = get_connected_clients()
+            connected_clients = get_host_registry()
             health_check_threads = get_health_check_threads()
             print(f"🗑️ [CLEANUP] Got app context successfully for {client_id[:8]}...")
         except RuntimeError:
@@ -960,7 +960,7 @@ def remove_client(client_id):
 
 def find_available_client(device_model):
     """Find an available client for the given device model"""
-    connected_clients = get_connected_clients()
+    connected_clients = get_host_registry()
     
     for client_id, client_info in connected_clients.items():
         if (client_info.get('device_model') == device_model and 

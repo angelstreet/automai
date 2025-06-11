@@ -9,7 +9,7 @@ This module contains the server-side ADB verification API endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
-from .utils import get_host_by_model, get_primary_host, build_host_url
+from src.utils.app_utils import get_host_by_model, get_primary_host, build_host_url
 
 # Create blueprint
 verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification')

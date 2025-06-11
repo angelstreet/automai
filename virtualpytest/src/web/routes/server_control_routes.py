@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import urllib.parse
 
-from .utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_connected_clients
+from src.utils.app_utils import get_host_by_model, build_host_url, make_host_request, get_team_id, get_host_registry
 from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -72,7 +72,7 @@ def take_control():
         
         # Get connected clients to find the host for this device
         try:
-            connected_clients = get_connected_clients()
+            connected_clients = get_host_registry()
             
             # Find host that owns this device
             host_info = None
@@ -296,7 +296,7 @@ def navigate():
             }), 400
         
         # Find host that controls this device
-        connected_clients = get_connected_clients()
+        connected_clients = get_host_registry()
         host_info = None
         
         for host_id, host_data in connected_clients.items():

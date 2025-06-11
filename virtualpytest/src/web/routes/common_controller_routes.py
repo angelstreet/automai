@@ -18,7 +18,7 @@ controller_bp = Blueprint('controller', __name__, url_prefix='/server/controller
 def check_controllers_available():
     """Helper function to check if controllers are available (lazy loaded)"""
     try:
-        from app_utils import lazy_load_controllers
+        from src.utils.app_utils import lazy_load_controllers
         controllers_available = lazy_load_controllers()
         if not controllers_available:
             return jsonify({'error': 'VirtualPyTest controllers not available'}), 503
