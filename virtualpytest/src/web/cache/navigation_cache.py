@@ -34,12 +34,18 @@ def get_cached_graph(tree_id: str, team_id: str, force_rebuild: bool = False) ->
     if force_rebuild or cache_key not in _navigation_graphs_cache:
         print(f"[@navigation:cache:get_cached_graph] Building NetworkX graph for tree: {tree_id}")
         
-        # Import here to avoid circular imports
-        from navigation_utils import get_navigation_nodes_and_edges
+        # Import from centralized utils instead of obsolete navigation_utils
+        from utils.supabase_utils import get_tree
         from navigation_graph import create_networkx_graph
         
         # Get fresh data from database
-        nodes, edges = get_navigation_nodes_and_edges(tree_id, team_id)
+        tree_data = get_tree(tree_id, team_id)
+        if not tree_data:
+            print(f"[@navigation:cache:get_cached_graph] No tree data found for tree: {tree_id}")
+            return None
+            
+        nodes = tree_data.get('metadata', {}).get('nodes', [])
+        edges = tree_data.get('metadata', {}).get('edges', [])
         
         if not nodes:
             print(f"[@navigation:cache:get_cached_graph] No nodes found for tree: {tree_id}")

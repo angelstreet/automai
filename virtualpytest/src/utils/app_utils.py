@@ -115,7 +115,7 @@ def validate_core_environment(mode='server'):
 def lazy_load_supabase():
     """Lazy load Supabase connection when first needed"""
     try:
-        from supabase_utils import get_supabase_client
+        from utils.supabase_utils import get_supabase_client
         supabase_client = get_supabase_client()
         if supabase_client:
             print("✅ Supabase connected successfully (lazy loaded)")

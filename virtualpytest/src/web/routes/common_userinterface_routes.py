@@ -8,9 +8,10 @@ This module contains the user interface management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-from userinterface_utils import (
+from utils.supabase_utils import (
     get_all_userinterfaces, get_userinterface, create_userinterface, 
-    update_userinterface, delete_userinterface, check_userinterface_name_exists
+    update_userinterface, delete_userinterface, check_userinterface_name_exists,
+    get_root_tree_for_interface
 )
 
 from .utils import check_supabase, get_team_id
@@ -39,7 +40,6 @@ def get_userinterfaces():
             interface_id = interface.get('id')
             if interface_id:
                 # Fetch root tree for this interface
-                from navigation_utils import get_root_tree_for_interface
                 root_tree = get_root_tree_for_interface(interface_id, team_id)
                 if root_tree:
                     interface['root_tree'] = root_tree
@@ -93,7 +93,6 @@ def get_userinterface_endpoint(interface_id):
         interface = get_userinterface(interface_id, team_id)
         if interface:
             # Enrich with root tree information
-            from navigation_utils import get_root_tree_for_interface
             root_tree = get_root_tree_for_interface(interface_id, team_id)
             if root_tree:
                 interface['root_tree'] = root_tree

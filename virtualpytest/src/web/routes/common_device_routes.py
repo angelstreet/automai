@@ -9,12 +9,46 @@ This module contains the device management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-from device_utils import (
-    get_all_devices, get_device, create_device, 
-    update_device, delete_device, check_device_name_exists
+from utils.supabase_utils import (
+    get_all_devices, get_device, save_device as create_device, 
+    delete_device
 )
 
 from .utils import check_supabase, get_team_id
+
+# =====================================================
+# HELPER FUNCTIONS
+# =====================================================
+
+def check_device_name_exists(name, team_id, exclude_device_id=None):
+    """Check if a device name already exists for the team"""
+    try:
+        devices = get_all_devices(team_id)
+        for device in devices:
+            if device.get('name') == name:
+                if exclude_device_id and device.get('id') == exclude_device_id:
+                    continue
+                return True
+        return False
+    except Exception:
+        return False
+
+def update_device(device_id, device_data, team_id):
+    """Update an existing device"""
+    try:
+        # Get the existing device
+        existing_device = get_device(device_id, team_id)
+        if not existing_device:
+            return None
+            
+        # Update the device data
+        updated_data = {**existing_device, **device_data}
+        updated_data['id'] = device_id
+        
+        # Save the updated device
+        return create_device(updated_data, team_id)
+    except Exception:
+        return None
 
 # Create blueprint
 device_bp = Blueprint('device', __name__, url_prefix='/server/device')
