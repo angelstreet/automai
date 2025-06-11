@@ -30,15 +30,37 @@ logger = logging.getLogger(__name__)
 
 class CloudflareUploader:
     """
-    Simple Cloudflare R2 uploader for VirtualPyTest resources.
+    Singleton Cloudflare R2 uploader for VirtualPyTest resources.
     Just upload files and get signed URLs - nothing fancy.
+    
+    This class implements the singleton pattern to ensure only one instance
+    exists throughout the application lifecycle, avoiding multiple S3 client
+    initializations and bucket existence checks.
     """
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls, bucket_name: str = 'virtualpytest-resources'):
+        """Singleton pattern implementation - only create one instance."""
+        if cls._instance is None:
+            logger.info("Creating new CloudflareUploader singleton instance")
+            cls._instance = super().__new__(cls)
+        else:
+            logger.debug("Returning existing CloudflareUploader singleton instance")
+        return cls._instance
+    
     def __init__(self, bucket_name: str = 'virtualpytest-resources'):
-        """Initialize the uploader with bucket name."""
+        """Initialize the uploader with bucket name (only once due to singleton)."""
+        # Prevent re-initialization of the singleton instance
+        if self._initialized:
+            return
+            
+        logger.info(f"Initializing CloudflareUploader singleton with bucket: {bucket_name}")
         self.bucket_name = bucket_name
         self.s3_client = self._init_s3_client()
         self._ensure_bucket_exists()
+        self._initialized = True
     
     def _init_s3_client(self):
         """Initialize S3 client for Cloudflare R2."""
@@ -50,6 +72,7 @@ class CloudflareUploader:
             if not all([endpoint_url, access_key, secret_key]):
                 raise ValueError("Missing required Cloudflare R2 environment variables")
             
+            logger.info("Initializing S3 client for Cloudflare R2")
             return boto3.client(
                 's3',
                 endpoint_url=endpoint_url,
@@ -65,7 +88,9 @@ class CloudflareUploader:
     def _ensure_bucket_exists(self):
         """Make sure the bucket exists, create if it doesn't."""
         try:
+            logger.info(f"Checking if bucket exists: {self.bucket_name}")
             self.s3_client.head_bucket(Bucket=self.bucket_name)
+            logger.info(f"Bucket exists: {self.bucket_name}")
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
                 logger.info(f"Creating bucket: {self.bucket_name}")
@@ -193,36 +218,57 @@ class CloudflareUploader:
             return False
 
 
-# Convenience functions for common use cases
+# Singleton getter function for consistent access
+def get_cloudflare_uploader() -> CloudflareUploader:
+    """
+    Get the singleton CloudflareUploader instance.
+    
+    This function provides a clean way to access the singleton instance
+    and makes the singleton pattern explicit in the code.
+    
+    Returns:
+        CloudflareUploader: The singleton instance
+    """
+    return CloudflareUploader()
+
+
+# Convenience functions for common use cases (now using singleton)
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
     """Upload a reference image with public access (no expiration)."""
-    uploader = CloudflareUploader()
+    uploader = get_cloudflare_uploader()
     remote_path = f"reference/{model}/{image_name}"
     return uploader.upload_file(local_path, remote_path, public=True)
 
 
 def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:
     """Upload a navigation screenshot with public access."""
-    uploader = CloudflareUploader()
+    uploader = get_cloudflare_uploader()
     remote_path = f"navigation/{model}/{screenshot_name}"
     return uploader.upload_file(local_path, remote_path, public=True)
 
 
 def upload_verification_result(local_path: str, job_id: str, filename: str) -> Dict:
     """Upload a verification result."""
-    uploader = CloudflareUploader()
+    uploader = get_cloudflare_uploader()
     remote_path = f"verification-results/{job_id}/{filename}"
     return uploader.upload_file(local_path, remote_path)
 
 
 def upload_temp_file(local_path: str, session_id: str, filename: str) -> Dict:
     """Upload a temporary file."""
-    uploader = CloudflareUploader()
+    uploader = get_cloudflare_uploader()
     remote_path = f"temp/{session_id}/{filename}"
     return uploader.upload_file(local_path, remote_path)
 
 
 if __name__ == '__main__':
-    # Simple test
-    uploader = CloudflareUploader()
-    print("Cloudflare uploader initialized successfully!") 
+    # Simple test - demonstrate singleton behavior
+    uploader1 = CloudflareUploader()
+    uploader2 = CloudflareUploader()
+    uploader3 = get_cloudflare_uploader()
+    
+    print(f"uploader1 id: {id(uploader1)}")
+    print(f"uploader2 id: {id(uploader2)}")
+    print(f"uploader3 id: {id(uploader3)}")
+    print(f"All instances are the same: {uploader1 is uploader2 is uploader3}")
+    print("Cloudflare uploader singleton initialized successfully!") 
