@@ -1,3 +1,17 @@
+/**
+ * Device Types - Comprehensive device type definitions
+ * 
+ * This file contains both:
+ * 1. Logical Device Types - For device management/database entities
+ * 2. Runtime Device Types - For connected hosts/clients from server
+ */
+
+import { SystemStats } from './Dashboard_Types';
+
+// =====================================
+// LOGICAL DEVICE TYPES (Database/Management)
+// =====================================
+
 // Physical device interfaces for device management
 export interface Device {
   id: string;
@@ -44,4 +58,73 @@ export const DeviceStatuses = {
   OFFLINE: 'offline',
 } as const;
 
-export type DeviceStatus = typeof DeviceStatuses[keyof typeof DeviceStatuses]; 
+export type DeviceStatus = typeof DeviceStatuses[keyof typeof DeviceStatuses];
+
+// =====================================
+// RUNTIME DEVICE TYPES (Connected Hosts/Clients)
+// =====================================
+
+/**
+ * Runtime device types for actual connected hosts/clients
+ * Server endpoint: /server/system/clients/devices
+ * Returns: { success: boolean, devices: DeviceRegistration[] }
+ */
+
+// Device connection information
+export interface DeviceConnection {
+  flask_url: string;
+  nginx_url: string;
+}
+
+// Core device registration data as returned by server
+export interface DeviceRegistration {
+  // Server-provided core fields
+  id: string;                    // Device ID from server
+  name: string;                  // Device name 
+  host_name: string;            // Host name (e.g., "mac-host")
+  model: string;                // Device model
+  description?: string;         // Optional description
+  connection: DeviceConnection; // Connection URLs
+  status: string;               // Device status (online/offline)
+  last_seen: number;            // Unix timestamp
+  registered_at: string;        // ISO timestamp
+  capabilities: string[];       // Device capabilities
+  system_stats: SystemStats;   // System resource usage (imported from Dashboard_Types)
+  
+  // Device lock management
+  isLocked: boolean;            // Device lock status
+  lockedBy?: string;           // Session/user who locked it
+  lockedAt?: number;           // Timestamp when locked
+  
+  // Legacy compatibility fields (for Dashboard)
+  client_id: string;           // Maps to id field
+  device_model: string;        // Maps to model field
+  local_ip: string;           // Extracted from connection.flask_url
+  client_port: string;        // Extracted from connection.flask_url
+  public_ip: string;          // Same as local_ip for now
+  
+  // Controller configuration
+  controller_types?: string[];  // Available controller types
+  controller_configs?: any;    // Controller-specific configs
+}
+
+// For components that need the controller proxies attached
+export interface DeviceWithProxies extends DeviceRegistration {
+  controllerProxies?: {
+    av?: any;           // AVControllerProxy
+    remote?: any;       // RemoteControllerProxy  
+    verification?: any; // VerificationControllerProxy
+  };
+}
+
+// Server response structure
+export interface DevicesResponse {
+  success: boolean;
+  devices?: DeviceRegistration[];
+  error?: string;
+}
+
+// Type aliases for backward compatibility
+export type RegisteredHost = DeviceRegistration;
+export type ConnectedDevice = DeviceRegistration;
+export type Host = DeviceRegistration; 

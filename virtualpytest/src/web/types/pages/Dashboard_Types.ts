@@ -6,6 +6,18 @@ export interface DashboardStats {
   recentActivity: RecentActivity[];
 }
 
+// System stats structure as returned by the server (flat structure)
+// Used for dashboard display of device resource usage
+export interface SystemStats {
+  cpu_percent: number;
+  memory_percent: number;
+  disk_percent: number;
+  platform: string;
+  architecture: string;
+  python_version: string;
+  error?: string;
+}
+
 // Recent activity interface (separate from LogEntry)
 export interface RecentActivity {
   id: string;
@@ -25,28 +37,6 @@ export interface LogEntry {
 }
 
 export type ViewMode = 'grid' | 'table';
-
-export interface ConnectedDevice {
-  client_id: string;
-  name: string;
-  device_model: string;
-  local_ip: string;
-  client_port: string;
-  public_ip: string;
-  capabilities: string[];
-  status: string;
-  registered_at: string;
-  last_seen: number;
-  system_stats: {
-    cpu_percent: number;
-    memory_percent: number;
-    disk_percent: number;
-    platform: string;
-    architecture: string;
-    python_version: string;
-    error?: string;
-  };
-}
 
 export type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
 export type LogSource = 'all' | 'frontend' | 'backend';

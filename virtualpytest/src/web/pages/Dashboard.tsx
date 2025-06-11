@@ -50,10 +50,11 @@ import {
   RecentActivity,
   LogEntry,
   ViewMode,
-  ConnectedDevice,
   LogLevel,
   LogSource,
+  SystemStats,
 } from '../types/pages/Dashboard_Types';
+import { ConnectedDevice } from '../types/pages/Device_Types';
 
 const Dashboard: React.FC = () => {
   const { 

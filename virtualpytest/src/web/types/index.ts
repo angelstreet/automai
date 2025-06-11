@@ -11,7 +11,15 @@ export type {
   DeviceStatus,
   DeviceTypes,
   DeviceEnvironments,
-  DeviceStatuses
+  DeviceStatuses,
+  // Runtime device types
+  DeviceRegistration,
+  DeviceWithProxies,
+  ConnectedDevice,
+  RegisteredHost,
+  Host,
+  DeviceConnection,
+  DevicesResponse
 } from './pages/Device_Types';
 
 export type {
@@ -26,6 +34,7 @@ export * from './pages/Environment_Types';
 export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
 export * from './pages/UserInterface_Types';
+export * from './pages/Dashboard_Types';
 
 // Feature-specific types - Remote types with explicit exports to avoid conflicts
 export type { 

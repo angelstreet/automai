@@ -2,57 +2,20 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AVControllerProxy } from '../controllers/AVControllerProxy';
 import { RemoteControllerProxy } from '../controllers/RemoteControllerProxy';
 import { VerificationControllerProxy } from '../controllers/VerificationControllerProxy';
+import { 
+  DeviceRegistration, 
+  DeviceWithProxies, 
+  DevicesResponse,
+  DeviceConnection 
+} from '../types/pages/Device_Types';
 
 // Default team ID constant - centralized here for use across the application
 export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
 
-interface DeviceConnection {
-  flask_url: string;
-  nginx_url: string;
-}
-
-interface RegisteredHost {
-  id: string;
-  name: string;
-  model: string;
-  description?: string;
-  connection: DeviceConnection;
-  status: string;
-  isLocked: boolean;           // NEW - Device lock status
-  lockedBy?: string;          // NEW - Session/user who locked it (optional)
-  lockedAt?: number;          // NEW - Timestamp when locked (optional)
-  last_seen: number;
-  registered_at: string;
-  capabilities: string[];
-  system_stats: {
-    cpu_percent: number;
-    memory_percent: number;
-    disk_percent: number;
-    platform: string;
-    architecture: string;
-    python_version: string;
-    error?: string;
-  };
-  // Legacy fields for compatibility with Dashboard
-  client_id: string;
-  device_model: string;
-  local_ip: string;
-  client_port: string;
-  public_ip: string;
-  controller_types?: string[];
-  controller_configs?: any;
-  // NEW - Controller proxies for frontend interaction
-  controllerProxies?: {
-    av?: AVControllerProxy;
-    remote?: RemoteControllerProxy;
-    verification?: VerificationControllerProxy;
-  };
-}
-
 interface RegistrationContextType {
   // Host data
-  availableHosts: RegisteredHost[];
-  selectedHost: RegisteredHost | null;
+  availableHosts: DeviceWithProxies[];
+  selectedHost: DeviceWithProxies | null;
   isLoading: boolean;
   error: string | null;
   
@@ -73,13 +36,13 @@ interface RegistrationContextType {
   buildNginxUrl: (hostId: string, path: string) => string;      // To host's nginx
   
   // Convenience getters
-  getHostById: (hostId: string) => RegisteredHost | null;
-  getAvailableHosts: () => RegisteredHost[];
+  getHostById: (hostId: string) => DeviceWithProxies | null;
+  getAvailableHosts: () => DeviceWithProxies[];
   
   // Legacy compatibility (for gradual migration)
   buildApiUrl: (endpoint: string) => string;
-  setAvailableHosts: (hosts: RegisteredHost[]) => void;
-  setSelectedHost: (host: RegisteredHost | null) => void;
+  setAvailableHosts: (hosts: DeviceWithProxies[]) => void;
+  setSelectedHost: (host: DeviceWithProxies | null) => void;
   selectHostById: (hostId: string) => void;
 }
 
@@ -90,8 +53,8 @@ interface RegistrationProviderProps {
 }
 
 export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ children }) => {
-  const [availableHosts, setAvailableHosts] = useState<RegisteredHost[]>([]);
-  const [selectedHost, setSelectedHost] = useState<RegisteredHost | null>(null);
+  const [availableHosts, setAvailableHosts] = useState<DeviceWithProxies[]>([]);
+  const [selectedHost, setSelectedHost] = useState<DeviceWithProxies | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,10 +139,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   }, [availableHosts]);
 
   // Create controller proxies for a host device
-  const createControllerProxies = useCallback((host: RegisteredHost) => {
+  const createControllerProxies = useCallback((host: DeviceWithProxies) => {
     console.log(`[@context:Registration] Creating controller proxies for host: ${host.name} (${host.id})`);
     
-    const proxies: RegisteredHost['controllerProxies'] = {};
+    const proxies: DeviceWithProxies['controllerProxies'] = {};
     
     // Create AV controller proxy if host has AV capabilities
     if (host.controller_types?.includes('av') || host.capabilities?.includes('av')) {
@@ -280,7 +243,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         setAvailableHosts(hosts);
         
         // Then create controller proxies for each host (after availableHosts is populated)
-        const hostsWithProxies = hosts.map((host: RegisteredHost) => ({
+        const hostsWithProxies = hosts.map((host: DeviceWithProxies) => ({
           ...host,
           controllerProxies: createControllerProxies(host)
         }));
