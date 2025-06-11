@@ -631,7 +631,7 @@ def execute_navigation_host(tree_id, node_id):
             for action in actions:
                 try:
                     # Import and use remote controller
-                    from controllers import get_controller_for_device
+                    from src.controllers import get_controller_for_device
                     
                     # Get device info from host registry
                     host_device = getattr(current_app, 'my_host_device', None)

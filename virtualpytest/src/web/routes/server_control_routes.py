@@ -65,7 +65,7 @@ def get_controller_metadata():
 def getAllControllers():
     """Get all available controller types from the system"""
     try:
-        from controllers import ControllerFactory
+        from src.controllers import ControllerFactory
         
         # Get available controllers from factory
         available_controllers = ControllerFactory.list_available_controllers()
