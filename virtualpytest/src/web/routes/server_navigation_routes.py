@@ -13,8 +13,8 @@ import uuid
 import requests
 import time
 
-# Import from centralized supabase_utils instead of specialized navigation_utils
-from utils.supabase_utils import (
+# Import from specific database modules (direct imports)
+from src.lib.supabase.navigation_trees_db import (
     get_all_trees as get_all_navigation_trees_util,
     get_tree as get_navigation_tree,
     save_tree as create_navigation_tree_util,
@@ -22,6 +22,8 @@ from utils.supabase_utils import (
     delete_tree as delete_navigation_tree,
     check_navigation_tree_name_exists,
     get_root_tree_for_interface,
+)
+from src.lib.supabase.userinterface_db import (
     get_all_userinterfaces, 
     get_userinterface
 )

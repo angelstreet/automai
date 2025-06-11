@@ -14,7 +14,8 @@ import time
 # Import utility functions
 from .utils import get_team_id
 
-from utils.supabase_utils import (
+# Import from specific database module (direct import)
+from src.lib.supabase.testcase_db import (
     get_all_test_cases, get_test_case, save_test_case, delete_test_case
 )
 

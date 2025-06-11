@@ -8,9 +8,12 @@ This module contains the user interface management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-from utils.supabase_utils import (
+# Import from specific database modules (direct imports)
+from src.lib.supabase.userinterface_db import (
     get_all_userinterfaces, get_userinterface, create_userinterface, 
-    update_userinterface, delete_userinterface, check_userinterface_name_exists,
+    update_userinterface, delete_userinterface, check_userinterface_name_exists
+)
+from src.lib.supabase.navigation_trees_db import (
     get_root_tree_for_interface
 )
 

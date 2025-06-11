@@ -6,7 +6,7 @@ Functions are split by table type for better maintainability.
 """
 
 # Core Supabase client
-from utils.supabase_utils import get_supabase_client
+from src.utils.supabase_utils import get_supabase_client
 
 # Campaign operations
 from .campaign_db import (

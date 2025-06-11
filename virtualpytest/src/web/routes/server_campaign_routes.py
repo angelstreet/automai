@@ -13,7 +13,8 @@ from flask import Blueprint, request, jsonify, current_app
 # Import utility functions
 from .utils import get_team_id
 
-from utils.supabase_utils import (
+# Import from specific database module (direct import)
+from src.lib.supabase.campaign_db import (
     get_all_campaigns, get_campaign, save_campaign, delete_campaign
 )
 

@@ -9,7 +9,8 @@ This module contains the device model management API endpoints for:
 
 from flask import Blueprint, request, jsonify
 
-from utils.supabase_utils import (
+# Import from specific database module (direct import)
+from src.lib.supabase.devicemodel_db import (
     get_all_device_models as get_all_devicemodels, 
     get_device_model as get_devicemodel, 
     create_device_model as create_devicemodel,
