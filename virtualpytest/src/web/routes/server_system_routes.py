@@ -33,8 +33,6 @@ from src.utils.app_utils import (
     buildHostUrl
 )
 
-print("✅ [@system_routes] Successfully imported controller_config_factory")
-
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
 # In-memory log storage for debug purposes
