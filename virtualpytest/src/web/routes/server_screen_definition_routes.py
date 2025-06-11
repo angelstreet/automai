@@ -7,7 +7,6 @@ import signal
 from pathlib import Path
 import threading
 from datetime import datetime
-from utils.cloudflare_upload_utils import CloudflareUploader
 
 # Create blueprint with consistent name - remove URL prefix as it's set in register_routes
 screen_definition_blueprint = Blueprint('screen_definition', __name__, url_prefix='/server/capture')
@@ -155,6 +154,8 @@ def take_screenshot():
         cloudflare_path = None
         if upload_to_cloudflare:
             try:
+                # Lazy import - only load CloudflareUploader when actually needed
+                from utils.cloudflare_upload_utils import CloudflareUploader
                 uploader = CloudflareUploader()
                 
                 # Use the additional screenshot path if available, otherwise use the main path
