@@ -41,7 +41,7 @@ const ControllerPage: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        VirtualPyTest Controller Management
+        Controller Management
       </Typography>
 
       <Grid container spacing={3}>
