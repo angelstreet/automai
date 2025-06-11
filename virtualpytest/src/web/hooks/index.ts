@@ -6,10 +6,9 @@ export * from './controller';
 // Validation Hooks
 export * from './validation';
 
-
 // Page Hooks (domain-specific for pages)
 export * from './pages/useScreenEditor';
 export * from './pages/useNavigationEditor';  
-export * from './pages/useNavigationHooks';
-export * from './pages/useDeviceModels';
+export * from './pages/useNavigation';
+export * from './pages/useDevice';
 export * from './pages/useUserInterface';
