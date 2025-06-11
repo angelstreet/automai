@@ -79,12 +79,16 @@ def register_host_with_server():
         host_port_external = os.getenv('HOST_PORT_EXTERNAL', host_port_internal)  # For server communication (may be port-forwarded)
         host_port_web = os.getenv('HOST_PORT_WEB', '444')  # HTTPS/nginx port
         
+        # Get device model from environment with proper fallback
+        device_model = os.getenv('DEVICE_MODEL', os.getenv('HOST_DEVICE_MODEL', platform.system().lower()))
+        
         print(f"   Server: {server_host}:{server_port}")
         print(f"   Host Name: {host_name}")
         print(f"   Host IP: {host_ip}")
         print(f"   Host Port Internal: {host_port_internal} (Flask app)")
         print(f"   Host Port External: {host_port_external} (Server access)")
         print(f"   Host Port Web: {host_port_web} (HTTPS/nginx)")
+        print(f"   Device Model: {device_model}")
         
         # Create complete host info payload - everything the server needs
         host_info = {
@@ -93,7 +97,7 @@ def register_host_with_server():
             'host_port_internal': host_port_internal,  # Where Flask runs
             'host_port_external': host_port_external,  # For server communication
             'host_port_web': host_port_web,       # HTTPS/nginx port
-            'device_model': 'linux',              # Default device model for hosts
+            'device_model': device_model,         # Dynamic device model detection
             'system_stats': get_host_system_stats(),
         }
         

@@ -22,13 +22,13 @@ from src.utils.device_lock_manager_utils import (
 )
 
 # Create blueprint
-server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
+control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@server_control_bp.route('/take-control', methods=['POST'])
+@control_bp.route('/take-control', methods=['POST'])
 def take_control():
     """Server-side take control - Coordinate device locking and host discovery"""
     try:
@@ -201,7 +201,7 @@ def take_control():
         }), 500
 
 
-@server_control_bp.route('/release-control', methods=['POST'])
+@control_bp.route('/release-control', methods=['POST'])
 def release_control():
     """Server-side release control - Unlock device and forward request to host"""
     try:
@@ -275,7 +275,7 @@ def release_control():
         }), 500
 
 
-@server_control_bp.route('/navigate', methods=['POST'])
+@control_bp.route('/navigate', methods=['POST'])
 def navigate():
     """Server-side navigation - Forward navigation request to appropriate host"""
     try:

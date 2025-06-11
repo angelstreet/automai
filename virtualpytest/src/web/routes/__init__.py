@@ -66,15 +66,15 @@ def _register_server_routes(app):
         ('server_validation_routes', 'validation_bp'),
         ('server_navigation_config_routes', 'navigation_config_bp'),
         ('server_power_routes', 'power_bp'),
-        ('server_device_routes', 'server_device_bp'),  # ✅ Renamed from common_device_routes
-        ('server_userinterface_routes', 'server_userinterface_bp'),  # ✅ Renamed from common_userinterface_routes
-        ('server_devicemodel_routes', 'server_devicemodel_bp'),  # ✅ Renamed from common_devicemodel_routes
+        ('server_device_routes', 'device_bp'),  # ✅ Unified naming
+        ('server_userinterface_routes', 'userinterface_bp'),  # ✅ Unified naming
+        ('server_devicemodel_routes', 'devicemodel_bp'),  # ✅ Unified naming
         ('server_verification_common_routes', 'verification_common_bp'),
         ('server_verification_image_routes', 'verification_image_server_bp'),
         ('server_verification_text_routes', 'verification_text_server_bp'),
         ('server_verification_adb_routes', 'verification_adb_server_bp'),
         ('server_verification_execution_routes', 'verification_execution_server_bp'),
-        ('server_control_routes', 'server_control_bp'),
+        ('server_control_routes', 'control_bp'),  # ✅ Unified naming
         ('server_system_routes', 'system_bp'),
     ]
     
