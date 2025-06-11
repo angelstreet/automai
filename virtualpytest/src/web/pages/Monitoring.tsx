@@ -131,7 +131,6 @@ const Monitoring: React.FC = () => {
                 sx={{
                   p: 3,
                   textAlign: 'center',
-                  backgroundColor: 'grey.50',
                   borderRadius: 1,
                   minHeight: 200,
                   display: 'flex',

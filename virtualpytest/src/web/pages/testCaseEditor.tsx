@@ -107,8 +107,8 @@ const TestCaseEditor: React.FC = () => {
 
   const fetchTestCases = async () => {
     try {
-      // Use abstract server test execution endpoint
-      const response = await fetch(buildServerUrl('/server/test/cases'));
+      // Use correct testcases endpoint
+      const response = await fetch(buildServerUrl('/server/testcases/getAllTestCases'));
       if (response.ok) {
         const data = await response.json();
         setTestCases(data);
@@ -150,10 +150,10 @@ const TestCaseEditor: React.FC = () => {
     try {
       setLoading(true);
       const method = isEditing ? 'PUT' : 'POST';
-      // Use abstract server test execution endpoints
+      // Use correct testcases endpoints
       const url = isEditing
-        ? buildServerUrl(`/server/test/cases/${formData.test_id}`)
-        : buildServerUrl('/server/test/cases');
+        ? buildServerUrl(`/server/testcases/updateTestCase/${formData.test_id}`)
+        : buildServerUrl('/server/testcases/createTestCase');
 
       const response = await fetch(url, {
         method,
@@ -179,8 +179,8 @@ const TestCaseEditor: React.FC = () => {
   const handleDelete = async (testId: string) => {
     try {
       setLoading(true);
-      // Use abstract server test execution endpoint
-      const response = await fetch(buildServerUrl(`/server/test/cases/${testId}`), {
+      // Use correct testcases endpoint
+      const response = await fetch(buildServerUrl(`/server/testcases/deleteTestCase/${testId}`), {
         method: 'DELETE',
       });
 
@@ -383,60 +383,70 @@ const TestCaseEditor: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {testCases.map((testCase) => (
-              <TableRow key={testCase.test_id}>
-                <TableCell>{testCase.test_id}</TableCell>
-                <TableCell>{testCase.name}</TableCell>
-                <TableCell>
-                  <Chip label={testCase.test_type} size="small" variant="outlined" />
-                </TableCell>
-                <TableCell>
-                  {testCase.device_id ? (
-                    <Chip
-                      icon={<DeviceIcon />}
-                      label={getDeviceName(testCase.device_id)}
-                      size="small"
-                      color="primary"
-                    />
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      No device
-                    </Typography>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={getPriorityLabel(testCase.priority || 1)}
-                    size="small"
-                    color={getPriorityColor(testCase.priority || 1) as any}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{testCase.estimated_duration || 60}s</Typography>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {testCase.tags
-                      ?.slice(0, 2)
-                      .map((tag, index) => (
-                        <Chip key={index} label={tag} size="small" variant="outlined" />
-                      ))}
-                    {(testCase.tags?.length || 0) > 2 && (
-                      <Chip label={`+${(testCase.tags?.length || 0) - 2}`} size="small" />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>{testCase.steps.length}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpenDialog(testCase)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(testCase.test_id)} color="error">
-                    <DeleteIcon />
-                  </IconButton>
+            {testCases.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  <Typography variant="body2" color="textSecondary" sx={{ py: 4 }}>
+                    No test cases found. Create your first test case to get started.
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              testCases.map((testCase) => (
+                <TableRow key={testCase.test_id}>
+                  <TableCell>{testCase.test_id}</TableCell>
+                  <TableCell>{testCase.name}</TableCell>
+                  <TableCell>
+                    <Chip label={testCase.test_type} size="small" variant="outlined" />
+                  </TableCell>
+                  <TableCell>
+                    {testCase.device_id ? (
+                      <Chip
+                        icon={<DeviceIcon />}
+                        label={getDeviceName(testCase.device_id)}
+                        size="small"
+                        color="primary"
+                      />
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        No device
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getPriorityLabel(testCase.priority || 1)}
+                      size="small"
+                      color={getPriorityColor(testCase.priority || 1) as any}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{testCase.estimated_duration || 60}s</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      {testCase.tags
+                        ?.slice(0, 2)
+                        .map((tag, index) => (
+                          <Chip key={index} label={tag} size="small" variant="outlined" />
+                        ))}
+                      {(testCase.tags?.length || 0) > 2 && (
+                        <Chip label={`+${(testCase.tags?.length || 0) - 2}`} size="small" />
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{testCase.steps.length}</TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleOpenDialog(testCase)} color="primary">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(testCase.test_id)} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

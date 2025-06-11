@@ -93,7 +93,6 @@ const RunTests: React.FC = () => {
                 sx={{
                   p: 3,
                   textAlign: 'center',
-                  backgroundColor: 'grey.50',
                   borderRadius: 1,
                 }}
               >
