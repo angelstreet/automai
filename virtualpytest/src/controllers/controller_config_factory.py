@@ -71,10 +71,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'video_device': '/dev/video0',
             'resolution': '1920x1080',
             'fps': 30,
-            'host_ip': host_ip,
-            'host_port': host_port,
             'stream_path': '/stream/video',
-            'connection_timeout': 15,
             'service_name': 'stream'  # Correct systemd service name
         }
     }
@@ -95,8 +92,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         controller_configs['verification'] = {
             'implementation': 'ocr',
             'parameters': {
-                'host_ip': host_ip,
-                'host_port': host_port
+                # OCR verification works with AV controller, no host connection needed
             }
         }
     

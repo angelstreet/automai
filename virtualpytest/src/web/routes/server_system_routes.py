@@ -221,10 +221,12 @@ def register_client():
         print(f"[@route:register_client] Instantiating controller objects...")
         controller_objects = {}
         
-        # Build connection information manually since we removed build_host_connection_info
+        # Store connection data for URL builders to use when needed
+        # URL builders will construct URLs from this data when called
         host_connection = {
-            'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
-            'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
+            'host_ip': host_info['host_ip'],
+            'host_port_external': host_port_external,
+            'host_port_web': host_port_web
         }
         
         try:
@@ -241,13 +243,10 @@ def register_client():
                     capture_type=av_config['implementation'],
                     device_name=device_name,
                     video_device='/dev/video0',
-                    output_path='/var/www/html/stream/',
-                    host_ip=av_params.get('host_ip'),
-                    host_port=av_params.get('host_port'),
-                    host_connection=host_connection  # Pass host connection info
+                    output_path='/var/www/html/stream/'
                 )
                 controller_objects['av'] = av_controller
-                print(f"[@route:register_client] AV controller created successfully with connection: {host_connection['nginx_url']}")
+                print(f"[@route:register_client] AV controller created successfully")
             
             # STEP 2: Create Remote controller (independent)
             if 'remote' in controller_configs:
@@ -784,17 +783,9 @@ def start_health_check(client_id, client_ip, client_port):
                         break
                     
                     try:
-                        # Use pre-built flask_url from host connection instead of manual URL building
+                        # Always use URL builder from registry data
                         host_info = connected_clients[client_id]
-                        connection = host_info.get('connection', {})
-                        flask_url = connection.get('flask_url')
-                        
-                        if not flask_url:
-                            # Use URL builder for fallback instead of manual construction
-                            health_url = buildHostUrl(host_info, "/server/system/health")
-                            print(f"⚠️ [HEALTH] No flask_url in connection data for {client_id[:8]}..., using URL builder fallback: {health_url}")
-                        else:
-                            health_url = f"{flask_url}/server/system/health"
+                        health_url = buildHostUrl(host_info, "/server/system/health")
                         
                         response = requests.get(health_url, timeout=5)
                         if response.status_code == 200:
