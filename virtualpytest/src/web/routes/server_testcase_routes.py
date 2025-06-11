@@ -20,8 +20,8 @@ from utils.supabase_utils import (
 
 from .utils import check_supabase
 
-# Create blueprint with abstract server test prefix
-testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/test')
+# Create blueprint with abstract server testcases prefix
+testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/testcases')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -30,31 +30,42 @@ def get_user_id():
     return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
-# ABSTRACT TEST CASE ENDPOINTS
+# TEST CASE ENDPOINTS WITH CONSISTENT NAMING
 # =====================================================
 
-@testcase_bp.route('/cases', methods=['GET', 'POST'])
-def test_cases():
+@testcase_bp.route('/getAllTestCases', methods=['GET'])
+def get_all_test_cases_route():
+    """Get all test cases for a team"""
     error = check_supabase()
     if error:
         return error
         
     team_id = get_team_id()
-    user_id = get_user_id()
     
     try:
-        if request.method == 'GET':
-            test_cases = get_all_test_cases(team_id)
-            return jsonify(test_cases)
-        elif request.method == 'POST':
-            test_case = request.json
-            save_test_case(test_case, team_id, user_id)
-            return jsonify({'status': 'success', 'test_id': test_case['test_id']})
+        test_cases = get_all_test_cases(team_id)
+        return jsonify(test_cases)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/cases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
-def test_case_by_id(test_id):
+@testcase_bp.route('/getTestCase/<test_id>', methods=['GET'])
+def get_test_case_route(test_id):
+    """Get a specific test case by ID"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        test_case = get_test_case(test_id, team_id)
+        return jsonify(test_case if test_case else {})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@testcase_bp.route('/createTestCase', methods=['POST'])
+def create_test_case_route():
+    """Create a new test case"""
     error = check_supabase()
     if error:
         return error
@@ -63,24 +74,49 @@ def test_case_by_id(test_id):
     user_id = get_user_id()
     
     try:
-        if request.method == 'GET':
-            test_case = get_test_case(test_id, team_id)
-            return jsonify(test_case if test_case else {})
-        elif request.method == 'PUT':
-            test_case = request.json
-            test_case['test_id'] = test_id
-            save_test_case(test_case, team_id, user_id)
+        test_case = request.json
+        save_test_case(test_case, team_id, user_id)
+        return jsonify({'status': 'success', 'test_id': test_case['test_id']})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@testcase_bp.route('/updateTestCase/<test_id>', methods=['PUT'])
+def update_test_case_route(test_id):
+    """Update an existing test case"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        test_case = request.json
+        test_case['test_id'] = test_id
+        save_test_case(test_case, team_id, user_id)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@testcase_bp.route('/deleteTestCase/<test_id>', methods=['DELETE'])
+def delete_test_case_route(test_id):
+    """Delete a test case"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        success = delete_test_case(test_id, team_id)
+        if success:
             return jsonify({'status': 'success'})
-        elif request.method == 'DELETE':
-            success = delete_test_case(test_id, team_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Test case not found'}), 404
+        else:
+            return jsonify({'error': 'Test case not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/execute', methods=['POST'])
+@testcase_bp.route('/executeTestCase', methods=['POST'])
 def execute_test_case():
     """Execute a test case using abstract controllers"""
     try:
@@ -105,4 +141,31 @@ def execute_test_case():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+# =====================================================
+# LEGACY ENDPOINTS (for backward compatibility)
+# =====================================================
+
+@testcase_bp.route('/cases', methods=['GET', 'POST'])
+def test_cases_legacy():
+    """Legacy endpoint - redirects to new endpoints"""
+    if request.method == 'GET':
+        return get_all_test_cases_route()
+    elif request.method == 'POST':
+        return create_test_case_route()
+
+@testcase_bp.route('/cases/<test_id>', methods=['GET', 'PUT', 'DELETE'])
+def test_case_by_id_legacy(test_id):
+    """Legacy endpoint - redirects to new endpoints"""
+    if request.method == 'GET':
+        return get_test_case_route(test_id)
+    elif request.method == 'PUT':
+        return update_test_case_route(test_id)
+    elif request.method == 'DELETE':
+        return delete_test_case_route(test_id)
+
+@testcase_bp.route('/execute', methods=['POST'])
+def execute_legacy():
+    """Legacy endpoint - redirects to new endpoint"""
+    return execute_test_case() 

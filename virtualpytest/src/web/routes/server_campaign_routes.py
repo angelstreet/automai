@@ -20,7 +20,7 @@ from utils.supabase_utils import (
 from .utils import check_supabase
 
 # Create blueprint with abstract server campaign prefix
-campaign_bp = Blueprint('campaign', __name__, url_prefix='/server')
+campaign_bp = Blueprint('campaign', __name__, url_prefix='/server/campaigns')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -29,31 +29,42 @@ def get_user_id():
     return request.headers.get('X-User-ID', default_user_id)
 
 # =====================================================
-# ABSTRACT CAMPAIGN ENDPOINTS
+# CAMPAIGN ENDPOINTS WITH CONSISTENT NAMING
 # =====================================================
 
-@campaign_bp.route('/campaigns', methods=['GET', 'POST'])
-def campaigns():
+@campaign_bp.route('/getAllCampaigns', methods=['GET'])
+def get_all_campaigns_route():
+    """Get all campaigns for a team"""
     error = check_supabase()
     if error:
         return error
         
     team_id = get_team_id()
-    user_id = get_user_id()
     
     try:
-        if request.method == 'GET':
-            campaigns = get_all_campaigns(team_id)
-            return jsonify(campaigns)
-        elif request.method == 'POST':
-            campaign = request.json
-            save_campaign(campaign, team_id, user_id)
-            return jsonify({'status': 'success', 'campaign_id': campaign['campaign_id']})
+        campaigns = get_all_campaigns(team_id)
+        return jsonify(campaigns)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@campaign_bp.route('/campaigns/<campaign_id>', methods=['GET', 'PUT', 'DELETE'])
-def campaign(campaign_id):
+@campaign_bp.route('/getCampaign/<campaign_id>', methods=['GET'])
+def get_campaign_route(campaign_id):
+    """Get a specific campaign by ID"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        campaign = get_campaign(campaign_id, team_id)
+        return jsonify(campaign if campaign else {})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@campaign_bp.route('/createCampaign', methods=['POST'])
+def create_campaign_route():
+    """Create a new campaign"""
     error = check_supabase()
     if error:
         return error
@@ -62,19 +73,66 @@ def campaign(campaign_id):
     user_id = get_user_id()
     
     try:
-        if request.method == 'GET':
-            campaign = get_campaign(campaign_id, team_id)
-            return jsonify(campaign if campaign else {})
-        elif request.method == 'PUT':
-            campaign = request.json
-            campaign['campaign_id'] = campaign_id
-            save_campaign(campaign, team_id, user_id)
-            return jsonify({'status': 'success'})
-        elif request.method == 'DELETE':
-            success = delete_campaign(campaign_id, team_id)
-            if success:
-                return jsonify({'status': 'success'})
-            else:
-                return jsonify({'error': 'Campaign not found'}), 404
+        campaign = request.json
+        save_campaign(campaign, team_id, user_id)
+        return jsonify({'status': 'success', 'campaign_id': campaign['campaign_id']})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+@campaign_bp.route('/updateCampaign/<campaign_id>', methods=['PUT'])
+def update_campaign_route(campaign_id):
+    """Update an existing campaign"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    user_id = get_user_id()
+    
+    try:
+        campaign = request.json
+        campaign['campaign_id'] = campaign_id
+        save_campaign(campaign, team_id, user_id)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@campaign_bp.route('/deleteCampaign/<campaign_id>', methods=['DELETE'])
+def delete_campaign_route(campaign_id):
+    """Delete a campaign"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        success = delete_campaign(campaign_id, team_id)
+        if success:
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'error': 'Campaign not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# =====================================================
+# LEGACY ENDPOINTS (for backward compatibility)
+# =====================================================
+
+@campaign_bp.route('/', methods=['GET', 'POST'])
+def campaigns_legacy():
+    """Legacy endpoint - redirects to new endpoints"""
+    if request.method == 'GET':
+        return get_all_campaigns_route()
+    elif request.method == 'POST':
+        return create_campaign_route()
+
+@campaign_bp.route('/<campaign_id>', methods=['GET', 'PUT', 'DELETE'])
+def campaign_legacy(campaign_id):
+    """Legacy endpoint - redirects to new endpoints"""
+    if request.method == 'GET':
+        return get_campaign_route(campaign_id)
+    elif request.method == 'PUT':
+        return update_campaign_route(campaign_id)
+    elif request.method == 'DELETE':
+        return delete_campaign_route(campaign_id) 

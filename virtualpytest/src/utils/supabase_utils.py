@@ -1,9 +1,5 @@
 import os
 from supabase import create_client, Client
-from typing import Dict, List, Optional
-from datetime import datetime
-from uuid import uuid4
-import json
 
 # Initialize Supabase client using the simple pattern
 url: str = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
@@ -14,394 +10,78 @@ def get_supabase_client() -> Client:
     """Get the Supabase client instance."""
     return supabase
 
-def save_test_case(test_case: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save test case to Supabase test_cases table."""
-    test_case['test_id'] = test_case.get('test_id', str(uuid4()))
-    
-    try:
-        supabase.table('test_cases').insert({
-            'test_id': test_case['test_id'],
-            'name': test_case['name'],
-            'test_type': test_case['test_type'],
-            'start_node': test_case['start_node'],
-            'steps': json.dumps(test_case.get('steps', [])),
-            'team_id': team_id,
-            'creator_id': creator_id,
-            # New Phase 2 fields
-            'device_id': test_case.get('device_id'),
-            'environment_profile_id': test_case.get('environment_profile_id'),
-            'verification_conditions': json.dumps(test_case.get('verification_conditions', [])),
-            'expected_results': json.dumps(test_case.get('expected_results', {})),
-            'execution_config': json.dumps(test_case.get('execution_config', {})),
-            'tags': test_case.get('tags', []),
-            'priority': test_case.get('priority', 1),
-            'estimated_duration': test_case.get('estimated_duration', 60)
-        }).execute()
-    except Exception:
-        # Update existing test case
-        supabase.table('test_cases').update({
-            'name': test_case['name'],
-            'test_type': test_case['test_type'],
-            'start_node': test_case['start_node'],
-            'steps': json.dumps(test_case.get('steps', [])),
-            'updated_at': datetime.now().isoformat(),
-            # New Phase 2 fields
-            'device_id': test_case.get('device_id'),
-            'environment_profile_id': test_case.get('environment_profile_id'),
-            'verification_conditions': json.dumps(test_case.get('verification_conditions', [])),
-            'expected_results': json.dumps(test_case.get('expected_results', {})),
-            'execution_config': json.dumps(test_case.get('execution_config', {})),
-            'tags': test_case.get('tags', []),
-            'priority': test_case.get('priority', 1),
-            'estimated_duration': test_case.get('estimated_duration', 60)
-        }).eq('test_id', test_case['test_id']).eq('team_id', team_id).execute()
+# Import all database functions from the organized lib/supabase structure
+# This maintains backward compatibility while providing better organization
 
-def save_tree(tree: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save navigation tree to Supabase navigation_trees table."""
-    tree['tree_id'] = tree.get('tree_id', str(uuid4()))
-    
-    try:
-        supabase.table('navigation_trees').insert({
-            'tree_id': tree['tree_id'],
-            'name': tree['name'],
-            'description': tree.get('description', ''),
-            'nodes': json.dumps(tree.get('nodes', [])),
-            'team_id': team_id,
-            'creator_id': creator_id
-        }).execute()
-    except Exception:
-        # Update existing tree
-        supabase.table('navigation_trees').update({
-            'name': tree['name'],
-            'description': tree.get('description', ''),
-            'nodes': json.dumps(tree.get('nodes', [])),
-            'updated_at': datetime.now().isoformat()
-        }).eq('tree_id', tree['tree_id']).eq('team_id', team_id).execute()
+# Campaign operations
+from lib.supabase.campaign_db import (
+    save_campaign,
+    get_campaign,
+    get_all_campaigns,
+    delete_campaign
+)
 
-def save_campaign(campaign: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save campaign to Supabase campaigns table."""
-    campaign['campaign_id'] = campaign.get('campaign_id', str(uuid4()))
-    
-    try:
-        supabase.table('campaigns').insert({
-            'campaign_id': campaign['campaign_id'],
-            'name': campaign['name'],
-            'description': campaign.get('description', ''),
-            'test_case_ids': campaign.get('test_case_ids', []),
-            'navigation_tree_id': campaign.get('tree_id'),
-            'prioritization_enabled': campaign.get('prioritization_enabled', False),
-            'team_id': team_id,
-            'creator_id': creator_id
-        }).execute()
-    except Exception:
-        # Update existing campaign
-        supabase.table('campaigns').update({
-            'name': campaign['name'],
-            'description': campaign.get('description', ''),
-            'test_case_ids': campaign.get('test_case_ids', []),
-            'navigation_tree_id': campaign.get('tree_id'),
-            'prioritization_enabled': campaign.get('prioritization_enabled', False),
-            'updated_at': datetime.now().isoformat()
-        }).eq('campaign_id', campaign['campaign_id']).eq('team_id', team_id).execute()
+# Test case operations  
+from lib.supabase.testcase_db import (
+    save_test_case,
+    get_test_case,
+    get_all_test_cases,
+    delete_test_case,
+    save_result,
+    get_failure_rates
+)
 
-def save_result(test_id: str, name: str, test_type: str, node: str, outcome: str, 
-               duration: float, steps: List[Dict], team_id: str) -> None:
-    """Save test result to Supabase test_executions table."""
-    supabase.table('test_executions').insert({
-        'test_id': test_id,
-        'name': name,
-        'test_type': test_type,
-        'node': node,
-        'outcome': outcome,
-        'duration': duration,
-        'steps': json.dumps(steps),
-        'team_id': team_id
-    }).execute()
+# Navigation tree operations
+from lib.supabase.navigation_trees_db import (
+    get_all_trees,
+    get_tree,
+    save_tree,
+    update_tree,
+    delete_tree,
+    check_navigation_tree_name_exists,
+    get_root_tree_for_interface
+)
 
-def get_test_case(test_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve test case by test_id from Supabase."""
-    result = supabase.table('test_cases').select(
-        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at',
-        'device_id', 'environment_profile_id', 'verification_conditions', 'expected_results',
-        'execution_config', 'tags', 'priority', 'estimated_duration'
-    ).eq('test_id', test_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        test_case = dict(result.data[0])
-        test_case['steps'] = json.loads(test_case['steps']) if test_case['steps'] else []
-        test_case['verification_conditions'] = json.loads(test_case['verification_conditions']) if test_case['verification_conditions'] else []
-        test_case['expected_results'] = json.loads(test_case['expected_results']) if test_case['expected_results'] else {}
-        test_case['execution_config'] = json.loads(test_case['execution_config']) if test_case['execution_config'] else {}
-        return test_case
-    return None
+# User interface operations
+from lib.supabase.userinterface_db import (
+    get_all_userinterfaces,
+    get_userinterface,
+    create_userinterface,
+    update_userinterface,
+    delete_userinterface,
+    check_userinterface_name_exists
+)
 
-def get_tree(tree_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve navigation tree by tree_id from Supabase."""
-    result = supabase.table('navigation_trees').select(
-        'tree_id', 'name', 'description', 'nodes', 'created_at', 'updated_at'
-    ).eq('tree_id', tree_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        tree = dict(result.data[0])
-        tree['nodes'] = json.loads(tree['nodes']) if tree['nodes'] else []
-        return tree
-    return None
+# Device operations
+from lib.supabase.devices_db import (
+    save_device,
+    get_device,
+    get_all_devices,
+    delete_device
+)
 
-def get_campaign(campaign_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve campaign by campaign_id from Supabase."""
-    result = supabase.table('campaigns').select(
-        'campaign_id', 'name', 'description', 'test_case_ids', 'navigation_tree_id', 
-        'prioritization_enabled', 'created_at', 'updated_at'
-    ).eq('campaign_id', campaign_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        campaign = dict(result.data[0])
-        campaign['tree_id'] = campaign.pop('navigation_tree_id', None)
-        return campaign
-    return None
+# Controller operations
+from lib.supabase.controllers_db import (
+    save_controller,
+    get_controller,
+    get_all_controllers,
+    delete_controller
+)
 
-def get_all_test_cases(team_id: str) -> List[Dict]:
-    """Retrieve all test cases for a team from Supabase."""
-    result = supabase.table('test_cases').select(
-        'test_id', 'name', 'test_type', 'start_node', 'steps', 'created_at', 'updated_at',
-        'device_id', 'environment_profile_id', 'verification_conditions', 'expected_results',
-        'execution_config', 'tags', 'priority', 'estimated_duration'
-    ).eq('team_id', team_id).execute()
-    
-    test_cases = []
-    for test_case in result.data:
-        test_case = dict(test_case)
-        test_case['steps'] = json.loads(test_case['steps']) if test_case['steps'] else []
-        test_case['verification_conditions'] = json.loads(test_case['verification_conditions']) if test_case['verification_conditions'] else []
-        test_case['expected_results'] = json.loads(test_case['expected_results']) if test_case['expected_results'] else {}
-        test_case['execution_config'] = json.loads(test_case['execution_config']) if test_case['execution_config'] else {}
-        test_cases.append(test_case)
-    return test_cases
+# Environment profile operations
+from lib.supabase.environment_profiles_db import (
+    save_environment_profile,
+    get_environment_profile,
+    get_all_environment_profiles,
+    delete_environment_profile
+)
 
-def get_all_trees(team_id: str) -> List[Dict]:
-    """Retrieve all navigation trees for a team from Supabase."""
-    result = supabase.table('navigation_trees').select(
-        'tree_id', 'name', 'description', 'nodes', 'created_at', 'updated_at'
-    ).eq('team_id', team_id).execute()
-    
-    trees = []
-    for tree in result.data:
-        tree = dict(tree)
-        tree['nodes'] = json.loads(tree['nodes']) if tree['nodes'] else []
-        trees.append(tree)
-    return trees
-
-def get_all_campaigns(team_id: str) -> List[Dict]:
-    """Retrieve all campaigns for a team from Supabase."""
-    result = supabase.table('campaigns').select(
-        'campaign_id', 'name', 'description', 'test_case_ids', 'navigation_tree_id', 
-        'prioritization_enabled', 'created_at', 'updated_at'
-    ).eq('team_id', team_id).execute()
-    
-    campaigns = []
-    for campaign in result.data:
-        campaign = dict(campaign)
-        campaign['tree_id'] = campaign.pop('navigation_tree_id', None)
-        campaigns.append(campaign)
-    return campaigns
-
-def delete_test_case(test_id: str, team_id: str) -> bool:
-    """Delete test case from Supabase."""
-    result = supabase.table('test_cases').delete().eq('test_id', test_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0
-
-def delete_tree(tree_id: str, team_id: str) -> bool:
-    """Delete navigation tree from Supabase."""
-    result = supabase.table('navigation_trees').delete().eq('tree_id', tree_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0
-
-def delete_campaign(campaign_id: str, team_id: str) -> bool:
-    """Delete campaign from Supabase."""
-    result = supabase.table('campaigns').delete().eq('campaign_id', campaign_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0
-
-def get_failure_rates(team_id: str) -> Dict:
-    """Get failure rates and statistics from test results."""
-    try:
-        # Get total test results
-        total_result = supabase.table('test_results').select('id', count='exact').eq('team_id', team_id).execute()
-        total_tests = total_result.count or 0
-        
-        # Get failed test results
-        failed_result = supabase.table('test_results').select('id', count='exact').eq('team_id', team_id).eq('status', 'failed').execute()
-        failed_tests = failed_result.count or 0
-        
-        # Get passed test results
-        passed_result = supabase.table('test_results').select('id', count='exact').eq('team_id', team_id).eq('status', 'passed').execute()
-        passed_tests = passed_result.count or 0
-        
-        failure_rate = (failed_tests / total_tests * 100) if total_tests > 0 else 0
-        
-        return {
-            'total_tests': total_tests,
-            'passed_tests': passed_tests,
-            'failed_tests': failed_tests,
-            'failure_rate': round(failure_rate, 2)
-        }
-    except Exception as e:
-        print(f"Error getting failure rates: {e}")
-        return {
-            'total_tests': 0,
-            'passed_tests': 0,
-            'failed_tests': 0,
-            'failure_rate': 0
-        }
-
-# =====================================================
-# DEVICE MANAGEMENT FUNCTIONS
-# =====================================================
-
-def save_device(device: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save device to Supabase devices table."""
-    device_id = device.get('id', str(uuid4()))
-    
-    try:
-        supabase.table('devices').insert({
-            'id': device_id,
-            'name': device['name'],
-            'type': device['type'],
-            'model': device.get('model', ''),
-            'version': device.get('version', ''),
-            'environment': device.get('environment', 'dev'),
-            'connection_config': device.get('connection_config', {}),
-            'status': device.get('status', 'offline'),
-            'team_id': team_id
-        }).execute()
-    except Exception:
-        # Update existing device
-        supabase.table('devices').update({
-            'name': device['name'],
-            'type': device['type'],
-            'model': device.get('model', ''),
-            'version': device.get('version', ''),
-            'environment': device.get('environment', 'dev'),
-            'connection_config': device.get('connection_config', {}),
-            'status': device.get('status', 'offline'),
-            'updated_at': datetime.now().isoformat()
-        }).eq('id', device_id).eq('team_id', team_id).execute()
-
-def save_controller(controller: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save controller to Supabase controllers table."""
-    controller_id = controller.get('id', str(uuid4()))
-    
-    try:
-        supabase.table('controllers').insert({
-            'id': controller_id,
-            'name': controller['name'],
-            'type': controller['type'],
-            'config': controller.get('config', {}),
-            'device_id': controller.get('device_id'),
-            'team_id': team_id
-        }).execute()
-    except Exception:
-        # Update existing controller
-        supabase.table('controllers').update({
-            'name': controller['name'],
-            'type': controller['type'],
-            'config': controller.get('config', {}),
-            'device_id': controller.get('device_id'),
-            'updated_at': datetime.now().isoformat()
-        }).eq('id', controller_id).eq('team_id', team_id).execute()
-
-def save_environment_profile(profile: Dict, team_id: str, creator_id: str = None) -> None:
-    """Save environment profile to Supabase environment_profiles table."""
-    profile_id = profile.get('id', str(uuid4()))
-    
-    try:
-        supabase.table('environment_profiles').insert({
-            'id': profile_id,
-            'name': profile['name'],
-            'device_id': profile['device_id'],
-            'remote_controller_id': profile.get('remote_controller_id'),
-            'av_controller_id': profile.get('av_controller_id'),
-            'verification_controller_id': profile.get('verification_controller_id'),
-            'team_id': team_id
-        }).execute()
-    except Exception:
-        # Update existing profile
-        supabase.table('environment_profiles').update({
-            'name': profile['name'],
-            'device_id': profile['device_id'],
-            'remote_controller_id': profile.get('remote_controller_id'),
-            'av_controller_id': profile.get('av_controller_id'),
-            'verification_controller_id': profile.get('verification_controller_id'),
-            'updated_at': datetime.now().isoformat()
-        }).eq('id', profile_id).eq('team_id', team_id).execute()
-
-def get_device(device_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve device by device_id from Supabase."""
-    result = supabase.table('devices').select(
-        'id', 'name', 'type', 'model', 'version', 'environment', 
-        'connection_config', 'status', 'created_at', 'updated_at'
-    ).eq('id', device_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        return dict(result.data[0])
-    return None
-
-def get_controller(controller_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve controller by controller_id from Supabase."""
-    result = supabase.table('controllers').select(
-        'id', 'name', 'type', 'config', 'device_id', 'created_at', 'updated_at'
-    ).eq('id', controller_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        return dict(result.data[0])
-    return None
-
-def get_environment_profile(profile_id: str, team_id: str) -> Optional[Dict]:
-    """Retrieve environment profile by profile_id from Supabase."""
-    result = supabase.table('environment_profiles').select(
-        'id', 'name', 'device_id', 'remote_controller_id', 
-        'av_controller_id', 'verification_controller_id', 'created_at', 'updated_at'
-    ).eq('id', profile_id).eq('team_id', team_id).execute()
-    
-    if result.data:
-        return dict(result.data[0])
-    return None
-
-def get_all_devices(team_id: str) -> List[Dict]:
-    """Retrieve all devices for a team from Supabase."""
-    result = supabase.table('devices').select(
-        'id', 'name', 'type', 'model', 'version', 'environment', 
-        'connection_config', 'status', 'created_at', 'updated_at'
-    ).eq('team_id', team_id).order('created_at', desc=True).execute()
-    
-    return [dict(device) for device in result.data]
-
-def get_all_controllers(team_id: str) -> List[Dict]:
-    """Retrieve all controllers for a team from Supabase."""
-    result = supabase.table('controllers').select(
-        'id', 'name', 'type', 'config', 'device_id', 'created_at', 'updated_at'
-    ).eq('team_id', team_id).order('created_at', desc=True).execute()
-    
-    return [dict(controller) for controller in result.data]
-
-def get_all_environment_profiles(team_id: str) -> List[Dict]:
-    """Retrieve all environment profiles for a team from Supabase."""
-    result = supabase.table('environment_profiles').select(
-        'id', 'name', 'device_id', 'remote_controller_id', 
-        'av_controller_id', 'verification_controller_id', 'created_at', 'updated_at'
-    ).eq('team_id', team_id).order('created_at', desc=True).execute()
-    
-    return [dict(profile) for profile in result.data]
-
-def delete_device(device_id: str, team_id: str) -> bool:
-    """Delete device from Supabase."""
-    result = supabase.table('devices').delete().eq('id', device_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0
-
-def delete_controller(controller_id: str, team_id: str) -> bool:
-    """Delete controller from Supabase."""
-    result = supabase.table('controllers').delete().eq('id', controller_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0
-
-def delete_environment_profile(profile_id: str, team_id: str) -> bool:
-    """Delete environment profile from Supabase."""
-    result = supabase.table('environment_profiles').delete().eq('id', profile_id).eq('team_id', team_id).execute()
-    return len(result.data) > 0 
+# Device model operations
+from lib.supabase.device_models_db import (
+    get_all_device_models,
+    get_device_model,
+    create_device_model,
+    update_device_model,
+    delete_device_model,
+    check_device_model_name_exists
+) 

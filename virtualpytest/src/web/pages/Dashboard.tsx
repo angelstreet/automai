@@ -113,9 +113,9 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
-        fetch(buildServerUrl('/server/campaigns')),
-        fetch(buildServerUrl('/server/test/cases')),
-        fetch(buildServerUrl('/server/navigation/trees')), // Fixed: added the missing trees API call
+        fetch(buildServerUrl('/server/campaigns/getAllCampaigns')),
+        fetch(buildServerUrl('/server/testcases/getAllTestCases')),
+        fetch(buildServerUrl('/server/navigation/getAllTrees')), // Updated to use consistent naming
       ]);
 
       let testCases: TestCase[] = [];
@@ -789,13 +789,15 @@ const Dashboard: React.FC = () => {
               </ToggleButton>
             </ToggleButtonGroup>
             <Tooltip title="Refresh Devices">
-              <IconButton 
-                onClick={memoizedFetchHosts} 
-                disabled={hostsLoading}
-                size="small"
-              >
-                <RefreshIcon />
-              </IconButton>
+              <span>
+                <IconButton 
+                  onClick={memoizedFetchHosts} 
+                  disabled={hostsLoading}
+                  size="small"
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           </Box>
         </Box>
