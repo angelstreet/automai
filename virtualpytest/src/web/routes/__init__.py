@@ -45,9 +45,6 @@ def register_routes(app: Flask, mode='server'):
         from .server_navigation_config_routes import navigation_config_bp
         from .server_power_routes import power_bp
         
-        # Import dashboard statistics (server-only)
-        from .common_stats_routes import stats_bp
-        
         # Import database management routes (moved from common)
         from .common_device_routes import device_bp
         from .common_userinterface_routes import userinterface_bp
@@ -94,9 +91,6 @@ def register_routes(app: Flask, mode='server'):
         app.register_blueprint(testcase_bp)
         app.register_blueprint(screen_definition_blueprint)
         app.register_blueprint(power_bp)
-        
-        # Dashboard statistics (server-only)
-        app.register_blueprint(stats_bp)
         
         # Database management (server-only)
         app.register_blueprint(device_bp)
