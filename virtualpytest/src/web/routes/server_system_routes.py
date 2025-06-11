@@ -21,13 +21,14 @@ from src.controllers.controller_config_factory import (
     get_device_capabilities_from_model,
     get_controller_types_from_model
 )
-print("   ✅ [@system_routes] Successfully imported controller_config_factory")
 
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
     build_host_connection_info,
     build_host_url
 )
+
+print("✅ [@system_routes] Successfully imported controller_config_factory")
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
