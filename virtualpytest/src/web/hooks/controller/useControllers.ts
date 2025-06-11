@@ -22,7 +22,26 @@ export function useControllers() {
       const data = await response.json();
       console.log('[@hook:useControllers] ✅ Successfully fetched controller types:', data);
       
-      setControllerTypes(data);
+      // Extract the controller_types from the API response
+      let controllerTypesData = data.controller_types || data;
+      
+      // Validate that we have the expected structure
+      if (!controllerTypesData || typeof controllerTypesData !== 'object') {
+        throw new Error('Invalid API response: missing controller types data');
+      }
+      
+      // Ensure all expected controller type arrays exist
+      const expectedTypes = ['remote', 'av', 'network', 'verification', 'power'];
+      for (const type of expectedTypes) {
+        if (!Array.isArray(controllerTypesData[type])) {
+          console.warn(`[@hook:useControllers] ⚠️ Missing or invalid ${type} controllers, initializing as empty array`);
+          controllerTypesData[type] = [];
+        }
+      }
+      
+      console.log('[@hook:useControllers] 📋 Validated controller types data:', controllerTypesData);
+      
+      setControllerTypes(controllerTypesData);
       setError(null);
     } catch (err: any) {
       console.error('[@hook:useControllers] ❌ Error fetching controller types:', err);
