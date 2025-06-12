@@ -346,18 +346,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 title={
                   !isLocked
                     ? "Cannot save - tree is in read-only mode"
-                    : isLocked && lockInfo?.locked_by !== sessionId 
-                      ? "Cannot save - tree is locked by another user"
-                      : hasUnsavedChanges 
-                        ? "Save Changes to Config" 
-                        : "Save to Config"
+                    : hasUnsavedChanges 
+                      ? "Save Changes to Config" 
+                      : "Save to Config"
                 }
-                disabled={
-                  isLoading || 
-                  !!error || 
-                  !isLocked ||
-                  (isLocked && lockInfo?.locked_by !== sessionId)
-                }
+                disabled={isLoading || !!error || !isLocked}
                 color={hasUnsavedChanges ? "primary" : "default"}
               >
                 {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
