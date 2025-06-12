@@ -101,7 +101,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
 
   // Check if selected device is locked
   const selectedDeviceHost = useMemo(() => {
-    return filteredDevices.find(device => device.host_name === selectedDevice);
+    return filteredDevices.find(device => device.device_name === selectedDevice);
   }, [filteredDevices, selectedDevice]);
 
   const isSelectedDeviceLocked = useMemo(() => {
@@ -265,7 +265,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                     return (
                       <MenuItem 
                         key={device.host_name} 
-                        value={device.host_name}
+                        value={device.device_name}
                         disabled={deviceIsLocked}
                         sx={{
                           display: 'flex',

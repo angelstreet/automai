@@ -126,12 +126,12 @@ const NavigationEditorContent: React.FC = () => {
   } = useRegistration();
   
   // Create a wrapper for selectHost to match the expected interface
-  const handleHostSelect = useCallback((hostNameOrNull: string | null) => {
-    if (hostNameOrNull) {
-      // Find the host by name and select it
-      const host = availableHosts.find(h => h.name === hostNameOrNull);
+  const handleHostSelect = useCallback((deviceNameOrNull: string | null) => {
+    if (deviceNameOrNull) {
+      // Find the host by device name and select it by host_name
+      const host = availableHosts.find(h => h.device_name === deviceNameOrNull);
       if (host) {
-        selectHost(host.id);
+        selectHost(host.host_name);
       }
     } else {
       // Clear selection using the modern clearSelection function
@@ -374,7 +374,7 @@ const NavigationEditorContent: React.FC = () => {
         lockInfo={lockInfo}
         sessionId={sessionId}
         userInterface={userInterface}
-        selectedDevice={selectedHost?.name || null}
+        selectedDevice={selectedHost?.device_name || null}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
         devicesLoading={false}
@@ -556,7 +556,7 @@ const NavigationEditorContent: React.FC = () => {
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                     onReset={resetNode}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.name || null}
+                    selectedDevice={selectedHost?.device_name || null}
                     onTakeScreenshot={() => {}} // Handled by device control component
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
@@ -576,7 +576,7 @@ const NavigationEditorContent: React.FC = () => {
                     setEdgeForm={setEdgeForm}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.name || null}
+                    selectedDevice={selectedHost?.device_name || null}
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                   />
@@ -600,7 +600,7 @@ const NavigationEditorContent: React.FC = () => {
         onResetNode={resetNode}
         verificationControllerTypes={['text', 'image']}
         isVerificationActive={isVerificationActive}
-        selectedDevice={selectedHost?.name || null}
+        selectedDevice={selectedHost?.device_name || null}
         selectedHostDevice={selectedHost}
         isControlActive={isControlActive}
         model={userInterface?.models?.[0] || 'android_mobile'}
@@ -616,7 +616,7 @@ const NavigationEditorContent: React.FC = () => {
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
         isControlActive={isControlActive}
-        selectedDevice={selectedHost?.name || null}
+        selectedDevice={selectedHost?.device_name || null}
         selectedHostDevice={selectedHost}
       />
 
