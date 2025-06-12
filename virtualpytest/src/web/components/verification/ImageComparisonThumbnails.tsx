@@ -21,8 +21,8 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
   imageFilter,
   onImageClick
 }) => {
-  // Use registration context to get selected host for nginx URL
-  const { selectedHost } = useRegistration();
+  // Use registration context to get buildNginxUrl and selected host
+  const { selectedHost, buildNginxUrl } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
@@ -32,10 +32,10 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
       return url;
     }
     
-    // ✅ Use direct nginx URL from host data instead of buildServerUrl
-    if (selectedHost?.connection?.nginx_url) {
+    // Use buildNginxUrl from registration context
+    if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return `${selectedHost.connection.nginx_url}${cleanUrl}`;
+      return buildNginxUrl(selectedHost.host_name, cleanUrl);
     }
     
     // Fallback if no host selected

@@ -1,31 +1,5 @@
 import os
 import sys
-
-# CRITICAL: Set up import paths FIRST, before any other imports
-print(f"[@hostUtils:__init__] Setting up import paths for hostUtils...")
-current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/utils
-web_dir = os.path.dirname(current_dir)                    # /src/web
-src_dir = os.path.dirname(web_dir)                        # /src
-parent_dir = os.path.dirname(src_dir)                     # /
-
-# Add paths to sys.path for the entire application
-paths_to_add = [
-    os.path.join(web_dir, 'utils'),               # /src/web/utils
-    os.path.join(web_dir, 'cache'),               # /src/web/cache
-    os.path.join(web_dir, 'services'),            # /src/web/services
-    os.path.join(src_dir, 'utils'),               # /src/utils  
-    src_dir,                                      # /src
-    os.path.join(parent_dir, 'controllers'),      # /controllers
-]
-
-for path in paths_to_add:
-    if path not in sys.path:
-        sys.path.insert(0, path)
-        print(f"[@hostUtils:__init__] Added to sys.path: {path}")
-
-print(f"[@hostUtils:__init__] Import paths setup completed")
-
-# Now proceed with other imports that need the paths
 import time
 import threading
 import signal
@@ -52,8 +26,8 @@ client_registration_state = {
 ping_thread = None
 ping_stop_event = threading.Event()
 
-# Global storage for host device object (used when Flask app context is not available)
-global_host_device = None
+# Global storage for host object (used when Flask app context is not available)
+global_host_object = None
 
 # Global storage for local controller objects (host manages its own controllers)
 local_controller_objects = {}
@@ -63,7 +37,7 @@ from src.utils.app_utils import buildServerUrl
 
 def register_host_with_server():
     """Register this host with the server"""
-    global client_registration_state, global_host_device
+    global client_registration_state, global_host_object
     
     print("=" * 50)
     print("🔗 [HOST] Starting registration with server...")
@@ -142,8 +116,8 @@ def register_host_with_server():
                 client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
                 client_registration_state['urls'] = urls
                 
-                # Store global host device object
-                global_host_device = response_data.get('host_data', {})
+                # Store global host object
+                global_host_object = response_data.get('host_data', {})
                 
                 print(f"\n✅ [HOST] Registration successful!")
                 print(f"   Host Name: {host_name}")
@@ -387,15 +361,56 @@ def setup_host_signal_handlers():
     # Register exit handler for normal exit
     atexit.register(cleanup_on_exit) 
 
-def create_local_controllers_from_model(device_model, device_name, device_ip, device_port):
+def query_device_model_configuration(device_model, team_id):
     """
-    Create controller objects locally based on device model - simplified without server configs.
+    Query the database to get controller configuration for the device model.
+    Uses dedicated database utilities instead of direct database queries.
+    
+    Args:
+        device_model: Device model string (e.g., 'android_mobile')
+        team_id: Team ID for database query
+        
+    Returns:
+        dict: Controller configuration from database or None if not found
+    """
+    try:
+        from src.lib.supabase.device_models_db import get_all_device_models
+        
+        print(f"[@utils:host_utils:query_device_model_configuration] Querying database for model: {device_model}")
+        
+        # Use existing database utilities to get device models
+        device_models = get_all_device_models(team_id)
+        
+        # Find the device model by name
+        for model in device_models:
+            if model['name'] == device_model:
+                controllers_config = model.get('controllers', {})
+                
+                print(f"[@utils:host_utils:query_device_model_configuration] Found configuration for {device_model}:")
+                print(f"   Controllers: {controllers_config}")
+                print(f"   Types: {model.get('types', [])}")
+                
+                return controllers_config
+        
+        print(f"[@utils:host_utils:query_device_model_configuration] No configuration found for model: {device_model}")
+        return None
+            
+    except Exception as e:
+        print(f"[@utils:host_utils:query_device_model_configuration] ERROR querying database: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def create_local_controllers_from_model(device_model, device_name, device_ip, device_port, team_id):
+    """
+    Create controller objects locally based on device model configuration from database.
     
     Args:
         device_model: Device model (e.g., 'android_mobile', 'android_tv')
         device_name: Name of the device
         device_ip: Device IP address
         device_port: Device port
+        team_id: Team ID for database query
         
     Returns:
         dict: Dictionary of created controller objects
@@ -407,25 +422,46 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
     try:
         from src.controllers import ControllerFactory
         
-        # STEP 1: Create AV controller (all devices get HDMI stream)
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating AV controller: hdmi_stream")
-        av_controller = ControllerFactory.create_av_controller(
-            capture_type='hdmi_stream',
-            device_name=device_name,
-            video_device='/dev/video0',
-            resolution='1920x1080',
-            fps=30,
-            stream_path='/stream/video',
-            service_name='stream'
-        )
-        controller_objects['av'] = av_controller
-        print(f"[@utils:host_utils:create_local_controllers_from_model] AV controller created: {type(av_controller).__name__}")
+        # STEP 1: Query database for controller configuration using dedicated DB utilities
+        controllers_config = query_device_model_configuration(device_model, team_id)
         
-        # STEP 2: Create remote controller based on device model
-        if device_model in ['android_mobile', 'android_tv']:
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating remote controller: {device_model}")
+        if not controllers_config:
+            print(f"[@utils:host_utils:create_local_controllers_from_model] No database configuration found, using defaults")
+            # Fallback to basic configuration
+            controllers_config = {
+                "av": "hdmi_stream",
+                "remote": device_model if device_model in ['android_mobile', 'android_tv'] else "",
+                "verification": "ocr",
+                "power": "usb"
+            }
+        
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Using controller configuration: {controllers_config}")
+        
+        # STEP 2: Create controllers based on database configuration
+        av_controller = None
+        
+        # Create AV controller if configured
+        if controllers_config.get('av'):
+            av_type = controllers_config['av']
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating AV controller: {av_type}")
+            av_controller = ControllerFactory.create_av_controller(
+                capture_type=av_type,
+                device_name=device_name,
+                video_device='/dev/video0',
+                resolution='1920x1080',
+                fps=30,
+                stream_path='/stream/video',
+                service_name='stream'
+            )
+            controller_objects['av'] = av_controller
+            print(f"[@utils:host_utils:create_local_controllers_from_model] AV controller created: {type(av_controller).__name__}")
+        
+        # Create remote controller if configured
+        if controllers_config.get('remote') and controllers_config['remote'].strip():
+            remote_type = controllers_config['remote']
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating remote controller: {remote_type}")
             remote_controller = ControllerFactory.create_remote_controller(
-                device_type=device_model,
+                device_type=remote_type,
                 device_name=device_name,
                 device_ip=device_ip,
                 device_port=device_port,
@@ -434,26 +470,37 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
             controller_objects['remote'] = remote_controller
             print(f"[@utils:host_utils:create_local_controllers_from_model] Remote controller created: {type(remote_controller).__name__}")
         
-        # STEP 3: Create verification controller (OCR for all devices)
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: ocr")
-        verification_controller = ControllerFactory.create_verification_controller(
-            verification_type='ocr',
-            device_name=device_name,
-            av_controller=av_controller
-        )
-        controller_objects['verification'] = verification_controller
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller created: {type(verification_controller).__name__}")
+        # Create verification controller if configured
+        if controllers_config.get('verification') and controllers_config['verification'].strip():
+            verification_type = controllers_config['verification']
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: {verification_type}")
+            verification_controller = ControllerFactory.create_verification_controller(
+                verification_type=verification_type,
+                device_name=device_name,
+                av_controller=av_controller
+            )
+            controller_objects['verification'] = verification_controller
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller created: {type(verification_controller).__name__}")
         
-        # STEP 4: Create power controller (USB for all devices)
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating power controller: usb")
-        power_controller = ControllerFactory.create_power_controller(
-            power_type='usb',
-            device_name=device_name,
-            hub_location='1-1',
-            port_number='1'
-        )
-        controller_objects['power'] = power_controller
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Power controller created: {type(power_controller).__name__}")
+        # Create power controller if configured
+        if controllers_config.get('power') and controllers_config['power'].strip():
+            power_type = controllers_config['power']
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating power controller: {power_type}")
+            power_controller = ControllerFactory.create_power_controller(
+                power_type=power_type,
+                device_name=device_name,
+                hub_location='1-1',
+                port_number='1'
+            )
+            controller_objects['power'] = power_controller
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Power controller created: {type(power_controller).__name__}")
+        
+        # Create network controller if configured
+        if controllers_config.get('network') and controllers_config['network'].strip():
+            network_type = controllers_config['network']
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating network controller: {network_type}")
+            # Note: Network controller creation would need to be implemented in ControllerFactory
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Network controller type {network_type} - implementation needed")
         
         print(f"[@utils:host_utils:create_local_controllers_from_model] Successfully created {len(controller_objects)} controllers: {list(controller_objects.keys())}")
         

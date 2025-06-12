@@ -2,7 +2,7 @@
 Shared Device/Host Types for Python Backend
 
 These types mirror the TypeScript types in:
-- src/web/types/pages/Device_Types.ts (Runtime Device Types section)
+- src/web/types/common/Host_Types.ts (Host Types section)
 - src/web/types/pages/Dashboard_Types.ts (SystemStats for dashboard display)
 
 This ensures type consistency between frontend and backend.

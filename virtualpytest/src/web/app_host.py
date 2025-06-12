@@ -90,31 +90,31 @@ def register_host_routes(app):
         print(f"[@host:main:register_host_routes] ❌ Failed to register routes: {e}")
         return False
 
-def initialize_host_device(app):
-    """Initialize host device after startup"""
+def initialize_host_object(app):
+    """Initialize host object after startup"""
     def delayed_init():
         time.sleep(5)  # Give Flask app time to start
         
         try:
-            print(f"[@host:main:initialize_host_device] Initializing host device object...")
+            print(f"[@host:main:initialize_host_object] Initializing host object...")
             
             # Import host_utils to access global storage
             import src.utils.host_utils as host_utils
             
-            if hasattr(host_utils, 'global_host_device') and host_utils.global_host_device:
+            if hasattr(host_utils, 'global_host_object') and host_utils.global_host_object:
                 with app.app_context():
-                    app.my_host_device = host_utils.global_host_device
-                    print(f"[@host:main:initialize_host_device] Host device initialization completed")
-                    print(f"[@host:main:initialize_host_device] Host: {host_utils.global_host_device.get('host_name')}")
-                    print(f"[@host:main:initialize_host_device] Device Name: {host_utils.global_host_device.get('name')}")
-                    print(f"[@host:main:initialize_host_device] Device Model: {host_utils.global_host_device.get('model')}")
-                    print(f"[@host:main:initialize_host_device] Device IP: {host_utils.global_host_device.get('device_ip')}")
-                    print(f"[@host:main:initialize_host_device] Device Port: {host_utils.global_host_device.get('device_port')}")
+                    app.my_host_object = host_utils.global_host_object
+                    print(f"[@host:main:initialize_host_object] Host object initialization completed")
+                    print(f"[@host:main:initialize_host_object] Host: {host_utils.global_host_object.get('host_name')}")
+                    print(f"[@host:main:initialize_host_object] Device Name: {host_utils.global_host_object.get('name')}")
+                    print(f"[@host:main:initialize_host_object] Device Model: {host_utils.global_host_object.get('model')}")
+                    print(f"[@host:main:initialize_host_object] Device IP: {host_utils.global_host_object.get('device_ip')}")
+                    print(f"[@host:main:initialize_host_object] Device Port: {host_utils.global_host_object.get('device_port')}")
             else:
-                print(f"[@host:main:initialize_host_device] No global host device found yet (registration may still be in progress)")
+                print(f"[@host:main:initialize_host_object] No global host object found yet (registration may still be in progress)")
                 
         except Exception as e:
-            print(f"[@host:main:initialize_host_device] ⚠️ Error during host device initialization: {e}")
+            print(f"[@host:main:initialize_host_object] ⚠️ Error during host object initialization: {e}")
     
     init_thread = threading.Thread(target=delayed_init, daemon=True)
     init_thread.start()
@@ -189,8 +189,8 @@ def main():
     # Start background services
     start_background_services()
     
-    # Initialize host device (async)
-    initialize_host_device(app)
+    # Initialize host object (async)
+    initialize_host_object(app)
     
     # Start Flask application
     print("[@host:main:main] 🎉 Host ready!")

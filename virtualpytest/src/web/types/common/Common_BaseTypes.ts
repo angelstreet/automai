@@ -189,4 +189,13 @@ export interface WizardStep {
   component: React.ComponentType<any>;
   isValid: boolean;
   isComplete: boolean;
+}
+
+/**
+ * Generic server response structure for all endpoints
+ */
+export interface ServerResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
 } 

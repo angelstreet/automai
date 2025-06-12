@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Device } from '../types/pages/Device_Types';
+import { Host } from '../types/common/Host_Types';
 
 // Default team ID constant - centralized here for use across the application
 export const DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce";
 
 interface RegistrationContextType {
   // Host data
-  availableHosts: Device[];
-  selectedHost: Device | null;
+  availableHosts: Host[];
+  selectedHost: Host | null;
   isLoading: boolean;
   error: string | null;
   
@@ -28,8 +28,8 @@ interface RegistrationContextType {
   buildNginxUrl: (hostName: string, path: string) => string;      // To host's nginx
   
   // Convenience getters
-  getHostByName: (hostName: string) => Device | null;
-  getAvailableHosts: () => Device[];
+  getHostByName: (hostName: string) => Host | null;
+  getAvailableHosts: () => Host[];
 }
 
 const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined);
@@ -39,8 +39,8 @@ interface RegistrationProviderProps {
 }
 
 export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ children }) => {
-  const [availableHosts, setAvailableHosts] = useState<Device[]>([]);
-  const [selectedHost, setSelectedHost] = useState<Device | null>(null);
+  const [availableHosts, setAvailableHosts] = useState<Host[]>([]);
+  const [selectedHost, setSelectedHost] = useState<Host | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,12 +71,12 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       throw new Error(`Host with name ${hostName} not found`);
     }
     
-    // Build flask URL from host connection data
-    if (!host.connection?.host_ip || !host.connection?.host_port_external) {
+    // Build flask URL from host data
+    if (!host.host_ip || !host.host_port_external) {
       throw new Error(`Host ${hostName} does not have required connection data`);
     }
     
-    const baseUrl = `http://${host.connection.host_ip}:${host.connection.host_port_external}`;
+    const baseUrl = `http://${host.host_ip}:${host.host_port_external}`;
     
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     const finalUrl = `${baseUrl}/${cleanEndpoint}`;
@@ -124,12 +124,12 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       throw new Error(`Host with name ${hostName} not found`);
     }
     
-    // Build nginx URL from host connection data (use web port for nginx)
-    if (!host.connection?.host_ip || !host.connection?.host_port_web) {
+    // Build nginx URL from host data (use web port for nginx)
+    if (!host.host_ip || !host.host_port_web) {
       throw new Error(`Host ${hostName} does not have required connection data for nginx`);
     }
     
-    const baseUrl = `https://${host.connection.host_ip}:${host.connection.host_port_web}`;
+    const baseUrl = `https://${host.host_ip}:${host.host_port_web}`;
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     const finalUrl = `${baseUrl}/${cleanPath}`;
     
@@ -141,7 +141,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     const host = availableHosts.find(h => h.host_name === hostName);
     if (host) {
       setSelectedHost(host);
-      console.log(`[@context:Registration] Selected host: ${host.name} (${host.connection?.host_ip}:${host.connection?.host_port_external})`);
+      console.log(`[@context:Registration] Selected host: ${host.name} (${host.host_ip}:${host.host_port_external})`);
     } else {
       console.warn(`[@context:Registration] Host with name ${hostName} not found`);
     }

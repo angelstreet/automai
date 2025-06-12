@@ -4,23 +4,13 @@
 export * from './common/Common_BaseTypes';
 export * from './common/Common_ActionTypes';
 
-// Specific common types (avoiding conflicts)
+// Host types
 export type { 
-  DeviceType, 
-  DeviceEnvironment, 
-  DeviceStatus,
-  DeviceTypes,
-  DeviceEnvironments,
-  DeviceStatuses,
-  // Runtime device types
-  DeviceRegistration,
-  DeviceWithProxies,
-  ConnectedDevice,
-  RegisteredHost,
   Host,
-  DeviceConnection,
-  DevicesResponse
-} from './pages/Device_Types';
+  HostRegistrationPayload,
+  HostStatus,
+  HostStatusType
+} from './common/Host_Types';
 
 export type {
   ControllerImplementation,
@@ -33,7 +23,25 @@ export * from './pages/Environment_Types';
 // Page-specific types
 export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
-export * from './pages/UserInterface_Types';
+
+// Export UserInterface types with explicit naming to avoid ViewMode conflict
+export type {
+  UserInterface,
+  UserInterfaceCreatePayload,
+  ScreenDefinitionEditorProps,
+  ViewMode as UIViewMode,  // Alias to avoid conflict with Dashboard ViewMode
+  StreamStatus,
+  LayoutConfig,
+  DeviceResolution,
+  ResolutionInfo,
+  SelectedArea,
+  CaptureImageState,
+  ScreenEditorState,
+  ScreenEditorActions,
+  RecordingTimerProps,
+  OverlayProps
+} from './pages/UserInterface_Types';
+
 export * from './pages/Dashboard_Types';
 
 // Feature-specific types - Remote types with explicit exports to avoid conflicts
@@ -62,4 +70,8 @@ export type {
   ControllerType as RemoteControllerType
 } from './controller/Remote_Types';
 
-export * from './features/Validation_Types'; 
+export * from './features/Validation_Types';
+
+// Additional exports if needed for specific contexts
+export type { ScreenViewMode } from './pages/UserInterface_Types';
+export type { DataViewMode } from './pages/Dashboard_Types'; 

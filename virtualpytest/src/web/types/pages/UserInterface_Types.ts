@@ -9,7 +9,7 @@ export interface ScreenDefinitionEditorProps {
   sx?: any;
 }
 
-export type ViewMode = 'stream' | 'screenshot' | 'capture';
+export type ScreenViewMode = 'stream' | 'screenshot' | 'capture';
 export type StreamStatus = 'running' | 'stopped' | 'unknown';
 
 export interface LayoutConfig {
@@ -55,7 +55,7 @@ export interface ScreenEditorState {
   videoFramesPath: string | undefined;
   currentFrame: number;
   totalFrames: number;
-  viewMode: ViewMode;
+  viewMode: ScreenViewMode;
   isCapturing: boolean;
   isStoppingCapture: boolean;
   captureStartTime: Date | null;
