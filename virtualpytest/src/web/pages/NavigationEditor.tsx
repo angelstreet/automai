@@ -626,7 +626,7 @@ const NavigationEditorContent: React.FC = () => {
         >
           <AVPanel
             host={selectedHost}
-            autoConnect={isControlActive}
+            autoConnect={false}
             onConnectionChange={handleConnectionChange}
             onDisconnectComplete={handleDisconnectComplete}
           />
