@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 export interface NavigationHookResult {
@@ -14,34 +15,23 @@ export interface NavigationHookResult {
   filteredHosts: any[];
   isLoadingHosts: boolean;
 
-  // Device selection
-  selectedDeviceName: string | null;
-  setSelectedDeviceName: (deviceName: string | null) => void;
-
-  // Device control state
+  // Device selection and control
+  selectedDevice: string | null;
   isControlActive: boolean;
-  setIsControlActive: (active: boolean) => void;
   isRemotePanelOpen: boolean;
-  setIsRemotePanelOpen: (open: boolean) => void;
-  isVerificationActive: boolean;
-  setIsVerificationActive: (active: boolean) => void;
-  verificationControllerStatus: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  };
-  setVerificationControllerStatus: (status: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  }) => void;
-  verificationResults: any[];
-  setVerificationResults: (results: any[]) => void;
-  verificationPassCondition: 'all' | 'any';
-  setVerificationPassCondition: (condition: 'all' | 'any') => void;
-  lastVerifiedNodeId: string | null;
-  setLastVerifiedNodeId: (nodeId: string | null) => void;
-
-  // Device control actions
+  setSelectedDevice: (device: string | null) => void;
   handleTakeControl: () => Promise<void>;
+  handleToggleRemotePanel: () => void;
+
+  // Tree state
+  hasUnsavedChanges: boolean;
+  setHasUnsavedChanges: (value: boolean) => void;
+  focusNodeId: string | null;
+  setFocusNodeId: (nodeId: string | null) => void;
+  maxDisplayDepth: number;
+  setMaxDisplayDepth: (depth: number) => void;
+
+  // Screenshot functionality
   handleTakeScreenshot: (
     selectedNode: any,
     nodes: any[],
@@ -50,7 +40,6 @@ export interface NavigationHookResult {
     setSelectedNode: any,
     setHasUnsavedChanges: any,
   ) => Promise<void>;
-  handleToggleRemotePanel: () => void;
 }
 
 export const useNavigation = (): NavigationHookResult => {
@@ -65,23 +54,15 @@ export const useNavigation = (): NavigationHookResult => {
   const [isLoadingInterface, setIsLoadingInterface] = useState(false);
   const [interfaceError, setInterfaceError] = useState<string | null>(null);
 
-  // Device selection state
-  const [selectedDeviceName, setSelectedDeviceName] = useState<string | null>(null);
-
-  // Device control state
+  // Device selection and control state
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
-  const [isVerificationActive, setIsVerificationActive] = useState(false);
-  const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  }>({
-    image_controller_available: false,
-    text_controller_available: false,
-  });
-  const [verificationResults, setVerificationResults] = useState<any[]>([]);
-  const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
-  const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
+
+  // Tree state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [maxDisplayDepth, setMaxDisplayDepth] = useState(3);
 
   // Fetch interface models when interface name is available
   useEffect(() => {
@@ -139,77 +120,64 @@ export const useNavigation = (): NavigationHookResult => {
     return filtered;
   }, [availableHosts, interfaceModels]);
 
-  // Get selected device data
-  const selectedDeviceData = useMemo(() => {
-    return filteredHosts.find((host) => host.device_name === selectedDeviceName);
-  }, [filteredHosts, selectedDeviceName]);
+  // Handle take control
+  const handleTakeControl = useCallback(async () => {
+    if (!selectedDevice) {
+      console.log('[@hook:useNavigation] Cannot take control: no device selected');
+      return;
+    }
 
-  // Device control handlers
+    const wasControlActive = isControlActive;
+    const controlAction = wasControlActive ? 'release-control' : 'take-control';
+
+    console.log(
+      `[@hook:useNavigation] ${wasControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedDevice}`,
+    );
+
+    try {
+      const response = await fetch(`/server/control/${controlAction}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedDevice,
+          session_id: 'default-session',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setIsControlActive(!wasControlActive);
+          if (!wasControlActive) {
+            setIsRemotePanelOpen(true);
+          } else {
+            setIsRemotePanelOpen(false);
+          }
+          console.log(
+            `[@hook:useNavigation] Successfully ${wasControlActive ? 'released' : 'taken'} control of device: ${selectedDevice}`,
+          );
+        } else {
+          console.error(`[@hook:useNavigation] Failed to ${controlAction}: ${data.error}`);
+        }
+      } else {
+        console.error(
+          `[@hook:useNavigation] Server error during ${controlAction}: ${response.status} ${response.statusText}`,
+        );
+      }
+    } catch (error) {
+      console.error(`[@hook:useNavigation] Error during control operation:`, error);
+    }
+  }, [selectedDevice, isControlActive]);
+
+  // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {
     setIsRemotePanelOpen((prev) => !prev);
     console.log(`[@hook:useNavigation] Remote panel toggled: ${!isRemotePanelOpen}`);
   }, [isRemotePanelOpen]);
 
-  const handleTakeControl = useCallback(async () => {
-    const wasControlActive = isControlActive;
-
-    console.log(
-      `[@hook:useNavigation] ${wasControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedDeviceName}`,
-    );
-
-    // If we're releasing control, check if stream needs to be restarted BEFORE disconnecting
-    if (wasControlActive && selectedDeviceData) {
-      console.log(
-        '[@hook:useNavigation] Releasing control, checking stream status before disconnect...',
-      );
-
-      try {
-        // Check current stream status while SSH connection is still active
-        const response = await fetch('/api/virtualpytest/screen-definition/stream/status');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && !data.is_active) {
-            console.log(
-              '[@hook:useNavigation] Stream was stopped, will restart after disconnect...',
-            );
-
-            // Restart the stream before disconnecting
-            const restartResponse = await fetch(
-              '/api/virtualpytest/screen-definition/stream/restart',
-              {
-                method: 'POST',
-              },
-            );
-
-            if (restartResponse.ok) {
-              const restartData = await restartResponse.json();
-              if (restartData.success) {
-                console.log(
-                  '[@hook:useNavigation] Stream restarted successfully before releasing control',
-                );
-              }
-            }
-          } else if (data.success && data.is_active) {
-            console.log('[@hook:useNavigation] Stream is already running, no restart needed');
-          }
-        } else {
-          console.log(
-            '[@hook:useNavigation] Stream status check failed, SSH connection may not be available',
-          );
-        }
-      } catch (error) {
-        console.log(
-          '[@hook:useNavigation] Could not check/restart stream before disconnect:',
-          error,
-        );
-        // Don't throw error, just log it
-      }
-    }
-
-    // Toggle control state
-    setIsControlActive(!isControlActive);
-  }, [isControlActive, selectedDeviceName, selectedDeviceData]);
-
+  // Screenshot functionality
   const handleTakeScreenshot = useCallback(
     async (
       selectedNode: any,
@@ -219,9 +187,9 @@ export const useNavigation = (): NavigationHookResult => {
       setSelectedNode: any,
       setHasUnsavedChanges: any,
     ) => {
-      if (!selectedDeviceName || !isControlActive || !selectedNode) {
+      if (!selectedDevice || !selectedNode) {
         console.log(
-          '[@hook:useNavigation] Cannot take screenshot: no device selected, not in control, or no node selected',
+          '[@hook:useNavigation] Cannot take screenshot: no device selected or no node selected',
         );
         return;
       }
@@ -242,7 +210,7 @@ export const useNavigation = (): NavigationHookResult => {
         }
 
         console.log(
-          `[@hook:useNavigation] Taking screenshot for device: ${selectedDeviceName}, parent: ${parentName}, node: ${nodeName}`,
+          `[@hook:useNavigation] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`,
         );
 
         // Call screenshot API with parent and node name parameters
@@ -252,9 +220,9 @@ export const useNavigation = (): NavigationHookResult => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            device_model: selectedDeviceData?.device_model || 'android_mobile',
+            device_model: selectedDevice,
             video_device:
-              selectedDeviceData?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+              selectedDevice?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
             parent_name: parentName,
             node_name: nodeName,
           }),
@@ -312,7 +280,7 @@ export const useNavigation = (): NavigationHookResult => {
         console.error('[@hook:useNavigation] Error taking screenshot:', error);
       }
     },
-    [selectedDeviceName, isControlActive, selectedDeviceData],
+    [selectedDevice],
   );
 
   return {
@@ -325,31 +293,25 @@ export const useNavigation = (): NavigationHookResult => {
     // Host data
     availableHosts,
     filteredHosts,
-    isLoadingHosts: false, // Registration context handles this
+    isLoadingHosts: false,
 
-    // Device selection
-    selectedDeviceName,
-    setSelectedDeviceName,
-
-    // Device control state
+    // Device selection and control
+    selectedDevice,
     isControlActive,
-    setIsControlActive,
     isRemotePanelOpen,
-    setIsRemotePanelOpen,
-    isVerificationActive,
-    setIsVerificationActive,
-    verificationControllerStatus,
-    setVerificationControllerStatus,
-    verificationResults,
-    setVerificationResults,
-    verificationPassCondition,
-    setVerificationPassCondition,
-    lastVerifiedNodeId,
-    setLastVerifiedNodeId,
-
-    // Device control actions
+    setSelectedDevice,
     handleTakeControl,
-    handleTakeScreenshot,
     handleToggleRemotePanel,
+
+    // Tree state
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    focusNodeId,
+    setFocusNodeId,
+    maxDisplayDepth,
+    setMaxDisplayDepth,
+
+    // Screenshot functionality
+    handleTakeScreenshot,
   };
 };

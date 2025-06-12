@@ -1,39 +1,43 @@
-import {
-  Add as AddIcon,
-  FitScreen as FitScreenIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Tv as TvIcon,
-  Lock as LockIcon,
-} from '@mui/icons-material';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  IconButton,
-  Box,
-  CircularProgress,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-} from '@mui/material';
-import React, { useMemo } from 'react';
+import { AppBar, Toolbar, Typography, Box } from '@mui/material';
+import React from 'react';
 
 import { useRegistration } from '../../contexts/RegistrationContext';
-import { useNavigation } from '../../hooks/navigation/useNavigation';
-import { NavigationEditorHeaderProps } from '../../types/pages/Navigation_Types';
 import {
-  ValidationButtonClient,
   ValidationPreviewClient,
   ValidationResultsClient,
   ValidationProgressClient,
 } from '../validation';
 
-import { TreeFilterControls } from './Navigation_TreeFilterControls';
+import NavigationEditorActionButtons from './Navigation_NavigationEditor_ActionButtons';
+import NavigationEditorDeviceControls from './Navigation_NavigationEditor_DeviceControls';
+import NavigationEditorTreeControls from './Navigation_NavigationEditor_TreeControls';
 
-export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
+export const NavigationEditorHeader: React.FC<{
+  hasUnsavedChanges: boolean;
+  focusNodeId: string | null;
+  availableFocusNodes: any[];
+  maxDisplayDepth: number;
+  totalNodes: number;
+  visibleNodes: number;
+  isLoading: boolean;
+  error: string | null;
+  isLocked: boolean;
+  treeId: string;
+  selectedDevice: string;
+  isControlActive: boolean;
+  isRemotePanelOpen: boolean;
+  onAddNewNode: () => void;
+  onFitView: () => void;
+  onSaveToConfig: () => void;
+  onDiscardChanges: () => void;
+  onFocusNodeChange: (nodeId: string | null) => void;
+  onDepthChange: (depth: number) => void;
+  onResetFocus: () => void;
+  onToggleRemotePanel: () => void;
+  onTakeControl: () => Promise<void>;
+  onUpdateNode: (nodeId: string, updatedData: any) => void;
+  onUpdateEdge: (edgeId: string, updatedData: any) => void;
+}> = ({
   hasUnsavedChanges,
   focusNodeId,
   availableFocusNodes,
@@ -43,12 +47,10 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   isLoading,
   error,
   isLocked,
-  isRemotePanelOpen,
+  treeId,
   selectedDevice,
   isControlActive,
-  userInterface,
-  devicesLoading = false,
-  treeId,
+  isRemotePanelOpen,
   onAddNewNode,
   onFitView,
   onSaveToConfig,
@@ -57,40 +59,24 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   onDepthChange,
   onResetFocus,
   onToggleRemotePanel,
-  onDeviceSelect,
   onTakeControl,
   onUpdateNode,
   onUpdateEdge,
 }) => {
-  // Use navigation hook for autonomous interface fetching and host filtering
-  const {
-    interfaceName,
-    filteredHosts,
-    selectedDeviceName,
-    setSelectedDeviceName,
-    isLoadingInterface,
-  } = useNavigation();
+  // Get host data from RegistrationContext
+  const { availableHosts, isDeviceLocked } = useRegistration();
 
-  // Get device lock status from RegistrationContext
-  const { isDeviceLocked } = useRegistration();
-
-  // Use filtered hosts from navigation hook
-  const filteredDevices = filteredHosts;
-
-  // Check if selected device is locked
-  const selectedDeviceHost = useMemo(() => {
-    return filteredDevices.find((device) => device.host_name === selectedDeviceName);
-  }, [filteredDevices, selectedDeviceName]);
-
-  const isSelectedDeviceLocked = useMemo(() => {
-    return selectedDeviceHost ? isDeviceLocked(selectedDeviceHost.host_name) : false;
-  }, [selectedDeviceHost, isDeviceLocked]);
+  // Handle device selection
+  const handleDeviceSelect = (device: string | null) => {
+    console.log(`[@component:NavigationEditorHeader] Selected device: ${device}`);
+    // Implementation would go here
+  };
 
   return (
     <>
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar variant="dense" sx={{ minHeight: 48, px: 2 }}>
-          {/* Grid Layout with 4 sections - Updated width for validation button */}
+          {/* Grid Layout with 4 sections */}
           <Box
             sx={{
               display: 'grid',
@@ -102,7 +88,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
           >
             {/* Section 1: Tree Name and Status */}
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              {/* Simple Tree Name Display */}
               <Typography
                 variant="h6"
                 sx={{
@@ -114,7 +99,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {/* Show tree name from multiple possible sources */}
                 root
                 {hasUnsavedChanges && (
                   <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
@@ -124,232 +108,50 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               </Typography>
             </Box>
 
-            {/* Section 2: Node Controls (TreeFilterControls) */}
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                minWidth: 0,
-                width: '100%',
-                '& > *': {
-                  gap: 1,
-                  '& .MuiFormControl-root': {
-                    minWidth: '70px !important',
-                    marginRight: '8px',
-                  },
-                  '& .MuiButton-root': {
-                    fontSize: '0.75rem',
-                    minWidth: 'auto',
-                    padding: '4px 8px',
-                  },
-                  '& .MuiTypography-root': {
-                    fontSize: '0.75rem',
-                    whiteSpace: 'nowrap',
-                  },
-                },
-              }}
-            >
-              <TreeFilterControls
-                focusNodeId={focusNodeId}
-                availableFocusNodes={availableFocusNodes}
-                onFocusNodeChange={onFocusNodeChange}
-                maxDisplayDepth={maxDisplayDepth}
-                onDepthChange={onDepthChange}
-                onResetFocus={onResetFocus}
-                totalNodes={totalNodes}
-                visibleNodes={visibleNodes}
-              />
-            </Box>
+            {/* Section 2: Tree Controls */}
+            <NavigationEditorTreeControls
+              focusNodeId={focusNodeId}
+              availableFocusNodes={availableFocusNodes}
+              maxDisplayDepth={maxDisplayDepth}
+              totalNodes={totalNodes}
+              visibleNodes={visibleNodes}
+              onFocusNodeChange={onFocusNodeChange}
+              onDepthChange={onDepthChange}
+              onResetFocus={onResetFocus}
+            />
 
             {/* Section 3: Action Buttons */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1,
-                minWidth: 0,
-              }}
-            >
-              {/* Validation Button */}
-              <ValidationButtonClient
-                treeId={treeId}
-                disabled={isLoading || !!error || !isControlActive || !selectedDeviceName}
-              />
-
-              <Button
-                startIcon={<AddIcon />}
-                onClick={() => onAddNewNode('node', { x: 0, y: 0 })}
-                size="small"
-                disabled={isLoading || !!error || !isLocked}
-                variant="outlined"
-                sx={{
-                  minWidth: 'auto',
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.75rem',
-                }}
-                title={!isLocked ? 'Cannot add nodes - tree is in read-only mode' : 'Add Node'}
-              >
-                Add&nbsp;Node
-              </Button>
-
-              <IconButton
-                onClick={onFitView}
-                size="small"
-                title="Fit View"
-                disabled={isLoading || !!error}
-              >
-                <FitScreenIcon />
-              </IconButton>
-
-              <IconButton
-                onClick={() => {
-                  if (onSaveToConfig) {
-                    onSaveToConfig('root');
-                  }
-                }}
-                size="small"
-                title={
-                  !isLocked
-                    ? 'Cannot save - tree is in read-only mode'
-                    : hasUnsavedChanges
-                      ? 'Save Changes to Config'
-                      : 'Save to Config'
-                }
-                disabled={isLoading || !!error || !isLocked}
-                color={hasUnsavedChanges ? 'primary' : 'default'}
-              >
-                {isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
-              </IconButton>
-
-              <IconButton
-                onClick={onDiscardChanges}
-                size="small"
-                title={hasUnsavedChanges ? 'Discard Unsaved Changes' : 'Discard Changes'}
-                color={hasUnsavedChanges ? 'warning' : 'default'}
-                disabled={isLoading || !!error}
-              >
-                <CancelIcon />
-              </IconButton>
-            </Box>
+            <NavigationEditorActionButtons
+              treeId={treeId}
+              isLocked={isLocked}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isLoading={isLoading}
+              error={error}
+              selectedDevice={selectedDevice}
+              onAddNewNode={onAddNewNode}
+              onFitView={onFitView}
+              onSaveToConfig={onSaveToConfig}
+              onDiscardChanges={onDiscardChanges}
+            />
 
             {/* Section 4: Device Controls */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: 1,
-                minWidth: 0,
-              }}
-            >
-              {/* Device Selection Dropdown */}
-              <FormControl size="small" sx={{ minWidth: 120, maxWidth: 120 }}>
-                <InputLabel id="device-select-label">Device</InputLabel>
-                <Select
-                  labelId="device-select-label"
-                  value={selectedDeviceName || ''}
-                  onChange={(e) => {
-                    const hostName = e.target.value || null;
-                    setSelectedDeviceName(hostName);
-                    onDeviceSelect(hostName);
-                  }}
-                  label="Device"
-                  disabled={isLoading || !!error || devicesLoading || isControlActive}
-                  sx={{ height: 32, fontSize: '0.75rem' }}
-                >
-                  <MenuItem value="">
-                    <em>{devicesLoading ? 'Loading...' : 'None'}</em>
-                  </MenuItem>
-                  {filteredDevices.map((device) => {
-                    const deviceIsLocked = isDeviceLocked(device.host_name);
-                    return (
-                      <MenuItem
-                        key={device.host_name}
-                        value={device.host_name}
-                        disabled={deviceIsLocked}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          opacity: deviceIsLocked ? 0.6 : 1,
-                        }}
-                      >
-                        {deviceIsLocked && (
-                          <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
-                        )}
-                        <span>{device.device_name}</span>
-                        {deviceIsLocked && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              ml: 'auto',
-                              color: 'warning.main',
-                              fontSize: '0.65rem',
-                            }}
-                          >
-                            (Locked)
-                          </Typography>
-                        )}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-
-              {/* Combined Take Control & Remote Panel Button */}
-              <Button
-                variant={isControlActive ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => {
-                  // Handle both take control and remote panel toggle
-                  onTakeControl();
-                  // If taking control, show the remote panel; if releasing, hide it
-                  if (!isControlActive && selectedDeviceName) {
-                    // Taking control - ensure remote panel is open
-                    if (!isRemotePanelOpen) {
-                      onToggleRemotePanel();
-                    }
-                  } else if (isControlActive) {
-                    // Releasing control - hide remote panel
-                    if (isRemotePanelOpen) {
-                      onToggleRemotePanel();
-                    }
-                  }
-                }}
-                disabled={
-                  !selectedDeviceName ||
-                  isLoading ||
-                  !!error ||
-                  devicesLoading ||
-                  isSelectedDeviceLocked
-                }
-                startIcon={isControlActive ? <TvIcon /> : <TvIcon />}
-                color={isControlActive ? 'success' : 'primary'}
-                sx={{
-                  height: 32,
-                  fontSize: '0.7rem',
-                  minWidth: 110,
-                  maxWidth: 110,
-                  whiteSpace: 'nowrap',
-                  px: 1.5,
-                }}
-                title={
-                  isSelectedDeviceLocked
-                    ? `Device is locked by ${selectedDeviceHost?.lockedBy || 'another user'}`
-                    : isControlActive
-                      ? 'Release Control'
-                      : 'Take Control'
-                }
-              >
-                {isControlActive ? 'Release' : 'Control'}
-              </Button>
-            </Box>
+            <NavigationEditorDeviceControls
+              selectedDevice={selectedDevice}
+              isControlActive={isControlActive}
+              isRemotePanelOpen={isRemotePanelOpen}
+              isLoading={isLoading}
+              error={error}
+              availableHosts={availableHosts}
+              isDeviceLocked={isDeviceLocked}
+              onDeviceSelect={handleDeviceSelect}
+              onTakeControl={onTakeControl}
+              onToggleRemotePanel={onToggleRemotePanel}
+            />
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Validation Components - Only render when needed */}
+      {/* Validation Components */}
       {treeId && (
         <>
           <ValidationPreviewClient treeId={treeId} />
@@ -364,3 +166,5 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
     </>
   );
 };
+
+export default NavigationEditorHeader;
