@@ -22,6 +22,8 @@ import {
 import { useLocation } from 'react-router-dom';
 
 // Import extracted components and hooks
+import { AVPanel } from '../components/controller/av/AVPanel';
+import { RemotePanel } from '../components/controller/remote/RemotePanel';
 import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
@@ -30,6 +32,8 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+
+// Import autonomous panels
 
 // Import registration context
 
@@ -213,6 +217,22 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges,
     setEdges,
     setSelectedEdge,
+
+    // Device control state & handlers
+    selectedHost,
+    isControlActive,
+    isRemotePanelOpen,
+    showRemotePanel,
+    showAVPanel,
+    isVerificationActive,
+    handleDeviceSelect,
+    handleTakeControl,
+    handleToggleRemotePanel,
+    handleConnectionChange,
+    handleDisconnectComplete,
+    availableHosts,
+    getHostByName,
+    fetchHosts,
   } = useNavigationEditor();
 
   // Track the last loaded tree ID to prevent unnecessary reloads
@@ -366,6 +386,10 @@ const NavigationEditorContent: React.FC = () => {
         userInterface={userInterface}
         devicesLoading={false}
         treeId={currentTreeId}
+        // Device control props - now provided by hook
+        selectedDevice={selectedHost?.device_name || ''}
+        isControlActive={isControlActive}
+        isRemotePanelOpen={isRemotePanelOpen}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
@@ -380,9 +404,9 @@ const NavigationEditorContent: React.FC = () => {
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
-        onToggleRemotePanel={() => {}} // Handled by header autonomously
-        onDeviceSelect={() => {}} // Handled by header autonomously
-        onTakeControl={() => {}} // Handled by header autonomously
+        onToggleRemotePanel={handleToggleRemotePanel}
+        onDeviceSelect={handleDeviceSelect}
+        onTakeControl={handleTakeControl}
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
       />
@@ -555,6 +579,59 @@ const NavigationEditorContent: React.FC = () => {
 
         {/* Remote Control Panel is now handled by NavigationEditorDeviceControl component */}
       </Box>
+
+      {/* Autonomous Panels - Rendered based on hook state */}
+      {showRemotePanel && selectedHost && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: '100px',
+            right: '20px',
+            width: '400px',
+            height: 'calc(100vh - 140px)',
+            zIndex: 1000,
+            backgroundColor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            boxShadow: 3,
+            overflow: 'hidden',
+          }}
+        >
+          <RemotePanel
+            host={selectedHost}
+            autoConnect={isControlActive}
+            onConnectionChange={handleConnectionChange}
+            onDisconnectComplete={handleDisconnectComplete}
+          />
+        </Box>
+      )}
+
+      {showAVPanel && selectedHost && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: '100px',
+            right: showRemotePanel ? '440px' : '20px', // Position next to remote panel if both are open
+            width: '400px',
+            height: 'calc(100vh - 140px)',
+            zIndex: 1000,
+            backgroundColor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            boxShadow: 3,
+            overflow: 'hidden',
+          }}
+        >
+          <AVPanel
+            host={selectedHost}
+            autoConnect={isControlActive}
+            onConnectionChange={handleConnectionChange}
+            onDisconnectComplete={handleDisconnectComplete}
+          />
+        </Box>
+      )}
 
       {/* Node Edit Dialog */}
       <NodeEditDialog
