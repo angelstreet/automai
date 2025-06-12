@@ -28,11 +28,13 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   const sessionId = useRef<string>(crypto.randomUUID());
   const [isLocked, setIsLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState<any>(null);
+  const [isCheckingLock, setIsCheckingLock] = useState(false); // Start as false, only true when actively checking
 
   // Lock a navigation tree for editing
   const lockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
     try {
       console.log(`[@hook:useNavigationConfig:lockNavigationTree] Attempting to lock tree: ${treeName}`);
+      setIsCheckingLock(true);
       
       const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`), {
         method: 'POST',
@@ -60,12 +62,16 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         return true;
       } else {
         console.log(`[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${data.error}`);
+        setIsLocked(false);
         setLockInfo(data.current_lock);
         return false;
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:lockNavigationTree] Error locking tree:`, error);
+      setIsLocked(false);
       return false;
+    } finally {
+      setIsCheckingLock(false);
     }
   }, []);
 
@@ -155,6 +161,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         // Update lock info
         setIsLocked(data.is_locked);
         setLockInfo(data.lock_info);
+        setIsCheckingLock(false); // Lock check is complete when tree data is loaded
         
         console.log(`[@hook:useNavigationConfig:loadFromConfig] Successfully loaded tree: ${treeName}`);
       } else {
@@ -165,6 +172,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       state.setError(error instanceof Error ? error.message : 'Failed to load navigation tree');
     } finally {
       state.setIsLoading(false);
+      setIsCheckingLock(false); // Ensure lock check is marked complete even on error
     }
   }, [state]);
 
@@ -332,6 +340,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     // Lock management
     isLocked,
     lockInfo,
+    isCheckingLock,
     sessionId: sessionId.current,
     lockNavigationTree,
     unlockNavigationTree,

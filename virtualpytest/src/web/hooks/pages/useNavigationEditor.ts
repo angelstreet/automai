@@ -37,7 +37,6 @@ export const useNavigationEditor = () => {
   // Initialize teamId in localStorage if not already set
   useEffect(() => {
     if (!localStorage.getItem('teamId') && !sessionStorage.getItem('teamId')) {
-      console.log(`[@hook:useNavigationEditor] Setting default team_id in localStorage: ${DEFAULT_TEAM_ID}`);
       localStorage.setItem('teamId', DEFAULT_TEAM_ID);
     }
   }, []);
@@ -104,7 +103,7 @@ export const useNavigationEditor = () => {
 
   // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback((changes: any[]) => {
-    console.log('[@hook:useNavigationEditor] onNodesChange called with changes:', changes);
+    
     
     // Apply changes to nodes (single source of truth)
     navigationState.onNodesChange(changes);
@@ -134,7 +133,7 @@ export const useNavigationEditor = () => {
 
   // Handle new connections
   const onConnect = useCallback((params: Connection) => {
-    console.log('[@component:NavigationEditor] onConnectHistory called with params:', params);
+    
     
     if (!params.source || !params.target) return;
 
@@ -175,11 +174,7 @@ export const useNavigationEditor = () => {
       return;
     }
     
-    console.log('[@component:NavigationEditor] Connection approved:', {
-      edgeType: connectionResult.edgeType,
-      sourceUpdates: connectionResult.sourceNodeUpdates,
-      targetUpdates: connectionResult.targetNodeUpdates
-    });
+    
 
     // Apply node updates if any
     if (connectionResult.sourceNodeUpdates || connectionResult.targetNodeUpdates) {
@@ -238,23 +233,12 @@ export const useNavigationEditor = () => {
     // Mark as having unsaved changes
     navigationState.setHasUnsavedChanges(true);
     
-    console.log('[@component:NavigationEditor] Connection created successfully:', {
-      edgeId,
-      edgeType: connectionResult.edgeType,
-      sourceLabel: sourceNode.data.label,
-      targetLabel: targetNode.data.label
-    });
+    
   }, [navigationState.nodes, navigationState.setNodes, navigationState.setEdges, navigationState.setHasUnsavedChanges, typedValidateConnection]);
 
   // Set user interface from props (passed from UserInterface.tsx via navigation state)
   const setUserInterfaceFromProps = useCallback((userInterfaceData: any) => {
     if (userInterfaceData) {
-      console.log(`[@hook:useNavigationEditor] Setting user interface from props:`, {
-        id: userInterfaceData.id,
-        name: userInterfaceData.name,
-        models: userInterfaceData.models
-      });
-      
       navigationState.setUserInterface(userInterfaceData);
       navigationState.setIsLoadingInterface(false);
     }
@@ -285,27 +269,27 @@ export const useNavigationEditor = () => {
     event.stopPropagation();
     const uiNode = node as UINavigationNode;
     
-    console.log(`[@hook:useNavigationEditor] Double-click on node: ${uiNode.data.label} (type: ${uiNode.data.type})`);
+    
     
     // Check if there's currently a filter applied
     if (navigationState.focusNodeId) {
       // If filter is applied, reset it to show all nodes
-      console.log(`[@hook:useNavigationEditor] Filter is active (focused on: ${navigationState.focusNodeId}), resetting filter`);
+      
       navigationState.setFocusNodeId(null);
       navigationState.setMaxDisplayDepth(5);
-      console.log(`[@hook:useNavigationEditor] Filter reset - showing all nodes`);
+      
     } else {
       // If no filter is applied, focus on the double-clicked node (if it's focusable)
       const isFocusableNode = uiNode.data.type === 'menu' || uiNode.data.is_root;
       
       if (isFocusableNode) {
-        console.log(`[@hook:useNavigationEditor] No filter active, focusing on node: ${uiNode.data.label} (${uiNode.id})`);
+        
         navigationState.setFocusNodeId(uiNode.id);
         // Set a reasonable depth for viewing the focused node and its children
         navigationState.setMaxDisplayDepth(3);
-        console.log(`[@hook:useNavigationEditor] Focused on node: ${uiNode.data.label} with depth limit 3`);
+        
       } else {
-        console.log(`[@hook:useNavigationEditor] Node ${uiNode.data.label} is not focusable (type: ${uiNode.data.type}), double-click ignored`);
+        
       }
     }
   }, [navigationState]);
@@ -331,7 +315,7 @@ export const useNavigationEditor = () => {
     // Load tree data for that level from config
     configHook.loadFromConfig(targetTreeName);
     
-    console.log(`[@component:NavigationEditor] Navigating back to: ${targetTreeName}`);
+
   }, [navigationState, configHook.loadFromConfig, navigate]);
 
   // Go back to parent tree
@@ -351,7 +335,7 @@ export const useNavigationEditor = () => {
       // Load parent tree data from config
       configHook.loadFromConfig(targetTreeName);
       
-      console.log(`[@component:NavigationEditor] Going back to parent: ${targetTreeId}`);
+      
     }
   }, [navigationState, configHook.loadFromConfig, navigate]);
 
@@ -373,7 +357,7 @@ export const useNavigationEditor = () => {
       navigationState.setSaveError(null);
       navigationState.setSaveSuccess(false);
       navigationState.setIsDiscardDialogOpen(false);
-      console.log('[@component:NavigationEditor] Discarded changes, reverted to initial state.');
+      
     }
   }, [navigationState]);
 
@@ -384,7 +368,7 @@ export const useNavigationEditor = () => {
       const visibleNodes = navigationState.nodes;
       
       if (visibleNodes.length > 0) {
-        console.log(`[@hook:useNavigationEditor] Fitting view to ${visibleNodes.length} visible nodes`);
+        
         // Fit view to only the visible/filtered nodes
         navigationState.reactFlowInstance.fitView({
           nodes: visibleNodes.map(node => ({ id: node.id })),
@@ -392,7 +376,7 @@ export const useNavigationEditor = () => {
           duration: 300, // Smooth animation
         });
       } else {
-        console.log(`[@hook:useNavigationEditor] No visible nodes to fit view to, using default fitView`);
+        
         // Fallback to default fitView if no visible nodes
         navigationState.reactFlowInstance.fitView();
       }
@@ -401,7 +385,7 @@ export const useNavigationEditor = () => {
 
   // Navigate back to parent
   const navigateToParent = useCallback(() => {
-    console.log('[@hook:useNavigationEditor] Navigating back to interface configuration');
+    
     navigate('/configuration/interface');
   }, [navigate]);
 
@@ -434,7 +418,7 @@ export const useNavigationEditor = () => {
     // Find the focus node
     const focusNode = allNodes.find(n => n.id === navigationState.focusNodeId);
     if (!focusNode) {
-      console.warn(`[@hook:useNavigationEditor] Focus node ${navigationState.focusNodeId} not found`);
+      
       return allNodes;
     }
 
@@ -482,7 +466,7 @@ export const useNavigationEditor = () => {
     const targetView = navigationState.viewPath[targetIndex];
     navigationState.setCurrentViewRootId(targetView.id);
     navigationState.setViewPath(prev => prev.slice(0, targetIndex + 1));
-    console.log(`[@hook:useNavigationEditor] Navigated to parent view: ${targetView.name}`);
+    
   }, [navigationState]);
 
   // Update available focus nodes when nodes change
@@ -501,19 +485,19 @@ export const useNavigationEditor = () => {
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback((nodeId: string | null) => {
-    console.log(`[@hook:useNavigationEditor] Setting focus node: ${nodeId}`);
+    
     navigationState.setFocusNodeId(nodeId);
   }, [navigationState]);
 
   // Set max display depth (dropdown selection)
   const setDisplayDepth = useCallback((depth: number) => {
-    console.log(`[@hook:useNavigationEditor] Setting display depth: ${depth}`);
+    
     navigationState.setMaxDisplayDepth(depth);
   }, [navigationState]);
 
   // Reset focus to show all root level nodes
   const resetFocus = useCallback(() => {
-    console.log(`[@hook:useNavigationEditor] Resetting focus to All and D1`);
+      
     navigationState.setFocusNodeId(null);
     navigationState.setMaxDisplayDepth(5);
   }, [navigationState]);
@@ -603,6 +587,7 @@ export const useNavigationEditor = () => {
     // Lock management from Config hook
     isLocked: configHook.isLocked,
     lockInfo: configHook.lockInfo,
+    isCheckingLock: configHook.isCheckingLock,
     sessionId: configHook.sessionId,
     lockNavigationTree: configHook.lockNavigationTree,
     unlockNavigationTree: configHook.unlockNavigationTree,

@@ -185,24 +185,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
             width: '100%'
           }}>
             
-            {/* Section 1: Tree Name with Lock Indicator */}
+            {/* Section 1: Tree Name and Status */}
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              {/* Lock Indicator */}
-              {isLocked && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  mr: 1,
-                  px: 1,
-                  py: 0.5,
-                  backgroundColor: lockInfo?.locked_by === sessionId ? 'success.light' : 'warning.light',
-                  borderRadius: 1,
-                  fontSize: '0.7rem'
-                }}>
-                  🔒 {lockInfo?.locked_by === sessionId ? 'Locked by you' : 'Locked by another user'}
-                </Box>
-              )}
-              
               {/* Simple Tree Name Display */}
               <Typography
                 variant="h6"

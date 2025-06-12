@@ -146,6 +146,7 @@ const NavigationEditorContent: React.FC = () => {
     saveToConfig,
     isLocked,
     lockInfo,
+    isCheckingLock,
     sessionId,
     lockNavigationTree,
     unlockNavigationTree,
@@ -371,7 +372,7 @@ const NavigationEditorContent: React.FC = () => {
               }}
             >
               {/* Read-Only Overlay - shown when tree is not locked */}
-              {!isLocked && (
+              {currentTreeName && !isCheckingLock && !isLocked && (
                 <Box
                   sx={{
                     position: 'absolute',

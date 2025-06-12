@@ -12,13 +12,8 @@ export const buildScreenshotUrl = (
   deviceModel: string = 'android_mobile'
 ): string | undefined => {
   if (!screenshotPath) return undefined;
-  
-  console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Input: ${screenshotPath}, Device: ${deviceModel}`);
-  console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Using R2 URL: ${CLOUDFLARE_R2_PUBLIC_URL}`);
-  
   // If it's already a full URL (local or Cloudflare), return as-is
   if (screenshotPath.startsWith('http://') || screenshotPath.startsWith('https://')) {
-    console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Already full URL, returning as-is: ${screenshotPath}`);
     return screenshotPath;
   }
   
@@ -29,13 +24,11 @@ export const buildScreenshotUrl = (
       const pathParam = url.searchParams.get('path');
       if (pathParam) {
         const decodedPath = decodeURIComponent(pathParam);
-        console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Extracted path from local URL: ${decodedPath}`);
         
         // Extract just the filename from the full path
         const filename = decodedPath.split('/').pop();
         if (filename) {
           const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/navigation/${deviceModel}/${filename}`;
-          console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Built Cloudflare URL from local path: ${cloudflareUrl}`);
           return cloudflareUrl;
         }
       }
@@ -47,13 +40,11 @@ export const buildScreenshotUrl = (
   // If it's a relative path starting with virtualpytest/, use it directly
   if (screenshotPath.startsWith('virtualpytest/')) {
     const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/${screenshotPath}`;
-    console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Built URL for virtualpytest path: ${cloudflareUrl}`);
     return cloudflareUrl;
   }
   
   // If it's just a filename, use the navigation folder structure
   const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/navigation/${deviceModel}/${screenshotPath}`;
-  console.log(`[@utils:cloudflareUtils:buildScreenshotUrl] Built URL for filename: ${cloudflareUrl}`);
   return cloudflareUrl;
 };
 

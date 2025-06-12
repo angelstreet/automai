@@ -109,7 +109,6 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
   // Handle taking screenshot using AV controller proxy
   const handleTakeScreenshot = useCallback(async () => {
     if (!selectedHost || !isControlActive || !selectedNode) {
-      console.log('[@component:NavigationEditorDeviceControl] Cannot take screenshot: no device selected, not in control, or no node selected');
       return;
     }
 
@@ -128,7 +127,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         }
       }
 
-      console.log(`[@component:NavigationEditorDeviceControl] Taking screenshot for device: ${selectedHost.name}, parent: ${parentName}, node: ${nodeName}`);
+      
       
       // Use AV controller proxy instead of direct HTTP call
       const avControllerProxy = selectedHost?.controllerProxies?.av;
@@ -136,13 +135,13 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
       }
       
-      console.log('[@component:NavigationEditorDeviceControl] AV controller proxy found, calling take_screenshot...');
+      
       
       // Call take_screenshot on the AV controller proxy
       const screenshotUrl = await avControllerProxy.take_screenshot();
       
       if (screenshotUrl) {
-        console.log('[@component:NavigationEditorDeviceControl] Screenshot taken successfully:', screenshotUrl);
+        
         
         // Create updated node with screenshot
         const updatedNode = {
@@ -163,24 +162,24 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         onSetSelectedNode(updatedNode);
         onSetHasUnsavedChanges(true);
         
-        console.log(`[@component:NavigationEditorDeviceControl] Screenshot captured and node updated`);
+        
       } else {
-        console.error('[@component:NavigationEditorDeviceControl] Screenshot failed - no URL returned');
+        
       }
     } catch (error) {
-      console.error('[@component:NavigationEditorDeviceControl] Error taking screenshot:', error);
+      
     }
   }, [selectedHost, isControlActive, selectedNode, nodes, onSetNodes, onSetSelectedNode, onSetHasUnsavedChanges]);
 
   // Handle verification execution using verification controller proxy
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
     if (!isVerificationActive || !verifications || verifications.length === 0) {
-      console.log('[@component:NavigationEditorDeviceControl] Cannot execute verifications: controllers not active or no verifications');
+      
       return;
     }
 
     try {
-      console.log(`[@component:NavigationEditorDeviceControl] Executing ${verifications.length} verifications for node: ${nodeId}`);
+      
       
       // Clear previous results and set current node
       onSetVerificationResults([]);
@@ -192,7 +191,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         throw new Error('Verification controller proxy not available. Host may not have verification capabilities or proxy creation failed.');
       }
       
-      console.log('[@component:NavigationEditorDeviceControl] Verification controller proxy found, calling executeVerificationBatch...');
+      
       
       // Call executeVerificationBatch on the verification controller proxy
       const response = await verificationControllerProxy.executeVerificationBatch({
@@ -203,14 +202,13 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
       });
       
       if (response.success && response.data?.results) {
-        console.log('[@component:NavigationEditorDeviceControl] Verification results:', response.data);
+        
         
         // Process results to match VerificationTestResult interface
         const processedResults = response.data.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
-          console.log(`[@component:NavigationEditorDeviceControl] Processing result ${index}:`, result);
-          console.log(`[@component:NavigationEditorDeviceControl] Verification ${index}:`, verification);
+
           
           // Determine result type
           let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
@@ -241,31 +239,31 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
             matches: result.matches,
           };
           
-          console.log(`[@component:NavigationEditorDeviceControl] Processed result ${index}:`, processedResult);
+          
           return processedResult;
         });
         
-        console.log(`[@component:NavigationEditorDeviceControl] Setting verification results:`, processedResults);
+        
         onSetVerificationResults(processedResults);
         
         // Show summary like in NodeVerificationsList
         if (response.data.results) {
           const passed = response.data.results.filter((r: any) => r.success).length;
           const total = response.data.results.length;
-          console.log(`[@component:NavigationEditorDeviceControl] Verification completed: ${passed}/${total} passed`);
+          
           
           // Log final result based on pass condition
           const finalPassed = verificationPassCondition === 'all'
             ? passed === total
             : passed > 0;
-          console.log(`[@component:NavigationEditorDeviceControl] Final result (${verificationPassCondition}): ${finalPassed ? 'PASS' : 'FAIL'}`);
+          
         }
       } else {
-        console.error('[@component:NavigationEditorDeviceControl] Verification failed:', response.error);
+        
         onSetVerificationResults([]);
       }
     } catch (error) {
-      console.error('[@component:NavigationEditorDeviceControl] Error executing verifications:', error);
+      
       onSetVerificationResults([]);
     }
   }, [isVerificationActive, selectedHost, verificationPassCondition, onSetVerificationResults, onSetLastVerifiedNodeId]);
@@ -284,9 +282,9 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
       {/* Verification Results Display - Show when there are verification results */}
       {(() => {
         const shouldShow = verificationResults.length > 0 && lastVerifiedNodeId;
-        console.log(`[@component:NavigationEditorDeviceControl] Verification display check: results.length=${verificationResults.length}, lastVerifiedNodeId=${lastVerifiedNodeId}, shouldShow=${shouldShow}`);
+        
         if (shouldShow) {
-          console.log(`[@component:NavigationEditorDeviceControl] Rendering verification results for node:`, nodes.find(n => n.id === lastVerifiedNodeId)?.data.label);
+          
         }
         return shouldShow;
       })() && (
@@ -457,7 +455,7 @@ export const createDeviceControlHandlers = (
   // Handle taking screenshot using AV controller proxy
   const handleTakeScreenshot = async () => {
     if (!selectedHost || !isControlActive || !selectedNode) {
-      console.log('[@handlers:DeviceControl] Cannot take screenshot: no device selected, not in control, or no node selected');
+      
       return;
     }
 
