@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, Slider, IconButton, Typography } from '@mui/material';
 import { PlayArrow, Pause } from '@mui/icons-material';
 import { DragSelectionOverlay } from './DragSelectionOverlay';
-import { getStreamViewerLayout } from '../../config/layoutConfig';
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { getStreamViewerLayout } from '../../../config/layoutConfig';
+import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface DragArea {
   x: number;
@@ -267,47 +267,6 @@ export function VideoCapture({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleCapture = async () => {
-    if (!selectedHostDevice) {
-      console.error('[@component:VideoCapture] No host device selected for capture');
-      return;
-    }
-
-    setIsCapturing(true);
-    setCaptureError(null);
-
-    try {
-      console.log('[@component:VideoCapture] Starting capture using server route...');
-
-      // Use server route instead of AV controller proxy
-      const response = await fetch(`/server/av/capture`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedHostDevice.host_name,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.imagePath) {
-        const newImages = [...capturedImages, result.imagePath];
-        setCapturedImages(newImages);
-        setCurrentValue(newImages.length - 1);
-        console.log(`[@component:VideoCapture] Capture successful: ${result.imagePath}`);
-      } else {
-        throw new Error(result.error || 'Capture failed');
-      }
-    } catch (error: any) {
-      console.error('[@component:VideoCapture] Capture failed:', error);
-      setCaptureError(error.message || 'Failed to capture image');
-    } finally {
-      setIsCapturing(false);
-    }
   };
 
   return (

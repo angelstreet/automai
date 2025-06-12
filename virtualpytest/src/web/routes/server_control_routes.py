@@ -136,13 +136,14 @@ def take_control():
                 
                 if host_data.get('success'):
                     # Host confirmed controllers started - that's all we need
-                    print(f"[@route:server_take_control] Control taken successfully for host: {host_name}")
+                    print(f"[@route:server_take_control] SUCCESS: Take control succeeded for host: {host_name}")
                     return jsonify({
                         'success': True,
                         'message': 'Control taken successfully'
                     }), 200
                 else:
                     # Host failed to start controllers - unlock and return simple error
+                    print(f"[@route:server_take_control] FAILED: Take control failed for host: {host_name}")
                     unlock_device_in_registry(host_name, session_id)
                     
                     return jsonify({

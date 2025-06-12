@@ -659,6 +659,7 @@ export const useNavigationEditor = () => {
     // Device control state
     selectedHost: deviceControl.selectedHost,
     isControlActive: deviceControl.isControlActive,
+    isTakingControl: deviceControl.isTakingControl,
     isRemotePanelOpen: deviceControl.isRemotePanelOpen,
     showRemotePanel: deviceControl.showRemotePanel,
     showAVPanel: deviceControl.showAVPanel,

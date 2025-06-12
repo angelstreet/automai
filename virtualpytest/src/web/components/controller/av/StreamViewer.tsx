@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../config/layoutConfig';
-import { StreamClickOverlay } from './UserInterface_StreamClickOverlay';
+import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
+import { StreamClickOverlay } from './StreamClickOverlay';
 
 interface StreamViewerProps {
   streamUrl?: string;
@@ -55,9 +55,9 @@ export function StreamViewer({
       isCapturing,
       model,
       layoutConfig,
-      hasVideoRef: !!videoRef.current
+      hasVideoRef: !!videoRef.current,
     });
-    
+
     return () => {
       console.log('[@component:StreamViewer] Component unmounting');
     };
@@ -123,7 +123,7 @@ export function StreamViewer({
 
     console.log('[@component:StreamViewer] Trying native HTML5 playback');
     setUseNativePlayer(true);
-    
+
     try {
       // Clean up any existing HLS
       if (hlsRef.current) {
@@ -132,7 +132,7 @@ export function StreamViewer({
       }
 
       const video = videoRef.current;
-      
+
       // Set up event listeners for native playback
       const handleLoadedMetadata = () => {
         console.log('[@component:StreamViewer] Native playback loaded successfully');
@@ -170,7 +170,8 @@ export function StreamViewer({
   // Initialize or reinitialize stream with simplified approach
   const initializeStream = useCallback(async () => {
     const now = Date.now();
-    if (now - lastInitTime.current < 1000) { // Reduced debounce
+    if (now - lastInitTime.current < 1000) {
+      // Reduced debounce
       return;
     }
     lastInitTime.current = now;
@@ -240,7 +241,7 @@ export function StreamViewer({
 
       hls.on(HLS.Events.ERROR, (_: any, data: any) => {
         console.warn('[@component:StreamViewer] HLS error:', data.type, data.details);
-        
+
         if (data.fatal) {
           console.error('[@component:StreamViewer] Fatal HLS error, trying native playback');
           // Don't retry HLS, switch to native immediately
@@ -268,12 +269,19 @@ export function StreamViewer({
       // Load the stream
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
-
     } catch (error: any) {
       console.error('[@component:StreamViewer] HLS initialization failed, trying native:', error);
       await tryNativePlayback();
     }
-  }, [streamUrl, currentStreamUrl, cleanupStream, attemptPlay, retryCount, useNativePlayer, tryNativePlayback]);
+  }, [
+    streamUrl,
+    currentStreamUrl,
+    cleanupStream,
+    attemptPlay,
+    retryCount,
+    useNativePlayer,
+    tryNativePlayback,
+  ]);
 
   // Handle stream errors with simplified retry logic
   const handleStreamError = useCallback(() => {
@@ -294,7 +302,15 @@ export function StreamViewer({
     }, retryDelay);
 
     return () => clearTimeout(timeout);
-  }, [retryCount, isStreamActive, streamUrl, initializeStream, maxRetries, retryDelay, tryNativePlayback]);
+  }, [
+    retryCount,
+    isStreamActive,
+    streamUrl,
+    initializeStream,
+    maxRetries,
+    retryDelay,
+    tryNativePlayback,
+  ]);
 
   // Handle tab visibility changes - simplified
   useEffect(() => {
@@ -318,7 +334,7 @@ export function StreamViewer({
       setRetryCount(0);
       setStreamLoaded(false); // Force reload by resetting loaded state
       setStreamError(null);
-      
+
       // Add a small delay to ensure clean state reset
       setTimeout(() => {
         initializeStream();
@@ -335,14 +351,15 @@ export function StreamViewer({
   // Log click overlay status
   useEffect(() => {
     if (enableClick) {
-      const overlayEnabled = streamLoaded && !requiresUserInteraction && deviceResolution && videoRef.current;
+      const overlayEnabled =
+        streamLoaded && !requiresUserInteraction && deviceResolution && videoRef.current;
       console.log('[@component:StreamViewer] Click overlay status:', {
         enabled: overlayEnabled,
         streamLoaded,
         requiresUserInteraction,
         hasDeviceResolution: !!deviceResolution,
         hasVideoRef: !!videoRef.current,
-        deviceResolution
+        deviceResolution,
       });
     }
   }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution, videoRef.current]);
@@ -441,29 +458,34 @@ export function StreamViewer({
                 : 'Connecting with fallback player...'
               : 'Loading stream...'}
           </Typography>
-          
+
           {streamError && (
-            <Typography variant="caption" sx={{ color: '#777777', textAlign: 'center', fontSize: '0.65rem', maxWidth: '80%' }}>
-              {useNativePlayer ? 'Using native player for better compatibility' : 'Stream will auto-reconnect'}
+            <Typography
+              variant="caption"
+              sx={{ color: '#777777', textAlign: 'center', fontSize: '0.65rem', maxWidth: '80%' }}
+            >
+              {useNativePlayer
+                ? 'Using native player for better compatibility'
+                : 'Stream will auto-reconnect'}
             </Typography>
           )}
         </Box>
       )}
 
       {/* Stream Click Overlay - only show when click is enabled and stream is loaded */}
-      {enableClick && 
-       streamLoaded && 
-       !requiresUserInteraction && 
-       deviceResolution && 
-       videoRef.current && (
-        <StreamClickOverlay
-          videoRef={videoRef}
-          deviceResolution={deviceResolution}
-          deviceId={deviceId}
-          onTap={onTap}
-          selectedHostDevice={selectedHostDevice}
-        />
-      )}
+      {enableClick &&
+        streamLoaded &&
+        !requiresUserInteraction &&
+        deviceResolution &&
+        videoRef.current && (
+          <StreamClickOverlay
+            videoRef={videoRef}
+            deviceResolution={deviceResolution}
+            deviceId={deviceId}
+            onTap={onTap}
+            selectedHostDevice={selectedHostDevice}
+          />
+        )}
 
       {(!streamUrl || !isStreamActive) && (
         <Box
@@ -508,33 +530,64 @@ export function StreamViewer({
 
 export default React.memo(StreamViewer, (prevProps, nextProps) => {
   // Compare all props that could cause stream reinitialization
-  const isEqual = prevProps.streamUrl === nextProps.streamUrl && 
-         prevProps.isStreamActive === nextProps.isStreamActive &&
-         prevProps.isCapturing === nextProps.isCapturing &&
-         prevProps.model === nextProps.model &&
-         prevProps.enableClick === nextProps.enableClick &&
-         prevProps.deviceId === nextProps.deviceId &&
-         prevProps.layoutConfig === nextProps.layoutConfig &&
-         prevProps.onTap === nextProps.onTap &&
-         JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
-         JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
-         prevProps.selectedHostDevice === nextProps.selectedHostDevice;
-  
+  const isEqual =
+    prevProps.streamUrl === nextProps.streamUrl &&
+    prevProps.isStreamActive === nextProps.isStreamActive &&
+    prevProps.isCapturing === nextProps.isCapturing &&
+    prevProps.model === nextProps.model &&
+    prevProps.enableClick === nextProps.enableClick &&
+    prevProps.deviceId === nextProps.deviceId &&
+    prevProps.layoutConfig === nextProps.layoutConfig &&
+    prevProps.onTap === nextProps.onTap &&
+    JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
+    JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
+    prevProps.selectedHostDevice === nextProps.selectedHostDevice;
+
   if (!isEqual) {
     console.log('[@component:StreamViewer] Props changed, component will re-render:', {
-      streamUrl: prevProps.streamUrl !== nextProps.streamUrl ? { prev: prevProps.streamUrl, next: nextProps.streamUrl } : 'same',
-      isStreamActive: prevProps.isStreamActive !== nextProps.isStreamActive ? { prev: prevProps.isStreamActive, next: nextProps.isStreamActive } : 'same',
-      isCapturing: prevProps.isCapturing !== nextProps.isCapturing ? { prev: prevProps.isCapturing, next: nextProps.isCapturing } : 'same',
-      model: prevProps.model !== nextProps.model ? { prev: prevProps.model, next: nextProps.model } : 'same',
-      enableClick: prevProps.enableClick !== nextProps.enableClick ? { prev: prevProps.enableClick, next: nextProps.enableClick } : 'same',
-      deviceId: prevProps.deviceId !== nextProps.deviceId ? { prev: prevProps.deviceId, next: nextProps.deviceId } : 'same',
-      layoutConfig: prevProps.layoutConfig !== nextProps.layoutConfig ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig } : 'same',
+      streamUrl:
+        prevProps.streamUrl !== nextProps.streamUrl
+          ? { prev: prevProps.streamUrl, next: nextProps.streamUrl }
+          : 'same',
+      isStreamActive:
+        prevProps.isStreamActive !== nextProps.isStreamActive
+          ? { prev: prevProps.isStreamActive, next: nextProps.isStreamActive }
+          : 'same',
+      isCapturing:
+        prevProps.isCapturing !== nextProps.isCapturing
+          ? { prev: prevProps.isCapturing, next: nextProps.isCapturing }
+          : 'same',
+      model:
+        prevProps.model !== nextProps.model
+          ? { prev: prevProps.model, next: nextProps.model }
+          : 'same',
+      enableClick:
+        prevProps.enableClick !== nextProps.enableClick
+          ? { prev: prevProps.enableClick, next: nextProps.enableClick }
+          : 'same',
+      deviceId:
+        prevProps.deviceId !== nextProps.deviceId
+          ? { prev: prevProps.deviceId, next: nextProps.deviceId }
+          : 'same',
+      layoutConfig:
+        prevProps.layoutConfig !== nextProps.layoutConfig
+          ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig }
+          : 'same',
       onTap: prevProps.onTap !== nextProps.onTap ? { prev: 'function', next: 'function' } : 'same',
-      sx: JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx) ? { prev: prevProps.sx, next: nextProps.sx } : 'same',
-      deviceResolution: JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution) ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution } : 'same',
-      selectedHostDevice: prevProps.selectedHostDevice !== nextProps.selectedHostDevice ? { prev: prevProps.selectedHostDevice, next: nextProps.selectedHostDevice } : 'same',
+      sx:
+        JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx)
+          ? { prev: prevProps.sx, next: nextProps.sx }
+          : 'same',
+      deviceResolution:
+        JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution)
+          ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution }
+          : 'same',
+      selectedHostDevice:
+        prevProps.selectedHostDevice !== nextProps.selectedHostDevice
+          ? { prev: prevProps.selectedHostDevice, next: nextProps.selectedHostDevice }
+          : 'same',
     });
   }
-  
+
   return isEqual;
 });

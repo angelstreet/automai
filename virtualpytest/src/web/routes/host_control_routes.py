@@ -174,7 +174,7 @@ def take_control():
                 })
         
         # Both controllers are ready
-        print(f"[@route:take_control] All controllers ready for device: {device_name}")
+        print(f"[@route:take_control] SUCCESS: Take control succeeded for device: {device_name}")
         return jsonify({
             'success': True,
             'status': 'ready',
@@ -191,7 +191,7 @@ def take_control():
         })
             
     except Exception as e:
-        print(f"[@route:take_control] Error checking controllers: {str(e)}")
+        print(f"[@route:take_control] FAILED: Take control failed with error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Failed to check controllers: {str(e)}'

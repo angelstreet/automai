@@ -18,6 +18,7 @@ export const useNavigationDeviceControl = ({
   // Device control state
   const [selectedHost, setSelectedHost] = useState<Host | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
+  const [isTakingControl, setIsTakingControl] = useState(false);
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [showRemotePanel, setShowRemotePanel] = useState(false);
   const [showAVPanel, setShowAVPanel] = useState(false);
@@ -64,6 +65,12 @@ export const useNavigationDeviceControl = ({
       return;
     }
 
+    if (isTakingControl) {
+      console.warn('[@hook:useNavigationDeviceControl] Take control already in progress');
+      return;
+    }
+
+    setIsTakingControl(true);
     console.log(
       `[@hook:useNavigationDeviceControl] Taking control of device: ${selectedHost.host_name}`,
     );
@@ -135,8 +142,10 @@ export const useNavigationDeviceControl = ({
       setShowRemotePanel(false);
       setShowAVPanel(false);
       setIsRemotePanelOpen(false);
+    } finally {
+      setIsTakingControl(false);
     }
-  }, [selectedHost, isControlActive, buildServerUrl]);
+  }, [selectedHost, isControlActive, isTakingControl, buildServerUrl]);
 
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {
@@ -285,6 +294,7 @@ export const useNavigationDeviceControl = ({
     // Device control state
     selectedHost,
     isControlActive,
+    isTakingControl,
     isRemotePanelOpen,
     showRemotePanel,
     showAVPanel,
