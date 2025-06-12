@@ -105,8 +105,8 @@ def initialize_host_object(app):
                     app.my_host_device = host_utils.global_host_object
                     print(f"[@host:main:initialize_host_object] Host device initialization completed")
                     print(f"[@host:main:initialize_host_object] Host: {host_utils.global_host_object.get('host_name')}")
-                    print(f"[@host:main:initialize_host_object] Device Name: {host_utils.global_host_object.get('name')}")
-                    print(f"[@host:main:initialize_host_object] Device Model: {host_utils.global_host_object.get('model')}")
+                    print(f"[@host:main:initialize_host_object] Device Name: {host_utils.global_host_object.get('device_name')}")
+                    print(f"[@host:main:initialize_host_object] Device Model: {host_utils.global_host_object.get('device_model')}")
                     print(f"[@host:main:initialize_host_object] Device IP: {host_utils.global_host_object.get('device_ip')}")
                     print(f"[@host:main:initialize_host_object] Device Port: {host_utils.global_host_object.get('device_port')}")
             else:

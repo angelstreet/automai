@@ -1,37 +1,24 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
-  Edge,
-  ReactFlowInstance,
-  MarkerType,
-  useReactFlow,
-} from 'reactflow';
-import {
-  UINavigationNode,
-  UINavigationEdge,
-  NavigationTreeData,
-  NodeForm,
-  EdgeForm,
-} from '../../types/pages/Navigation_Types';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { addEdge, Connection, MarkerType } from 'reactflow';
+
+import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
+import { Host } from '../../types/common/Host_Types';
+import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
 
 // Import the modular hooks
+import { ConnectionResult } from '../navigation/useConnectionRules';
+import { useNavigationConfig } from '../navigation/useNavigationConfig';
+
 import { useNavigationState, useConnectionRules, useNodeEdgeManagement } from './useNavigation';
 
 // Import the real navigation config hook
-import { useNavigationConfig } from '../navigation/useNavigationConfig';
 
 // Import connection result type
-import { ConnectionResult } from '../navigation/useConnectionRules';
 
 // Import registration context and default team ID
-import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
 
 // Import Host type for device control
-import { Host } from '../../types/common/Host_Types';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
@@ -119,6 +106,9 @@ export const useNavigationEditor = () => {
   const [showAVPanel, setShowAVPanel] = useState(false);
   const [isVerificationActive, setIsVerificationActive] = useState(false);
 
+  // Filtered hosts based on interface models
+  const [filteredAvailableHosts, setFilteredAvailableHosts] = useState<Host[]>([]);
+
   // Get registration context for host management
   const {
     availableHosts,
@@ -126,6 +116,17 @@ export const useNavigationEditor = () => {
     buildServerUrl: buildRegistrationServerUrl,
     fetchHosts,
   } = useRegistration();
+
+  // Ensure hosts are fetched when component mounts
+  useEffect(() => {
+    console.log(
+      `[@hook:useNavigationEditor] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
+    );
+    if (availableHosts.length === 0) {
+      console.log(`[@hook:useNavigationEditor] No hosts available, triggering fetch...`);
+      fetchHosts();
+    }
+  }, []); // Only run on mount
 
   // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback(
@@ -363,7 +364,7 @@ export const useNavigationEditor = () => {
       navigationState.setCurrentTreeName(targetTreeName);
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
 
-      // Load tree data for that level from config
+      // Load tree data for that level from config (nodes/edges only, not interface metadata)
       configHook.loadFromConfig(targetTreeName);
     },
     [navigationState, configHook.loadFromConfig, navigate],
@@ -383,7 +384,7 @@ export const useNavigationEditor = () => {
       navigationState.setCurrentTreeName(targetTreeName);
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
 
-      // Load parent tree data from config
+      // Load parent tree data from config (nodes/edges only, not interface metadata)
       configHook.loadFromConfig(targetTreeName);
     }
   }, [navigationState, configHook.loadFromConfig, navigate]);
@@ -638,6 +639,35 @@ export const useNavigationEditor = () => {
     setIsRemotePanelOpen(false);
   }, []);
 
+  // Update filtered hosts when availableHosts changes
+  useEffect(() => {
+    console.log(
+      `[@hook:useNavigationEditor] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
+      navigationState.userInterface?.models,
+    );
+
+    if (navigationState.userInterface?.models && availableHosts.length > 0) {
+      console.log(
+        `[@hook:useNavigationEditor] Available hosts for filtering:`,
+        availableHosts.map((h) => ({ host_name: h.host_name, device_model: h.device_model })),
+      );
+
+      const compatibleHosts = availableHosts.filter((host) =>
+        navigationState.userInterface.models.includes(host.device_model),
+      );
+
+      console.log(
+        `[@hook:useNavigationEditor] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
+      );
+      setFilteredAvailableHosts(compatibleHosts);
+    } else {
+      console.log(
+        `[@hook:useNavigationEditor] No filtering - showing all ${availableHosts.length} hosts`,
+      );
+      setFilteredAvailableHosts(availableHosts);
+    }
+  }, [availableHosts, navigationState.userInterface?.models]);
+
   // Fetch interface and filter hosts based on URL parameter
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -659,12 +689,44 @@ export const useNavigationEditor = () => {
 
             // Filter hosts by device models from interface
             if (interfaceData.models && availableHosts.length > 0) {
+              console.log(`[@hook:useNavigationEditor] Interface models:`, interfaceData.models);
+              console.log(
+                `[@hook:useNavigationEditor] Available hosts device models:`,
+                availableHosts.map((host) => ({
+                  host_name: host.host_name,
+                  device_model: host.device_model,
+                  device_name: host.device_name,
+                })),
+              );
+
               const compatibleHosts = availableHosts.filter((host) =>
                 interfaceData.models.includes(host.device_model),
               );
+
               console.log(
-                `[@hook:useNavigationEditor] Compatible hosts found: ${compatibleHosts.length}`,
+                `[@hook:useNavigationEditor] Compatible hosts found: ${compatibleHosts.length}/${availableHosts.length}`,
               );
+
+              // Debug logging: Show which hosts were filtered out and why
+              const filteredOut = availableHosts.filter(
+                (host) => !interfaceData.models.includes(host.device_model),
+              );
+              if (filteredOut.length > 0) {
+                console.log(
+                  `[@hook:useNavigationEditor] Hosts filtered out:`,
+                  filteredOut.map((host) => ({
+                    host_name: host.host_name,
+                    device_model: host.device_model,
+                    reason: `device_model "${host.device_model}" not in interface models [${interfaceData.models.join(', ')}]`,
+                  })),
+                );
+              }
+
+              // Store filtered hosts
+              setFilteredAvailableHosts(compatibleHosts);
+            } else {
+              // No interface models or no hosts - show all hosts
+              setFilteredAvailableHosts(availableHosts);
             }
           }
         } catch (error) {
@@ -822,8 +884,8 @@ export const useNavigationEditor = () => {
     handleConnectionChange,
     handleDisconnectComplete,
 
-    // Host data
-    availableHosts,
+    // Host data (filtered by interface models)
+    availableHosts: filteredAvailableHosts,
     getHostByName,
     fetchHosts,
   };

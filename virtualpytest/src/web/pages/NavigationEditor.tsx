@@ -271,7 +271,7 @@ const NavigationEditorContent: React.FC = () => {
             console.log(
               `[@component:NavigationEditor] Lock acquired successfully for tree: ${currentTreeName}`,
             );
-            // STEP 2: If lock acquired, load the tree data
+            // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
             loadFromConfig(currentTreeName);
           } else {
             console.warn(

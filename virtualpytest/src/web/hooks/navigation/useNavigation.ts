@@ -111,11 +111,37 @@ export const useNavigation = (): NavigationHookResult => {
       return availableHosts;
     }
 
+    // Debug logging: Show all available host device models
+    console.log(`[@hook:useNavigation] Interface models:`, interfaceModels);
+    console.log(
+      `[@hook:useNavigation] Available hosts device models:`,
+      availableHosts.map((host) => ({
+        host_name: host.host_name,
+        device_model: host.device_model,
+        device_name: host.device_name,
+      })),
+    );
+
     const filtered = availableHosts.filter((host) => interfaceModels.includes(host.device_model));
 
     console.log(
       `[@hook:useNavigation] Filtered hosts: ${filtered.length}/${availableHosts.length} hosts match models: ${interfaceModels.join(', ')}`,
     );
+
+    // Debug logging: Show which hosts were filtered out and why
+    const filteredOut = availableHosts.filter(
+      (host) => !interfaceModels.includes(host.device_model),
+    );
+    if (filteredOut.length > 0) {
+      console.log(
+        `[@hook:useNavigation] Hosts filtered out:`,
+        filteredOut.map((host) => ({
+          host_name: host.host_name,
+          device_model: host.device_model,
+          reason: `device_model "${host.device_model}" not in interface models [${interfaceModels.join(', ')}]`,
+        })),
+      );
+    }
 
     return filtered;
   }, [availableHosts, interfaceModels]);
