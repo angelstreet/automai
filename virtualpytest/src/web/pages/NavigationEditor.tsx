@@ -598,12 +598,7 @@ const NavigationEditorContent: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <RemotePanel
-            host={selectedHost}
-            autoConnect={false}
-            onConnectionChange={handleConnectionChange}
-            onDisconnectComplete={handleDisconnectComplete}
-          />
+          <RemotePanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
         </Box>
       )}
 
@@ -624,12 +619,7 @@ const NavigationEditorContent: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <AVPanel
-            host={selectedHost}
-            autoConnect={false}
-            onConnectionChange={handleConnectionChange}
-            onDisconnectComplete={handleDisconnectComplete}
-          />
+          <AVPanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
         </Box>
       )}
 

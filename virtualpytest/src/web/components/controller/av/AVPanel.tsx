@@ -1,71 +1,58 @@
 import { Box, Alert } from '@mui/material';
 import React from 'react';
-import { HDMIStreamPanel } from './HDMIStreamPanel';
+
 import { Host } from '../../../types/common/Host_Types';
 
+import { HDMIStream } from './HDMIStream';
+
 interface AVPanelProps {
-  /** Host device to control */
   host: Host;
-  /** Auto-connect on mount */
-  autoConnect?: boolean;
-  /** Callback when connection state changes */
-  onConnectionChange?: (connected: boolean) => void;
-  /** Callback when disconnect is complete */
-  onDisconnectComplete?: () => void;
-  /** Custom styling */
-  sx?: any;
+  onReleaseControl?: () => void;
 }
 
-export function AVPanel({
-  host,
-  autoConnect = false,
-  onConnectionChange,
-  onDisconnectComplete,
-  sx = {},
-}: AVPanelProps) {
-  console.log(`[@component:AVPanel] Rendering AV panel for device model: ${host.device_model}`);
+export function AVPanel({ host }: AVPanelProps) {
+  console.log(`[@component:AVPanel] Rendering AV panel for device: ${host.device_model}`);
+  console.log(`[@component:AVPanel] Controller config:`, host.controller_configs);
 
-  // Instantiate specific AV component based on host.device_model
+  // Simple controller config detection - no loading, no fallback, no validation
   const renderAVComponent = () => {
-    switch (host.device_model) {
-      case 'android_mobile':
-      case 'android_tv':
+    // Check if host has AV controller configuration
+    const avConfig = host.controller_configs?.av;
+
+    if (!avConfig) {
+      return (
+        <Box sx={{ p: 2 }}>
+          <Alert severity="info">No AV configuration available for this device</Alert>
+        </Box>
+      );
+    }
+
+    // Select component based on AV controller implementation
+    const avType = avConfig.implementation || avConfig.type || 'unknown';
+
+    switch (avType) {
+      case 'hdmi_stream':
+        return <HDMIStream host={host} />;
+      case 'usb_stream':
         return (
-          <HDMIStreamPanel
-            host={host}
-            autoConnect={autoConnect}
-            onConnectionChange={onConnectionChange}
-            onDisconnectComplete={onDisconnectComplete}
-            compact={true}
-            sx={sx}
-          />
+          <Box sx={{ p: 2 }}>
+            <Alert severity="info">USB Stream Panel - Coming Soon</Alert>
+          </Box>
         );
-      case 'ios_mobile':
-        // Future: USBStreamPanel
+      case 'wireless_stream':
         return (
-          <Box sx={{ p: 2, ...sx }}>
-            <Alert severity="info">USB Stream Panel for iOS devices - Coming Soon</Alert>
+          <Box sx={{ p: 2 }}>
+            <Alert severity="info">Wireless Stream Panel - Coming Soon</Alert>
           </Box>
         );
       default:
         return (
-          <Box sx={{ p: 2, ...sx }}>
-            <Alert severity="warning">
-              No AV component available for device model: {host.device_model}
-            </Alert>
+          <Box sx={{ p: 2 }}>
+            <Alert severity="warning">Unsupported AV type: {String(avType)}</Alert>
           </Box>
         );
     }
   };
 
-  // Early return if no host provided
-  if (!host) {
-    return (
-      <Box sx={{ p: 2, ...sx }}>
-        <Alert severity="error">No host device provided for AV panel</Alert>
-      </Box>
-    );
-  }
-
-  return renderAVComponent();
+  return <Box sx={{ width: '100%', height: '100%' }}>{renderAVComponent()}</Box>;
 }
