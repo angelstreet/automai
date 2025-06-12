@@ -17,7 +17,7 @@ import {
   LinkOff,
   FiberManualRecord,
 } from '@mui/icons-material';
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface PowerPanelProps {
   /** Custom styling */

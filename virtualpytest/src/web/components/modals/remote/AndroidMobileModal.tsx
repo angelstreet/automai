@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Box,
   Button,
   TextField,
@@ -14,8 +15,8 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useRemoteConnection } from '../../../hooks/controller/useRemoteConnection';
-import { AndroidMobileCore } from '../../remote/AndroidMobileCore';
-import { AndroidMobileOverlay } from '../../remote/AndroidMobileOverlay';
+import { AndroidMobileCore } from '../../controller/remote/android/AndroidMobileCore';
+import { AndroidMobileOverlay } from '../../controller/remote/android/AndroidMobileOverlay';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { BaseConnectionConfig } from '../../../types/controller/Remote_Types';
 

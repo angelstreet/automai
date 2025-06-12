@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   Typography,
   IconButton,
+  DialogActions,
+  Button,
+  Box,
 } from '@mui/material';
 import { Close as CloseIcon, Android, Bluetooth, Router, PhoneAndroid } from '@mui/icons-material';
-import { RemotePanel } from '../../remote/RemotePanel';
+import { RemotePanel } from '../../controller/remote/abstract/RemotePanel';
 import { RemoteType, BaseConnectionConfig } from '../../../types/controller/Remote_Types';
 import { getRemoteConfig } from '../../../hooks/controller/useRemoteConfigs';
 

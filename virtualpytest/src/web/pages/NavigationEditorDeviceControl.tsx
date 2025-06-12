@@ -2,21 +2,41 @@ import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import {
   Box,
   Typography,
-  IconButton
+  IconButton,
+  Grid,
+  Alert
 } from '@mui/material';
 import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 
 // Import NEW generic remote components instead of device-specific ones
-import { CompactRemote } from '../components/remote/CompactRemote';
-import { CompactAndroidMobile } from '../components/remote/CompactAndroidMobile';
+import { CompactRemote } from '../components/controller/remote/abstract/CompactRemote';
+import { CompactAndroidMobile } from '../components/controller/remote/android/CompactAndroidMobile';
 
 // Import ScreenDefinitionEditor
-import { ScreenDefinitionEditor } from '../components/userinterface/UserInterface_ScreenDefinitionEditor';
+import { ScreenDefinitionEditor } from '../components/controller/screen/ScreenDefinitionEditor';
 
-// Import device utilities
-import { getDeviceRemoteConfig, extractConnectionConfigForAndroid, extractConnectionConfigForIR, extractConnectionConfigForBluetooth } from '../utils/device/deviceRemoteMappingUtils';
+// Simple placeholder functions to replace missing deviceRemoteMappingUtils
+const getDeviceRemoteConfig = (selectedHost: any) => {
+  // Simple fallback - just return basic config
+  return selectedHost?.controller_configs?.remote || null;
+};
+
+const extractConnectionConfigForAndroid = (remoteConfig: any) => {
+  // Simple fallback - return Android config if available
+  return remoteConfig?.android || null;
+};
+
+const extractConnectionConfigForIR = (remoteConfig: any) => {
+  // Simple fallback - return IR config if available  
+  return remoteConfig?.ir || null;
+};
+
+const extractConnectionConfigForBluetooth = (remoteConfig: any) => {
+  // Simple fallback - return Bluetooth config if available
+  return remoteConfig?.bluetooth || null;
+};
 
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';

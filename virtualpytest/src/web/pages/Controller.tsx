@@ -8,7 +8,7 @@ import {
   Container,
 } from '@mui/material';
 
-import { ControllerTypesOverview, ControllerImplementations } from '../components/remote';
+import { ControllerTypesOverview, ControllerImplementations } from '../components/controller/remote';
 import { useControllers } from '../hooks/controller';
 
 const ControllerPage: React.FC = () => {
