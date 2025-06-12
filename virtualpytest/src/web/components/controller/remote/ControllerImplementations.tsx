@@ -30,13 +30,45 @@ import {
   FormControlLabel,
   Paper,
   Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
-import { ExpandMore, ExpandLess, PlayArrow, Stop, Settings, Info } from '@mui/icons-material';
-import { ControllerTypesResponse, ControllerItem } from '../../../types/controller/Remote_Types';
-import { RemoteModal } from '../../modals/remote/RemoteModal';
-import { AndroidMobileModal } from '../../modals/remote/AndroidMobileModal';
-import { HDMIStreamModal } from '../../modals/remote/HDMIStreamModal';
-import { USBPowerPanel } from '../power/USBPowerPanel';
+import { 
+  ExpandMore, 
+  ExpandLess, 
+  PlayArrow, 
+  Stop, 
+  Settings, 
+  Info,
+  Close as CloseIcon,
+  Gamepad as ControllerIcon,
+  Tv as TvIcon,
+  Wifi as WifiIcon,
+  Visibility as VerificationIcon,
+  Power as PowerIcon,
+  Memory as ProcessorIcon,
+  CheckCircle as ConnectedIcon,
+  Cancel as DisconnectedIcon,
+} from '@mui/icons-material';
+
+// Temporary types until we fix the type imports
+interface ControllerItem {
+  id: string;
+  name: string;
+  description: string;
+  status: 'available' | 'placeholder';
+}
+
+interface ControllerTypesResponse {
+  [key: string]: ControllerItem[];
+}
+
+// TODO: Fix these imports when modal components are available
+// import { RemoteModal } from '../../modals/remote/RemoteModal';
+// import { AndroidMobileModal } from '../../modals/remote/AndroidMobileModal';
+// import { HDMIStreamModal } from '../../modals/remote/HDMIStreamModal';
+// import { USBPowerPanel } from '../power/USBPowerPanel';
 
 interface ControllerImplementationsProps {
   controllerTypes: ControllerTypesResponse | null;
@@ -154,6 +186,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       </Card>
 
       {/* Controller Modals */}
+      {/* TODO: Uncomment when modal components are available
       <RemoteModal 
         remoteType="android-tv"
         open={androidTVModalOpen} 
@@ -177,6 +210,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
         open={hdmiStreamModalOpen} 
         onClose={() => setHdmiStreamModalOpen(false)}
       />
+      */}
       
       {/* USB Power Control Modal */}
       <Dialog 
@@ -196,7 +230,9 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <USBPowerPanel />
+          {/* TODO: Uncomment when USBPowerPanel is available */}
+          {/* <USBPowerPanel /> */}
+          <Typography>USB Power Panel - Coming Soon</Typography>
         </DialogContent>
       </Dialog>
     </>
