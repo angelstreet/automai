@@ -32,7 +32,7 @@ const CampaignEditor: React.FC = () => {
   const { buildServerUrl } = useRegistration();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true for initial fetch
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +41,8 @@ const CampaignEditor: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Don't set loading to true here since it's already true initially
+      // Only set loading for subsequent fetches (like after delete)
       const campaignsResponse = await fetch(buildServerUrl('/server/campaigns/getAllCampaigns'));
 
       if (campaignsResponse.ok) {
@@ -94,13 +95,12 @@ const CampaignEditor: React.FC = () => {
         </Alert>
       )}
 
-      {loading && (
+      {loading ? (
         <Box display="flex" justifyContent="center" my={4}>
           <CircularProgress />
         </Box>
-      )}
-
-      <TableContainer component={Paper}>
+      ) : (
+        <TableContainer component={Paper}>
         <Table 
           sx={{
             '& .MuiTableRow-root:hover': {
@@ -149,6 +149,7 @@ const CampaignEditor: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      )}
     </Box>
   );
 };
