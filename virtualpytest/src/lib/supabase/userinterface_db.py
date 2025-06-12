@@ -65,6 +65,26 @@ def get_userinterface(interface_id: str, team_id: str) -> Optional[Dict]:
         print(f"[@db:userinterface_db:get_userinterface] Error: {e}")
         return None
 
+def get_userinterface_by_name(interface_name: str, team_id: str) -> Optional[Dict]:
+    """Retrieve a user interface by name and team ID from Supabase."""
+    supabase = get_supabase()
+    try:
+        result = supabase.table('userinterfaces').select(
+            'id', 'name', 'models'
+        ).eq('name', interface_name).eq('team_id', team_id).single().execute()
+        
+        if result.data:
+            ui = result.data
+            return {
+                'id': ui['id'],
+                'name': ui['name'],
+                'models': ui.get('models', []),
+            }
+        return None
+    except Exception as e:
+        print(f"[@db:userinterface_db:get_userinterface_by_name] Error: {e}")
+        return None
+
 def create_userinterface(interface_data: Dict, team_id: str, creator_id: str = None) -> Optional[Dict]:
     """Create a new user interface."""
     supabase = get_supabase()

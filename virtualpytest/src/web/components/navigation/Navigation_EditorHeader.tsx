@@ -145,11 +145,48 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   // Track logging to prevent spam in development mode
   const lastLoggedState = useRef<{ hasModels: boolean; deviceCount: number } | null>(null);
 
+  // Fetch userInterface data from API using tree name
+  const [fetchedUserInterface, setFetchedUserInterface] = useState<{ id: string; name: string; models: string[] } | null>(null);
+  const [isFetchingInterface, setIsFetchingInterface] = useState(false);
+
+  // Extract tree name from current path - use the tree name to fetch userInterface
+  useEffect(() => {
+    // Get tree name from URL path (e.g., /navigation-editor/horizon_android_mobile)
+    const pathParts = window.location.pathname.split('/');
+    const treeName = pathParts[pathParts.length - 1]; // Last part is the tree name
+    
+    if (treeName && treeName !== 'navigation-editor') {
+      const fetchUserInterface = async () => {
+        try {
+          setIsFetchingInterface(true);
+          const response = await fetch(`/server/userinterface/getUserInterfaceByName/${encodeURIComponent(treeName)}`);
+          
+          if (response.ok) {
+            const interfaceData = await response.json();
+            console.log(`[@component:NavigationEditorHeader] Fetched userInterface:`, interfaceData);
+            setFetchedUserInterface(interfaceData);
+          } else {
+            console.warn(`[@component:NavigationEditorHeader] UserInterface not found for tree: ${treeName}`);
+            setFetchedUserInterface(null);
+          }
+        } catch (error) {
+          console.error(`[@component:NavigationEditorHeader] Error fetching userInterface:`, error);
+          setFetchedUserInterface(null);
+        } finally {
+          setIsFetchingInterface(false);
+        }
+      };
+
+      fetchUserInterface();
+    }
+  }, []); // Only run once on mount
+
+  // Use fetched userInterface if available, otherwise fall back to props
+  const effectiveUserInterface = fetchedUserInterface || userInterface;
+
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
-    
-
-    const hasUserInterfaceModels = userInterface && userInterface.models && Array.isArray(userInterface.models);
+    const hasUserInterfaceModels = effectiveUserInterface && effectiveUserInterface.models && Array.isArray(effectiveUserInterface.models);
     const currentDeviceCount = availableHosts.length;
     
     // Only log if the state has actually changed
@@ -165,7 +202,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
       return availableHosts;
     }
 
-    const interfaceModels = userInterface.models;
+    const interfaceModels = effectiveUserInterface.models;
     const filtered = availableHosts.filter(device => 
       interfaceModels.includes(device.model)
     );
@@ -176,7 +213,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
     }
     
     return filtered;
-  }, [availableHosts, userInterface]);
+  }, [availableHosts, effectiveUserInterface]);
 
   // Extract device names for the dropdown
   const availableDevices = useMemo(() => {

@@ -12,6 +12,7 @@ from flask import Blueprint, request, jsonify
 from src.lib.supabase.userinterface_db import (
     get_all_userinterfaces, 
     get_userinterface, 
+    get_userinterface_by_name,
     create_userinterface, 
     delete_userinterface,
     update_userinterface,
@@ -103,6 +104,24 @@ def get_userinterface_endpoint(interface_id):
             root_tree = get_root_tree_for_interface(interface_id, team_id)
             if root_tree:
                 interface['root_tree'] = root_tree
+            return jsonify(interface)
+        else:
+            return jsonify({'error': 'User interface not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@userinterface_bp.route('/getUserInterfaceByName/<interface_name>', methods=['GET'])
+def get_userinterface_by_name_endpoint(interface_name):
+    """Get a specific user interface by name (for navigation editor)"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        interface = get_userinterface_by_name(interface_name, team_id)
+        if interface:
             return jsonify(interface)
         else:
             return jsonify({'error': 'User interface not found'}), 404
