@@ -47,7 +47,7 @@ def take_control():
         # Step 1: Check AV controller from own host_device
         try:
             from src.utils.host_utils import get_local_controller
-        av_controller = get_local_controller('av')
+            av_controller = get_local_controller('av')
             
             if not av_controller:
                 return jsonify({
