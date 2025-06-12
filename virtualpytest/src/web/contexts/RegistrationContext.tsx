@@ -141,7 +141,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     const host = availableHosts.find(h => h.host_name === hostName);
     if (host) {
       setSelectedHost(host);
-      console.log(`[@context:Registration] Selected host: ${host.name} (${host.host_ip}:${host.host_port_external})`);
+      console.log(`[@context:Registration] Selected host: ${host.host_name} (${host.host_ip}:${host.host_port_external})`);
     } else {
       console.warn(`[@context:Registration] Host with name ${hostName} not found`);
     }
