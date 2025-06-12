@@ -46,7 +46,8 @@ def take_control():
         
         # Step 1: Check AV controller from own host_device
         try:
-            av_controller = host_device.get('controller_objects', {}).get('av')
+            from src.utils.host_utils import get_local_controller
+        av_controller = get_local_controller('av')
             
             if not av_controller:
                 return jsonify({
@@ -99,7 +100,7 @@ def take_control():
         
         if device_ip and device_model in ['android_mobile', 'android_tv']:
             try:
-                remote_controller = host_device.get('controller_objects', {}).get('remote')
+                remote_controller = get_local_controller('remote')
                 
                 if not remote_controller:
                     return jsonify({

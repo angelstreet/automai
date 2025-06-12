@@ -10,6 +10,7 @@ These endpoints run on the host and use the host's own stored device object.
 """
 
 from flask import Blueprint, request, jsonify, current_app, send_file
+from src.utils.host_utils import get_local_controller
 import os
 
 # Create blueprint
@@ -29,7 +30,7 @@ def connect():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -78,7 +79,7 @@ def disconnect():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -119,7 +120,7 @@ def get_status():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -159,7 +160,7 @@ def get_stream_url():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -204,7 +205,7 @@ def take_screenshot():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -253,7 +254,7 @@ def start_video_capture():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({
@@ -318,7 +319,7 @@ def stop_video_capture():
             }), 404
         
         # Get controller object directly from own stored host_device
-        av_controller = host_device.get('controller_objects', {}).get('av')
+        av_controller = get_local_controller('av')
         
         if not av_controller:
             return jsonify({

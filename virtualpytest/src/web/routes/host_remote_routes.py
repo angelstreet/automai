@@ -9,6 +9,7 @@ This module contains host-side remote control endpoints that:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from src.utils.host_utils import get_local_controller
 
 # Create blueprint
 remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
@@ -32,7 +33,7 @@ def take_screenshot():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -85,7 +86,7 @@ def execute_command():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -186,7 +187,7 @@ def screenshot_and_dump_ui():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -262,7 +263,7 @@ def get_installed_apps():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -323,7 +324,7 @@ def click_element():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -396,7 +397,7 @@ def tap_coordinates():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -446,7 +447,7 @@ def connect_remote():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -489,7 +490,7 @@ def disconnect_remote():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
@@ -532,7 +533,7 @@ def get_remote_status():
             }), 500
         
         # Get the remote controller
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
+        remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,

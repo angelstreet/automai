@@ -217,127 +217,13 @@ def register_client():
         print(f"   Capabilities: {capabilities}")
         print(f"   Controller types: {controller_types}")
         
-        # Instantiate controller objects from configs
-        print(f"[@route:register_client] Instantiating controller objects...")
-        controller_objects = {}
+        # Use controller config names as capabilities
+        capabilities = list(controller_configs.keys()) if controller_configs else []
         
-        # Store connection data for URL builders to use when needed
-        # URL builders will construct URLs from this data when called
-        host_connection = {
-            'host_ip': host_info['host_ip'],
-            'host_port_external': host_port_external,
-            'host_port_web': host_port_web
-        }
+        print(f"[@route:register_client] Controller configs available:")
+        print(f"   Controller types: {capabilities}")
         
-        try:
-            from src.controllers import ControllerFactory
-            
-            # STEP 1: Create AV controller FIRST (required by verification controllers)
-            av_controller = None
-            if 'av' in controller_configs:
-                av_config = controller_configs['av']
-                av_params = av_config['parameters']
-                
-                print(f"[@route:register_client] Creating AV controller: {av_config['implementation']}")
-                av_controller = ControllerFactory.create_av_controller(
-                    capture_type=av_config['implementation'],
-                    device_name=device_name,
-                    video_device='/dev/video0',
-                    output_path='/var/www/html/stream/'
-                )
-                controller_objects['av'] = av_controller
-                print(f"[@route:register_client] AV controller created successfully")
-            
-            # STEP 2: Create Remote controller (independent)
-            if 'remote' in controller_configs:
-                remote_config = controller_configs['remote']
-                remote_params = remote_config['parameters']
-                
-                print(f"[@route:register_client] Creating Remote controller: {remote_config['implementation']}")
-                remote_controller = ControllerFactory.create_remote_controller(
-                    device_type=remote_config['implementation'],
-                    device_name=device_name,
-                    device_ip=remote_params.get('device_ip'),
-                    device_port=remote_params.get('device_port'),
-                    adb_port=remote_params.get('device_port')
-                )
-                controller_objects['remote'] = remote_controller
-                print(f"[@route:register_client] Remote controller created successfully")
-            
-            # STEP 3: Create Verification controller (AFTER AV controller, pass av_controller if needed)
-            if 'verification' in controller_configs:
-                verification_config = controller_configs['verification']
-                verification_params = verification_config['parameters']
-                
-                print(f"[@route:register_client] Creating Verification controller: {verification_config['implementation']}")
-                
-                # For ADB verification, construct device_id from device_ip and device_port
-                if verification_config['implementation'] == 'adb':
-                    verification_device_id = f"{verification_params.get('device_ip')}:{verification_params.get('device_port')}"
-                    verification_controller = ControllerFactory.create_verification_controller(
-                        verification_type=verification_config['implementation'],
-                        device_name=device_name,
-                        device_id=verification_device_id,
-                        connection_timeout=verification_params.get('connection_timeout', 10)
-                    )
-                else:
-                    # For text/image verification controllers, they need the AV controller
-                    if verification_config['implementation'] in ['ocr', 'text', 'image']:
-                        if not av_controller:
-                            raise ValueError(f"AV controller is required for {verification_config['implementation']} verification but was not created")
-                        
-                        verification_controller = ControllerFactory.create_verification_controller(
-                            verification_type=verification_config['implementation'],
-                            av_controller=av_controller,  # Pass AV controller for screenshot capture
-                            device_name=device_name,
-                            **verification_params
-                        )
-                    else:
-                        # For other verification types, pass parameters as-is
-                        verification_controller = ControllerFactory.create_verification_controller(
-                            verification_type=verification_config['implementation'],
-                            device_name=device_name,
-                            **verification_params
-                        )
-                
-                controller_objects['verification'] = verification_controller
-                print(f"[@route:register_client] Verification controller created successfully")
-            
-            # STEP 4: Create Power controller (independent)
-            if 'power' in controller_configs:
-                power_config = controller_configs['power']
-                power_params = power_config['parameters']
-                
-                print(f"[@route:register_client] Creating Power controller: {power_config['implementation']}")
-                power_controller = ControllerFactory.create_power_controller(
-                    power_type=power_config['implementation'],
-                    device_name=device_name,
-                    hub_location=power_params.get('hub_location'),
-                    port_number=power_params.get('port_number')
-                )
-                controller_objects['power'] = power_controller
-                print(f"[@route:register_client] Power controller created successfully")
-            
-            print(f"[@route:register_client] All controller objects instantiated: {list(controller_objects.keys())}")
-            
-        except Exception as e:
-            error_msg = f"Failed to instantiate controllers: {str(e)}"
-            print(f"❌ [SERVER] Registration failed: {error_msg}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({
-                'status': 'error',
-                'error': error_msg,
-                'details': 'Controller instantiation failed during host registration'
-            }), 500
-        
-        # Use actual controller names directly - no mapping needed
-        capabilities = list(controller_objects.keys())
-        
-        print(f"[@route:register_client] Actual instantiated controllers:")
-        print(f"   Controllers: {list(controller_objects.keys())}")
-        
-        # Create a single, clean host object
+        # Create a single, complete host object - SINGLE SOURCE OF TRUTH
         host_object = {
             # === PRIMARY HOST IDENTIFICATION ===
             'host_name': host_info['host_name'],           # Primary key
@@ -354,20 +240,27 @@ def register_client():
             'device_ip': device_ip,
             'device_port': device_port,
             
-            # === CONNECTION INFORMATION ===
-            'connection': host_connection,
+            # === CONNECTION INFORMATION (embedded in host object) ===
+            'connection': {
+                'host_ip': host_info['host_ip'],
+                'host_port_external': host_port_external,
+                'host_port_web': host_port_web,
+                'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
+                'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
+            },
             
             # === STATUS AND METADATA ===
             'status': 'online',
             'registered_at': datetime.now().isoformat(),
             'last_seen': time.time(),
             'capabilities': capabilities,
+            'controller_types': controller_types,
             'system_stats': host_info.get('system_stats', get_system_stats()),
             'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
             
             # === CONTROLLER INFORMATION ===
             'controller_configs': controller_configs,     # Complete configs from factory
-            'controller_objects': controller_objects,     # Instantiated controllers (internal use)
+            # 🚫 REMOVED: 'controller_objects' - Host manages its own controllers locally
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -407,8 +300,7 @@ def register_client():
             print(f"   Device: {device_name} ({host_info['device_model']})")
             print(f"   Device Address: {device_ip}:{device_port}")
         
-        # Send clean response (exclude controller_objects)
-        response_data = {k: v for k, v in host_object.items() if k != 'controller_objects'}
+        response_data = host_object
         
         return jsonify({
             'status': 'success',
@@ -611,34 +503,12 @@ def list_clients_as_devices():
                 del connected_clients[host_name]
                 set_health_check_threads(get_health_check_threads())
         
-        # Convert hosts to clean device format
-        devices = []
-        for host_name, host_info in connected_clients.items():
-            if host_info.get('status') == 'online':
-                # Return clean, consistent structure
-                devices.append({
-                    # === PRIMARY DEVICE IDENTIFICATION ===
-                    'id': host_name,          # For compatibility
-                    'name': host_info.get('name'),             # Device display name
-                    'host_name': host_name,                    # Primary host identifier
-                    'model': host_info.get('model'),           # Device model
-                    
-                    # === CONNECTION INFORMATION ===
-                    'connection': host_info.get('connection', {}),
-                    
-                    # === STATUS AND METADATA ===
-                    'status': host_info.get('status'),
-                    'last_seen': host_info.get('last_seen'),
-                    'registered_at': host_info.get('registered_at'),
-                    'capabilities': host_info.get('capabilities', []),
-                    'system_stats': host_info.get('system_stats', {}),
-                    'description': host_info.get('description', ''),
-                    
-                    # === DEVICE LOCK MANAGEMENT ===
-                    'isLocked': host_info.get('isLocked', False),
-                    'lockedBy': host_info.get('lockedBy'),
-                    'lockedAt': host_info.get('lockedAt'),
-                })
+        # Return complete stored objects exactly as-is - no manual processing
+        devices = [
+            {k: v for k, v in host_info.items() if k != 'controller_objects'}
+            for host_name, host_info in connected_clients.items()
+            if host_info.get('status') == 'online'
+        ]
         
         print(f"📱 [DEVICES] Returning {len(devices)} online devices from registered hosts")
         for device in devices:

@@ -55,10 +55,11 @@ ping_stop_event = threading.Event()
 # Global storage for host device object (used when Flask app context is not available)
 global_host_device = None
 
-# Import centralized URL building from routes utils
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
-from app_utils import buildServerUrl
+# Global storage for local controller objects (host manages its own controllers)
+local_controller_objects = {}
+
+# Import centralized URL building from utils
+from src.utils.app_utils import buildServerUrl
 
 def register_host_with_server():
     """Register this host with the server"""
@@ -146,6 +147,11 @@ def register_host_with_server():
                 
                 print(f"\n✅ [HOST] Registration successful!")
                 print(f"   Host Name: {host_name}")
+                
+                # Create local controllers directly from device model (no server response needed)
+                print(f"\n🎮 [HOST] Creating local controllers for device model: {device_model}")
+                created_controllers = create_local_controllers_from_model(device_model, device_name, device_ip, device_port)
+                print(f"   Created controllers: {list(created_controllers.keys())}")
                 
                 # Start periodic ping thread
                 start_ping_thread()
@@ -380,3 +386,116 @@ def setup_host_signal_handlers():
     
     # Register exit handler for normal exit
     atexit.register(cleanup_on_exit) 
+
+def create_local_controllers_from_model(device_model, device_name, device_ip, device_port):
+    """
+    Create controller objects locally based on device model - simplified without server configs.
+    
+    Args:
+        device_model: Device model (e.g., 'android_mobile', 'android_tv')
+        device_name: Name of the device
+        device_ip: Device IP address
+        device_port: Device port
+        
+    Returns:
+        dict: Dictionary of created controller objects
+    """
+    print(f"[@utils:host_utils:create_local_controllers_from_model] Creating controllers for {device_model}: {device_name}")
+    
+    controller_objects = {}
+    
+    try:
+        from src.controllers import ControllerFactory
+        
+        # STEP 1: Create AV controller (all devices get HDMI stream)
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating AV controller: hdmi_stream")
+        av_controller = ControllerFactory.create_av_controller(
+            capture_type='hdmi_stream',
+            device_name=device_name,
+            video_device='/dev/video0',
+            resolution='1920x1080',
+            fps=30,
+            stream_path='/stream/video',
+            service_name='stream'
+        )
+        controller_objects['av'] = av_controller
+        print(f"[@utils:host_utils:create_local_controllers_from_model] AV controller created: {type(av_controller).__name__}")
+        
+        # STEP 2: Create remote controller based on device model
+        if device_model in ['android_mobile', 'android_tv']:
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating remote controller: {device_model}")
+            remote_controller = ControllerFactory.create_remote_controller(
+                device_type=device_model,
+                device_name=device_name,
+                device_ip=device_ip,
+                device_port=device_port,
+                connection_timeout=10
+            )
+            controller_objects['remote'] = remote_controller
+            print(f"[@utils:host_utils:create_local_controllers_from_model] Remote controller created: {type(remote_controller).__name__}")
+        
+        # STEP 3: Create verification controller (OCR for all devices)
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: ocr")
+        verification_controller = ControllerFactory.create_verification_controller(
+            verification_type='ocr',
+            device_name=device_name,
+            av_controller=av_controller
+        )
+        controller_objects['verification'] = verification_controller
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller created: {type(verification_controller).__name__}")
+        
+        # STEP 4: Create power controller (USB for all devices)
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Creating power controller: usb")
+        power_controller = ControllerFactory.create_power_controller(
+            power_type='usb',
+            device_name=device_name,
+            hub_location='1-1',
+            port_number='1'
+        )
+        controller_objects['power'] = power_controller
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Power controller created: {type(power_controller).__name__}")
+        
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Successfully created {len(controller_objects)} controllers: {list(controller_objects.keys())}")
+        
+        # Store controllers globally for access by routes
+        global local_controller_objects
+        local_controller_objects = controller_objects
+        
+        return controller_objects
+        
+    except Exception as e:
+        print(f"[@utils:host_utils:create_local_controllers_from_model] ERROR creating controllers: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
+def get_local_controller(controller_type):
+    """
+    Get a local controller by type.
+    
+    Args:
+        controller_type: Type of controller ('remote', 'av', 'verification', 'power')
+        
+    Returns:
+        Controller object or None if not found
+    """
+    global local_controller_objects
+    return local_controller_objects.get(controller_type)
+
+def get_all_local_controllers():
+    """
+    Get all local controller objects.
+    
+    Returns:
+        dict: Dictionary of all controller objects
+    """
+    global local_controller_objects
+    return local_controller_objects.copy()
+
+def clear_local_controllers():
+    """
+    Clear all local controller objects.
+    """
+    global local_controller_objects
+    print("[@utils:host_utils:clear_local_controllers] Clearing all local controllers")
+    local_controller_objects = {} 
