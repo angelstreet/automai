@@ -1,11 +1,3 @@
-import React from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
 import {
   PhotoCamera,
   VideoCall,
@@ -14,14 +6,26 @@ import {
   FullscreenExit,
   Refresh,
 } from '@mui/icons-material';
-import { StreamViewer } from './UserInterface_StreamViewer';
-import { ScreenshotCapture } from './UserInterface_ScreenshotCapture';
-import { VideoCapture } from './UserInterface_VideoCapture';
-import { VerificationEditor } from './UserInterface_VerificationEditor';
-import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot, StatusIndicator } from './UserInterface_ScreenEditorOverlay';
+import { Box, IconButton, Tooltip } from '@mui/material';
+import React from 'react';
+
 import { useScreenEditor } from '../../hooks/pages/useScreenEditor';
-import { getCompactViewDimensions, createBaseContainerStyles } from '../../utils/userinterface/screenEditorUtils';
 import { ScreenDefinitionEditorProps } from '../../types/pages/UserInterface_Types';
+import {
+  getCompactViewDimensions,
+  createBaseContainerStyles,
+} from '../../utils/userinterface/screenEditorUtils';
+
+import {
+  RecordingOverlay,
+  LoadingOverlay,
+  ModeIndicatorDot,
+  StatusIndicator,
+} from './UserInterface_ScreenEditorOverlay';
+import { ScreenshotCapture } from './UserInterface_ScreenshotCapture';
+import { StreamViewer } from './UserInterface_StreamViewer';
+import { VerificationEditor } from './UserInterface_VerificationEditor';
+import { VideoCapture } from './UserInterface_VideoCapture';
 
 export function ScreenDefinitionEditor({
   selectedHostDevice,
@@ -85,55 +89,69 @@ export function ScreenDefinitionEditor({
     <Box sx={baseContainerStyles}>
       {isExpanded ? (
         // Expanded view with VerificationEditor side panel
-        <Box sx={{
-          display: 'flex',
-          gap: 0,
-          boxShadow: 2,
-          borderRadius: 1,
-          overflow: 'hidden',
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0,
+            boxShadow: 2,
+            borderRadius: 1,
+            overflow: 'hidden',
+          }}
+        >
           {/* Main Screen Definition Editor Panel */}
-          <Box sx={{
-            width: verificationEditorLayout.width,
-            height: verificationEditorLayout.height,
-            bgcolor: '#1E1E1E',
-            border: '2px solid #1E1E1E',
-            borderRadius: '1px 0 0 1px',
-          }}>
+          <Box
+            sx={{
+              width: verificationEditorLayout.width,
+              height: verificationEditorLayout.height,
+              bgcolor: '#1E1E1E',
+              border: '2px solid #1E1E1E',
+              borderRadius: '1px 0 0 1px',
+            }}
+          >
             {/* Header with controls - fixed width sections to prevent flickering */}
-            <Box sx={{ 
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 1,
-              borderBottom: '1px solid #333',
-              height: '48px'
-            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                p: 1,
+                borderBottom: '1px solid #333',
+                height: '48px',
+              }}
+            >
               {/* Left section - status indicator */}
-              <Box sx={{ 
-                width: '80px', 
-                display: 'flex', 
-                justifyContent: 'flex-start'
-              }}>
+              <Box
+                sx={{
+                  width: '80px',
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                }}
+              >
                 <StatusIndicator streamStatus={streamStatus} />
               </Box>
-              
+
               {/* Center section - action buttons */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 1, 
-                alignItems: 'center',
-                justifyContent: 'center',
-                flex: 1
-              }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: 1,
+                }}
+              >
                 <Tooltip title="Take Screenshot">
                   <span>
-                    <IconButton 
-                      size="small" 
-                      onClick={handleTakeScreenshot} 
-                      sx={{ 
-                        color: (viewMode === 'screenshot' || isScreenshotLoading) ? '#ff4444' : '#ffffff',
-                        borderBottom: (viewMode === 'screenshot' || isScreenshotLoading) ? '2px solid #ff4444' : 'none'
+                    <IconButton
+                      size="small"
+                      onClick={handleTakeScreenshot}
+                      sx={{
+                        color:
+                          viewMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
+                        borderBottom:
+                          viewMode === 'screenshot' || isScreenshotLoading
+                            ? '2px solid #ff4444'
+                            : 'none',
                       }}
                       disabled={!isConnected || isCapturing || isScreenshotLoading}
                     >
@@ -141,16 +159,17 @@ export function ScreenDefinitionEditor({
                     </IconButton>
                   </span>
                 </Tooltip>
-                
+
                 {isCapturing ? (
                   <Tooltip title="Stop Capture">
                     <span>
-                      <IconButton 
-                        size="small" 
-                        onClick={handleStopCapture} 
-                        sx={{ 
-                          color: (viewMode === 'capture' || isCapturing) ? '#ff4444' : '#ffffff',
-                          borderBottom: (viewMode === 'capture' || isCapturing) ? '2px solid #ff4444' : 'none'
+                      <IconButton
+                        size="small"
+                        onClick={handleStopCapture}
+                        sx={{
+                          color: viewMode === 'capture' || isCapturing ? '#ff4444' : '#ffffff',
+                          borderBottom:
+                            viewMode === 'capture' || isCapturing ? '2px solid #ff4444' : 'none',
                         }}
                         disabled={isStoppingCapture}
                       >
@@ -161,12 +180,13 @@ export function ScreenDefinitionEditor({
                 ) : (
                   <Tooltip title="Start Capture">
                     <span>
-                      <IconButton 
-                        size="small" 
-                        onClick={handleStartCapture} 
-                        sx={{ 
-                          color: (viewMode === 'capture' || isCapturing) ? '#ff4444' : '#ffffff',
-                          borderBottom: (viewMode === 'capture' || isCapturing) ? '2px solid #ff4444' : 'none'
+                      <IconButton
+                        size="small"
+                        onClick={handleStartCapture}
+                        sx={{
+                          color: viewMode === 'capture' || isCapturing ? '#ff4444' : '#ffffff',
+                          borderBottom:
+                            viewMode === 'capture' || isCapturing ? '2px solid #ff4444' : 'none',
                         }}
                         disabled={!isConnected}
                       >
@@ -175,12 +195,12 @@ export function ScreenDefinitionEditor({
                     </span>
                   </Tooltip>
                 )}
-                
+
                 <Tooltip title="Restart Stream">
                   <span>
-                    <IconButton 
-                      size="small" 
-                      onClick={restartStream} 
+                    <IconButton
+                      size="small"
+                      onClick={restartStream}
                       sx={{ color: '#ffffff' }}
                       disabled={!isConnected || isCapturing}
                     >
@@ -189,17 +209,19 @@ export function ScreenDefinitionEditor({
                   </span>
                 </Tooltip>
               </Box>
-              
+
               {/* Right section - minimize button */}
-              <Box sx={{ 
-                width: '40px', 
-                display: 'flex', 
-                justifyContent: 'flex-end'
-              }}>
+              <Box
+                sx={{
+                  width: '40px',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                }}
+              >
                 <Tooltip title="Minimize">
                   <span>
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={handleToggleExpanded}
                       sx={{ color: '#ffffff' }}
                     >
@@ -211,12 +233,14 @@ export function ScreenDefinitionEditor({
             </Box>
 
             {/* Main viewing area using new component architecture */}
-            <Box sx={{ 
-              flex: 1,
-              position: 'relative',
-              overflow: 'hidden',
-              height: 'calc(100% - 48px)'
-            }}>
+            <Box
+              sx={{
+                flex: 1,
+                position: 'relative',
+                overflow: 'hidden',
+                height: 'calc(100% - 48px)',
+              }}
+            >
               {/* Stream viewer - always rendered at top level to prevent unmount/remount */}
               <StreamViewer
                 key="main-stream-viewer"
@@ -232,7 +256,7 @@ export function ScreenDefinitionEditor({
                 selectedHostDevice={selectedHostDevice}
                 sx={streamViewerSx}
               />
-              
+
               {/* Other components rendered on top when needed */}
               {viewMode === 'screenshot' && (
                 <ScreenshotCapture
@@ -251,11 +275,11 @@ export function ScreenDefinitionEditor({
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    zIndex: 5
+                    zIndex: 5,
                   }}
                 />
               )}
-              
+
               {viewMode === 'capture' && (
                 <VideoCapture
                   deviceModel={deviceModel}
@@ -282,11 +306,11 @@ export function ScreenDefinitionEditor({
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    zIndex: 5
+                    zIndex: 5,
                   }}
                 />
               )}
-              
+
               {/* Overlays */}
               <LoadingOverlay isScreenshotLoading={isScreenshotLoading} />
               <RecordingOverlay isCapturing={isCapturing} />
@@ -357,16 +381,18 @@ export function ScreenDefinitionEditor({
         </Box>
       ) : (
         // Compact view - exact same layout as before
-        <Box sx={{ 
-          width: compactDimensions.width,
-          height: compactDimensions.height,
-          bgcolor: '#1E1E1E',
-          border: '2px solid #1E1E1E',
-          borderRadius: 1,
-          overflow: 'hidden',
-          position: 'relative',
-          boxShadow: 2,
-        }}>
+        <Box
+          sx={{
+            width: compactDimensions.width,
+            height: compactDimensions.height,
+            bgcolor: '#1E1E1E',
+            border: '2px solid #1E1E1E',
+            borderRadius: 1,
+            overflow: 'hidden',
+            position: 'relative',
+            boxShadow: 2,
+          }}
+        >
           {/* Stream viewer - always rendered to prevent unmount/remount */}
           <StreamViewer
             key="compact-stream-viewer"
@@ -382,7 +408,7 @@ export function ScreenDefinitionEditor({
             selectedHostDevice={selectedHostDevice}
             sx={streamViewerSx}
           />
-          
+
           {/* Other components rendered on top when needed */}
           {viewMode === 'screenshot' && (
             <ScreenshotCapture
@@ -401,11 +427,11 @@ export function ScreenDefinitionEditor({
                 left: 0,
                 width: '100%',
                 height: '100%',
-                zIndex: 5
+                zIndex: 5,
               }}
             />
           )}
-          
+
           {viewMode === 'capture' && (
             <VideoCapture
               deviceModel={deviceModel}
@@ -432,7 +458,7 @@ export function ScreenDefinitionEditor({
                 left: 0,
                 width: '100%',
                 height: '100%',
-                zIndex: 5
+                zIndex: 5,
               }}
             />
           )}
@@ -441,10 +467,10 @@ export function ScreenDefinitionEditor({
           <ModeIndicatorDot viewMode={viewMode} />
 
           {/* Only the expand button - recording/saving indicators are now overlays within the stream */}
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={handleToggleExpanded}
-            sx={{ 
+            sx={{
               position: 'absolute',
               top: 4,
               right: 4,
@@ -452,8 +478,8 @@ export function ScreenDefinitionEditor({
               color: '#ffffff',
               zIndex: 1,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.7)'
-              }
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
             }}
           >
             <Fullscreen sx={{ fontSize: 16 }} />
@@ -463,4 +489,3 @@ export function ScreenDefinitionEditor({
     </Box>
   );
 }
-

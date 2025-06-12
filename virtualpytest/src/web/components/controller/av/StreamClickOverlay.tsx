@@ -1,5 +1,5 @@
-import React, { useCallback, useRef, useState } from 'react';
 import { Box } from '@mui/material';
+import React, { useCallback, useRef, useState } from 'react';
 
 interface StreamClickOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -20,10 +20,12 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   sx = {},
   selectedHostDevice,
   showOverlay,
-  isActive
+  isActive,
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(null);
+  const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(
+    null,
+  );
 
   const getVideoBounds = useCallback(() => {
     if (!videoRef.current || !overlayRef.current) {
@@ -32,16 +34,16 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
 
     const video = videoRef.current;
     const overlay = overlayRef.current;
-    
+
     const videoRect = video.getBoundingClientRect();
     const overlayRect = overlay.getBoundingClientRect();
-    
+
     // Calculate the actual displayed video dimensions (accounting for object-fit)
     const videoAspectRatio = deviceResolution.width / deviceResolution.height;
     const containerAspectRatio = videoRect.width / videoRect.height;
-    
+
     let displayedWidth, displayedHeight, offsetX, offsetY;
-    
+
     if (videoAspectRatio > containerAspectRatio) {
       // Video is wider than container - limited by width
       displayedWidth = videoRect.width;
@@ -55,14 +57,14 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       offsetX = (videoRect.width - displayedWidth) / 2;
       offsetY = 0;
     }
-    
+
     return {
       left: videoRect.left - overlayRect.left + offsetX,
       top: videoRect.top - overlayRect.top + offsetY,
       width: displayedWidth,
       height: displayedHeight,
       scaleX: deviceResolution.width / displayedWidth,
-      scaleY: deviceResolution.height / displayedHeight
+      scaleY: deviceResolution.height / displayedHeight,
     };
   }, [videoRef, deviceResolution]);
 
@@ -74,10 +76,12 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     const y = e.clientY - rect.top;
 
     // Convert screen coordinates to device coordinates if needed
-    const deviceX = Math.round(x * (deviceResolution?.width || 1) / rect.width);
-    const deviceY = Math.round(y * (deviceResolution?.height || 1) / rect.height);
+    const deviceX = Math.round((x * (deviceResolution?.width || 1)) / rect.width);
+    const deviceY = Math.round((y * (deviceResolution?.height || 1)) / rect.height);
 
-    console.log(`[@component:StreamClickOverlay] Click at screen (${x}, ${y}) -> device (${deviceX}, ${deviceY})`);
+    console.log(
+      `[@component:StreamClickOverlay] Click at screen (${x}, ${y}) -> device (${deviceX}, ${deviceY})`,
+    );
 
     try {
       // Use server route instead of remote controller proxy
@@ -89,14 +93,16 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         body: JSON.stringify({
           host_name: selectedHostDevice.host_name,
           x: deviceX,
-          y: deviceY
-        })
+          y: deviceY,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        console.log(`[@component:StreamClickOverlay] Tap successful at device coordinates (${deviceX}, ${deviceY})`);
+        console.log(
+          `[@component:StreamClickOverlay] Tap successful at device coordinates (${deviceX}, ${deviceY})`,
+        );
       } else {
         console.error(`[@component:StreamClickOverlay] Tap failed:`, result.error);
       }
@@ -108,10 +114,10 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   const showClickAnimation = useCallback((x: number, y: number) => {
     const animationId = Date.now();
     setClickAnimation({ x, y, id: animationId });
-    
+
     // Remove animation after 500ms
     setTimeout(() => {
-      setClickAnimation(prev => prev?.id === animationId ? null : prev);
+      setClickAnimation((prev) => (prev?.id === animationId ? null : prev));
     }, 500);
   }, []);
 
@@ -126,7 +132,10 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
 
   // Log when overlay is mounted
   React.useEffect(() => {
-    console.log('[@component:StreamClickOverlay] 🎯 Click overlay mounted and ready! Device resolution:', deviceResolution);
+    console.log(
+      '[@component:StreamClickOverlay] 🎯 Click overlay mounted and ready! Device resolution:',
+      deviceResolution,
+    );
     console.log('[@component:StreamClickOverlay] Video ref current:', !!videoRef.current);
     console.log('[@component:StreamClickOverlay] Overlay ref current:', !!overlayRef.current);
     return () => {
@@ -137,7 +146,8 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   // Add mouse event logging for debugging
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     // Only log occasionally to avoid spam
-    if (Math.random() < 0.01) { // 1% chance
+    if (Math.random() < 0.01) {
+      // 1% chance
       console.log('[@component:StreamClickOverlay] Mouse move detected');
     }
   }, []);
@@ -167,7 +177,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
         '&:hover': {
           backgroundColor: 'rgba(255, 255, 255, 0.02)',
         },
-        ...sx
+        ...sx,
       }}
       onClick={handleClick}
       onMouseMove={handleMouseMove}
@@ -202,7 +212,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
           }}
         />
       )}
-      
+
       {/* LED indicator moved to top-left */}
       <Box
         sx={{
@@ -227,4 +237,4 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   );
 };
 
-export default StreamClickOverlay; 
+export default StreamClickOverlay;

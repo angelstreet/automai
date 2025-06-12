@@ -1,4 +1,9 @@
-export { HDMIStreamPanel } from './HDMIStreamPanel';
+export { AVPanel } from './AVPanel';
+export { HDMIStream } from './HDMIStream';
 export { StreamViewer } from './StreamViewer';
 export { VideoCapture } from './VideoCapture';
-export { ScreenshotCapture } from './ScreenshotCapture'; 
+export { ScreenshotCapture } from './ScreenshotCapture';
+export { DragSelectionOverlay } from './DragSelectionOverlay';
+export { StreamClickOverlay } from './StreamClickOverlay';
+export { ScreenDefinitionEditor } from './ScreenDefinitionEditor';
+export { ScreenEditorOverlay } from './ScreenEditorOverlay';

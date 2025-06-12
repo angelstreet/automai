@@ -3,22 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
 import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
-import { Host } from '../../types/common/Host_Types';
-import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
-
-// Import the modular hooks
-import { ConnectionResult } from '../navigation/useConnectionRules';
+import {
+  UINavigationNode,
+  UINavigationEdge,
+  ConnectionResult,
+} from '../../types/pages/Navigation_Types';
 import { useNavigationConfig } from '../navigation/useNavigationConfig';
+import { useNavigationDeviceControl } from '../navigation/useNavigationDeviceControl';
 
 import { useNavigationState, useConnectionRules, useNodeEdgeManagement } from './useNavigation';
-
-// Import the real navigation config hook
-
-// Import connection result type
-
-// Import registration context and default team ID
-
-// Import Host type for device control
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
@@ -94,39 +87,11 @@ export const useNavigationEditor = () => {
   // Additional state that might need local management
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
 
-  // ========================================
-  // DEVICE CONTROL STATE
-  // ========================================
-
-  // Device control state
-  const [selectedHost, setSelectedHost] = useState<Host | null>(null);
-  const [isControlActive, setIsControlActive] = useState(false);
-  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
-  const [showRemotePanel, setShowRemotePanel] = useState(false);
-  const [showAVPanel, setShowAVPanel] = useState(false);
-  const [isVerificationActive, setIsVerificationActive] = useState(false);
-
-  // Filtered hosts based on interface models
-  const [filteredAvailableHosts, setFilteredAvailableHosts] = useState<Host[]>([]);
-
-  // Get registration context for host management
-  const {
-    availableHosts,
-    getHostByName,
-    buildServerUrl: buildRegistrationServerUrl,
-    fetchHosts,
-  } = useRegistration();
-
-  // Ensure hosts are fetched when component mounts
-  useEffect(() => {
-    console.log(
-      `[@hook:useNavigationEditor] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
-    );
-    if (availableHosts.length === 0) {
-      console.log(`[@hook:useNavigationEditor] No hosts available, triggering fetch...`);
-      fetchHosts();
-    }
-  }, []); // Only run on mount
+  // Use device control hook for all device-related functionality
+  const deviceControl = useNavigationDeviceControl({
+    userInterface: navigationState.userInterface,
+    buildServerUrl,
+  });
 
   // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback(
@@ -560,205 +525,6 @@ export const useNavigationEditor = () => {
     navigationState.setMaxDisplayDepth(5);
   }, [navigationState]);
 
-  // ========================================
-  // DEVICE CONTROL HANDLERS
-  // ========================================
-
-  // Handle device selection
-  const handleDeviceSelect = useCallback(
-    (hostName: string | null) => {
-      console.log(`[@hook:useNavigationEditor] Host selected: ${hostName}`);
-
-      if (!hostName) {
-        console.log(`[@hook:useNavigationEditor] No host selected, clearing selection`);
-        setSelectedHost(null);
-        return;
-      }
-
-      const host = getHostByName(hostName);
-      if (host) {
-        setSelectedHost(host);
-        console.log(
-          `[@hook:useNavigationEditor] Host found and selected: ${host.host_name} (device: ${host.device_name})`,
-        );
-      } else {
-        console.warn(`[@hook:useNavigationEditor] Host not found: ${hostName}`);
-        setSelectedHost(null);
-      }
-    },
-    [getHostByName],
-  );
-
-  // Handle take control
-  const handleTakeControl = useCallback(async () => {
-    if (!selectedHost) {
-      console.warn('[@hook:useNavigationEditor] No host selected for take control');
-      return;
-    }
-
-    console.log(`[@hook:useNavigationEditor] Taking control of device: ${selectedHost.host_name}`);
-
-    try {
-      if (!isControlActive) {
-        // TEMPORARY: Skip control endpoints for now and just show panels
-        console.log(
-          `[@hook:useNavigationEditor] TEMPORARY: Showing panels without control endpoints`,
-        );
-
-        // STEP 3: Show panels (temporarily without control acquisition)
-        setIsControlActive(true);
-        setShowRemotePanel(true);
-        setShowAVPanel(true);
-        setIsRemotePanelOpen(true);
-        console.log(`[@hook:useNavigationEditor] Step 3 complete: Control activated, panels shown`);
-        console.log(
-          `[@hook:useNavigationEditor] Panel states - showRemotePanel: true, showAVPanel: true, selectedHost:`,
-          selectedHost,
-        );
-      } else {
-        // Releasing control
-        console.log(`[@hook:useNavigationEditor] TEMPORARY: Releasing control without endpoints`);
-
-        // Hide panels
-        setIsControlActive(false);
-        setShowRemotePanel(false);
-        setShowAVPanel(false);
-        setIsRemotePanelOpen(false);
-        console.log(`[@hook:useNavigationEditor] Control released, panels hidden`);
-      }
-    } catch (error) {
-      console.error('[@hook:useNavigationEditor] Error during take control:', error);
-      // Reset state on error
-      setIsControlActive(false);
-      setShowRemotePanel(false);
-      setShowAVPanel(false);
-      setIsRemotePanelOpen(false);
-    }
-  }, [selectedHost, isControlActive, buildServerUrl]);
-
-  // Handle remote panel toggle
-  const handleToggleRemotePanel = useCallback(() => {
-    const newState = !isRemotePanelOpen;
-    setIsRemotePanelOpen(newState);
-    console.log(
-      `[@hook:useNavigationEditor] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
-    );
-  }, [isRemotePanelOpen]);
-
-  // Handle connection change (for panels)
-  const handleConnectionChange = useCallback((connected: boolean) => {
-    console.log(`[@hook:useNavigationEditor] Connection state changed: ${connected}`);
-    // Could update UI state based on connection status
-  }, []);
-
-  // Handle disconnect complete (for panels)
-  const handleDisconnectComplete = useCallback(() => {
-    console.log(`[@hook:useNavigationEditor] Disconnect complete`);
-    setIsControlActive(false);
-    setShowRemotePanel(false);
-    setShowAVPanel(false);
-    setIsRemotePanelOpen(false);
-  }, []);
-
-  // Update filtered hosts when availableHosts changes
-  useEffect(() => {
-    console.log(
-      `[@hook:useNavigationEditor] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
-      navigationState.userInterface?.models,
-    );
-
-    if (navigationState.userInterface?.models && availableHosts.length > 0) {
-      console.log(
-        `[@hook:useNavigationEditor] Available hosts for filtering:`,
-        availableHosts.map((h) => ({ host_name: h.host_name, device_model: h.device_model })),
-      );
-
-      const compatibleHosts = availableHosts.filter((host) =>
-        navigationState.userInterface.models.includes(host.device_model),
-      );
-
-      console.log(
-        `[@hook:useNavigationEditor] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
-      );
-      setFilteredAvailableHosts(compatibleHosts);
-    } else {
-      console.log(
-        `[@hook:useNavigationEditor] No filtering - showing all ${availableHosts.length} hosts`,
-      );
-      setFilteredAvailableHosts(availableHosts);
-    }
-  }, [availableHosts, navigationState.userInterface?.models]);
-
-  // Fetch interface and filter hosts based on URL parameter
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const interfaceName = window.location.pathname.split('/').pop();
-
-    if (interfaceName && interfaceName !== 'navigation-editor') {
-      console.log(`[@hook:useNavigationEditor] Interface name from URL: ${interfaceName}`);
-
-      // Fetch interface data by name
-      const fetchInterfaceData = async () => {
-        try {
-          const response = await fetch(
-            buildServerUrl(`server/userinterface/getUserInterfaceByName/${interfaceName}`),
-          );
-          if (response.ok) {
-            const interfaceData = await response.json();
-            console.log(`[@hook:useNavigationEditor] Interface data fetched:`, interfaceData);
-            navigationState.setUserInterface(interfaceData);
-
-            // Filter hosts by device models from interface
-            if (interfaceData.models && availableHosts.length > 0) {
-              console.log(`[@hook:useNavigationEditor] Interface models:`, interfaceData.models);
-              console.log(
-                `[@hook:useNavigationEditor] Available hosts device models:`,
-                availableHosts.map((host) => ({
-                  host_name: host.host_name,
-                  device_model: host.device_model,
-                  device_name: host.device_name,
-                })),
-              );
-
-              const compatibleHosts = availableHosts.filter((host) =>
-                interfaceData.models.includes(host.device_model),
-              );
-
-              console.log(
-                `[@hook:useNavigationEditor] Compatible hosts found: ${compatibleHosts.length}/${availableHosts.length}`,
-              );
-
-              // Debug logging: Show which hosts were filtered out and why
-              const filteredOut = availableHosts.filter(
-                (host) => !interfaceData.models.includes(host.device_model),
-              );
-              if (filteredOut.length > 0) {
-                console.log(
-                  `[@hook:useNavigationEditor] Hosts filtered out:`,
-                  filteredOut.map((host) => ({
-                    host_name: host.host_name,
-                    device_model: host.device_model,
-                    reason: `device_model "${host.device_model}" not in interface models [${interfaceData.models.join(', ')}]`,
-                  })),
-                );
-              }
-
-              // Store filtered hosts
-              setFilteredAvailableHosts(compatibleHosts);
-            } else {
-              // No interface models or no hosts - show all hosts
-              setFilteredAvailableHosts(availableHosts);
-            }
-          }
-        } catch (error) {
-          console.error('[@hook:useNavigationEditor] Error fetching interface data:', error);
-        }
-      };
-
-      fetchInterfaceData();
-    }
-  }, [buildServerUrl]); // Removed navigationState and availableHosts to prevent infinite loop
-
   return {
     // State (filtered views for ReactFlow display)
     nodes: filteredNodes,
@@ -891,23 +657,23 @@ export const useNavigationEditor = () => {
     // ========================================
 
     // Device control state
-    selectedHost,
-    isControlActive,
-    isRemotePanelOpen,
-    showRemotePanel,
-    showAVPanel,
-    isVerificationActive,
+    selectedHost: deviceControl.selectedHost,
+    isControlActive: deviceControl.isControlActive,
+    isRemotePanelOpen: deviceControl.isRemotePanelOpen,
+    showRemotePanel: deviceControl.showRemotePanel,
+    showAVPanel: deviceControl.showAVPanel,
+    isVerificationActive: deviceControl.isVerificationActive,
 
     // Device control handlers
-    handleDeviceSelect,
-    handleTakeControl,
-    handleToggleRemotePanel,
-    handleConnectionChange,
-    handleDisconnectComplete,
+    handleDeviceSelect: deviceControl.handleDeviceSelect,
+    handleTakeControl: deviceControl.handleTakeControl,
+    handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
+    handleConnectionChange: deviceControl.handleConnectionChange,
+    handleDisconnectComplete: deviceControl.handleDisconnectComplete,
 
     // Host data (filtered by interface models)
-    availableHosts: filteredAvailableHosts,
-    getHostByName,
-    fetchHosts,
+    availableHosts: deviceControl.availableHosts,
+    getHostByName: deviceControl.getHostByName,
+    fetchHosts: deviceControl.fetchHosts,
   };
 };
