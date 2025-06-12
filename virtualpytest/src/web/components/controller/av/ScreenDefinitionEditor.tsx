@@ -21,11 +21,10 @@ import {
   LoadingOverlay,
   ModeIndicatorDot,
   StatusIndicator,
-} from './UserInterface_ScreenEditorOverlay';
-import { ScreenshotCapture } from './UserInterface_ScreenshotCapture';
-import { StreamViewer } from './UserInterface_StreamViewer';
-import { VerificationEditor } from './UserInterface_VerificationEditor';
-import { VideoCapture } from './UserInterface_VideoCapture';
+} from './ScreenEditorOverlay';
+import { ScreenshotCapture } from './ScreenshotCapture';
+import { StreamViewer } from './StreamViewer';
+import { VideoCapture } from './VideoCapture';
 
 export function ScreenDefinitionEditor({
   selectedHostDevice,
@@ -316,68 +315,6 @@ export function ScreenDefinitionEditor({
               <RecordingOverlay isCapturing={isCapturing} />
             </Box>
           </Box>
-
-          {/* Verification Editor Side Panel - only show during capture or screenshot modes */}
-          {(viewMode === 'screenshot' || viewMode === 'capture') && (
-            <VerificationEditor
-              model={deviceModel}
-              isVisible={true}
-              isScreenshotMode={viewMode === 'screenshot'}
-              isCaptureActive={isCapturing}
-              captureImageRef={captureImageRef}
-              captureImageDimensions={captureImageDimensions}
-              captureSourcePath={captureSourcePath}
-              selectedArea={selectedArea}
-              onAreaSelected={handleAreaSelected}
-              onClearSelection={handleClearSelection}
-              screenshotPath={lastScreenshotPath}
-              videoFramesPath={videoFramesPath}
-              totalFrames={totalFrames}
-              currentFrame={currentFrame}
-              selectedHostDevice={selectedHostDevice}
-              sx={{
-                backgroundColor: '#1E1E1E',
-                borderRadius: '0 1px 1px 0',
-                border: '2px solid #1E1E1E',
-                borderLeft: 'none',
-                color: '#ffffff',
-                '& .MuiTypography-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiTextField-root': {
-                  '& .MuiInputLabel-root': {
-                    color: '#ffffff',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#333',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#555',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#666',
-                    },
-                  },
-                },
-                '& .MuiSelect-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiFormControl-root': {
-                  '& .MuiInputLabel-root': {
-                    color: '#ffffff',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#333',
-                    },
-                  },
-                },
-              }}
-            />
-          )}
         </Box>
       ) : (
         // Compact view - exact same layout as before
