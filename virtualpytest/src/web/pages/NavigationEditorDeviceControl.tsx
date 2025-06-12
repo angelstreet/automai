@@ -99,42 +99,35 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
     }
 
     try {
-      // Get node name from selected node
-      const nodeName = selectedNode.data.label || 'unknown';
-      
-      // Get parent name from selected node
-      let parentName = 'root';
-      if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
-        // Find the parent node by ID
-        const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1]; // Get the immediate parent
-        const parentNode = nodes.find(node => node.id === parentId);
-        if (parentNode) {
-          parentName = parentNode.data.label || 'unknown';
-        }
-      }
-
-      
-      
-      // Use AV controller proxy instead of direct HTTP call
-      const avControllerProxy = selectedHost?.controllerProxies?.av;
-      if (!avControllerProxy) {
-        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
+      // Use server route instead of AV controller proxy
+      if (!selectedHost) {
+        throw new Error('No host selected for screenshot operation');
       }
       
+      console.log(`[@handlers:DeviceControl] Taking screenshot for host: ${selectedHost.host_name}`);
       
+      // Call take-screenshot server route
+      const response = await fetch(`/server/remote/take-screenshot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
       
-      // Call take_screenshot on the AV controller proxy
-      const screenshotUrl = await avControllerProxy.take_screenshot();
+      const result = await response.json();
       
-      if (screenshotUrl) {
-        
+      if (result.success && result.screenshot) {
+        console.log('[@handlers:DeviceControl] Screenshot taken successfully');
         
         // Create updated node with screenshot
         const updatedNode = {
           ...selectedNode,
           data: {
             ...selectedNode.data,
-            screenshot: `data:image/png;base64,${screenshotUrl}` // Assuming base64 format
+            screenshot: `data:image/png;base64,${result.screenshot}`
           }
         };
         
@@ -148,53 +141,65 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         onSetSelectedNode(updatedNode);
         onSetHasUnsavedChanges(true);
         
-        
+        console.log(`[@handlers:DeviceControl] Screenshot captured and node updated`);
       } else {
-        
+        console.error('[@handlers:DeviceControl] Screenshot failed - no data returned');
       }
     } catch (error) {
-      
+      console.error('[@handlers:DeviceControl] Error taking screenshot:', error);
     }
   }, [selectedHost, isControlActive, selectedNode, nodes, onSetNodes, onSetSelectedNode, onSetHasUnsavedChanges]);
 
-  // Handle verification execution using verification controller proxy
+  // Handle verification execution using verification server route
   const handleVerification = useCallback(async (nodeId: string, verifications: any[]) => {
     if (!isVerificationActive || !verifications || verifications.length === 0) {
-      
+      console.log('[@handlers:DeviceControl] Verification not active or no verifications provided');
       return;
     }
 
     try {
-      
+      console.log(`[@handlers:DeviceControl] Executing verification for node: ${nodeId}, verifications count: ${verifications.length}`);
       
       // Clear previous results and set current node
       onSetVerificationResults([]);
       onSetLastVerifiedNodeId(nodeId);
       
-      // Use verification controller proxy instead of server endpoint
-      const verificationControllerProxy = selectedHost?.controllerProxies?.verification;
-      if (!verificationControllerProxy) {
-        throw new Error('Verification controller proxy not available. Host may not have verification capabilities or proxy creation failed.');
+      // Use server route instead of verification controller proxy
+      if (!selectedHost) {
+        throw new Error('No host selected for verification operation');
       }
       
+      console.log('[@handlers:DeviceControl] Using server route for verification execution...');
       
-      
-      // Call executeVerificationBatch on the verification controller proxy
-      const response = await verificationControllerProxy.executeVerificationBatch({
-        verifications: verifications,
-        model: selectedHost?.model || 'android_mobile',
-        node_id: nodeId,
-        source_filename: 'current_screenshot.jpg' // Default source filename
+      // Call execute-batch verification server route
+      const response = await fetch(`/server/verification/execute-batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name,
+          verifications: verifications,
+          model: selectedHost?.model || 'android_mobile',
+          node_id: nodeId,
+          source_filename: 'current_screenshot.jpg'
+        })
       });
       
-      if (response.success && response.data?.results) {
-        
+      const result = await response.json();
+      
+      if (result.success && result.data?.results) {
+        console.log('[@handlers:DeviceControl] Verification completed successfully, processing results...');
         
         // Process results to match VerificationTestResult interface
-        const processedResults = response.data.results.map((result: any, index: number) => {
+        const processedResults = result.data.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
-
+          console.log(`[@handlers:DeviceControl] Processing verification result ${index + 1}/${verifications.length}:`, {
+            success: result.success,
+            message: result.message,
+            error: result.error
+          });
           
           // Determine result type
           let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
@@ -225,31 +230,33 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
             matches: result.matches,
           };
           
-          
+          console.log(`[@handlers:DeviceControl] Processed result ${index + 1}:`, processedResult);
           return processedResult;
         });
         
-        
+        console.log('[@handlers:DeviceControl] All verification results processed, updating state');
         onSetVerificationResults(processedResults);
         
         // Show summary like in NodeVerificationsList
-        if (response.data.results) {
-          const passed = response.data.results.filter((r: any) => r.success).length;
-          const total = response.data.results.length;
+        if (result.data.results) {
+          const passed = result.data.results.filter((r: any) => r.success).length;
+          const total = result.data.results.length;
           
+          console.log(`[@handlers:DeviceControl] Verification summary: ${passed}/${total} passed`);
           
           // Log final result based on pass condition
           const finalPassed = verificationPassCondition === 'all'
             ? passed === total
             : passed > 0;
           
+          console.log(`[@handlers:DeviceControl] Final result (${verificationPassCondition} condition): ${finalPassed ? 'PASSED' : 'FAILED'}`);
         }
       } else {
-        
+        console.error('[@handlers:DeviceControl] Verification failed:', result.error);
         onSetVerificationResults([]);
       }
     } catch (error) {
-      
+      console.error('[@handlers:DeviceControl] Verification execution error:', error);
       onSetVerificationResults([]);
     }
   }, [isVerificationActive, selectedHost, verificationPassCondition, onSetVerificationResults, onSetLastVerifiedNodeId]);
@@ -446,42 +453,35 @@ export const createDeviceControlHandlers = (
     }
 
     try {
-      // Get node name from selected node
-      const nodeName = selectedNode.data.label || 'unknown';
-      
-      // Get parent name from selected node
-      let parentName = 'root';
-      if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
-        // Find the parent node by ID
-        const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1]; // Get the immediate parent
-        const parentNode = nodes.find(node => node.id === parentId);
-        if (parentNode) {
-          parentName = parentNode.data.label || 'unknown';
-        }
-      }
-
-      console.log(`[@handlers:DeviceControl] Taking screenshot for device: ${selectedHost.name}, parent: ${parentName}, node: ${nodeName}`);
-      
-      // Use AV controller proxy instead of direct HTTP call
-      const avControllerProxy = selectedHost?.controllerProxies?.av;
-      if (!avControllerProxy) {
-        throw new Error('AV controller proxy not available. Host may not have AV capabilities or proxy creation failed.');
+      // Use server route instead of AV controller proxy
+      if (!selectedHost) {
+        throw new Error('No host selected for screenshot operation');
       }
       
-      console.log('[@handlers:DeviceControl] AV controller proxy found, calling take_screenshot...');
+      console.log(`[@handlers:DeviceControl] Taking screenshot for host: ${selectedHost.host_name}`);
       
-      // Call take_screenshot on the AV controller proxy
-      const screenshotUrl = await avControllerProxy.take_screenshot();
+      // Call take-screenshot server route
+      const response = await fetch(`/server/remote/take-screenshot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
       
-      if (screenshotUrl) {
-        console.log('[@handlers:DeviceControl] Screenshot taken successfully:', screenshotUrl);
+      const result = await response.json();
+      
+      if (result.success && result.screenshot) {
+        console.log('[@handlers:DeviceControl] Screenshot taken successfully');
         
         // Create updated node with screenshot
         const updatedNode = {
           ...selectedNode,
           data: {
             ...selectedNode.data,
-            screenshot: `data:image/png;base64,${screenshotUrl}` // Assuming base64 format
+            screenshot: `data:image/png;base64,${result.screenshot}`
           }
         };
         
@@ -497,52 +497,63 @@ export const createDeviceControlHandlers = (
         
         console.log(`[@handlers:DeviceControl] Screenshot captured and node updated`);
       } else {
-        console.error('[@handlers:DeviceControl] Screenshot failed - no URL returned');
+        console.error('[@handlers:DeviceControl] Screenshot failed - no data returned');
       }
     } catch (error) {
       console.error('[@handlers:DeviceControl] Error taking screenshot:', error);
     }
   };
 
-  // Handle verification execution using verification controller proxy
+  // Handle verification execution using verification server route
   const handleVerification = async (nodeId: string, verifications: any[]) => {
     if (!isVerificationActive || !verifications || verifications.length === 0) {
-      console.log('[@handlers:DeviceControl] Cannot execute verifications: controllers not active or no verifications');
+      console.log('[@handlers:DeviceControl] Verification not active or no verifications provided');
       return;
     }
 
     try {
-      console.log(`[@handlers:DeviceControl] Executing ${verifications.length} verifications for node: ${nodeId}`);
+      console.log(`[@handlers:DeviceControl] Executing verification for node: ${nodeId}, verifications count: ${verifications.length}`);
       
       // Clear previous results and set current node
       onSetVerificationResults([]);
       onSetLastVerifiedNodeId(nodeId);
       
-      // Use verification controller proxy instead of server endpoint
-      const verificationControllerProxy = selectedHost?.controllerProxies?.verification;
-      if (!verificationControllerProxy) {
-        throw new Error('Verification controller proxy not available. Host may not have verification capabilities or proxy creation failed.');
+      // Use server route instead of verification controller proxy
+      if (!selectedHost) {
+        throw new Error('No host selected for verification operation');
       }
       
-      console.log('[@handlers:DeviceControl] Verification controller proxy found, calling executeVerificationBatch...');
+      console.log('[@handlers:DeviceControl] Using server route for verification execution...');
       
-      // Call executeVerificationBatch on the verification controller proxy
-      const response = await verificationControllerProxy.executeVerificationBatch({
-        verifications: verifications,
-        model: selectedHost?.model || 'android_mobile',
-        node_id: nodeId,
-        source_filename: 'current_screenshot.jpg' // Default source filename
+      // Call execute-batch verification server route
+      const response = await fetch(`/server/verification/execute-batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name,
+          verifications: verifications,
+          model: selectedHost?.model || 'android_mobile',
+          node_id: nodeId,
+          source_filename: 'current_screenshot.jpg'
+        })
       });
       
-      if (response.success && response.data?.results) {
-        console.log('[@handlers:DeviceControl] Verification results:', response.data);
+      const result = await response.json();
+      
+      if (result.success && result.data?.results) {
+        console.log('[@handlers:DeviceControl] Verification completed successfully, processing results...');
         
         // Process results to match VerificationTestResult interface
-        const processedResults = response.data.results.map((result: any, index: number) => {
+        const processedResults = result.data.results.map((result: any, index: number) => {
           const verification = verifications[index];
           
-          console.log(`[@handlers:DeviceControl] Processing result ${index}:`, result);
-          console.log(`[@handlers:DeviceControl] Verification ${index}:`, verification);
+          console.log(`[@handlers:DeviceControl] Processing verification result ${index + 1}/${verifications.length}:`, {
+            success: result.success,
+            message: result.message,
+            error: result.error
+          });
           
           // Determine result type
           let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
@@ -573,31 +584,33 @@ export const createDeviceControlHandlers = (
             matches: result.matches,
           };
           
-          console.log(`[@handlers:DeviceControl] Processed result ${index}:`, processedResult);
+          console.log(`[@handlers:DeviceControl] Processed result ${index + 1}:`, processedResult);
           return processedResult;
         });
         
-        console.log(`[@handlers:DeviceControl] Setting verification results:`, processedResults);
+        console.log('[@handlers:DeviceControl] All verification results processed, updating state');
         onSetVerificationResults(processedResults);
         
         // Show summary like in NodeVerificationsList
-        if (response.data.results) {
-          const passed = response.data.results.filter((r: any) => r.success).length;
-          const total = response.data.results.length;
-          console.log(`[@handlers:DeviceControl] Verification completed: ${passed}/${total} passed`);
+        if (result.data.results) {
+          const passed = result.data.results.filter((r: any) => r.success).length;
+          const total = result.data.results.length;
+          
+          console.log(`[@handlers:DeviceControl] Verification summary: ${passed}/${total} passed`);
           
           // Log final result based on pass condition
           const finalPassed = verificationPassCondition === 'all'
             ? passed === total
             : passed > 0;
-          console.log(`[@handlers:DeviceControl] Final result (${verificationPassCondition}): ${finalPassed ? 'PASS' : 'FAIL'}`);
+          
+          console.log(`[@handlers:DeviceControl] Final result (${verificationPassCondition} condition): ${finalPassed ? 'PASSED' : 'FAILED'}`);
         }
       } else {
-        console.error('[@handlers:DeviceControl] Verification failed:', response.error);
+        console.error('[@handlers:DeviceControl] Verification failed:', result.error);
         onSetVerificationResults([]);
       }
     } catch (error) {
-      console.error('[@handlers:DeviceControl] Error executing verifications:', error);
+      console.error('[@handlers:DeviceControl] Verification execution error:', error);
       onSetVerificationResults([]);
     }
   };

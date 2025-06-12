@@ -43,8 +43,8 @@ export function RemotePanel({
 
   const { selectedHost } = useRegistration();
 
-  // Check if remote controller is available
-  const isRemoteAvailable = selectedHost?.controllerProxies?.remote ? true : false;
+  // Check if remote controller is available (simplified - just check if host is selected)
+  const isRemoteAvailable = selectedHost ? true : false;
 
   // Auto-connect on mount if requested
   useEffect(() => {
@@ -65,15 +65,23 @@ export function RemotePanel({
         throw new Error('No host selected for remote connection');
       }
 
-      if (!selectedHost.controllerProxies?.remote) {
-        throw new Error('Remote controller proxy not available for selected host');
+      // Check status using server route
+      const response = await fetch(`/server/remote/get-status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('[@component:RemotePanel] Remote controller available');
+        setIsConnected(true);
+        console.log('[@component:RemotePanel] Remote control activated');
+      } else {
+        throw new Error(result.error || 'Remote controller not available');
       }
-      
-      // ✅ Remote controller proxy is available
-      console.log('[@component:RemotePanel] Remote controller proxy available');
-      
-      setIsConnected(true);
-      console.log('[@component:RemotePanel] Remote control activated');
     } catch (error: any) {
       console.error('[@component:RemotePanel] Connection failed:', error);
       setConnectionError(error.message);
@@ -100,18 +108,32 @@ export function RemotePanel({
 
   // Handle screenshot
   const handleScreenshotClick = async () => {
-    if (!showScreenshot || !selectedHost?.controllerProxies?.remote) return;
+    if (!showScreenshot || !selectedHost) return;
     
     setIsScreenshotLoading(true);
     setScreenshotError(null);
     
     try {
-      console.log('[@component:RemotePanel] Taking screenshot via remote controller');
+      console.log('[@component:RemotePanel] Taking screenshot via server route');
       
-      // ✅ Use remote controller proxy for screenshot
-      await selectedHost.controllerProxies.remote.take_screenshot();
+      // Use server route instead of proxy
+      const response = await fetch(`/server/remote/take-screenshot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
       
-      console.log('[@component:RemotePanel] Screenshot taken successfully');
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('[@component:RemotePanel] Screenshot taken successfully');
+      } else {
+        throw new Error(result.error || 'Screenshot failed');
+      }
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to take screenshot';
       setScreenshotError(errorMessage);
@@ -137,7 +159,7 @@ export function RemotePanel({
           Remote Controller Not Available
         </Typography>
         <Typography variant="body2" color="textSecondary" textAlign="center">
-          Select a host with remote controller proxy to use remote control
+          Select a host to use remote control
         </Typography>
       </Box>
     );

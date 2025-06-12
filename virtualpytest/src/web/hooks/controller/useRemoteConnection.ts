@@ -76,9 +76,9 @@ export function useRemoteConnection(remoteType: RemoteType) {
     setConnectionError(null);
 
     try {
-      console.log('[@hook:useRemoteConnection] Starting take control process with form:', connectionForm);
+      console.log('[@hook:useRemoteConnection] Starting take control process for:', selectedHost.host_name);
 
-      // Simplified validation - only device_ip needed (if any)
+      // Simplified validation - device_ip is optional now
       if (connectionForm.device_ip && !connectionForm.device_ip.trim()) {
         const errorMsg = 'Device IP is required';
         console.error('[@hook:useRemoteConnection]', errorMsg);
@@ -86,30 +86,26 @@ export function useRemoteConnection(remoteType: RemoteType) {
         return;
       }
 
-      console.log('[@hook:useRemoteConnection] Using remote controller proxy for connection...');
+      console.log('[@hook:useRemoteConnection] Using server route for status check...');
       
-      // Get remote controller proxy from selectedHost
-      const remoteController = selectedHost.controllerProxies?.remote;
+      // Check current status using server route
+      const response = await fetch(`/server/remote/get-status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (!remoteController) {
-        throw new Error('Remote controller proxy not available. Host may not have remote capabilities or proxy creation failed.');
-      }
-
-      console.log('[@hook:useRemoteConnection] Remote controller proxy found, checking status...');
-      
-      // Check current status using controller proxy
-      const statusResult = await remoteController.get_status();
+      const statusResult = await response.json();
       
       if (statusResult.success) {
         console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
         setSession({
           connected: true,
-          connectionInfo: connectionForm.device_ip || 'Connected via proxy'
+          connectionInfo: connectionForm.device_ip || 'Connected via server route'
         });
         setConnectionError(null);
-
-        // Remote is autonomous - no need to call showRemote
-        console.log('[@hook:useRemoteConnection] Remote is autonomous and ready');
+        console.log('[@hook:useRemoteConnection] Remote is ready');
       } else {
         const errorMsg = statusResult.error || `Failed to connect to ${deviceConfig.name} device`;
         console.error('[@hook:useRemoteConnection] Connection failed:', errorMsg);
@@ -131,35 +127,32 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
     
     setConnectionLoading(true);
-    setConnectionError(null); // Clear any connection errors
+    setConnectionError(null);
 
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
       
-      // Get remote controller proxy from selectedHost
-      const remoteController = selectedHost.controllerProxies?.remote;
-      
-      if (remoteController) {
-        console.log('[@hook:useRemoteConnection] Using remote controller proxy for disconnect...');
+      // Check status to verify connection state using server route
+      try {
+        const response = await fetch(`/server/remote/get-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         
-        // Use controller proxy to disconnect
-        try {
-          await remoteController.get_status(); // Check status to verify connection state
-          console.log('[@hook:useRemoteConnection] Remote controller status checked before disconnect');
-        } catch (error) {
-          console.log('[@hook:useRemoteConnection] Remote controller already disconnected or unavailable');
-        }
-      } else {
-        console.log('[@hook:useRemoteConnection] No remote controller proxy available');
+        const result = await response.json();
+        console.log('[@hook:useRemoteConnection] Remote controller status checked before disconnect:', result.success);
+      } catch (error) {
+        console.log('[@hook:useRemoteConnection] Remote controller already disconnected or unavailable');
       }
       
       console.log('[@hook:useRemoteConnection] Control released successfully');
     } catch (err: any) {
       console.error('[@hook:useRemoteConnection] Release control error:', err);
-      // Continue with reset even if release fails
     } finally {
-      // Always reset session state and clear data (even if backend call fails)
-      setSession(initialSession); // This sets connected: false
+      // Always reset session state and clear data
+      setSession(initialSession);
       setAndroidScreenshot(null);
       setAndroidElements([]);
       setAndroidApps([]);
@@ -173,30 +166,33 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for screenshot operation');
     }
     
-    // Get remote controller proxy from selectedHost
-    const remoteController = selectedHost.controllerProxies?.remote;
-    
-    if (!remoteController) {
-      throw new Error('Remote controller proxy not available. Screenshot not supported for this device type.');
-    }
-    
     try {
-      console.log('[@hook:useRemoteConnection] Taking screenshot using remote controller proxy...');
+      console.log('[@hook:useRemoteConnection] Taking screenshot using server route...');
       
-      // Use remote controller proxy to take screenshot
-      const screenshotPath = await remoteController.take_screenshot();
+      // Use direct server route call instead of proxy
+      const response = await fetch(`/server/remote/take-screenshot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
       
-      if (screenshotPath) {
-        setAndroidScreenshot(screenshotPath);
-        console.log('[@hook:useRemoteConnection] Screenshot captured successfully via proxy');
+      const result = await response.json();
+      
+      if (result.success && result.screenshot) {
+        setAndroidScreenshot(result.screenshot);
+        console.log('[@hook:useRemoteConnection] Screenshot captured successfully');
       } else {
-        const errorMessage = 'Screenshot failed - no path returned';
+        const errorMessage = result.error || 'Screenshot failed - no data returned';
         console.error('[@hook:useRemoteConnection] Screenshot failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('[@hook:useRemoteConnection] Screenshot error:', err);
-      throw err; // Re-throw the error so the modal can catch it
+      throw err;
     }
   }, [selectedHost]);
 
@@ -206,18 +202,21 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for UI dump operation');
     }
     
-    // Get remote controller proxy from selectedHost
-    const remoteController = selectedHost.controllerProxies?.remote;
-    
-    if (!remoteController) {
-      throw new Error('Remote controller proxy not available. UI dump not supported for this device type.');
-    }
-    
     try {
-      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements using remote controller proxy...');
+      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements using server route...');
       
-      // Use remote controller proxy to take screenshot and dump UI
-      const result = await remoteController.screenshot_and_dump_ui();
+      // Use direct server route call instead of proxy
+      const response = await fetch(`/server/remote/screenshot-and-dump`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
+      
+      const result = await response.json();
       
       if (result.success) {
         if (result.screenshot) {
@@ -227,7 +226,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
           setAndroidElements(result.elements);
           console.log(`[@hook:useRemoteConnection] Found ${result.elements.length} UI elements`);
         }
-        console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully via proxy');
+        console.log('[@hook:useRemoteConnection] Screenshot and UI dump completed successfully');
       } else {
         const errorMessage = result.error || 'Screenshot and UI dump failed';
         console.error('[@hook:useRemoteConnection] Screenshot and UI dump failed:', errorMessage);
@@ -245,22 +244,25 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for apps operation');
     }
     
-    // Get remote controller proxy from selectedHost
-    const remoteController = selectedHost.controllerProxies?.remote;
-    
-    if (!remoteController) {
-      throw new Error('Remote controller proxy not available. App listing not supported for this device type.');
-    }
-    
     try {
-      console.log('[@hook:useRemoteConnection] Getting installed apps using remote controller proxy...');
+      console.log('[@hook:useRemoteConnection] Getting installed apps using server route...');
       
-      // Use remote controller proxy to get installed apps
-      const apps = await remoteController.get_installed_apps();
+      // Use direct server route call instead of proxy
+      const response = await fetch(`/server/remote/get-apps`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name
+        })
+      });
       
-      if (apps && apps.length > 0) {
-        setAndroidApps(apps);
-        console.log(`[@hook:useRemoteConnection] Found ${apps.length} installed apps via proxy`);
+      const result = await response.json();
+      
+      if (result.success && result.apps) {
+        setAndroidApps(result.apps);
+        console.log(`[@hook:useRemoteConnection] Found ${result.apps.length} installed apps`);
       } else {
         console.log('[@hook:useRemoteConnection] No apps found or apps list is empty');
         setAndroidApps([]);
@@ -277,21 +279,25 @@ export function useRemoteConnection(remoteType: RemoteType) {
       throw new Error('No host selected for element click operation');
     }
     
-    // Get remote controller proxy from selectedHost
-    const remoteController = selectedHost.controllerProxies?.remote;
-    
-    if (!remoteController) {
-      throw new Error('Remote controller proxy not available. Element clicking not supported for this device type.');
-    }
-    
     try {
-      console.log(`[@hook:useRemoteConnection] Clicking element using remote controller proxy: ${element.id}`);
+      console.log(`[@hook:useRemoteConnection] Clicking element using server route: ${element.id}`);
       
-      // Use remote controller proxy to click element
-      const result = await remoteController.click_element(String(element.id));
+      // Use direct server route call instead of proxy
+      const response = await fetch(`/server/remote/click-element`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name,
+          elementId: element.id
+        })
+      });
+      
+      const result = await response.json();
       
       if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully clicked element via proxy: ${element.id}`);
+        console.log(`[@hook:useRemoteConnection] Successfully clicked element: ${element.id}`);
       } else {
         const errorMessage = result.error || 'Element click failed';
         console.error('[@hook:useRemoteConnection] Element click failed:', errorMessage);
@@ -315,36 +321,52 @@ export function useRemoteConnection(remoteType: RemoteType) {
       return;
     }
     
-    // Get remote controller proxy from selectedHost
-    const remoteController = selectedHost.controllerProxies?.remote;
-    
-    if (!remoteController) {
-      console.error('[@hook:useRemoteConnection] Remote controller proxy not available');
-      return;
-    }
-    
     try {
-      console.log(`[@hook:useRemoteConnection] Sending remote command via proxy: ${command}`, params);
+      console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
       
       // Handle special Android mobile commands
       if (remoteType === 'android-mobile' && command === 'LAUNCH_APP') {
-        const result = await remoteController.launch_app(params.package);
+        const response = await fetch(`/server/remote/execute-command`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: selectedHost.host_name,
+            command: 'launch_app',
+            params: { package: params.package }
+          })
+        });
+        
+        const result = await response.json();
         
         if (result.success) {
-          console.log(`[@hook:useRemoteConnection] Successfully launched app via proxy: ${params.package}`);
+          console.log(`[@hook:useRemoteConnection] Successfully launched app: ${params.package}`);
         } else {
-          console.error(`[@hook:useRemoteConnection] App launch failed via proxy:`, result.error);
+          console.error(`[@hook:useRemoteConnection] App launch failed:`, result.error);
         }
         return;
       }
       
-      // For regular key press commands, use press_key method
-      const result = await remoteController.press_key(command);
+      // For regular key press commands
+      const response = await fetch(`/server/remote/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHost.host_name,
+          command: 'press_key',
+          params: { key: command }
+        })
+      });
+      
+      const result = await response.json();
       
       if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully sent command via proxy: ${command}`);
+        console.log(`[@hook:useRemoteConnection] Successfully sent command: ${command}`);
       } else {
-        console.error(`[@hook:useRemoteConnection] Remote command failed via proxy:`, result.error);
+        console.error(`[@hook:useRemoteConnection] Remote command failed:`, result.error);
       }
     } catch (err: any) {
       console.error(`[@hook:useRemoteConnection] Remote command error:`, err);

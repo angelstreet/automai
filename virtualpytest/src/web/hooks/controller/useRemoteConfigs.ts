@@ -1,6 +1,6 @@
 import { RemoteDeviceConfig } from '../../types/controller/Remote_Types';
 
-// Android TV configuration - uses direct host communication
+// Android TV configuration - uses server route proxying to host
 export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   type: 'android-tv',
   name: 'Android TV',
@@ -8,14 +8,14 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',        // Server handles device locking
-    disconnect: '/server/control/release-control',  // Server handles device unlocking
-    screenshot: '/host/remote/screenshot',          // Direct host communication
-    command: '/host/remote/command',                // Direct host communication
+    connect: '/server/control/take-control',
+    disconnect: '/server/control/release-control',
+    screenshot: '/server/remote/take-screenshot',
+    command: '/server/remote/execute-command',
   }
 };
 
-// Android Mobile configuration - uses direct host communication
+// Android Mobile configuration - uses server route proxying to host
 export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   type: 'android-mobile',
   name: 'Android Mobile',
@@ -23,18 +23,18 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',        // Server handles device locking
-    disconnect: '/server/control/release-control',  // Server handles device unlocking
-    screenshot: '/host/remote/screenshot',          // Direct host communication
-    command: '/host/remote/command',                // Direct host communication
-    dumpUI: '/host/remote/screenshot-and-dump-ui', // Direct host communication
-    getApps: '/host/remote/get-apps',               // Direct host communication
-    clickElement: '/host/remote/click-element',     // Direct host communication
-    tapCoordinates: '/host/remote/tap-coordinates'  // Direct host communication
+    connect: '/server/control/take-control',
+    disconnect: '/server/control/release-control',
+    screenshot: '/server/remote/take-screenshot',
+    command: '/server/remote/execute-command',
+    dumpUI: '/server/remote/screenshot-and-dump',
+    getApps: '/server/remote/get-apps',
+    clickElement: '/server/remote/click-element',
+    tapCoordinates: '/server/remote/tap-element'
   }
 };
 
-// IR Remote configuration - uses direct host communication
+// IR Remote configuration - uses server route proxying to host
 export const IR_CONFIG: RemoteDeviceConfig = {
   type: 'ir',
   name: 'IR Remote',
@@ -42,13 +42,13 @@ export const IR_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: false,
   hasOverlay: false,
   serverEndpoints: {
-    connect: '/host/remote/connect',      // Direct host communication
-    disconnect: '/host/remote/disconnect', // Direct host communication
-    command: '/host/remote/command',      // Direct host communication
+    connect: '/server/remote/connect',
+    disconnect: '/server/remote/disconnect',
+    command: '/server/remote/execute-command',
   }
 };
 
-// Bluetooth Remote configuration - uses direct host communication
+// Bluetooth Remote configuration - uses server route proxying to host
 export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   type: 'bluetooth',
   name: 'Bluetooth Remote',
@@ -56,9 +56,9 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: false,
   hasOverlay: false,
   serverEndpoints: {
-    connect: '/host/remote/connect',      // Direct host communication
-    disconnect: '/host/remote/disconnect', // Direct host communication
-    command: '/host/remote/command',      // Direct host communication
+    connect: '/server/remote/connect',
+    disconnect: '/server/remote/disconnect',
+    command: '/server/remote/execute-command',
   }
 };
 
