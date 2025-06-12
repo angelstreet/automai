@@ -600,7 +600,7 @@ const NavigationEditorContent: React.FC = () => {
         >
           <RemotePanel
             host={selectedHost}
-            autoConnect={isControlActive}
+            autoConnect={false}
             onConnectionChange={handleConnectionChange}
             onDisconnectComplete={handleDisconnectComplete}
           />

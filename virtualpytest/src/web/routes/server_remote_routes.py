@@ -367,39 +367,7 @@ def execute_command():
             'error': f'Command execution error: {str(e)}'
         }), 500
 
-@remote_bp.route('/get-status', methods=['GET'])
-def get_status():
-    """Proxy status request to host remote controller."""
-    try:
-        print(f"[@route:server_remote:get_status] Proxying status request")
-        
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device not initialized'
-            }), 500
-        
-        remote_controller = host_device.get('controller_objects', {}).get('remote')
-        if not remote_controller:
-            return jsonify({
-                'success': False,
-                'error': 'Remote controller not available'
-            }), 400
-        
-        status = remote_controller.get_status()
-        
-        return jsonify({
-            'success': True,
-            'status': status
-        })
-            
-    except Exception as e:
-        print(f"[@route:server_remote:get_status] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Status error: {str(e)}'
-        }), 500
+# get-status endpoint removed - not needed
 
 # NOTE: Navigation actions (navigate, click, swipe, key-press) are typically
 # handled by navigation/pathfinding routes or direct controller calls.

@@ -1,5 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import { RemoteSession, ConnectionForm, RemoteConfig, AndroidElement, AndroidApp } from '../../types/controller/Remote_Types';
+import {
+  RemoteSession,
+  ConnectionForm,
+  RemoteConfig,
+  AndroidElement,
+  AndroidApp,
+} from '../../types/controller/Remote_Types';
 import { RemoteType } from '../../types/controller/Remote_Types';
 import { getRemoteConfig } from './useRemoteConfigs';
 import { useRegistration } from '../../contexts/RegistrationContext';
@@ -7,18 +13,18 @@ import { useRegistration } from '../../contexts/RegistrationContext';
 // Simplified connection form - no SSH fields needed with abstract controller
 const initialConnectionForm: ConnectionForm = {
   device_ip: '',
-  device_port: '5555'
+  device_port: '5555',
 };
 
 // Generic session for all remote types
 const initialSession: RemoteSession = {
   connected: false,
-  connectionInfo: ''
+  connectionInfo: '',
 };
 
 export function useRemoteConnection(remoteType: RemoteType) {
   const { selectedHost } = useRegistration();
-  
+
   // Original interface state
   const [session, setSession] = useState<RemoteSession>(initialSession);
   const [connectionForm, setConnectionForm] = useState<ConnectionForm>(initialConnectionForm);
@@ -33,15 +39,20 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
   // Get device configuration
   const deviceConfig = getRemoteConfig(remoteType);
-  
+
   // Debug logging for device configuration
   useEffect(() => {
     console.log(`[@hook:useRemoteConnection] Device config for ${remoteType}:`, deviceConfig);
     console.log(`[@hook:useRemoteConnection] Selected host:`, selectedHost);
     if (!deviceConfig) {
-      console.error(`[@hook:useRemoteConnection] No device configuration found for remote type: ${remoteType}`);
+      console.error(
+        `[@hook:useRemoteConnection] No device configuration found for remote type: ${remoteType}`,
+      );
     } else {
-      console.log(`[@hook:useRemoteConnection] Device config endpoints:`, deviceConfig.serverEndpoints);
+      console.log(
+        `[@hook:useRemoteConnection] Device config endpoints:`,
+        deviceConfig.serverEndpoints,
+      );
     }
   }, [remoteType, deviceConfig, selectedHost]);
 
@@ -55,13 +66,17 @@ export function useRemoteConnection(remoteType: RemoteType) {
         icon: deviceConfig.icon,
         hasScreenshot: deviceConfig.hasScreenshot,
         hasOverlay: deviceConfig.hasOverlay,
-        serverEndpoints: deviceConfig.serverEndpoints
+        serverEndpoints: deviceConfig.serverEndpoints,
       };
-      
+
       setRemoteConfig(basicRemoteConfig);
-      console.log(`[@hook:useRemoteConnection] Loaded ${deviceConfig.name} remote configuration from device config`);
+      console.log(
+        `[@hook:useRemoteConnection] Loaded ${deviceConfig.name} remote configuration from device config`,
+      );
     } else {
-      console.log(`[@hook:useRemoteConnection] No device configuration available for remote type: ${remoteType}`);
+      console.log(
+        `[@hook:useRemoteConnection] No device configuration available for remote type: ${remoteType}`,
+      );
       setRemoteConfig(null);
     }
   }, [deviceConfig, remoteType]);
@@ -71,12 +86,15 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] No device config or selected host available');
       return;
     }
-    
+
     setConnectionLoading(true);
     setConnectionError(null);
 
     try {
-      console.log('[@hook:useRemoteConnection] Starting take control process for:', selectedHost.host_name);
+      console.log(
+        '[@hook:useRemoteConnection] Starting take control process for:',
+        selectedHost.host_name,
+      );
 
       // Simplified validation - device_ip is optional now
       if (connectionForm.device_ip && !connectionForm.device_ip.trim()) {
@@ -86,31 +104,16 @@ export function useRemoteConnection(remoteType: RemoteType) {
         return;
       }
 
-      console.log('[@hook:useRemoteConnection] Using server route for status check...');
-      
-      // Check current status using server route
-      const response = await fetch(`/server/remote/get-status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      console.log('[@hook:useRemoteConnection] Control already taken by navigation editor');
+
+      // Control is already taken by navigation editor, just set connected state
+      console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
+      setSession({
+        connected: true,
+        connectionInfo: connectionForm.device_ip || 'Connected via navigation editor',
       });
-      
-      const statusResult = await response.json();
-      
-      if (statusResult.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
-        setSession({
-          connected: true,
-          connectionInfo: connectionForm.device_ip || 'Connected via server route'
-        });
-        setConnectionError(null);
-        console.log('[@hook:useRemoteConnection] Remote is ready');
-      } else {
-        const errorMsg = statusResult.error || `Failed to connect to ${deviceConfig.name} device`;
-        console.error('[@hook:useRemoteConnection] Connection failed:', errorMsg);
-        setConnectionError(errorMsg);
-      }
+      setConnectionError(null);
+      console.log('[@hook:useRemoteConnection] Remote is ready');
     } catch (err: any) {
       const errorMsg = err.message || 'Connection failed - network or server error';
       console.error('[@hook:useRemoteConnection] Exception during connection:', err);
@@ -125,28 +128,16 @@ export function useRemoteConnection(remoteType: RemoteType) {
       console.error('[@hook:useRemoteConnection] No device config or selected host available');
       return;
     }
-    
+
     setConnectionLoading(true);
     setConnectionError(null);
 
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
-      
-      // Check status to verify connection state using server route
-      try {
-        const response = await fetch(`/server/remote/get-status`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        const result = await response.json();
-        console.log('[@hook:useRemoteConnection] Remote controller status checked before disconnect:', result.success);
-      } catch (error) {
-        console.log('[@hook:useRemoteConnection] Remote controller already disconnected or unavailable');
-      }
-      
+
+      // Control is managed by navigation editor, no status check needed
+      console.log('[@hook:useRemoteConnection] Control released by navigation editor');
+
       console.log('[@hook:useRemoteConnection] Control released successfully');
     } catch (err: any) {
       console.error('[@hook:useRemoteConnection] Release control error:', err);
@@ -157,7 +148,9 @@ export function useRemoteConnection(remoteType: RemoteType) {
       setAndroidElements([]);
       setAndroidApps([]);
       setConnectionLoading(false);
-      console.log('[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled');
+      console.log(
+        '[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled',
+      );
     }
   }, [deviceConfig, selectedHost]);
 
@@ -165,10 +158,10 @@ export function useRemoteConnection(remoteType: RemoteType) {
     if (!selectedHost) {
       throw new Error('No host selected for screenshot operation');
     }
-    
+
     try {
       console.log('[@hook:useRemoteConnection] Taking screenshot using server route...');
-      
+
       // Use direct server route call instead of proxy
       const response = await fetch(`/server/remote/take-screenshot`, {
         method: 'POST',
@@ -176,12 +169,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name
-        })
+          host_name: selectedHost.host_name,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success && result.screenshot) {
         setAndroidScreenshot(result.screenshot);
         console.log('[@hook:useRemoteConnection] Screenshot captured successfully');
@@ -201,10 +194,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
     if (!selectedHost) {
       throw new Error('No host selected for UI dump operation');
     }
-    
+
     try {
-      console.log('[@hook:useRemoteConnection] Taking screenshot and dumping UI elements using server route...');
-      
+      console.log(
+        '[@hook:useRemoteConnection] Taking screenshot and dumping UI elements using server route...',
+      );
+
       // Use direct server route call instead of proxy
       const response = await fetch(`/server/remote/screenshot-and-dump`, {
         method: 'POST',
@@ -212,12 +207,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name
-        })
+          host_name: selectedHost.host_name,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         if (result.screenshot) {
           setAndroidScreenshot(result.screenshot);
@@ -243,10 +238,10 @@ export function useRemoteConnection(remoteType: RemoteType) {
     if (!selectedHost) {
       throw new Error('No host selected for apps operation');
     }
-    
+
     try {
       console.log('[@hook:useRemoteConnection] Getting installed apps using server route...');
-      
+
       // Use direct server route call instead of proxy
       const response = await fetch(`/server/remote/get-apps`, {
         method: 'POST',
@@ -254,12 +249,12 @@ export function useRemoteConnection(remoteType: RemoteType) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name
-        })
+          host_name: selectedHost.host_name,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success && result.apps) {
         setAndroidApps(result.apps);
         console.log(`[@hook:useRemoteConnection] Found ${result.apps.length} installed apps`);
@@ -274,40 +269,45 @@ export function useRemoteConnection(remoteType: RemoteType) {
   }, [selectedHost]);
 
   // Android Mobile specific: Click UI element
-  const handleClickElement = useCallback(async (element: AndroidElement) => {
-    if (!selectedHost) {
-      throw new Error('No host selected for element click operation');
-    }
-    
-    try {
-      console.log(`[@hook:useRemoteConnection] Clicking element using server route: ${element.id}`);
-      
-      // Use direct server route call instead of proxy
-      const response = await fetch(`/server/remote/click-element`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedHost.host_name,
-          elementId: element.id
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully clicked element: ${element.id}`);
-      } else {
-        const errorMessage = result.error || 'Element click failed';
-        console.error('[@hook:useRemoteConnection] Element click failed:', errorMessage);
-        throw new Error(errorMessage);
+  const handleClickElement = useCallback(
+    async (element: AndroidElement) => {
+      if (!selectedHost) {
+        throw new Error('No host selected for element click operation');
       }
-    } catch (err: any) {
-      console.error('[@hook:useRemoteConnection] Element click error:', err);
-      throw err;
-    }
-  }, [selectedHost]);
+
+      try {
+        console.log(
+          `[@hook:useRemoteConnection] Clicking element using server route: ${element.id}`,
+        );
+
+        // Use direct server route call instead of proxy
+        const response = await fetch(`/server/remote/click-element`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: selectedHost.host_name,
+            elementId: element.id,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          console.log(`[@hook:useRemoteConnection] Successfully clicked element: ${element.id}`);
+        } else {
+          const errorMessage = result.error || 'Element click failed';
+          console.error('[@hook:useRemoteConnection] Element click failed:', errorMessage);
+          throw new Error(errorMessage);
+        }
+      } catch (err: any) {
+        console.error('[@hook:useRemoteConnection] Element click error:', err);
+        throw err;
+      }
+    },
+    [selectedHost],
+  );
 
   // Clear UI elements
   const clearElements = useCallback(() => {
@@ -315,17 +315,41 @@ export function useRemoteConnection(remoteType: RemoteType) {
     setAndroidElements([]);
   }, []);
 
-  const handleRemoteCommand = useCallback(async (command: string, params: any = {}) => {
-    if (!deviceConfig || !selectedHost) {
-      console.error('[@hook:useRemoteConnection] No device config or selected host available');
-      return;
-    }
-    
-    try {
-      console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
-      
-      // Handle special Android mobile commands
-      if (remoteType === 'android-mobile' && command === 'LAUNCH_APP') {
+  const handleRemoteCommand = useCallback(
+    async (command: string, params: any = {}) => {
+      if (!deviceConfig || !selectedHost) {
+        console.error('[@hook:useRemoteConnection] No device config or selected host available');
+        return;
+      }
+
+      try {
+        console.log(`[@hook:useRemoteConnection] Sending remote command: ${command}`, params);
+
+        // Handle special Android mobile commands
+        if (remoteType === 'android-mobile' && command === 'LAUNCH_APP') {
+          const response = await fetch(`/server/remote/execute-command`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host_name: selectedHost.host_name,
+              command: 'launch_app',
+              params: { package: params.package },
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            console.log(`[@hook:useRemoteConnection] Successfully launched app: ${params.package}`);
+          } else {
+            console.error(`[@hook:useRemoteConnection] App launch failed:`, result.error);
+          }
+          return;
+        }
+
+        // For regular key press commands
         const response = await fetch(`/server/remote/execute-command`, {
           method: 'POST',
           headers: {
@@ -333,45 +357,24 @@ export function useRemoteConnection(remoteType: RemoteType) {
           },
           body: JSON.stringify({
             host_name: selectedHost.host_name,
-            command: 'launch_app',
-            params: { package: params.package }
-          })
+            command: 'press_key',
+            params: { key: command },
+          }),
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-          console.log(`[@hook:useRemoteConnection] Successfully launched app: ${params.package}`);
+          console.log(`[@hook:useRemoteConnection] Successfully sent command: ${command}`);
         } else {
-          console.error(`[@hook:useRemoteConnection] App launch failed:`, result.error);
+          console.error(`[@hook:useRemoteConnection] Remote command failed:`, result.error);
         }
-        return;
+      } catch (err: any) {
+        console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
       }
-      
-      // For regular key press commands
-      const response = await fetch(`/server/remote/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedHost.host_name,
-          command: 'press_key',
-          params: { key: command }
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        console.log(`[@hook:useRemoteConnection] Successfully sent command: ${command}`);
-      } else {
-        console.error(`[@hook:useRemoteConnection] Remote command failed:`, result.error);
-      }
-    } catch (err: any) {
-      console.error(`[@hook:useRemoteConnection] Remote command error:`, err);
-    }
-  }, [deviceConfig, remoteType, selectedHost]);
+    },
+    [deviceConfig, remoteType, selectedHost],
+  );
 
   return {
     // Interface
@@ -382,24 +385,24 @@ export function useRemoteConnection(remoteType: RemoteType) {
     connectionError,
     remoteConfig,
     androidScreenshot,
-    
+
     // Android Mobile specific state
     androidElements,
     androidApps,
-    
+
     // Core methods
     handleTakeControl,
     handleReleaseControl,
     handleScreenshot,
     handleRemoteCommand,
-    
+
     // Android Mobile specific methods
     handleScreenshotAndDumpUI,
     handleGetApps,
     handleClickElement,
     clearElements,
-    
+
     // Device configuration
     deviceConfig,
   };
-} 
+}

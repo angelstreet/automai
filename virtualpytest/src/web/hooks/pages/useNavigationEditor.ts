@@ -599,18 +599,93 @@ export const useNavigationEditor = () => {
     console.log(`[@hook:useNavigationEditor] Taking control of device: ${selectedHost.host_name}`);
 
     try {
-      // Toggle control state
-      const newControlState = !isControlActive;
-      setIsControlActive(newControlState);
+      if (!isControlActive) {
+        // STEP 1: Take control on server (lock the host)
+        console.log(`[@hook:useNavigationEditor] Step 1: Locking host on server...`);
+        const serverControlResponse = await fetch(buildServerUrl('server/control/take-control'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: selectedHost.host_name,
+          }),
+        });
 
-      if (newControlState) {
-        // Taking control - show both panels
+        const serverControlResult = await serverControlResponse.json();
+        if (!serverControlResult.success) {
+          throw new Error(serverControlResult.error || 'Failed to lock host on server');
+        }
+
+        console.log(`[@hook:useNavigationEditor] Step 1 complete: Host locked on server`);
+
+        // STEP 2: Take control on host (verify host is ready)
+        console.log(`[@hook:useNavigationEditor] Step 2: Taking control on host...`);
+        const hostControlResponse = await fetch(buildServerUrl('host/control/take-control'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: selectedHost.host_name,
+          }),
+        });
+
+        const hostControlResult = await hostControlResponse.json();
+        if (!hostControlResult.success) {
+          throw new Error(hostControlResult.error || 'Failed to take control on host');
+        }
+
+        console.log(`[@hook:useNavigationEditor] Step 2 complete: Host control acquired`);
+
+        // STEP 3: Show panels (only after successful control acquisition)
+        setIsControlActive(true);
         setShowRemotePanel(true);
         setShowAVPanel(true);
         setIsRemotePanelOpen(true);
-        console.log(`[@hook:useNavigationEditor] Control activated, panels shown`);
+        console.log(`[@hook:useNavigationEditor] Step 3 complete: Control activated, panels shown`);
       } else {
-        // Releasing control - hide panels
+        // Releasing control
+        console.log(`[@hook:useNavigationEditor] Releasing control...`);
+
+        // Release control on host first
+        try {
+          await fetch(buildServerUrl('host/control/release-control'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host_name: selectedHost.host_name,
+            }),
+          });
+        } catch (error) {
+          console.warn(
+            '[@hook:useNavigationEditor] Warning: Failed to release host control:',
+            error,
+          );
+        }
+
+        // Release control on server
+        try {
+          await fetch(buildServerUrl('server/control/release-control'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host_name: selectedHost.host_name,
+            }),
+          });
+        } catch (error) {
+          console.warn(
+            '[@hook:useNavigationEditor] Warning: Failed to release server control:',
+            error,
+          );
+        }
+
+        // Hide panels
+        setIsControlActive(false);
         setShowRemotePanel(false);
         setShowAVPanel(false);
         setIsRemotePanelOpen(false);
@@ -618,8 +693,13 @@ export const useNavigationEditor = () => {
       }
     } catch (error) {
       console.error('[@hook:useNavigationEditor] Error during take control:', error);
+      // Reset state on error
+      setIsControlActive(false);
+      setShowRemotePanel(false);
+      setShowAVPanel(false);
+      setIsRemotePanelOpen(false);
     }
-  }, [selectedHost, isControlActive]);
+  }, [selectedHost, isControlActive, buildServerUrl]);
 
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {

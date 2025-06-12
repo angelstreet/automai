@@ -92,31 +92,13 @@ export function AndroidMobileRemote({
     try {
       console.log(`[@component:AndroidMobileRemote] Connecting to host: ${host.host_name}`);
 
-      // Check status using server route
-      const response = await fetch(`/server/remote/get-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: host.host_name,
-        }),
-      });
+      // Control is already taken by navigation editor, just set connected state
+      setIsConnected(true);
+      setConnectionError(null);
+      console.log(`[@component:AndroidMobileRemote] Successfully connected to ${host.device_name}`);
 
-      const result = await response.json();
-
-      if (result.success) {
-        setIsConnected(true);
-        setConnectionError(null);
-        console.log(
-          `[@component:AndroidMobileRemote] Successfully connected to ${host.device_name}`,
-        );
-
-        if (onConnectionChange) {
-          onConnectionChange(true);
-        }
-      } else {
-        throw new Error(result.error || 'Failed to connect to device');
+      if (onConnectionChange) {
+        onConnectionChange(true);
       }
     } catch (error: any) {
       console.error('[@component:AndroidMobileRemote] Connection failed:', error);

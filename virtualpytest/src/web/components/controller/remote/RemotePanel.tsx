@@ -47,61 +47,21 @@ export function RemotePanel({
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
   // Handle connection
-  const handleConnect = useCallback(async () => {
-    if (!host) {
-      setConnectionError('No host provided');
-      return;
-    }
+  // handleConnect removed - control is managed by navigation editor
 
-    setIsConnecting(true);
-    setConnectionError(null);
+  // Auto-connect on mount if requested (removed - control managed by navigation editor)
 
-    try {
-      console.log(`[@component:RemotePanel] Starting remote connection to ${host.host_name}...`);
-
-      // Check status using server route
-      const response = await fetch(`/server/remote/get-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: host.host_name,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        console.log(`[@component:RemotePanel] Remote controller available for ${host.device_name}`);
-        setIsConnected(true);
-        console.log('[@component:RemotePanel] Remote control activated');
-
-        if (onConnectionChange) {
-          onConnectionChange(true);
-        }
-      } else {
-        throw new Error(result.error || 'Remote controller not available');
-      }
-    } catch (error: any) {
-      console.error('[@component:RemotePanel] Connection failed:', error);
-      setConnectionError(error.message);
-      setIsConnected(false);
-
+  // If panel is shown, control is already active (set connected state)
+  useEffect(() => {
+    if (host) {
+      // Panel is shown after successful control acquisition by navigation editor
+      console.log(`[@component:RemotePanel] Control already active for ${host.host_name}`);
+      setIsConnected(true);
       if (onConnectionChange) {
-        onConnectionChange(false);
+        onConnectionChange(true);
       }
-    } finally {
-      setIsConnecting(false);
     }
   }, [host, onConnectionChange]);
-
-  // Auto-connect on mount if requested
-  useEffect(() => {
-    if (autoConnect && host && !isConnected) {
-      handleConnect();
-    }
-  }, [autoConnect, host, isConnected, handleConnect]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
@@ -186,7 +146,7 @@ export function RemotePanel({
             Connect to start using remote control features for {remoteType} device
           </Typography>
 
-          <Button variant="contained" onClick={handleConnect} disabled={isConnecting} fullWidth>
+          <Button variant="contained" onClick={() => {}} disabled={true} fullWidth>
             {isConnecting ? <CircularProgress size={16} /> : 'Connect'}
           </Button>
         </Paper>
