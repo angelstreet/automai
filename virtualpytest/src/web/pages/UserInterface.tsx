@@ -26,20 +26,14 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
-  OutlinedInput,
-  SelectChangeEvent,
   CircularProgress,
+  Autocomplete,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserInterface } from '../hooks/pages/useUserInterface';
 import { UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../types/pages/UserInterface_Types';
-import { Device } from '../types';
 
 const UserInterface: React.FC = () => {
   // Get navigation hook
@@ -54,8 +48,6 @@ const UserInterface: React.FC = () => {
   } = useUserInterface();
   
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ 
@@ -74,36 +66,28 @@ const UserInterface: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Extract unique models from devices
-  const availableModels = Array.from(new Set(
-    devices
-      .map(device => device.model)
-      .filter(model => model && model.trim() !== '')
-  )).sort();
+  // Common device models - can be expanded as needed
+  const commonModels = [
+    'iPhone 12',
+    'iPhone 13',
+    'iPhone 14',
+    'iPhone 15',
+    'Samsung Galaxy S21',
+    'Samsung Galaxy S22',
+    'Samsung Galaxy S23',
+    'Samsung Galaxy S24',
+    'Google Pixel 6',
+    'Google Pixel 7',
+    'Google Pixel 8',
+    'iPad Air',
+    'iPad Pro',
+    'Samsung Galaxy Tab',
+  ].sort();
 
   // Load data on component mount only
   useEffect(() => {
     loadUserInterfaces();
-    loadDevices();
-  }, []); // Remove deviceApi dependency - only load on mount
-
-  const loadDevices = async () => {
-    try {
-      setDevicesLoading(true);
-      const response = await fetch('/server/devices/getAllDevices');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch devices: ${response.status} ${response.statusText}`);
-      }
-      const fetchedDevices = await response.json();
-      setDevices(fetchedDevices || []);
-      console.log(`[@component:UserInterface] Successfully loaded ${fetchedDevices?.length || 0} devices`);
-    } catch (err) {
-      console.error('[@component:UserInterface] Error loading devices:', err);
-      setDevices([]);
-    } finally {
-      setDevicesLoading(false);
-    }
-  };
+  }, []);
 
   const loadUserInterfaces = async () => {
     try {
@@ -136,12 +120,7 @@ const UserInterface: React.FC = () => {
     }
 
     if (editForm.models.length === 0) {
-      setError('At least one model must be selected');
-      return;
-    }
-
-    if (devicesLoading) {
-      setError('Please wait for models to load');
+      setError('At least one model must be specified');
       return;
     }
 
@@ -214,12 +193,7 @@ const UserInterface: React.FC = () => {
     }
 
     if (newInterface.models.length === 0) {
-      setError('At least one model must be selected');
-      return;
-    }
-
-    if (devicesLoading) {
-      setError('Please wait for models to load');
+      setError('At least one model must be specified');
       return;
     }
 
@@ -263,32 +237,6 @@ const UserInterface: React.FC = () => {
     setOpenDialog(false);
     setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
     setError(null);
-  };
-
-  const handleModelChange = (event: SelectChangeEvent<string[]>, isEdit = false) => {
-    const value = event.target.value;
-    // Handle the case where value is a string (shouldn't happen with multiple select, but for safety)
-    const selectedModels = typeof value === 'string' ? [value] : value;
-    
-    if (isEdit) {
-      setEditForm({ ...editForm, models: selectedModels });
-    } else {
-      setNewInterface({ ...newInterface, models: selectedModels });
-    }
-  };
-
-  const handleRemoveModel = (modelToRemove: string, isEdit = false) => {
-    if (isEdit) {
-      setEditForm({ 
-        ...editForm, 
-        models: editForm.models.filter(model => model !== modelToRemove) 
-      });
-    } else {
-      setNewInterface({ 
-        ...newInterface, 
-        models: newInterface.models.filter(model => model !== modelToRemove) 
-      });
-    }
   };
 
   // Handle edit navigation functionality
@@ -374,7 +322,7 @@ const UserInterface: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
           size="small"
-          disabled={loading || devicesLoading}
+          disabled={loading}
         >
           Add UI
         </Button>
@@ -435,72 +383,39 @@ const UserInterface: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {editingId === userInterface.id ? (
-                          <FormControl size="small" fullWidth>
-                            <Select
-                              multiple
-                              value={editForm.models}
-                              onChange={(e) => handleModelChange(e, true)}
-                              input={<OutlinedInput />}
-                              disabled={devicesLoading}
-                              renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
-                                  {selected.map((value) => (
-                                    <Chip 
-                                      key={value} 
-                                      label={value} 
-                                      size="small"
-                                      onDelete={() => handleRemoveModel(value, true)}
-                                      sx={{ 
-                                        m: 0,
-                                        height: 20,
-                                        '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                                        '& .MuiChip-deleteIcon': { width: 14, height: 14 }
-                                      }}
-                                    />
-                                  ))}
-                                </Box>
-                              )}
-                              sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
-                              MenuProps={{
-                                PaperProps: {
-                                  style: {
-                                    maxHeight: 200,
-                                    width: 250,
-                                  },
-                                },
-                              }}
-                            >
-                              {devicesLoading ? (
-                                <MenuItem disabled>
-                                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                                  Loading models...
-                                </MenuItem>
-                              ) : availableModels.length === 0 ? (
-                                <MenuItem disabled>
-                                  No models available
-                                </MenuItem>
-                              ) : (
-                                availableModels.map((model) => (
-                                  <MenuItem 
-                                    key={model} 
-                                    value={model}
-                                    dense
-                                    sx={{
-                                      py: 0.5,
-                                      px: 1,
-                                      minHeight: 'auto',
-                                      backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'inherit',
-                                      '&:hover': {
-                                        backgroundColor: editForm.models.includes(model) ? 'action.selected' : 'action.hover',
-                                      },
-                                    }}
-                                  >
-                                    {model}
-                                  </MenuItem>
-                                ))
-                              )}
-                            </Select>
-                          </FormControl>
+                          <Autocomplete
+                            multiple
+                            size="small"
+                            options={commonModels}
+                            freeSolo
+                            value={editForm.models}
+                            onChange={(_, newValue) => {
+                              setEditForm({ ...editForm, models: newValue });
+                            }}
+                            renderTags={(value, getTagProps) =>
+                              value.map((option, index) => (
+                                <Chip 
+                                  variant="outlined" 
+                                  label={option} 
+                                  size="small"
+                                  {...getTagProps({ index })}
+                                  sx={{ 
+                                    height: 20,
+                                    '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                                    '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                                  }}
+                                />
+                              ))
+                            }
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                variant="outlined"
+                                placeholder="Add models..."
+                                sx={{ '& .MuiInputBase-root': { minHeight: '32px' } }}
+                              />
+                            )}
+                          />
                         ) : (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {userInterface.models.map((model) => (
@@ -628,73 +543,41 @@ const UserInterface: React.FC = () => {
               placeholder="e.g., Main Navigation Tree"
             />
             
-            <FormControl fullWidth margin="dense" sx={{ mb: 1.5 }}>
-              <InputLabel size="small">Models</InputLabel>
-              <Select
-                multiple
-                size="small"
-                value={newInterface.models}
-                onChange={(e) => handleModelChange(e)}
-                input={<OutlinedInput label="Models" />}
-                disabled={devicesLoading}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, p: 0.25 }}>
-                    {selected.map((value) => (
-                      <Chip 
-                        key={value} 
-                        label={value} 
-                        size="small"
-                        onDelete={() => handleRemoveModel(value, false)}
-                        sx={{ 
-                          m: 0,
-                          height: 20,
-                          '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                          '& .MuiChip-deleteIcon': { width: 14, height: 14 }
-                        }}
-                      />
-                    ))}
-                  </Box>
-                )}
-                MenuProps={{
-                  PaperProps: {
-                    style: {
-                      maxHeight: 200,
-                      width: 250,
-                    },
-                  },
-                }}
-              >
-                {devicesLoading ? (
-                  <MenuItem disabled>
-                    <CircularProgress size={16} sx={{ mr: 1 }} />
-                    Loading models...
-                  </MenuItem>
-                ) : availableModels.length === 0 ? (
-                  <MenuItem disabled>
-                    No models available
-                  </MenuItem>
-                ) : (
-                  availableModels.map((model) => (
-                    <MenuItem 
-                      key={model} 
-                      value={model}
-                      dense
-                      sx={{
-                        py: 0.5,
-                        px: 1,
-                        minHeight: 'auto',
-                        backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'inherit',
-                        '&:hover': {
-                          backgroundColor: newInterface.models.includes(model) ? 'action.selected' : 'action.hover',
-                        },
-                      }}
-                    >
-                      {model}
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              multiple
+              size="small"
+              options={commonModels}
+              freeSolo
+              value={newInterface.models}
+              onChange={(_, newValue) => {
+                setNewInterface({ ...newInterface, models: newValue });
+              }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip 
+                    variant="outlined" 
+                    label={option} 
+                    size="small"
+                    {...getTagProps({ index })}
+                    sx={{ 
+                      height: 20,
+                      '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                      '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                    }}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Models"
+                  variant="outlined"
+                  placeholder="Add device models..."
+                  margin="dense"
+                  sx={{ mb: 1.5 }}
+                />
+              )}
+            />
 
             <TextField
               margin="dense"
@@ -729,7 +612,7 @@ const UserInterface: React.FC = () => {
             onClick={handleAddNew} 
             variant="contained" 
             size="small"
-            disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting || devicesLoading}
+            disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting}
           >
             {submitting ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
             Add
