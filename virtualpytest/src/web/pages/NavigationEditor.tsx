@@ -319,8 +319,8 @@ const NavigationEditorContent: React.FC = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            device_id: selectedDevice.host_name, // Use host_name as device_id
-            session_id: sessionId || 'navigation-editor-session'
+            host_name: selectedDevice.host_name, // Use host_name instead of device_id
+            session_id: sessionId
           })
         });
 
@@ -337,39 +337,31 @@ const NavigationEditorContent: React.FC = () => {
         
       } else {
         // Take control
-        console.log(`[@component:NavigationEditor] Taking control of device: ${selectedDeviceName} (${selectedDevice.host_name})`);
+        setIsControlActive(true);
+        console.log(`[@component:NavigationEditor] Taking control of device: ${selectedDeviceName}`);
         
         const response = await fetch('/server/control/take-control', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            device_id: selectedDevice.host_name, // Use host_name as device_id
-            session_id: sessionId || 'navigation-editor-session'
+            host_name: selectedDevice.host_name,  // Use host_name instead of device_id
+            session_id: sessionId
           })
         });
-
+        
         const result = await response.json();
         
         if (result.success) {
-          console.log(`[@component:NavigationEditor] Successfully took control of device: ${selectedDeviceName}`);
-          console.log(`[@component:NavigationEditor] Device capabilities:`, result.device?.capabilities);
+          console.log(`[@component:NavigationEditor] Successfully took control: ${JSON.stringify(result.device)}`);
           setIsControlActive(true);
-          // Device is now locked on server side
         } else {
           console.error(`[@component:NavigationEditor] Failed to take control: ${result.error}`);
-          
-          // Handle specific error cases
-          if (result.device_locked) {
-            console.error(`[@component:NavigationEditor] Device is locked by: ${result.locked_by}`);
-          }
-          
-          // Show error to user (could add toast notification here)
+          setIsControlActive(false);
         }
       }
     } catch (error) {
-      console.error(`[@component:NavigationEditor] Error during take control operation:`, error);
+      console.error(`[@component:NavigationEditor] Take control error: ${error}`);
+      setIsControlActive(false);
     }
   }, [selectedDeviceName, availableHosts, isControlActive, sessionId]);
 

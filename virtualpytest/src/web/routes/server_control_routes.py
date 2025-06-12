@@ -169,23 +169,18 @@ def take_control():
         
         # Forward request to host using proper URL building
         try:
-            host_payload = {
-                'device_id': host_name,
-                'session_id': session_id
-            }
-            
+            # Host doesn't need any payload - it uses its own stored host_device object
             print(f"[@route:server_take_control] Forwarding to host using proper URL building")
-            print(f"[@route:server_take_control] Payload: {host_payload}")
             
             # Use proper URL building function from utils
             host_url = buildHostUrl(host_info, "/host/take-control")
             
             print(f"[@route:server_take_control] Built URL using build_host_url: {host_url}")
             
-            # Make request using the properly built URL
+            # Make request without payload - host uses its own stored device info
             host_response = requests.post(
                 host_url, 
-                json=host_payload, 
+                json={},  # Empty payload since host uses its own stored host_device
                 timeout=30, 
                 verify=False
             )
@@ -195,17 +190,12 @@ def take_control():
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
                 if host_data.get('success'):
-                    # Return the device info from our registry
+                    # Return clean device info from our registry
                     device_response = {
-                        'id': host_info.get('device_id'),
-                        'device_id': host_info.get('device_id'),
-                        'name': host_info.get('device_name'),
                         'device_name': host_info.get('device_name'),
-                        'model': host_info.get('device_model'),
                         'device_model': host_info.get('device_model'),
                         'device_ip': host_info.get('device_ip'),
                         'device_port': host_info.get('device_port'),
-                        'host_id': host_info.get('host_id'),
                         'host_name': host_info.get('host_name'),
                         'host_ip': host_info.get('host_ip'),
                         'host_port': host_info.get('host_port'),
@@ -275,65 +265,57 @@ def release_control():
     """Server-side release control - Unlock device and forward request to host"""
     try:
         data = request.get_json() or {}
-        device_model = data.get('device_model')
-        device_id = data.get('device_id')
+        host_name = data.get('host_name')
         session_id = data.get('session_id', 'default-session')
         
         print(f"[@route:server_release_control] Releasing control")
-        print(f"[@route:server_release_control] Device model: {device_model}")
-        print(f"[@route:server_release_control] Device ID: {device_id}")
+        print(f"[@route:server_release_control] Host name: {host_name}")
         print(f"[@route:server_release_control] Session ID: {session_id}")
         
-        # Step 1: Find host if device_model provided
-        host_info = None
-        if device_model:
-            host_info = get_host_by_model(device_model)
-            if host_info and not device_id:
-                device_id = host_info.get('client_id')
-        
-        # Step 2: Call host release control if we have host info
+        # Step 1: Call host release control if host_name provided
         host_release_success = True
-        if host_info:
-            try:
-                print(f"[@route:server_release_control] Calling host release control")
-                
-                host_url = buildHostUrl(host_info, '/host/release-control')
-                host_response = requests.post(
-                    host_url,
-                    json={
-                        'device_model': device_model,
-                        'session_id': session_id
-                    },
-                    timeout=30,
-                    verify=False
-                )
-                
-                if host_response.status_code == 200:
-                    host_result = host_response.json()
-                    host_release_success = host_result.get('success', False)
-                    print(f"[@route:server_release_control] Host release result: {host_result}")
-                else:
-                    print(f"[@route:server_release_control] Host release failed: {host_response.status_code}")
-                    host_release_success = False
+        if host_name:
+            connected_clients = get_host_registry()
+            host_info = connected_clients.get(host_name)
+            
+            if host_info:
+                try:
+                    print(f"[@route:server_release_control] Calling host release control")
                     
-            except Exception as e:
-                print(f"[@route:server_release_control] Host communication error: {str(e)}")
-                host_release_success = False
+                    host_url = buildHostUrl(host_info, '/host/release-control')
+                    host_response = requests.post(
+                        host_url,
+                        json={},  # Empty payload since host uses its own stored device info
+                        timeout=30,
+                        verify=False
+                    )
+                    
+                    if host_response.status_code == 200:
+                        host_result = host_response.json()
+                        host_release_success = host_result.get('success', False)
+                        print(f"[@route:server_release_control] Host release result: {host_result}")
+                    else:
+                        print(f"[@route:server_release_control] Host release failed: {host_response.status_code}")
+                        host_release_success = False
+                        
+                except Exception as e:
+                    print(f"[@route:server_release_control] Host communication error: {str(e)}")
+                    host_release_success = False
         
-        # Step 3: Unlock device if device_id provided
+        # Step 2: Unlock device if host_name provided
         device_unlock_success = True
-        if device_id:
-            device_unlock_success = unlock_device_in_registry(device_id, session_id)
+        if host_name:
+            device_unlock_success = unlock_device_in_registry(host_name, session_id)
             if device_unlock_success:
-                print(f"[@route:server_release_control] Successfully unlocked device: {device_id}")
+                print(f"[@route:server_release_control] Successfully unlocked host: {host_name}")
             else:
-                print(f"[@route:server_release_control] Failed to unlock device: {device_id}")
+                print(f"[@route:server_release_control] Failed to unlock host: {host_name}")
         
         return jsonify({
             'success': host_release_success and device_unlock_success,
             'message': 'Control released',
-            'device_unlocked': device_unlock_success if device_id else None,
-            'host_released': host_release_success if host_info else None
+            'device_unlocked': device_unlock_success if host_name else None,
+            'host_released': host_release_success if host_name else None
         })
         
     except Exception as e:
