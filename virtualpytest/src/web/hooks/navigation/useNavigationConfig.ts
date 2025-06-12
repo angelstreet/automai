@@ -24,22 +24,30 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   // Get buildServerUrl from registration context
   const { buildServerUrl } = useRegistration();
   
-  // Helper to get or create session ID
-  const getSessionId = () => {
+  // Session ID for lock management - persist across page reloads
+  // Use lazy initialization to ensure it's only created once
+  const [sessionId] = useState(() => {
     let id = sessionStorage.getItem('navigation-session-id');
     if (!id) {
       id = crypto.randomUUID();
       sessionStorage.setItem('navigation-session-id', id);
+      console.log(`[@hook:useNavigationConfig:init] Created new session ID: ${id}`);
+    } else {
+      console.log(`[@hook:useNavigationConfig:init] Using existing session ID: ${id}`);
     }
     return id;
-  };
-  
-  // Session ID for lock management - persist across page reloads
-  const sessionId = useRef<string>(getSessionId());
+  });
   const [isLocked, setIsLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState<any>(null);
   const [isCheckingLock, setIsCheckingLock] = useState(false); // Start as false, only true when actively checking
   const [showReadOnlyOverlay, setShowReadOnlyOverlay] = useState(false); // Only true when definitively locked by someone else
+
+  // Helper function to check if a lock belongs to our session
+  const isOurLock = useCallback((lockInfo: any): boolean => {
+    if (!lockInfo) return false;
+    const lockSession = lockInfo.session_id || lockInfo.locked_by;
+    return lockSession === sessionId;
+  }, []);
 
   // Set checking lock state immediately (fixes race condition)
   const setCheckingLockState = useCallback((checking: boolean) => {
@@ -49,16 +57,35 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   // Lock a navigation tree for editing
   const lockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
     try {
-      console.log(`[@hook:useNavigationConfig:lockNavigationTree] Attempting to lock tree: ${treeName}`);
       setIsCheckingLock(true);
       
+      const statusResponse = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
+        if (statusData.success && statusData.is_locked && isOurLock(statusData.lock_info)) {
+          // We already have the lock! Reclaim it.
+          console.log(`[@hook:useNavigationConfig:lockNavigationTree] Reclaiming existing lock for tree: ${treeName} (same session)`);
+          setIsLocked(true);
+          setLockInfo(statusData.lock_info);
+          setShowReadOnlyOverlay(false);
+          return true;
+        }
+      }
+      
+      // If we don't have the lock, try to acquire it normally
+      console.log(`[@hook:useNavigationConfig:lockNavigationTree] Attempting to acquire new lock for tree: ${treeName}`);
       const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sessionId.current
+          session_id: sessionId
         }),
       });
 
@@ -71,7 +98,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       if (data.success) {
         setIsLocked(true);
         setLockInfo({
-          locked_by: sessionId.current,
+          locked_by: sessionId,
           locked_at: data.locked_at
         });
         setShowReadOnlyOverlay(false); // We have the lock
@@ -92,7 +119,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     } finally {
       setIsCheckingLock(false);
     }
-  }, []);
+  }, [buildServerUrl]);
 
   // Unlock a navigation tree
   const unlockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
@@ -105,7 +132,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: sessionId.current
+          session_id: sessionId
         }),
       });
 
@@ -179,8 +206,15 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsCheckingLock(false); // Lock check is complete when tree data is loaded
         
         // Show overlay only if locked by someone else
-        const isLockedByOther = data.is_locked && data.lock_info?.locked_by !== sessionId.current;
+        const isLockedByOther = data.is_locked && !isOurLock(data.lock_info);
         setShowReadOnlyOverlay(isLockedByOther);
+        
+        // If locked by us (same session), we can reclaim it
+        if (data.is_locked && isOurLock(data.lock_info)) {
+          console.log(`[@hook:useNavigationConfig:loadFromConfig] Reclaiming lock during tree load for: ${treeName} (same session)`);
+          setIsLocked(true);
+          setShowReadOnlyOverlay(false);
+        }
         
         console.log(`[@hook:useNavigationConfig:loadFromConfig] Successfully loaded tree: ${treeName}`);
       } else {
@@ -210,7 +244,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       console.log(`[@hook:useNavigationConfig:saveToConfig] Saving ${nodesToSave.length} nodes and ${edgesToSave.length} edges`);
 
       const saveData = {
-        session_id: sessionId.current,
+        session_id: sessionId,
         tree_data: {
           nodes: nodesToSave,
           edges: edgesToSave
@@ -302,7 +336,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         return {
           isLocked: data.is_locked,
           lockInfo: data.lock_info,
-          isLockedByCurrentSession: data.lock_info?.locked_by === sessionId.current
+          isLockedByCurrentSession: data.lock_info?.locked_by === sessionId
         };
       }
       return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
@@ -339,7 +373,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     const handleBeforeUnload = () => {
       if (isLocked) {
         // Use sendBeacon for reliable cleanup on page unload
-        const unlockData = JSON.stringify({ session_id: sessionId.current });
+        const unlockData = JSON.stringify({ session_id: sessionId });
         navigator.sendBeacon(
           buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
           new Blob([unlockData], { type: 'application/json' })
@@ -363,7 +397,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     isCheckingLock,
     showReadOnlyOverlay,
     setCheckingLockState,
-    sessionId: sessionId.current,
+    sessionId,
     lockNavigationTree,
     unlockNavigationTree,
     checkTreeLockStatus,

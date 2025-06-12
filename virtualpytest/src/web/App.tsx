@@ -33,7 +33,12 @@ const App: React.FC = () => {
   return (
     <RegistrationProvider>
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <AppBar position="static" elevation={1}>
             <Toolbar>
               <Science sx={{ mr: 2 }} />

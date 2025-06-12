@@ -43,7 +43,7 @@ import { useRegistration } from '../contexts/RegistrationContext';
 // Import NavigationEdgeComponent
 import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
 
-// Node types for React Flow
+// Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
   uiScreen: UINavigationNode,
   uiMenu: UIMenuNode,
@@ -52,6 +52,45 @@ const nodeTypes = {
 const edgeTypes = {
   uiNavigation: NavigationEdgeComponent,
   smoothstep: NavigationEdgeComponent,
+};
+
+// Default options - defined outside component to prevent recreation
+const defaultEdgeOptions = {
+  type: 'uiNavigation',
+  animated: false,
+  style: { strokeWidth: 2, stroke: '#b1b1b7' },
+};
+
+const defaultViewport = { x: 0, y: 0, zoom: 1 };
+
+const translateExtent: [[number, number], [number, number]] = [[-5000, -5000], [10000, 10000]];
+const nodeExtent: [[number, number], [number, number]] = [[-5000, -5000], [10000, 10000]];
+
+const snapGrid: [number, number] = [15, 15];
+
+const reactFlowStyle = { width: '100%', height: '100%' };
+
+const nodeOrigin: [number, number] = [0, 0];
+
+const miniMapStyle = {
+  backgroundColor: 'var(--card, #ffffff)',
+  border: '1px solid var(--border, #e5e7eb)',
+  borderRadius: '8px',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+};
+
+const proOptions = { hideAttribution: true };
+
+// MiniMap nodeColor function - defined outside component to prevent recreation
+const miniMapNodeColor = (node: any) => {
+  switch (node.data?.type) {
+    case 'screen': return '#3b82f6';
+    case 'dialog': return '#8b5cf6';
+    case 'popup': return '#f59e0b';
+    case 'overlay': return '#10b981';
+    case 'menu': return '#ffc107';
+    default: return '#6b7280';
+  }
 };
 
 const NavigationEditorContent: React.FC = () => {
@@ -202,8 +241,7 @@ const NavigationEditorContent: React.FC = () => {
   // Load tree data when component mounts or treeId changes - LOCK FIRST APPROACH
   useEffect(() => {
     if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Starting lock-first workflow for tree: ${currentTreeName}`);
-      lastLoadedTreeId.current = currentTreeName;
+     lastLoadedTreeId.current = currentTreeName;
       
       // Fix race condition: Set checking state immediately
       setCheckingLockState(true);
@@ -420,22 +458,18 @@ const NavigationEditorContent: React.FC = () => {
                 }}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
-                defaultEdgeOptions={{
-                  type: 'uiNavigation',
-                  animated: false,
-                  style: { strokeWidth: 2, stroke: '#b1b1b7' },
-                }}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                defaultEdgeOptions={defaultEdgeOptions}
+                defaultViewport={defaultViewport}
                 // Ensure consistent viewport and prevent auto-fitting
-                translateExtent={[[-5000, -5000], [10000, 10000]]}
-                nodeExtent={[[-5000, -5000], [10000, 10000]]}
+                translateExtent={translateExtent}
+                nodeExtent={nodeExtent}
                 attributionPosition="bottom-left"
                 connectionLineType={ConnectionLineType.SmoothStep}
                 snapToGrid={true}
-                snapGrid={[15, 15]}
+                snapGrid={snapGrid}
                 deleteKeyCode={isLocked ? "Delete" : null}
                 multiSelectionKeyCode="Shift"
-                style={{ width: '100%', height: '100%' }}
+                style={reactFlowStyle}
                 fitView={false}
                 nodesDraggable={isLocked}
                 nodesConnectable={isLocked}
@@ -449,9 +483,9 @@ const NavigationEditorContent: React.FC = () => {
                 minZoom={0.1}
                 maxZoom={4}
                 // Disable React Flow's auto-positioning features
-                proOptions={{ hideAttribution: true }}
+                proOptions={proOptions}
                 // Prevent automatic layout algorithms
-                nodeOrigin={[0, 0]}
+                nodeOrigin={nodeOrigin}
                 // Additional props to prevent automatic positioning
                 autoPanOnConnect={false}
                 autoPanOnNodeDrag={false}
@@ -463,22 +497,8 @@ const NavigationEditorContent: React.FC = () => {
                 <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
                 <MiniMap 
                   position="bottom-right"
-                  style={{
-                    backgroundColor: 'var(--card, #ffffff)',
-                    border: '1px solid var(--border, #e5e7eb)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                  }}
-                  nodeColor={(node) => {
-                    switch (node.data?.type) {
-                      case 'screen': return '#3b82f6';
-                      case 'dialog': return '#8b5cf6';
-                      case 'popup': return '#f59e0b';
-                      case 'overlay': return '#10b981';
-                      case 'menu': return '#ffc107';
-                      default: return '#6b7280';
-                    }
-                  }}
+                  style={miniMapStyle}
+                  nodeColor={miniMapNodeColor}
                   maskColor="rgba(0, 0, 0, 0.1)"
                 />
               </ReactFlow>
