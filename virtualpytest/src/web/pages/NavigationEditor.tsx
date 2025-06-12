@@ -226,7 +226,6 @@ const NavigationEditorContent: React.FC = () => {
   // Set user interface from navigation state (passed from UserInterface.tsx)
   useEffect(() => {
     if (userInterfaceFromState) {
-      console.log('[@component:NavigationEditor] Setting user interface from navigation state:', userInterfaceFromState.name);
       setUserInterfaceFromProps(userInterfaceFromState);
     }
   }, [userInterfaceFromState, setUserInterfaceFromProps]);
