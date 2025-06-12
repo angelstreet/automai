@@ -12,7 +12,7 @@ export interface TestCase {
       };
     }[];
     // New fields for Phase 2 device integration
-    device_id?: string;
+    device_name?: string;
     environment_profile_id?: string;
     verification_conditions?: VerificationCondition[];
     expected_results?: { [key: string]: any };

@@ -4,7 +4,7 @@ export interface Controller {
   name: string;
   type: 'remote' | 'av' | 'verification';
   config: { [key: string]: any };
-  device_id: string;
+  device_name: string;
   team_id: string;
   created_at?: string;
   updated_at?: string;

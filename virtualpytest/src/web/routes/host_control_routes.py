@@ -129,7 +129,6 @@ def take_control():
                         'adb_details': {
                             'device_ip': device_ip,
                             'device_port': device_port,
-                            'android_device_id': f'{device_ip}:{device_port}',
                             'adb_status': 'connection_failed',
                             'device_status': 'unknown'
                         }
@@ -159,8 +158,7 @@ def take_control():
                             'device_ip': device_ip,
                             'device_port': device_port,
                             'adb_status': adb_status,
-                            'device_status': device_status,
-                            'android_device_id': remote_status.get('android_device_id')
+                            'device_status': device_status
                         }
                     })
                     
@@ -184,8 +182,7 @@ def take_control():
             'device_model': device_model,
             'av_status': av_status,
             'remote_status': remote_status,
-            'host_device': {
-                'host_name': host_name,
+            'device': {
                 'device_name': device_name,
                 'device_model': device_model,
                 'device_ip': device_ip,
@@ -220,9 +217,8 @@ def release_control():
         # Extract device info from stored host_device
         device_model = host_device.get('device_model', 'android_mobile')
         device_name = host_device.get('device_name')
-        host_name = host_device.get('host_name')
         
-        print(f"[@route:release_control] Host device: {host_name} releasing controllers for device: {device_name} ({device_model})")
+        print(f"[@route:release_control] Host device releasing controllers for device: {device_name} ({device_model})")
 
         # Release resources (implementation depends on controller types)
         # For now, just return success as controllers are session-based
@@ -231,8 +227,7 @@ def release_control():
             'success': True,
             'message': f'Released control for {device_name} ({device_model})',
             'device_model': device_model,
-            'host_device': {
-                'host_name': host_name,
+            'device': {
                 'device_name': device_name,
                 'device_model': device_model
             }
@@ -290,8 +285,7 @@ def controller_status():
         
         return jsonify({
             'success': True,
-            'host_device': {
-                'host_name': host_device.get('host_name'),
+            'device': {
                 'device_name': host_device.get('device_name'),
                 'device_model': host_device.get('device_model')
             },

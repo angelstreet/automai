@@ -272,10 +272,10 @@ const NavigationEditorContent: React.FC = () => {
   }, [currentTreeName, isLoadingInterface, loadFromConfig, lockNavigationTree, setupAutoUnlock, setCheckingLockState]);
 
   // ========================================
-  // 3. DEVICE & HOST MANAGEMENT
+  // 3. DEVICE CONTROL STATE
   // ========================================
   
-  // Device control state is now managed by NavigationEditorDeviceControl component
+  // Device control state - moved here to be accessible by handlers
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [isControlActive, setIsControlActive] = useState(false);
   const [isVerificationActive, setIsVerificationActive] = useState(false);
@@ -290,13 +290,100 @@ const NavigationEditorContent: React.FC = () => {
   const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
   const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
 
+  // ========================================
+  // 4. DEVICE CONTROL MANAGEMENT
+  // ========================================
+  
+  // Take control handler that calls server endpoints
+  const handleTakeControl = useCallback(async () => {
+    if (!selectedDeviceName) {
+      console.error('[@component:NavigationEditor] No device selected for take control');
+      return;
+    }
+
+    // Find the selected device from available hosts
+    const selectedDevice = availableHosts.find(host => host.device_name === selectedDeviceName);
+    if (!selectedDevice) {
+      console.error(`[@component:NavigationEditor] Selected device ${selectedDeviceName} not found in available hosts`);
+      return;
+    }
+
+    try {
+      if (isControlActive) {
+        // Release control
+        console.log(`[@component:NavigationEditor] Releasing control of device: ${selectedDeviceName}`);
+        
+        const response = await fetch('/server/control/release-control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_id: selectedDevice.host_name, // Use host_name as device_id
+            session_id: sessionId || 'navigation-editor-session'
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log(`[@component:NavigationEditor] Successfully released control of device: ${selectedDeviceName}`);
+          setIsControlActive(false);
+          // Note: Device will be unlocked on server side
+        } else {
+          console.error(`[@component:NavigationEditor] Failed to release control: ${result.error}`);
+          // Show error to user (could add toast notification here)
+        }
+        
+      } else {
+        // Take control
+        console.log(`[@component:NavigationEditor] Taking control of device: ${selectedDeviceName} (${selectedDevice.host_name})`);
+        
+        const response = await fetch('/server/control/take-control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            device_id: selectedDevice.host_name, // Use host_name as device_id
+            session_id: sessionId || 'navigation-editor-session'
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log(`[@component:NavigationEditor] Successfully took control of device: ${selectedDeviceName}`);
+          console.log(`[@component:NavigationEditor] Device capabilities:`, result.device?.capabilities);
+          setIsControlActive(true);
+          // Device is now locked on server side
+        } else {
+          console.error(`[@component:NavigationEditor] Failed to take control: ${result.error}`);
+          
+          // Handle specific error cases
+          if (result.device_locked) {
+            console.error(`[@component:NavigationEditor] Device is locked by: ${result.locked_by}`);
+          }
+          
+          // Show error to user (could add toast notification here)
+        }
+      }
+    } catch (error) {
+      console.error(`[@component:NavigationEditor] Error during take control operation:`, error);
+    }
+  }, [selectedDeviceName, availableHosts, isControlActive, sessionId]);
+
+  // ========================================
+  // 5. DEVICE & HOST MANAGEMENT
+  // ========================================
+  
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
     fetchHosts();
   }, [fetchHosts]);
 
   // ========================================
-  // 4. EVENT HANDLERS SETUP
+  // 6. EVENT HANDLERS SETUP
   // ========================================
 
   // Simple update handlers - complex validation logic moved to device control component
@@ -321,7 +408,7 @@ const NavigationEditorContent: React.FC = () => {
   }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
 
   // ========================================
-  // 5. RENDER
+  // 7. RENDER
   // ========================================
 
   return (
@@ -372,7 +459,7 @@ const NavigationEditorContent: React.FC = () => {
         onResetFocus={resetFocus}
         onToggleRemotePanel={() => {}} // Handled by device control component
         onDeviceSelect={handleHostSelect}
-        onTakeControl={() => {}} // Handled by device control component
+        onTakeControl={handleTakeControl}
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
       />

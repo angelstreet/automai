@@ -2,7 +2,7 @@
 export interface EnvironmentProfile {
   id: string;
   name: string;
-  device_id: string;
+  device_name: string;
   remote_controller_id?: string;
   av_controller_id?: string;
   verification_controller_id?: string;
@@ -21,19 +21,6 @@ export interface EnvironmentConfig {
   team_id: string;
   created_at?: string;
   updated_at?: string;
-}
-
-// Test environment setup interface
-export interface TestEnvironmentSetup {
-  profile_id: string;
-  device_id: string;
-  controllers: {
-    remote?: string;
-    av?: string;
-    verification?: string;
-  };
-  configuration: { [key: string]: any };
-  status: 'ready' | 'configuring' | 'error';
 }
 
 // Environment validation result

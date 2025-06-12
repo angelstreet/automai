@@ -137,8 +137,8 @@ def execute_test_case():
         
         return jsonify({
             'success': True,
-            'message': f'Test case {test_case_id} execution started on device {device_id}',
-            'execution_id': f'exec_{test_case_id}_{device_id}_{int(time.time())}'
+            'message': f'Test case {test_case_id} execution started on device {device_name}',
+            'execution_id': f'exec_{test_case_id}_{device_name}_{int(time.time())}'
         })
         
     except Exception as e:

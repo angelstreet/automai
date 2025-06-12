@@ -89,75 +89,88 @@ def take_control():
     """Server-side take control - Coordinate device locking and host discovery"""
     try:
         data = request.get_json() or {}
-        device_id = data.get('device_id')
+        host_name = data.get('host_name')
         session_id = data.get('session_id', 'default-session')
         
-        print(f"[@route:server_take_control] Take control requested for device: {device_id}")
+        print(f"[@route:server_take_control] Take control requested for host: {host_name}")
         print(f"[@route:server_take_control] Session ID: {session_id}")
         
-        if not device_id:
+        if not host_name:
             return jsonify({
                 'success': False,
-                'error': 'Missing device_id'
+                'error': 'Missing host_name'
             }), 400
         
         # Lock the device using device_lock_manager_utils
         try:
-            # Try to acquire lock for the device
-            lock_acquired = lock_device_in_registry(device_id, session_id)
-            
-            if not lock_acquired:
-                # Get lock info to see who owns it
-                lock_info = get_device_lock_info(device_id)
-                current_owner = lock_info.get('lockedBy', 'unknown') if lock_info else 'unknown'
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} is already locked by session: {current_owner}',
-                    'device_locked': True,
-                    'locked_by': current_owner
-                }), 409
-            
-            print(f"[@route:server_take_control] Successfully locked device {device_id} for session {session_id}")
-            
-        except Exception as e:
-            print(f"[@route:server_take_control] Error acquiring device lock: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to lock device: {str(e)}'
-            }), 500
-        
-        # Get connected clients to find the host for this device
-        try:
+            # Get host info first to check if it exists
             connected_clients = get_host_registry()
-            
-            # Find host that owns this device
-            host_info = None
-            for host_id, host_data in connected_clients.items():
-                if host_data.get('device_id') == device_id and host_data.get('status') == 'online':
-                    host_info = host_data
-                    break
+            host_info = connected_clients.get(host_name)
             
             if not host_info:
-                unlock_device_in_registry(device_id, session_id)
                 return jsonify({
                     'success': False,
-                    'error': f'No online host found for device: {device_id}'
+                    'error': f'Host {host_name} not found in registry',
+                    'device_locked': False,
+                    'locked_by': None
                 }), 404
             
-            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_info.get('host_ip')}:{host_info.get('host_port')}")
+            # Try to acquire lock for the host
+            lock_acquired = lock_device_in_registry(host_name, session_id)
+            
+            if not lock_acquired:
+                # Host exists but lock failed - check who owns it
+                lock_info = get_device_lock_info(host_name)
+                if lock_info:
+                    current_owner = lock_info.get('lockedBy', 'unknown')
+                    return jsonify({
+                        'success': False,
+                        'error': f'Host {host_name} is already locked by session: {current_owner}',
+                        'device_locked': True,
+                        'locked_by': current_owner
+                    }), 409
+                else:
+                    # This shouldn't happen - lock failed but no lock info
+                    return jsonify({
+                        'success': False,
+                        'error': f'Failed to acquire lock for host {host_name} (unknown reason)',
+                        'device_locked': False,
+                        'locked_by': None
+                    }), 500
+            
+            print(f"[@route:server_take_control] Successfully locked host {host_name} for session {session_id}")
             
         except Exception as e:
-            unlock_device_in_registry(device_id, session_id)
-            print(f"[@route:server_take_control] Error finding host: {e}")
+            print(f"[@route:server_take_control] Error acquiring host lock: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to find host for device: {str(e)}'
+                'error': f'Failed to lock host: {str(e)}'
+            }), 500
+        
+        # Verify host is online (host_info is now available from above)
+        try:
+            # Just verify it's online
+            if host_info.get('status') != 'online':
+                unlock_device_in_registry(host_name, session_id)
+                return jsonify({
+                    'success': False,
+                    'error': f'Host {host_name} is not online (status: {host_info.get("status")})'
+                }), 503
+            
+            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_info.get('host_ip')}:{host_info.get('host_port_external')}")
+            
+        except Exception as e:
+            unlock_device_in_registry(host_name, session_id)
+            print(f"[@route:server_take_control] Error verifying host status: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to verify host status: {str(e)}'
             }), 500
         
         # Forward request to host using proper URL building
         try:
             host_payload = {
-                'device_id': device_id,
+                'device_id': host_name,
                 'session_id': session_id
             }
             
@@ -206,7 +219,7 @@ def take_control():
                     }), 200
                 else:
                     # Host failed - pass through specific error details
-                    unlock_device_in_registry(device_id, session_id)
+                    unlock_device_in_registry(host_name, session_id)
                     
                     # Determine appropriate HTTP status code based on error type
                     error_type = host_data.get('error_type', 'unknown')
@@ -233,7 +246,7 @@ def take_control():
                     }), status_code
             else:
                 # Host request failed, release the device lock
-                unlock_device_in_registry(device_id, session_id)
+                unlock_device_in_registry(host_name, session_id)
                 return jsonify({
                     'success': False,
                     'error': f'Host request failed: {host_response.status_code} {host_response.text}',
@@ -242,7 +255,7 @@ def take_control():
                 
         except Exception as e:
             # Host communication failed, release the device lock
-            unlock_device_in_registry(device_id, session_id)
+            unlock_device_in_registry(host_name, session_id)
             print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,

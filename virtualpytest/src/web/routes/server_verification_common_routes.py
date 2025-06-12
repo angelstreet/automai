@@ -341,7 +341,7 @@ def verification_status():
 # - /server/verification/release-control (REMOVED - use server_control_routes.py)
 # - /server/verification/lock-device (REMOVED - use server_control_routes.py)
 # - /server/verification/unlock-device (REMOVED - use server_control_routes.py)
-# - /server/verification/device-lock-status/<device_id> (REMOVED - use server_control_routes.py)
+# - /server/verification/device-lock-status/<d> (REMOVED - use server_control_routes.py)
 
 # For device control, use the main server control endpoints:
 # - /server/control/take-control (POST) - Main device control with locking

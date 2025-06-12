@@ -10,4 +10,3 @@ export { default as RemoteController } from './RemoteController';
 export { default as CreateDeviceDialog } from './CreateDeviceDialog';
 export { default as Header } from './Header';
 export { default as Footer } from './Footer';
-export { default as DebugModal } from './DebugModal'; 
