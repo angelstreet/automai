@@ -10,8 +10,8 @@ import json
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
-# Config directory path
-CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config" / "navigation"
+# Config directory path - point to src/config/navigation
+CONFIG_DIR = Path(__file__).parent.parent / "config" / "navigation"
 
 def ensure_config_directory() -> bool:
     """

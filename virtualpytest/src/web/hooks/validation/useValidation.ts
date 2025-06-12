@@ -25,7 +25,7 @@ export const useValidation = () => {
       throw new Error('Validation hook not initialized. buildServerUrl function not available.');
     }
     // Use centralized URL building for validation endpoints
-    return buildServerUrl('api/validation');
+    return buildServerUrl('server/validation');
   }, [buildServerUrl]);
 
   const updateProgressCallback = useCallback((callback: ((progress: ValidationProgress) => void) | null) => {

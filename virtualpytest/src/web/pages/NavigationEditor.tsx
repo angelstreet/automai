@@ -54,6 +54,10 @@ const edgeTypes = {
 };
 
 const NavigationEditorContent: React.FC = () => {
+  // ========================================
+  // 1. INITIALIZATION & SETUP
+  // ========================================
+  
   // Use registration context only for host management, not URL building
   const { 
     availableHosts, 
@@ -76,37 +80,6 @@ const NavigationEditorContent: React.FC = () => {
       clearSelection();
     }
   }, [availableHosts, selectHost, clearSelection]);
-  
-  // Device control state is now managed by NavigationEditorDeviceControl component
-  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
-  const [isControlActive, setIsControlActive] = useState(false);
-  const [isVerificationActive, setIsVerificationActive] = useState(false);
-  const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  }>({
-    image_controller_available: false,
-    text_controller_available: false,
-  });
-  const [verificationResults, setVerificationResults] = useState<any[]>([]);
-  const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
-  const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
-
-  // Memoize computed values based on selectedHost from registration context
-  const remoteConfig = useMemo(() => {
-    return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
-  }, [selectedHost]);
-  
-  const hasAVCapabilities = useMemo(() => {
-    return selectedHost?.controller_configs?.av?.parameters != null;
-  }, [selectedHost]);
-
-  // Use registration context's fetchHosts instead of separate device fetching
-  useEffect(() => {
-    fetchHosts();
-  }, []);
-
-  // Device control effects are now handled by NavigationEditorDeviceControl component
 
   const {
     // State
@@ -133,8 +106,6 @@ const NavigationEditorContent: React.FC = () => {
     hasUnsavedChanges,
     isDiscardDialogOpen,
     userInterface,
-    
-    // History state removed - using page reload for cancel changes
     
     // View state for single-level navigation
     viewPath,
@@ -183,7 +154,6 @@ const NavigationEditorContent: React.FC = () => {
     performDiscardChanges,
     navigateToTreeLevel,
     closeSelectionPanel,
-    // undo/redo removed - using page reload for cancel changes
     fitView,
     deleteSelected,
     resetNode,
@@ -197,10 +167,28 @@ const NavigationEditorContent: React.FC = () => {
     setSelectedEdge,
     
   } = useNavigationEditor();
-  
+
   // Track the last loaded tree ID to prevent unnecessary reloads
   const lastLoadedTreeId = useRef<string | null>(null);
+
+  // ========================================
+  // 2. TREE LOADING & LOCK MANAGEMENT
+  // ========================================
   
+  // Debug logging for tree loading conditions
+  useEffect(() => {
+    console.log('[@component:NavigationEditor] Tree Loading Debug Info:', {
+      currentTreeName,
+      isLoadingInterface,
+      lastLoadedTreeId: lastLoadedTreeId.current,
+      nodesLength: nodes.length,
+      treeId,
+      interfaceId,
+      userInterface: userInterface?.name || 'none',
+      expectedJsonPath: currentTreeName ? `/config/navigation/${currentTreeName}.json` : 'no tree name'
+    });
+  }, [currentTreeName, isLoadingInterface, nodes.length, treeId, interfaceId, userInterface]);
+
   // Show message if tree ID is missing
   useEffect(() => {
     if (!treeId && !interfaceId) {
@@ -210,8 +198,21 @@ const NavigationEditorContent: React.FC = () => {
   
   // Load tree data when component mounts or treeId changes
   useEffect(() => {
+    console.log('[@component:NavigationEditor] Tree Loading Conditions Check:', {
+      condition1_currentTreeName: !!currentTreeName,
+      condition1_value: currentTreeName,
+      condition2_notLoadingInterface: !isLoadingInterface,
+      condition2_value: isLoadingInterface,
+      condition3_differentFromLast: currentTreeName !== lastLoadedTreeId.current,
+      condition3_lastLoaded: lastLoadedTreeId.current,
+      condition3_current: currentTreeName,
+      allConditionsMet: currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current,
+      expectedJsonPath: currentTreeName ? `/server/navigation/config/trees/${currentTreeName}` : 'no tree name available'
+    });
+
     if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
+      console.log(`[@component:NavigationEditor] ✅ ALL CONDITIONS MET - Loading tree data from config: ${currentTreeName}`);
+      console.log(`[@component:NavigationEditor] JSON will be loaded from: /server/navigation/config/trees/${currentTreeName}`);
       lastLoadedTreeId.current = currentTreeName;
       
       // Load from config instead of database
@@ -222,14 +223,48 @@ const NavigationEditorContent: React.FC = () => {
       
       // Return cleanup function
       return cleanup;
+    } else {
+      console.log(`[@component:NavigationEditor] ❌ CONDITIONS NOT MET - Tree will not load`);
     }
   }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
-  // Device control handlers are now managed by NavigationEditorDeviceControl component
+  // ========================================
+  // 3. DEVICE & HOST MANAGEMENT
+  // ========================================
+  
+  // Device control state is now managed by NavigationEditorDeviceControl component
+  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
+  const [isControlActive, setIsControlActive] = useState(false);
+  const [isVerificationActive, setIsVerificationActive] = useState(false);
+  const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
+    image_controller_available: boolean;
+    text_controller_available: boolean;
+  }>({
+    image_controller_available: false,
+    text_controller_available: false,
+  });
+  const [verificationResults, setVerificationResults] = useState<any[]>([]);
+  const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
+  const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
 
-  // Device control handlers are created within NavigationEditorDeviceControl component
+  // Memoize computed values based on selectedHost from registration context
+  const remoteConfig = useMemo(() => {
+    return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
+  }, [selectedHost]);
+  
+  const hasAVCapabilities = useMemo(() => {
+    return selectedHost?.controller_configs?.av?.parameters != null;
+  }, [selectedHost]);
 
-  // Verification is now handled by NavigationEditorDeviceControl component
+  // Use registration context's fetchHosts instead of separate device fetching
+  useEffect(() => {
+    console.log('[@component:NavigationEditor] Fetching available hosts...');
+    fetchHosts();
+  }, [fetchHosts]);
+
+  // ========================================
+  // 4. EVENT HANDLERS SETUP
+  // ========================================
 
   // Simple update handlers - complex validation logic moved to device control component
   const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
@@ -252,8 +287,10 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges(true);
   }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
 
-  // Verification state management is now handled by NavigationEditorDeviceControl component
-  
+  // ========================================
+  // 5. RENDER
+  // ========================================
+
   return (
     <Box sx={{ 
       width: '100%',

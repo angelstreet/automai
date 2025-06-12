@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
+import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface NavigationConfigState {
   currentTreeName: string;
@@ -20,11 +21,13 @@ interface NavigationConfigState {
   edges: UINavigationEdge[];
   // allNodes/allEdges removed - using single source of truth
   isSaving: boolean;
-  apiCall: (endpoint: string, options?: RequestInit) => Promise<any>;
   setUserInterface: (userInterface: any | null) => void;
 }
 
 export const useNavigationConfig = (state: NavigationConfigState) => {
+  // Get buildServerUrl from registration context
+  const { buildServerUrl } = useRegistration();
+  
   // Session ID for lock management
   const sessionId = useRef<string>(crypto.randomUUID());
   const [isLocked, setIsLocked] = useState(false);
@@ -35,58 +38,76 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:lockNavigationTree] Attempting to lock tree: ${treeName}`);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}/lock`, {
+      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`), {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           session_id: sessionId.current
         }),
       });
 
-      if (response.success) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         setIsLocked(true);
         setLockInfo({
           locked_by: sessionId.current,
-          locked_at: response.locked_at
+          locked_at: data.locked_at
         });
         console.log(`[@hook:useNavigationConfig:lockNavigationTree] Successfully locked tree: ${treeName}`);
         return true;
       } else {
-        console.log(`[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${response.error}`);
-        setLockInfo(response.current_lock);
+        console.log(`[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${data.error}`);
+        setLockInfo(data.current_lock);
         return false;
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:lockNavigationTree] Error locking tree:`, error);
       return false;
     }
-  }, [state.apiCall]);
+  }, []);
 
   // Unlock a navigation tree
   const unlockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
     try {
       console.log(`[@hook:useNavigationConfig:unlockNavigationTree] Attempting to unlock tree: ${treeName}`);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}/unlock`, {
+      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`), {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           session_id: sessionId.current
         }),
       });
 
-      if (response.success) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         setIsLocked(false);
         setLockInfo(null);
         console.log(`[@hook:useNavigationConfig:unlockNavigationTree] Successfully unlocked tree: ${treeName}`);
         return true;
       } else {
-        console.log(`[@hook:useNavigationConfig:unlockNavigationTree] Failed to unlock tree: ${response.error}`);
+        console.log(`[@hook:useNavigationConfig:unlockNavigationTree] Failed to unlock tree: ${data.error}`);
         return false;
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:unlockNavigationTree] Error unlocking tree:`, error);
       return false;
     }
-  }, [state.apiCall]);
+  }, []);
 
   // Load tree from config file
   const loadFromConfig = useCallback(async (treeName: string) => {
@@ -95,10 +116,20 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       state.setIsLoading(true);
       state.setError(null);
       
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`);
+      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      if (response.success && response.tree_data) {
-        const treeData = response.tree_data;
+      if (data.success && data.tree_data) {
+        const treeData = data.tree_data;
         
         console.log(`[@hook:useNavigationConfig:loadFromConfig] Loaded tree with ${treeData.nodes?.length || 0} nodes and ${treeData.edges?.length || 0} edges from config`);
         
@@ -111,9 +142,9 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         // setAllNodes/setAllEdges removed - using single source of truth
         
         // Set userInterface data from response if available
-        if (response.userinterface) {
-          console.log(`[@hook:useNavigationConfig:loadFromConfig] Setting userInterface: ${response.userinterface.name} with models: ${response.userinterface.models?.join(', ') || 'none'}`);
-          state.setUserInterface(response.userinterface);
+        if (data.userinterface) {
+          console.log(`[@hook:useNavigationConfig:loadFromConfig] Setting userInterface: ${data.userinterface.name} with models: ${data.userinterface.models?.join(', ') || 'none'}`);
+          state.setUserInterface(data.userinterface);
         } else {
           console.log(`[@hook:useNavigationConfig:loadFromConfig] No userInterface data found in response`);
           state.setUserInterface(null);
@@ -130,12 +161,12 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         state.setHasUnsavedChanges(false);
         
         // Update lock info
-        setIsLocked(response.is_locked);
-        setLockInfo(response.lock_info);
+        setIsLocked(data.is_locked);
+        setLockInfo(data.lock_info);
         
         console.log(`[@hook:useNavigationConfig:loadFromConfig] Successfully loaded tree: ${treeName}`);
       } else {
-        throw new Error(response.error || 'Failed to load navigation tree from config');
+        throw new Error(data.error || 'Failed to load navigation tree from config');
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:loadFromConfig] Error loading tree:`, error);
@@ -168,14 +199,23 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         }
       };
 
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`, {
+      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(saveData),
       });
 
-      if (response.success) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         console.log(`[@hook:useNavigationConfig:saveToConfig] Successfully saved tree: ${treeName}`);
-        console.log(`[@hook:useNavigationConfig:saveToConfig] Git result:`, response.git_result);
+        console.log(`[@hook:useNavigationConfig:saveToConfig] Git result:`, data.git_result);
         
         // Update initial state for change tracking
         state.setInitialState({ nodes: [...nodesToSave], edges: [...edgesToSave] });
@@ -184,7 +224,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
 
         setTimeout(() => state.setSaveSuccess(false), 3000);
       } else {
-        throw new Error(response.error || 'Failed to save navigation tree to config');
+        throw new Error(data.error || 'Failed to save navigation tree to config');
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:saveToConfig] Error saving tree:`, error);
@@ -199,32 +239,52 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:listAvailableTrees] Fetching available trees`);
       
-      const response = await state.apiCall('/api/navigation/config/trees');
+      const response = await fetch(buildServerUrl('/server/navigation/config/trees'), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      if (response.success) {
-        console.log(`[@hook:useNavigationConfig:listAvailableTrees] Found ${response.trees.length} trees`);
-        return response.trees;
+      if (data.success) {
+        console.log(`[@hook:useNavigationConfig:listAvailableTrees] Found ${data.trees.length} trees`);
+        return data.trees;
       } else {
-        throw new Error(response.error || 'Failed to list navigation trees');
+        throw new Error(data.error || 'Failed to list navigation trees');
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:listAvailableTrees] Error listing trees:`, error);
       return [];
     }
-  }, [state.apiCall]);
+  }, []);
 
   // Check if tree is locked by another session
   const checkTreeLockStatus = useCallback(async (treeName: string) => {
     try {
-      const response = await state.apiCall(`/api/navigation/config/trees/${treeName}`);
+      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      if (response.success) {
-        setIsLocked(response.is_locked);
-        setLockInfo(response.lock_info);
+      if (data.success) {
+        setIsLocked(data.is_locked);
+        setLockInfo(data.lock_info);
         return {
-          isLocked: response.is_locked,
-          lockInfo: response.lock_info,
-          isLockedByCurrentSession: response.lock_info?.locked_by === sessionId.current
+          isLocked: data.is_locked,
+          lockInfo: data.lock_info,
+          isLockedByCurrentSession: data.lock_info?.locked_by === sessionId.current
         };
       }
       return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
@@ -232,7 +292,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       console.error(`[@hook:useNavigationConfig:checkTreeLockStatus] Error checking lock status:`, error);
       return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
     }
-  }, [state.apiCall]);
+  }, []);
 
   // Create an empty tree structure
   const createEmptyTree = useCallback((): { nodes: UINavigationNode[], edges: UINavigationEdge[] } => {
@@ -263,7 +323,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         // Use sendBeacon for reliable cleanup on page unload
         const unlockData = JSON.stringify({ session_id: sessionId.current });
         navigator.sendBeacon(
-          `/api/navigation/config/trees/${treeName}/unlock`,
+          `/server/navigation/config/trees/${treeName}/unlock`,
           new Blob([unlockData], { type: 'application/json' })
         );
       }

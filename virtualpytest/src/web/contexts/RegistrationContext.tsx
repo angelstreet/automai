@@ -72,9 +72,9 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     console.log('[@context:Registration] Frontend port:', window.location.port);
     console.log('[@context:Registration] VITE_SERVER_PORT from env:', (import.meta as any).env.VITE_SERVER_PORT);
     console.log('[@context:Registration] VITE_SERVER_HOST from env:', (import.meta as any).env.VITE_SERVER_HOST);
-    console.log('[@context:Registration] Using API server host:', serverHost);
-    console.log('[@context:Registration] Using API server port:', serverPort);
-    console.log('[@context:Registration] Built API server URL:', baseUrl);
+    console.log('[@context:Registration] Using server host:', serverHost);
+    console.log('[@context:Registration] Using server port:', serverPort);
+    console.log('[@context:Registration] Built server URL:', baseUrl);
     
     return baseUrl;
   };

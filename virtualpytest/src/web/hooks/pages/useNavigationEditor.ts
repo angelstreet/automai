@@ -42,31 +42,7 @@ export const useNavigationEditor = () => {
     }
   }, []);
   
-  // Create apiCall function using buildServerUrl
-  const apiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
-  // Get team_id from localStorage or other state management, or use default
-  const teamId = localStorage.getItem('teamId') || sessionStorage.getItem('teamId') || DEFAULT_TEAM_ID;
-  
-  console.log(`[@hook:useNavigationEditor:apiCall] Making API call to ${endpoint} with team_id: ${teamId}`);
-  
-    const response = await fetch(buildServerUrl(endpoint), {
-    headers: {
-      'Content-Type': 'application/json',
-      // Include team_id in header to ensure proper RLS permissions
-      'X-Team-ID': teamId,
-      ...options.headers,
-    },
-    ...options,
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => 'Unknown error');
-    console.error(`[@hook:useNavigationEditor:apiCall] API call failed: ${response.status} - ${errorText}`);
-    throw new Error(`API call failed: ${response.status}`);
-  }
-  
-  return response.json();
-  }, [buildServerUrl]);
+
   
   // Use the modular state hook
   const navigationState = useNavigationState();
@@ -102,7 +78,6 @@ export const useNavigationEditor = () => {
     nodes: navigationState.nodes,
     edges: navigationState.edges,
     isSaving: navigationState.isSaving,
-    apiCall,
   });
   
   // Node/Edge management hook
@@ -273,37 +248,65 @@ export const useNavigationEditor = () => {
     });
   }, [navigationState.nodes, navigationState.setNodes, navigationState.setEdges, navigationState.setHasUnsavedChanges, typedValidateConnection]);
 
-  // Fetch user interface and root tree if interfaceId is provided
+  // Fetch user interface by name from URL parameter
   useEffect(() => {
-    const fetchUserInterface = async () => {
-      if (navigationState.interfaceId) {
+    const fetchUserInterfaceByName = async () => {
+      if (navigationState.currentTreeName) {
         navigationState.setIsLoadingInterface(true);
         try {
-          console.log(`[@component:NavigationEditor] Fetching user interface: ${navigationState.interfaceId}`);
-          const response = await apiCall(`/server/navigation/userinterfaces/${navigationState.interfaceId}`);
-          if (response.userinterface) {
-            navigationState.setUserInterface(response.userinterface);
-            if (response.root_navigation_tree) {
-              navigationState.setRootTree(response.root_navigation_tree);
-              navigationState.setCurrentTreeId(response.root_navigation_tree.id);
-              navigationState.setCurrentTreeName(response.root_navigation_tree.name);
-              navigationState.setNavigationPath([response.root_navigation_tree.id]);
-              navigationState.setNavigationNamePath([response.root_navigation_tree.name]);
-              // Update URL to reflect both ID and name of the root tree
-              navigate(`/navigation-editor/${response.root_navigation_tree.name}/${response.root_navigation_tree.id}`);
+          console.log(`[@hook:useNavigationEditor] Fetching user interface by name: ${navigationState.currentTreeName}`);
+          
+          // Fetch all userinterfaces and find the one matching the name
+          const response = await fetch(buildServerUrl('/server/userinterface/getAllUserInterfaces'), {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data && Array.isArray(data)) {
+            const matchingInterface = data.find(ui => ui.name === navigationState.currentTreeName);
+            
+            if (matchingInterface) {
+              console.log(`[@hook:useNavigationEditor] Found matching user interface:`, {
+                id: matchingInterface.id,
+                name: matchingInterface.name,
+                models: matchingInterface.models
+              });
+              
+              navigationState.setUserInterface(matchingInterface);
+              
+              // If there's a root tree, set up navigation
+              if (matchingInterface.root_tree) {
+                navigationState.setRootTree(matchingInterface.root_tree);
+                navigationState.setCurrentTreeId(matchingInterface.root_tree.id);
+                navigationState.setCurrentTreeName(matchingInterface.root_tree.name);
+                navigationState.setNavigationPath([matchingInterface.root_tree.id]);
+                navigationState.setNavigationNamePath([matchingInterface.root_tree.name]);
+              }
+            } else {
+              console.error(`[@hook:useNavigationEditor] No user interface found with name: ${navigationState.currentTreeName}`);
+              navigationState.setUserInterface(null);
             }
           } else {
-            console.error(`[@component:NavigationEditor] Failed to fetch user interface: ${navigationState.interfaceId}`);
+            console.error(`[@hook:useNavigationEditor] Failed to fetch user interfaces list`);
+            navigationState.setUserInterface(null);
           }
         } catch (error) {
-          console.error(`[@component:NavigationEditor] Error fetching user interface:`, error);
+          console.error(`[@hook:useNavigationEditor] Error fetching user interface by name:`, error);
+          navigationState.setUserInterface(null);
         } finally {
           navigationState.setIsLoadingInterface(false);
         }
       }
     };
-    fetchUserInterface();
-  }, [navigationState.interfaceId, navigate]);
+    
+    fetchUserInterfaceByName();
+  }, [navigationState.currentTreeName, buildServerUrl]);
 
   // Handle clicking on the background/pane to deselect
   const onPaneClick = useCallback(() => {
