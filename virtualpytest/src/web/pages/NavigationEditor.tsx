@@ -22,20 +22,19 @@ import {
 import { useLocation } from 'react-router-dom';
 
 // Import extracted components and hooks
-import { useNavigationEditor } from '../hooks';
-import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
-import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
-import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
-import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
+import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
+import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
+import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
+import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
+import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 
 // Import registration context
-import { useRegistration } from '../contexts/RegistrationContext';
 
 // Import NavigationEdgeComponent
-import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
+import { useNavigationEditor } from '../hooks';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
@@ -122,17 +121,9 @@ const NavigationEditorContent: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
-  // Use registration context only for basic host list fetching
-  const { availableHosts, fetchHosts } = useRegistration();
+  // Header is now autonomous for device management
 
-  // Simple device selection - just store the selected device name
-  const [selectedDeviceName, setSelectedDeviceName] = useState<string | null>(null);
-
-  // Simple device selection handler - no complex logic here
-  const handleHostSelect = useCallback((deviceNameOrNull: string | null) => {
-    setSelectedDeviceName(deviceNameOrNull);
-    console.log(`[@component:NavigationEditor] Device selected: ${deviceNameOrNull}`);
-  }, []);
+  // Device selection is now handled autonomously by the header
 
   const {
     // State
@@ -318,93 +309,7 @@ const NavigationEditorContent: React.FC = () => {
   // 4. DEVICE CONTROL MANAGEMENT
   // ========================================
 
-  // Take control handler that calls server endpoints
-  const handleTakeControl = useCallback(async () => {
-    if (!selectedDeviceName) {
-      console.error('[@component:NavigationEditor] No device selected for take control');
-      return;
-    }
-
-    // Find the selected device from available hosts
-    const selectedDevice = availableHosts.find((host) => host.device_name === selectedDeviceName);
-    if (!selectedDevice) {
-      console.error(
-        `[@component:NavigationEditor] Selected device ${selectedDeviceName} not found in available hosts`,
-      );
-      return;
-    }
-
-    try {
-      if (isControlActive) {
-        // Release control
-        console.log(
-          `[@component:NavigationEditor] Releasing control of device: ${selectedDeviceName}`,
-        );
-
-        const response = await fetch('/server/control/release-control', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host_name: selectedDevice.host_name, // Use host_name instead of device_id
-            session_id: sessionId,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          console.log(
-            `[@component:NavigationEditor] Successfully released control of device: ${selectedDeviceName}`,
-          );
-          setIsControlActive(false);
-          // Note: Device will be unlocked on server side
-        } else {
-          console.error(`[@component:NavigationEditor] Failed to release control: ${result.error}`);
-          // Show error to user (could add toast notification here)
-        }
-      } else {
-        // Take control
-        setIsControlActive(true);
-        console.log(
-          `[@component:NavigationEditor] Taking control of device: ${selectedDeviceName}`,
-        );
-
-        const response = await fetch('/server/control/take-control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host_name: selectedDevice.host_name, // Use host_name instead of device_id
-            session_id: sessionId,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          console.log(`[@component:NavigationEditor] Successfully took control`);
-          setIsControlActive(true);
-          setIsRemotePanelOpen(true); // Auto-show remote panel on take control
-        } else {
-          console.error(`[@component:NavigationEditor] Failed to take control: ${result.error}`);
-          setIsControlActive(false);
-        }
-      }
-    } catch (error) {
-      console.error(`[@component:NavigationEditor] Take control error: ${error}`);
-      setIsControlActive(false);
-    }
-  }, [selectedDeviceName, availableHosts, isControlActive, sessionId]);
-
-  // ========================================
-  // 5. DEVICE & HOST MANAGEMENT
-  // ========================================
-
-  // Use registration context's fetchHosts instead of separate device fetching
-  useEffect(() => {
-    fetchHosts();
-  }, [fetchHosts]);
+  // Device control is now handled autonomously by the header
 
   // ========================================
   // 6. EVENT HANDLERS SETUP
@@ -497,9 +402,9 @@ const NavigationEditorContent: React.FC = () => {
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
         onResetFocus={resetFocus}
-        onToggleRemotePanel={() => {}} // Handled by device control component
-        onDeviceSelect={handleHostSelect}
-        onTakeControl={handleTakeControl}
+        onToggleRemotePanel={() => {}} // Handled by header autonomously
+        onDeviceSelect={() => {}} // Handled by header autonomously
+        onTakeControl={() => {}} // Handled by header autonomously
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
       />
