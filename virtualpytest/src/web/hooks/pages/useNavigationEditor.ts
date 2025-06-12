@@ -588,6 +588,7 @@ export const useNavigationEditor = () => {
     isLocked: configHook.isLocked,
     lockInfo: configHook.lockInfo,
     isCheckingLock: configHook.isCheckingLock,
+    showReadOnlyOverlay: configHook.showReadOnlyOverlay,
     setCheckingLockState: configHook.setCheckingLockState,
     sessionId: configHook.sessionId,
     lockNavigationTree: configHook.lockNavigationTree,

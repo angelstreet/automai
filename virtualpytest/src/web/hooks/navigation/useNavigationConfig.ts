@@ -39,6 +39,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   const [isLocked, setIsLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState<any>(null);
   const [isCheckingLock, setIsCheckingLock] = useState(false); // Start as false, only true when actively checking
+  const [showReadOnlyOverlay, setShowReadOnlyOverlay] = useState(false); // Only true when definitively locked by someone else
 
   // Set checking lock state immediately (fixes race condition)
   const setCheckingLockState = useCallback((checking: boolean) => {
@@ -73,17 +74,20 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
           locked_by: sessionId.current,
           locked_at: data.locked_at
         });
+        setShowReadOnlyOverlay(false); // We have the lock
         console.log(`[@hook:useNavigationConfig:lockNavigationTree] Successfully locked tree: ${treeName}`);
         return true;
       } else {
         console.log(`[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${data.error}`);
         setIsLocked(false);
         setLockInfo(data.current_lock);
+        setShowReadOnlyOverlay(true); // Someone else has the lock
         return false;
       }
     } catch (error) {
       console.error(`[@hook:useNavigationConfig:lockNavigationTree] Error locking tree:`, error);
       setIsLocked(false);
+      setShowReadOnlyOverlay(true); // Assume locked on error
       return false;
     } finally {
       setIsCheckingLock(false);
@@ -129,7 +133,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   // Load tree from config file
   const loadFromConfig = useCallback(async (treeName: string) => {
     try {
-      console.log(`[@hook:useNavigationConfig:loadFromConfig] Loading tree from config: ${treeName}`);
       state.setIsLoading(true);
       state.setError(null);
       
@@ -148,7 +151,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       if (data.success && data.tree_data) {
         const treeData = data.tree_data;
         
-        console.log(`[@hook:useNavigationConfig:loadFromConfig] Loaded tree with ${treeData.nodes?.length || 0} nodes and ${treeData.edges?.length || 0} edges from config`);
         
         // Update state with loaded data
         const nodes = treeData.nodes || [];
@@ -160,10 +162,8 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         
         // Set userInterface data from response if available
         if (data.userinterface) {
-          console.log(`[@hook:useNavigationConfig:loadFromConfig] Setting userInterface: ${data.userinterface.name} with models: ${data.userinterface.models?.join(', ') || 'none'}`);
           state.setUserInterface(data.userinterface);
         } else {
-          console.log(`[@hook:useNavigationConfig:loadFromConfig] No userInterface data found in response`);
           state.setUserInterface(null);
         }
         
@@ -177,6 +177,10 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsLocked(data.is_locked);
         setLockInfo(data.lock_info);
         setIsCheckingLock(false); // Lock check is complete when tree data is loaded
+        
+        // Show overlay only if locked by someone else
+        const isLockedByOther = data.is_locked && data.lock_info?.locked_by !== sessionId.current;
+        setShowReadOnlyOverlay(isLockedByOther);
         
         console.log(`[@hook:useNavigationConfig:loadFromConfig] Successfully loaded tree: ${treeName}`);
       } else {
@@ -196,7 +200,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     if (state.isSaving) return;
 
     try {
-      console.log(`[@hook:useNavigationConfig:saveToConfig] Saving tree to config: ${treeName}`);
       state.setIsSaving(true);
       state.setSaveError(null);
 
@@ -358,6 +361,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     isLocked,
     lockInfo,
     isCheckingLock,
+    showReadOnlyOverlay,
     setCheckingLockState,
     sessionId: sessionId.current,
     lockNavigationTree,

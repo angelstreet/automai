@@ -147,6 +147,7 @@ const NavigationEditorContent: React.FC = () => {
     isLocked,
     lockInfo,
     isCheckingLock,
+    showReadOnlyOverlay,
     setCheckingLockState,
     sessionId,
     lockNavigationTree,
@@ -263,7 +264,6 @@ const NavigationEditorContent: React.FC = () => {
 
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
-    console.log('[@component:NavigationEditor] Fetching available hosts...');
     fetchHosts();
   }, [fetchHosts]);
 
@@ -375,8 +375,8 @@ const NavigationEditorContent: React.FC = () => {
                 position: 'relative'
               }}
             >
-              {/* Read-Only Overlay - shown when tree is not locked */}
-              {currentTreeName && !isCheckingLock && !isLocked && (
+              {/* Read-Only Overlay - only when definitively locked by someone else */}
+              {showReadOnlyOverlay && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -415,7 +415,6 @@ const NavigationEditorContent: React.FC = () => {
                 onPaneClick={onPaneClick}
                 onInit={(instance) => {
                   if (instance && !reactFlowInstance) {
-                    console.log('[@component:NavigationEditor] ReactFlow instance initialized');
                     setReactFlowInstance(instance);
                   }
                 }}

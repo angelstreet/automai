@@ -168,7 +168,6 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
 
   // Fetch hosts from server - FIXED: Removed createControllerProxies from dependency array
   const fetchHosts = useCallback(async () => {
-    console.log('[@context:Registration] fetchHosts function called!');
     try {
       setIsLoading(true);
       setError(null);
@@ -206,18 +205,14 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
           lockedAt: host.lockedAt || undefined,
         }));
         
-        console.log('[@context:Registration] Mapped hosts:', hosts);
-        
         // Store hosts WITHOUT controller proxies - proxies will be created only when taking control
         const hostsWithoutProxies = hosts.map((host: DeviceWithProxies) => ({
           ...host,
           controllerProxies: {} // Empty proxies object - will be populated on take control
         }));
         
-        console.log('[@context:Registration] Hosts without controller proxies:', hostsWithoutProxies);
         setAvailableHosts(hostsWithoutProxies);
-        console.log(`[@context:Registration] Successfully loaded ${hostsWithoutProxies.length} hosts (proxies will be created on take control)`);
-      } else {
+       } else {
         throw new Error(result.error || 'Server returned success: false');
       }
       

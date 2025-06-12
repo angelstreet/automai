@@ -80,42 +80,34 @@ export const useValidationStore = create<ValidationStore>()(
       currentTestingEdge: null,
       
       setShowPreview: (show) => {
-        console.log(`[@store:validationStore] Setting showPreview: ${show}`);
         set({ showPreview: show });
       },
       
       setShowResults: (show) => {
-        console.log(`[@store:validationStore] Setting showResults: ${show}`);
         set({ showResults: show });
       },
       
       setShowProgress: (show) => {
-        console.log(`[@store:validationStore] Setting showProgress: ${show}`);
         set({ showProgress: show });
       },
       
       setPreviewData: (data) => {
-        console.log(`[@store:validationStore] Setting preview data:`, data ? `${data.totalNodes} nodes` : 'null');
         set({ previewData: data });
       },
       
       setResults: (results) => {
-        console.log(`[@store:validationStore] Setting results:`, results ? `${results.summary.totalNodes} nodes, ${results.summary.overallHealth} health` : 'null');
         set({ results });
         
         if (results) {
-          console.log(`[@store:validationStore] Caching result for later viewing`);
           set({ lastResult: results });
         }
       },
       
       setLastResult: (results) => {
-        console.log(`[@store:validationStore] Setting lastResult:`, results ? `${results.summary.totalNodes} nodes, ${results.summary.overallHealth} health` : 'null');
         set({ lastResult: results });
       },
       
       setProgress: (progress) => {
-        console.log(`[@store:validationStore] Setting progress:`, progress ? `step ${progress.currentStep}/${progress.totalSteps}, node: ${progress.currentNodeName}` : 'null');
         set({ progress });
         
         // Update current testing node/edge based on progress
@@ -130,7 +122,6 @@ export const useValidationStore = create<ValidationStore>()(
       },
       
       setValidating: (validating) => {
-        console.log(`[@store:validationStore] Setting validating: ${validating}`);
         set({ isValidating: validating });
         
         // Reset testing indicators when validation stops
@@ -143,7 +134,6 @@ export const useValidationStore = create<ValidationStore>()(
       },
       
       setNodeValidationStatus: (nodeId, status) => {
-        console.log(`[@store:validationStore] Setting node validation status for ${nodeId}:`, status.status);
         const { nodeValidationStatus } = get();
         const newMap = new Map(nodeValidationStatus);
         newMap.set(nodeId, status);
@@ -159,12 +149,10 @@ export const useValidationStore = create<ValidationStore>()(
       },
       
       setCurrentTestingNode: (nodeId) => {
-        console.log(`[@store:validationStore] Setting current testing node: ${nodeId}`);
         set({ currentTestingNode: nodeId });
       },
       
       setCurrentTestingEdge: (edgeId) => {
-        console.log(`[@store:validationStore] Setting current testing edge: ${edgeId}`);
         set({ currentTestingEdge: edgeId });
       },
       

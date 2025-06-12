@@ -206,7 +206,6 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   // Clear testing indicators when validation stops
   useEffect(() => {
     if (!isValidating) {
-      console.log('[@component:ValidationProgressClient] Clearing testing indicators');
       setCurrentTestingNode(null);
       setCurrentTestingEdge(null);
     }
