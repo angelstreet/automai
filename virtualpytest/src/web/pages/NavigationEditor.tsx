@@ -31,12 +31,6 @@ import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSele
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
 
-// Import device control component
-import { NavigationEditorDeviceControl } from './NavigationEditorDeviceControl';
-
-// Import device utilities
-import { getDeviceRemoteConfig } from '../utils/device/deviceRemoteMappingUtils';
-
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
@@ -116,28 +110,20 @@ const NavigationEditorContent: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
   
-  // Use registration context only for host management, not URL building
+  // Use registration context only for basic host list fetching
   const { 
     availableHosts, 
-    selectedHost, 
-    selectHost,
-    clearSelection,
     fetchHosts,
   } = useRegistration();
   
-  // Create a wrapper for selectHost to match the expected interface
+  // Simple device selection - just store the selected device name
+  const [selectedDeviceName, setSelectedDeviceName] = useState<string | null>(null);
+  
+  // Simple device selection handler - no complex logic here
   const handleHostSelect = useCallback((deviceNameOrNull: string | null) => {
-    if (deviceNameOrNull) {
-      // Find the host by device name and select it by host_name
-      const host = availableHosts.find(h => h.device_name === deviceNameOrNull);
-      if (host) {
-        selectHost(host.host_name);
-      }
-    } else {
-      // Clear selection using the modern clearSelection function
-      clearSelection();
-    }
-  }, [availableHosts, selectHost, clearSelection]);
+    setSelectedDeviceName(deviceNameOrNull);
+    console.log(`[@component:NavigationEditor] Device selected: ${deviceNameOrNull}`);
+  }, []);
 
   const {
     // State
@@ -304,15 +290,6 @@ const NavigationEditorContent: React.FC = () => {
   const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
   const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
 
-  // Memoize computed values based on selectedHost from registration context
-  const remoteConfig = useMemo(() => {
-    return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
-  }, [selectedHost]);
-  
-  const hasAVCapabilities = useMemo(() => {
-    return selectedHost?.controller_configs?.av?.parameters != null;
-  }, [selectedHost]);
-
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
     fetchHosts();
@@ -374,7 +351,7 @@ const NavigationEditorContent: React.FC = () => {
         lockInfo={lockInfo}
         sessionId={sessionId}
         userInterface={userInterface}
-        selectedDevice={selectedHost?.device_name || null}
+        selectedDevice={selectedDeviceName}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
         devicesLoading={false}
@@ -517,29 +494,8 @@ const NavigationEditorContent: React.FC = () => {
               </ReactFlow>
             </div>
 
-            {/* Device Control Component - Handles all device/remote/verification logic */}
-            <NavigationEditorDeviceControl
-              selectedHost={selectedHost}
-              isControlActive={isControlActive}
-              isRemotePanelOpen={isRemotePanelOpen}
-              isVerificationActive={isVerificationActive}
-              verificationControllerStatus={verificationControllerStatus}
-              verificationResults={verificationResults}
-              verificationPassCondition={verificationPassCondition}
-              lastVerifiedNodeId={lastVerifiedNodeId}
-              nodes={nodes}
-              selectedNode={selectedNode}
-              selectedEdge={selectedEdge}
-              userInterface={userInterface}
-              onReleaseControl={() => {}} // Handled by device control component
-              onUpdateNode={handleUpdateNode}
-              onSetVerificationResults={setVerificationResults}
-              onSetLastVerifiedNodeId={setLastVerifiedNodeId}
-              onSetVerificationPassCondition={setVerificationPassCondition}
-              onSetNodes={setNodes}
-              onSetSelectedNode={setSelectedNode}
-              onSetHasUnsavedChanges={setHasUnsavedChanges}
-            />
+            {/* Device Control Component - Simplified without selectedHost */}
+            {/* NavigationEditorDeviceControl removed - logic should be in take control action */}
 
             {/* Selection Info Panel */}
             {(selectedNode || selectedEdge) ? (
@@ -556,11 +512,11 @@ const NavigationEditorContent: React.FC = () => {
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                     onReset={resetNode}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.device_name || null}
-                    onTakeScreenshot={() => {}} // Handled by device control component
+                    selectedDevice={selectedDeviceName}
+                    onTakeScreenshot={() => {}} // Handled by take control action
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
-                    onVerification={() => {}} // Handled by device control component
+                    onVerification={() => {}} // Handled by take control action
                     isVerificationActive={isVerificationActive}
                     verificationControllerStatus={verificationControllerStatus}
                     onUpdateNode={handleUpdateNode}
@@ -576,7 +532,7 @@ const NavigationEditorContent: React.FC = () => {
                     setEdgeForm={setEdgeForm}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.device_name || null}
+                    selectedDevice={selectedDeviceName}
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                   />
@@ -600,8 +556,8 @@ const NavigationEditorContent: React.FC = () => {
         onResetNode={resetNode}
         verificationControllerTypes={['text', 'image']}
         isVerificationActive={isVerificationActive}
-        selectedDevice={selectedHost?.device_name || null}
-        selectedHostDevice={selectedHost}
+        selectedDevice={selectedDeviceName}
+        selectedHostDevice={null}
         isControlActive={isControlActive}
         model={userInterface?.models?.[0] || 'android_mobile'}
       />
@@ -616,8 +572,8 @@ const NavigationEditorContent: React.FC = () => {
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
         isControlActive={isControlActive}
-        selectedDevice={selectedHost?.device_name || null}
-        selectedHostDevice={selectedHost}
+        selectedDevice={selectedDeviceName}
+        selectedHostDevice={null}
       />
 
       {/* Discard Changes Confirmation Dialog */}
