@@ -294,7 +294,7 @@ const Dashboard: React.FC = () => {
     return 'success';
   };
 
-  const SystemStatsDisplay: React.FC<{ stats: ConnectedDevice['system_stats'] }> = ({ stats: systemStats }) => {
+  const SystemStatsDisplay: React.FC<{ stats: Host['system_stats'] }> = ({ stats: systemStats }) => {
     if (!systemStats) {
       return (
         <Box>
@@ -408,14 +408,14 @@ const Dashboard: React.FC = () => {
   const renderDevicesGrid = () => (
     <Grid container spacing={2}>
       {availableHosts.map((device) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={device.client_id}>
+        <Grid item xs={12} sm={6} md={4} lg={3} key={device.host_name}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                 <Box display="flex" alignItems="center" gap={1}>
                   {getDeviceIcon(device.device_model)}
                   <Typography variant="h6" component="div" noWrap>
-                    {device.name}
+                    {device.host_name}
                   </Typography>
                 </Box>
                 <Chip
@@ -431,11 +431,11 @@ const Dashboard: React.FC = () => {
               </Typography>
               
               <Typography color="textSecondary" variant="body2" gutterBottom>
-                Local IP: {device.local_ip}:{device.client_port}
+                Host IP: {device.host_ip}:{device.host_port_external}
               </Typography>
               
               <Typography color="textSecondary" variant="body2" gutterBottom>
-                Public IP: {device.public_ip}
+                Device: {device.device_name} ({device.device_ip}:{device.device_port})
               </Typography>
               
               <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
@@ -477,11 +477,11 @@ const Dashboard: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Device</TableCell>
+            <TableCell>Host</TableCell>
             <TableCell>Model</TableCell>
             <TableCell>Status</TableCell>
-            <TableCell>Local IP</TableCell>
-            <TableCell>Public IP</TableCell>
+            <TableCell>Host IP</TableCell>
+            <TableCell>Device</TableCell>
             <TableCell>CPU</TableCell>
             <TableCell>RAM</TableCell>
             <TableCell>Disk</TableCell>
@@ -492,11 +492,19 @@ const Dashboard: React.FC = () => {
         </TableHead>
         <TableBody>
           {availableHosts.map((device) => (
-            <TableRow key={device.client_id} hover>
+            <TableRow 
+              key={device.host_name} 
+              hover
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'transparent !important',
+                },
+              }}
+            >
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   {getDeviceIcon(device.device_model)}
-                  <Typography variant="body2">{device.name}</Typography>
+                  <Typography variant="body2">{device.host_name}</Typography>
                 </Box>
               </TableCell>
               <TableCell>
@@ -512,12 +520,12 @@ const Dashboard: React.FC = () => {
               </TableCell>
               <TableCell>
                 <Typography variant="body2" fontFamily="monospace">
-                  {device.local_ip}:{device.client_port}
+                  {device.host_ip}:{device.host_port_external}
                 </Typography>
               </TableCell>
               <TableCell>
                 <Typography variant="body2" fontFamily="monospace">
-                  {device.public_ip}
+                  {device.device_name} ({device.device_ip}:{device.device_port})
                 </Typography>
               </TableCell>
               <TableCell>
@@ -828,25 +836,25 @@ const Dashboard: React.FC = () => {
       {/* System Status */}
       <Paper sx={{ p: 1, mt: 3 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} key="api-server">
             <Box display="flex" alignItems="center" gap={1}>
               <SuccessIcon color="success" />
               <Typography>API Server: Online</Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} key="database">
             <Box display="flex" alignItems="center" gap={1}>
               <SuccessIcon color="success" />
               <Typography>Database: Connected</Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} key="test-runner">
             <Box display="flex" alignItems="center" gap={1}>
               <PendingIcon color="warning" />
               <Typography>Test Runner: Idle</Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} key="scheduler">
             <Box display="flex" alignItems="center" gap={1}>
               <PendingIcon color="warning" />
               <Typography>Scheduler: Idle</Typography>
