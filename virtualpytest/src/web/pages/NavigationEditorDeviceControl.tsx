@@ -357,6 +357,8 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
               </Box>
               
               <AndroidMobileRemote
+                host={selectedHost}
+                autoConnect={isControlActive}
                 onDisconnectComplete={onReleaseControl}
               />
             </Box>
@@ -394,6 +396,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
               {/* Remote Panel Content - Dynamic based on device type */}
               {remoteConfig.type === 'android_tv' ? (
                 <RemotePanel
+                  host={selectedHost}
                   remoteType="android-tv"
                   connectionConfig={androidConnectionConfig || undefined}
                   autoConnect={isControlActive}
@@ -402,6 +405,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 />
               ) : remoteConfig.type === 'ir_remote' ? (
                 <RemotePanel
+                  host={selectedHost}
                   remoteType="ir"
                   connectionConfig={(irConnectionConfig || undefined) as any}
                   autoConnect={isControlActive}
@@ -409,6 +413,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
                 <RemotePanel
+                  host={selectedHost}
                   remoteType="bluetooth"
                   connectionConfig={(bluetoothConnectionConfig || undefined) as any}
                   autoConnect={isControlActive}

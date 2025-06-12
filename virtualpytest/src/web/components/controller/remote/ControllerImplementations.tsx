@@ -1,46 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
-  Chip,
-  IconButton,
-  Collapse,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Switch,
-  FormControlLabel,
-  Paper,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-} from '@mui/material';
-import { 
-  ExpandMore, 
-  ExpandLess, 
-  PlayArrow, 
-  Stop, 
-  Settings, 
-  Info,
+  ExpandMore,
   Close as CloseIcon,
   Gamepad as ControllerIcon,
   Tv as TvIcon,
@@ -51,6 +10,26 @@ import {
   CheckCircle as ConnectedIcon,
   Cancel as DisconnectedIcon,
 } from '@mui/icons-material';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Chip,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from '@mui/material';
+import React, { useState } from 'react';
 
 // Temporary types until we fix the type imports
 interface ControllerItem {
@@ -77,44 +56,48 @@ interface ControllerImplementationsProps {
 export const ControllerImplementations: React.FC<ControllerImplementationsProps> = ({
   controllerTypes,
 }) => {
-  // Modal states
-  const [androidTVModalOpen, setAndroidTVModalOpen] = useState(false);
-  const [androidMobileModalOpen, setAndroidMobileModalOpen] = useState(false);
-  const [irRemoteModalOpen, setIrRemoteModalOpen] = useState(false);
-  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
-  const [hdmiStreamModalOpen, setHdmiStreamModalOpen] = useState(false);
+  // Modal states - only keep the one that's actually used
   const [usbPowerModalOpen, setUsbPowerModalOpen] = useState(false);
 
   const getControllerIcon = (type: string) => {
     switch (type) {
-      case 'remote': return <ControllerIcon />;
-      case 'av': return <TvIcon />;
-      case 'network': return <WifiIcon />;
-      case 'verification': return <VerificationIcon />;
-      case 'power': return <PowerIcon />;
-      default: return <ProcessorIcon />;
+      case 'remote':
+        return <ControllerIcon />;
+      case 'av':
+        return <TvIcon />;
+      case 'network':
+        return <WifiIcon />;
+      case 'verification':
+        return <VerificationIcon />;
+      case 'power':
+        return <PowerIcon />;
+      default:
+        return <ProcessorIcon />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'available': return 'success';
-      case 'placeholder': return 'default';
-      default: return 'default';
+      case 'available':
+        return 'success';
+      case 'placeholder':
+        return 'default';
+      default:
+        return 'default';
     }
   };
 
   const handleControllerClick = (category: string, controller: ControllerItem) => {
     if (category === 'remote' && controller.id === 'android_tv') {
-      setAndroidTVModalOpen(true);
+      // setAndroidTVModalOpen(true);
     } else if (category === 'remote' && controller.id === 'android_mobile') {
-      setAndroidMobileModalOpen(true);
+      // setAndroidMobileModalOpen(true);
     } else if (category === 'remote' && controller.id === 'ir_remote') {
-      setIrRemoteModalOpen(true);
+      // setIrRemoteModalOpen(true);
     } else if (category === 'remote' && controller.id === 'bluetooth_remote') {
-      setBluetoothModalOpen(true);
+      // setBluetoothModalOpen(true);
     } else if (category === 'av' && controller.id === 'hdmi_stream') {
-      setHdmiStreamModalOpen(true);
+      // setHdmiStreamModalOpen(true);
     } else if (category === 'power' && controller.id === 'usb') {
       setUsbPowerModalOpen(true);
     }
@@ -140,11 +123,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
                   <Typography variant="h6">
                     {type.charAt(0).toUpperCase() + type.slice(1)} Controllers
                   </Typography>
-                  <Chip 
-                    label={`${implementations.length} types`} 
-                    size="small" 
-                    color="primary" 
-                  />
+                  <Chip label={`${implementations.length} types`} size="small" color="primary" />
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
@@ -152,10 +131,13 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
                   {implementations.map((impl: ControllerItem, index: number) => (
                     <React.Fragment key={impl.id}>
                       <ListItem
-                        onClick={() => impl.status === 'available' && handleControllerClick(type, impl)}
-                        sx={{ 
+                        onClick={() =>
+                          impl.status === 'available' && handleControllerClick(type, impl)
+                        }
+                        sx={{
                           cursor: impl.status === 'available' ? 'pointer' : 'default',
-                          '&:hover': impl.status === 'available' ? { backgroundColor: 'action.hover' } : {}
+                          '&:hover':
+                            impl.status === 'available' ? { backgroundColor: 'action.hover' } : {},
                         }}
                       >
                         <ListItemIcon>
@@ -165,14 +147,11 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
                             <DisconnectedIcon color="disabled" />
                           )}
                         </ListItemIcon>
-                        <ListItemText
-                          primary={impl.name}
-                          secondary={impl.description}
-                        />
-                        <Chip 
-                          label={impl.status} 
+                        <ListItemText primary={impl.name} secondary={impl.description} />
+                        <Chip
+                          label={impl.status}
                           color={getStatusColor(impl.status) as any}
-                          size="small" 
+                          size="small"
                         />
                       </ListItem>
                       {index < implementations.length - 1 && <Divider />}
@@ -211,15 +190,23 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
         onClose={() => setHdmiStreamModalOpen(false)}
       />
       */}
-      
+
       {/* USB Power Control Modal */}
-      <Dialog 
-        open={usbPowerModalOpen} 
+      <Dialog
+        open={usbPowerModalOpen}
         onClose={() => setUsbPowerModalOpen(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <DialogTitle
+          sx={{
+            m: 0,
+            p: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           USB Power Control
           <IconButton
             aria-label="close"
@@ -237,4 +224,4 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       </Dialog>
     </>
   );
-}; 
+};

@@ -1,4 +1,11 @@
-import { useState, useEffect } from 'react';
+import {
+  PowerSettingsNew,
+  PowerOff,
+  RestartAlt,
+  Link,
+  LinkOff,
+  FiberManualRecord,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -9,14 +16,8 @@ import {
   CardContent,
   Chip,
 } from '@mui/material';
-import {
-  PowerSettingsNew,
-  PowerOff,
-  RestartAlt,
-  Link,
-  LinkOff,
-  FiberManualRecord,
-} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+
 import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface PowerPanelProps {
@@ -40,11 +41,11 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   // Power status state
   const [powerStatus, setPowerStatus] = useState<PowerStatus>({
     power_state: 'unknown',
-    connected: false
+    connected: false,
   });
 
   // Check connection status on mount
@@ -57,7 +58,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
     try {
       const response = await fetch(buildServerUrl('/server/power/status'));
       const result = await response.json();
-      
+
       if (result.success && result.connected) {
         setIsConnected(true);
         console.log('[@component:USBPowerPanel] Found existing power connection');
@@ -71,25 +72,28 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
   const checkPowerStatus = async () => {
     if (!isConnected) return;
-    
+
     try {
       console.log('[@component:USBPowerPanel] Checking power status...');
       const response = await fetch(buildServerUrl('/server/power/power-status'));
       const result = await response.json();
-      
+
       if (result.success && result.power_status) {
         setPowerStatus({
           power_state: result.power_status.power_state,
           connected: result.power_status.connected,
-          error: result.power_status.error
+          error: result.power_status.error,
         });
-        console.log('[@component:USBPowerPanel] Power status updated:', result.power_status.power_state);
+        console.log(
+          '[@component:USBPowerPanel] Power status updated:',
+          result.power_status.power_state,
+        );
       } else {
         console.log('[@component:USBPowerPanel] Could not get power status:', result.error);
       }
     } catch (error) {
       console.log('[@component:USBPowerPanel] Could not check power status:', error);
-      setPowerStatus(prev => ({ ...prev, error: 'Failed to check power status' }));
+      setPowerStatus((prev) => ({ ...prev, error: 'Failed to check power status' }));
     }
   };
 
@@ -115,7 +119,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
         console.log('[@component:USBPowerPanel] Successfully connected to power controller');
         setIsConnected(true);
         setSuccessMessage(result.message);
-        
+
         // Check initial power status
         setTimeout(checkPowerStatus, 1000);
       } else {
@@ -142,7 +146,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       await fetch(buildServerUrl('/server/power/release-control'), {
         method: 'POST',
       });
-      
+
       console.log('[@component:USBPowerPanel] Disconnection successful');
     } catch (err: any) {
       console.error('[@component:USBPowerPanel] Disconnect error:', err);
@@ -151,7 +155,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       setIsConnected(false);
       setPowerStatus({
         power_state: 'unknown',
-        connected: false
+        connected: false,
       });
       setSuccessMessage(null);
       console.log('[@component:USBPowerPanel] Session state reset');
@@ -184,11 +188,11 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       if (result.success) {
         console.log('[@component:USBPowerPanel] Power toggle successful');
         // Update power status
-        setPowerStatus(prev => ({
+        setPowerStatus((prev) => ({
           ...prev,
-          power_state: result.new_state || (prev.power_state === 'on' ? 'off' : 'on')
+          power_state: result.new_state || (prev.power_state === 'on' ? 'off' : 'on'),
         }));
-        
+
         // Refresh status after a delay
         setTimeout(checkPowerStatus, 2000);
       } else {
@@ -230,11 +234,11 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       if (result.success) {
         console.log('[@component:USBPowerPanel] Device reboot initiated');
         // Set power state to unknown during reboot
-        setPowerStatus(prev => ({
+        setPowerStatus((prev) => ({
           ...prev,
-          power_state: 'unknown'
+          power_state: 'unknown',
         }));
-        
+
         // Check status after reboot delay
         setTimeout(checkPowerStatus, 10000); // 10 seconds for reboot
       } else {
@@ -253,9 +257,12 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
   const getPowerLEDColor = (state: string) => {
     switch (state) {
-      case 'on': return '#4caf50'; // Green
-      case 'off': return '#f44336'; // Red
-      default: return '#9e9e9e'; // Gray
+      case 'on':
+        return '#4caf50'; // Green
+      case 'off':
+        return '#f44336'; // Red
+      default:
+        return '#9e9e9e'; // Gray
     }
   };
 
@@ -280,7 +287,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       {/* Connection Status */}
       <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="subtitle2">Status:</Typography>
-        <Chip 
+        <Chip
           label={isConnected ? 'Connected' : 'Disconnected'}
           color={isConnected ? 'success' : 'default'}
           size="small"
@@ -293,7 +300,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
           <Typography variant="subtitle2" gutterBottom>
             Power Controller Connection
           </Typography>
-          
+
           <Box sx={{ mt: 1, display: 'flex', gap: 2 }}>
             {!isConnected ? (
               <Button
@@ -326,21 +333,21 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
           <Typography variant="subtitle2" gutterBottom>
             Power Control
           </Typography>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* LED Status */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FiberManualRecord 
-                sx={{ 
+              <FiberManualRecord
+                sx={{
                   color: getPowerLEDColor(powerStatus.power_state),
-                  fontSize: 16 
-                }} 
+                  fontSize: 16,
+                }}
               />
               <Typography variant="body2" color="text.secondary">
                 {powerStatus.power_state.toUpperCase()}
               </Typography>
             </Box>
-            
+
             {/* Control Buttons */}
             <Button
               variant="contained"
@@ -381,4 +388,4 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       )}
     </Box>
   );
-} 
+}

@@ -1,15 +1,3 @@
-import React from 'react';
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  Box,
-  IconButton,
-  Tooltip,
-  Paper,
-} from '@mui/material';
 import {
   Gamepad as ControllerIcon,
   Tv as TvIcon,
@@ -17,8 +5,9 @@ import {
   Visibility as VerificationIcon,
   Power as PowerIcon,
   Memory as ProcessorIcon,
-  Info as InfoIcon,
 } from '@mui/icons-material';
+import { Grid, Card, CardContent, Typography, Chip, Box, Paper } from '@mui/material';
+import React from 'react';
 
 // Temporary types until we fix the type imports
 interface ControllerItem {
@@ -41,12 +30,18 @@ export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = (
 }) => {
   const getControllerIcon = (type: string) => {
     switch (type) {
-      case 'remote': return <ControllerIcon />;
-      case 'av': return <TvIcon />;
-      case 'network': return <WifiIcon />;
-      case 'verification': return <VerificationIcon />;
-      case 'power': return <PowerIcon />;
-      default: return <ProcessorIcon />;
+      case 'remote':
+        return <ControllerIcon />;
+      case 'av':
+        return <TvIcon />;
+      case 'network':
+        return <WifiIcon />;
+      case 'verification':
+        return <VerificationIcon />;
+      case 'power':
+        return <PowerIcon />;
+      default:
+        return <ProcessorIcon />;
     }
   };
 
@@ -58,9 +53,7 @@ export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = (
     <Card>
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6">
-            Available Controller Types
-          </Typography>
+          <Typography variant="h6">Available Controller Types</Typography>
         </Box>
 
         <Grid container spacing={2}>
@@ -77,18 +70,20 @@ export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = (
                   {implementations.length} types
                 </Typography>
                 <Box display="flex" justifyContent="center" gap={0.5} flexWrap="wrap">
-                  {implementations.filter((impl: ControllerItem) => impl.status === 'available').length > 0 && (
-                    <Chip 
+                  {implementations.filter((impl: ControllerItem) => impl.status === 'available')
+                    .length > 0 && (
+                    <Chip
                       label={`${implementations.filter((impl: ControllerItem) => impl.status === 'available').length} Ready`}
-                      color="success" 
-                      size="small" 
+                      color="success"
+                      size="small"
                     />
                   )}
-                  {implementations.filter((impl: ControllerItem) => impl.status === 'placeholder').length > 0 && (
-                    <Chip 
+                  {implementations.filter((impl: ControllerItem) => impl.status === 'placeholder')
+                    .length > 0 && (
+                    <Chip
                       label={`${implementations.filter((impl: ControllerItem) => impl.status === 'placeholder').length} Planned`}
-                      color="default" 
-                      size="small" 
+                      color="default"
+                      size="small"
                     />
                   )}
                 </Box>
@@ -99,4 +94,4 @@ export const ControllerTypesOverview: React.FC<ControllerTypesOverviewProps> = (
       </CardContent>
     </Card>
   );
-}; 
+};

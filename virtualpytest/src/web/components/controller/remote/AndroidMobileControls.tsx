@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -9,13 +8,9 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  IconButton,
-  Chip,
-  Grid,
-  Paper,
-  Tooltip,
 } from '@mui/material';
-import { Home, ArrowBack, Menu, MoreVert, VolumeUp, VolumeDown, Power } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 
 interface AndroidMobileCoreProps {
@@ -57,10 +52,10 @@ export function AndroidMobileCore({
   handleRemoteCommand,
   handleOverlayElementClick,
   onDisconnect,
-  handleReleaseControl
+  handleReleaseControl,
 }: AndroidMobileCoreProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  
+
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
     try {
@@ -77,26 +72,28 @@ export function AndroidMobileCore({
       onDisconnect();
     }
   };
-  
+
   // Reset disconnecting state when connection changes
   useEffect(() => {
     if (session.connected) {
       setIsDisconnecting(false);
     }
   }, [session.connected]);
-  
+
   return (
-    <Box sx={{ 
-      maxWidth: '250px',
-      margin: '0 auto',
-      width: '100%'
-    }}>
+    <Box
+      sx={{
+        maxWidth: '250px',
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
       {/* App Launcher Section */}
       <Box sx={{ mb: 1 }}>
         <Typography variant="subtitle2" gutterBottom>
           App Launcher ({androidApps.length} apps)
         </Typography>
-        
+
         <Box sx={{ mb: 1, mt: 1 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Select an app...</InputLabel>
@@ -167,8 +164,8 @@ export function AndroidMobileCore({
         </Box>
 
         {/* Element selection dropdown */}
-        <FormControl 
-          fullWidth 
+        <FormControl
+          fullWidth
           size="small"
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -179,10 +176,10 @@ export function AndroidMobileCore({
               transform: 'translate(14px, 9px) scale(1)',
               '&.MuiInputLabel-shrink': {
                 transform: 'translate(14px, -6px) scale(0.75)',
-              }
+              },
             },
             maxWidth: '100%',
-            mb: 1
+            mb: 1,
           }}
         >
           <InputLabel>Select element...</InputLabel>
@@ -196,11 +193,11 @@ export function AndroidMobileCore({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-              }
+              },
             }}
             onChange={(e) => {
               const elementId = e.target.value as string;
-              const element = androidElements.find(el => el.id === elementId);
+              const element = androidElements.find((el) => el.id === elementId);
               if (element) {
                 setSelectedElement(element.id);
                 handleOverlayElementClick(element);
@@ -211,9 +208,9 @@ export function AndroidMobileCore({
                 style: {
                   maxHeight: 200,
                   width: 'auto',
-                  maxWidth: '100%'
-                }
-              }
+                  maxWidth: '100%',
+                },
+              },
             }}
           >
             {androidElements.map((element) => {
@@ -221,12 +218,16 @@ export function AndroidMobileCore({
                 let displayName = '';
                 if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
                   displayName = `"${el.text}" (${el.className?.split('.').pop() || 'Unknown'})`;
-                } else if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+                } else if (
+                  el.package &&
+                  el.package !== '<no package>' &&
+                  el.package.trim() !== ''
+                ) {
                   displayName = `${el.package.split('.').pop()} (${el.className?.split('.').pop() || 'Unknown'})`;
                 } else {
                   displayName = `${el.className?.split('.').pop() || 'Unknown'} #${el.id}`;
                 }
-                
+
                 // Limit display name length
                 if (displayName.length > 30) {
                   return displayName.substring(0, 27) + '...';
@@ -235,17 +236,17 @@ export function AndroidMobileCore({
               };
 
               return (
-                <MenuItem 
-                  key={element.id} 
+                <MenuItem
+                  key={element.id}
                   value={element.id}
-                  sx={{ 
+                  sx={{
                     fontSize: '0.75rem',
                     py: 0.5,
                     px: 1,
                     minHeight: 'auto',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   {getElementDisplayName(element)}
@@ -261,7 +262,7 @@ export function AndroidMobileCore({
         <Typography variant="subtitle2" gutterBottom>
           Device Controls
         </Typography>
-        
+
         {/* System buttons */}
         <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
           <Button
@@ -359,16 +360,14 @@ export function AndroidMobileCore({
       {/* Error Display Area */}
       {(connectionError || dumpError) && (
         <Box sx={{ mb: 1 }}>
-          <Alert severity="error">
-            {connectionError || dumpError}
-          </Alert>
+          <Alert severity="error">{connectionError || dumpError}</Alert>
         </Box>
       )}
 
       {/* Disconnect Button */}
       <Box sx={{ pt: 1, borderTop: '1px solid #e0e0e0' }}>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           color="error"
           onClick={handleDisconnect}
           disabled={connectionLoading || isDisconnecting}
@@ -379,4 +378,7 @@ export function AndroidMobileCore({
       </Box>
     </Box>
   );
-} 
+}
+
+// Export alias for backward compatibility
+export const AndroidMobileControls = AndroidMobileCore;

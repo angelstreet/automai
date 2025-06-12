@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 
 interface ScaledElement {
@@ -33,8 +34,10 @@ export function AndroidMobileOverlay({
   selectedElementId,
   onElementClick,
 }: AndroidMobileOverlayProps) {
-  console.log(`[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`);
-  
+  console.log(
+    `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
+  );
+
   const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -56,32 +59,36 @@ export function AndroidMobileOverlay({
 
     // If no screenshot element, we can't position properly, but still create elements for debugging
     if (!screenshotElement) {
-      console.log(`[@component:AndroidMobileOverlay] No screenshot element, creating elements with original bounds`);
-      
-      const scaled = elements.map((element, index) => {
-        const bounds = parseBounds(element.bounds);
-        if (!bounds) return null;
+      console.log(
+        `[@component:AndroidMobileOverlay] No screenshot element, creating elements with original bounds`,
+      );
 
-        const getElementLabel = (el: AndroidElement) => {
-          if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-            return el.text.substring(0, 20);
-          }
-          if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
-            return el.package.split('.').pop()?.substring(0, 20) || '';
-          }
-          return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
-        };
+      const scaled = elements
+        .map((element, index) => {
+          const bounds = parseBounds(element.bounds);
+          if (!bounds) return null;
 
-        return {
-          id: element.id,
-          x: bounds.x,
-          y: bounds.y,
-          width: bounds.width,
-          height: bounds.height,
-          color: COLORS[index % COLORS.length],
-          label: getElementLabel(element),
-        };
-      }).filter(Boolean) as ScaledElement[];
+          const getElementLabel = (el: AndroidElement) => {
+            if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
+              return el.text.substring(0, 20);
+            }
+            if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+              return el.package.split('.').pop()?.substring(0, 20) || '';
+            }
+            return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
+          };
+
+          return {
+            id: element.id,
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+            color: COLORS[index % COLORS.length],
+            label: getElementLabel(element),
+          };
+        })
+        .filter(Boolean) as ScaledElement[];
 
       setScaledElements(scaled);
       return;
@@ -222,7 +229,11 @@ export function AndroidMobileOverlay({
 
   if (!isVisible || scaledElements.length === 0) return null;
 
-  console.log('[@component:AndroidMobileOverlay] Rendering overlay with', scaledElements.length, 'elements');
+  console.log(
+    '[@component:AndroidMobileOverlay] Rendering overlay with',
+    scaledElements.length,
+    'elements',
+  );
 
   return (
     <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
@@ -292,4 +303,4 @@ export function AndroidMobileOverlay({
       ))}
     </div>
   );
-} 
+}

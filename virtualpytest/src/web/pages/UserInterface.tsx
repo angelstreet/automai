@@ -32,36 +32,36 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useUserInterface } from '../hooks/pages/useUserInterface';
-import { UserInterface as UserInterfaceType, UserInterfaceCreatePayload } from '../types/pages/UserInterface_Types';
+import {
+  UserInterface as UserInterfaceType,
+  UserInterfaceCreatePayload,
+} from '../types/pages/UserInterface_Types';
 
 const UserInterface: React.FC = () => {
   // Get navigation hook
   const navigate = useNavigate();
-  
+
   // Get the hook functions
-  const {
-    getAllUserInterfaces,
-    updateUserInterface,
-    deleteUserInterface,
-    createUserInterface,
-  } = useUserInterface();
-  
+  const { getAllUserInterfaces, updateUserInterface, deleteUserInterface, createUserInterface } =
+    useUserInterface();
+
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ 
-    name: '', 
-    models: [] as string[], 
-    min_version: '', 
-    max_version: '' 
+  const [editForm, setEditForm] = useState({
+    name: '',
+    models: [] as string[],
+    min_version: '',
+    max_version: '',
   });
   const [openDialog, setOpenDialog] = useState(false);
-  const [newInterface, setNewInterface] = useState({ 
-    name: '', 
-    models: [] as string[], 
-    min_version: '', 
-    max_version: '' 
+  const [newInterface, setNewInterface] = useState({
+    name: '',
+    models: [] as string[],
+    min_version: '',
+    max_version: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -126,9 +126,9 @@ const UserInterface: React.FC = () => {
 
     // Check for duplicate names (excluding current item)
     const isDuplicate = userInterfaces.some(
-      (ui) => ui.id !== editingId && ui.name.toLowerCase() === editForm.name.toLowerCase().trim()
+      (ui) => ui.id !== editingId && ui.name.toLowerCase() === editForm.name.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A user interface with this name already exists');
       return;
@@ -146,14 +146,15 @@ const UserInterface: React.FC = () => {
       };
 
       const updatedInterface = await updateUserInterface(editingId!, payload);
-      
+
       // Update local state
-      setUserInterfaces(userInterfaces.map(ui => 
-        ui.id === editingId ? updatedInterface : ui
-      ));
-      
+      setUserInterfaces(userInterfaces.map((ui) => (ui.id === editingId ? updatedInterface : ui)));
+
       setEditingId(null);
-      console.log('[@component:UserInterface] Successfully updated user interface:', updatedInterface.name);
+      console.log(
+        '[@component:UserInterface] Successfully updated user interface:',
+        updatedInterface.name,
+      );
     } catch (err) {
       console.error('[@component:UserInterface] Error updating user interface:', err);
       setError(err instanceof Error ? err.message : 'Failed to update user interface');
@@ -176,9 +177,9 @@ const UserInterface: React.FC = () => {
     try {
       setError(null);
       await deleteUserInterface(id);
-      
+
       // Update local state
-      setUserInterfaces(userInterfaces.filter(ui => ui.id !== id));
+      setUserInterfaces(userInterfaces.filter((ui) => ui.id !== id));
       console.log('[@component:UserInterface] Successfully deleted user interface');
     } catch (err) {
       console.error('[@component:UserInterface] Error deleting user interface:', err);
@@ -199,9 +200,9 @@ const UserInterface: React.FC = () => {
 
     // Check for duplicate names
     const isDuplicate = userInterfaces.some(
-      (ui) => ui.name.toLowerCase() === newInterface.name.toLowerCase().trim()
+      (ui) => ui.name.toLowerCase() === newInterface.name.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A user interface with this name already exists');
       return;
@@ -219,12 +220,15 @@ const UserInterface: React.FC = () => {
       };
 
       const createdInterface = await createUserInterface(payload);
-      
+
       // Update local state
       setUserInterfaces([...userInterfaces, createdInterface]);
       setNewInterface({ name: '', models: [], min_version: '', max_version: '' });
       setOpenDialog(false);
-      console.log('[@component:UserInterface] Successfully created user interface:', createdInterface.name);
+      console.log(
+        '[@component:UserInterface] Successfully created user interface:',
+        createdInterface.name,
+      );
     } catch (err) {
       console.error('[@component:UserInterface] Error creating user interface:', err);
       setError(err instanceof Error ? err.message : 'Failed to create user interface');
@@ -247,7 +251,7 @@ const UserInterface: React.FC = () => {
         interfaceName: userInterface.name,
         models: userInterface.models,
       });
-      
+
       // Navigate to navigation editor using React Router navigation with state
       // This matches our simplified config system: {userinterface_name}.json
       const url = `/navigation-editor/${encodeURIComponent(userInterface.name)}`;
@@ -257,8 +261,8 @@ const UserInterface: React.FC = () => {
             id: userInterface.id,
             name: userInterface.name,
             models: userInterface.models,
-          }
-        }
+          },
+        },
       });
     } catch (err) {
       console.error('[@component:UserInterface] Error opening navigation editor:', err);
@@ -268,14 +272,14 @@ const UserInterface: React.FC = () => {
 
   // Loading state component
   const LoadingState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -287,21 +291,22 @@ const UserInterface: React.FC = () => {
 
   // Empty state component
   const EmptyState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <Typography variant="h6" color="text.secondary" gutterBottom>
         No User Interface Created
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
-        Create your first user interface to define navigation structures and device compatibility for your test automation.
+        Create your first user interface to define navigation structures and device compatibility
+        for your test automation.
       </Typography>
     </Box>
   );
@@ -342,26 +347,38 @@ const UserInterface: React.FC = () => {
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-              <Table 
-                size="small" 
-                sx={{ 
+              <Table
+                size="small"
+                sx={{
                   '& .MuiTableCell-root': { py: 0.5, px: 1 },
                   '& .MuiTableRow-root:hover': {
-                    backgroundColor: (theme) => 
-                      theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08) !important' 
-                        : 'rgba(0, 0, 0, 0.04) !important'
-                  }
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08) !important'
+                        : 'rgba(0, 0, 0, 0.04) !important',
+                  },
                 }}
               >
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Models</strong></TableCell>
-                    <TableCell><strong>Min Version</strong></TableCell>
-                    <TableCell><strong>Max Version</strong></TableCell>
-                    <TableCell align="center"><strong>Navigation</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
+                    <TableCell>
+                      <strong>Name</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Models</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Min Version</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Max Version</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Navigation</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Actions</strong>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -394,15 +411,15 @@ const UserInterface: React.FC = () => {
                             }}
                             renderTags={(value, getTagProps) =>
                               value.map((option, index) => (
-                                <Chip 
-                                  variant="outlined" 
-                                  label={option} 
+                                <Chip
+                                  variant="outlined"
+                                  label={option}
                                   size="small"
                                   {...getTagProps({ index })}
-                                  sx={{ 
+                                  sx={{
                                     height: 20,
                                     '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                                    '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                                    '& .MuiChip-deleteIcon': { width: 14, height: 14 },
                                   }}
                                 />
                               ))
@@ -419,12 +436,7 @@ const UserInterface: React.FC = () => {
                         ) : (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {userInterface.models.map((model) => (
-                              <Chip 
-                                key={model} 
-                                label={model} 
-                                size="small" 
-                                variant="outlined"
-                              />
+                              <Chip key={model} label={model} size="small" variant="outlined" />
                             ))}
                           </Box>
                         )}
@@ -434,7 +446,9 @@ const UserInterface: React.FC = () => {
                           <TextField
                             size="small"
                             value={editForm.min_version}
-                            onChange={(e) => setEditForm({ ...editForm, min_version: e.target.value })}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, min_version: e.target.value })
+                            }
                             fullWidth
                             variant="outlined"
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
@@ -448,7 +462,9 @@ const UserInterface: React.FC = () => {
                           <TextField
                             size="small"
                             value={editForm.max_version}
-                            onChange={(e) => setEditForm({ ...editForm, max_version: e.target.value })}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, max_version: e.target.value })
+                            }
                             fullWidth
                             variant="outlined"
                             sx={{ '& .MuiInputBase-root': { height: '32px' } }}
@@ -463,11 +479,11 @@ const UserInterface: React.FC = () => {
                           variant="outlined"
                           startIcon={<LaunchIcon fontSize="small" />}
                           onClick={() => handleEditNavigation(userInterface)}
-                          sx={{ 
+                          sx={{
                             minWidth: 'auto',
                             px: 1,
                             py: 0.25,
-                            fontSize: '0.75rem'
+                            fontSize: '0.75rem',
                           }}
                         >
                           Edit Navigation
@@ -483,7 +499,11 @@ const UserInterface: React.FC = () => {
                               disabled={submitting}
                               sx={{ p: 0.5 }}
                             >
-                              {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                              {submitting ? (
+                                <CircularProgress size={16} />
+                              ) : (
+                                <SaveIcon fontSize="small" />
+                              )}
                             </IconButton>
                             <IconButton
                               size="small"
@@ -542,7 +562,7 @@ const UserInterface: React.FC = () => {
               size="small"
               placeholder="e.g., Main Navigation Tree"
             />
-            
+
             <Autocomplete
               multiple
               size="small"
@@ -554,15 +574,15 @@ const UserInterface: React.FC = () => {
               }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip 
-                    variant="outlined" 
-                    label={option} 
+                  <Chip
+                    variant="outlined"
+                    label={option}
                     size="small"
                     {...getTagProps({ index })}
-                    sx={{ 
+                    sx={{
                       height: 20,
                       '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                      '& .MuiChip-deleteIcon': { width: 14, height: 14 }
+                      '& .MuiChip-deleteIcon': { width: 14, height: 14 },
                     }}
                   />
                 ))
@@ -608,9 +628,9 @@ const UserInterface: React.FC = () => {
           <Button onClick={handleCloseDialog} size="small" variant="outlined" disabled={submitting}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleAddNew} 
-            variant="contained" 
+          <Button
+            onClick={handleAddNew}
+            variant="contained"
             size="small"
             disabled={!newInterface.name.trim() || newInterface.models.length === 0 || submitting}
           >
@@ -623,4 +643,4 @@ const UserInterface: React.FC = () => {
   );
 };
 
-export default UserInterface; 
+export default UserInterface;

@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import ReactFlow, {
   Background,
-  Controls, 
+  Controls,
   ReactFlowProvider,
   MiniMap,
   ConnectionLineType,
@@ -57,8 +57,14 @@ const defaultEdgeOptions = {
 
 const defaultViewport = { x: 0, y: 0, zoom: 1 };
 
-const translateExtent: [[number, number], [number, number]] = [[-5000, -5000], [10000, 10000]];
-const nodeExtent: [[number, number], [number, number]] = [[-5000, -5000], [10000, 10000]];
+const translateExtent: [[number, number], [number, number]] = [
+  [-5000, -5000],
+  [10000, 10000],
+];
+const nodeExtent: [[number, number], [number, number]] = [
+  [-5000, -5000],
+  [10000, 10000],
+];
 
 const snapGrid: [number, number] = [15, 15];
 
@@ -70,7 +76,7 @@ const miniMapStyle = {
   backgroundColor: 'var(--card, #ffffff)',
   border: '1px solid var(--border, #e5e7eb)',
   borderRadius: '8px',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
 };
 
 const proOptions = { hideAttribution: true };
@@ -78,12 +84,18 @@ const proOptions = { hideAttribution: true };
 // MiniMap nodeColor function - defined outside component to prevent recreation
 const miniMapNodeColor = (node: any) => {
   switch (node.data?.type) {
-    case 'screen': return '#3b82f6';
-    case 'dialog': return '#8b5cf6';
-    case 'popup': return '#f59e0b';
-    case 'overlay': return '#10b981';
-    case 'menu': return '#ffc107';
-    default: return '#6b7280';
+    case 'screen':
+      return '#3b82f6';
+    case 'dialog':
+      return '#8b5cf6';
+    case 'popup':
+      return '#f59e0b';
+    case 'overlay':
+      return '#10b981';
+    case 'menu':
+      return '#ffc107';
+    default:
+      return '#6b7280';
   }
 };
 
@@ -91,7 +103,7 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 1. INITIALIZATION & SETUP
   // ========================================
-  
+
   // Memoize nodeTypes and edgeTypes as extra safety for hot reloading
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
   const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
@@ -105,20 +117,17 @@ const NavigationEditorContent: React.FC = () => {
   const memoizedProOptions = useMemo(() => proOptions, []);
   const memoizedMiniMapStyle = useMemo(() => miniMapStyle, []);
   const memoizedMiniMapNodeColor = useMemo(() => miniMapNodeColor, []);
-  
+
   // Get user interface data from navigation state (passed from UserInterface.tsx)
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
-  
+
   // Use registration context only for basic host list fetching
-  const { 
-    availableHosts, 
-    fetchHosts,
-  } = useRegistration();
-  
+  const { availableHosts, fetchHosts } = useRegistration();
+
   // Simple device selection - just store the selected device name
   const [selectedDeviceName, setSelectedDeviceName] = useState<string | null>(null);
-  
+
   // Simple device selection handler - no complex logic here
   const handleHostSelect = useCallback((deviceNameOrNull: string | null) => {
     setSelectedDeviceName(deviceNameOrNull);
@@ -141,7 +150,7 @@ const NavigationEditorContent: React.FC = () => {
     reactFlowInstance,
     treeId,
     interfaceId,
-    
+
     // Navigation state
     currentTreeId,
     currentTreeName,
@@ -150,11 +159,11 @@ const NavigationEditorContent: React.FC = () => {
     hasUnsavedChanges,
     isDiscardDialogOpen,
     userInterface,
-    
+
     // View state for single-level navigation
     viewPath,
     navigateToParentView,
-    
+
     // Tree filtering state
     focusNodeId,
     maxDisplayDepth,
@@ -163,14 +172,14 @@ const NavigationEditorContent: React.FC = () => {
     setFocusNode,
     setDisplayDepth,
     resetFocus,
-    
+
     // Setters
     setIsNodeDialogOpen,
     setIsEdgeDialogOpen,
     setNodeForm,
     setEdgeForm,
     setIsDiscardDialogOpen,
-    
+
     // Event handlers
     onNodesChange,
     onEdgesChange,
@@ -179,7 +188,7 @@ const NavigationEditorContent: React.FC = () => {
     onEdgeClick,
     onNodeDoubleClick,
     onPaneClick,
-    
+
     // Actions
     loadFromConfig,
     saveToConfig,
@@ -205,7 +214,7 @@ const NavigationEditorContent: React.FC = () => {
     deleteSelected,
     resetNode,
     setUserInterfaceFromProps,
-    
+
     // Additional setters we need
     setNodes,
     setSelectedNode,
@@ -213,7 +222,6 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges,
     setEdges,
     setSelectedEdge,
-    
   } = useNavigationEditor();
 
   // Track the last loaded tree ID to prevent unnecessary reloads
@@ -222,59 +230,75 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
   // ========================================
-  
+
   // Set user interface from navigation state (passed from UserInterface.tsx)
   useEffect(() => {
     if (userInterfaceFromState) {
       setUserInterfaceFromProps(userInterfaceFromState);
     }
   }, [userInterfaceFromState, setUserInterfaceFromProps]);
-  
+
   // Show message if tree ID is missing
   useEffect(() => {
     if (!treeId && !interfaceId) {
       console.log('[@component:NavigationEditor] Missing tree ID in URL');
     }
   }, [treeId, interfaceId]);
-  
+
   // Load tree data when component mounts or treeId changes - LOCK FIRST APPROACH
   useEffect(() => {
     if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-     lastLoadedTreeId.current = currentTreeName;
-      
+      lastLoadedTreeId.current = currentTreeName;
+
       // Fix race condition: Set checking state immediately
       setCheckingLockState(true);
-      
+
       // STEP 1: First acquire lock (this is the critical requirement)
-      lockNavigationTree(currentTreeName).then(lockSuccess => {
-        if (lockSuccess) {
-          console.log(`[@component:NavigationEditor] Lock acquired successfully for tree: ${currentTreeName}`);
-          // STEP 2: If lock acquired, load the tree data
+      lockNavigationTree(currentTreeName)
+        .then((lockSuccess) => {
+          if (lockSuccess) {
+            console.log(
+              `[@component:NavigationEditor] Lock acquired successfully for tree: ${currentTreeName}`,
+            );
+            // STEP 2: If lock acquired, load the tree data
+            loadFromConfig(currentTreeName);
+          } else {
+            console.warn(
+              `[@component:NavigationEditor] Failed to acquire lock for tree: ${currentTreeName} - entering read-only mode`,
+            );
+            // STEP 3: If lock failed, still load tree but in read-only mode
+            loadFromConfig(currentTreeName);
+            // Note: isLocked state will be false, which will trigger read-only UI
+          }
+        })
+        .catch((error) => {
+          console.error(
+            `[@component:NavigationEditor] Error during lock acquisition for tree: ${currentTreeName}`,
+            error,
+          );
+          // Still try to load in read-only mode
           loadFromConfig(currentTreeName);
-        } else {
-          console.warn(`[@component:NavigationEditor] Failed to acquire lock for tree: ${currentTreeName} - entering read-only mode`);
-          // STEP 3: If lock failed, still load tree but in read-only mode
-          loadFromConfig(currentTreeName);
-          // Note: isLocked state will be false, which will trigger read-only UI
-        }
-      }).catch(error => {
-        console.error(`[@component:NavigationEditor] Error during lock acquisition for tree: ${currentTreeName}`, error);
-        // Still try to load in read-only mode
-        loadFromConfig(currentTreeName);
-      });
-      
+        });
+
       // Setup auto-unlock for this tree (cleanup function)
       const cleanup = setupAutoUnlock(currentTreeName);
-      
+
       // Return cleanup function
       return cleanup;
     }
-  }, [currentTreeName, isLoadingInterface, loadFromConfig, lockNavigationTree, setupAutoUnlock, setCheckingLockState]);
+  }, [
+    currentTreeName,
+    isLoadingInterface,
+    loadFromConfig,
+    lockNavigationTree,
+    setupAutoUnlock,
+    setCheckingLockState,
+  ]);
 
   // ========================================
   // 3. DEVICE CONTROL STATE
   // ========================================
-  
+
   // Device control state - moved here to be accessible by handlers
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [isControlActive, setIsControlActive] = useState(false);
@@ -293,7 +317,7 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 4. DEVICE CONTROL MANAGEMENT
   // ========================================
-  
+
   // Take control handler that calls server endpoints
   const handleTakeControl = useCallback(async () => {
     if (!selectedDeviceName) {
@@ -302,17 +326,21 @@ const NavigationEditorContent: React.FC = () => {
     }
 
     // Find the selected device from available hosts
-    const selectedDevice = availableHosts.find(host => host.device_name === selectedDeviceName);
+    const selectedDevice = availableHosts.find((host) => host.device_name === selectedDeviceName);
     if (!selectedDevice) {
-      console.error(`[@component:NavigationEditor] Selected device ${selectedDeviceName} not found in available hosts`);
+      console.error(
+        `[@component:NavigationEditor] Selected device ${selectedDeviceName} not found in available hosts`,
+      );
       return;
     }
 
     try {
       if (isControlActive) {
         // Release control
-        console.log(`[@component:NavigationEditor] Releasing control of device: ${selectedDeviceName}`);
-        
+        console.log(
+          `[@component:NavigationEditor] Releasing control of device: ${selectedDeviceName}`,
+        );
+
         const response = await fetch('/server/control/release-control', {
           method: 'POST',
           headers: {
@@ -320,40 +348,44 @@ const NavigationEditorContent: React.FC = () => {
           },
           body: JSON.stringify({
             host_name: selectedDevice.host_name, // Use host_name instead of device_id
-            session_id: sessionId
-          })
+            session_id: sessionId,
+          }),
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
-          console.log(`[@component:NavigationEditor] Successfully released control of device: ${selectedDeviceName}`);
+          console.log(
+            `[@component:NavigationEditor] Successfully released control of device: ${selectedDeviceName}`,
+          );
           setIsControlActive(false);
           // Note: Device will be unlocked on server side
         } else {
           console.error(`[@component:NavigationEditor] Failed to release control: ${result.error}`);
           // Show error to user (could add toast notification here)
         }
-        
       } else {
         // Take control
         setIsControlActive(true);
-        console.log(`[@component:NavigationEditor] Taking control of device: ${selectedDeviceName}`);
-        
+        console.log(
+          `[@component:NavigationEditor] Taking control of device: ${selectedDeviceName}`,
+        );
+
         const response = await fetch('/server/control/take-control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host_name: selectedDevice.host_name,  // Use host_name instead of device_id
-            session_id: sessionId
-          })
+            host_name: selectedDevice.host_name, // Use host_name instead of device_id
+            session_id: sessionId,
+          }),
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
           console.log(`[@component:NavigationEditor] Successfully took control`);
           setIsControlActive(true);
+          setIsRemotePanelOpen(true); // Auto-show remote panel on take control
         } else {
           console.error(`[@component:NavigationEditor] Failed to take control: ${result.error}`);
           setIsControlActive(false);
@@ -368,7 +400,7 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 5. DEVICE & HOST MANAGEMENT
   // ========================================
-  
+
   // Use registration context's fetchHosts instead of separate device fetching
   useEffect(() => {
     fetchHosts();
@@ -379,39 +411,55 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
 
   // Simple update handlers - complex validation logic moved to device control component
-  const handleUpdateNode = useCallback((nodeId: string, updatedData: any) => {
-    setNodes(nodes => nodes.map(node => 
-      node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node
-    ));
-    if (selectedNode?.id === nodeId) {
-      setSelectedNode(node => node ? { ...node, data: { ...node.data, ...updatedData } } : node);
-    }
-    setHasUnsavedChanges(true);
-  }, [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode]);
+  const handleUpdateNode = useCallback(
+    (nodeId: string, updatedData: any) => {
+      setNodes((nodes) =>
+        nodes.map((node) =>
+          node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node,
+        ),
+      );
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode((node) =>
+          node ? { ...node, data: { ...node.data, ...updatedData } } : node,
+        );
+      }
+      setHasUnsavedChanges(true);
+    },
+    [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode],
+  );
 
-  const handleUpdateEdge = useCallback((edgeId: string, updatedData: any) => {
-    setEdges(edges => edges.map(edge => 
-      edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge
-    ));
-    if (selectedEdge?.id === edgeId) {
-      setSelectedEdge(edge => edge ? { ...edge, data: { ...edge.data, ...updatedData } } : edge);
-    }
-    setHasUnsavedChanges(true);
-  }, [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge]);
+  const handleUpdateEdge = useCallback(
+    (edgeId: string, updatedData: any) => {
+      setEdges((edges) =>
+        edges.map((edge) =>
+          edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge,
+        ),
+      );
+      if (selectedEdge?.id === edgeId) {
+        setSelectedEdge((edge) =>
+          edge ? { ...edge, data: { ...edge.data, ...updatedData } } : edge,
+        );
+      }
+      setHasUnsavedChanges(true);
+    },
+    [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge],
+  );
 
   // ========================================
   // 7. RENDER
   // ========================================
 
   return (
-    <Box sx={{ 
-      width: '100%',
-      height: 'calc(100vh - 100px)', 
-      minHeight: '500px',
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: 'hidden'
-    }}>
+    <Box
+      sx={{
+        width: '100%',
+        height: 'calc(100vh - 100px)',
+        minHeight: '500px',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header with NavigationEditorHeader component */}
       <NavigationEditorHeader
         navigationPath={navigationPath}
@@ -457,29 +505,33 @@ const NavigationEditorContent: React.FC = () => {
       />
 
       {/* Main Container with side-by-side layout */}
-      <Box sx={{ 
-        flex: 1, 
-        display: 'flex',
-        minHeight: '500px',
-        overflow: 'hidden'
-      }}>
-        {/* Main Editor Area */}
-        <Box sx={{ 
-          flex: 1, 
-          position: 'relative', 
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
           minHeight: '500px',
           overflow: 'hidden',
-          transition: 'margin-right',
-          marginRight: isRemotePanelOpen ? '180px' : '0px'
-        }}>
+        }}
+      >
+        {/* Main Editor Area */}
+        <Box
+          sx={{
+            flex: 1,
+            position: 'relative',
+            minHeight: '500px',
+            overflow: 'hidden',
+            transition: 'margin-right',
+            marginRight: isRemotePanelOpen ? '320px' : '0px',
+          }}
+        >
           <>
-            <div 
-              ref={reactFlowWrapper} 
-              style={{ 
+            <div
+              ref={reactFlowWrapper}
+              style={{
                 width: '100%',
                 height: '100%',
                 minHeight: '500px',
-                position: 'relative'
+                position: 'relative',
               }}
             >
               {/* Read-Only Overlay - only when definitively locked by someone else */}
@@ -493,23 +545,23 @@ const NavigationEditorContent: React.FC = () => {
                     backgroundColor: 'warning.light',
                     color: 'warning.contrastText',
                     px: 1,
-                    py: 0.5 ,
+                    py: 0.5,
                     borderRadius: 1,
                     boxShadow: 2,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
                     fontSize: '0.675rem',
-                    fontWeight: 'medium'
+                    fontWeight: 'medium',
                   }}
                 >
                   🔒 READ-ONLY MODE
-                  <Typography variant="caption" sx={{opacity: 0.8 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
                     Tree is locked
                   </Typography>
                 </Box>
               )}
-              
+
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -536,7 +588,7 @@ const NavigationEditorContent: React.FC = () => {
                 connectionLineType={ConnectionLineType.SmoothStep}
                 snapToGrid={true}
                 snapGrid={memoizedSnapGrid}
-                deleteKeyCode={isLocked ? "Delete" : null}
+                deleteKeyCode={isLocked ? 'Delete' : null}
                 multiSelectionKeyCode="Shift"
                 style={memoizedReactFlowStyle}
                 fitView={false}
@@ -563,8 +615,13 @@ const NavigationEditorContent: React.FC = () => {
                 onlyRenderVisibleElements={false}
               >
                 <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <Controls position="top-left" showZoom={true} showFitView={true} showInteractive={false} />
-                <MiniMap 
+                <Controls
+                  position="top-left"
+                  showZoom={true}
+                  showFitView={true}
+                  showInteractive={false}
+                />
+                <MiniMap
                   position="bottom-right"
                   style={memoizedMiniMapStyle}
                   nodeColor={memoizedMiniMapNodeColor}
@@ -577,7 +634,7 @@ const NavigationEditorContent: React.FC = () => {
             {/* NavigationEditorDeviceControl removed - logic should be in take control action */}
 
             {/* Selection Info Panel */}
-            {(selectedNode || selectedEdge) ? (
+            {selectedNode || selectedEdge ? (
               <>
                 {selectedNode && (
                   <NodeSelectionPanel
@@ -601,7 +658,7 @@ const NavigationEditorContent: React.FC = () => {
                     onUpdateNode={handleUpdateNode}
                   />
                 )}
-                
+
                 {selectedEdge && (
                   <EdgeSelectionPanel
                     selectedEdge={selectedEdge}
@@ -660,7 +717,8 @@ const NavigationEditorContent: React.FC = () => {
         <DialogTitle>Discard Changes?</DialogTitle>
         <DialogContent>
           <Typography>
-            You have unsaved changes. Are you sure you want to discard them and revert to the last saved state?
+            You have unsaved changes. Are you sure you want to discard them and revert to the last
+            saved state?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -673,16 +731,16 @@ const NavigationEditorContent: React.FC = () => {
 
       {/* Success/Error Messages */}
       {success && (
-      <Snackbar
+        <Snackbar
           open={!!success}
-        autoHideDuration={3000}
+          autoHideDuration={3000}
           onClose={() => {}}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
           <Alert severity="success" sx={{ width: '100%' }}>
             {success}
-        </Alert>
-      </Snackbar>
+          </Alert>
+        </Snackbar>
       )}
     </Box>
   );
@@ -696,4 +754,4 @@ const NavigationEditor: React.FC = () => {
   );
 };
 
-export default NavigationEditor; 
+export default NavigationEditor;

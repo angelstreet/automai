@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  CircularProgress,
-  Grid,
-  Paper,
-  Alert,
-} from '@mui/material';
-import { useRegistration } from '../../../contexts/RegistrationContext';
+import { Box, Button, Typography, CircularProgress, Grid, Paper, Alert } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import { RemoteType, BaseConnectionConfig } from '../../../types/controller/Remote_Types';
 
+interface Host {
+  host_name: string;
+  device_name: string;
+  device_model: string;
+}
+
 interface RemotePanelProps {
+  /** Host device to control */
+  host: Host;
   /** The type of remote device */
   remoteType?: RemoteType;
   /** Optional pre-configured connection parameters */
@@ -22,63 +22,64 @@ interface RemotePanelProps {
   sx?: any;
   /** Auto-connect on mount */
   autoConnect?: boolean;
+  /** Callback when connection state changes */
+  onConnectionChange?: (connected: boolean) => void;
   /** Callback when disconnect is complete */
   onDisconnectComplete?: () => void;
 }
 
 export function RemotePanel({
+  host,
+  remoteType = 'android-mobile',
   showScreenshot = false,
   sx = {},
   autoConnect = false,
-  onDisconnectComplete
+  onConnectionChange,
+  onDisconnectComplete,
 }: RemotePanelProps) {
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  
+
   // Screenshot UI state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
-  const { selectedHost } = useRegistration();
-
-  // Check if remote controller is available (simplified - just check if host is selected)
-  const isRemoteAvailable = selectedHost ? true : false;
-
-  // Auto-connect on mount if requested
-  useEffect(() => {
-    if (autoConnect && isRemoteAvailable && !isConnected) {
-      handleConnect();
-    }
-  }, [autoConnect, isRemoteAvailable, isConnected]);
-
   // Handle connection
-  const handleConnect = async () => {
+  const handleConnect = useCallback(async () => {
+    if (!host) {
+      setConnectionError('No host provided');
+      return;
+    }
+
     setIsConnecting(true);
     setConnectionError(null);
-    
+
     try {
-      console.log('[@component:RemotePanel] Starting remote connection...');
-      
-      if (!selectedHost) {
-        throw new Error('No host selected for remote connection');
-      }
+      console.log(`[@component:RemotePanel] Starting remote connection to ${host.host_name}...`);
 
       // Check status using server route
       const response = await fetch(`/server/remote/get-status`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          host_name: host.host_name,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        console.log('[@component:RemotePanel] Remote controller available');
+        console.log(`[@component:RemotePanel] Remote controller available for ${host.device_name}`);
         setIsConnected(true);
         console.log('[@component:RemotePanel] Remote control activated');
+
+        if (onConnectionChange) {
+          onConnectionChange(true);
+        }
       } else {
         throw new Error(result.error || 'Remote controller not available');
       }
@@ -86,18 +87,33 @@ export function RemotePanel({
       console.error('[@component:RemotePanel] Connection failed:', error);
       setConnectionError(error.message);
       setIsConnected(false);
+
+      if (onConnectionChange) {
+        onConnectionChange(false);
+      }
     } finally {
       setIsConnecting(false);
     }
-  };
+  }, [host, onConnectionChange]);
+
+  // Auto-connect on mount if requested
+  useEffect(() => {
+    if (autoConnect && host && !isConnected) {
+      handleConnect();
+    }
+  }, [autoConnect, host, isConnected, handleConnect]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
     try {
-      console.log('[@component:RemotePanel] Disconnecting remote control');
+      console.log(`[@component:RemotePanel] Disconnecting remote control from ${host.host_name}`);
       setIsConnected(false);
       setScreenshotError(null);
-      
+
+      if (onConnectionChange) {
+        onConnectionChange(false);
+      }
+
       if (onDisconnectComplete) {
         onDisconnectComplete();
       }
@@ -108,14 +124,14 @@ export function RemotePanel({
 
   // Handle screenshot
   const handleScreenshotClick = async () => {
-    if (!showScreenshot || !selectedHost) return;
-    
+    if (!showScreenshot || !host) return;
+
     setIsScreenshotLoading(true);
     setScreenshotError(null);
-    
+
     try {
-      console.log('[@component:RemotePanel] Taking screenshot via server route');
-      
+      console.log(`[@component:RemotePanel] Taking screenshot for ${host.host_name}`);
+
       // Use server route instead of proxy
       const response = await fetch(`/server/remote/take-screenshot`, {
         method: 'POST',
@@ -123,12 +139,12 @@ export function RemotePanel({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name
-        })
+          host_name: host.host_name,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         console.log('[@component:RemotePanel] Screenshot taken successfully');
       } else {
@@ -143,24 +159,11 @@ export function RemotePanel({
     }
   };
 
-  // Not available state
-  if (!isRemoteAvailable) {
+  // Early return if no host provided
+  if (!host) {
     return (
-      <Box sx={{ 
-        p: 2, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        height: '100%',
-        ...sx 
-      }}>
-        <Typography variant="h6" color="textSecondary" gutterBottom>
-          Remote Controller Not Available
-        </Typography>
-        <Typography variant="body2" color="textSecondary" textAlign="center">
-          Select a host to use remote control
-        </Typography>
+      <Box sx={{ ...sx, p: 2 }}>
+        <Alert severity="error">No host device provided. Please select a host to control.</Alert>
       </Box>
     );
   }
@@ -177,18 +180,13 @@ export function RemotePanel({
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Remote Control
+            Remote Control for {host.device_name}
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            Connect to start using remote control features
+            Connect to start using remote control features for {remoteType} device
           </Typography>
-          
-          <Button
-            variant="contained"
-            onClick={handleConnect}
-            disabled={isConnecting}
-            fullWidth
-          >
+
+          <Button variant="contained" onClick={handleConnect} disabled={isConnecting} fullWidth>
             {isConnecting ? <CircularProgress size={16} /> : 'Connect'}
           </Button>
         </Paper>
@@ -203,20 +201,22 @@ export function RemotePanel({
         {/* Screenshot Section */}
         {showScreenshot && (
           <Grid item xs={12} md={8}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              height: '100%',
-              position: 'relative'
-            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                position: 'relative',
+              }}
+            >
               {screenshotError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {screenshotError}
                 </Alert>
               )}
-              
-              <Box 
-                sx={{ 
+
+              <Box
+                sx={{
                   flex: 1,
                   display: 'flex',
                   alignItems: 'center',
@@ -231,19 +231,20 @@ export function RemotePanel({
                 }}
               >
                 <Typography variant="body2" color="textSecondary" textAlign="center">
-                  Remote Control Active
+                  Remote Control Active for {host.device_name}
+                  <br />({remoteType} device)
                   <br />
-                  Use controller proxy methods for remote operations
+                  Use screenshot or disconnect when finished
                 </Typography>
               </Box>
-              
+
               <Button
                 variant="contained"
                 onClick={handleScreenshotClick}
                 disabled={isScreenshotLoading}
                 fullWidth
                 size="small"
-                sx={{ 
+                sx={{
                   height: '28px',
                   mt: 2,
                   ml: 2,
@@ -262,23 +263,20 @@ export function RemotePanel({
             </Box>
           </Grid>
         )}
-        
+
         {/* Remote Control Section */}
         <Grid item xs={12} md={showScreenshot ? 4 : 12}>
           <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
             <Typography variant="h6" gutterBottom>
-              Remote Control
+              Remote Control Active
             </Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              Remote controller proxy is active and ready for use
+              Connected to {host.device_name} ({remoteType})
+              <br />
+              Host: {host.host_name}
             </Typography>
-            
-            <Button
-              variant="outlined"
-              onClick={handleDisconnect}
-              fullWidth
-              size="small"
-            >
+
+            <Button variant="outlined" onClick={handleDisconnect} fullWidth size="small">
               Disconnect
             </Button>
           </Paper>
@@ -286,4 +284,4 @@ export function RemotePanel({
       </Grid>
     </Box>
   );
-} 
+}
