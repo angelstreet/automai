@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -142,10 +142,24 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   // Get devices and lock status from RegistrationContext
   const { availableHosts, isDeviceLocked } = useRegistration();
 
+  // Track logging to prevent spam in development mode
+  const lastLoggedState = useRef<{ hasModels: boolean; deviceCount: number } | null>(null);
+
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
-    if (!userInterface || !userInterface.models || !Array.isArray(userInterface.models)) {
-      console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
+    const hasUserInterfaceModels = userInterface && userInterface.models && Array.isArray(userInterface.models);
+    const currentDeviceCount = availableHosts.length;
+    
+    // Only log if the state has actually changed
+    const shouldLog = !lastLoggedState.current || 
+                      lastLoggedState.current.hasModels !== hasUserInterfaceModels ||
+                      lastLoggedState.current.deviceCount !== currentDeviceCount;
+
+    if (!hasUserInterfaceModels) {
+      if (shouldLog) {
+        console.log('[@component:NavigationEditorHeader] No user interface models found, showing all devices');
+        lastLoggedState.current = { hasModels: false, deviceCount: currentDeviceCount };
+      }
       return availableHosts;
     }
 
@@ -154,7 +168,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
       interfaceModels.includes(device.model)
     );
 
-    console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filtered.length}/${availableHosts.length} devices match models: ${interfaceModels.join(', ')}`);
+    if (shouldLog) {
+      console.log(`[@component:NavigationEditorHeader] Filtered devices: ${filtered.length}/${availableHosts.length} devices match models: ${interfaceModels.join(', ')}`);
+      lastLoggedState.current = { hasModels: true, deviceCount: currentDeviceCount };
+    }
+    
     return filtered;
   }, [availableHosts, userInterface]);
 
