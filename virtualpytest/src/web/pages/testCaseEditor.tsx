@@ -2,8 +2,6 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
-  DevicesOther as DeviceIcon,
-  VerifiedUser as VerifyIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import {
@@ -38,15 +36,13 @@ import {
   Tab,
   Autocomplete,
   Slider,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 // Import registration context
 import { useRegistration } from '../contexts/RegistrationContext';
 
-import { TestCase, Device, EnvironmentProfile, VerificationCondition } from '../types';
+import { TestCase } from '../types';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -74,8 +70,6 @@ const TestCaseEditor: React.FC = () => {
   const { buildServerUrl } = useRegistration();
 
   const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [environmentProfiles, setEnvironmentProfiles] = useState<EnvironmentProfile[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -88,12 +82,7 @@ const TestCaseEditor: React.FC = () => {
     test_type: 'functional',
     start_node: '',
     steps: [],
-    // New Phase 2 fields
-    device_id: '',
-    environment_profile_id: '',
-    verification_conditions: [],
-    expected_results: {},
-    execution_config: {},
+    // Simplified fields - removed device and environment dependencies
     tags: [],
     priority: 1,
     estimated_duration: 60,
@@ -101,8 +90,6 @@ const TestCaseEditor: React.FC = () => {
 
   useEffect(() => {
     fetchTestCases();
-    fetchDevices();
-    fetchEnvironmentProfiles();
   }, []);
 
   const fetchTestCases = async () => {
@@ -115,34 +102,6 @@ const TestCaseEditor: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching test cases:', err);
-    }
-  };
-
-  const fetchDevices = async () => {
-    try {
-      // Use existing system clients devices endpoint
-      const response = await fetch(buildServerUrl('/server/system/clients/devices'));
-      if (response.ok) {
-        const data = await response.json();
-        // Extract devices array from the response
-        setDevices(data.devices || []);
-      }
-    } catch (err) {
-      console.error('Error fetching devices:', err);
-    }
-  };
-
-  const fetchEnvironmentProfiles = async () => {
-    try {
-      // Use abstract system environment profiles endpoint
-      const response = await fetch(buildServerUrl('/server/system/environment-profiles'));
-      if (response.ok) {
-        const data = await response.json();
-        // Extract profiles array from the response
-        setEnvironmentProfiles(data.profiles || []);
-      }
-    } catch (err) {
-      console.error('Error fetching environment profiles:', err);
     }
   };
 
@@ -207,11 +166,6 @@ const TestCaseEditor: React.FC = () => {
         test_type: 'functional',
         start_node: '',
         steps: [],
-        device_id: '',
-        environment_profile_id: '',
-        verification_conditions: [],
-        expected_results: {},
-        execution_config: {},
         tags: [],
         priority: 1,
         estimated_duration: 60,
@@ -256,49 +210,8 @@ const TestCaseEditor: React.FC = () => {
     }));
   };
 
-  const addVerificationCondition = () => {
-    const newCondition: VerificationCondition = {
-      id: `vc_${Date.now()}`,
-      type: 'element_exists',
-      description: '',
-      parameters: {},
-      timeout: 5000,
-      critical: false,
-    };
-    setFormData((prev) => ({
-      ...prev,
-      verification_conditions: [...(prev.verification_conditions || []), newCondition],
-    }));
-  };
-
-  const updateVerificationCondition = (
-    index: number,
-    field: keyof VerificationCondition,
-    value: any,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      verification_conditions:
-        prev.verification_conditions?.map((condition, i) =>
-          i === index ? { ...condition, [field]: value } : condition,
-        ) || [],
-    }));
-  };
-
-  const removeVerificationCondition = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      verification_conditions: prev.verification_conditions?.filter((_, i) => i !== index) || [],
-    }));
-  };
-
   const handleTagsChange = (_event: any, newValue: string[]) => {
     setFormData((prev) => ({ ...prev, tags: newValue }));
-  };
-
-  const getDeviceName = (deviceId: string) => {
-    const device = devices.find((d) => d.id === deviceId);
-    return device ? device.name : 'Unknown Device';
   };
 
   const getPriorityColor = (priority: number) => {
@@ -374,7 +287,6 @@ const TestCaseEditor: React.FC = () => {
               <TableCell>Test ID</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Type</TableCell>
-              <TableCell>Device</TableCell>
               <TableCell>Priority</TableCell>
               <TableCell>Duration</TableCell>
               <TableCell>Tags</TableCell>
@@ -385,7 +297,7 @@ const TestCaseEditor: React.FC = () => {
           <TableBody>
             {testCases.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={8} align="center">
                   <Typography variant="body2" color="textSecondary" sx={{ py: 4 }}>
                     No test cases found. Create your first test case to get started.
                   </Typography>
@@ -398,20 +310,6 @@ const TestCaseEditor: React.FC = () => {
                   <TableCell>{testCase.name}</TableCell>
                   <TableCell>
                     <Chip label={testCase.test_type} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    {testCase.device_id ? (
-                      <Chip
-                        icon={<DeviceIcon />}
-                        label={getDeviceName(testCase.device_id)}
-                        size="small"
-                        color="primary"
-                      />
-                    ) : (
-                      <Typography variant="body2" color="textSecondary">
-                        No device
-                      </Typography>
-                    )}
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -458,8 +356,6 @@ const TestCaseEditor: React.FC = () => {
           <Box sx={{ pt: 2 }}>
             <Tabs value={tabValue} onChange={(_e, newValue) => setTabValue(newValue)}>
               <Tab label="Basic Info" icon={<EditIcon />} />
-              <Tab label="Device & Environment" icon={<DeviceIcon />} />
-              <Tab label="Verification" icon={<VerifyIcon />} />
               <Tab label="Settings" icon={<SettingsIcon />} />
             </Tabs>
 
@@ -568,145 +464,8 @@ const TestCaseEditor: React.FC = () => {
               </Box>
             </TabPanel>
 
-            {/* Device & Environment Tab */}
-            <TabPanel value={tabValue} index={1}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Device</InputLabel>
-                    <Select
-                      value={formData.device_id}
-                      label="Device"
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, device_id: e.target.value }))
-                      }
-                    >
-                      <MenuItem value="">Select a device</MenuItem>
-                      {devices.map((device) => (
-                        <MenuItem key={device.id} value={device.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <DeviceIcon />
-                            <Box>
-                              <Typography variant="body1">{device.name}</Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {device.type} - {device.environment}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Environment Profile</InputLabel>
-                    <Select
-                      value={formData.environment_profile_id}
-                      label="Environment Profile"
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, environment_profile_id: e.target.value }))
-                      }
-                    >
-                      <MenuItem value="">Select an environment profile</MenuItem>
-                      {environmentProfiles.map((profile) => (
-                        <MenuItem key={profile.id} value={profile.id}>
-                          {profile.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </TabPanel>
-
-            {/* Verification Tab */}
-            <TabPanel value={tabValue} index={2}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">Verification Conditions</Typography>
-                <Button startIcon={<AddIcon />} onClick={addVerificationCondition}>
-                  Add Condition
-                </Button>
-              </Box>
-
-              {formData.verification_conditions?.map((condition, index) => (
-                <Card key={condition.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
-                        <FormControl fullWidth>
-                          <InputLabel>Type</InputLabel>
-                          <Select
-                            value={condition.type}
-                            label="Type"
-                            onChange={(e) =>
-                              updateVerificationCondition(index, 'type', e.target.value)
-                            }
-                          >
-                            <MenuItem value="image_appears">Image Appears</MenuItem>
-                            <MenuItem value="text_appears">Text Appears</MenuItem>
-                            <MenuItem value="element_exists">Element Exists</MenuItem>
-                            <MenuItem value="audio_playing">Audio Playing</MenuItem>
-                            <MenuItem value="video_playing">Video Playing</MenuItem>
-                            <MenuItem value="color_present">Color Present</MenuItem>
-                            <MenuItem value="screen_state">Screen State</MenuItem>
-                            <MenuItem value="performance_metric">Performance Metric</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          fullWidth
-                          label="Timeout (ms)"
-                          type="number"
-                          value={condition.timeout}
-                          onChange={(e) =>
-                            updateVerificationCondition(index, 'timeout', parseInt(e.target.value))
-                          }
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={condition.critical}
-                              onChange={(e) =>
-                                updateVerificationCondition(index, 'critical', e.target.checked)
-                              }
-                            />
-                          }
-                          label="Critical"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Description"
-                          value={condition.description}
-                          onChange={(e) =>
-                            updateVerificationCondition(index, 'description', e.target.value)
-                          }
-                          multiline
-                          rows={2}
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                  <CardActions>
-                    <Button
-                      startIcon={<DeleteIcon />}
-                      onClick={() => removeVerificationCondition(index)}
-                      color="error"
-                    >
-                      Remove Condition
-                    </Button>
-                  </CardActions>
-                </Card>
-              ))}
-            </TabPanel>
-
             {/* Settings Tab */}
-            <TabPanel value={tabValue} index={3}>
+            <TabPanel value={tabValue} index={1}>
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <Typography gutterBottom>Priority</Typography>
