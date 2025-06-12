@@ -45,7 +45,6 @@ try:
         setup_flask_app,
         validate_core_environment,
         initialize_global_sessions,
-        generate_stable_host_id,
         DEFAULT_TEAM_ID,
         DEFAULT_USER_ID
     )
@@ -178,10 +177,8 @@ def main():
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     host_name = os.getenv('HOST_NAME', 'unknown-host')
     host_ip = os.getenv('HOST_IP', '127.0.0.1')
-    host_id = generate_stable_host_id(host_name, host_ip)
     
     print(f"[@host:main:main] Host Information:")
-    print(f"[@host:main:main]    Host ID: {host_id}")
     print(f"[@host:main:main]    Host Name: {host_name}")
     print(f"[@host:main:main]    Host IP: {host_ip}")
     print(f"[@host:main:main]    Internal Port: {host_port_internal}")

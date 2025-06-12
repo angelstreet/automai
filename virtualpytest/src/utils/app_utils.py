@@ -3,7 +3,7 @@ import os
 import time
 import subprocess
 import psutil
-import hashlib
+
 import platform
 from flask import Flask, current_app, jsonify, request
 from flask_cors import CORS
@@ -173,10 +173,7 @@ def check_supabase():
         from flask import jsonify
         return jsonify({'error': 'Supabase not available'}), 503
 
-def generate_stable_host_id(host_name, host_ip):
-    """Generate a stable host ID based on host name and IP"""
-    stable_id_string = f"{host_name}-{host_ip}"
-    return hashlib.md5(stable_id_string.encode()).hexdigest()
+
 
 def initialize_global_sessions():
     """Initialize global session storage for controllers"""
@@ -199,16 +196,16 @@ def initialize_server_globals():
     print("🖥️ Server mode: Ready to accept host registrations")
 
 
-def add_connected_client(client_id, client_info):
-    """Add a client to the connected clients registry"""
-    connected_clients[client_id] = client_info
-    print(f"📝 Added client {client_id[:8]}... to registry")
+def add_host(host_name, host_info):
+    """Add a host to the connected hosts registry"""
+    connected_clients[host_name] = host_info
+    print(f"📝 Added host {host_name} to registry")
 
-def remove_connected_client(client_id):
-    """Remove a client from the connected clients registry"""
-    if client_id in connected_clients:
-        del connected_clients[client_id]
-        print(f"🗑️ Removed client {client_id[:8]}... from registry")
+def remove_host(host_name):
+    """Remove a host from the connected hosts registry"""
+    if host_name in connected_clients:
+        del connected_clients[host_name]
+        print(f"🗑️ Removed host {host_name} from registry")
 
 def cleanup_server_resources():
     """Cleanup server resources on shutdown"""
@@ -311,10 +308,10 @@ def get_host_registry():
     """Get the host registry from Flask app context"""
     return getattr(current_app, '_connected_clients', {})
 
-def get_host_by_id(host_id):
-    """Get a specific host by ID from the registry"""
+def get_host_by_name(host_name):
+    """Get a specific host by name from the registry"""
     host_registry = get_host_registry()
-    return host_registry.get(host_id)
+    return host_registry.get(host_name)
 
 def get_host_by_model(device_model):
     """Get the first available host with the specified device model"""
@@ -324,12 +321,7 @@ def get_host_by_model(device_model):
             return host_info
     return None
 
-def get_primary_host():
-    """Get the first available host (fallback when no specific host is needed)"""
-    host_registry = get_host_registry()
-    if host_registry:
-        return next(iter(host_registry.values()))
-    return None
+
 
 # =====================================================
 # FLASK-SPECIFIC HELPER FUNCTIONS

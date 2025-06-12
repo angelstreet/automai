@@ -8,11 +8,8 @@ import threading
 import time
 import requests
 import os
-import logging
-import tempfile
 import psutil
 from datetime import datetime
-from collections import deque
 import json
 from typing import TypedDict, Optional, List, Any
 
@@ -26,48 +23,12 @@ from src.controllers.controller_config_factory import (
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
     get_host_registry,
-    get_host_by_id,
-    get_primary_host,
-    generate_stable_host_id,
-    add_connected_client,
-    remove_connected_client,
     buildHostUrl
 )
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
-# In-memory log storage for debug purposes
-_debug_logs = deque(maxlen=10000)  # Keep last 10000 log entries
 
-class DebugLogHandler(logging.Handler):
-    """Custom log handler to capture logs for debug modal"""
-    
-    def emit(self, record):
-        try:
-            log_entry = {
-                'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-                'level': record.levelname,
-                'message': self.format(record),
-                'source': record.name
-            }
-            _debug_logs.append(log_entry)
-        except Exception:
-            pass  # Ignore errors in logging handler
-
-# Set up debug logging
-debug_handler = DebugLogHandler()
-debug_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(name)s - %(message)s')
-debug_handler.setFormatter(formatter)
-
-# Add handler to root logger to capture all logs
-root_logger = logging.getLogger()
-root_logger.addHandler(debug_handler)
-root_logger.setLevel(logging.DEBUG)
-
-# Also add handler to Flask app logger
-flask_logger = logging.getLogger('werkzeug')
-flask_logger.addHandler(debug_handler)
 
 def get_health_check_threads():
     """Get health check threads from app context"""
@@ -77,63 +38,7 @@ def set_health_check_threads(threads):
     """Set health check threads in app context"""
     current_app._health_check_threads = threads
 
-@system_bp.route('/logs', methods=['GET'])
-def get_logs():
-    """Get server logs for debug modal"""
-    try:
-        lines = request.args.get('lines', 1000, type=int)
-        level_filter = request.args.get('level', 'all').upper()
-        
-        # Convert deque to list and get last N entries
-        all_logs = list(_debug_logs)
-        
-        # Filter by level if specified
-        if level_filter != 'ALL':
-            filtered_logs = [log for log in all_logs if log['level'] == level_filter]
-        else:
-            filtered_logs = all_logs
-        
-        # Get last N lines
-        recent_logs = filtered_logs[-lines:] if lines > 0 else filtered_logs
-        
-        return jsonify({
-            'success': True,
-            'logs': recent_logs,
-            'total_logs': len(all_logs),
-            'filtered_logs': len(recent_logs)
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
-@system_bp.route('/logs/clear', methods=['POST'])
-def clear_logs():
-    """Clear server logs"""
-    try:
-        _debug_logs.clear()
-        
-        # Add a log entry about clearing
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'level': 'INFO',
-            'message': 'Debug logs cleared via API',
-            'source': 'system'
-        }
-        _debug_logs.append(log_entry)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Logs cleared successfully'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 @system_bp.route('/register', methods=['POST'])
 def register_host():
