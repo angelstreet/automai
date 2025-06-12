@@ -223,7 +223,7 @@ def unlock_navigation_tree(userinterface_name):
         }), 500
 
 
-@navigation_config_bp.route('/trees/<userinterface_name>', methods=['PUT'])
+@navigation_config_bp.route('/saveTree/<userinterface_name>', methods=['PUT'])
 def save_navigation_tree(userinterface_name):
     """
     Save a navigation tree (requires lock)

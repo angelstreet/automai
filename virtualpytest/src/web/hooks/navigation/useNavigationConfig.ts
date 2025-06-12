@@ -191,7 +191,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         }
       };
 
-      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
+      const response = await fetch(buildServerUrl(`/server/navigation/saveTree/${treeName}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

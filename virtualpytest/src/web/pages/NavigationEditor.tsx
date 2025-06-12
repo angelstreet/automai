@@ -196,22 +196,37 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [treeId, interfaceId]);
   
-  // Load tree data when component mounts or treeId changes
+  // Load tree data when component mounts or treeId changes - LOCK FIRST APPROACH
   useEffect(() => {
     if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
+      console.log(`[@component:NavigationEditor] Starting lock-first workflow for tree: ${currentTreeName}`);
       lastLoadedTreeId.current = currentTreeName;
       
-      // Load from config instead of database
-      loadFromConfig(currentTreeName);
+      // STEP 1: First acquire lock (this is the critical requirement)
+      lockNavigationTree(currentTreeName).then(lockSuccess => {
+        if (lockSuccess) {
+          console.log(`[@component:NavigationEditor] Lock acquired successfully for tree: ${currentTreeName}`);
+          // STEP 2: If lock acquired, load the tree data
+          loadFromConfig(currentTreeName);
+        } else {
+          console.warn(`[@component:NavigationEditor] Failed to acquire lock for tree: ${currentTreeName} - entering read-only mode`);
+          // STEP 3: If lock failed, still load tree but in read-only mode
+          loadFromConfig(currentTreeName);
+          // Note: isLocked state will be false, which will trigger read-only UI
+        }
+      }).catch(error => {
+        console.error(`[@component:NavigationEditor] Error during lock acquisition for tree: ${currentTreeName}`, error);
+        // Still try to load in read-only mode
+        loadFromConfig(currentTreeName);
+      });
       
-      // Setup auto-unlock for this tree
+      // Setup auto-unlock for this tree (cleanup function)
       const cleanup = setupAutoUnlock(currentTreeName);
       
       // Return cleanup function
       return cleanup;
     }
-  }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
+  }, [currentTreeName, isLoadingInterface, loadFromConfig, lockNavigationTree, setupAutoUnlock]);
 
   // ========================================
   // 3. DEVICE & HOST MANAGEMENT
@@ -351,15 +366,44 @@ const NavigationEditorContent: React.FC = () => {
               style={{ 
                 width: '100%',
                 height: '100%',
-                minHeight: '500px'
+                minHeight: '500px',
+                position: 'relative'
               }}
             >
+              {/* Read-Only Overlay - shown when tree is not locked */}
+              {!isLocked && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    zIndex: 1000,
+                    backgroundColor: 'warning.light',
+                    color: 'warning.contrastText',
+                    px: 1,
+                    py: 0.5 ,
+                    borderRadius: 1,
+                    boxShadow: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    fontSize: '0.675rem',
+                    fontWeight: 'medium'
+                  }}
+                >
+                  🔒 READ-ONLY MODE
+                  <Typography variant="caption" sx={{opacity: 0.8 }}>
+                    Tree is locked
+                  </Typography>
+                </Box>
+              )}
+              
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+                onNodesChange={isLocked ? onNodesChange : undefined}
+                onEdgesChange={isLocked ? onEdgesChange : undefined}
+                onConnect={isLocked ? onConnect : undefined}
                 onNodeClick={onNodeClick}
                 onEdgeClick={onEdgeClick}
                 onNodeDoubleClick={onNodeDoubleClick}
@@ -385,12 +429,12 @@ const NavigationEditorContent: React.FC = () => {
                 connectionLineType={ConnectionLineType.SmoothStep}
                 snapToGrid={true}
                 snapGrid={[15, 15]}
-                deleteKeyCode="Delete"
+                deleteKeyCode={isLocked ? "Delete" : null}
                 multiSelectionKeyCode="Shift"
                 style={{ width: '100%', height: '100%' }}
                 fitView={false}
-                nodesDraggable={true}
-                nodesConnectable={true}
+                nodesDraggable={isLocked}
+                nodesConnectable={isLocked}
                 elementsSelectable={true}
                 preventScrolling={false}
                 panOnDrag={true}

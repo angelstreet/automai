@@ -272,13 +272,14 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 startIcon={<AddIcon />}
                 onClick={() => onAddNewNode('node', { x: 0, y: 0 })}
                 size="small"
-                disabled={isLoading || !!error}
+                disabled={isLoading || !!error || !isLocked}
                 variant="outlined"
                 sx={{ 
                   minWidth: 'auto',
                   whiteSpace: 'nowrap',
                   fontSize: '0.75rem'
                 }}
+                title={!isLocked ? "Cannot add nodes - tree is in read-only mode" : "Add Node"}
               >
                 Add&nbsp;Node
               </Button>
@@ -302,15 +303,18 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                 }} 
                 size="small" 
                 title={
-                  isLocked && lockInfo?.locked_by !== sessionId 
-                    ? "Cannot save - tree is locked by another user"
-                    : hasUnsavedChanges 
-                      ? "Save Changes to Config" 
-                      : "Save to Config"
+                  !isLocked
+                    ? "Cannot save - tree is in read-only mode"
+                    : isLocked && lockInfo?.locked_by !== sessionId 
+                      ? "Cannot save - tree is locked by another user"
+                      : hasUnsavedChanges 
+                        ? "Save Changes to Config" 
+                        : "Save to Config"
                 }
                 disabled={
                   isLoading || 
                   !!error || 
+                  !isLocked ||
                   (isLocked && lockInfo?.locked_by !== sessionId)
                 }
                 color={hasUnsavedChanges ? "primary" : "default"}
