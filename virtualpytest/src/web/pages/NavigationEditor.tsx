@@ -352,7 +352,7 @@ const NavigationEditorContent: React.FC = () => {
         const result = await response.json();
         
         if (result.success) {
-          console.log(`[@component:NavigationEditor] Successfully took control: ${JSON.stringify(result.device)}`);
+          console.log(`[@component:NavigationEditor] Successfully took control`);
           setIsControlActive(true);
         } else {
           console.error(`[@component:NavigationEditor] Failed to take control: ${result.error}`);

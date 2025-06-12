@@ -25,61 +25,6 @@ from src.utils.device_lock_manager_utils import (
 # Create blueprint
 control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 
-# Helper functions
-def get_controller_metadata():
-    """Get enhanced controller metadata"""
-    return {
-        'remote': [
-            {'id': 'android_tv', 'name': 'Android TV Remote', 'description': 'ADB Android TV controller', 'status': 'available'},
-            {'id': 'android_mobile', 'name': 'Android Mobile Remote', 'description': 'ADB Android Mobile controller', 'status': 'available'},
-            {'id': 'ir_remote', 'name': 'IR Remote', 'description': 'Infrared remote controller', 'status': 'available'},
-            {'id': 'bluetooth_remote', 'name': 'Bluetooth Remote', 'description': 'Bluetooth HID remote controller', 'status': 'available'},
-        ],
-        'av': [
-            {'id': 'hdmi_stream', 'name': 'HDMI Stream', 'description': 'HDMI stream URL capture', 'status': 'available'},
-        ],
-        'network': [
-            {'id': 'network', 'name': 'Network Stream', 'description': 'Network-based audio/video streaming', 'status': 'placeholder'},
-            {'id': 'rtsp', 'name': 'RTSP Stream', 'description': 'Real-Time Streaming Protocol capture', 'status': 'placeholder'},
-            {'id': 'http_stream', 'name': 'HTTP Stream', 'description': 'HTTP-based video streaming', 'status': 'placeholder'},
-            {'id': 'webrtc', 'name': 'WebRTC', 'description': 'Web Real-Time Communication', 'status': 'placeholder'},
-        ],
-        'verification': [
-            {'id': 'ocr', 'name': 'Text Verification', 'description': 'Text matching verification', 'status': 'available'},
-            {'id': 'image', 'name': 'Image Verification', 'description': 'Image matching verification', 'status': 'available'},
-            {'id': 'adb', 'name': 'ADB Verification', 'description': 'Direct ADB element verification via SSH', 'status': 'available'},
-            {'id': 'audio', 'name': 'Audio Verification', 'description': 'Audio content verification', 'status': 'placeholder'},
-            {'id': 'video', 'name': 'Video Verification', 'description': 'Video content verification', 'status': 'placeholder'},
-            {'id': 'ai', 'name': 'AI Verification', 'description': 'AI-based verification', 'status': 'placeholder'},
-        ],
-        'power': [
-            {'id': 'usb', 'name': 'USB Power Control', 'description': 'USB hub power control via SSH + uhubctl', 'status': 'available'},
-        ]
-    }
-
-# =====================================================
-# CONTROLLER INFORMATION ENDPOINTS
-# =====================================================
-
-@control_bp.route('/getAllControllers', methods=['GET'])
-def getAllControllers():
-    """Get all available controller types from the system"""
-    try:
-        from src.controllers import ControllerFactory
-        
-        # Get available controllers from factory
-        available_controllers = ControllerFactory.list_available_controllers()
-        
-        # Get enhanced controller information
-        enhanced_controllers = get_controller_metadata()
-        
-        return jsonify({
-            'controller_types': enhanced_controllers,
-            'total_types': sum(len(impls) for impls in available_controllers.values())
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
@@ -190,50 +135,20 @@ def take_control():
                 print(f"[@route:server_take_control] Host response: {host_data}")
                 
                 if host_data.get('success'):
-                    # Return clean device info from our registry
-                    device_response = {
-                        'device_name': host_info.get('device_name'),
-                        'device_model': host_info.get('device_model'),
-                        'device_ip': host_info.get('device_ip'),
-                        'device_port': host_info.get('device_port'),
-                        'host_name': host_info.get('host_name'),
-                        'host_ip': host_info.get('host_ip'),
-                        'host_port': host_info.get('host_port'),
-                        'capabilities': host_info.get('capabilities', [])
-                    }
-                    
+                    # Host confirmed controllers started - that's all we need
+                    print(f"[@route:server_take_control] Control taken successfully for host: {host_name}")
                     return jsonify({
                         'success': True,
-                        'message': 'Control taken successfully',
-                        'device': device_response
+                        'message': 'Control taken successfully'
                     }), 200
                 else:
-                    # Host failed - pass through specific error details
+                    # Host failed to start controllers - unlock and return simple error
                     unlock_device_in_registry(host_name, session_id)
-                    
-                    # Determine appropriate HTTP status code based on error type
-                    error_type = host_data.get('error_type', 'unknown')
-                    status_code = 500  # Default to 500 for unknown errors
-                    
-                    if error_type in ['stream_service_error', 'adb_connection_error']:
-                        status_code = 422  # Unprocessable Entity - service/connection issue
-                    elif error_type in ['configuration_error']:
-                        status_code = 503  # Service Unavailable - configuration issue
-                    elif error_type in ['av_controller_exception', 'remote_controller_exception']:
-                        status_code = 500  # Internal Server Error - controller exception
                     
                     return jsonify({
                         'success': False,
-                        'error': host_data.get('error', 'Host failed to take control'),
-                        'error_type': error_type,
-                        'status': host_data.get('status', 'host_error'),
-                        'host_details': {
-                            'av_status': host_data.get('av_status'),
-                            'remote_status': host_data.get('remote_status'),
-                            'service_details': host_data.get('service_details'),
-                            'adb_details': host_data.get('adb_details')
-                        }
-                    }), status_code
+                        'error': host_data.get('error', 'Host failed to start controllers')
+                    }), 500
             else:
                 # Host request failed, release the device lock
                 unlock_device_in_registry(host_name, session_id)
@@ -293,7 +208,7 @@ def release_control():
                     if host_response.status_code == 200:
                         host_result = host_response.json()
                         host_release_success = host_result.get('success', False)
-                        print(f"[@route:server_release_control] Host release result: {host_result}")
+                        print(f"[@route:server_release_control] Host confirmed controllers stopped: {host_release_success}")
                     else:
                         print(f"[@route:server_release_control] Host release failed: {host_response.status_code}")
                         host_release_success = False
