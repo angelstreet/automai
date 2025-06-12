@@ -65,40 +65,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   // Track logging to prevent spam in development mode
   const lastLoggedState = useRef<{ hasModels: boolean; deviceCount: number } | null>(null);
 
-  // Fetch userInterface data from API using tree name
-  const [fetchedUserInterface, setFetchedUserInterface] = useState<{ id: string; name: string; models: string[] } | null>(null);
-
-  // Extract tree name from current path - use the tree name to fetch userInterface
-  useEffect(() => {
-    // Get tree name from URL path (e.g., /navigation-editor/horizon_android_mobile)
-    const pathParts = window.location.pathname.split('/');
-    const treeName = pathParts[pathParts.length - 1]; // Last part is the tree name
-    
-    if (treeName && treeName !== 'navigation-editor') {
-      const fetchUserInterface = async () => {
-        try {
-          const response = await fetch(`/server/userinterface/getUserInterfaceByName/${encodeURIComponent(treeName)}`);
-          
-          if (response.ok) {
-            const interfaceData = await response.json();
-            console.log(`[@component:NavigationEditorHeader] Fetched userInterface:`, interfaceData);
-            setFetchedUserInterface(interfaceData);
-          } else {
-            console.warn(`[@component:NavigationEditorHeader] UserInterface not found for tree: ${treeName}`);
-            setFetchedUserInterface(null);
-          }
-        } catch (error) {
-          console.error(`[@component:NavigationEditorHeader] Error fetching userInterface:`, error);
-          setFetchedUserInterface(null);
-        }
-      };
-
-      fetchUserInterface();
-    }
-  }, []); // Only run once on mount
-
-  // Use fetched userInterface if available, otherwise fall back to props
-  const effectiveUserInterface = fetchedUserInterface || userInterface;
+  // Use userInterface from props (already fetched by useNavigationConfig hook)
+  const effectiveUserInterface = userInterface;
 
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
@@ -120,7 +88,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
 
     const interfaceModels = effectiveUserInterface.models;
     const filtered = availableHosts.filter(device => 
-      interfaceModels.includes(device.model)
+      interfaceModels.includes(device.device_model)
     );
 
     if (shouldLog) {
@@ -133,11 +101,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
 
   // Check if selected device is locked
   const selectedDeviceHost = useMemo(() => {
-    return filteredDevices.find(device => device.name === selectedDevice);
+    return filteredDevices.find(device => device.host_name === selectedDevice);
   }, [filteredDevices, selectedDevice]);
 
   const isSelectedDeviceLocked = useMemo(() => {
-    return selectedDeviceHost ? isDeviceLocked(selectedDeviceHost.id) : false;
+    return selectedDeviceHost ? isDeviceLocked(selectedDeviceHost.host_name) : false;
   }, [selectedDeviceHost, isDeviceLocked]);
 
   return (
@@ -293,11 +261,11 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                     <em>{devicesLoading ? 'Loading...' : 'None'}</em>
                   </MenuItem>
                   {filteredDevices.map((device) => {
-                    const deviceIsLocked = isDeviceLocked(device.id);
+                    const deviceIsLocked = isDeviceLocked(device.host_name);
                     return (
                       <MenuItem 
-                        key={device.name} 
-                        value={device.name}
+                        key={device.host_name} 
+                        value={device.host_name}
                         disabled={deviceIsLocked}
                         sx={{
                           display: 'flex',
@@ -307,7 +275,7 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
                         }}
                       >
                         {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
-                        <span>{device.name}</span>
+                        <span>{device.device_name}</span>
                         {deviceIsLocked && (
                           <Typography 
                             variant="caption" 
