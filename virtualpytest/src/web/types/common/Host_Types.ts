@@ -23,7 +23,6 @@ import { SystemStats } from '../pages/Dashboard_Types';
 export interface Host {
   // === PRIMARY IDENTIFICATION ===
   host_name: string;             // Host machine name (primary identifier)
-
   description?: string;          // Optional description
   
   // === NETWORK CONFIGURATION ===
@@ -37,7 +36,7 @@ export interface Host {
   device_port: string;           // Device port (for ADB/device control)
   device_name: string;           // Device display name
   device_model: string;          // Device model for controller configuration
-  
+
   // === STATUS AND METADATA ===
   status: 'online' | 'offline' | 'unreachable' | 'maintenance';
   last_seen: number;             // Unix timestamp

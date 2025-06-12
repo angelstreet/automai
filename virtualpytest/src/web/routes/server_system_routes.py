@@ -14,6 +14,7 @@ import psutil
 from datetime import datetime
 from collections import deque
 import json
+from typing import TypedDict, Optional, List, Any
 
 # Import using consistent src. prefix (project root is already in sys.path from app startup)
 from src.controllers.controller_config_factory import (
@@ -206,37 +207,35 @@ def register_host():
         print(f"[@route:register_host] Controller configs available:")
         print(f"   Controller types: {capabilities}")
         
-        # Create a single, complete host object - SINGLE SOURCE OF TRUTH
-        host_object = {
-            # === PRIMARY HOST IDENTIFICATION ===
-            'host_name': host_info['host_name'],           # Primary key
+        # Create flat host object matching Host_Types.ts interface
+        host_object: Host = {
+            # === PRIMARY IDENTIFICATION ===
+            'host_name': host_info['host_name'],
+            'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
+            
+            # === NETWORK CONFIGURATION ===
             'host_ip': host_info['host_ip'],
+            'host_port_internal': int(host_port_internal),
+            'host_port_external': int(host_port_external),
+            'host_port_web': int(host_port_web),
             
-            # === COMPLETE PORT STRUCTURE ===
-            'host_port_internal': host_port_internal,     # Where Flask actually runs
-            'host_port_external': host_port_external,     # For server communication
-            'host_port_web': host_port_web,               # HTTPS/nginx port
-            
-            # === DEVICE CONFIGURATION === (aligned with Host_Types.ts)
-            'device_ip': device_ip,                       # Device IP address
-            'device_port': device_port,                   # Device port
-            'device_name': device_name,                   # Device display name
-            'device_model': host_info['device_model'],    # Device model for controller configuration
-            'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
-            'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
+            # === DEVICE CONFIGURATION ===
+            'device_ip': device_ip,
+            'device_port': device_port,
+            'device_name': device_name,
+            'device_model': host_info['device_model'],
             
             # === STATUS AND METADATA ===
             'status': 'online',
-            'registered_at': datetime.now().isoformat(),
             'last_seen': time.time(),
-            'capabilities': capabilities,
-            'controller_types': controller_types,
+            'registered_at': datetime.now().isoformat(),
             'system_stats': host_info.get('system_stats', get_system_stats()),
-            'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
             
-            # === CONTROLLER INFORMATION ===
-            'controller_configs': controller_configs,     # Complete configs from factory
-           
+            # === HOST CAPABILITIES ===
+            'capabilities': capabilities,
+            'controller_configs': controller_configs,
+            'controller_types': controller_types,
+            
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
             'lockedBy': None,
@@ -338,8 +337,6 @@ def health_check():
         'system_stats': system_stats
     }), 200
 
-
-
 @system_bp.route('/getAllHosts', methods=['GET'])
 def getAllHosts():
     """Return all registered hosts - single REST endpoint for host listing"""
@@ -380,8 +377,6 @@ def getAllHosts():
     except Exception as e:
         print(f"❌ [HOSTS] Error listing hosts: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
 
 @system_bp.route('/environment-profiles', methods=['GET'])
 def get_environment_profiles():
@@ -569,4 +564,38 @@ def find_available_client(device_model):
             return client_info
     
     return None
+
+# Define Host type matching Host_Types.ts
+class Host(TypedDict):
+    # === PRIMARY IDENTIFICATION ===
+    host_name: str
+    description: Optional[str]
+    
+    # === NETWORK CONFIGURATION ===
+    host_ip: str
+    host_port_internal: int
+    host_port_external: int
+    host_port_web: int
+    
+    # === DEVICE CONFIGURATION ===
+    device_ip: str
+    device_port: str
+    device_name: str
+    device_model: str
+    
+    # === STATUS AND METADATA ===
+    status: str  # 'online' | 'offline' | 'unreachable' | 'maintenance'
+    last_seen: float
+    registered_at: str
+    system_stats: Any  # SystemStats type
+    
+    # === HOST CAPABILITIES ===
+    capabilities: List[str]
+    controller_configs: Optional[Any]
+    controller_types: Optional[List[str]]
+    
+    # === DEVICE LOCK MANAGEMENT ===
+    isLocked: bool
+    lockedBy: Optional[str]
+    lockedAt: Optional[float]
 
