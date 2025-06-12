@@ -90,14 +90,14 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       setIsLoading(true);
       setError(null);
       
-      const fullUrl = `${SERVER_BASE_URL}/server/system/clients/devices`; 
+      const fullUrl = `${SERVER_BASE_URL}/server/system/getAllHosts`; 
       const response = await fetch(fullUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const result = await response.json();
       if (result.success) {
-        const rawHosts = result.devices || [];
+        const rawHosts = result.hosts || [];
         console.log(`[@context:Registration] Received ${rawHosts.length} hosts from server`);
         
         // Use server response directly - no transformation needed

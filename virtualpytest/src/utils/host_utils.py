@@ -116,16 +116,27 @@ def register_host_with_server():
                 client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
                 client_registration_state['urls'] = urls
                 
-                # Store global host object
+                # Store global host object from server response (includes all server-added data)
                 global_host_object = response_data.get('host_data', {})
                 
                 print(f"\n✅ [HOST] Registration successful!")
                 print(f"   Host Name: {host_name}")
+                print(f"   Server returned host object with keys: {list(global_host_object.keys())}")
                 
-                # Create local controllers directly from device model (no server response needed)
+                # Create local controllers using the device model and add them to the host object
                 print(f"\n🎮 [HOST] Creating local controllers for device model: {device_model}")
-                created_controllers = create_local_controllers_from_model(device_model, device_name, device_ip, device_port)
+                created_controllers = create_local_controllers_from_model(
+                    device_model, 
+                    device_name, 
+                    device_ip, 
+                    device_port,
+                    os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce')  # Use team_id from env
+                )
                 print(f"   Created controllers: {list(created_controllers.keys())}")
+                
+                # Add controller objects to the global host object (local host management)
+                global_host_object['local_controller_objects'] = created_controllers
+                print(f"   Added controller objects to host object")
                 
                 # Start periodic ping thread
                 start_ping_thread()

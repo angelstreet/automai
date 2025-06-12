@@ -24,12 +24,12 @@ export * from './pages/Environment_Types';
 export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
 
-// Export UserInterface types with explicit naming to avoid ViewMode conflict
+// Export UserInterface types 
 export type {
   UserInterface,
   UserInterfaceCreatePayload,
   ScreenDefinitionEditorProps,
-  ViewMode as UIViewMode,  // Alias to avoid conflict with Dashboard ViewMode
+  ScreenViewMode,
   StreamStatus,
   LayoutConfig,
   DeviceResolution,
@@ -70,8 +70,4 @@ export type {
   ControllerType as RemoteControllerType
 } from './controller/Remote_Types';
 
-export * from './features/Validation_Types';
-
-// Additional exports if needed for specific contexts
-export type { ScreenViewMode } from './pages/UserInterface_Types';
-export type { DataViewMode } from './pages/Dashboard_Types'; 
+export * from './features/Validation_Types'; 

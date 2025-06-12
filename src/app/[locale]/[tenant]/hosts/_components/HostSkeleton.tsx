@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { useHostViewStore } from '@/store/hostViewStore';
 
 interface HostSkeletonProps {
   hostCount?: number;
@@ -17,10 +16,8 @@ export default function HostSkeleton({ hostCount = 0 }: HostSkeletonProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Only access the store on the client side
     setMounted(true);
-    const { viewMode: storeViewMode } = useHostViewStore.getState();
-    setViewMode(storeViewMode);
+    // Simple default - no store access needed
   }, []);
 
   // Calculate how many items to show in skeleton

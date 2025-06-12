@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   ScreenEditorState, 
   ScreenEditorActions, 
-  ViewMode, 
+  ScreenViewMode, 
   StreamStatus,
   SelectedArea 
-} from '../types/screenEditorTypes';
+} from '../../types/pages/UserInterface_Types';
 import { 
   createCompactLayoutConfig, 
   getVerificationLayout, 
@@ -35,7 +35,7 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
   const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('stream');
+  const [viewMode, setViewMode] = useState<ScreenViewMode>('stream');
   
   // Memoize sx props to prevent new object references
   const streamViewerSx = useMemo(() => createStreamViewerSx(viewMode), [viewMode]);

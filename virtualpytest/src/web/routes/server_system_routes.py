@@ -135,12 +135,12 @@ def clear_logs():
         }), 500
 
 @system_bp.route('/register', methods=['POST'])
-def register_client():
+def register_host():
     """Host registers with server"""
     try:
         host_info = request.get_json()
         
-        print(f"[@route:register_client] Host registration request received:")
+        print(f"[@route:register_host] Host registration request received:")
         print(f"   Host info keys: {list(host_info.keys()) if host_info else 'None'}")
         print(f"   Host name: {host_info.get('host_name', 'Not provided')}")
         print(f"   Host IP: {host_info.get('host_ip', 'Not provided')}")
@@ -160,29 +160,12 @@ def register_client():
             print(f"   Received fields: {list(host_info.keys()) if host_info else 'None'}")
             return jsonify({'error': error_msg}), 400
         
-        # Validate field values
-        validation_errors = []
-        
-        if not host_info.get('host_ip'):
-            validation_errors.append('host_ip cannot be empty')
-        
-        if not host_info.get('device_model'):
-            validation_errors.append('device_model cannot be empty')
-        
-        if not host_info.get('host_name'):
-            validation_errors.append('host_name cannot be empty')
-        
-        if validation_errors:
-            error_msg = f'Validation errors: {"; ".join(validation_errors)}'
-            print(f"❌ [SERVER] Registration failed: {error_msg}")
-            return jsonify({'error': error_msg}), 400
-        
         # Extract and set port defaults - complete port structure
         host_port_internal = host_info.get('host_port_internal', '6119')
         host_port_external = host_info.get('host_port_external', host_port_internal)
         host_port_web = host_info.get('host_port_web', '444')
         
-        print(f"[@route:register_client] Port configuration:")
+        print(f"[@route:register_host] Port configuration:")
         print(f"   Internal Port: {host_port_internal} (Flask app)")
         print(f"   External Port: {host_port_external} (Server access)")
         print(f"   Web Port: {host_port_web} (HTTPS/nginx)")
@@ -192,14 +175,14 @@ def register_client():
         device_ip = host_info.get('device_ip', host_info['host_ip'])  # Fallback to host IP if not provided
         device_port = host_info.get('device_port', '5555')  # Fallback to default ADB port
         
-        print(f"[@route:register_client] Device information received:")
+        print(f"[@route:register_host] Device information received:")
         print(f"   Device Name: {device_name} ({'provided' if host_info.get('device_name') else 'generated from model'})")
         print(f"   Device Model: {host_info['device_model']}")
         print(f"   Device IP: {device_ip} ({'provided' if host_info.get('device_ip') else 'using host IP'})")
         print(f"   Device Port: {device_port} ({'provided' if host_info.get('device_port') else 'default ADB port'})")
         
         # Build complete controller configs using factory
-        print(f"[@route:register_client] Building controller configs using factory...")
+        print(f"[@route:register_host] Building controller configs using factory...")
         controller_configs = create_controller_configs_from_device_info(
             device_model=host_info['device_model'],
             device_ip=device_ip,
@@ -212,7 +195,7 @@ def register_client():
         capabilities = get_device_capabilities_from_model(host_info['device_model'])
         controller_types = get_controller_types_from_model(host_info['device_model'])
         
-        print(f"[@route:register_client] Factory built:")
+        print(f"[@route:register_host] Factory built:")
         print(f"   Controller configs: {list(controller_configs.keys()) if controller_configs else 'None'}")
         print(f"   Capabilities: {capabilities}")
         print(f"   Controller types: {controller_types}")
@@ -220,7 +203,7 @@ def register_client():
         # Use controller config names as capabilities
         capabilities = list(controller_configs.keys()) if controller_configs else []
         
-        print(f"[@route:register_client] Controller configs available:")
+        print(f"[@route:register_host] Controller configs available:")
         print(f"   Controller types: {capabilities}")
         
         # Create a single, complete host object - SINGLE SOURCE OF TRUTH
@@ -234,20 +217,13 @@ def register_client():
             'host_port_external': host_port_external,     # For server communication
             'host_port_web': host_port_web,               # HTTPS/nginx port
             
-            # === DEVICE INFORMATION ===  
-            'name': device_name,                          # Device display name
-            'model': host_info['device_model'],           # Device model
-            'device_ip': device_ip,
-            'device_port': device_port,
-            
-            # === CONNECTION INFORMATION (embedded in host object) ===
-            'connection': {
-                'host_ip': host_info['host_ip'],
-                'host_port_external': host_port_external,
-                'host_port_web': host_port_web,
-                'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
-                'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
-            },
+            # === DEVICE CONFIGURATION === (aligned with Host_Types.ts)
+            'device_ip': device_ip,                       # Device IP address
+            'device_port': device_port,                   # Device port
+            'device_name': device_name,                   # Device display name
+            'device_model': host_info['device_model'],    # Device model for controller configuration
+            'flask_url': f"http://{host_info['host_ip']}:{host_port_external}",
+            'nginx_url': f"https://{host_info['host_ip']}:{host_port_web}"
             
             # === STATUS AND METADATA ===
             'status': 'online',
@@ -260,8 +236,7 @@ def register_client():
             
             # === CONTROLLER INFORMATION ===
             'controller_configs': controller_configs,     # Complete configs from factory
-            # 🚫 REMOVED: 'controller_objects' - Host manages its own controllers locally
-            
+           
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
             'lockedBy': None,
@@ -269,10 +244,10 @@ def register_client():
         }
         
         # Store host by host_name (primary key)
-        connected_clients = get_host_registry()
+        connected_hosts = get_host_registry()
         
         # Check if host is already registered (by host_name)
-        existing_host = connected_clients.get(host_info['host_name'])
+        existing_host = connected_hosts.get(host_info['host_name'])
         
         if existing_host:
             # Update existing host
@@ -285,13 +260,13 @@ def register_client():
             host_object['reconnected_at'] = datetime.now().isoformat()
             
             # Update with new data
-            connected_clients[host_info['host_name']] = host_object
+            connected_hosts[host_info['host_name']] = host_object
             set_health_check_threads(get_health_check_threads())
             
             print(f"✅ [SERVER] Host registration updated successfully")
         else:
             # New host registration
-            connected_clients[host_info['host_name']] = host_object
+            connected_hosts[host_info['host_name']] = host_object
             set_health_check_threads(get_health_check_threads())
             
             print(f"✅ [SERVER] New host registered successfully:")
@@ -317,8 +292,8 @@ def register_client():
         return jsonify({'error': error_msg}), 500
 
 @system_bp.route('/unregister', methods=['POST'])
-def unregister_client():
-    """Client unregisters from server"""
+def unregister_host():
+    """Host unregisters from server"""
     try:
         data = request.get_json()
         
@@ -327,14 +302,14 @@ def unregister_client():
         if not host_name:
             return jsonify({'error': 'Missing host_name'}), 400
         
-        connected_clients = get_host_registry()
+        connected_hosts = get_host_registry()
         
         # Find host by host_name
-        if host_name in connected_clients:
-            host_to_remove = connected_clients[host_name]
+        if host_name in connected_hosts:
+            host_to_remove = connected_hosts[host_name]
             
             # Remove host
-            del connected_clients[host_name]
+            del connected_hosts[host_name]
             set_health_check_threads(get_health_check_threads())
             
             print(f"🔌 Host unregistered: {host_name}")
@@ -363,166 +338,50 @@ def health_check():
         'system_stats': system_stats
     }), 200
 
-@system_bp.route('/health-with-devices', methods=['GET'])
-def health_check_with_devices():
-    """Health check endpoint that also returns connected devices"""
-    try:
-        system_stats = get_system_stats()
-        
-        # Get connected clients and clean up stale ones
-        connected_clients = get_host_registry()
-        
-        # Clean up stale clients (not seen for more than 2 minutes)
-        current_time = time.time()
-        stale_clients = []
-        
-        for client_id, client_info in connected_clients.items():
-            if current_time - client_info.get('last_seen', 0) > 120:  # 2 minutes
-                stale_clients.append(client_id)
-        
-        # Remove stale clients
-        for client_id in stale_clients:
-            remove_client(client_id)
-        
-        # Get updated clients list after cleanup
-        connected_clients = get_host_registry()
-        
-        # Format clients list
-        clients_list = []
-        for client_id, client_info in connected_clients.items():
-            clients_list.append({
-                'client_id': client_id,
-                'name': client_info.get('name'),
-                'device_model': client_info.get('device_model'),
-                'local_ip': client_info.get('local_ip'),
-                'client_port': client_info.get('client_port'),
-                'public_ip': client_info.get('public_ip'),
-                'capabilities': client_info.get('capabilities', []),
-                'status': client_info.get('status'),
-                'registered_at': client_info.get('registered_at'),
-                'last_seen': client_info.get('last_seen'),
-                'system_stats': client_info.get('system_stats', {
-                    'cpu': {'percent': 0},
-                    'memory': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-                    'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-                    'timestamp': 0
-                })
-            })
-        
-        print(f"💓 [HEALTH-CHECK] Health check with devices: {len(clients_list)} clients connected")
-        
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': time.time(),
-            'mode': os.getenv('SERVER_MODE', 'server'),
-            'system_stats': system_stats,
-            'clients': {
-                'status': 'success',
-                'clients': clients_list,
-                'total_clients': len(clients_list)
-            }
-        }), 200
-        
-    except Exception as e:
-        print(f"❌ [HEALTH-CHECK] Error in health check with devices: {e}")
-        return jsonify({
-            'status': 'error',
-            'timestamp': time.time(),
-            'mode': os.getenv('SERVER_MODE', 'server'),
-            'error': str(e)
-        }), 500
 
-@system_bp.route('/clients', methods=['GET'])
-def list_clients():
-    """Server lists all connected hosts"""
+
+@system_bp.route('/getAllHosts', methods=['GET'])
+def getAllHosts():
+    """Return all registered hosts - single REST endpoint for host listing"""
     try:
-        connected_clients = get_host_registry()
+        connected_hosts = get_host_registry()
         
         # Clean up stale hosts (not seen for more than 2 minutes)
         current_time = time.time()
         stale_hosts = []
         
-        for host_name, host_info in connected_clients.items():
+        for host_name, host_info in connected_hosts.items():
             if current_time - host_info.get('last_seen', 0) > 120:  # 2 minutes
                 stale_hosts.append(host_name)
         
         # Remove stale hosts
         for host_name in stale_hosts:
-            if host_name in connected_clients:
-                del connected_clients[host_name]
-                set_health_check_threads(get_health_check_threads())
-        
-        # Return current hosts
-        hosts_list = []
-        for host_name, host_info in connected_clients.items():
-            hosts_list.append({
-                'host_name': host_name,
-                'name': host_info.get('name'),
-                'device_model': host_info.get('model'),
-                'host_ip': host_info.get('host_ip'),
-                'host_port_external': host_info.get('host_port_external'),
-                'capabilities': host_info.get('capabilities', []),
-                'status': host_info.get('status'),
-                'registered_at': host_info.get('registered_at'),
-                'last_seen': host_info.get('last_seen'),
-                'system_stats': host_info.get('system_stats', {
-                    'cpu': {'percent': 0},
-                    'memory': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-                    'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-                    'timestamp': 0
-                })
-            })
-        
-        return jsonify({
-            'status': 'success',
-            'hosts': hosts_list,
-            'total_hosts': len(hosts_list)
-        }), 200
-        
-    except Exception as e:
-        print(f"❌ Error listing hosts: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@system_bp.route('/clients/devices', methods=['GET'])
-def list_clients_as_devices():
-    """Return registered devices with clean, consistent structure"""
-    try:
-        connected_clients = get_host_registry()
-        
-        # Clean up stale hosts (not seen for more than 2 minutes)
-        current_time = time.time()
-        stale_hosts = []
-        
-        for host_name, host_info in connected_clients.items():
-            if current_time - host_info.get('last_seen', 0) > 120:  # 2 minutes
-                stale_hosts.append(host_name)
-        
-        # Remove stale hosts
-        for host_name in stale_hosts:
-            if host_name in connected_clients:
-                del connected_clients[host_name]
+            if host_name in connected_hosts:
+                del connected_hosts[host_name]
                 set_health_check_threads(get_health_check_threads())
         
         # Return complete stored objects exactly as-is - no manual processing
-        devices = [
+        # Filter to only online hosts for active use
+        hosts = [
             {k: v for k, v in host_info.items() if k != 'controller_objects'}
-            for host_name, host_info in connected_clients.items()
+            for host_name, host_info in connected_hosts.items()
             if host_info.get('status') == 'online'
         ]
         
-        print(f"📱 [DEVICES] Returning {len(devices)} online devices from registered hosts")
-        for device in devices:
-            print(f"   Device: {device['name']} ({device['model']}) on host: {device['host_name']}")
+        print(f"🖥️ [HOSTS] Returning {len(hosts)} online hosts")
+        for host in hosts:
+            print(f"   Host: {host['host_name']} - Device: {host['device_name']} ({host['device_model']})")
         
         return jsonify({
             'success': True,
-            'devices': devices,
-            'total_devices': len(devices)
+            'hosts': hosts
         }), 200
         
     except Exception as e:
-        print(f"❌ [DEVICES] Error listing devices: {e}")
+        print(f"❌ [HOSTS] Error listing hosts: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
 
 @system_bp.route('/environment-profiles', methods=['GET'])
 def get_environment_profiles():
@@ -587,10 +446,10 @@ def client_ping():
         if not host_name:
             return jsonify({'error': 'Missing host_name in ping'}), 400
         
-        connected_clients = get_host_registry()
+        connected_hosts = get_host_registry()
         
         # Find host by host_name
-        if host_name not in connected_clients:
+        if host_name not in connected_hosts:
             # Host not registered, ask them to register
             print(f"📍 [PING] Unknown host {host_name} sending registration request")
             return jsonify({
@@ -600,7 +459,7 @@ def client_ping():
             }), 404
         
         # Update host information
-        host_to_update = connected_clients[host_name]
+        host_to_update = connected_hosts[host_name]
         current_time = time.time()
         host_to_update['last_seen'] = current_time
         host_to_update['status'] = 'online'
@@ -700,110 +559,6 @@ def start_health_check(client_id, client_ip, client_port):
         set_health_check_threads(health_check_threads)
         print(f"🏥 [HEALTH] Started health check thread for client {client_id[:8]}...")
 
-def remove_client_with_app(client_id, app_instance):
-    """Remove a client from the registry with app instance"""
-    try:
-        print(f"🗑️ [CLEANUP] Attempting to remove client {client_id[:8]}...")
-        
-        with app_instance.app_context():
-            connected_clients = getattr(app_instance, '_connected_clients', {})
-            health_check_threads = getattr(app_instance, '_health_check_threads', {})
-            
-            if client_id in connected_clients:
-                client_info = connected_clients[client_id]
-                del connected_clients[client_id]
-                app_instance._connected_clients = connected_clients
-                print(f"🗑️ [CLEANUP] Removed client: {client_info.get('name', client_id[:8])}")
-            else:
-                print(f"⚠️ [CLEANUP] Client {client_id[:8]}... not found in connected clients")
-            
-            # Clean up health check thread
-            if client_id in health_check_threads:
-                del health_check_threads[client_id]
-                app_instance._health_check_threads = health_check_threads
-                print(f"🗑️ [CLEANUP] Cleaned up health check thread for {client_id[:8]}...")
-            else:
-                print(f"⚠️ [CLEANUP] No health check thread found for {client_id[:8]}...")
-                
-            print(f"✅ [CLEANUP] Successfully removed client {client_id[:8]}...")
-            
-    except Exception as e:
-        print(f"❌ [CLEANUP] Error removing client {client_id[:8]}...: {e}")
-        import traceback
-        traceback.print_exc()
-
-def remove_client(client_id):
-    """Remove a client from the registry"""
-    try:
-        from flask import current_app
-        
-        print(f"🗑️ [CLEANUP] Attempting to remove client {client_id[:8]}...")
-        
-        # Try to get app context, if not available use direct access
-        try:
-            connected_clients = get_host_registry()
-            health_check_threads = get_health_check_threads()
-            print(f"🗑️ [CLEANUP] Got app context successfully for {client_id[:8]}...")
-        except RuntimeError:
-            # If we're outside app context, try to get app directly
-            try:
-                app = current_app._get_current_object()
-                connected_clients = getattr(app, '_connected_clients', {})
-                health_check_threads = getattr(app, '_health_check_threads', {})
-                print(f"🗑️ [CLEANUP] Got app object directly for {client_id[:8]}...")
-            except Exception as app_error:
-                print(f"❌ [CLEANUP] Could not access app context to remove client {client_id[:8]}...: {app_error}")
-                return
-        
-        if client_id in connected_clients:
-            client_info = connected_clients[client_id]
-            del connected_clients[client_id]
-            
-            # Update the app state
-            try:
-                set_health_check_threads(get_health_check_threads())
-                print(f"��️ [CLEANUP] Updated connected clients list")
-            except RuntimeError:
-                # Direct update if context not available
-                try:
-                    app = current_app._get_current_object()
-                    app._connected_clients = connected_clients
-                    print(f"🗑️ [CLEANUP] Updated connected clients directly")
-                except Exception as update_error:
-                    print(f"⚠️ [CLEANUP] Could not update connected clients: {update_error}")
-            
-            print(f"🗑️ [CLEANUP] Removed client: {client_info.get('name', client_id[:8])}")
-        else:
-            print(f"⚠️ [CLEANUP] Client {client_id[:8]}... not found in connected clients")
-        
-        # Clean up health check thread
-        if client_id in health_check_threads:
-            thread = health_check_threads[client_id]
-            del health_check_threads[client_id]
-            
-            try:
-                set_health_check_threads(health_check_threads)
-                print(f"🗑️ [CLEANUP] Updated health check threads list")
-            except RuntimeError:
-                # Direct update if context not available
-                try:
-                    app = current_app._get_current_object()
-                    app._health_check_threads = health_check_threads
-                    print(f"🗑️ [CLEANUP] Updated health check threads directly")
-                except Exception as update_error:
-                    print(f"⚠️ [CLEANUP] Could not update health check threads: {update_error}")
-            
-            print(f"🗑️ [CLEANUP] Cleaned up health check thread for {client_id[:8]}...")
-        else:
-            print(f"⚠️ [CLEANUP] No health check thread found for {client_id[:8]}...")
-            
-        print(f"✅ [CLEANUP] Successfully removed client {client_id[:8]}...")
-            
-    except Exception as e:
-        print(f"❌ [CLEANUP] Error removing client {client_id[:8]}...: {e}")
-        import traceback
-        traceback.print_exc()
-
 def find_available_client(device_model):
     """Find an available client for the given device model"""
     connected_clients = get_host_registry()
@@ -815,46 +570,3 @@ def find_available_client(device_model):
     
     return None
 
-def get_system_stats():
-    """Get current system statistics (CPU, RAM, Disk)"""
-    try:
-        # CPU usage percentage
-        cpu_percent = psutil.cpu_percent(interval=1)
-        
-        # Memory usage
-        memory = psutil.virtual_memory()
-        memory_percent = memory.percent
-        memory_used_gb = memory.used / (1024**3)
-        memory_total_gb = memory.total / (1024**3)
-        
-        # Disk usage (root partition)
-        disk = psutil.disk_usage('/')
-        disk_percent = (disk.used / disk.total) * 100
-        disk_used_gb = disk.used / (1024**3)
-        disk_total_gb = disk.total / (1024**3)
-        
-        return {
-            'cpu': {
-                'percent': round(cpu_percent, 1)
-            },
-            'memory': {
-                'percent': round(memory_percent, 1),
-                'used_gb': round(memory_used_gb, 2),
-                'total_gb': round(memory_total_gb, 2)
-            },
-            'disk': {
-                'percent': round(disk_percent, 1),
-                'used_gb': round(disk_used_gb, 2),
-                'total_gb': round(disk_total_gb, 2)
-            },
-            'timestamp': time.time()
-        }
-    except Exception as e:
-        print(f"⚠️ [SYSTEM] Error getting system stats: {e}")
-        return {
-            'cpu': {'percent': 0},
-            'memory': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-            'disk': {'percent': 0, 'used_gb': 0, 'total_gb': 0},
-            'timestamp': time.time(),
-            'error': str(e)
-        } 

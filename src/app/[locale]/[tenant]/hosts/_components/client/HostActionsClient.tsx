@@ -14,10 +14,16 @@ import { HostsEvents } from './HostEventListener';
 import { HostFormDialogClient, FormData as ConnectionFormData } from './HostFormDialogClient';
 
 interface HostActionsClientProps {
-  hostCount?: number;
+  hostCount: number;
+  viewMode: 'grid' | 'table';
+  onViewModeToggle: () => void;
 }
 
-export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActionsClientProps) {
+export default function HostActionsClient({ 
+  hostCount, 
+  viewMode, 
+  onViewModeToggle 
+}: HostActionsClientProps) {
   const t = useTranslations('hosts');
   const c = useTranslations('common');
   const {
@@ -26,9 +32,6 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     refetchHosts,
     testConnection: _testConnection,
   } = useHost();
-
-  // Get view mode state from Zustand store
-  const { viewMode, toggleViewMode } = useHostViewStore();
 
   const [showAddHost, setShowAddHost] = useState(false);
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -57,7 +60,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
   });
 
   // Derive host count from React Query's hosts data, falling back to the prop
-  const currentHostCount = hosts?.length ?? initialHostCount;
+  const currentHostCount = hosts?.length ?? hostCount;
 
   // Listen for host-specific testing events
   useEffect(() => {
@@ -198,9 +201,7 @@ export function HostActionsClient({ hostCount: initialHostCount = 0 }: HostActio
     console.log(
       `[@component:HostActionsClient] Toggling view mode from ${viewMode} to ${viewMode === 'grid' ? 'table' : 'grid'}`,
     );
-    // Toggle view mode using Zustand store
-    toggleViewMode();
-    // Still dispatch the event for any listeners that might be interested
+    onViewModeToggle();
     window.dispatchEvent(new Event(HostsEvents.TOGGLE_HOST_VIEW_MODE));
   };
 

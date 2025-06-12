@@ -36,7 +36,7 @@ export interface LogEntry {
   details?: any;
 }
 
-export type DataViewMode = 'grid' | 'table';
+export type ViewMode = 'grid' | 'table';
 
 export type LogLevel = 'all' | 'info' | 'warn' | 'error' | 'debug';
 export type LogSource = 'all' | 'frontend' | 'backend';

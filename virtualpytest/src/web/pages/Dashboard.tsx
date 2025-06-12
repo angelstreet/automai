@@ -49,7 +49,7 @@ import {
   DashboardStats,
   RecentActivity,
   LogEntry,
-  DataViewMode,
+  ViewMode,
   LogLevel,
   LogSource,
   SystemStats,
@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<DataViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   
   // Debug logs state
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -223,7 +223,7 @@ const Dashboard: React.FC = () => {
 
   const handleViewModeChange = (
     _event: React.MouseEvent<HTMLElement>,
-    newViewMode: DataViewMode,
+    newViewMode: ViewMode,
   ) => {
     if (newViewMode !== null) {
       setViewMode(newViewMode);

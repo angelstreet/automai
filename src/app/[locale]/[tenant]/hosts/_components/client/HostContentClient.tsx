@@ -7,7 +7,6 @@ import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/w
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useHost } from '@/hooks/useHost';
-import { useHostViewStore } from '@/store/hostViewStore';
 import { Host } from '@/types/component/hostComponentType';
 
 import HostEventListener, { HostsEvents } from './HostEventListener';
@@ -17,24 +16,23 @@ import { TerminalContainer } from './TerminalContainer';
 
 interface HostContentClientProps {
   initialHosts: Host[];
+  viewMode: 'grid' | 'table';
 }
 
 /**
  * Client component for displaying and managing hosts
  * Supports both grid and table views with React Query for state management
  */
-export { HostContentClient as default, HostContentClient };
-
-function HostContentClient({ initialHosts }: HostContentClientProps) {
+export default function HostContentClient({ 
+  initialHosts, 
+  viewMode 
+}: HostContentClientProps) {
   // Initialize React Query with initial data from server
   const {
     hosts: queryHosts,
     deleteHost: deleteHostMutation,
     testConnection: testConnectionMutation,
   } = useHost();
-
-  // Get view mode from Zustand store
-  const { viewMode } = useHostViewStore();
 
   // Use state for hosts with initialHosts as initial value
   // This will be updated by React Query when data is fetched
