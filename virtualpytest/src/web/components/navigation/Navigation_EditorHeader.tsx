@@ -35,6 +35,7 @@ export const NavigationEditorHeader: React.FC<{
   onResetFocus: () => void;
   onToggleRemotePanel: () => void;
   onTakeControl: () => Promise<void>;
+  onDeviceSelect: (device: string | null) => void;
   onUpdateNode: (nodeId: string, updatedData: any) => void;
   onUpdateEdge: (edgeId: string, updatedData: any) => void;
 }> = ({
@@ -60,17 +61,12 @@ export const NavigationEditorHeader: React.FC<{
   onResetFocus,
   onToggleRemotePanel,
   onTakeControl,
+  onDeviceSelect,
   onUpdateNode,
   onUpdateEdge,
 }) => {
   // Get host data from RegistrationContext
   const { availableHosts, isDeviceLocked } = useRegistration();
-
-  // Handle device selection
-  const handleDeviceSelect = (device: string | null) => {
-    console.log(`[@component:NavigationEditorHeader] Selected device: ${device}`);
-    // Implementation would go here
-  };
 
   return (
     <>
@@ -143,7 +139,7 @@ export const NavigationEditorHeader: React.FC<{
               error={error}
               availableHosts={availableHosts}
               isDeviceLocked={isDeviceLocked}
-              onDeviceSelect={handleDeviceSelect}
+              onDeviceSelect={onDeviceSelect}
               onTakeControl={onTakeControl}
               onToggleRemotePanel={onToggleRemotePanel}
             />

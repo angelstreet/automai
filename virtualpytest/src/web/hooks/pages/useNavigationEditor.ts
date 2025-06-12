@@ -566,8 +566,14 @@ export const useNavigationEditor = () => {
 
   // Handle device selection
   const handleDeviceSelect = useCallback(
-    (hostName: string) => {
+    (hostName: string | null) => {
       console.log(`[@hook:useNavigationEditor] Host selected: ${hostName}`);
+
+      if (!hostName) {
+        console.log(`[@hook:useNavigationEditor] No host selected, clearing selection`);
+        setSelectedHost(null);
+        return;
+      }
 
       const host = getHostByName(hostName);
       if (host) {
