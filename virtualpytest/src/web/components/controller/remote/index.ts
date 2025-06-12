@@ -1,14 +1,7 @@
-// Controller Overview Components
-export { ControllerTypesOverview } from './implementations/ControllerTypesOverview';
-export { ControllerImplementations } from './implementations/ControllerImplementations';
+// Main Remote Components (Flat Structure)
+export { RemotePanel } from './RemotePanel';
+export { AndroidMobileRemote } from './AndroidMobileRemote';
 
-// Abstract Remote Components
-export { RemoteInterface } from './abstract/RemoteInterface';
-export { RemotePanel } from './abstract/RemotePanel';
-export { CompactRemote } from './abstract/CompactRemote';
-export { RemoteCore } from './abstract/RemoteCore';
-
-// Android Remote Components
-export { CompactAndroidMobile } from './android/CompactAndroidMobile';
-export { AndroidMobileCore } from './android/AndroidMobileCore';
-export { AndroidMobileOverlay } from './android/AndroidMobileOverlay';
+// Android Remote Support Components
+export { AndroidMobileCore } from './AndroidMobileCore';
+export { AndroidMobileOverlay } from './AndroidMobileOverlay';

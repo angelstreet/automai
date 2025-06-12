@@ -11,8 +11,8 @@ import {
 } from '@mui/icons-material';
 
 // Import NEW generic remote components instead of device-specific ones
-import { CompactRemote } from '../components/controller/remote/abstract/CompactRemote';
-import { CompactAndroidMobile } from '../components/controller/remote/android/CompactAndroidMobile';
+import { RemotePanel } from '../components/controller/remote/RemotePanel';
+import { AndroidMobileRemote } from '../components/controller/remote/AndroidMobileRemote';
 
 // Import ScreenDefinitionEditor
 import { ScreenDefinitionEditor } from '../components/controller/screen/ScreenDefinitionEditor';
@@ -349,7 +349,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 </Typography>
               </Box>
               
-              <CompactAndroidMobile
+              <AndroidMobileRemote
                 onDisconnectComplete={onReleaseControl}
               />
             </Box>
@@ -386,7 +386,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
               
               {/* Remote Panel Content - Dynamic based on device type */}
               {remoteConfig.type === 'android_tv' ? (
-                <CompactRemote
+                <RemotePanel
                   remoteType="android-tv"
                   connectionConfig={androidConnectionConfig || undefined}
                   autoConnect={isControlActive}
@@ -394,14 +394,14 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                   onDisconnectComplete={onReleaseControl}
                 />
               ) : remoteConfig.type === 'ir_remote' ? (
-                <CompactRemote
+                <RemotePanel
                   remoteType="ir"
                   connectionConfig={(irConnectionConfig || undefined) as any}
                   autoConnect={isControlActive}
                   onDisconnectComplete={onReleaseControl}
                 />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
-                <CompactRemote
+                <RemotePanel
                   remoteType="bluetooth"
                   connectionConfig={(bluetoothConnectionConfig || undefined) as any}
                   autoConnect={isControlActive}

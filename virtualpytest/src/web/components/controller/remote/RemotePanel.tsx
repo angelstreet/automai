@@ -10,7 +10,6 @@ import {
 } from '@mui/material';
 import { useRegistration } from '../../../contexts/RegistrationContext';
 import { RemoteType, BaseConnectionConfig } from '../../../types/controller/Remote_Types';
-import { RemoteInterface } from './RemoteInterface';
 
 interface RemotePanelProps {
   /** The type of remote device */

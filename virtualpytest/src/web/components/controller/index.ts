@@ -1,7 +1,9 @@
+// Controller Overview Components
+export { ControllerImplementations } from './ControllerImplementations';
+export { ControllerTypesOverview } from './ControllerTypesOverview';
+
 // Remote Controllers
-export * from './remote/abstract';
-export * from './remote/android';
-export * from './remote/implementations';
+export * from './remote';
 
 // AV Controllers  
 export * from './av';
@@ -10,7 +12,4 @@ export * from './av';
 export * from './screen';
 
 // Verification Controllers
-export * from './verification';
-
-// Legacy compatibility - re-export from old remote index
-export * from './remote'; 
+export * from './verification'; 

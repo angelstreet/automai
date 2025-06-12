@@ -12,7 +12,7 @@ const getRemoteLayout = () => ({
   containerHeight: 600
 });
 
-export function CompactAndroidMobile({
+export function AndroidMobileRemote({
   onDisconnectComplete,
   sx = {},
 }: {
