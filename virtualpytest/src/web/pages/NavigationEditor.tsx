@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -121,9 +121,9 @@ const NavigationEditorContent: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
-  // Header is now autonomous for device management
-
-  // Device selection is now handled autonomously by the header
+  // Use navigation hook for device management
+  // This hook handles: interface fetching, host filtering, device control, take control, screenshots
+  // The header will use this same hook to be autonomous
 
   const {
     // State
@@ -287,29 +287,10 @@ const NavigationEditorContent: React.FC = () => {
   ]);
 
   // ========================================
-  // 3. DEVICE CONTROL STATE
+  // 3. DEVICE CONTROL - HANDLED BY HOOK
   // ========================================
 
-  // Device control state - moved here to be accessible by handlers
-  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
-  const [isControlActive, setIsControlActive] = useState(false);
-  const [isVerificationActive, setIsVerificationActive] = useState(false);
-  const [verificationControllerStatus, setVerificationControllerStatus] = useState<{
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  }>({
-    image_controller_available: false,
-    text_controller_available: false,
-  });
-  const [verificationResults, setVerificationResults] = useState<any[]>([]);
-  const [verificationPassCondition, setVerificationPassCondition] = useState<'all' | 'any'>('all');
-  const [lastVerifiedNodeId, setLastVerifiedNodeId] = useState<string | null>(null);
-
-  // ========================================
-  // 4. DEVICE CONTROL MANAGEMENT
-  // ========================================
-
-  // Device control is now handled autonomously by the header
+  // All device control logic is now in useNavigation hook
 
   // ========================================
   // 6. EVENT HANDLERS SETUP
@@ -383,9 +364,6 @@ const NavigationEditorContent: React.FC = () => {
         lockInfo={lockInfo}
         sessionId={sessionId}
         userInterface={userInterface}
-        selectedDevice={selectedDeviceName}
-        isControlActive={isControlActive}
-        isRemotePanelOpen={isRemotePanelOpen}
         devicesLoading={false}
         treeId={currentTreeId}
         onNavigateToParent={navigateToParent}
@@ -426,7 +404,7 @@ const NavigationEditorContent: React.FC = () => {
             minHeight: '500px',
             overflow: 'hidden',
             transition: 'margin-right',
-            marginRight: isRemotePanelOpen ? '320px' : '0px',
+            marginRight: '0px', // Remote panel managed by header
           }}
         >
           <>
@@ -552,14 +530,8 @@ const NavigationEditorContent: React.FC = () => {
                     setNodeForm={setNodeForm}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                     onReset={resetNode}
-                    isControlActive={isControlActive}
-                    selectedDevice={selectedDeviceName}
-                    onTakeScreenshot={() => {}} // Handled by take control action
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
-                    onVerification={() => {}} // Handled by take control action
-                    isVerificationActive={isVerificationActive}
-                    verificationControllerStatus={verificationControllerStatus}
                     onUpdateNode={handleUpdateNode}
                   />
                 )}
@@ -572,8 +544,6 @@ const NavigationEditorContent: React.FC = () => {
                     onDelete={deleteSelected}
                     setEdgeForm={setEdgeForm}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                    isControlActive={isControlActive}
-                    selectedDevice={selectedDeviceName}
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                   />
@@ -595,11 +565,6 @@ const NavigationEditorContent: React.FC = () => {
         onSubmit={handleNodeFormSubmit}
         onClose={cancelNodeChanges}
         onResetNode={resetNode}
-        verificationControllerTypes={['text', 'image']}
-        isVerificationActive={isVerificationActive}
-        selectedDevice={selectedDeviceName}
-        selectedHostDevice={null}
-        isControlActive={isControlActive}
         model={userInterface?.models?.[0] || 'android_mobile'}
       />
 
@@ -612,9 +577,6 @@ const NavigationEditorContent: React.FC = () => {
         onClose={() => setIsEdgeDialogOpen(false)}
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
-        isControlActive={isControlActive}
-        selectedDevice={selectedDeviceName}
-        selectedHostDevice={null}
       />
 
       {/* Discard Changes Confirmation Dialog */}
