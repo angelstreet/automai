@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Alert } from '@mui/material';
 
 import { useRemoteConnection } from '../../../hooks/controller/useRemoteConnection';
-import { AndroidMobileCore } from './AndroidMobileCore';
+import { AndroidMobileControls } from './AndroidMobileControls';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 
@@ -173,7 +173,7 @@ export function AndroidMobileRemote({
         margin: '0 auto',
         width: '100%'
       }}>
-        <AndroidMobileCore
+        <AndroidMobileControls
           session={{ connected: true, device_ip: 'autonomous' }} // Always connected for autonomous remote
           connectionLoading={connectionLoading}
           connectionError={connectionError}

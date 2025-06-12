@@ -3,7 +3,7 @@ export { RemotePanel } from './RemotePanel';
 export { AndroidMobileRemote } from './AndroidMobileRemote';
 
 // Android Remote Support Components
-export { AndroidMobileCore } from './AndroidMobileCore';
+export { AndroidMobileControls } from './AndroidMobileControls';
 export { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
 // Controller Overview Components
