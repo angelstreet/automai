@@ -1,26 +1,5 @@
 import { useCallback } from 'react';
-import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
-
-interface NodeEdgeManagementProps {
-  nodes: UINavigationNode[];
-  edges: UINavigationEdge[];
-  selectedNode: UINavigationNode | null;
-  selectedEdge: UINavigationEdge | null;
-  nodeForm: any;
-  edgeForm: any;
-  isNewNode: boolean;
-  setNodes: (nodes: any) => void;
-  setEdges: (edges: any) => void;
-  setSelectedNode: (node: UINavigationNode | null) => void;
-  setSelectedEdge: (edge: UINavigationEdge | null) => void;
-  setNodeForm: (form: any) => void;
-  setEdgeForm: (form: any) => void;
-  setIsNodeDialogOpen: (isOpen: boolean) => void;
-  setIsEdgeDialogOpen: (isOpen: boolean) => void;
-  setIsNewNode: (isNew: boolean) => void;
-  setHasUnsavedChanges: (hasChanges: boolean) => void;
-  // setAllNodes/setAllEdges removed - using single source of truth
-}
+import { UINavigationNode, UINavigationEdge, NodeEdgeManagementProps } from '../../types/pages/Navigation_Types';
 
 export const useNodeEdgeManagement = (props: NodeEdgeManagementProps) => {
   const {

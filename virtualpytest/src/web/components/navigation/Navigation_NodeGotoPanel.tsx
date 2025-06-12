@@ -19,7 +19,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
-import { NavigationApi, NavigationStep, NavigationPreviewResponse } from '../../utils/navigation/navigationUtils';
+import { NavigationStep, NavigationPreviewResponse, NavigationExecuteResponse } from '../../utils/navigation/navigationUtils';
 
 interface NodeGotoPanelProps {
   selectedNode: UINavigationNode;
@@ -91,17 +91,26 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     try {
       console.log(`[@component:NodeGotoPanel] Loading navigation preview for node: ${selectedNode.id}`);
       
-      const response = await NavigationApi.getNavigationPreview(
-        treeId,
-        selectedNode.id,
-        currentNodeId
-      );
+      // Use relative URL that goes through Vite proxy
+      const url = new URL(`/server/navigation/preview/${treeId}/${selectedNode.id}`, window.location.origin);
+      if (currentNodeId) {
+        url.searchParams.append('current_node_id', currentNodeId);
+      }
 
-      if (response.success) {
-        setNavigationSteps(response.steps);
-        console.log(`[@component:NodeGotoPanel] Loaded ${response.total_steps} navigation steps`);
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result: NavigationPreviewResponse = await response.json();
+
+      if (result.success) {
+        setNavigationSteps(result.steps);
+        console.log(`[@component:NodeGotoPanel] Loaded ${result.total_steps} navigation steps`);
       } else {
-        setError(response.error || 'Failed to load navigation preview');
+        setError(result.error || 'Failed to load navigation preview');
       }
     } catch (err) {
       setError(`Failed to load navigation preview: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -118,22 +127,26 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     try {
       console.log(`[@component:NodeGotoPanel] Executing navigation to node: ${selectedNode.id}`);
       
-      const response = await NavigationApi.executeNavigation(
-        treeId,
-        selectedNode.id,
-        currentNodeId,
-        true
-      );
+      // Use relative URL that goes through Vite proxy
+      const response = await fetch(`/server/navigation/navigate/${treeId}/${selectedNode.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          current_node_id: currentNodeId,
+          execute: true,
+        }),
+      });
 
-      if (response.success) {
+      const result: NavigationExecuteResponse = await response.json();
+
+      if (result.success) {
         let successMessage = 'Navigation completed successfully!';
         
-        // Use the new transition/action counts from API (type assertion for new fields)
-        const execResponse = response as any;
-        if (execResponse.transitions_executed && execResponse.total_transitions) {
-          successMessage = `Executed ${execResponse.transitions_executed}/${execResponse.total_transitions} in ${execResponse.execution_time?.toFixed(2) || 0}s`;
-        } else if (execResponse.final_message) {
-          successMessage = execResponse.final_message;
+        // Use the new step counts from API
+        if (result.steps_executed && result.total_steps) {
+          successMessage = `Executed ${result.steps_executed}/${result.total_steps} steps in ${result.execution_time?.toFixed(2) || 0}s`;
         }
 
         setExecutionMessage(successMessage);
@@ -142,8 +155,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         // Refresh the step list to show any updates
         await loadNavigationPreview();
       } else {
-        const execResponse = response as any;
-        const errorMessage = execResponse.error || execResponse.error_message || 'Navigation failed';
+        const errorMessage = result.error || 'Navigation failed';
         setExecutionMessage(`Navigation failed: ${errorMessage}`);
         setIsExecuting(false);
       }

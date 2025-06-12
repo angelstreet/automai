@@ -23,41 +23,7 @@ import { useRegistration } from '../contexts/RegistrationContext';
 
 // Import verification display
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
-
-interface NavigationEditorDeviceControlProps {
-  // Device state
-  selectedHost: any;
-  isControlActive: boolean;
-  isRemotePanelOpen: boolean;
-  
-  // Verification state
-  isVerificationActive: boolean;
-  verificationControllerStatus: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  };
-  verificationResults: any[];
-  verificationPassCondition: 'all' | 'any';
-  lastVerifiedNodeId: string | null;
-  
-  // Node/Edge data for verification
-  nodes: any[];
-  selectedNode: any;
-  selectedEdge: any;
-  
-  // UI state
-  userInterface: any;
-  
-  // Event handlers
-  onReleaseControl: () => void;
-  onUpdateNode: (nodeId: string, updatedData: any) => void;
-  onSetVerificationResults: (results: any[]) => void;
-  onSetLastVerifiedNodeId: (nodeId: string | null) => void;
-  onSetVerificationPassCondition: (condition: 'all' | 'any') => void;
-  onSetNodes: (updateFunction: (nodes: any[]) => any[]) => void;
-  onSetSelectedNode: (node: any) => void;
-  onSetHasUnsavedChanges: (hasChanges: boolean) => void;
-}
+import { NavigationEditorDeviceControlProps } from '../types/pages/Navigation_Types';
 
 export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceControlProps> = ({
   selectedHost,

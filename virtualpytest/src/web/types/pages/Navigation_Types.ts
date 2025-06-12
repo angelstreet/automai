@@ -1,20 +1,21 @@
 import { Node, Edge } from 'reactflow';
 
+// =====================================================
+// CORE NAVIGATION TYPES
+// =====================================================
+
 // Verification interface for node verifications
 export interface NodeVerification {
   id: string;
   label: string;
-  command: 'waitForImageToAppear' | 'waitForImageToDisappear' | 'waitForTextToAppear' | 'waitForTextToDisappear';
-  controller_type: 'image' | 'text';
-  params: {
-    image_path?: string;
-    text?: string;
-    timeout?: number;
-    threshold?: number;
-    case_sensitive?: boolean;
-    area?: [number, number, number, number]; // [x, y, width, height]
-  };
+  command: string;
+  controller_type: 'image' | 'text' | 'adb'; // Keep ADB support
+  params: any;
   description?: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+  inputValue?: string;
   last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
 }
 
@@ -93,6 +94,10 @@ export interface NavigationTreeData {
   };
 }
 
+// =====================================================
+// FORM TYPES
+// =====================================================
+
 export interface NodeForm {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
@@ -114,6 +119,439 @@ export interface EdgeForm {
   retryActions: EdgeAction[];
   finalWaitTime: number;
   description: string;
+}
+
+// =====================================================
+// NAVIGATION EXECUTION TYPES (from navigationUtils.ts)
+// =====================================================
+
+export interface NavigationStep {
+  step_number: number;
+  action: string;
+  from_node_label: string;
+  to_node_label: string;
+  from_node_id: string;
+  to_node_id: string;
+}
+
+export interface NavigationPreviewResponse {
+  success: boolean;
+  error?: string;
+  tree_id: string;
+  target_node_id: string;
+  steps: NavigationStep[];
+  total_steps: number;
+}
+
+export interface NavigationExecuteResponse {
+  success: boolean;
+  error?: string;
+  steps_executed: number;
+  total_steps: number;
+  execution_time: number;
+  target_node_id: string;
+  current_node_id?: string;
+}
+
+export interface ActionExecutionResult {
+  results: string[];
+  executionStopped: boolean;
+  updatedActions: any[];
+  updatedRetryActions?: any[];
+}
+
+// =====================================================
+// CONTROLLER & ACTION TYPES
+// =====================================================
+
+export interface ControllerAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  description: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+}
+
+export interface VerificationAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  description: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+}
+
+export interface VerificationActions {
+  [controllerType: string]: VerificationAction[];
+}
+
+export interface ControllerActions {
+  [controllerType: string]: ControllerAction[];
+}
+
+// =====================================================
+// VERIFICATION RESULT TYPES
+// =====================================================
+
+export interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  // Language detection for text verifications
+  detectedLanguage?: string;
+  languageConfidence?: number;
+  // OCR confidence for text verifications
+  ocrConfidence?: number;
+  // ADB-specific result data - keep ADB support
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
+}
+
+// =====================================================
+// NAVIGATION UI COMPONENT TYPES
+// =====================================================
+
+export interface NavigationItem {
+  label: string;
+  path: string;
+  icon?: React.ReactNode;
+}
+
+export interface NavigationDropdownProps {
+  label: string;
+  items: NavigationItem[];
+}
+
+// =====================================================
+// CONNECTION & HOOK TYPES
+// =====================================================
+
+export interface ConnectionResult {
+  isAllowed: boolean;
+  reason?: string;
+  edgeType: 'horizontal' | 'vertical';
+  sourceNodeUpdates?: Partial<UINavigationNodeData>;
+  targetNodeUpdates?: Partial<UINavigationNodeData>;
+}
+
+export interface NavigationConfigState {
+  currentTreeName: string;
+  setCurrentTreeName: (name: string) => void;
+  setNodes: (nodes: UINavigationNode[]) => void;
+  setEdges: (edges: UINavigationEdge[]) => void;
+  setInitialState: (state: { nodes: UINavigationNode[], edges: UINavigationEdge[] } | null) => void;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+  setIsLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  setSaveError: (error: string | null) => void;
+  setSaveSuccess: (success: boolean) => void;
+  setIsSaving: (saving: boolean) => void;
+  nodes: UINavigationNode[];
+  edges: UINavigationEdge[];
+  isSaving: boolean;
+  setUserInterface: (userInterface: any | null) => void;
+}
+
+export interface NodeEdgeManagementProps {
+  nodes: UINavigationNode[];
+  edges: UINavigationEdge[];
+  selectedNode: UINavigationNode | null;
+  selectedEdge: UINavigationEdge | null;
+  nodeForm: any;
+  edgeForm: any;
+  isNewNode: boolean;
+  setNodes: (nodes: any) => void;
+  setEdges: (edges: any) => void;
+  setSelectedNode: (node: UINavigationNode | null) => void;
+  setSelectedEdge: (edge: UINavigationEdge | null) => void;
+  setNodeForm: (form: any) => void;
+  setEdgeForm: (form: any) => void;
+  setIsNodeDialogOpen: (isOpen: boolean) => void;
+  setIsEdgeDialogOpen: (isOpen: boolean) => void;
+  setIsNewNode: (isNew: boolean) => void;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+}
+
+// =====================================================
+// COMPONENT PROPS TYPES
+// =====================================================
+
+export interface NavigationEditorHeaderProps {
+  // Navigation state
+  navigationPath: string[];
+  navigationNamePath: string[];
+  viewPath: { id: string; name: string }[];
+  hasUnsavedChanges: boolean;
+  
+  // Tree filtering props
+  focusNodeId: string | null;
+  availableFocusNodes: { id: string; label: string; depth: number }[];
+  maxDisplayDepth: number;
+  totalNodes: number;
+  visibleNodes: number;
+  
+  // Loading and error states
+  isLoading: boolean;
+  error: string | null;
+  
+  // Lock management props
+  isLocked?: boolean;
+  lockInfo?: any;
+  sessionId?: string;
+  
+  // Remote control props
+  isRemotePanelOpen: boolean;
+  selectedDevice: string | null;
+  isControlActive: boolean;
+  
+  // User interface props
+  userInterface: any;
+  
+  // Device props
+  devicesLoading?: boolean;
+  
+  // Validation props
+  treeId: string;
+  
+  // Action handlers
+  onNavigateToParent: () => void;
+  onNavigateToTreeLevel: (index: number) => void;
+  onNavigateToParentView: (index: number) => void;
+  onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
+  onFitView: () => void;
+  onSaveToConfig?: (treeName: string) => void;
+  onLockTree?: (treeName: string) => void;
+  onUnlockTree?: (treeName: string) => void;
+  onDiscardChanges: () => void;
+  
+  // Tree filtering handlers
+  onFocusNodeChange: (nodeId: string | null) => void;
+  onDepthChange: (depth: number) => void;
+  onResetFocus: () => void;
+  
+  // Remote control handlers
+  onToggleRemotePanel: () => void;
+  onDeviceSelect: (device: string | null) => void;
+  onTakeControl: () => void;
+  
+  // Update handlers for validation confidence tracking
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
+}
+
+export interface NavigationEditorDeviceControlProps {
+  // Device state
+  selectedHost: any;
+  isControlActive: boolean;
+  isRemotePanelOpen: boolean;
+  
+  // Verification state
+  isVerificationActive: boolean;
+  verificationControllerStatus: {
+    image_controller_available: boolean;
+    text_controller_available: boolean;
+  };
+  verificationResults: any[];
+  verificationPassCondition: 'all' | 'any';
+  lastVerifiedNodeId: string | null;
+  
+  // Node/Edge data for verification
+  nodes: any[];
+  selectedNode: any;
+  selectedEdge: any;
+  
+  // UI state
+  userInterface: any;
+  
+  // Event handlers
+  onReleaseControl: () => void;
+  onUpdateNode: (nodeId: string, updatedData: any) => void;
+  onSetVerificationResults: (results: any[]) => void;
+  onSetLastVerifiedNodeId: (nodeId: string | null) => void;
+  onSetVerificationPassCondition: (condition: 'all' | 'any') => void;
+  onSetNodes: (updateFunction: (nodes: any[]) => any[]) => void;
+  onSetSelectedNode: (node: any) => void;
+  onSetHasUnsavedChanges: (hasChanges: boolean) => void;
+}
+
+export interface NodeEditDialogProps {
+  isOpen: boolean;
+  nodeForm: NodeForm | null;
+  nodes: UINavigationNode[];
+  setNodeForm: (form: NodeForm | null) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+  onResetNode?: () => void;
+  verificationControllerTypes?: string[];
+  isVerificationActive?: boolean;
+  selectedDevice?: string | null;
+  selectedHostDevice?: any;
+  isControlActive?: boolean;
+  model?: string;
+}
+
+export interface EdgeEditDialogProps {
+  isOpen: boolean;
+  edgeForm: EdgeForm | null;
+  setEdgeForm: (form: EdgeForm | null) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+  controllerTypes?: string[];
+  selectedEdge?: UINavigationEdge | null;
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  selectedHostDevice?: any;
+}
+
+export interface NodeSelectionPanelProps {
+  selectedNode: UINavigationNode;
+  nodes: UINavigationNode[];
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAddChildren: () => void;
+  setNodeForm: (form: NodeForm | null) => void;
+  setIsNodeDialogOpen: (open: boolean) => void;
+  onReset?: () => void;
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  onTakeScreenshot?: () => void;
+  treeId: string;
+  currentNodeId?: string;
+  onVerification?: () => void;
+  isVerificationActive?: boolean;
+  verificationControllerStatus?: {
+    image_controller_available: boolean;
+    text_controller_available: boolean;
+  };
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+}
+
+export interface EdgeSelectionPanelProps {
+  selectedEdge: UINavigationEdge;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  setEdgeForm: (form: EdgeForm | null) => void;
+  setIsEdgeDialogOpen: (open: boolean) => void;
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  controllerTypes?: string[];
+  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
+}
+
+export interface NodeGotoPanelProps {
+  selectedNode: UINavigationNode;
+  treeId: string;
+  currentNodeId?: string;
+  onClose: () => void;
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+}
+
+export interface TreeFilterControlsProps {
+  focusNodeId: string | null;
+  availableFocusNodes: { id: string; label: string; depth: number }[];
+  maxDisplayDepth: number;
+  totalNodes: number;
+  visibleNodes: number;
+  onFocusNodeChange: (nodeId: string | null) => void;
+  onDepthChange: (depth: number) => void;
+  onResetFocus: () => void;
+}
+
+export interface StatusMessagesProps {
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface NavigationToolbarProps {
+  onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
+  onFitView: () => void;
+  onSave: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  hasUnsavedChanges: boolean;
+  isLocked?: boolean;
+}
+
+// =====================================================
+// LIST COMPONENT PROPS TYPES
+// =====================================================
+
+export interface EdgeActionsListProps {
+  actions: EdgeAction[];
+  retryActions: EdgeAction[];
+  finalWaitTime: number;
+  onActionsChange: (actions: EdgeAction[]) => void;
+  onRetryActionsChange: (retryActions: EdgeAction[]) => void;
+  onFinalWaitTimeChange: (waitTime: number) => void;
+  controllerTypes: string[];
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  selectedHostDevice?: any;
+}
+
+export interface EdgeActionItemProps {
+  action: EdgeAction;
+  onUpdate: (updatedAction: EdgeAction) => void;
+  onDelete: () => void;
+  controllerTypes: string[];
+  isControlActive?: boolean;
+  selectedDevice?: string | null;
+  selectedHostDevice?: any;
+}
+
+export interface NodeVerificationsListProps {
+  verifications: NodeVerification[];
+  availableActions: VerificationActions;
+  onVerificationsChange: (verifications: NodeVerification[]) => void;
+  loading?: boolean;
+  error?: string | null;
+  model?: string;
+  onTest?: () => void;
+  testResults?: VerificationTestResult[];
+  reloadTrigger?: number; // Trigger to reload references
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
 }
 
 // Progressive loading interfaces removed - loading all nodes at once 

@@ -1,14 +1,6 @@
 import { useCallback } from 'react';
 import { Connection } from 'reactflow';
-import { UINavigationNode } from '../../types/pages/Navigation_Types';
-
-export interface ConnectionResult {
-  isAllowed: boolean;
-  reason?: string;
-  edgeType: 'horizontal' | 'vertical';
-  sourceNodeUpdates?: Partial<UINavigationNode['data']>;
-  targetNodeUpdates?: Partial<UINavigationNode['data']>;
-}
+import { UINavigationNode, ConnectionResult } from '../../types/pages/Navigation_Types';
 
 /**
  * Returns a summary of connection rules for reference

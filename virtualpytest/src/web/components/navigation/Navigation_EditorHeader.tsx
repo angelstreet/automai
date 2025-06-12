@@ -15,11 +15,8 @@ import {
 import {
   Add as AddIcon,
   FitScreen as FitScreenIcon,
-  // Undo/Redo icons removed
   Save as SaveIcon,
   Cancel as CancelIcon,
-  ArrowBack as ArrowBackIcon,
-  ControlCamera as ControlCameraIcon,
   Tv as TvIcon,
   Lock as LockIcon,
 } from '@mui/icons-material';
@@ -31,77 +28,9 @@ import {
   ValidationResultsClient,
   ValidationProgressClient 
 } from '../validation';
-
-interface NavigationEditorHeaderProps {
-  // Navigation state
-  navigationPath: string[];
-  navigationNamePath: string[];
-  viewPath: { id: string; name: string }[];
-  hasUnsavedChanges: boolean;
-  
-  // Tree filtering props
-  focusNodeId: string | null;
-  availableFocusNodes: { id: string; label: string; depth: number }[];
-  maxDisplayDepth: number;
-  totalNodes: number;
-  visibleNodes: number;
-  
-  // Loading and error states
-  isLoading: boolean;
-  error: string | null;
-  // History props removed - using page reload for cancel changes
-  
-  // Lock management props
-  isLocked?: boolean;
-  lockInfo?: any;
-  sessionId?: string;
-  
-  // Remote control props
-  isRemotePanelOpen: boolean;
-  selectedDevice: string | null;
-  isControlActive: boolean;
-  
-  // User interface props
-  userInterface: any;
-  
-  // Device props - now using RegisteredHost from RegistrationContext
-  devicesLoading?: boolean;
-  
-  // Validation props
-  treeId: string;
-  
-  // Action handlers
-  onNavigateToParent: () => void;
-  onNavigateToTreeLevel: (index: number) => void;
-  onNavigateToParentView: (index: number) => void;
-  onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
-  onFitView: () => void;
-  // onUndo/onRedo removed - using page reload for cancel changes
-
-  onSaveToConfig?: (treeName: string) => void;
-  onLockTree?: (treeName: string) => void;
-  onUnlockTree?: (treeName: string) => void;
-  onDiscardChanges: () => void;
-  
-  // Tree filtering handlers
-  onFocusNodeChange: (nodeId: string | null) => void;
-  onDepthChange: (depth: number) => void;
-  onResetFocus: () => void;
-  
-  // Remote control handlers
-  onToggleRemotePanel: () => void;
-  onDeviceSelect: (device: string | null) => void;
-  onTakeControl: () => void;
-  
-  // Update handlers for validation confidence tracking
-  onUpdateNode?: (nodeId: string, updatedData: any) => void;
-  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
-}
+import { NavigationEditorHeaderProps } from '../../types/pages/Navigation_Types';
 
 export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
-  navigationPath,
-  navigationNamePath,
-  viewPath,
   hasUnsavedChanges,
   focusNodeId,
   availableFocusNodes,
@@ -110,25 +39,16 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
   visibleNodes,
   isLoading,
   error,
-  // History props removed
   isLocked,
-  lockInfo,
-  sessionId,
   isRemotePanelOpen,
   selectedDevice,
   isControlActive,
   userInterface,
   devicesLoading = false,
   treeId,
-  onNavigateToParent,
-  onNavigateToTreeLevel,
-  onNavigateToParentView,
   onAddNewNode,
   onFitView,
-  // onUndo/onRedo functions removed
   onSaveToConfig,
-  onLockTree,
-  onUnlockTree,
   onDiscardChanges,
   onFocusNodeChange,
   onDepthChange,
@@ -147,7 +67,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
 
   // Fetch userInterface data from API using tree name
   const [fetchedUserInterface, setFetchedUserInterface] = useState<{ id: string; name: string; models: string[] } | null>(null);
-  const [isFetchingInterface, setIsFetchingInterface] = useState(false);
 
   // Extract tree name from current path - use the tree name to fetch userInterface
   useEffect(() => {
@@ -158,7 +77,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
     if (treeName && treeName !== 'navigation-editor') {
       const fetchUserInterface = async () => {
         try {
-          setIsFetchingInterface(true);
           const response = await fetch(`/server/userinterface/getUserInterfaceByName/${encodeURIComponent(treeName)}`);
           
           if (response.ok) {
@@ -172,8 +90,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
         } catch (error) {
           console.error(`[@component:NavigationEditorHeader] Error fetching userInterface:`, error);
           setFetchedUserInterface(null);
-        } finally {
-          setIsFetchingInterface(false);
         }
       };
 
@@ -214,11 +130,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
     
     return filtered;
   }, [availableHosts, effectiveUserInterface]);
-
-  // Extract device names for the dropdown
-  const availableDevices = useMemo(() => {
-    return filteredDevices.map(device => device.name);
-  }, [filteredDevices]);
 
   // Check if selected device is locked
   const selectedDeviceHost = useMemo(() => {
@@ -333,8 +244,6 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
               >
                 <FitScreenIcon />
               </IconButton>
-              
-                            {/* Undo/Redo buttons removed - using page reload for cancel changes */}
               
               <IconButton 
                 onClick={() => {

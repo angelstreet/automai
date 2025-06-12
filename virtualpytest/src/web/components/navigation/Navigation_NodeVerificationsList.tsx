@@ -28,93 +28,13 @@ import { VerificationImageComparisonDialog } from '../verification/VerificationI
 
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-
-interface NodeVerification {
-  id: string;
-  label: string;
-  command: string;
-  controller_type: 'text' | 'image' | 'adb'; // Keep ADB support
-  params: any;
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-}
-
-interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  // Language detection for text verifications
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  // OCR confidence for text verifications
-  ocrConfidence?: number;
-  // ADB-specific result data - keep ADB support
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
-}
-
-interface VerificationAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-interface VerificationActions {
-  [category: string]: VerificationAction[];
-}
-
-interface NodeVerificationsListProps {
-  verifications: NodeVerification[];
-  availableActions: VerificationActions;
-  onVerificationsChange: (verifications: NodeVerification[]) => void;
-  loading?: boolean;
-  error?: string | null;
-  model?: string;
-  onTest?: () => void;
-  testResults?: VerificationTestResult[];
-  reloadTrigger?: number; // Trigger to reload references
-  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
-}
+import { 
+  NodeVerification, 
+  VerificationTestResult, 
+  VerificationAction, 
+  VerificationActions, 
+  NodeVerificationsListProps 
+} from '../../types/pages/Navigation_Types';
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   verifications,

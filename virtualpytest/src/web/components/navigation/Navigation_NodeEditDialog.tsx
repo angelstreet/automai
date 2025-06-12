@@ -40,42 +40,14 @@ import {
 } from '@mui/icons-material';
 
 // Import proper types from navigationTypes
-import { UINavigationNode, NodeForm, NodeVerification } from '../../types/pages/Navigation_Types';
-
-interface VerificationAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-interface VerificationActions {
-  [category: string]: VerificationAction[];
-}
-
-interface NodeEditDialogProps {
-  isOpen: boolean;
-  nodeForm: NodeForm;
-  nodes: UINavigationNode[];
-  setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
-  onSubmit: (formData: any) => void;
-  onClose: () => void;
-  onResetNode?: (nodeId: string) => void;
-  // Verification-related props
-  verificationControllerTypes?: string[];
-  isVerificationActive?: boolean;
-  selectedDevice?: string | null;
-  // Add isControlActive like EdgeEditDialog
-  isControlActive?: boolean;
-  // Add model prop for verification references
-  model?: string;
-  // Add selectedHostDevice prop for controller proxy access
-  selectedHostDevice?: any;
-}
+import { 
+  UINavigationNode, 
+  NodeForm, 
+  NodeVerification, 
+  VerificationAction, 
+  VerificationActions, 
+  NodeEditDialogProps 
+} from '../../types/pages/Navigation_Types';
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,

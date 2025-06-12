@@ -2,17 +2,7 @@ import { KeyboardArrowDown } from '@mui/icons-material';
 import { Button, Menu, MenuItem, Box, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-
-interface NavigationItem {
-  label: string;
-  path: string;
-  icon?: React.ReactNode;
-}
-
-interface NavigationDropdownProps {
-  label: string;
-  items: NavigationItem[];
-}
+import { NavigationItem, NavigationDropdownProps } from '../../types/pages/Navigation_Types';
 
 const NavigationDropdown: React.FC<NavigationDropdownProps> = ({ label, items }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
