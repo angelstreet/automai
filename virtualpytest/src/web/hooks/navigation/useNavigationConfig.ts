@@ -7,10 +7,7 @@ interface NavigationConfigState {
   setCurrentTreeName: (name: string) => void;
   setNodes: (nodes: UINavigationNode[]) => void;
   setEdges: (edges: UINavigationEdge[]) => void;
-  // setAllNodes/setAllEdges removed - using single source of truth
   setInitialState: (state: { nodes: UINavigationNode[], edges: UINavigationEdge[] } | null) => void;
-  setHistory: (history: { nodes: UINavigationNode[], edges: UINavigationEdge[] }[]) => void;
-  setHistoryIndex: (index: number) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -19,7 +16,6 @@ interface NavigationConfigState {
   setIsSaving: (saving: boolean) => void;
   nodes: UINavigationNode[];
   edges: UINavigationEdge[];
-  // allNodes/allEdges removed - using single source of truth
   isSaving: boolean;
   setUserInterface: (userInterface: any | null) => void;
 }
@@ -152,10 +148,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         
         // Set initial state for change tracking
         state.setInitialState({ nodes: [...nodes], edges: [...edges] });
-        
-        // Reset history
-        state.setHistory([{ nodes: [...nodes], edges: [...edges] }]);
-        state.setHistoryIndex(0);
         
         // Clear unsaved changes
         state.setHasUnsavedChanges(false);

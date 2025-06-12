@@ -175,20 +175,6 @@ const NavigationEditorContent: React.FC = () => {
   // 2. TREE LOADING & LOCK MANAGEMENT
   // ========================================
   
-  // Debug logging for tree loading conditions
-  useEffect(() => {
-    console.log('[@component:NavigationEditor] Tree Loading Debug Info:', {
-      currentTreeName,
-      isLoadingInterface,
-      lastLoadedTreeId: lastLoadedTreeId.current,
-      nodesLength: nodes.length,
-      treeId,
-      interfaceId,
-      userInterface: userInterface?.name || 'none',
-      expectedJsonPath: currentTreeName ? `/config/navigation/${currentTreeName}.json` : 'no tree name'
-    });
-  }, [currentTreeName, isLoadingInterface, nodes.length, treeId, interfaceId, userInterface]);
-
   // Show message if tree ID is missing
   useEffect(() => {
     if (!treeId && !interfaceId) {
@@ -198,21 +184,8 @@ const NavigationEditorContent: React.FC = () => {
   
   // Load tree data when component mounts or treeId changes
   useEffect(() => {
-    console.log('[@component:NavigationEditor] Tree Loading Conditions Check:', {
-      condition1_currentTreeName: !!currentTreeName,
-      condition1_value: currentTreeName,
-      condition2_notLoadingInterface: !isLoadingInterface,
-      condition2_value: isLoadingInterface,
-      condition3_differentFromLast: currentTreeName !== lastLoadedTreeId.current,
-      condition3_lastLoaded: lastLoadedTreeId.current,
-      condition3_current: currentTreeName,
-      allConditionsMet: currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current,
-      expectedJsonPath: currentTreeName ? `/server/navigation/config/trees/${currentTreeName}` : 'no tree name available'
-    });
-
     if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      console.log(`[@component:NavigationEditor] ✅ ALL CONDITIONS MET - Loading tree data from config: ${currentTreeName}`);
-      console.log(`[@component:NavigationEditor] JSON will be loaded from: /server/navigation/config/trees/${currentTreeName}`);
+      console.log(`[@component:NavigationEditor] Loading tree data from config: ${currentTreeName}`);
       lastLoadedTreeId.current = currentTreeName;
       
       // Load from config instead of database
@@ -223,8 +196,6 @@ const NavigationEditorContent: React.FC = () => {
       
       // Return cleanup function
       return cleanup;
-    } else {
-      console.log(`[@component:NavigationEditor] ❌ CONDITIONS NOT MET - Tree will not load`);
     }
   }, [currentTreeName, isLoadingInterface, loadFromConfig, setupAutoUnlock]);
 
