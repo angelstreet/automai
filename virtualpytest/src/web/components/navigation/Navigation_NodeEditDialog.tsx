@@ -92,6 +92,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   model,
   selectedHostDevice,
 }) => {
+  // Early return if nodeForm is null or undefined - MUST be before any hooks
+  if (!nodeForm) {
+    return null;
+  }
+
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -99,11 +104,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
-
-  // Early return if nodeForm is null or undefined
-  if (!nodeForm) {
-    return null;
-  }
 
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {

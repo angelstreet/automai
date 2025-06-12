@@ -294,6 +294,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
         p: 1.5,
         zIndex: 1000,
       }}
+      onClick={(e) => e.stopPropagation()}
     >
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -321,7 +322,10 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
           </Box>
           <IconButton
             size="small"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent event from bubbling to ReactFlow pane
+              onClose();
+            }}
             sx={{ p: 0.25 }}
           >
             <CloseIcon fontSize="small" />

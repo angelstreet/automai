@@ -72,7 +72,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   isVerificationActive = false,
   verificationControllerStatus,
 }) => {
-  // Don't render the panel for entry nodes
+  // Don't render the panel for entry nodes - MUST be before any hooks
   if ((selectedNode.data.type as string) === 'entry') {
     return null;
   }
@@ -344,6 +344,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           p: 1.5,
           zIndex: 1000,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -371,7 +372,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             </Box>
             <IconButton
               size="small"
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event from bubbling to ReactFlow pane
+                onClose();
+              }}
               sx={{ p: 0.25 }}
             >
               <CloseIcon fontSize="small" />

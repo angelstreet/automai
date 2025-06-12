@@ -82,16 +82,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedDevice = null,
   selectedHostDevice,
 }) => {
+  // Early return if edgeForm is null or undefined - MUST be before any hooks
+  if (!edgeForm) {
+    return null;
+  }
+
   const [controllerActions, setControllerActions] = useState<ControllerActions>({});
   const [loadingActions, setLoadingActions] = useState(false);
   const [actionsError, setActionsError] = useState<string | null>(null);
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
-
-  // Early return if edgeForm is null or undefined
-  if (!edgeForm) {
-    return null;
-  }
 
   const canRunActions = isControlActive && selectedDevice && edgeForm?.actions?.length > 0 && !isRunningActions;
 

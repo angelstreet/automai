@@ -19,6 +19,7 @@ import {
   Typography,
   Button,
 } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 
 // Import extracted components and hooks
 import { useNavigationEditor } from '../hooks';
@@ -57,6 +58,10 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 1. INITIALIZATION & SETUP
   // ========================================
+  
+  // Get user interface data from navigation state (passed from UserInterface.tsx)
+  const location = useLocation();
+  const userInterfaceFromState = location.state?.userInterface;
   
   // Use registration context only for host management, not URL building
   const { 
@@ -157,6 +162,7 @@ const NavigationEditorContent: React.FC = () => {
     fitView,
     deleteSelected,
     resetNode,
+    setUserInterfaceFromProps,
     
     // Additional setters we need
     setNodes,
@@ -174,6 +180,14 @@ const NavigationEditorContent: React.FC = () => {
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
   // ========================================
+  
+  // Set user interface from navigation state (passed from UserInterface.tsx)
+  useEffect(() => {
+    if (userInterfaceFromState) {
+      console.log('[@component:NavigationEditor] Setting user interface from navigation state:', userInterfaceFromState.name);
+      setUserInterfaceFromProps(userInterfaceFromState);
+    }
+  }, [userInterfaceFromState, setUserInterfaceFromProps]);
   
   // Show message if tree ID is missing
   useEffect(() => {

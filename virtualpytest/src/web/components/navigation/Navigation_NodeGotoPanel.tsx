@@ -177,6 +177,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         zIndex: 1000,
         overflow: 'hidden',
       }}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* Header - Fixed at top */}
       <Box sx={{ 
@@ -195,7 +196,10 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         </Box>
         <IconButton
           size="small"
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent event from bubbling to ReactFlow pane
+            onClose();
+          }}
           sx={{ p: 0.25 }}
         >
           <CloseIcon fontSize="small" />

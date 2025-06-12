@@ -66,8 +66,6 @@ export const useNavigationEditor = () => {
     setNodes: navigationState.setNodes,
     setEdges: navigationState.setEdges,
     setInitialState: navigationState.setInitialState,
-    setHistory: navigationState.setHistory,
-    setHistoryIndex: navigationState.setHistoryIndex,
     setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
     setIsLoading: navigationState.setIsLoading,
     setError: navigationState.setError,
@@ -248,65 +246,19 @@ export const useNavigationEditor = () => {
     });
   }, [navigationState.nodes, navigationState.setNodes, navigationState.setEdges, navigationState.setHasUnsavedChanges, typedValidateConnection]);
 
-  // Fetch user interface by name from URL parameter
-  useEffect(() => {
-    const fetchUserInterfaceByName = async () => {
-      if (navigationState.currentTreeName) {
-        navigationState.setIsLoadingInterface(true);
-        try {
-          console.log(`[@hook:useNavigationEditor] Fetching user interface by name: ${navigationState.currentTreeName}`);
-          
-          // Fetch all userinterfaces and find the one matching the name
-          const response = await fetch(buildServerUrl('/server/userinterface/getAllUserInterfaces'), {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          if (data && Array.isArray(data)) {
-            const matchingInterface = data.find(ui => ui.name === navigationState.currentTreeName);
-            
-            if (matchingInterface) {
-              console.log(`[@hook:useNavigationEditor] Found matching user interface:`, {
-                id: matchingInterface.id,
-                name: matchingInterface.name,
-                models: matchingInterface.models
-              });
-              
-              navigationState.setUserInterface(matchingInterface);
-              
-              // If there's a root tree, set up navigation
-              if (matchingInterface.root_tree) {
-                navigationState.setRootTree(matchingInterface.root_tree);
-                navigationState.setCurrentTreeId(matchingInterface.root_tree.id);
-                navigationState.setCurrentTreeName(matchingInterface.root_tree.name);
-                navigationState.setNavigationPath([matchingInterface.root_tree.id]);
-                navigationState.setNavigationNamePath([matchingInterface.root_tree.name]);
-              }
-            } else {
-              console.error(`[@hook:useNavigationEditor] No user interface found with name: ${navigationState.currentTreeName}`);
-              navigationState.setUserInterface(null);
-            }
-          } else {
-            console.error(`[@hook:useNavigationEditor] Failed to fetch user interfaces list`);
-            navigationState.setUserInterface(null);
-          }
-        } catch (error) {
-          console.error(`[@hook:useNavigationEditor] Error fetching user interface by name:`, error);
-          navigationState.setUserInterface(null);
-        } finally {
-          navigationState.setIsLoadingInterface(false);
-        }
-      }
-    };
-    
-    fetchUserInterfaceByName();
-  }, [navigationState.currentTreeName, buildServerUrl]);
+  // Set user interface from props (passed from UserInterface.tsx via navigation state)
+  const setUserInterfaceFromProps = useCallback((userInterfaceData: any) => {
+    if (userInterfaceData) {
+      console.log(`[@hook:useNavigationEditor] Setting user interface from props:`, {
+        id: userInterfaceData.id,
+        name: userInterfaceData.name,
+        models: userInterfaceData.models
+      });
+      
+      navigationState.setUserInterface(userInterfaceData);
+      navigationState.setIsLoadingInterface(false);
+    }
+  }, [navigationState]);
 
   // Handle clicking on the background/pane to deselect
   const onPaneClick = useCallback(() => {
@@ -417,8 +369,6 @@ export const useNavigationEditor = () => {
     if (navigationState.initialState) {
       navigationState.setNodes([...navigationState.initialState.nodes]);
       navigationState.setEdges([...navigationState.initialState.edges]);
-      navigationState.setHistory([{ nodes: navigationState.initialState.nodes, edges: navigationState.initialState.edges }]);
-      navigationState.setHistoryIndex(0);
       navigationState.setHasUnsavedChanges(false);
       navigationState.setSaveError(null);
       navigationState.setSaveSuccess(false);
@@ -688,5 +638,8 @@ export const useNavigationEditor = () => {
     
     // Connection rules and debugging
     getConnectionRulesSummary: getRulesSummary,
+    
+    // User interface management
+    setUserInterfaceFromProps,
   };
 }; 

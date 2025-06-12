@@ -297,12 +297,21 @@ const UserInterface: React.FC = () => {
       console.log('[@component:UserInterface] Opening navigation editor for userinterface:', {
         interfaceId: userInterface.id,
         interfaceName: userInterface.name,
+        models: userInterface.models,
       });
       
-      // Navigate to navigation editor using React Router navigation
+      // Navigate to navigation editor using React Router navigation with state
       // This matches our simplified config system: {userinterface_name}.json
       const url = `/navigation-editor/${encodeURIComponent(userInterface.name)}`;
-      navigate(url);
+      navigate(url, {
+        state: {
+          userInterface: {
+            id: userInterface.id,
+            name: userInterface.name,
+            models: userInterface.models,
+          }
+        }
+      });
     } catch (err) {
       console.error('[@component:UserInterface] Error opening navigation editor:', err);
       setError('Failed to open navigation editor. Please try again.');
