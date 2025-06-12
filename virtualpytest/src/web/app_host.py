@@ -102,8 +102,8 @@ def initialize_host_object(app):
             
             if hasattr(host_utils, 'global_host_object') and host_utils.global_host_object:
                 with app.app_context():
-                    app.my_host_object = host_utils.global_host_object
-                    print(f"[@host:main:initialize_host_object] Host object initialization completed")
+                    app.my_host_device = host_utils.global_host_object
+                    print(f"[@host:main:initialize_host_object] Host device initialization completed")
                     print(f"[@host:main:initialize_host_object] Host: {host_utils.global_host_object.get('host_name')}")
                     print(f"[@host:main:initialize_host_object] Device Name: {host_utils.global_host_object.get('name')}")
                     print(f"[@host:main:initialize_host_object] Device Model: {host_utils.global_host_object.get('model')}")
