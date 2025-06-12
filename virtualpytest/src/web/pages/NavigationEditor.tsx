@@ -147,6 +147,7 @@ const NavigationEditorContent: React.FC = () => {
     isLocked,
     lockInfo,
     isCheckingLock,
+    setCheckingLockState,
     sessionId,
     lockNavigationTree,
     unlockNavigationTree,
@@ -203,6 +204,9 @@ const NavigationEditorContent: React.FC = () => {
       console.log(`[@component:NavigationEditor] Starting lock-first workflow for tree: ${currentTreeName}`);
       lastLoadedTreeId.current = currentTreeName;
       
+      // Fix race condition: Set checking state immediately
+      setCheckingLockState(true);
+      
       // STEP 1: First acquire lock (this is the critical requirement)
       lockNavigationTree(currentTreeName).then(lockSuccess => {
         if (lockSuccess) {
@@ -227,7 +231,7 @@ const NavigationEditorContent: React.FC = () => {
       // Return cleanup function
       return cleanup;
     }
-  }, [currentTreeName, isLoadingInterface, loadFromConfig, lockNavigationTree, setupAutoUnlock]);
+  }, [currentTreeName, isLoadingInterface, loadFromConfig, lockNavigationTree, setupAutoUnlock, setCheckingLockState]);
 
   // ========================================
   // 3. DEVICE & HOST MANAGEMENT

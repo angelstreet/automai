@@ -24,11 +24,26 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   // Get buildServerUrl from registration context
   const { buildServerUrl } = useRegistration();
   
-  // Session ID for lock management
-  const sessionId = useRef<string>(crypto.randomUUID());
+  // Helper to get or create session ID
+  const getSessionId = () => {
+    let id = sessionStorage.getItem('navigation-session-id');
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem('navigation-session-id', id);
+    }
+    return id;
+  };
+  
+  // Session ID for lock management - persist across page reloads
+  const sessionId = useRef<string>(getSessionId());
   const [isLocked, setIsLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState<any>(null);
   const [isCheckingLock, setIsCheckingLock] = useState(false); // Start as false, only true when actively checking
+
+  // Set checking lock state immediately (fixes race condition)
+  const setCheckingLockState = useCallback((checking: boolean) => {
+    setIsCheckingLock(checking);
+  }, []);
 
   // Lock a navigation tree for editing
   const lockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
@@ -323,9 +338,11 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         // Use sendBeacon for reliable cleanup on page unload
         const unlockData = JSON.stringify({ session_id: sessionId.current });
         navigator.sendBeacon(
-          `/server/navigation/config/trees/${treeName}/unlock`,
+          buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
           new Blob([unlockData], { type: 'application/json' })
         );
+        // Clean up session storage
+        sessionStorage.removeItem('navigation-session-id');
       }
     };
 
@@ -334,13 +351,14 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isLocked]);
+  }, [isLocked, buildServerUrl]);
 
   return {
     // Lock management
     isLocked,
     lockInfo,
     isCheckingLock,
+    setCheckingLockState,
     sessionId: sessionId.current,
     lockNavigationTree,
     unlockNavigationTree,
