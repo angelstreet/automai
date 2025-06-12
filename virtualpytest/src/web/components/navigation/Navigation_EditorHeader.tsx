@@ -80,7 +80,7 @@ export const NavigationEditorHeader: React.FC<{
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: '190px 290px 300px 300px',
+              gridTemplateColumns: '100px 360px 300px 300px',
               gap: 1,
               alignItems: 'center',
               width: '100%',

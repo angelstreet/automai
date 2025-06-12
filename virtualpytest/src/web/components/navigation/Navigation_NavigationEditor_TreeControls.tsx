@@ -2,6 +2,13 @@ import React from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, Button, Typography } from '@mui/material';
 import { NavigationEditorTreeControlsProps } from '../../types/pages/Navigation_Header_Types';
 
+interface TreeNode {
+  id: string;
+  data?: {
+    label?: string;
+  };
+}
+
 export const NavigationEditorTreeControls: React.FC<NavigationEditorTreeControlsProps> = ({
   focusNodeId,
   availableFocusNodes,
@@ -12,6 +19,16 @@ export const NavigationEditorTreeControls: React.FC<NavigationEditorTreeControls
   onDepthChange,
   onResetFocus,
 }) => {
+  // Ensure availableFocusNodes is an array
+  const safeNodes = Array.isArray(availableFocusNodes) ? availableFocusNodes : [];
+
+  // Log warning if nodes are not in expected format
+  React.useEffect(() => {
+    if (safeNodes.some((node) => !node?.id)) {
+      console.warn('[@component:NavigationEditorTreeControls] Some nodes are missing ID');
+    }
+  }, [safeNodes]);
+
   return (
     <Box
       sx={{
@@ -46,9 +63,9 @@ export const NavigationEditorTreeControls: React.FC<NavigationEditorTreeControls
           <MenuItem value="">
             <em>None</em>
           </MenuItem>
-          {availableFocusNodes.map((node: any) => (
+          {safeNodes.map((node: TreeNode) => (
             <MenuItem key={node.id} value={node.id}>
-              {node.data.label || node.id}
+              {node.data?.label || node.id}
             </MenuItem>
           ))}
         </Select>
