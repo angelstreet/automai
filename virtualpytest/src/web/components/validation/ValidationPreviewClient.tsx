@@ -87,20 +87,18 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   }, [validation.showPreview, treeId]);
 
   const fetchOptimalPath = async () => {
-    if (!treeId) return;
-    
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('[@component:ValidationPreviewClient] Checking verification controller availability...');
+      console.log('[@component:ValidationPreviewClient] Fetching optimal path from server...');
       
-      if (!selectedHost?.controllerProxies?.verification) {
-        throw new Error('Verification controller proxy not available for selected host');
+      // Simply check if host is selected - no need for controller proxy verification
+      if (!selectedHost) {
+        throw new Error('No host selected for validation');
       }
       
-      // ✅ Verification controller proxy is available
-      console.log('[@component:ValidationPreviewClient] Verification controller proxy available');
+      console.log('[@component:ValidationPreviewClient] Host available, fetching optimal path');
       
       const response = await fetch(buildServerUrl(`server/validation/optimal-path/${treeId}`));
       
@@ -115,7 +113,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       setEstimatedTime(data.summary.efficiency_ratio * data.sequence.length);
     } catch (err: any) {
       console.error('[@component:ValidationPreviewClient] Error:', err);
-      setError(err.message || 'Failed to access verification controller');
+      setError(err.message || 'Failed to fetch validation data');
     } finally {
       setIsLoading(false);
     }

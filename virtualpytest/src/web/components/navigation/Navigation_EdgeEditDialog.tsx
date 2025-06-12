@@ -105,19 +105,19 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     // Only log when dialog is actually opened, not when closed
     if (isOpen) {
       console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
-      if (controllerTypes.length > 0 && selectedHostDevice?.controllerProxies?.remote) {
+      if (controllerTypes.length > 0 && selectedHostDevice) {
         console.log(`[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`);
         fetchControllerActions(controllerTypes[0]);
       } else {
-        console.log('[@component:EdgeEditDialog] No controller types or remote controller proxy available');
-        setActionsError('No controller types available or remote controller not accessible');
+        console.log('[@component:EdgeEditDialog] No controller types or host device available');
+        setActionsError('No controller types available or host device not selected');
       }
     }
   }, [isOpen, controllerTypes, selectedHostDevice]);
 
   const fetchControllerActions = async (controllerType: string) => {
-    if (!selectedHostDevice?.controllerProxies?.remote) {
-      setActionsError('Remote controller proxy not available');
+    if (!selectedHostDevice) {
+      setActionsError('No host device selected');
       return;
     }
 
@@ -125,21 +125,34 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     setActionsError(null);
     
     try {
-      console.log(`[@component:EdgeEditDialog] Fetching actions using remote controller proxy`);
-      const result = await selectedHostDevice.controllerProxies.remote.getActions();
+      console.log(`[@component:EdgeEditDialog] Fetching actions using server route`);
       
-      console.log(`[@component:EdgeEditDialog] Controller proxy response:`, result);
+      // Use server route instead of controller proxy
+      const response = await fetch(`/server/remote/get-actions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name,
+          controller_type: controllerType
+        })
+      });
+      
+      const result = await response.json();
+      
+      console.log(`[@component:EdgeEditDialog] Server route response:`, result);
       
       if (result.success) {
         setControllerActions(result.actions);
         console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for remote controller`);
       } else {
-        console.error(`[@component:EdgeEditDialog] Controller proxy returned error:`, result.error);
+        console.error(`[@component:EdgeEditDialog] Server route returned error:`, result.error);
         setActionsError(result.error || 'Failed to load actions');
       }
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error fetching actions:', err);
-      setActionsError('Failed to connect to remote controller');
+      setActionsError('Failed to connect to remote server');
     } finally {
       setLoadingActions(false);
     }

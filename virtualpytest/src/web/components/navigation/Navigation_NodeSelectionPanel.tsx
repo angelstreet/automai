@@ -213,20 +213,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         let verificationSuccess = false;
         
         try {
-          // Execute verification using controller proxy instead of direct HTTP call
-          if (!selectedDevice) {
-            results.push(`❌ Verification ${i + 1}: No device selected`);
-            verificationSuccess = false;
-          } else {
-            // Use verification controller proxy if available
-            // Note: This would need to be passed as a prop or accessed through a context
-            // For now, we'll show an error indicating the need for controller proxy
-            results.push(`❌ Verification ${i + 1}: Verification controller proxy not implemented yet`);
-            verificationSuccess = false;
-            
-            // TODO: Replace with actual controller proxy call when available:
-            // const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verification]);
-          }
+          // Use server route for verification (to be implemented)
+          // Note: This component currently shows verification UI but actual execution
+          // should be handled through the NodeEditDialog component
+          results.push(`❌ Verification ${i + 1}: Use NodeEditDialog for verification execution`);
+          verificationSuccess = false;
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
           verificationSuccess = false;

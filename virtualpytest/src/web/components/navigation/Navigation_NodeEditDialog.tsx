@@ -118,14 +118,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && verificationControllerTypes.length > 0 && Object.keys(verificationActions).length === 0 && selectedHostDevice?.controllerProxies?.verification) {
+    if (isOpen && verificationControllerTypes.length > 0 && Object.keys(verificationActions).length === 0 && selectedHostDevice) {
       fetchVerificationActions();
     }
   }, [isOpen, verificationControllerTypes, verificationActions, selectedHostDevice]);
 
   const fetchVerificationActions = async () => {
-    if (!selectedHostDevice?.controllerProxies?.verification) {
-      setVerificationError('Verification controller proxy not available');
+    if (!selectedHostDevice) {
+      setVerificationError('No host device selected');
       return;
     }
 
@@ -133,21 +133,33 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     setVerificationError(null);
     
     try {
-      console.log(`[@component:NodeEditDialog] Fetching verification actions using controller proxy`);
-      const result = await selectedHostDevice.controllerProxies.verification.getVerificationActions();
+      console.log(`[@component:NodeEditDialog] Fetching verification actions using server route`);
       
-      console.log(`[@component:NodeEditDialog] Verification controller proxy response:`, result);
+      // Use server route instead of controller proxy
+      const response = await fetch(`/server/verification/actions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name
+        })
+      });
+      
+      const result = await response.json();
+      
+      console.log(`[@component:NodeEditDialog] Server route response:`, result);
       
       if (result.success) {
         setVerificationActions(result.verifications);
         console.log(`[@component:NodeEditDialog] Loaded verification actions`);
       } else {
-        console.error(`[@component:NodeEditDialog] Verification controller proxy returned error:`, result.error);
+        console.error(`[@component:NodeEditDialog] Server route returned error:`, result.error);
         setVerificationError(result.error || 'Failed to load verification actions');
       }
     } catch (err: any) {
       console.error('[@component:NodeEditDialog] Error fetching verification actions:', err);
-      setVerificationError('Failed to connect to verification controller');
+      setVerificationError('Failed to connect to verification server');
     } finally {
       setLoadingVerifications(false);
     }
@@ -254,11 +266,26 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
         
         try {
-          if (!selectedHostDevice?.controllerProxies?.verification) {
-            results.push(`❌ Verification ${i + 1}: Verification controller not available`);
+          if (!selectedHostDevice) {
+            results.push(`❌ Verification ${i + 1}: No host device selected`);
             verificationSuccess = false;
           } else {
-            const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verificationToExecute]);
+            // Use server route instead of controller proxy
+            const response = await fetch(`/server/verification/execute-batch`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                host_name: selectedHostDevice.host_name,
+                verifications: [verificationToExecute],
+                model: selectedHostDevice.model || 'android_mobile',
+                node_id: nodeForm?.id || 'unknown',
+                source_filename: 'verification_screenshot.jpg'
+              })
+            });
+            
+            const result = await response.json();
             
             if (result.success) {
               results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
@@ -334,12 +361,25 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       console.log(`[@component:NodeEditDialog] Starting goto navigation for node: ${nodeForm?.label || 'unknown'}`);
       
       try {
-        // Execute navigation to this node using navigation controller proxy
-        if (!selectedHostDevice?.controllerProxies?.navigation) {
-          gotoResults.push(`❌ Navigation: Navigation controller not available`);
-          console.error(`[@component:NodeEditDialog] Navigation controller proxy not available`);
+        // Execute navigation to this node using server route
+        if (!selectedHostDevice) {
+          gotoResults.push(`❌ Navigation: No host device selected`);
+          console.error(`[@component:NodeEditDialog] No host device selected for navigation`);
         } else {
-          const navigationResult = await selectedHostDevice.controllerProxies.navigation.gotoNode(nodeForm?.label || '');
+          // Use server route instead of navigation controller proxy
+          const response = await fetch(`/server/navigation/goto-node`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host_name: selectedHostDevice.host_name,
+              node_label: nodeForm?.label || '',
+              model: selectedHostDevice.model || 'android_mobile'
+            })
+          });
+          
+          const navigationResult = await response.json();
           
           if (navigationResult.success) {
             gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm?.label || 'unknown'}`);
@@ -391,12 +431,27 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
           
           try {
-            if (!selectedHostDevice?.controllerProxies?.verification) {
-              gotoResults.push(`❌ Verification ${i + 1}: Verification controller not available`);
+            if (!selectedHostDevice) {
+              gotoResults.push(`❌ Verification ${i + 1}: No host device selected`);
               verificationSuccess = false;
               individualVerificationSuccess = false;
             } else {
-              const result = await selectedHostDevice.controllerProxies.verification.executeVerificationBatch([verificationToExecute]);
+              // Use server route instead of controller proxy
+              const response = await fetch(`/server/verification/execute-batch`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  host_name: selectedHostDevice.host_name,
+                  verifications: [verificationToExecute],
+                  model: selectedHostDevice.model || 'android_mobile',
+                  node_id: nodeForm?.id || 'unknown',
+                  source_filename: 'verification_screenshot.jpg'
+                })
+              });
+              
+              const result = await response.json();
               
               if (result.success) {
                 gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);

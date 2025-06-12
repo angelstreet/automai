@@ -235,17 +235,29 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     type: 'image' | 'text';
   } | null>(null);
 
-  // Helper function to get the verification controller proxy
-  const getVerificationControllerProxy = () => {
-    // Use selectedHostDevice if available (new controller architecture)
-    if (selectedHostDevice?.controllerProxies?.verification) {
-      console.log(`[@component:VerificationEditor] Using verification controller proxy`);
-      return selectedHostDevice.controllerProxies.verification;
+  // Get verification proxy using server route instead of controller proxy
+  const getVerificationProxy = useCallback(() => {
+    if (selectedHostDevice) {
+      console.log('[@component:VerificationEditor] Using server route for verification operations');
+      return {
+        // Return a simplified interface that uses server routes
+        executeVerification: async (verification: any) => {
+          const response = await fetch(`/server/verification/execute`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host_name: selectedHostDevice.host_name,
+              verification
+            })
+          });
+          return response.json();
+        }
+      };
     }
-    
-    console.log(`[@component:VerificationEditor] No verification controller proxy available`);
     return null;
-  };
+  }, [selectedHostDevice]);
 
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = useMemo(() => {
@@ -310,7 +322,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const fetchVerificationActions = async () => {
     try {
-      const verificationController = getVerificationControllerProxy();
+      const verificationController = getVerificationProxy();
       
       if (verificationController) {
         console.log(`[@component:VerificationEditor] Using verification controller proxy for actions`);
@@ -415,7 +427,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         screenshot_path: screenshotPath
       });
 
-      const verificationController = getVerificationControllerProxy();
+      const verificationController = getVerificationProxy();
       
       if (verificationController) {
         console.log(`[@component:VerificationEditor] Using verification controller proxy for save`);
@@ -576,7 +588,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       
       console.log('[@component:VerificationEditor] Batch execution payload:', batchPayload);
 
-      const verificationController = getVerificationControllerProxy();
+      const verificationController = getVerificationProxy();
       
       if (!verificationController) {
         throw new Error('No verification controller proxy available');
@@ -698,7 +710,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     try {
       console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
       
-      const verificationController = getVerificationControllerProxy();
+      const verificationController = getVerificationProxy();
       
       if (!verificationController) {
         console.error('[@component:VerificationEditor] No verification controller proxy available');

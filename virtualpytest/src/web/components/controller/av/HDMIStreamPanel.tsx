@@ -37,8 +37,8 @@ export function HDMIStreamPanel({
   // Simplified state - just check if AV controller proxy is available
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
-  // Check if AV controller is available
-  const isAvailable = selectedHost?.controllerProxies?.av ? true : false;
+  // Check if AV functionality is available (simplified - just check if host is selected)
+  const isAvailable = selectedHost ? true : false;
 
   // Auto-connect if requested
   useEffect(() => {

@@ -8,6 +8,8 @@ interface StreamClickOverlayProps {
   onTap?: (x: number, y: number) => void;
   sx?: any;
   selectedHostDevice?: any; // Add host device prop for controller proxy access
+  showOverlay: boolean;
+  isActive: boolean;
 }
 
 export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
@@ -16,7 +18,9 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   deviceId,
   onTap,
   sx = {},
-  selectedHostDevice
+  selectedHostDevice,
+  showOverlay,
+  isActive
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(null);
@@ -62,27 +66,44 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     };
   }, [videoRef, deviceResolution]);
 
-  const sendTapCommand = useCallback(async (x: number, y: number) => {
+  const handleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isActive || !selectedHostDevice) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Convert screen coordinates to device coordinates if needed
+    const deviceX = Math.round(x * (deviceResolution?.width || 1) / rect.width);
+    const deviceY = Math.round(y * (deviceResolution?.height || 1) / rect.height);
+
+    console.log(`[@component:StreamClickOverlay] Click at screen (${x}, ${y}) -> device (${deviceX}, ${deviceY})`);
+
     try {
-      console.log(`[@component:StreamClickOverlay] Sending tap command: ${x}, ${y}`);
+      // Use server route instead of remote controller proxy
+      const response = await fetch(`/server/remote/tap-element`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name,
+          x: deviceX,
+          y: deviceY
+        })
+      });
       
-      // Use remote controller proxy if available
-      if (selectedHostDevice?.controllerProxies?.remote) {
-        console.log(`[@component:StreamClickOverlay] Using remote controller proxy to tap at coordinates: (${x}, ${y})`);
-        const result = await selectedHostDevice.controllerProxies.remote.tap(x, y);
-        
-        if (result.success) {
-          console.log(`[@component:StreamClickOverlay] ✅ Tap successful at (${x}, ${y})`);
-        } else {
-          console.error(`[@component:StreamClickOverlay] ❌ Tap failed: ${result.error}`);
-        }
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log(`[@component:StreamClickOverlay] Tap successful at device coordinates (${deviceX}, ${deviceY})`);
       } else {
-        console.log(`[@component:StreamClickOverlay] No remote controller proxy available - tap coordinates logged only`);
+        console.error(`[@component:StreamClickOverlay] Tap failed:`, result.error);
       }
     } catch (error) {
-      console.error(`[@component:StreamClickOverlay] ❌ Tap request failed:`, error);
+      console.error('[@component:StreamClickOverlay] Error performing tap:', error);
     }
-  }, [selectedHostDevice]);
+  };
 
   const showClickAnimation = useCallback((x: number, y: number) => {
     const animationId = Date.now();
@@ -94,48 +115,20 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     }, 500);
   }, []);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (!videoRef.current) return;
-    
-    const bounds = getVideoBounds();
-    if (!bounds) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Check if click is within video bounds
-    if (x >= bounds.left && x <= bounds.left + bounds.width && 
-        y >= bounds.top && y <= bounds.top + bounds.height) {
-      
-      // Convert to device coordinates
-      const deviceX = Math.round((x - bounds.left) * bounds.scaleX);
-      const deviceY = Math.round((y - bounds.top) * bounds.scaleY);
-      
-      console.log(`[@component:StreamClickOverlay] 🎯 Click at display (${Math.round(x - bounds.left)}, ${Math.round(y - bounds.top)}) -> device (${deviceX}, ${deviceY})`);
-      
-      // Show click animation at click position
-      showClickAnimation(x, y);
-      
-      // Send tap command via controller proxy
-      sendTapCommand(deviceX, deviceY);
-      
-      // Call optional callback
-      if (onTap) {
-        onTap(deviceX, deviceY);
-      }
-      
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, [videoRef, getVideoBounds, sendTapCommand, onTap, showClickAnimation]);
+  // Render overlay with appropriate styling
+  const shouldRender = selectedHostDevice && (showOverlay || isActive);
+  console.log('[@component:StreamClickOverlay] Rendering overlay:', shouldRender);
+  console.log('[@component:StreamClickOverlay] Has host device:', !!selectedHostDevice);
+
+  if (!shouldRender) {
+    return null;
+  }
 
   // Log when overlay is mounted
   React.useEffect(() => {
     console.log('[@component:StreamClickOverlay] 🎯 Click overlay mounted and ready! Device resolution:', deviceResolution);
     console.log('[@component:StreamClickOverlay] Video ref current:', !!videoRef.current);
     console.log('[@component:StreamClickOverlay] Overlay ref current:', !!overlayRef.current);
-    console.log('[@component:StreamClickOverlay] Has remote controller proxy:', !!selectedHostDevice?.controllerProxies?.remote);
     return () => {
       console.log('[@component:StreamClickOverlay] Click overlay unmounted');
     };

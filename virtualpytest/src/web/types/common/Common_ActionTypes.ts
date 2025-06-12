@@ -95,8 +95,8 @@ export interface ControllerCapabilities {
   };
 }
 
-// Action execution result
-export interface ActionExecutionResult {
+// Remote action execution result
+export interface RemoteActionExecutionResult {
   success: boolean;
   error?: string;
   duration?: number; // milliseconds

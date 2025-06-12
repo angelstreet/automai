@@ -57,7 +57,7 @@ export function ScreenshotCapture({
     }
   };
 
-  // Get image URL using AV controller proxy instead of building URLs
+  // Get image URL using server route instead of AV controller proxy
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
     
@@ -75,13 +75,13 @@ export function ScreenshotCapture({
       return screenshotPath;
     }
     
-    // For file paths, use AV controller proxy to serve images
-    if (!selectedHostDevice?.controllerProxies?.av) {
-      console.error(`[@component:ScreenshotCapture] No AV controller proxy available for image serving`);
+    // For file paths, use server route for image serving
+    if (!selectedHostDevice) {
+      console.error(`[@component:ScreenshotCapture] No host device available for image serving`);
       return '';
     }
     
-    console.log('[@component:ScreenshotCapture] Using AV controller proxy for image serving');
+    console.log('[@component:ScreenshotCapture] Using server route for image serving');
     
     // Extract filename from path
     const filename = screenshotPath.split('/').pop()?.split('?')[0];
@@ -90,24 +90,22 @@ export function ScreenshotCapture({
       return '';
     }
     
-    // Use the AV controller proxy to get the image URL
-    // This should be synchronous URL building through the proxy
+    // Use server route to serve images
     try {
-      const avController = selectedHostDevice.controllerProxies.av;
       let imageUrl: string;
       
       if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
-        // Screenshot images - use AV controller image serving method
-        imageUrl = avController.buildImageUrl(`screenshot/${filename}`);
+        // Screenshot images - use server route for screenshots
+        imageUrl = `/server/av/screenshot/${filename}?host_name=${selectedHostDevice.host_name}`;
       } else {
-        // General images - use AV controller general image serving
-        imageUrl = avController.buildImageUrl(screenshotPath);
+        // General images - use server route for general images
+        imageUrl = `/server/av/image/${encodeURIComponent(screenshotPath)}?host_name=${selectedHostDevice.host_name}`;
       }
       
-      console.log(`[@component:ScreenshotCapture] Generated image URL via AV controller: ${imageUrl}`);
+      console.log(`[@component:ScreenshotCapture] Generated image URL via server route: ${imageUrl}`);
       return imageUrl;
     } catch (error) {
-      console.error(`[@component:ScreenshotCapture] Error building image URL via AV controller:`, error);
+      console.error(`[@component:ScreenshotCapture] Error building image URL via server route:`, error);
       return '';
     }
   }, [screenshotPath, selectedHostDevice]);

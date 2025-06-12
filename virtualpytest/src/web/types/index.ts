@@ -2,7 +2,24 @@
 
 // Common types - Base types first, then specific types
 export * from './common/Common_BaseTypes';
-export * from './common/Common_ActionTypes';
+
+// Export specific types from Common_ActionTypes to avoid conflicts with Navigation_Types
+export type {
+  RemoteType,
+  BaseAction,
+  KeyPressAction,
+  TextInputAction,
+  AppLaunchAction,
+  ElementClickAction,
+  CoordinateTapAction,
+  SequenceAction,
+  NavigationAction,
+  EdgeActionData,
+  ControllerCapabilities,
+  RemoteActionExecutionResult,
+  COMMON_KEYS,
+  createNavigationAction
+} from './common/Common_ActionTypes';
 
 // Host types
 export type { 
@@ -20,7 +37,7 @@ export type {
 
 export * from './pages/Environment_Types';
 
-// Page-specific types
+// Page-specific types (Navigation_Types includes its own ActionExecutionResult)
 export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
 
@@ -48,15 +65,16 @@ export * from './pages/Dashboard_Types';
 export type { 
   AndroidElement, 
   AndroidApp, 
-  RemoteConfig, 
+  RemoteConfig,
   RemoteDeviceConfig,
   ConnectionForm, 
   RemoteSession, 
   AndroidTVSession, 
   AndroidMobileSession, 
   TestResult,
-  RemoteType,
+  RemoteType as RemoteControllerType,
   BaseConnectionConfig,
+  AndroidConnectionConfig,
   IRConnectionConfig,
   BluetoothConnectionConfig,
   AnyConnectionConfig,
@@ -67,7 +85,7 @@ export type {
 // Export the Remote ControllerTypes with alias to avoid conflict
 export type { 
   ControllerTypes as RemoteControllerTypes,
-  ControllerType as RemoteControllerType
+  ControllerType as RemoteControllerTypeAlias
 } from './controller/Remote_Types';
 
 export * from './features/Validation_Types'; 

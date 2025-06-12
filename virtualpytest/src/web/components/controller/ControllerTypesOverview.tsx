@@ -1,12 +1,14 @@
 import React from 'react';
 import {
+  Grid,
   Card,
   CardContent,
   Typography,
-  Grid,
-  Paper,
-  Box,
   Chip,
+  Box,
+  IconButton,
+  Tooltip,
+  Paper,
 } from '@mui/material';
 import {
   Gamepad as ControllerIcon,
@@ -15,9 +17,20 @@ import {
   Visibility as VerificationIcon,
   Power as PowerIcon,
   Memory as ProcessorIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 
-import { ControllerTypesResponse, ControllerItem } from '../../types/controller/Remote_Types';
+// Temporary types until we fix the type imports
+interface ControllerItem {
+  id: string;
+  name: string;
+  description: string;
+  status: 'available' | 'placeholder';
+}
+
+interface ControllerTypesResponse {
+  [key: string]: ControllerItem[];
+}
 
 interface ControllerTypesOverviewProps {
   controllerTypes: ControllerTypesResponse | null;

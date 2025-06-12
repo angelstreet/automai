@@ -205,59 +205,47 @@ export function VideoCapture({
     }
   };
 
-  // Get current image URL using AV controller proxy instead of building URLs
-  const currentImageUrl = useMemo(() => {
-    if (capturedImages.length === 0) return '';
-    
+  // Get image URL using server route instead of AV controller proxy
+  const imageUrl = useMemo(() => {
     const screenshotPath = capturedImages[currentValue] || capturedImages[0];
     if (!screenshotPath) return '';
     
     console.log(`[@component:VideoCapture] Processing image path: ${screenshotPath}`);
     
-    // Handle data URLs (base64 from remote system) - return as is
+    // Handle data URLs (base64) - return as is
     if (screenshotPath.startsWith('data:')) {
-      console.log('[@component:VideoCapture] Using data URL from remote system');
+      console.log('[@component:VideoCapture] Using data URL');
       return screenshotPath;
     }
     
-    // Handle full URLs (already complete) - return as is
+    // Handle full URLs - return as is  
     if (screenshotPath.startsWith('http')) {
       console.log('[@component:VideoCapture] Using complete URL');
       return screenshotPath;
     }
     
-    // For file paths, use AV controller proxy to serve images
-    if (!selectedHostDevice?.controllerProxies?.av) {
-      console.error(`[@component:VideoCapture] No AV controller proxy available for image serving`);
+    // For file paths, use server route for image serving
+    if (!selectedHostDevice) {
+      console.error('[@component:VideoCapture] No host device available for image serving');
       return '';
     }
     
-    console.log('[@component:VideoCapture] Using AV controller proxy for image serving');
+    console.log('[@component:VideoCapture] Using server route for image serving');
     
     // Extract filename from path
     const filename = screenshotPath.split('/').pop()?.split('?')[0];
     if (!filename) {
-      console.error(`[@component:VideoCapture] Failed to extract filename from path: ${screenshotPath}`);
+      console.error(`[@component:VideoCapture] Failed to extract filename: ${screenshotPath}`);
       return '';
     }
-    
-    // Use the AV controller proxy to get the image URL
+
+    // Use server route to serve images
     try {
-      const avController = selectedHostDevice.controllerProxies.av;
-      let imageUrl: string;
-      
-      if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
-        // Screenshot images - use AV controller image serving method
-        imageUrl = avController.buildImageUrl(`screenshot/${filename}`);
-      } else {
-        // General images - use AV controller general image serving
-        imageUrl = avController.buildImageUrl(screenshotPath);
-      }
-      
-      console.log(`[@component:VideoCapture] Generated image URL via AV controller: ${imageUrl}`);
+      const imageUrl = `/server/av/screenshot/${filename}?host_name=${selectedHostDevice.host_name}`;
+      console.log(`[@component:VideoCapture] Generated image URL: ${imageUrl}`);
       return imageUrl;
     } catch (error) {
-      console.error(`[@component:VideoCapture] Error building image URL via AV controller:`, error);
+      console.error('[@component:VideoCapture] Error building image URL:', error);
       return '';
     }
   }, [capturedImages, currentValue, selectedHostDevice]);
@@ -270,6 +258,47 @@ export function VideoCapture({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleCapture = async () => {
+    if (!selectedHostDevice) {
+      console.error('[@component:VideoCapture] No host device selected for capture');
+      return;
+    }
+    
+    setIsCapturing(true);
+    setCaptureError(null);
+    
+    try {
+      console.log('[@component:VideoCapture] Starting capture using server route...');
+      
+      // Use server route instead of AV controller proxy
+      const response = await fetch(`/server/av/capture`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.imagePath) {
+        const newImages = [...capturedImages, result.imagePath];
+        setCapturedImages(newImages);
+        setCurrentValue(newImages.length - 1);
+        console.log(`[@component:VideoCapture] Capture successful: ${result.imagePath}`);
+      } else {
+        throw new Error(result.error || 'Capture failed');
+      }
+    } catch (error: any) {
+      console.error('[@component:VideoCapture] Capture failed:', error);
+      setCaptureError(error.message || 'Failed to capture image');
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   return (
@@ -344,10 +373,10 @@ export function VideoCapture({
         )}
 
         {/* Captured images display - same logic as ScreenshotCapture */}
-        {capturedImages.length > 0 && currentImageUrl && !isCapturing && (
+        {capturedImages.length > 0 && imageUrl && !isCapturing && (
           <img 
             ref={imageRef}
-            src={currentImageUrl}
+            src={imageUrl}
             alt={`Captured Frame ${currentValue + 1}`}
             style={{
               maxWidth: layoutConfig.isMobileModel ? 'auto' : '100%',

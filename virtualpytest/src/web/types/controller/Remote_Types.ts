@@ -27,6 +27,85 @@ export interface AndroidApp {
 // Remote types
 export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
 
+// Base connection configuration interface
+export interface BaseConnectionConfig {
+  [key: string]: any;
+}
+
+// Android connection configuration (for both TV and mobile)
+export interface AndroidConnectionConfig extends BaseConnectionConfig {
+  device_ip: string;
+  device_port: string;
+}
+
+// IR connection configuration
+export interface IRConnectionConfig extends BaseConnectionConfig {
+  device_path: string;
+  protocol: string;
+  frequency: number;
+}
+
+// Bluetooth connection configuration
+export interface BluetoothConnectionConfig extends BaseConnectionConfig {
+  device_address: string;
+  device_name?: string;
+  pairing_pin?: string;
+}
+
+// Union type for all connection configurations
+export type AnyConnectionConfig = 
+  | AndroidConnectionConfig 
+  | IRConnectionConfig 
+  | BluetoothConnectionConfig 
+  | BaseConnectionConfig;
+
+// Connection form interface for UI forms
+export interface ConnectionForm {
+  device_ip: string;
+  device_port: string;
+}
+
+// Remote device configuration interface (extends RemoteConfig with additional endpoints)
+export interface RemoteDeviceConfig {
+  type: string;
+  name: string;
+  icon: string;
+  hasScreenshot: boolean;
+  hasOverlay: boolean;
+  serverEndpoints: {
+    connect: string;
+    disconnect: string;
+    screenshot?: string;
+    command: string;
+    screenshotAndDump?: string;
+    getApps?: string;
+    clickElement?: string;
+    tapElement?: string;
+    executeCommand?: string;
+    getStatus?: string;
+  };
+}
+
+// Android TV session interface
+export interface AndroidTVSession extends RemoteSession {
+  deviceInfo?: {
+    model: string;
+    manufacturer: string;
+    androidVersion: string;
+  };
+  adbConnected?: boolean;
+}
+
+// Android Mobile session interface  
+export interface AndroidMobileSession extends RemoteSession {
+  deviceInfo?: {
+    model: string;
+    manufacturer: string;
+    androidVersion: string;
+  };
+  adbConnected?: boolean;
+}
+
 // Remote configuration interface
 export interface RemoteConfig {
   type: string;
