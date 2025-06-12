@@ -147,6 +147,8 @@ export const NavigationEditorHeader: React.FC<NavigationEditorHeaderProps> = ({
 
   // Memoize filtered devices to prevent recreation on every render
   const filteredDevices = useMemo(() => {
+    
+
     const hasUserInterfaceModels = userInterface && userInterface.models && Array.isArray(userInterface.models);
     const currentDeviceCount = availableHosts.length;
     
