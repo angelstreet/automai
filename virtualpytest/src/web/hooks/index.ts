@@ -8,7 +8,6 @@ export * from './validation';
 
 // Page Hooks (domain-specific for pages)
 export * from './pages/useScreenEditor';
-export * from './pages/useNavigationEditor';  
-export * from './pages/useNavigation';
+export * from './pages/useNavigationEditor';
 export * from './pages/useDevice';
 export * from './pages/useUserInterface';

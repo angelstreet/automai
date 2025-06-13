@@ -1,11 +1,12 @@
-import React from 'react';
-import { Box, Button, IconButton, CircularProgress } from '@mui/material';
 import {
   Add as AddIcon,
   FitScreen as FitScreenIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
+import { Box, Button, IconButton, CircularProgress } from '@mui/material';
+import React from 'react';
+
 import { NavigationEditorActionButtonsProps } from '../../types/pages/Navigation_Header_Types';
 import { ValidationButtonClient } from '../validation';
 
@@ -16,6 +17,7 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
   isLoading,
   error,
   selectedDevice,
+  isControlActive,
   onAddNewNode,
   onFitView,
   onSaveToConfig,
@@ -32,7 +34,10 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
       }}
     >
       {/* Validation Button */}
-      <ValidationButtonClient treeId={treeId} disabled={isLoading || !!error || !selectedDevice} />
+      <ValidationButtonClient
+        treeId={treeId}
+        disabled={isLoading || !!error || !selectedDevice || !isControlActive}
+      />
 
       {/* Add Node Button */}
       <Button

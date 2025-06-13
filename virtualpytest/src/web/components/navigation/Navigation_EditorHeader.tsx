@@ -124,6 +124,7 @@ export const NavigationEditorHeader: React.FC<{
               isLoading={isLoading}
               error={error}
               selectedDevice={selectedDevice}
+              isControlActive={isControlActive}
               onAddNewNode={onAddNewNode}
               onFitView={onFitView}
               onSaveToConfig={onSaveToConfig}

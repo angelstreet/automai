@@ -10,8 +10,9 @@ import {
 } from '../../types/pages/Navigation_Types';
 import { useNavigationConfig } from '../navigation/useNavigationConfig';
 import { useNavigationDeviceControl } from '../navigation/useNavigationDeviceControl';
-
-import { useNavigationState, useConnectionRules, useNodeEdgeManagement } from './useNavigation';
+import { useNavigationState } from '../navigation/useNavigationState';
+import { useConnectionRules } from '../navigation/useConnectionRules';
+import { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
