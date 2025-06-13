@@ -43,10 +43,13 @@ export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
       setIsLoadingStream(true);
 
       const response = await fetch('/server/av/get-stream-url', {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          host: host,
+        }),
       });
 
       const result = await response.json();
@@ -67,7 +70,7 @@ export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
     } finally {
       setIsLoadingStream(false);
     }
-  }, [host.host_name]);
+  }, [host]);
 
   // Fetch stream URL when component mounts
   useEffect(() => {

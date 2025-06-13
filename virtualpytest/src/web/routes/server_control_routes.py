@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import urllib.parse
 
-from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, buildHostUrl
+from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, buildHostUrl, get_user_id
 from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -37,9 +37,15 @@ def take_control():
         data = request.get_json() or {}
         host_name = data.get('host_name')
         session_id = data.get('session_id', 'default-session')
+        user_id = data.get('user_id') or get_user_id()  # Get user ID from request or headers
+        
+        # Enhance session ID with user identification
+        enhanced_session_id = f"{session_id}|user:{user_id}" if user_id != 'default-user-id' else session_id
         
         print(f"[@route:server_take_control] Take control requested for host: {host_name}")
         print(f"[@route:server_take_control] Session ID: {session_id}")
+        print(f"[@route:server_take_control] Enhanced Session ID: {enhanced_session_id}")
+        print(f"[@route:server_take_control] User ID: {user_id}")
         
         if not host_name:
             return jsonify({
@@ -62,18 +68,25 @@ def take_control():
                 }), 404
             
             # Try to acquire lock for the host
-            lock_acquired = lock_device_in_registry(host_name, session_id)
+            lock_acquired = lock_device_in_registry(host_name, enhanced_session_id)
             
             if not lock_acquired:
                 # Host exists but lock failed - check who owns it
                 lock_info = get_device_lock_info(host_name)
                 if lock_info:
                     current_owner = lock_info.get('lockedBy', 'unknown')
+                    
+                    # Check if it's locked by the same user (different session)
+                    current_user_from_lock = None
+                    if '|user:' in current_owner:
+                        current_user_from_lock = current_owner.split('|user:')[1]
+                    
                     return jsonify({
                         'success': False,
                         'error': f'Host {host_name} is already locked by session: {current_owner}',
                         'device_locked': True,
-                        'locked_by': current_owner
+                        'locked_by': current_owner,
+                        'locked_by_same_user': current_user_from_lock == user_id if current_user_from_lock else False
                     }), 409
                 else:
                     # This shouldn't happen - lock failed but no lock info
@@ -84,7 +97,7 @@ def take_control():
                         'locked_by': None
                     }), 500
             
-            print(f"[@route:server_take_control] Successfully locked host {host_name} for session {session_id}")
+            print(f"[@route:server_take_control] Successfully locked host {host_name} for session {enhanced_session_id}")
             
         except Exception as e:
             print(f"[@route:server_take_control] Error acquiring host lock: {e}")
@@ -97,7 +110,7 @@ def take_control():
         try:
             # Just verify it's online
             if host_info.get('status') != 'online':
-                unlock_device_in_registry(host_name, session_id)
+                unlock_device_in_registry(host_name, enhanced_session_id)
                 return jsonify({
                     'success': False,
                     'error': f'Host {host_name} is not online (status: {host_info.get("status")})'
@@ -106,7 +119,7 @@ def take_control():
             print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_info.get('host_url')}")
             
         except Exception as e:
-            unlock_device_in_registry(host_name, session_id)
+            unlock_device_in_registry(host_name, enhanced_session_id)
             print(f"[@route:server_take_control] Error verifying host status: {e}")
             return jsonify({
                 'success': False,
@@ -140,12 +153,13 @@ def take_control():
                     print(f"[@route:server_take_control] SUCCESS: Take control succeeded for host: {host_name}")
                     return jsonify({
                         'success': True,
-                        'message': 'Control taken successfully'
+                        'message': 'Control taken successfully',
+                        'session_id': enhanced_session_id
                     }), 200
                 else:
                     # Host failed to start controllers - unlock and return simple error
                     print(f"[@route:server_take_control] FAILED: Take control failed for host: {host_name}")
-                    unlock_device_in_registry(host_name, session_id)
+                    unlock_device_in_registry(host_name, enhanced_session_id)
                     
                     return jsonify({
                         'success': False,
@@ -153,7 +167,7 @@ def take_control():
                     }), 500
             else:
                 # Host request failed, release the device lock
-                unlock_device_in_registry(host_name, session_id)
+                unlock_device_in_registry(host_name, enhanced_session_id)
                 return jsonify({
                     'success': False,
                     'error': f'Host request failed: {host_response.status_code} {host_response.text}',
@@ -162,7 +176,7 @@ def take_control():
                 
         except Exception as e:
             # Host communication failed, release the device lock
-            unlock_device_in_registry(host_name, session_id)
+            unlock_device_in_registry(host_name, enhanced_session_id)
             print(f"[@route:server_take_control] Error calling host: {e}")
             return jsonify({
                 'success': False,
@@ -184,10 +198,18 @@ def release_control():
         data = request.get_json() or {}
         host_name = data.get('host_name')
         session_id = data.get('session_id', 'default-session')
+        user_id = data.get('user_id') or get_user_id()  # Get user ID from request or headers
+        
+        # Enhance session ID with user identification if not already enhanced
+        enhanced_session_id = session_id
+        if '|user:' not in session_id and user_id != 'default-user-id':
+            enhanced_session_id = f"{session_id}|user:{user_id}"
         
         print(f"[@route:server_release_control] Releasing control")
         print(f"[@route:server_release_control] Host name: {host_name}")
         print(f"[@route:server_release_control] Session ID: {session_id}")
+        print(f"[@route:server_release_control] Enhanced Session ID: {enhanced_session_id}")
+        print(f"[@route:server_release_control] User ID: {user_id}")
         
         # Step 1: Call host release control if host_name provided
         host_release_success = True
@@ -223,7 +245,7 @@ def release_control():
         # Step 2: Unlock device if host_name provided
         device_unlock_success = True
         if host_name:
-            device_unlock_success = unlock_device_in_registry(host_name, session_id)
+            device_unlock_success = unlock_device_in_registry(host_name, enhanced_session_id)
             if device_unlock_success:
                 print(f"[@route:server_release_control] Successfully unlocked host: {host_name}")
             else:
@@ -242,6 +264,9 @@ def release_control():
             'success': False,
             'error': f'Error releasing control: {str(e)}'
         }), 500
+
+
+
 
 
 @control_bp.route('/navigate', methods=['POST'])

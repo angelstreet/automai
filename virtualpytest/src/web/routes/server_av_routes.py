@@ -14,43 +14,67 @@ import json
 # Create blueprint
 av_bp = Blueprint('server_av', __name__, url_prefix='/server/av')
 
-def get_selected_host_url():
-    """Get the base URL for the currently selected host"""
-    # TODO: Implement logic to get selected host from session/context
-    # For now, this is a placeholder that should be implemented based on your host selection logic
-    # This should return something like: "https://sunri-pi1:8443"
+def get_host_from_request():
+    """
+    Get host information from request data.
+    Frontend can provide:
+    - GET: host_name in query params (simple)
+    - POST: full host object in body (efficient - has host_url)
     
-    # Example implementation - you'll need to adapt this to your actual host selection mechanism
+    Returns:
+        Tuple of (host_info, error_message)
+    """
     try:
-        # This could come from session, request headers, or global state
-        # Replace this with your actual host selection logic
-        selected_host = "sunri-pi1:8443"  # Placeholder
-        return f"https://{selected_host}"
+        if request.method == 'GET':
+            host_name = request.args.get('host_name')
+            if not host_name:
+                return None, 'host_name parameter required'
+            # Simple host info for buildHostUrl
+            return {'host_name': host_name}, None
+        else:
+            data = request.get_json() or {}
+            host_object = data.get('host')
+            
+            if not host_object:
+                return None, 'host object required in request body'
+                
+            # Full host object with host_url - most efficient
+            return host_object, None
+                
     except Exception as e:
-        print(f"[@route:server_av] Error getting selected host URL: {e}")
-        return None
+        return None, f'Error getting host from request: {str(e)}'
 
 def proxy_to_host(endpoint, method='GET', data=None):
     """
-    Proxy a request to the selected host's AV endpoint
+    Proxy a request to the specified host's AV endpoint using buildHostUrl
     
     Args:
         endpoint: The host endpoint to call (e.g., '/host/av/get-stream-url')
         method: HTTP method ('GET', 'POST', etc.)
-        data: Request data for POST requests
+        data: Request data for POST requests (should include host info)
     
     Returns:
         Tuple of (response_data, status_code)
     """
     try:
-        host_url = get_selected_host_url()
-        if not host_url:
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
             return {
                 'success': False,
-                'error': 'No host selected or host URL unavailable'
+                'error': error or 'Host information required'
+            }, 400
+        
+        # Use buildHostUrl to construct the proper URL
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host_info, endpoint)
+        
+        if not full_url:
+            return {
+                'success': False,
+                'error': 'Failed to build host URL'
             }, 500
         
-        full_url = f"{host_url}{endpoint}"
         print(f"[@route:server_av:proxy] Proxying {method} {full_url}")
         
         # Prepare request parameters
@@ -122,7 +146,7 @@ def restart_stream():
             'error': str(e)
         }), 500
 
-@av_bp.route('/get-stream-url', methods=['GET'])
+@av_bp.route('/get-stream-url', methods=['GET', 'POST'])
 def get_stream_url():
     """Proxy get stream URL request to selected host"""
     try:
@@ -139,7 +163,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@av_bp.route('/status', methods=['GET'])
+@av_bp.route('/get-status', methods=['GET'])
 def get_status():
     """Proxy get status request to selected host"""
     try:
