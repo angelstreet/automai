@@ -1,6 +1,8 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
+import React from 'react';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
+import { buildHostWebUrl } from '../../utils/frontendUtils';
 
 interface ImageComparisonThumbnailsProps {
   sourceUrl: string;
@@ -21,8 +23,8 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
   imageFilter,
   onImageClick,
 }) => {
-  // Use registration context to get buildHostWebUrl and selected host
-  const { selectedHost, buildHostWebUrl } = useRegistration();
+  // Use registration context to get selected host
+  const { selectedHost } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
@@ -32,10 +34,10 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
       return url;
     }
 
-    // Use buildHostWebUrl from registration context
+    // Use buildHostWebUrl from frontendUtils
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostWebUrl(selectedHost.host_name, cleanUrl);
+      return buildHostWebUrl(selectedHost, cleanUrl);
     }
 
     // Fallback if no host selected

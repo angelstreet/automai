@@ -1,6 +1,8 @@
+import { Box, Typography } from '@mui/material';
 import React from 'react';
-import { Box, Typography, Chip } from '@mui/material';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
+import { buildHostWebUrl } from '../../utils/frontendUtils';
 
 interface TextComparisonDisplayProps {
   searchedText: string;
@@ -22,7 +24,7 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
   onSourceImageClick,
 }) => {
   // Use registration context to get selected host for nginx URL
-  const { selectedHost, buildHostWebUrl } = useRegistration();
+  const { selectedHost } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';

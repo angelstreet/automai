@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 
 import { useRegistration } from '../../../contexts/RegistrationContext';
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { buildServerUrl } from '../../../utils/frontendUtils';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;
@@ -28,7 +29,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   onModelSelected,
   errors = {},
 }) => {
-  const { vite_buildServerUrl } = useRegistration();
+  const {} = useRegistration();
   const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
       try {
         console.log('[@component:ModelSelectionStep] Fetching device models');
 
-        const response = await fetch(vite_buildServerUrl('/server/devicemodel/getAllModels'));
+        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
         if (!response.ok) {
           throw new Error(
             `Failed to fetch device models: ${response.status} ${response.statusText}`,
@@ -62,7 +63,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     };
 
     fetchModels();
-  }, [vite_buildServerUrl]); // Added vite_buildServerUrl to dependencies
+  }, []);
 
   // Update selected model details when model changes
   useEffect(() => {
