@@ -33,7 +33,9 @@ const registeredRoutes = [
   '/navigation-editor', // Will match /navigation-editor/* paths
 ];
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // Force production mode when using HTTPS
+  mode: shouldUseHttps ? 'production' : mode,
   plugins: [
     react(),
     // Custom plugin for route validation
@@ -116,4 +118,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
