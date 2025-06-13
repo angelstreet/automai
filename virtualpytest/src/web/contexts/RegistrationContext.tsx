@@ -3,9 +3,6 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useRegistrationLogic } from '../hooks/useRegistration';
 import { Host } from '../types/common/Host_Types';
 
-// Default team ID constant - centralized here for use across the application
-export const DEFAULT_TEAM_ID = '7fdeb4bb-3639-4ec3-959f-b54769a219ce';
-
 interface RegistrationContextType {
   // Host data
   availableHosts: Host[];
