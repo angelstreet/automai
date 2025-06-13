@@ -101,10 +101,8 @@ export default defineConfig({
           }
         : undefined // Let Vite generate self-signed certificates
       : undefined, // No HTTPS
-    // Configure HMR WebSocket for auto-refresh
-    hmr: {
-      port: 5073,
-    },
+    // Configure HMR WebSocket for auto-refresh (only for HTTP development)
+    hmr: shouldUseHttps ? false : { port: 5073 },
     // Configure how the dev server handles routing
     fs: {
       strict: false,
