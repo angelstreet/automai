@@ -211,12 +211,18 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
           state.setEdges(edges);
           // setAllNodes/setAllEdges removed - using single source of truth
 
-          // IMPORTANT: Do NOT set userInterface data from config file
-          // Interface metadata should only come from database to avoid model conflicts
-          // The config file may have outdated interface models that conflict with database
-          console.log(
-            `[@hook:useNavigationConfig:loadFromConfig] Ignoring userInterface from config file to prevent model conflicts`,
-          );
+          // Use userInterface data from config file as single source of truth
+          if (data.userinterface) {
+            console.log(
+              `[@hook:useNavigationConfig:loadFromConfig] Loading userInterface from config file: ${data.userinterface.name} with models: ${data.userinterface.models?.join(', ') || 'none'}`,
+            );
+            state.setUserInterface(data.userinterface);
+          } else {
+            console.log(
+              `[@hook:useNavigationConfig:loadFromConfig] No userInterface data found in config file for tree: ${treeName}`,
+            );
+            state.setUserInterface(null);
+          }
 
           // Set initial state for change tracking
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });

@@ -247,8 +247,7 @@ export const useNavigation = (): NavigationHookResult => {
           },
           body: JSON.stringify({
             device_model: selectedDevice,
-            video_device:
-              selectedDevice?.controller_configs?.av?.parameters?.video_device || '/dev/video0',
+            video_device: '/dev/video0', // Use default video device
             parent_name: parentName,
             node_name: nodeName,
           }),
