@@ -29,3 +29,10 @@ traces/
 # Git API temporary directories
 temp/
 virtualpytest/src/tmp/screenshots/android_mobile.jpg
+virtualpytest/src/web/components/controller/av/tmp/DragSelectionOverlay.tsx
+virtualpytest/src/web/components/controller/av/tmp/ScreenDefinitionEditor.tsx
+virtualpytest/src/web/components/controller/av/tmp/ScreenshotCapture.tsx
+virtualpytest/src/web/components/controller/av/tmp/StreamClickOverlay.tsx
+virtualpytest/src/web/components/controller/av/tmp/StreamViewer.tsx
+virtualpytest/src/web/components/controller/av/tmp/VerificationEditor.tsx
+virtualpytest/src/web/components/controller/av/tmp/VideoCapture.tsx
