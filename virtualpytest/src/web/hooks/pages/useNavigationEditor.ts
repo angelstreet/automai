@@ -2,30 +2,20 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
-import { useRegistration, DEFAULT_TEAM_ID } from '../../contexts/RegistrationContext';
 import {
   UINavigationNode,
   UINavigationEdge,
   ConnectionResult,
 } from '../../types/pages/Navigation_Types';
+import { buildServerUrl } from '../../utils/frontendUtils';
+import { useConnectionRules } from '../navigation/useConnectionRules';
 import { useNavigationConfig } from '../navigation/useNavigationConfig';
 import { useNavigationDeviceControl } from '../navigation/useNavigationDeviceControl';
 import { useNavigationState } from '../navigation/useNavigationState';
-import { useConnectionRules } from '../navigation/useConnectionRules';
 import { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
-
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-
-  // Initialize teamId in localStorage if not already set
-  useEffect(() => {
-    if (!localStorage.getItem('teamId') && !sessionStorage.getItem('teamId')) {
-      localStorage.setItem('teamId', DEFAULT_TEAM_ID);
-    }
-  }, []);
 
   // Use the modular state hook
   const navigationState = useNavigationState();
