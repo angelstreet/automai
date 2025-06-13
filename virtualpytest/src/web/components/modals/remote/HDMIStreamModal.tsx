@@ -25,27 +25,27 @@ interface HDMIStreamModalProps {
 }
 
 export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModalProps) {
-  const { buildNginxUrl } = useRegistration();
-  
+  const { buildHostWebUrl } = useRegistration();
+
   // Stream configuration state
   const [resolution, setResolution] = useState('1920x1080');
   const [fps, setFps] = useState(30);
-  
+
   // SSH connection parameters - populated from selectedHost
   const [hostIp, setHostIp] = useState('');
   const [hostPort, setHostPort] = useState(22);
   const [hostUsername, setHostUsername] = useState('');
   const [hostPassword, setHostPassword] = useState('');
-  
+
   // Stream connection form state - will be built dynamically
   const [streamUrl, setStreamUrl] = useState('');
   const [videoDevice, setVideoDevice] = useState('/dev/video0');
-  
+
   // Connection and streaming state
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  
+
   // Video player refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -55,7 +55,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
     if (open && selectedHost) {
       fetchDefaultValues();
     }
-    
+
     // Cleanup when modal closes
     return () => {
       cleanupStream();
@@ -68,7 +68,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
-    
+
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.src = '';
@@ -84,17 +84,20 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
         return;
       }
 
-      console.log('[@component:HDMIStreamModal] Loading values from selected host:', selectedHost.name);
-      
+      console.log(
+        '[@component:HDMIStreamModal] Loading values from selected host:',
+        selectedHost.name,
+      );
+
       // Populate SSH connection details from selected host
       setHostIp(selectedHost.local_ip || '');
       setHostPort(22); // Default SSH port
       setHostUsername(''); // User needs to provide this
       setHostPassword(''); // User needs to provide this
-      
+
       // Build stream URL using the nginx URL builder from registration context
       try {
-        const dynamicStreamUrl = buildNginxUrl(selectedHost.id, 'stream/output.m3u8');
+        const dynamicStreamUrl = buildHostWebUrl(selectedHost.id, 'stream/output.m3u8');
         setStreamUrl(dynamicStreamUrl);
         console.log('[@component:HDMIStreamModal] Built dynamic stream URL:', dynamicStreamUrl);
       } catch (error) {
@@ -102,7 +105,6 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
         // Fallback to manual entry
         setStreamUrl('');
       }
-      
     } catch (error) {
       console.error('[@component:HDMIStreamModal] Could not load default values:', error);
     }
@@ -114,32 +116,39 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
       setConnectionError('Please enter both a valid stream URL and video device');
       return;
     }
-    
+
     if (!videoRef.current) {
       setConnectionError('Video player not initialized');
       return;
     }
-    
+
     setIsConnecting(true);
     setConnectionError(null);
-    
+
     try {
       console.log('[@component:HDMIStreamModal] Connecting to HLS stream:', streamUrl);
       console.log('[@component:HDMIStreamModal] Using video device:', videoDevice);
-      console.log('[@component:HDMIStreamModal] SSH Host:', hostIp, 'Port:', hostPort, 'User:', hostUsername);
-      
+      console.log(
+        '[@component:HDMIStreamModal] SSH Host:',
+        hostIp,
+        'Port:',
+        hostPort,
+        'User:',
+        hostUsername,
+      );
+
       // Clean up any existing stream first
       cleanupStream();
-      
+
       // Make sure we have the video element
       if (!videoRef.current) {
         throw new Error('Video element not found');
       }
-      
+
       // Dynamically import HLS.js
       const HLSModule = await import('hls.js');
       const HLS = HLSModule.default;
-      
+
       if (!HLS.isSupported()) {
         console.log('[@component:HDMIStreamModal] HLS.js is not supported, trying native playback');
         // Try native HLS (Safari)
@@ -153,7 +162,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
               setConnectionError('Autoplay failed - please click play');
             });
           });
-          
+
           videoRef.current.addEventListener('error', () => {
             setIsConnecting(false);
             setIsConnected(false);
@@ -164,7 +173,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
         }
         return;
       }
-      
+
       // Create HLS instance with low latency settings
       const hls = new HLS({
         enableWorker: true,
@@ -175,9 +184,9 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
         maxBufferLength: 5,
         maxMaxBufferLength: 10,
       });
-      
+
       hlsRef.current = hls;
-      
+
       // Setup event handlers
       hls.on(HLS.Events.MANIFEST_PARSED, () => {
         setIsConnecting(false);
@@ -187,14 +196,14 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
           setConnectionError('Autoplay failed - please click play');
         });
       });
-      
+
       hls.on(HLS.Events.ERROR, (_: any, data: any) => {
         if (data.fatal) {
           console.error('[@component:HDMIStreamModal] Fatal HLS error:', data.type, data.details);
           setIsConnecting(false);
           setIsConnected(false);
           setConnectionError(`Stream error: ${data.details || data.type}`);
-          
+
           // Destroy instance on fatal error
           hls.destroy();
           hlsRef.current = null;
@@ -202,11 +211,10 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
           console.warn('[@component:HDMIStreamModal] Non-fatal HLS error:', data.details);
         }
       });
-      
+
       // Load and attach the stream
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
-      
     } catch (error: any) {
       console.error('[@component:HDMIStreamModal] Stream connection failed:', error);
       setIsConnecting(false);
@@ -214,39 +222,37 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
       setConnectionError(error.message || 'Failed to connect to stream');
     }
   };
-  
+
   // Handle stream disconnect
   const handleDisconnect = () => {
     console.log('[@component:HDMIStreamModal] Disconnecting from stream');
     cleanupStream();
     setIsConnected(false);
   };
-  
+
   // Handle modal close
   const handleCloseModal = () => {
     console.log('[@component:HDMIStreamModal] Closing modal and cleaning up');
-    
+
     // Clean up streaming
     if (isConnected) {
       handleDisconnect();
     }
-    
+
     onClose();
   };
 
   return (
     <Dialog open={open} onClose={handleCloseModal} maxWidth="lg" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+      <DialogTitle
+        sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}
+      >
         <Typography variant="h6" component="div">
           HDMI Stream Viewer {selectedHost && `- ${selectedHost.name}`}
         </Typography>
-        
+
         {/* Close button - always visible */}
-        <IconButton
-          onClick={handleCloseModal}
-          size="small"
-          aria-label="close"
-        >
+        <IconButton onClick={handleCloseModal} size="small" aria-label="close">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -254,10 +260,11 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
         {/* Show warning if no host is selected */}
         {!selectedHost && (
           <Alert severity="warning" sx={{ mb: 3 }}>
-            No device selected. Please select a device from the Dashboard first to use HDMI streaming.
+            No device selected. Please select a device from the Dashboard first to use HDMI
+            streaming.
           </Alert>
         )}
-        
+
         {/* Show selected host info */}
         {selectedHost && (
           <Alert severity="info" sx={{ mb: 3 }}>
@@ -266,7 +273,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
             </Typography>
           </Alert>
         )}
-        
+
         <Grid container spacing={3}>
           {/* Left Column: Stream Configuration & Controls */}
           <Grid item xs={4}>
@@ -276,7 +283,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                 <Typography variant="subtitle2" gutterBottom>
                   SSH Connection Details
                 </Typography>
-                
+
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={8}>
                     <TextField
@@ -322,11 +329,11 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                     />
                   </Grid>
                 </Grid>
-                
+
                 <Typography variant="subtitle2" gutterBottom>
                   Stream Connection Details
                 </Typography>
-                
+
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12}>
                     <TextField
@@ -349,11 +356,11 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                     />
                   </Grid>
                 </Grid>
-                
+
                 <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
                   Stream Configuration
                 </Typography>
-                
+
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={6}>
                     <TextField
@@ -388,12 +395,8 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                   >
                     {isConnecting ? 'Connecting...' : 'Connect'}
                   </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    onClick={handleCloseModal}
-                    fullWidth
-                  >
+
+                  <Button variant="outlined" onClick={handleCloseModal} fullWidth>
                     Close
                   </Button>
                 </Box>
@@ -404,7 +407,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                 <Typography variant="subtitle2" gutterBottom>
                   Connection Information
                 </Typography>
-                
+
                 <Card sx={{ mb: 2 }}>
                   <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>
@@ -423,26 +426,17 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
                       <strong>Quality:</strong> {resolution}@{fps}fps
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Status:</strong> <Chip label="Connected" color="success" size="small" />
+                      <strong>Status:</strong>{' '}
+                      <Chip label="Connected" color="success" size="small" />
                     </Typography>
                   </CardContent>
                 </Card>
-                
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={handleDisconnect}
-                  fullWidth
-                >
+
+                <Button variant="contained" color="error" onClick={handleDisconnect} fullWidth>
                   Disconnect
                 </Button>
-                
-                <Button
-                  variant="outlined"
-                  onClick={handleCloseModal}
-                  fullWidth
-                  sx={{ mt: 1 }}
-                >
+
+                <Button variant="outlined" onClick={handleCloseModal} fullWidth sx={{ mt: 1 }}>
                   Close
                 </Button>
               </Box>
@@ -451,40 +445,44 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
 
           {/* Right Column: Video Player */}
           <Grid item xs={8}>
-            <Box sx={{ 
-              position: 'relative', 
-              width: '100%', 
-              height: '420px',
-              border: '1px solid #ccc',
-              borderRadius: 1,
-              overflow: 'hidden',
-              backgroundColor: isConnected ? '#000' : 'transparent',
-            }}>
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                height: '420px',
+                border: '1px solid #ccc',
+                borderRadius: 1,
+                overflow: 'hidden',
+                backgroundColor: isConnected ? '#000' : 'transparent',
+              }}
+            >
               {/* Video element - always rendered but only visible when connected */}
-              <video 
+              <video
                 ref={videoRef}
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
+                style={{
+                  width: '100%',
+                  height: '100%',
                   objectFit: 'contain',
-                  display: isConnected ? 'block' : 'none'
+                  display: isConnected ? 'block' : 'none',
                 }}
                 controls
                 playsInline
               />
-              
+
               {/* Placeholder - only visible when not connected */}
               {!isConnected && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
                     <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
                     <Typography variant="h6">HDMI Stream</Typography>
@@ -494,7 +492,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
             </Box>
           </Grid>
         </Grid>
-        
+
         {/* Display error message at the bottom of the form */}
         {connectionError && !isConnected && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -504,4 +502,4 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
       </DialogContent>
     </Dialog>
   );
-} 
+}

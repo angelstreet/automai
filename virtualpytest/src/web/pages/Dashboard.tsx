@@ -50,7 +50,12 @@ import { Host } from '../types/common/Host_Types';
 import { DashboardStats, RecentActivity, LogEntry, ViewMode } from '../types/pages/Dashboard_Types';
 
 const Dashboard: React.FC = () => {
-  const { buildServerUrl, availableHosts, fetchHosts, isLoading: hostsLoading } = useRegistration();
+  const {
+    vite_buildServerUrl,
+    availableHosts,
+    fetchHosts,
+    isLoading: hostsLoading,
+  } = useRegistration();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -83,9 +88,9 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
-        fetch(buildServerUrl('/server/campaigns/getAllCampaigns')),
-        fetch(buildServerUrl('/server/testcases/getAllTestCases')),
-        fetch(buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
+        fetch(vite_buildServerUrl('/server/campaigns/getAllCampaigns')),
+        fetch(vite_buildServerUrl('/server/testcases/getAllTestCases')),
+        fetch(vite_buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
       ]);
 
       let testCases: TestCase[] = [];
@@ -147,7 +152,7 @@ const Dashboard: React.FC = () => {
   const fetchLogs = async () => {
     try {
       // Fetch backend logs
-      const backendLogsRes = await fetch(buildServerUrl('/server/system/logs'));
+      const backendLogsRes = await fetch(vite_buildServerUrl('/server/system/logs'));
 
       if (backendLogsRes.ok) {
         const backendLogs = await backendLogsRes.json();
@@ -403,7 +408,7 @@ const Dashboard: React.FC = () => {
               </Typography>
 
               <Typography color="textSecondary" variant="body2" gutterBottom>
-                Host IP: {device.host_ip}:{device.host_port_external}
+                Host URL: {device.host_url}
               </Typography>
 
               <Typography color="textSecondary" variant="body2" gutterBottom>
@@ -496,7 +501,7 @@ const Dashboard: React.FC = () => {
               </TableCell>
               <TableCell>
                 <Typography variant="body2" fontFamily="monospace">
-                  {device.host_ip}:{device.host_port_external}
+                  {device.host_url}
                 </Typography>
               </TableCell>
               <TableCell>

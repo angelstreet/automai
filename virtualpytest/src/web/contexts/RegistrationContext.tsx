@@ -24,9 +24,8 @@ interface RegistrationContextType {
   canLockDevice: (hostName: string) => boolean;
 
   // URL Builders (NO hardcoded values)
-  buildServerUrl: (endpoint: string) => string; // Always to main server
-  buildHostUrl: (endpoint: string) => string; // To specific host
-  buildNginxUrl: (hostName: string, path: string) => string; // To host's nginx
+  vite_buildServerUrl: (endpoint: string) => string; // Frontend to main server
+  buildHostWebUrl: (hostName: string, path: string) => string; // To host's nginx
 
   // Convenience getters
   getHostByName: (hostName: string) => Host | null;
@@ -48,8 +47,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   // Server configuration - Use VITE_SERVER_URL for all API calls
   const SERVER_BASE_URL = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:5109';
 
-  // Build server URL (always goes to main server)
-  const buildServerUrl = useCallback(
+  // Build server URL (always goes to main server) - Frontend uses VITE_SERVER_URL
+  const vite_buildServerUrl = useCallback(
     (endpoint: string) => {
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
       return `${SERVER_BASE_URL}/${cleanEndpoint}`;
@@ -57,16 +56,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     [SERVER_BASE_URL],
   );
 
-  // Build host URL (uses host URL from environment)
-  const buildHostUrl = useCallback((endpoint: string) => {
-    const HOST_BASE_URL = (import.meta as any).env.VITE_HOST_URL || 'http://localhost:6109';
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    const finalUrl = `${HOST_BASE_URL}/${cleanEndpoint}`;
-    console.log(`[@context:Registration] Final host URL: ${finalUrl}`);
-    return finalUrl;
-  }, []);
-
-  // Fetch hosts from server - FIXED: Removed createControllerProxies from dependency array
+  // Fetch hosts from server
   const fetchHosts = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -96,10 +86,10 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     } finally {
       setIsLoading(false);
     }
-  }, [SERVER_BASE_URL]); // FIXED: Include SERVER_BASE_URL dependency
+  }, [SERVER_BASE_URL]);
 
   // Build nginx URL (for host media/files)
-  const buildNginxUrl = useCallback(
+  const buildHostWebUrl = useCallback(
     (hostName: string, path: string) => {
       const host = availableHosts.find((h) => h.host_name === hostName);
       if (!host) {
@@ -173,7 +163,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         }
 
         // Call main server control endpoint to take control (which includes locking)
-        const response = await fetch(buildServerUrl('/server/control/take-control'), {
+        const response = await fetch(vite_buildServerUrl('/server/control/take-control'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -220,7 +210,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         return false;
       }
     },
-    [availableHosts, buildServerUrl],
+    [availableHosts, vite_buildServerUrl],
   );
 
   const unlockDevice = useCallback(
@@ -229,7 +219,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         console.log(`[@context:Registration] Attempting to release control of device: ${hostName}`);
 
         // Call main server control endpoint to release control (which includes unlocking)
-        const response = await fetch(buildServerUrl('/server/release-control'), {
+        const response = await fetch(vite_buildServerUrl('/server/release-control'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -280,7 +270,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         return false;
       }
     },
-    [buildServerUrl],
+    [vite_buildServerUrl],
   );
 
   const isDeviceLocked = useCallback(
@@ -321,9 +311,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     canLockDevice,
 
     // URL Builders
-    buildServerUrl,
-    buildHostUrl,
-    buildNginxUrl,
+    vite_buildServerUrl,
+    buildHostWebUrl,
 
     // Convenience getters
     getHostByName,

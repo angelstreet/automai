@@ -226,68 +226,93 @@ DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
 DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
 
 # =====================================================
-# URL BUILDER FUNCTIONS (Clean, Simplified API)
+# URL BUILDER FUNCTIONS (Standardized - Only 3 Functions)
 # =====================================================
 
-def buildServerUrl(endpoint: str) -> str:
+def vite_buildServerUrl(endpoint: str) -> str:
     """
-    Build a URL for server endpoints using environment configuration
+    Frontend URL builder - Build URLs for server endpoints using VITE environment
     
     Args:
         endpoint: The endpoint path to append
         
     Returns:
-        Complete URL to the server endpoint
+        Complete URL to the server endpoint for frontend use
     """
-    server_url = os.getenv('SERVER_URL', 'http://localhost:5109')
+    # Frontend uses VITE_SERVER_URL environment variable
+    server_url = os.getenv('VITE_SERVER_URL', 'http://localhost:5109')
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
     return f"{server_url}/{clean_endpoint}"
 
-def buildHostUrl(endpoint: str) -> str:
+def server_buildHostUrl(host_info: dict, endpoint: str) -> str:
     """
-    Build a URL for host Flask/API endpoints using environment configuration
+    Server URL builder - Build URLs for host API endpoints using host registry data
+    
+    Args:
+        host_info: Host information from the registry
+        endpoint: The endpoint path to append
+        
+    Returns:
+        Complete URL to the host API endpoint
+    """
+    if not host_info:
+        raise ValueError("host_info is required for server_buildHostUrl")
+    
+    # Use host_url from registry (contains full base URL like http://host:6109)
+    host_base_url = host_info.get('host_url')
+    if not host_base_url:
+        raise ValueError(f"Host missing host_url in registry: {host_info.get('host_name', 'unknown')}")
+    
+    # Clean endpoint
+    clean_endpoint = endpoint.lstrip('/')
+    
+    return f"{host_base_url}/{clean_endpoint}"
+
+def server_buildHostWebUrl(host_info: dict, path: str) -> str:
+    """
+    Server URL builder - Build URLs for host web/nginx endpoints using host registry data
+    
+    Args:
+        host_info: Host information from the registry
+        path: The path to append
+        
+    Returns:
+        Complete URL to the host web resource
+    """
+    if not host_info:
+        raise ValueError("host_info is required for server_buildHostWebUrl")
+    
+    # Use host_url from registry and modify for web access
+    host_base_url = host_info.get('host_url')
+    if not host_base_url:
+        raise ValueError(f"Host missing host_url in registry: {host_info.get('host_name', 'unknown')}")
+    
+    # For web access, we typically use the same base URL but could modify port if needed
+    # For now, assume web resources are served on the same URL as API
+    clean_path = path.lstrip('/')
+    
+    return f"{host_base_url}/{clean_path}"
+
+def host_buildServerUrl(endpoint: str) -> str:
+    """
+    Host URL builder - Build URLs for server endpoints from host context
     
     Args:
         endpoint: The endpoint path to append
         
     Returns:
-        Complete URL to the host endpoint
+        Complete URL to the server endpoint for host use
     """
-    host_url = os.getenv('HOST_URL', 'http://localhost:6109')
+    # Host uses SERVER_URL environment variable to reach server
+    server_url = os.getenv('SERVER_URL', 'http://localhost:5109')
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
-    return f"{host_url}/{clean_endpoint}"
-
-def buildHostWebUrl(host_info: dict, path: str) -> str:
-    """
-    Build a URL for host web/nginx endpoints (HTTPS)
-    
-    Args:
-        host_info: Host information from the registry containing connection data
-        path: The path to append
-        
-    Returns:
-        Complete HTTPS URL to the host web resource
-    """
-    # Use pre-built nginx_url from host connection data
-    connection = host_info.get('connection', {})
-    nginx_url = connection.get('nginx_url')
-    
-    if not nginx_url:
-        # Build manually if connection data is missing
-        host_ip = host_info.get('host_ip')
-        host_port_web = host_info.get('host_port_web') or '444'
-        nginx_url = f"https://{host_ip}:{host_port_web}"
-    
-    # Clean path
-    clean_path = path.lstrip('/')
-    
-    return f"{nginx_url}/{clean_path}"
+    return f"{server_url}/{clean_endpoint}"
 
 # =====================================================
 # HOST REGISTRY FUNCTIONS (Single Source of Truth)

@@ -10,7 +10,7 @@ This module contains the server-side verification execution endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostWebUrl
+from src.utils.app_utils import get_host_by_model, server_buildHostUrl, server_buildHostWebUrl
 
 # Create blueprint
 verification_execution_server_bp = Blueprint('verification_execution_server', __name__, url_prefix='/server/verification')
@@ -61,7 +61,7 @@ def execute_verification():
         print(f"[@route:execute_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_execute_url = buildHostUrl(host_info, '/stream/execute-verification')
+        host_execute_url = server_buildHostUrl(host_info, '/stream/execute-verification')
         
         execute_payload = {
             'source_filename': source_filename,
@@ -81,11 +81,11 @@ def execute_verification():
                 
                 # Convert host URLs to nginx-exposed URLs using registry-based URL builder
                 if verification_result.get('source_image_url'):
-                    verification_result['source_image_url'] = buildHostWebUrl(host_info, verification_result['source_image_url'])
+                    verification_result['source_image_url'] = server_buildHostWebUrl(host_info, verification_result['source_image_url'])
                 if verification_result.get('result_overlay_url'):
-                    verification_result['result_overlay_url'] = buildHostWebUrl(host_info, verification_result['result_overlay_url'])
+                    verification_result['result_overlay_url'] = server_buildHostWebUrl(host_info, verification_result['result_overlay_url'])
                 if verification_result.get('reference_image_url'):
-                    verification_result['reference_image_url'] = buildHostWebUrl(host_info, verification_result['reference_image_url'])
+                    verification_result['reference_image_url'] = server_buildHostWebUrl(host_info, verification_result['reference_image_url'])
                 
                 return jsonify(host_result)
             else:
@@ -143,7 +143,7 @@ def execute_batch_verification():
         print(f"[@route:execute_batch_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_batch_url = buildHostUrl(host_info, '/stream/execute-batch-verification')
+        host_batch_url = server_buildHostUrl(host_info, '/stream/execute-batch-verification')
         
         batch_payload = {
             'source_filename': source_filename,
@@ -164,15 +164,15 @@ def execute_batch_verification():
                 # Convert all host URLs to nginx-exposed URLs using registry-based URL builder
                 for result in results:
                     if result.get('source_image_url'):
-                        result['source_image_url'] = buildHostWebUrl(host_info, result['source_image_url'])
+                        result['source_image_url'] = server_buildHostWebUrl(host_info, result['source_image_url'])
                     if result.get('result_overlay_url'):
-                        result['result_overlay_url'] = buildHostWebUrl(host_info, result['result_overlay_url'])
+                        result['result_overlay_url'] = server_buildHostWebUrl(host_info, result['result_overlay_url'])
                     if result.get('reference_image_url'):
-                        result['reference_image_url'] = buildHostWebUrl(host_info, result['reference_image_url'])
+                        result['reference_image_url'] = server_buildHostWebUrl(host_info, result['reference_image_url'])
                 
                 # Convert results directory URL
                 if host_result.get('results_directory'):
-                    host_result['results_directory_url'] = buildHostWebUrl(host_info, host_result['results_directory'])
+                    host_result['results_directory_url'] = server_buildHostWebUrl(host_info, host_result['results_directory'])
                 
                 return jsonify(host_result)
             else:
