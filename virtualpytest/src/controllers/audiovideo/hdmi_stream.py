@@ -26,18 +26,13 @@ class HDMIStreamController(AVControllerInterface):
         
         Args:
             device_name: Name of the device for logging
-            **kwargs: Required parameters:
-                - host_connection: Host connection info with host_url (from host device object)
+            **kwargs: Additional parameters:
                 - service_name: systemd service name for stream (default: 'hdmi-stream')
         """
         super().__init__(device_name, "HDMI")
         
-        # Host connection information (from host device object)
-        self.host_connection = kwargs.get('host_connection', {})
-        self.host_url = self.host_connection.get('host_url', 'https://localhost:444')
-        
         # Service configuration (for stream status checking)
-        self.service_name = kwargs.get('service_name', 'hdmi-stream')
+        self.service_name = kwargs.get('service_name', 'stream')
         
         # Video capture state (timestamp-based, no FFmpeg)
         self.is_capturing_video = False
@@ -45,8 +40,26 @@ class HDMIStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"HDMI[{self.capture_source}]: Initialized with host_url: {self.host_url}")
+        print(f"HDMI[{self.capture_source}]: Initialized with service: {self.service_name}")
         
+    def _get_host_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Get host information from Flask app context.
+        
+        Returns:
+            Host information dictionary or None if not available
+        """
+        try:
+            from flask import current_app
+            host_device = getattr(current_app, 'my_host_device', None)
+            if host_device:
+                return host_device
+            else:
+                print(f"HDMI[{self.capture_source}]: No host device found in Flask app context")
+                return None
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error getting host info: {e}")
+            return None
         
     def connect(self) -> bool:
         """Connect to the HDMI acquisition device."""
@@ -120,70 +133,89 @@ class HDMIStreamController(AVControllerInterface):
         # Check if stream service is running
         is_streaming = service_status.get('activestate') == 'active' and service_status.get('substate') == 'running'
         
+        # Get stream URL using buildHostUrl
+        stream_url = self.get_stream_url()
+        
         status = {
             'is_streaming': is_streaming,
             'session_id': self.capture_session_id,
             'service_status': service_status,
-            'host_url': self.host_url
+            'stream_url': stream_url
         }
         
         return status
         
-    def get_stream_url(self) -> str:
+    def get_stream_url(self) -> Optional[str]:
         """
         Get the stream URL for this HDMI controller.
-        Returns the nginx URL with the stream path.
+        Uses buildHostUrl to construct the proper URL.
         """
-        if not self.host_url:
-            print(f"HDMI[{self.capture_source}]: No host_url configured")
-            return None
+        try:
+            from src.utils.app_utils import buildHostUrl
             
-        # Build stream URL using host_url from host connection
-        stream_url = f"{self.host_url}/stream/output.m3u8"
+            host_info = self._get_host_info()
+            if not host_info:
+                print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
+                return None
+            
+            stream_url = buildHostUrl(host_info, 'stream/output.m3u8')
+            print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
+            return stream_url
+                
+        except Exception as e:
+            print(f"HDMI[{self.capture_source}]: Error getting stream URL: {e}")
+            return None
         
-        print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
-        return stream_url
-        
-    def take_screenshot(self, filename: str = None) -> str:
+    def take_screenshot(self, filename: str = None) -> Optional[str]:
         """
         Take screenshot using timestamp logic from ScreenDefinitionEditor.
-        Uses host_url from host connection to reference continuously captured screenshots.
+        Uses buildHostUrl to reference continuously captured screenshots.
         """
         if not self.is_connected:
             print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
             return None
             
-        # EXACT COPY from ScreenDefinitionEditor.tsx handleTakeScreenshot()
-        print('[@controller:HDMIStream] Generating Zurich timezone timestamp for screenshot...')
-        
-        # Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
-        now = datetime.now()
-        zurich_tz = pytz.timezone("Europe/Zurich")
-        zurich_time = now.astimezone(zurich_tz)
-        
-        # Format: YYYYMMDDHHMMSS (no separators)
-        year = zurich_time.year
-        month = str(zurich_time.month).zfill(2)
-        day = str(zurich_time.day).zfill(2)
-        hours = str(zurich_time.hour).zfill(2)
-        minutes = str(zurich_time.minute).zfill(2)
-        seconds = str(zurich_time.second).zfill(2)
-        
-        timestamp = f"{year}{month}{day}{hours}{minutes}{seconds}"
-        
-        print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
-        
-        # Use host_url from host connection to reference continuously captured screenshot
-        host_url = f"{self.host_url}/stream/captures/capture_{timestamp}.jpg"
-        
-        print(f'[@controller:HDMIStream] Built screenshot URL using host connection: {host_url}')
-        print(f'[@controller:HDMIStream] host_url from host connection: {self.host_url}')
-        
-        # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
-        print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
-        time.sleep(0.6)
-        
-        return host_url
+        try:
+            from src.utils.app_utils import buildHostUrl
+            
+            # EXACT COPY from ScreenDefinitionEditor.tsx handleTakeScreenshot()
+            print('[@controller:HDMIStream] Generating Zurich timezone timestamp for screenshot...')
+            
+            # Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
+            now = datetime.now()
+            zurich_tz = pytz.timezone("Europe/Zurich")
+            zurich_time = now.astimezone(zurich_tz)
+            
+            # Format: YYYYMMDDHHMMSS (no separators)
+            year = zurich_time.year
+            month = str(zurich_time.month).zfill(2)
+            day = str(zurich_time.day).zfill(2)
+            hours = str(zurich_time.hour).zfill(2)
+            minutes = str(zurich_time.minute).zfill(2)
+            seconds = str(zurich_time.second).zfill(2)
+            
+            timestamp = f"{year}{month}{day}{hours}{minutes}{seconds}"
+            
+            print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
+            
+            # Get host info and build screenshot URL
+            host_info = self._get_host_info()
+            if not host_info:
+                print(f'[@controller:HDMIStream] Cannot build screenshot URL - no host info available')
+                return None
+            
+            screenshot_url = buildHostUrl(host_info, f'stream/captures/capture_{timestamp}.jpg')
+            print(f'[@controller:HDMIStream] Built screenshot URL using buildHostUrl: {screenshot_url}')
+            
+            # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
+            print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
+            time.sleep(0.6)
+            
+            return screenshot_url
+                
+        except Exception as e:
+            print(f'[@controller:HDMIStream] Error taking screenshot: {e}')
+            return None
         
     def take_control(self) -> Dict[str, Any]:
         """
@@ -210,6 +242,9 @@ class HDMIStreamController(AVControllerInterface):
             stream_status = self.get_stream_status()
             is_streaming = stream_status.get('is_streaming', False)
             
+            # Get stream URL for response
+            stream_url = self.get_stream_url()
+            
             # For HDMI stream, we just need the service to be running
             # The host continuously captures screenshots regardless
             return {
@@ -219,7 +254,7 @@ class HDMIStreamController(AVControllerInterface):
                 'device_name': self.device_name,
                 'stream_info': stream_status,
                 'capabilities': ['video_capture', 'screenshot', 'streaming'],
-                'host_url': self.host_url
+                'stream_url': stream_url
             }
                 
         except Exception as e:
@@ -263,7 +298,16 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
             print(f"HDMI[{self.capture_source}]: Start time: {self.capture_start_time}")
             print(f"HDMI[{self.capture_source}]: Duration: {duration}s")
-            print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {self.host_url}/stream/captures/")
+            
+            # Get captures URL for logging
+            try:
+                from src.utils.app_utils import buildHostUrl
+                host_info = self._get_host_info()
+                if host_info:
+                    captures_url = buildHostUrl(host_info, 'stream/captures/')
+                    print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {captures_url}")
+            except Exception:
+                pass  # Logging only, don't fail if URL building fails
             
             # Start monitoring thread to automatically stop after duration
             monitoring_thread = threading.Thread(
@@ -356,6 +400,9 @@ class HDMIStreamController(AVControllerInterface):
                 
                 print(f"[@controller:HDMIStream:get_status] Service detected as NOT ACTIVE: {service_state}")
             
+            # Get stream URL for status
+            stream_url = self.get_stream_url()
+            
             return {
                 'success': True,
                 'controller_type': 'av',
@@ -365,7 +412,7 @@ class HDMIStreamController(AVControllerInterface):
                 'is_streaming': is_stream_active,
                 'is_capturing': self.is_capturing_video,
                 'capture_session_id': self.capture_session_id,
-                'host_url': self.host_url,
+                'stream_url': stream_url,
                 'systemctl_returncode': result.returncode,
                 'systemctl_output': result.stdout,
                 'message': f'Stream service ({self.service_name}) is active' if is_stream_active else f'Stream service ({self.service_name}) is not running - status: {service_state}'
@@ -381,7 +428,7 @@ class HDMIStreamController(AVControllerInterface):
                 'service_status': 'timeout',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
-                'host_url': self.host_url,
+                'stream_url': None,
                 'error': f'Timeout checking stream service status for {self.service_name}'
             }
         except Exception as e:
@@ -394,7 +441,7 @@ class HDMIStreamController(AVControllerInterface):
                 'service_status': 'error',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
-                'host_url': self.host_url,
+                'stream_url': None,
                 'error': f'Failed to check stream service: {str(e)}'
             }
 
