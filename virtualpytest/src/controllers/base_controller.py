@@ -21,15 +21,15 @@ class BaseController(ABC):
         self.device_name = device_name
         self.is_connected = False
     
-    @abstractmethod
     def connect(self) -> bool:
-        """Connect to the device/service. Must be implemented by subclasses."""
-        pass
+        """Connect to the device/service. Optional - override if needed."""
+        self.is_connected = True
+        return True
     
-    @abstractmethod
     def disconnect(self) -> bool:
-        """Disconnect from the device/service. Must be implemented by subclasses."""
-        pass
+        """Disconnect from the device/service. Optional - override if needed."""
+        self.is_connected = False
+        return True
     
     @abstractmethod
     def get_status(self) -> Dict[str, Any]:
