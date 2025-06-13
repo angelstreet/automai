@@ -18,7 +18,6 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5073,
     allowedHosts: ['virtualpytest.com', 'www.virtualpytest.com', 'localhost', '127.0.0.1'],
-    // Configure HTTPS based on server URL
     https: shouldUseHttps
       ? hasCertificates
         ? {
