@@ -5,7 +5,7 @@ This module creates complete controller configurations from basic device registr
 All communication is via direct device connections (ADB, uhubctl, etc.).
 """
 
-def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_ip, host_port):
+def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port):
     """
     Create complete controller_configs from basic device registration info.
     
@@ -13,7 +13,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         device_model: Device model (e.g., 'android_mobile', 'android_tv')
         device_ip: Device IP address
         device_port: Device port (e.g., '5555' for ADB)
-        host_ip: Host IP address (for Flask API communication)
+        host_url: Host base URL (e.g., 'https://virtualpytest.com' or 'http://localhost:6109')
         host_port: Host port (for Flask API communication)
     
     Returns:
@@ -124,7 +124,7 @@ def get_device_capabilities_from_model(device_model):
         device_model=device_model,
         device_ip='0.0.0.0',  # Placeholder for capability detection
         device_port='0000',   # Placeholder for capability detection
-        host_ip='0.0.0.0',    # Placeholder for capability detection
+        host_url='http://localhost:0000',    # Placeholder for capability detection
         host_port='0000'      # Placeholder for capability detection
     )
     
