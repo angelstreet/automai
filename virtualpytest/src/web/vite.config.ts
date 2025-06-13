@@ -1,4 +1,6 @@
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -7,10 +9,65 @@ import { defineConfig } from 'vite';
 const serverUrl = process.env.VITE_SERVER_URL || 'http://localhost:5109';
 const shouldUseHttps = serverUrl.startsWith('https://');
 
-// Certificate paths (only used if HTTPS is needed)
-const certPath = '~/vite-certs/fullchain.pem';
-const keyPath = '~/vite-certs/privkey.pem';
-const hasCertificates = fs.existsSync(certPath) && fs.existsSync(keyPath);
+// Helper function to resolve tilde paths
+function resolvePath(filePath: string): string {
+  if (filePath.startsWith('~/')) {
+    return path.join(os.homedir(), filePath.slice(2));
+  }
+  return filePath;
+}
+
+// Certificate paths with multiple fallback options
+const certPaths = [
+  // User's home directory (for development)
+  {
+    cert: resolvePath('~/vite-certs/fullchain.pem'),
+    key: resolvePath('~/vite-certs/privkey.pem'),
+  },
+  // Let's Encrypt paths (for production)
+  {
+    cert: '/etc/letsencrypt/live/virtualpytest.com/fullchain.pem',
+    key: '/etc/letsencrypt/live/virtualpytest.com/privkey.pem',
+  },
+];
+
+// Function to check if certificates are readable
+function canReadCertificates(certPath: string, keyPath: string): boolean {
+  try {
+    fs.accessSync(certPath, fs.constants.R_OK);
+    fs.accessSync(keyPath, fs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Find the first available certificate pair
+let httpsConfig: { key: Buffer; cert: Buffer } | undefined;
+let certificateSource = 'none';
+
+if (shouldUseHttps) {
+  for (const { cert, key } of certPaths) {
+    if (fs.existsSync(cert) && fs.existsSync(key) && canReadCertificates(cert, key)) {
+      try {
+        httpsConfig = {
+          key: fs.readFileSync(key),
+          cert: fs.readFileSync(cert),
+        };
+        certificateSource = cert.includes('letsencrypt') ? 'letsencrypt' : 'local';
+        console.log(`[vite] Using ${certificateSource} certificates: ${cert}`);
+        break;
+      } catch (error) {
+        console.warn(`[vite] Failed to read certificates from ${cert}:`, error);
+      }
+    }
+  }
+
+  if (!httpsConfig) {
+    console.log('[vite] No valid certificates found, using Vite self-signed certificates');
+    certificateSource = 'self-signed';
+  }
+}
 
 // Define registered frontend routes (must match your React Router routes)
 const registeredRoutes = [
@@ -93,14 +150,18 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5073,
     allowedHosts: ['virtualpytest.com', 'www.virtualpytest.com', 'localhost', '127.0.0.1'],
-    https: shouldUseHttps
-      ? hasCertificates
-        ? {
-            key: fs.readFileSync(keyPath),
-            cert: fs.readFileSync(certPath),
-          }
-        : undefined // Let Vite generate self-signed certificates
-      : undefined, // No HTTPS
+    https: shouldUseHttps ? (httpsConfig ? httpsConfig : true) : undefined,
+    // Configure HMR for WebSocket connections
+    hmr: shouldUseHttps
+      ? {
+          port: 5073,
+          host: 'localhost',
+          protocol: 'wss',
+        }
+      : {
+          port: 5073,
+          host: 'localhost',
+        },
     // Configure how the dev server handles routing
     fs: {
       strict: false,
