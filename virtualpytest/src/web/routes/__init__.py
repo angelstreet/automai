@@ -56,6 +56,7 @@ def _register_server_routes(app):
     # Server-only routes (including former "common" routes that are actually server-only)
     server_route_modules = [
         ('server_remote_routes', 'remote_bp'),
+        ('server_av_routes', 'av_bp'),  # ✅ AV proxy routes
         ('server_navigation_routes', 'navigation_bp'),
         ('server_campaign_routes', 'campaign_bp'),
         ('server_testcase_routes', 'testcase_bp'),
@@ -79,7 +80,7 @@ def _register_server_routes(app):
     # Import and register each module (FAIL FAST)
     for module_name, blueprint_name in server_route_modules:
         try:
-            module = __import__(f'routes.{module_name}', fromlist=[blueprint_name])
+            module = __import__(f'src.web.routes.{module_name}', fromlist=[blueprint_name])
             blueprint = getattr(module, blueprint_name)
             app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")
@@ -109,7 +110,7 @@ def _register_host_routes(app):
     
     for module_name, blueprint_name in host_route_modules:
         try:
-            module = __import__(f'routes.{module_name}', fromlist=[blueprint_name])
+            module = __import__(f'src.web.routes.{module_name}', fromlist=[blueprint_name])
             blueprint = getattr(module, blueprint_name)
             app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")
