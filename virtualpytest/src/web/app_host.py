@@ -9,15 +9,10 @@ Usage:
     python3 app_host.py
 
 Environment Variables Required (in .env.host file):
-    SERVER_IP - IP address of the server (e.g., 77.56.53.130 or https://77.56.53.130)
-    SERVER_PORT - Port of the server (default: 5009)
-    SERVER_PROTOCOL - Protocol to use for server (http or https, default: http)
+    SERVER_URL - Base URL of the server (e.g., https://virtualpytest.com or http://localhost:5109)
+    HOST_URL - Base URL of this host (e.g., https://virtualpytest.com or http://localhost:6109)
+    HOST_PORT - Port where Flask app runs (default: 6109)
     HOST_NAME - Name of this host (e.g., sunri-pi1)
-    HOST_IP - IP address of this host
-    HOST_PROTOCOL - Protocol to use for host (http or https, default: http)
-    HOST_PORT_INTERNAL - Internal port where Flask app runs (default: 5119)
-    HOST_PORT_EXTERNAL - External port for server communication (default: 5119)
-    HOST_PORT_WEB - Web interface port (default: 444)
     GITHUB_TOKEN - GitHub token for authentication (loaded when needed)
     DEBUG - Set to 'true' to enable debug mode (default: false)
 """
@@ -61,11 +56,9 @@ except ImportError as e:
 def cleanup_host_ports():
     """Clean up ports for host mode"""
     print("[@host:main:cleanup_host_ports] Cleaning up host ports...")
-    host_port_internal = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
-    host_port_web = int(os.getenv('HOST_PORT_WEB', '444'))
+    host_port = int(os.getenv('HOST_PORT', '6109'))
     
-    kill_process_on_port(host_port_internal)
-    kill_process_on_port(host_port_web)
+    kill_process_on_port(host_port)
     print("[@host:main:cleanup_host_ports] Port cleanup completed")
 
 def setup_host_cleanup():
@@ -173,15 +166,15 @@ def main():
     setup_host_cleanup()
     
     # Get configuration
-    host_port_internal = int(os.getenv('HOST_PORT_INTERNAL', '5119'))
+    host_port = int(os.getenv('HOST_PORT', '6109'))
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     host_name = os.getenv('HOST_NAME', 'unknown-host')
-    host_ip = os.getenv('HOST_IP', '127.0.0.1')
+    host_url = os.getenv('HOST_URL', f'http://localhost:{host_port}')
     
     print(f"[@host:main:main] Host Information:")
     print(f"[@host:main:main]    Host Name: {host_name}")
-    print(f"[@host:main:main]    Host IP: {host_ip}")
-    print(f"[@host:main:main]    Internal Port: {host_port_internal}")
+    print(f"[@host:main:main]    Host URL: {host_url}")
+    print(f"[@host:main:main]    Host Port: {host_port}")
     
     # Start background services
     start_background_services()
@@ -191,12 +184,12 @@ def main():
     
     # Start Flask application
     print("[@host:main:main] 🎉 Host ready!")
-    print(f"[@host:main:main] 🚀 Starting host on port {host_port_internal}")
+    print(f"[@host:main:main] 🚀 Starting host on port {host_port}")
     print(f"[@host:main:main] 📡 Attempting to register with server...")
     print(f"[@host:main:main] 🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     
     try:
-        app.run(host='0.0.0.0', port=host_port_internal, debug=debug_mode, use_reloader=debug_mode)
+        app.run(host='0.0.0.0', port=host_port, debug=debug_mode, use_reloader=debug_mode)
     except KeyboardInterrupt:
         print(f"[@host:main:main] 🛑 Host shutting down...")
     except Exception as e:

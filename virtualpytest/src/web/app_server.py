@@ -5,8 +5,8 @@ VirtualPyTest Server Application - Simplified Fail-Fast Version
 Usage: python3 app_server.py
 
 Environment Variables Required (in .env.server file):
-    SERVER_IP - IP address of this server
-    SERVER_PORT - Port for this server (default: 5009)
+    SERVER_URL - Base URL of this server (e.g., https://virtualpytest.com or http://localhost:5109)
+    SERVER_PORT - Port for this server (default: 5109)
     GITHUB_TOKEN - GitHub token for authentication (loaded when needed)
     DEBUG - Set to 'true' to enable debug mode (default: false)
 """
@@ -110,7 +110,7 @@ def register_all_server_routes(app):
 
 def start_server(app):
     """Start the Flask server"""
-    server_port = int(os.getenv('SERVER_PORT', '5009'))
+    server_port = int(os.getenv('SERVER_PORT', '5109'))
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
     print("🎉 Server ready!")

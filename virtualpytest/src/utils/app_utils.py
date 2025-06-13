@@ -80,15 +80,15 @@ def validate_core_environment(mode='server'):
     
     if mode == 'server':
         required_vars = {
-            'SERVER_IP': 'Server IP address',
+            'SERVER_URL': 'Server base URL',
             'SERVER_PORT': 'Server port number'
         }
     elif mode == 'host':
         required_vars = {
-            'SERVER_IP': 'Server IP address',
-            'SERVER_PORT': 'Server port number', 
+            'SERVER_URL': 'Server base URL',
+            'HOST_URL': 'Host base URL',
             'HOST_NAME': 'Host identifier name',
-            'HOST_IP': 'Host IP address'
+            'HOST_PORT': 'Host port number'
         }
     else:
         print(f"⚠️ Unknown mode: {mode}")
@@ -239,40 +239,29 @@ def buildServerUrl(endpoint: str) -> str:
     Returns:
         Complete URL to the server endpoint
     """
-    server_host = os.getenv('SERVER_HOST', '127.0.0.1')
-    server_port = os.getenv('SERVER_PORT', '5119')
-    protocol = os.getenv('SERVER_PROTOCOL', 'http')
+    server_url = os.getenv('SERVER_URL', 'http://localhost:5109')
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
-    return f"{protocol}://{server_host}:{server_port}/{clean_endpoint}"
+    return f"{server_url}/{clean_endpoint}"
 
-def buildHostUrl(host_info: dict, endpoint: str) -> str:
+def buildHostUrl(endpoint: str) -> str:
     """
-    Build a URL for host Flask/API endpoints (HTTP)
+    Build a URL for host Flask/API endpoints using environment configuration
     
     Args:
-        host_info: Host information from the registry containing connection data
         endpoint: The endpoint path to append
         
     Returns:
-        Complete HTTP URL to the host endpoint
+        Complete URL to the host endpoint
     """
-    # Use pre-built flask_url from host connection data
-    connection = host_info.get('connection', {})
-    flask_url = connection.get('flask_url')
-    
-    if not flask_url:
-        # Build manually if connection data is missing
-        host_ip = host_info.get('host_ip')
-        host_port = host_info.get('host_port_external') or host_info.get('host_port') or '6119'
-        flask_url = f"http://{host_ip}:{host_port}"
+    host_url = os.getenv('HOST_URL', 'http://localhost:6109')
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
     
-    return f"{flask_url}/{clean_endpoint}"
+    return f"{host_url}/{clean_endpoint}"
 
 def buildHostWebUrl(host_info: dict, path: str) -> str:
     """

@@ -49,11 +49,11 @@ def register_host():
         print(f"[@route:register_host] Host registration request received:")
         print(f"   Host info keys: {list(host_info.keys()) if host_info else 'None'}")
         print(f"   Host name: {host_info.get('host_name', 'Not provided')}")
-        print(f"   Host IP: {host_info.get('host_ip', 'Not provided')}")
+        print(f"   Host URL: {host_info.get('host_url', 'Not provided')}")
         print(f"   Device model: {host_info.get('device_model', 'Not provided')}")
         
         # Check for required fields
-        required_fields = ['host_ip', 'device_model', 'host_name']
+        required_fields = ['host_url', 'device_model', 'host_name']
         missing_fields = []
         for field in required_fields:
             if field not in host_info or not host_info[field]:
@@ -66,19 +66,16 @@ def register_host():
             print(f"   Received fields: {list(host_info.keys()) if host_info else 'None'}")
             return jsonify({'error': error_msg}), 400
         
-        # Extract and set port defaults - complete port structure
-        host_port_internal = host_info.get('host_port_internal', '6119')
-        host_port_external = host_info.get('host_port_external', host_port_internal)
-        host_port_web = host_info.get('host_port_web', '444')
+        # Extract port from host_url or use provided port
+        host_port = host_info.get('host_port', '6109')
         
-        print(f"[@route:register_host] Port configuration:")
-        print(f"   Internal Port: {host_port_internal} (Flask app)")
-        print(f"   External Port: {host_port_external} (Server access)")
-        print(f"   Web Port: {host_port_web} (HTTPS/nginx)")
+        print(f"[@route:register_host] Host configuration:")
+        print(f"   Host URL: {host_info['host_url']}")
+        print(f"   Host Port: {host_port}")
         
         # Use provided device information (host now sends complete device data)
         device_name = host_info.get('device_name', f"{host_info['device_model'].replace('_', ' ').title()}")
-        device_ip = host_info.get('device_ip', host_info['host_ip'])  # Fallback to host IP if not provided
+        device_ip = host_info.get('device_ip', '127.0.0.1')  # Default device IP
         device_port = host_info.get('device_port', '5555')  # Fallback to default ADB port
         
         print(f"[@route:register_host] Device information received:")
@@ -93,8 +90,8 @@ def register_host():
             device_model=host_info['device_model'],
             device_ip=device_ip,
             device_port=device_port,
-            host_ip=host_info['host_ip'],
-            host_port=host_port_external
+            host_url=host_info['host_url'],
+            host_port=host_port
         )
         
         # Get capabilities and controller types from factory
@@ -119,10 +116,8 @@ def register_host():
             'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
             
             # === NETWORK CONFIGURATION ===
-            'host_ip': host_info['host_ip'],
-            'host_port_internal': int(host_port_internal),
-            'host_port_external': int(host_port_external),
-            'host_port_web': int(host_port_web),
+            'host_url': host_info['host_url'],
+            'host_port': int(host_port),
             
             # === DEVICE CONFIGURATION ===
             'device_ip': device_ip,
@@ -175,7 +170,7 @@ def register_host():
             
             print(f"✅ [SERVER] New host registered successfully:")
             print(f"   Host Name: {host_info['host_name']}")
-            print(f"   Host Address: {host_info['host_ip']}:{host_port_external}")
+            print(f"   Host URL: {host_info['host_url']}")
             print(f"   Device: {device_name} ({host_info['device_model']})")
             print(f"   Device Address: {device_ip}:{device_port}")
         

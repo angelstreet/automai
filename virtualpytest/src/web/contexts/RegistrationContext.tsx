@@ -25,7 +25,7 @@ interface RegistrationContextType {
 
   // URL Builders (NO hardcoded values)
   buildServerUrl: (endpoint: string) => string; // Always to main server
-  buildHostUrl: (hostName: string, endpoint: string) => string; // To specific host
+  buildHostUrl: (endpoint: string) => string; // To specific host
   buildNginxUrl: (hostName: string, path: string) => string; // To host's nginx
 
   // Convenience getters
@@ -45,19 +45,8 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Server configuration - ALWAYS use VITE_SERVER_PORT for API calls
-  const getServerBaseUrl = () => {
-    // Get server configuration from environment
-    const serverPort = (import.meta as any).env.VITE_SERVER_PORT || '5119'; // Port from env with fallback
-    const serverHost = (import.meta as any).env.VITE_SERVER_HOST || 'localhost'; // Host from env with localhost fallback
-    const serverProtocol = window.location.protocol.replace(':', ''); // 'http' or 'https'
-
-    // Build server URL using environment configuration
-    const baseUrl = `${serverProtocol}://${serverHost}:${serverPort}`;
-    return baseUrl;
-  };
-
-  const SERVER_BASE_URL = getServerBaseUrl();
+  // Server configuration - Use VITE_SERVER_URL for all API calls
+  const SERVER_BASE_URL = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:5109';
 
   // Build server URL (always goes to main server)
   const buildServerUrl = useCallback(
@@ -68,28 +57,14 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     [SERVER_BASE_URL],
   );
 
-  // Build host URL (goes directly to specific host)
-  const buildHostUrl = useCallback(
-    (hostName: string, endpoint: string) => {
-      const host = availableHosts.find((h) => h.host_name === hostName);
-      if (!host) {
-        throw new Error(`Host with name ${hostName} not found`);
-      }
-
-      // Build flask URL from host data
-      if (!host.host_ip || !host.host_port_external) {
-        throw new Error(`Host ${hostName} does not have required connection data`);
-      }
-
-      const baseUrl = `http://${host.host_ip}:${host.host_port_external}`;
-
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-      const finalUrl = `${baseUrl}/${cleanEndpoint}`;
-      console.log(`[@context:Registration] Final host URL: ${finalUrl}`);
-      return finalUrl;
-    },
-    [availableHosts],
-  );
+  // Build host URL (uses host URL from environment)
+  const buildHostUrl = useCallback((endpoint: string) => {
+    const HOST_BASE_URL = (import.meta as any).env.VITE_HOST_URL || 'http://localhost:6109';
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    const finalUrl = `${HOST_BASE_URL}/${cleanEndpoint}`;
+    console.log(`[@context:Registration] Final host URL: ${finalUrl}`);
+    return finalUrl;
+  }, []);
 
   // Fetch hosts from server - FIXED: Removed createControllerProxies from dependency array
   const fetchHosts = useCallback(async () => {
@@ -131,14 +106,13 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
         throw new Error(`Host with name ${hostName} not found`);
       }
 
-      // Build nginx URL from host data (use web port for nginx)
-      if (!host.host_ip || !host.host_port_web) {
+      // Build nginx URL from host data
+      if (!host.host_url) {
         throw new Error(`Host ${hostName} does not have required connection data for nginx`);
       }
 
-      const baseUrl = `https://${host.host_ip}:${host.host_port_web}`;
       const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-      const finalUrl = `${baseUrl}/${cleanPath}`;
+      const finalUrl = `${host.host_url}/${cleanPath}`;
 
       return finalUrl;
     },
@@ -151,9 +125,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
       const host = availableHosts.find((h) => h.host_name === hostName);
       if (host) {
         setSelectedHost(host);
-        console.log(
-          `[@context:Registration] Selected host: ${host.host_name} (${host.host_ip}:${host.host_port_external})`,
-        );
+        console.log(`[@context:Registration] Selected host: ${host.host_name} (${host.host_url})`);
       } else {
         console.warn(`[@context:Registration] Host with name ${hostName} not found`);
       }
