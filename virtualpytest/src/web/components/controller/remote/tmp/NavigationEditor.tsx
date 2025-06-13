@@ -222,7 +222,7 @@ const NavigationEditorContent: React.FC = () => {
     setSelectedHost,
     selectHostById,
     buildHostUrl,
-    buildHostWebUrl,
+    buildHostUrl,
   } = useRegistration();
 
   // Basic remote control state

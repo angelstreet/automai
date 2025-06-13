@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material';
 import React from 'react';
 
 import { useRegistration } from '../../contexts/RegistrationContext';
-import { buildHostWebUrl } from '../../utils/frontendUtils';
+import { buildHostUrl } from '../../utils/frontendUtils';
 
 interface TextComparisonDisplayProps {
   searchedText: string;
@@ -34,10 +34,10 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
       return url;
     }
 
-    // Use buildHostWebUrl from registration context
+    // Use buildHostUrl from registration context
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostWebUrl(selectedHost.host_name, cleanUrl);
+      return buildHostUrl(selectedHost.host_name, cleanUrl);
     }
 
     // Fallback if no host selected

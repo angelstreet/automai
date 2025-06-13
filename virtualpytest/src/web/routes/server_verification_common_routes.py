@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 import os
-from src.utils.app_utils import get_host_by_model, buildHostWebUrl, buildHostUrl
+from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')

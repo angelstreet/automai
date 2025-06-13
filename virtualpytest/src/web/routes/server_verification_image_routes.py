@@ -10,7 +10,7 @@ This module contains the server-side image verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostWebUrl
+from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
 
 # Create blueprint
 verification_image_server_bp = Blueprint('verification_image_server', __name__, url_prefix='/server/verification')
@@ -73,7 +73,7 @@ def capture_reference_image():
                 print(f"[@route:capture_reference_image] Host crop successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = buildHostWebUrl(host_info, cropped_path)
+                full_image_url = buildHostUrl(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -166,7 +166,7 @@ def process_area_reference():
                 print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = buildHostWebUrl(host_info, cropped_path)
+                full_image_url = buildHostUrl(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -267,7 +267,7 @@ def save_reference():
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
                 # Use pre-built nginx URL from host registry
-                full_public_url = buildHostWebUrl(host_info, public_url)
+                full_public_url = buildHostUrl(host_info, public_url)
                 
                 return jsonify({
                     'success': True,

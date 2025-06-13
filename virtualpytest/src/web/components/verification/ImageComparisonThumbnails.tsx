@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material';
 import React from 'react';
 
 import { useRegistration } from '../../contexts/RegistrationContext';
-import { buildHostWebUrl } from '../../utils/frontendUtils';
+import { buildHostUrl } from '../../utils/frontendUtils';
 
 interface ImageComparisonThumbnailsProps {
   sourceUrl: string;
@@ -34,10 +34,10 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
       return url;
     }
 
-    // Use buildHostWebUrl from frontendUtils
+    // Use buildHostUrl from frontendUtils
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostWebUrl(selectedHost, cleanUrl);
+      return buildHostUrl(selectedHost, cleanUrl);
     }
 
     // Fallback if no host selected

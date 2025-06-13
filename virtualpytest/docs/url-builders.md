@@ -19,8 +19,9 @@ url = buildServerUrl('/server/verification/status')
 ```
 
 **Environment Variables Used:**
+
 - `SERVER_HOST` (default: '127.0.0.1')
-- `SERVER_PORT` (default: '5119') 
+- `SERVER_PORT` (default: '5119')
 - `SERVER_PROTOCOL` (default: 'http')
 
 **When to use:** Calling server API endpoints from any component, including host registration and ping operations.
@@ -40,16 +41,16 @@ url = buildHostUrl(host_info, '/stream/verification-status')
 
 **When to use:** Making API calls to host applications.
 
-### 3. `buildHostWebUrl(host_info, path)`
+### 3. `buildHostUrl(host_info, path)`
 
 Build URLs for **host web/nginx resources** (HTTPS).
 
 ```python
-from src.utils.app_utils import buildHostWebUrl, get_host_by_model
+from src.utils.app_utils import buildHostUrl, get_host_by_model
 
 # Usage
 host_info = get_host_by_model('pixel_7')
-url = buildHostWebUrl(host_info, '/screenshots/image.png')
+url = buildHostUrl(host_info, '/screenshots/image.png')
 # Returns: https://192.168.1.100:444/screenshots/image.png
 ```
 
@@ -62,15 +63,15 @@ The URL builder functions are used consistently throughout the codebase:
 - **Host Registration**: `host_utils.py` uses `buildServerUrl()` for all server communication
 - **Route Controllers**: All route files use the appropriate URL builders
 - **Navigation System**: `navigation_executor.py` uses `buildServerUrl()` for server calls
-- **Verification Routes**: All verification routes use `buildHostUrl()` and `buildHostWebUrl()`
+- **Verification Routes**: All verification routes use `buildHostUrl()` and `buildHostUrl()`
 
 ## Quick Reference
 
-| Function | Protocol | Port | Use Case | Environment Variables |
-|----------|----------|------|----------|----------------------|
-| `buildServerUrl` | HTTP/HTTPS | 5119 | Server API calls | SERVER_HOST, SERVER_PORT, SERVER_PROTOCOL |
-| `buildHostUrl` | HTTP | 6119 | Host API calls | Uses host_info from registry |
-| `buildHostWebUrl` | HTTPS | 444 | Host static files | Uses host_info from registry |
+| Function         | Protocol   | Port | Use Case          | Environment Variables                     |
+| ---------------- | ---------- | ---- | ----------------- | ----------------------------------------- |
+| `buildServerUrl` | HTTP/HTTPS | 5119 | Server API calls  | SERVER_HOST, SERVER_PORT, SERVER_PROTOCOL |
+| `buildHostUrl`   | HTTP       | 6119 | Host API calls    | Uses host_info from registry              |
+| `buildHostUrl`   | HTTPS      | 444  | Host static files | Uses host_info from registry              |
 
 ## Benefits
 
@@ -90,4 +91,4 @@ host_info = get_host_by_model('pixel_7')
 if host_info:
     url = buildHostUrl(host_info, '/health')
     response = requests.get(url)
-``` 
+```

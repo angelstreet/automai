@@ -253,31 +253,6 @@ def buildHostUrl(host_info: dict, endpoint: str) -> str:
     
     return f"{host_base_url}/{clean_endpoint}"
 
-def buildHostWebUrl(host_info: dict, path: str) -> str:
-    """
-    Server URL builder - Build URLs for host web/nginx endpoints using host registry data
-    
-    Args:
-        host_info: Host information from the registry
-        path: The path to append
-        
-    Returns:
-        Complete URL to the host web resource
-    """
-    if not host_info:
-        raise ValueError("host_info is required for buildHostWebUrl")
-    
-    # Use host_url from registry and modify for web access
-    host_base_url = host_info.get('host_url')
-    if not host_base_url:
-        raise ValueError(f"Host missing host_url in registry: {host_info.get('host_name', 'unknown')}")
-    
-    # For web access, we typically use the same base URL but could modify port if needed
-    # For now, assume web resources are served on the same URL as API
-    clean_path = path.lstrip('/')
-    
-    return f"{host_base_url}/{clean_path}"
-
 def buildServerUrl(endpoint: str) -> str:
     """
     Host URL builder - Build URLs for server endpoints from host context

@@ -24,8 +24,8 @@ export const VerificationTextComparisonDisplay: React.FC<
   languageConfidence,
   onSourceImageClick,
 }) => {
-  // Use registration context to get buildHostWebUrl and selected host
-  const { selectedHost, buildHostWebUrl } = useRegistration();
+  // Use registration context to get buildHostUrl and selected host
+  const { selectedHost, buildHostUrl } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
@@ -35,10 +35,10 @@ export const VerificationTextComparisonDisplay: React.FC<
       return url;
     }
 
-    // Use buildHostWebUrl from registration context
+    // Use buildHostUrl from registration context
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostWebUrl(selectedHost.host_name, cleanUrl);
+      return buildHostUrl(selectedHost.host_name, cleanUrl);
     }
 
     // Fallback if no host selected

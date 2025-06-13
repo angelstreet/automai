@@ -53,9 +53,6 @@ class HDMIStreamController(AVControllerInterface):
         try:
             print(f"HDMI[{self.capture_source}]: Connecting to HDMI stream service")
             self.is_connected = True
-            print(f"HDMI[{self.capture_source}]: Connected successfully")
-            print(f"HDMI[{self.capture_source}]: nginx_url: {self.nginx_url}")
-            print(f"HDMI[{self.capture_source}]: Service name: {self.service_name}")
             return True
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Connection error: {e}")
@@ -64,7 +61,6 @@ class HDMIStreamController(AVControllerInterface):
         
     def disconnect(self) -> bool:
         """Disconnect from the HDMI acquisition device."""
-        print(f"HDMI[{self.capture_source}]: Disconnecting")
         self.is_connected = False
         print(f"HDMI[{self.capture_source}]: Disconnected")
         return True

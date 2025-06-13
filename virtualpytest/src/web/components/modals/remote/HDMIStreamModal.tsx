@@ -26,7 +26,7 @@ interface HDMIStreamModalProps {
 }
 
 export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModalProps) {
-  const { buildHostWebUrl } = useRegistration();
+  const { buildHostUrl } = useRegistration();
 
   // Stream configuration state
   const [resolution, setResolution] = useState('1920x1080');
@@ -98,7 +98,7 @@ export function HDMIStreamModal({ open, onClose, selectedHost }: HDMIStreamModal
 
       // Build stream URL using the nginx URL builder from registration context
       try {
-        const dynamicStreamUrl = buildHostWebUrl(selectedHost.id, 'stream/output.m3u8');
+        const dynamicStreamUrl = buildHostUrl(selectedHost.id, 'stream/output.m3u8');
         setStreamUrl(dynamicStreamUrl);
         console.log('[@component:HDMIStreamModal] Built dynamic stream URL:', dynamicStreamUrl);
       } catch (error) {
