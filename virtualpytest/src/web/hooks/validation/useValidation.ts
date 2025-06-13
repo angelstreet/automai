@@ -6,7 +6,6 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import {
   ValidationPreview,
   ValidationResults,
@@ -15,21 +14,18 @@ import {
   ValidationRunResponse,
   ValidationExportResponse,
 } from '../../types/features/Validation_Types';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 export const useValidation = () => {
-  const { buildServerUrl } = useRegistration();
   const [progressCallback, setProgressCallback] = useState<
     ((progress: ValidationProgress) => void) | null
   >(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const getApiBaseUrl = useCallback((): string => {
-    if (!buildServerUrl) {
-      throw new Error('Validation hook not initialized. buildServerUrl function not available.');
-    }
     // Use centralized URL building for validation endpoints
     return buildServerUrl('server/validation');
-  }, [buildServerUrl]);
+  }, []);
 
   const updateProgressCallback = useCallback(
     (callback: ((progress: ValidationProgress) => void) | null) => {
@@ -62,6 +58,14 @@ export const useValidation = () => {
     },
     [getApiBaseUrl],
   );
+
+  const closeProgressStream = useCallback((): void => {
+    if (eventSourceRef.current) {
+      console.log(`[@hook:useValidation:closeProgressStream] Closing progress stream`);
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
 
   const setupProgressStream = useCallback(
     (sessionId: string): void => {
@@ -122,16 +126,8 @@ export const useValidation = () => {
         );
       }
     },
-    [getApiBaseUrl, progressCallback],
+    [getApiBaseUrl, progressCallback, closeProgressStream],
   );
-
-  const closeProgressStream = useCallback((): void => {
-    if (eventSourceRef.current) {
-      console.log(`[@hook:useValidation:closeProgressStream] Closing progress stream`);
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-  }, []);
 
   const runValidation = useCallback(
     async (

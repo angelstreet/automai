@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface ImageComparisonDialogData {
   open: boolean;
@@ -19,8 +19,6 @@ interface UseImageComparisonModalReturn {
 }
 
 export const useImageComparisonModal = (): UseImageComparisonModalReturn => {
-  const { buildServerUrl } = useRegistration();
-
   const [imageComparisonDialog, setImageComparisonDialog] = useState<ImageComparisonDialogData>({
     open: false,
     sourceUrl: '',

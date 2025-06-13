@@ -86,22 +86,22 @@ const UserInterface: React.FC = () => {
 
   // Load data on component mount only
   useEffect(() => {
-    loadUserInterfaces();
-  }, []);
+    const loadUserInterfaces = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const interfaces = await getAllUserInterfaces();
+        setUserInterfaces(interfaces);
+      } catch (err) {
+        console.error('[@component:UserInterface] Error loading user interfaces:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load user interfaces');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadUserInterfaces = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const interfaces = await getAllUserInterfaces();
-      setUserInterfaces(interfaces);
-    } catch (err) {
-      console.error('[@component:UserInterface] Error loading user interfaces:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load user interfaces');
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadUserInterfaces();
+  }, [getAllUserInterfaces]);
 
   const handleEdit = (userInterface: UserInterfaceType) => {
     setEditingId(userInterface.id);

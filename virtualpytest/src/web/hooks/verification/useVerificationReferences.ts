@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface ReferenceImage {
   name: string;
@@ -31,9 +31,6 @@ interface UseVerificationReferencesReturn {
 export const useVerificationReferences = (
   reloadTrigger?: number,
 ): UseVerificationReferencesReturn => {
-  // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
@@ -106,7 +103,7 @@ export const useVerificationReferences = (
   // Fetch references on mount and when reload trigger changes
   useEffect(() => {
     fetchAvailableReferences();
-  }, [reloadTrigger, buildServerUrl]);
+  }, [reloadTrigger]);
 
   return {
     availableReferences,

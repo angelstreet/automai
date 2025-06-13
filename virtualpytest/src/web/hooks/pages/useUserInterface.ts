@@ -6,12 +6,10 @@
 
 import { useMemo } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import { UserInterface, UserInterfaceCreatePayload } from '../../types/pages/UserInterface_Types';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 export const useUserInterface = () => {
-  const { buildServerUrl } = useRegistration();
-
   /**
    * Get all user interfaces
    */
@@ -84,7 +82,7 @@ export const useUserInterface = () => {
         throw error;
       }
     },
-    [buildServerUrl],
+    [],
   );
 
   /**
@@ -123,7 +121,7 @@ export const useUserInterface = () => {
           throw error;
         }
       },
-    [buildServerUrl],
+    [],
   );
 
   /**
@@ -174,7 +172,7 @@ export const useUserInterface = () => {
           throw error;
         }
       },
-    [buildServerUrl],
+    [],
   );
 
   /**
@@ -225,7 +223,7 @@ export const useUserInterface = () => {
           throw error;
         }
       },
-    [buildServerUrl],
+    [],
   );
 
   /**
@@ -268,7 +266,7 @@ export const useUserInterface = () => {
           throw error;
         }
       },
-    [buildServerUrl],
+    [],
   );
 
   return {
