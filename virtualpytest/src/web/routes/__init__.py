@@ -60,7 +60,6 @@ def _register_server_routes(app):
         ('server_navigation_routes', 'navigation_bp'),
         ('server_campaign_routes', 'campaign_bp'),
         ('server_testcase_routes', 'testcase_bp'),
-        ('server_screen_definition_routes', 'screen_definition_bp'),  # ✅ Unified naming
         ('server_pathfinding_routes', 'pathfinding_bp'),
         ('server_validation_routes', 'validation_bp'),
         ('server_navigation_config_routes', 'navigation_config_bp'),

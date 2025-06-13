@@ -141,7 +141,7 @@ class HDMIStreamController(AVControllerInterface):
                 print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
                 return None
             
-            stream_url = buildHostUrl(host_info, 'stream/output.m3u8')
+            stream_url = buildHostUrl(host_info, 'host/stream/output.m3u8')
             print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
             return stream_url
                 
