@@ -43,26 +43,14 @@ import {
   Paper,
 } from '@mui/material';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+
 import { useRegistration } from '../contexts/RegistrationContext';
 import { TestCase, Campaign, Tree } from '../types';
-import {
-  DashboardStats,
-  RecentActivity,
-  LogEntry,
-  ViewMode,
-  LogLevel,
-  LogSource,
-  SystemStats,
-} from '../types/pages/Dashboard_Types';
 import { Host } from '../types/common/Host_Types';
+import { DashboardStats, RecentActivity, LogEntry, ViewMode } from '../types/pages/Dashboard_Types';
 
 const Dashboard: React.FC = () => {
-  const { 
-    buildServerUrl,
-    availableHosts, 
-    fetchHosts, 
-    isLoading: hostsLoading
-  } = useRegistration();
+  const { buildServerUrl, availableHosts, fetchHosts, isLoading: hostsLoading } = useRegistration();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -72,7 +60,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  
+
   // Debug logs state
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [autoRefreshLogs] = useState(false);
@@ -91,31 +79,13 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []); // Empty dependency array to prevent infinite loop
 
-  // Auto-refresh logs
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (autoRefreshLogs) {
-      interval = setInterval(fetchLogs, 5000); // Refresh every 5 seconds
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefreshLogs]);
-
-  // Auto-scroll to bottom of logs
-  useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs]);
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
         fetch(buildServerUrl('/server/campaigns/getAllCampaigns')),
         fetch(buildServerUrl('/server/testcases/getAllTestCases')),
-        fetch('/server/navigation/getAllTrees'), // Use relative URL for navigation requests
+        fetch(buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
       ]);
 
       let testCases: TestCase[] = [];
@@ -140,20 +110,24 @@ const Dashboard: React.FC = () => {
 
       // Generate mock recent activity with proper RecentActivity type
       const recentActivity: RecentActivity[] = [
-        ...testCases.slice(0, 3).map((tc): RecentActivity => ({
-          id: tc.test_id,
-          type: 'test' as const,
-          name: tc.name,
-          status: 'success' as const,
-          timestamp: new Date().toISOString(),
-        })),
-        ...campaigns.slice(0, 2).map((c): RecentActivity => ({
-          id: c.campaign_id,
-          type: 'campaign' as const,
-          name: c.campaign_name,
-          status: 'pending' as const,
-          timestamp: new Date().toISOString(),
-        })),
+        ...testCases.slice(0, 3).map(
+          (tc): RecentActivity => ({
+            id: tc.test_id,
+            type: 'test' as const,
+            name: tc.name,
+            status: 'success' as const,
+            timestamp: new Date().toISOString(),
+          }),
+        ),
+        ...campaigns.slice(0, 2).map(
+          (c): RecentActivity => ({
+            id: c.campaign_id,
+            type: 'campaign' as const,
+            name: c.campaign_name,
+            status: 'pending' as const,
+            timestamp: new Date().toISOString(),
+          }),
+        ),
       ].slice(0, 5);
 
       setStats({
@@ -162,7 +136,6 @@ const Dashboard: React.FC = () => {
         trees: trees.length,
         recentActivity,
       });
-      
     } catch (err) {
       setError('Failed to fetch dashboard data');
       addFrontendLog('error', 'Failed to fetch dashboard data', err);
@@ -175,10 +148,10 @@ const Dashboard: React.FC = () => {
     try {
       // Fetch backend logs
       const backendLogsRes = await fetch(buildServerUrl('/server/system/logs'));
-      
+
       if (backendLogsRes.ok) {
         const backendLogs = await backendLogsRes.json();
-        
+
         // Convert backend logs to our format
         const formattedBackendLogs: LogEntry[] = backendLogs.map((log: any) => ({
           timestamp: log.timestamp || new Date().toISOString(),
@@ -190,7 +163,7 @@ const Dashboard: React.FC = () => {
 
         // Get frontend logs from console (if available)
         const frontendLogs = getFrontendLogs();
-        
+
         // Combine and sort logs by timestamp
         const allLogs = [...formattedBackendLogs, ...frontendLogs]
           .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
@@ -206,7 +179,7 @@ const Dashboard: React.FC = () => {
 
   const getFrontendLogs = (): LogEntry[] => {
     // This would ideally capture console logs, but for now return stored frontend logs
-    return logs.filter(log => log.source === 'frontend');
+    return logs.filter((log) => log.source === 'frontend');
   };
 
   const addFrontendLog = (level: LogEntry['level'], message: string, details?: any) => {
@@ -217,14 +190,11 @@ const Dashboard: React.FC = () => {
       message,
       details,
     };
-    
-    setLogs(prevLogs => [...prevLogs.slice(-99), newLog]); // Keep only last 100 logs
+
+    setLogs((prevLogs) => [...prevLogs.slice(-99), newLog]); // Keep only last 100 logs
   };
 
-  const handleViewModeChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newViewMode: ViewMode,
-  ) => {
+  const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: ViewMode) => {
     if (newViewMode !== null) {
       setViewMode(newViewMode);
       addFrontendLog('info', `View mode changed to ${newViewMode}`);
@@ -271,7 +241,7 @@ const Dashboard: React.FC = () => {
   const formatLastSeen = (timestamp: number) => {
     const now = Date.now() / 1000;
     const diff = now - timestamp;
-    
+
     if (diff < 60) return 'Just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -294,7 +264,9 @@ const Dashboard: React.FC = () => {
     return 'success';
   };
 
-  const SystemStatsDisplay: React.FC<{ stats: Host['system_stats'] }> = ({ stats: systemStats }) => {
+  const SystemStatsDisplay: React.FC<{ stats: Host['system_stats'] }> = ({
+    stats: systemStats,
+  }) => {
     if (!systemStats) {
       return (
         <Box>
@@ -325,13 +297,13 @@ const Dashboard: React.FC = () => {
             {systemStats.cpu_percent}%
           </Typography>
         </Box>
-        <Box 
-          sx={{ 
-            width: '100%', 
-            height: 4, 
-            backgroundColor: 'grey.300', 
+        <Box
+          sx={{
+            width: '100%',
+            height: 4,
+            backgroundColor: 'grey.300',
             borderRadius: 1,
-            mb: 1
+            mb: 1,
           }}
         >
           <Box
@@ -352,13 +324,13 @@ const Dashboard: React.FC = () => {
             {systemStats.memory_percent}%
           </Typography>
         </Box>
-        <Box 
-          sx={{ 
-            width: '100%', 
-            height: 4, 
-            backgroundColor: 'grey.300', 
+        <Box
+          sx={{
+            width: '100%',
+            height: 4,
+            backgroundColor: 'grey.300',
             borderRadius: 1,
-            mb: 1
+            mb: 1,
           }}
         >
           <Box
@@ -379,13 +351,13 @@ const Dashboard: React.FC = () => {
             {systemStats.disk_percent}%
           </Typography>
         </Box>
-        <Box 
-          sx={{ 
-            width: '100%', 
-            height: 4, 
-            backgroundColor: 'grey.300', 
+        <Box
+          sx={{
+            width: '100%',
+            height: 4,
+            backgroundColor: 'grey.300',
             borderRadius: 1,
-            mb: 1
+            mb: 1,
           }}
         >
           <Box
@@ -425,19 +397,19 @@ const Dashboard: React.FC = () => {
                   variant="outlined"
                 />
               </Box>
-              
+
               <Typography color="textSecondary" variant="body2" gutterBottom>
                 Model: {device.device_model}
               </Typography>
-              
+
               <Typography color="textSecondary" variant="body2" gutterBottom>
                 Host IP: {device.host_ip}:{device.host_port_external}
               </Typography>
-              
+
               <Typography color="textSecondary" variant="body2" gutterBottom>
                 Device: {device.device_name} ({device.device_ip}:{device.device_port})
               </Typography>
-              
+
               <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
                 {device.capabilities.map((capability) => (
                   <Chip
@@ -449,19 +421,23 @@ const Dashboard: React.FC = () => {
                   />
                 ))}
               </Box>
-              
+
               {/* System Stats */}
               <Box mb={2}>
-                <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                <Typography
+                  variant="subtitle2"
+                  gutterBottom
+                  sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}
+                >
                   System Stats
                 </Typography>
                 <SystemStatsDisplay stats={device.system_stats} />
               </Box>
-              
+
               <Typography color="textSecondary" variant="caption" display="block">
                 Last seen: {formatLastSeen(device.last_seen)}
               </Typography>
-              
+
               <Typography color="textSecondary" variant="caption" display="block">
                 Registered: {formatRegisteredAt(device.registered_at)}
               </Typography>
@@ -492,8 +468,8 @@ const Dashboard: React.FC = () => {
         </TableHead>
         <TableBody>
           {availableHosts.map((device) => (
-            <TableRow 
-              key={device.host_name} 
+            <TableRow
+              key={device.host_name}
               hover
               sx={{
                 '&:hover': {
@@ -533,12 +509,12 @@ const Dashboard: React.FC = () => {
                   <Typography variant="body2" fontWeight="bold">
                     {device.system_stats.cpu_percent}%
                   </Typography>
-                  <Box 
-                    sx={{ 
-                      width: 40, 
-                      height: 4, 
-                      backgroundColor: 'grey.300', 
-                      borderRadius: 1
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 4,
+                      backgroundColor: 'grey.300',
+                      borderRadius: 1,
                     }}
                   >
                     <Box
@@ -557,12 +533,12 @@ const Dashboard: React.FC = () => {
                   <Typography variant="body2" fontWeight="bold">
                     {device.system_stats.memory_percent}%
                   </Typography>
-                  <Box 
-                    sx={{ 
-                      width: 40, 
-                      height: 4, 
-                      backgroundColor: 'grey.300', 
-                      borderRadius: 1
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 4,
+                      backgroundColor: 'grey.300',
+                      borderRadius: 1,
                     }}
                   >
                     <Box
@@ -581,12 +557,12 @@ const Dashboard: React.FC = () => {
                   <Typography variant="body2" fontWeight="bold">
                     {device.system_stats.disk_percent}%
                   </Typography>
-                  <Box 
-                    sx={{ 
-                      width: 40, 
-                      height: 4, 
-                      backgroundColor: 'grey.300', 
-                      borderRadius: 1
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 4,
+                      backgroundColor: 'grey.300',
+                      borderRadius: 1,
                     }}
                   >
                     <Box
@@ -614,14 +590,10 @@ const Dashboard: React.FC = () => {
                 </Box>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">
-                  {formatLastSeen(device.last_seen)}
-                </Typography>
+                <Typography variant="body2">{formatLastSeen(device.last_seen)}</Typography>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">
-                  {formatRegisteredAt(device.registered_at)}
-                </Typography>
+                <Typography variant="body2">{formatRegisteredAt(device.registered_at)}</Typography>
               </TableCell>
             </TableRow>
           ))}
@@ -779,9 +751,7 @@ const Dashboard: React.FC = () => {
       {/* Connected Devices */}
       <Paper sx={{ p: 2, mt: 3 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Typography variant="h6">
-            Registered Clients ({availableHosts.length})
-          </Typography>
+          <Typography variant="h6">Registered Clients ({availableHosts.length})</Typography>
           <Box display="flex" alignItems="center" gap={1}>
             <ToggleButtonGroup
               value={viewMode}
@@ -802,33 +772,32 @@ const Dashboard: React.FC = () => {
             </ToggleButtonGroup>
             <Tooltip title="Refresh Devices">
               <span>
-                <IconButton 
-                  onClick={memoizedFetchHosts} 
-                  disabled={hostsLoading}
-                  size="small"
-                >
+                <IconButton onClick={memoizedFetchHosts} disabled={hostsLoading} size="small">
                   <RefreshIcon />
                 </IconButton>
               </span>
             </Tooltip>
           </Box>
         </Box>
-        
+
         {hostsLoading && (
           <Box display="flex" justifyContent="center" py={2}>
             <CircularProgress size={24} />
           </Box>
         )}
-        
+
         {availableHosts.length > 0 ? (
-          viewMode === 'grid' ? renderDevicesGrid() : renderDevicesTable()
+          viewMode === 'grid' ? (
+            renderDevicesGrid()
+          ) : (
+            renderDevicesTable()
+          )
         ) : (
           <Box textAlign="center" py={4}>
             <DevicesIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
             <Typography color="textSecondary" variant="h6" gutterBottom>
               No devices connected
             </Typography>
-            
           </Box>
         )}
       </Paper>
