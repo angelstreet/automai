@@ -27,14 +27,14 @@ class HDMIStreamController(AVControllerInterface):
         Args:
             device_name: Name of the device for logging
             **kwargs: Required parameters:
-                - host_connection: Host connection info with nginx_url (from host device object)
+                - host_connection: Host connection info with host_url (from host device object)
                 - service_name: systemd service name for stream (default: 'hdmi-stream')
         """
         super().__init__(device_name, "HDMI")
         
         # Host connection information (from host device object)
         self.host_connection = kwargs.get('host_connection', {})
-        self.nginx_url = self.host_connection.get('nginx_url', 'https://localhost:444')
+        self.host_url = self.host_connection.get('host_url', 'https://localhost:444')
         
         # Service configuration (for stream status checking)
         self.service_name = kwargs.get('service_name', 'hdmi-stream')
@@ -45,7 +45,7 @@ class HDMIStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"HDMI[{self.capture_source}]: Initialized with nginx_url: {self.nginx_url}")
+        print(f"HDMI[{self.capture_source}]: Initialized with host_url: {self.host_url}")
         
         
     def connect(self) -> bool:
@@ -124,7 +124,7 @@ class HDMIStreamController(AVControllerInterface):
             'is_streaming': is_streaming,
             'session_id': self.capture_session_id,
             'service_status': service_status,
-            'nginx_url': self.nginx_url
+            'host_url': self.host_url
         }
         
         return status
@@ -134,12 +134,12 @@ class HDMIStreamController(AVControllerInterface):
         Get the stream URL for this HDMI controller.
         Returns the nginx URL with the stream path.
         """
-        if not self.nginx_url:
-            print(f"HDMI[{self.capture_source}]: No nginx_url configured")
+        if not self.host_url:
+            print(f"HDMI[{self.capture_source}]: No host_url configured")
             return None
             
-        # Build stream URL using nginx_url from host connection
-        stream_url = f"{self.nginx_url}/stream/output.m3u8"
+        # Build stream URL using host_url from host connection
+        stream_url = f"{self.host_url}/stream/output.m3u8"
         
         print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
         return stream_url
@@ -147,7 +147,7 @@ class HDMIStreamController(AVControllerInterface):
     def take_screenshot(self, filename: str = None) -> str:
         """
         Take screenshot using timestamp logic from ScreenDefinitionEditor.
-        Uses nginx_url from host connection to reference continuously captured screenshots.
+        Uses host_url from host connection to reference continuously captured screenshots.
         """
         if not self.is_connected:
             print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
@@ -173,11 +173,11 @@ class HDMIStreamController(AVControllerInterface):
         
         print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
         
-        # Use nginx_url from host connection to reference continuously captured screenshot
-        host_url = f"{self.nginx_url}/stream/captures/capture_{timestamp}.jpg"
+        # Use host_url from host connection to reference continuously captured screenshot
+        host_url = f"{self.host_url}/stream/captures/capture_{timestamp}.jpg"
         
         print(f'[@controller:HDMIStream] Built screenshot URL using host connection: {host_url}')
-        print(f'[@controller:HDMIStream] nginx_url from host connection: {self.nginx_url}')
+        print(f'[@controller:HDMIStream] host_url from host connection: {self.host_url}')
         
         # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
         print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
@@ -219,7 +219,7 @@ class HDMIStreamController(AVControllerInterface):
                 'device_name': self.device_name,
                 'stream_info': stream_status,
                 'capabilities': ['video_capture', 'screenshot', 'streaming'],
-                'nginx_url': self.nginx_url
+                'host_url': self.host_url
             }
                 
         except Exception as e:
@@ -263,7 +263,7 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
             print(f"HDMI[{self.capture_source}]: Start time: {self.capture_start_time}")
             print(f"HDMI[{self.capture_source}]: Duration: {duration}s")
-            print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {self.nginx_url}/stream/captures/")
+            print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {self.host_url}/stream/captures/")
             
             # Start monitoring thread to automatically stop after duration
             monitoring_thread = threading.Thread(
@@ -365,7 +365,7 @@ class HDMIStreamController(AVControllerInterface):
                 'is_streaming': is_stream_active,
                 'is_capturing': self.is_capturing_video,
                 'capture_session_id': self.capture_session_id,
-                'nginx_url': self.nginx_url,
+                'host_url': self.host_url,
                 'systemctl_returncode': result.returncode,
                 'systemctl_output': result.stdout,
                 'message': f'Stream service ({self.service_name}) is active' if is_stream_active else f'Stream service ({self.service_name}) is not running - status: {service_state}'
@@ -381,7 +381,7 @@ class HDMIStreamController(AVControllerInterface):
                 'service_status': 'timeout',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
-                'nginx_url': self.nginx_url,
+                'host_url': self.host_url,
                 'error': f'Timeout checking stream service status for {self.service_name}'
             }
         except Exception as e:
@@ -394,7 +394,7 @@ class HDMIStreamController(AVControllerInterface):
                 'service_status': 'error',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
-                'nginx_url': self.nginx_url,
+                'host_url': self.host_url,
                 'error': f'Failed to check stream service: {str(e)}'
             }
 

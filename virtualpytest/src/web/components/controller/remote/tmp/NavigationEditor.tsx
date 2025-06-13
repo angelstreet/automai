@@ -1422,8 +1422,8 @@ const NavigationEditorContent: React.FC = () => {
                   autoConnect={true}
                   deviceConnection={{
                     flask_url: selectedDeviceData.connection?.flask_url || buildApiUrl(''),
-                    nginx_url:
-                      selectedDeviceData.connection?.nginx_url ||
+                    host_url:
+                      selectedDeviceData.connection?.host_url ||
                       buildApiUrl('').replace('http:', 'https:').replace('5009', '444'),
                   }}
                   onDisconnectComplete={() => {

@@ -23,14 +23,17 @@ import {
   FormLabel,
   Chip,
 } from '@mui/material';
-import { 
+import {
   Camera as CameraIcon,
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
 import { NodeVerificationsList } from '../navigation/NodeVerificationsList';
 import { styled } from '@mui/material/styles';
-import { VerificationEditorLayoutConfig, getVerificationEditorLayout } from '../../../config/layoutConfig';
+import {
+  VerificationEditorLayoutConfig,
+  getVerificationEditorLayout,
+} from '../../../config/layoutConfig';
 
 // Import registration context
 import { useRegistration } from '../../contexts/RegistrationContext';
@@ -40,7 +43,7 @@ import { VerificationCondition } from '../../type';
 // Define DeviceConnection interface locally since it's not exported
 interface DeviceConnection {
   flask_url: string;
-  nginx_url: string;
+  host_url: string;
 }
 
 interface VerificationAction {
@@ -147,15 +150,15 @@ interface VerificationEditorProps {
   videoFramesPath?: string;
   totalFrames?: number;
   currentFrame?: number;
-  // ScreenshotCapture component state  
+  // ScreenshotCapture component state
   screenshotPath?: string;
   sx?: any;
   onReferenceSaved?: (referenceName: string) => void;
   layoutConfig?: VerificationEditorLayoutConfig; // Allow direct override if needed
   // Device connection information
   deviceConnection?: {
-    flask_url: string;    // e.g., "http://192.168.1.67:5119"
-    nginx_url: string;    // e.g., "https://192.168.1.67:444"
+    flask_url: string; // e.g., "http://192.168.1.67:5119"
+    host_url: string; // e.g., "https://192.168.1.67:444"
   };
 }
 
@@ -175,7 +178,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   videoFramesPath,
   totalFrames,
   currentFrame,
-  // ScreenshotCapture component state  
+  // ScreenshotCapture component state
   screenshotPath,
   sx = {},
   onReferenceSaved,
@@ -194,7 +197,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const [testResults, setTestResults] = useState<VerificationTestResult[]>([]);
-  
+
   // Collapsible sections state
   const [captureCollapsed, setCaptureCollapsed] = useState<boolean>(false);
   const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
@@ -218,7 +221,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // Image processing options for capture only
   const [imageProcessingOptions, setImageProcessingOptions] = useState({
     autocrop: false,
-    removeBackground: false
+    removeBackground: false,
   });
 
   // NEW: State for selected reference image preview
@@ -236,7 +239,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     if (deviceConnection?.flask_url) {
       return deviceConnection.flask_url;
     }
-    
+
     // Use registration context for fallback URL
     const fallbackUrl = buildApiUrl('');
     console.log(`[@component:VerificationEditor] Using fallback URL: ${fallbackUrl}`);
@@ -245,11 +248,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   // Helper function to convert Flask HTTP URLs to Nginx HTTPS URLs
   const convertToNginxUrl = (flaskUrl: string) => {
-    if (deviceConnection?.nginx_url) {
+    if (deviceConnection?.host_url) {
       try {
         const path = new URL(flaskUrl).pathname;
-        const nginxUrl = `${deviceConnection.nginx_url}${path}`;
-        console.log(`[@component:VerificationEditor] Converting Flask URL to Nginx: ${flaskUrl} -> ${nginxUrl}`);
+        const nginxUrl = `${deviceConnection.host_url}${path}`;
+        console.log(
+          `[@component:VerificationEditor] Converting Flask URL to Nginx: ${flaskUrl} -> ${nginxUrl}`,
+        );
         return nginxUrl;
       } catch (error) {
         console.error(`[@component:VerificationEditor] Error converting URL: ${error}`);
@@ -269,7 +274,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       isMobileModel: config.isMobileModel,
       width: config.width,
       height: config.height,
-      captureHeight: config.captureHeight
+      captureHeight: config.captureHeight,
     });
     return config;
   }, [model, layoutConfig]);
@@ -281,9 +286,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       model,
       isScreenshotMode,
       isCaptureActive,
-      layoutConfig: finalLayoutConfig
+      layoutConfig: finalLayoutConfig,
     });
-    
+
     return () => {
       console.log('[@component:VerificationEditor] Component unmounting');
     };
@@ -292,7 +297,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // Debug logging for selected reference image changes
   useEffect(() => {
     if (selectedReferenceImage) {
-      console.log('[@component:VerificationEditor] Selected reference image state updated:', selectedReferenceImage);
+      console.log(
+        '[@component:VerificationEditor] Selected reference image state updated:',
+        selectedReferenceImage,
+      );
     }
   }, [selectedReferenceImage]);
 
@@ -343,55 +351,73 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   // NEW: Handle reference selection to update preview
   const handleReferenceSelected = async (referenceName: string, referenceData: any) => {
-    console.log('[@component:VerificationEditor] Reference selected:', referenceName, referenceData);
+    console.log(
+      '[@component:VerificationEditor] Reference selected:',
+      referenceName,
+      referenceData,
+    );
     console.log('[@component:VerificationEditor] Reference data details:', {
       type: referenceData?.type,
       path: referenceData?.path,
       full_path: referenceData?.full_path,
-      name: referenceData?.name
+      name: referenceData?.name,
     });
-    
+
     if (referenceData && referenceData.type === 'image') {
       try {
         // Use existing server route to ensure the reference is available in stream directory
         const baseUrl = getBaseUrl();
-        const ensureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/ensure-stream-availability`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const ensureResponse = await fetch(
+          `${baseUrl}/api/virtualpytest/reference/ensure-stream-availability`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              reference_name: referenceName,
+              model: model,
+            }),
           },
-          body: JSON.stringify({
-            reference_name: referenceName,
-            model: model
-          }),
-        });
-        
+        );
+
         if (ensureResponse.ok) {
           const ensureResult = await ensureResponse.json();
           if (ensureResult.success && ensureResult.image_url) {
-            console.log('[@component:VerificationEditor] Reference available at:', ensureResult.image_url);
+            console.log(
+              '[@component:VerificationEditor] Reference available at:',
+              ensureResult.image_url,
+            );
             setSelectedReferenceImage(ensureResult.image_url);
             setSelectedReferenceInfo({
               name: referenceName,
-              type: 'image'
+              type: 'image',
             });
           } else {
-            console.error('[@component:VerificationEditor] Failed to ensure stream availability:', ensureResult.error);
+            console.error(
+              '[@component:VerificationEditor] Failed to ensure stream availability:',
+              ensureResult.error,
+            );
             setSelectedReferenceImage(null);
             setSelectedReferenceInfo(null);
           }
         } else {
-          console.error('[@component:VerificationEditor] Ensure stream availability request failed:', ensureResponse.status);
+          console.error(
+            '[@component:VerificationEditor] Ensure stream availability request failed:',
+            ensureResponse.status,
+          );
           setSelectedReferenceImage(null);
           setSelectedReferenceInfo(null);
         }
-        
+
         // Clear any captured reference since we're now showing a selected reference
         setCapturedReferenceImage(null);
         setHasCaptured(false);
-        
       } catch (error) {
-        console.error('[@component:VerificationEditor] Error ensuring reference availability:', error);
+        console.error(
+          '[@component:VerificationEditor] Error ensuring reference availability:',
+          error,
+        );
         setSelectedReferenceImage(null);
         setSelectedReferenceInfo(null);
         setCapturedReferenceImage(null);
@@ -399,58 +425,80 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       }
     } else if (referenceData && referenceData.type === 'text') {
       // For text references, clear the image preview
-      console.log('[@component:VerificationEditor] Text reference selected, clearing image preview');
+      console.log(
+        '[@component:VerificationEditor] Text reference selected, clearing image preview',
+      );
       setSelectedReferenceImage(null);
       setSelectedReferenceInfo({
         name: referenceName,
-        type: 'text'
+        type: 'text',
       });
-      
+
       // Clear any captured reference
       setCapturedReferenceImage(null);
       setHasCaptured(false);
     } else {
       // Clear preview if no valid reference
-      console.log('[@component:VerificationEditor] Invalid or unknown reference type, clearing preview');
+      console.log(
+        '[@component:VerificationEditor] Invalid or unknown reference type, clearing preview',
+      );
       setSelectedReferenceImage(null);
       setSelectedReferenceInfo(null);
     }
   };
 
   // Handle area selection from drag overlay
-  const handleAreaSelected = useCallback((area: { x: number; y: number; width: number; height: number }) => {
-    console.log('[@component:VerificationEditor] === AREA SELECTION DEBUG ===');
-    console.log('[@component:VerificationEditor] New area selected:', {
-      x: area.x,
-      y: area.y,
-      width: area.width,
-      height: area.height,
-      area: area
-    });
-    console.log('[@component:VerificationEditor] Previous selected area:', selectedArea);
-    console.log('[@component:VerificationEditor] Capture image dimensions:', captureImageDimensions);
-    console.log('[@component:VerificationEditor] Original image dimensions:', originalImageDimensions);
-    console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
-    
-    if (onAreaSelected) {
-      console.log('[@component:VerificationEditor] Calling parent onAreaSelected with area:', area);
-      onAreaSelected(area);
-    }
-  }, [selectedArea, captureImageDimensions, originalImageDimensions, captureSourcePath, onAreaSelected]);
+  const handleAreaSelected = useCallback(
+    (area: { x: number; y: number; width: number; height: number }) => {
+      console.log('[@component:VerificationEditor] === AREA SELECTION DEBUG ===');
+      console.log('[@component:VerificationEditor] New area selected:', {
+        x: area.x,
+        y: area.y,
+        width: area.width,
+        height: area.height,
+        area: area,
+      });
+      console.log('[@component:VerificationEditor] Previous selected area:', selectedArea);
+      console.log(
+        '[@component:VerificationEditor] Capture image dimensions:',
+        captureImageDimensions,
+      );
+      console.log(
+        '[@component:VerificationEditor] Original image dimensions:',
+        originalImageDimensions,
+      );
+      console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
+
+      if (onAreaSelected) {
+        console.log(
+          '[@component:VerificationEditor] Calling parent onAreaSelected with area:',
+          area,
+        );
+        onAreaSelected(area);
+      }
+    },
+    [
+      selectedArea,
+      captureImageDimensions,
+      originalImageDimensions,
+      captureSourcePath,
+      onAreaSelected,
+    ],
+  );
 
   // Handle clearing selection
   const handleClearSelection = useCallback(() => {
     console.log('[@component:VerificationEditor] === AREA CLEAR DEBUG ===');
     console.log('[@component:VerificationEditor] Clearing area selection');
     console.log('[@component:VerificationEditor] Previous selected area:', selectedArea);
-    
+
     // Clear captured reference images when clearing selection
     setCapturedReferenceImage(null);
     setHasCaptured(false);
     // Also clear selected reference when clearing selection
     setSelectedReferenceImage(null);
     setSelectedReferenceInfo(null);
-    
+
     if (onClearSelection) {
       console.log('[@component:VerificationEditor] Calling parent onClearSelection');
       onClearSelection();
@@ -474,21 +522,35 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       y: selectedArea.y,
       width: selectedArea.width,
       height: selectedArea.height,
-      area: selectedArea
+      area: selectedArea,
     });
     console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
-    console.log('[@component:VerificationEditor] Capture image dimensions:', captureImageDimensions);
-    console.log('[@component:VerificationEditor] Original image dimensions:', originalImageDimensions);
+    console.log(
+      '[@component:VerificationEditor] Capture image dimensions:',
+      captureImageDimensions,
+    );
+    console.log(
+      '[@component:VerificationEditor] Original image dimensions:',
+      originalImageDimensions,
+    );
     console.log('[@component:VerificationEditor] Reference name:', referenceName);
     console.log('[@component:VerificationEditor] Model:', model);
-    console.log('[@component:VerificationEditor] Processing options:', referenceType === 'image' ? imageProcessingOptions : undefined);
+    console.log(
+      '[@component:VerificationEditor] Processing options:',
+      referenceType === 'image' ? imageProcessingOptions : undefined,
+    );
 
     try {
       let captureResponse;
       const baseUrl = getBaseUrl();
-      
-      if (referenceType === 'image' && (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)) {
-        console.log('[@component:VerificationEditor] Using process-area endpoint with processing options');
+
+      if (
+        referenceType === 'image' &&
+        (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
+      ) {
+        console.log(
+          '[@component:VerificationEditor] Using process-area endpoint with processing options',
+        );
         captureResponse = await fetch(`${baseUrl}/api/virtualpytest/reference/process-area`, {
           method: 'POST',
           headers: {
@@ -500,7 +562,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             reference_name: referenceName,
             model: model,
             autocrop: imageProcessingOptions.autocrop,
-            remove_background: imageProcessingOptions.removeBackground
+            remove_background: imageProcessingOptions.removeBackground,
           }),
         });
       } else {
@@ -514,32 +576,38 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName,
-            model: model
+            model: model,
           }),
         });
       }
 
       const result = await captureResponse.json();
       console.log('[@component:VerificationEditor] Capture response result:', result);
-      
+
       if (result.success) {
         const timestamp = new Date().getTime();
         // Server now returns complete URLs, so use them directly with cache-busting timestamp
         const imageUrl = `${result.image_url}?t=${timestamp}`;
-        console.log('[@component:VerificationEditor] Temporary capture created successfully, setting image URL:', imageUrl);
+        console.log(
+          '[@component:VerificationEditor] Temporary capture created successfully, setting image URL:',
+          imageUrl,
+        );
         setCapturedReferenceImage(imageUrl);
         setHasCaptured(true);
-        
+
         // If autocrop was applied and new area dimensions are provided, update the selected area
         if (imageProcessingOptions.autocrop && result.processed_area && onAreaSelected) {
           console.log('[@component:VerificationEditor] === AUTOCROP AREA UPDATE ===');
           console.log('[@component:VerificationEditor] Original area:', selectedArea);
-          console.log('[@component:VerificationEditor] Processed area from server:', result.processed_area);
+          console.log(
+            '[@component:VerificationEditor] Processed area from server:',
+            result.processed_area,
+          );
           onAreaSelected({
             x: result.processed_area.x,
             y: result.processed_area.y,
             width: result.processed_area.width,
-            height: result.processed_area.height
+            height: result.processed_area.height,
           });
           console.log('[@component:VerificationEditor] Area updated after autocrop');
         }
@@ -553,7 +621,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const handleSaveReference = async () => {
     if (!referenceName.trim() || !selectedArea || !model) {
-      console.log('[@component:VerificationEditor] Cannot save: missing reference name, area, or model');
+      console.log(
+        '[@component:VerificationEditor] Cannot save: missing reference name, area, or model',
+      );
       return;
     }
 
@@ -566,7 +636,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     try {
       // Proceed directly with save
       await performSaveReference();
-
     } catch (error) {
       console.error('[@component:VerificationEditor] Error saving reference:', error);
     }
@@ -583,7 +652,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         y: selectedArea?.y,
         width: selectedArea?.width,
         height: selectedArea?.height,
-        area: selectedArea
+        area: selectedArea,
       });
       console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
 
@@ -594,11 +663,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           model_name: model,
           area: selectedArea,
           reference_type: 'reference_image',
-          source_path: captureSourcePath  // Add source path to help build cropped filename
+          source_path: captureSourcePath, // Add source path to help build cropped filename
         };
-        
+
         console.log('[@component:VerificationEditor] Image save payload:', savePayload);
-        
+
         const baseUrl = getBaseUrl();
         const response = await fetch(`${baseUrl}/api/virtualpytest/reference/save`, {
           method: 'POST',
@@ -610,16 +679,21 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         const result = await response.json();
         console.log('[@component:VerificationEditor] Image save response:', result);
-        
+
         if (result.success) {
           console.log('[@component:VerificationEditor] Image reference saved successfully');
           const publicUrl = result.public_url;
-          setSuccessMessage(`Image reference "${referenceName}" saved successfully! Available at: ${publicUrl}`);
+          setSuccessMessage(
+            `Image reference "${referenceName}" saved successfully! Available at: ${publicUrl}`,
+          );
           setTempReferenceUrl('');
-          setReferenceSaveCounter(prev => prev + 1);
+          setReferenceSaveCounter((prev) => prev + 1);
           onReferenceSaved?.(referenceName);
         } else {
-          console.error('[@component:VerificationEditor] Failed to save image reference:', result.error);
+          console.error(
+            '[@component:VerificationEditor] Failed to save image reference:',
+            result.error,
+          );
           setSuccessMessage(`Failed to save image reference: ${result.error}`);
         }
       } else if (referenceType === 'text') {
@@ -630,11 +704,11 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           area: selectedArea,
           text: referenceText,
           fontSize: detectedTextData?.fontSize,
-          confidence: detectedTextData?.confidence
+          confidence: detectedTextData?.confidence,
         };
-        
+
         console.log('[@component:VerificationEditor] Text save payload:', savePayload);
-        
+
         const baseUrl = getBaseUrl();
         const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/save`, {
           method: 'POST',
@@ -645,15 +719,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         });
 
         console.log('[@component:VerificationEditor] Text save response status:', response.status);
-        
+
         if (response.ok) {
           console.log('[@component:VerificationEditor] Text reference saved successfully');
           setSuccessMessage(`Text reference "${referenceName}" saved successfully!`);
           setDetectedTextData(null);
-          setReferenceSaveCounter(prev => prev + 1);
+          setReferenceSaveCounter((prev) => prev + 1);
           onReferenceSaved?.(referenceName);
         } else {
-          console.error('[@component:VerificationEditor] Failed to save text reference:', response.status);
+          console.error(
+            '[@component:VerificationEditor] Failed to save text reference:',
+            response.status,
+          );
         }
       }
     } catch (error) {
@@ -667,79 +744,102 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     if (verifications.length === 0) {
       console.log('[@component:VerificationEditor] No verifications to test');
       return;
     }
 
     console.log('[@component:VerificationEditor] === VERIFICATION TEST DEBUG ===');
-    console.log('[@component:VerificationEditor] Number of verifications before filtering:', verifications.length);
-    
+    console.log(
+      '[@component:VerificationEditor] Number of verifications before filtering:',
+      verifications.length,
+    );
+
     // Filter out empty/invalid verifications before testing
     const validVerifications = verifications.filter((verification, index) => {
       // Check if verification has an id (is configured)
       if (!verification.id || verification.id.trim() === '') {
-        console.log(`[@component:VerificationEditor] Removing verification ${index}: No verification type selected`);
+        console.log(
+          `[@component:VerificationEditor] Removing verification ${index}: No verification type selected`,
+        );
         return false;
       }
-      
+
       // Check if verification has required input based on controller type
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath = verification.params?.full_path || 
-                            verification.params?.reference_path || 
-                            verification.inputValue;
+        const hasImagePath =
+          verification.params?.full_path ||
+          verification.params?.reference_path ||
+          verification.inputValue;
         if (!hasImagePath) {
-          console.log(`[@component:VerificationEditor] Removing verification ${index}: No image reference specified`);
+          console.log(
+            `[@component:VerificationEditor] Removing verification ${index}: No image reference specified`,
+          );
           return false;
         }
       } else if (verification.controller_type === 'text') {
         // Text verifications need text to search for
         const hasText = verification.inputValue && verification.inputValue.trim() !== '';
         if (!hasText) {
-          console.log(`[@component:VerificationEditor] Removing verification ${index}: No text specified`);
+          console.log(
+            `[@component:VerificationEditor] Removing verification ${index}: No text specified`,
+          );
           return false;
         }
       } else if (verification.controller_type === 'adb') {
         // ADB verifications need search criteria
         const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
         if (!hasSearchTerm) {
-          console.log(`[@component:VerificationEditor] Removing verification ${index}: No search term specified`);
+          console.log(
+            `[@component:VerificationEditor] Removing verification ${index}: No search term specified`,
+          );
           return false;
         }
       }
-      
+
       // For other types, check if requiresInput is set and if so, validate accordingly
       if (verification.requiresInput) {
         const hasInput = verification.inputValue && verification.inputValue.trim() !== '';
         if (!hasInput) {
-          console.log(`[@component:VerificationEditor] Removing verification ${index}: Required input missing`);
+          console.log(
+            `[@component:VerificationEditor] Removing verification ${index}: Required input missing`,
+          );
           return false;
         }
       }
-      
+
       return true;
     });
-    
+
     // Update verifications list if any were filtered out
     if (validVerifications.length !== verifications.length) {
-      console.log(`[@component:VerificationEditor] Filtered out ${verifications.length - validVerifications.length} empty verifications`);
+      console.log(
+        `[@component:VerificationEditor] Filtered out ${verifications.length - validVerifications.length} empty verifications`,
+      );
       setVerifications(validVerifications);
-      
+
       // Show message about removed verifications
       if (validVerifications.length === 0) {
-        setError('All verifications were empty and have been removed. Please add valid verifications.');
+        setError(
+          'All verifications were empty and have been removed. Please add valid verifications.',
+        );
         return;
       } else {
-        setSuccessMessage(`Removed ${verifications.length - validVerifications.length} empty verification(s). Testing ${validVerifications.length} valid verification(s).`);
+        setSuccessMessage(
+          `Removed ${verifications.length - validVerifications.length} empty verification(s). Testing ${validVerifications.length} valid verification(s).`,
+        );
       }
     }
-    
-    console.log('[@component:VerificationEditor] Number of valid verifications:', validVerifications.length);
+
+    console.log(
+      '[@component:VerificationEditor] Number of valid verifications:',
+      validVerifications.length,
+    );
     console.log('[@component:VerificationEditor] Model:', model);
     console.log('[@component:VerificationEditor] Capture source path:', captureSourcePath);
-    
+
     // Log each valid verification with its area coordinates
     validVerifications.forEach((verification, index) => {
       console.log(`[@component:VerificationEditor] Valid verification ${index}:`, {
@@ -749,19 +849,19 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         controller_type: verification.controller_type,
         params: verification.params,
         area: verification.params?.area,
-        inputValue: verification.inputValue
+        inputValue: verification.inputValue,
       });
-      
+
       if (verification.params?.area) {
         console.log(`[@component:VerificationEditor] Verification ${index} area details:`, {
           x: verification.params.area.x,
           y: verification.params.area.y,
           width: verification.params.area.width,
-          height: verification.params.area.height
+          height: verification.params.area.height,
         });
       }
     });
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -786,9 +886,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         model: model,
         node_id: 'verification-editor',
         tree_id: 'verification-tree',
-        capture_filename: capture_filename  // NEW: Send specific capture filename
+        capture_filename: capture_filename, // NEW: Send specific capture filename
       };
-      
+
       console.log('[@component:VerificationEditor] Batch execution payload:', batchPayload);
 
       // Execute batch verification with specific capture
@@ -811,50 +911,62 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       // Process results if we have them, regardless of overall batch success
       // The batch can be "unsuccessful" if some verifications failed, but we still want to show the results
       if (batchResult.results && batchResult.results.length > 0) {
-        console.log('[@component:VerificationEditor] Processing batch results:', batchResult.results.length, 'results');
-        
+        console.log(
+          '[@component:VerificationEditor] Processing batch results:',
+          batchResult.results.length,
+          'results',
+        );
+
         // Process and set test results for NodeVerificationsList to display
-        const processedResults: VerificationTestResult[] = batchResult.results.map((result: any, index: number) => {
-          const verification = validVerifications[index]; // Use validVerifications instead of verifications
-          
-          console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
-          console.log(`[@component:VerificationEditor] Corresponding verification ${index}:`, verification);
-          
-          // Determine result type
-          let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
-          if (result.success) {
-            resultType = 'PASS';
-          } else if (result.error && !result.message) {
-            resultType = 'ERROR';
-          }
-          
-          const processedResult: VerificationTestResult = {
-            success: result.success,
-            message: result.message,
-            error: result.error,
-            threshold: result.confidence || result.threshold, // Use confidence from host result
-            resultType: resultType,
-            sourceImageUrl: result.sourceImageUrl,
-            referenceImageUrl: result.referenceImageUrl,
-            extractedText: result.extracted_text,
-            searchedText: result.searched_text,
-            imageFilter: result.image_filter || verification.params?.image_filter,
-            detectedLanguage: result.detected_language,
-            languageConfidence: result.language_confidence,
-            // Add ADB-specific fields
-            search_term: result.search_term,
-            wait_time: result.wait_time,
-            total_matches: result.total_matches,
-            matches: result.matches,
-          };
-          
-          console.log(`[@component:VerificationEditor] Processed result ${index}:`, processedResult);
-          return processedResult;
-        });
-        
+        const processedResults: VerificationTestResult[] = batchResult.results.map(
+          (result: any, index: number) => {
+            const verification = validVerifications[index]; // Use validVerifications instead of verifications
+
+            console.log(`[@component:VerificationEditor] Processing result ${index}:`, result);
+            console.log(
+              `[@component:VerificationEditor] Corresponding verification ${index}:`,
+              verification,
+            );
+
+            // Determine result type
+            let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
+            if (result.success) {
+              resultType = 'PASS';
+            } else if (result.error && !result.message) {
+              resultType = 'ERROR';
+            }
+
+            const processedResult: VerificationTestResult = {
+              success: result.success,
+              message: result.message,
+              error: result.error,
+              threshold: result.confidence || result.threshold, // Use confidence from host result
+              resultType: resultType,
+              sourceImageUrl: result.sourceImageUrl,
+              referenceImageUrl: result.referenceImageUrl,
+              extractedText: result.extracted_text,
+              searchedText: result.searched_text,
+              imageFilter: result.image_filter || verification.params?.image_filter,
+              detectedLanguage: result.detected_language,
+              languageConfidence: result.language_confidence,
+              // Add ADB-specific fields
+              search_term: result.search_term,
+              wait_time: result.wait_time,
+              total_matches: result.total_matches,
+              matches: result.matches,
+            };
+
+            console.log(
+              `[@component:VerificationEditor] Processed result ${index}:`,
+              processedResult,
+            );
+            return processedResult;
+          },
+        );
+
         console.log('[@component:VerificationEditor] Setting test results:', processedResults);
         setTestResults(processedResults);
-        
+
         // Update verifications with results (use validVerifications for consistency)
         const updatedVerifications = validVerifications.map((verification, index) => {
           const result = batchResult.results?.[index];
@@ -865,23 +977,25 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               lastRunResults: [result.success],
               resultImageUrl: result.sourceImageUrl,
               referenceImageUrl: result.referenceImageUrl,
-              lastRunDetails: result.message || 'Verification completed'
+              lastRunDetails: result.message || 'Verification completed',
             };
           }
           return verification;
         });
-        
+
         setVerifications(updatedVerifications);
-        
+
         // Show success message with pass/fail count
         const passedCount = batchResult.passed_count || 0;
         const totalCount = batchResult.total_count || processedResults.length;
         setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
-        
       } else if (batchResult.success === false && batchResult.error) {
         // Only treat as error if there's an actual error and no results
         const errorMessage = batchResult.message || batchResult.error || 'Unknown error occurred';
-        console.log('[@component:VerificationEditor] Batch execution failed with error:', errorMessage);
+        console.log(
+          '[@component:VerificationEditor] Batch execution failed with error:',
+          errorMessage,
+        );
         setError(`Verification failed: ${errorMessage}`);
         // Clear test results on actual failure
         setTestResults([]);
@@ -908,13 +1022,18 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     }
 
     if (!captureSourcePath) {
-      console.log('[@component:VerificationEditor] Cannot auto-detect: missing capture source path');
+      console.log(
+        '[@component:VerificationEditor] Cannot auto-detect: missing capture source path',
+      );
       return;
     }
 
     try {
-      console.log('[@component:VerificationEditor] Starting text auto-detection in area:', selectedArea);
-      
+      console.log(
+        '[@component:VerificationEditor] Starting text auto-detection in area:',
+        selectedArea,
+      );
+
       const baseUrl = getBaseUrl();
       const response = await fetch(`${baseUrl}/api/virtualpytest/reference/text/auto-detect`, {
         method: 'POST',
@@ -925,33 +1044,37 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           model,
           area: selectedArea,
           source_path: captureSourcePath,
-          image_filter: textImageFilter
+          image_filter: textImageFilter,
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
         console.log('[@component:VerificationEditor] Text auto-detection successful:', result);
-        
+
         setDetectedTextData({
           text: result.detected_text,
           fontSize: result.font_size,
           confidence: result.confidence,
           detectedLanguage: result.detected_language,
           detectedLanguageName: result.detected_language_name,
-          languageConfidence: result.language_confidence
+          languageConfidence: result.language_confidence,
         });
-        
+
         // Pre-fill the text input with detected text
         setReferenceText(result.detected_text);
-        
+
         // Use the preview URL returned from the backend (not hardcoded capture.png)
         if (result.preview_url) {
           // Check if result.preview_url is already a complete URL
-          const previewUrl = result.preview_url.startsWith('http://') || result.preview_url.startsWith('https://') 
-            ? result.preview_url
-            : convertToNginxUrl(result.preview_url);
-          console.log('[@component:VerificationEditor] Setting preview from backend response:', previewUrl);
+          const previewUrl =
+            result.preview_url.startsWith('http://') || result.preview_url.startsWith('https://')
+              ? result.preview_url
+              : convertToNginxUrl(result.preview_url);
+          console.log(
+            '[@component:VerificationEditor] Setting preview from backend response:',
+            previewUrl,
+          );
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
         } else {
@@ -959,15 +1082,24 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         }
       } else {
         const errorResult = await response.json();
-        console.error('[@component:VerificationEditor] Text auto-detection failed:', response.status, errorResult);
-        
+        console.error(
+          '[@component:VerificationEditor] Text auto-detection failed:',
+          response.status,
+          errorResult,
+        );
+
         // Still show preview even if OCR failed (but area was cropped)
         if (errorResult.preview_url) {
           // Check if errorResult.preview_url is already a complete URL
-          const previewUrl = errorResult.preview_url.startsWith('http://') || errorResult.preview_url.startsWith('https://') 
-            ? errorResult.preview_url
-            : convertToNginxUrl(errorResult.preview_url);
-          console.log('[@component:VerificationEditor] Setting preview from error response:', previewUrl);
+          const previewUrl =
+            errorResult.preview_url.startsWith('http://') ||
+            errorResult.preview_url.startsWith('https://')
+              ? errorResult.preview_url
+              : convertToNginxUrl(errorResult.preview_url);
+          console.log(
+            '[@component:VerificationEditor] Setting preview from error response:',
+            previewUrl,
+          );
           setCapturedReferenceImage(previewUrl);
           setHasCaptured(true);
         }
@@ -979,7 +1111,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   const validateRegex = (text: string): boolean => {
     if (!text) return true; // Empty text is valid
-    
+
     try {
       new RegExp(text);
       return true;
@@ -993,13 +1125,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     if (!referenceName.trim() || !selectedArea || !model || model.trim() === '') {
       return false;
     }
-    
+
     if (referenceType === 'image') {
       return hasCaptured; // Image type requires capture
     } else if (referenceType === 'text') {
       return referenceText.trim() !== '' && validateRegex(referenceText); // Text type requires valid text/regex
     }
-    
+
     return false;
   })();
   const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
@@ -1017,17 +1149,19 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
   if (!model || model.trim() === '') {
     return (
-      <Box sx={{ 
-        width: finalLayoutConfig.width, 
-        height: finalLayoutConfig.height, 
-        p: 1, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...sx,
-      }}>
+      <Box
+        sx={{
+          width: finalLayoutConfig.width,
+          height: finalLayoutConfig.height,
+          p: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...sx,
+        }}
+      >
         <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
           Configuration Error
         </Typography>
@@ -1039,38 +1173,45 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   }
 
   return (
-    <Box sx={{ 
-      width: finalLayoutConfig.width, 
-      height: finalLayoutConfig.height, 
-      p: 1, 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: 1,
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      '&::-webkit-scrollbar': {
-        width: '6px',
-      },
-      '&::-webkit-scrollbar-track': {
-        background: 'rgba(255,255,255,0.1)',
-        borderRadius: '3px',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        background: 'rgba(255,255,255,0.3)',
-        borderRadius: '3px',
-        '&:hover': {
-          background: 'rgba(255,255,255,0.5)',
+    <Box
+      sx={{
+        width: finalLayoutConfig.width,
+        height: finalLayoutConfig.height,
+        p: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        '&::-webkit-scrollbar': {
+          width: '6px',
         },
-      },
-      ...sx,
-    }}>
+        '&::-webkit-scrollbar-track': {
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '3px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(255,255,255,0.3)',
+          borderRadius: '3px',
+          '&:hover': {
+            background: 'rgba(255,255,255,0.5)',
+          },
+        },
+        ...sx,
+      }}
+    >
       <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
         Verification Editor
         <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
-          ({model}) {!finalLayoutConfig.isMobileModel && <Typography component="span" sx={{ fontSize: '0.7rem' }}>[Landscape]</Typography>}
+          ({model}){' '}
+          {!finalLayoutConfig.isMobileModel && (
+            <Typography component="span" sx={{ fontSize: '0.7rem' }}>
+              [Landscape]
+            </Typography>
+          )}
         </Typography>
       </Typography>
-      
+
       {/* Show error message if any */}
       {error && (
         <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
@@ -1082,8 +1223,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       <Box>
         {/* Capture Section Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={() => setCaptureCollapsed(!captureCollapsed)}
             sx={{ p: 0.25, mr: 0.5 }}
           >
@@ -1103,55 +1244,60 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           <Box>
             {/* 1. Capture Container (Reference Image Preview) */}
             <Box>
-              <Box 
+              <Box
                 ref={captureContainerRef}
-                sx={{ 
+                sx={{
                   position: 'relative',
-                  width: '100%', 
-                  height: finalLayoutConfig.captureHeight, 
-                  border: '2px dashed #444', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  width: '100%',
+                  height: finalLayoutConfig.captureHeight,
+                  border: '2px dashed #444',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: 1,
                   bgcolor: 'rgba(255,255,255,0.05)',
                   overflow: 'hidden',
-                  mb: 1.5
+                  mb: 1.5,
                 }}
               >
                 {capturedReferenceImage ? (
                   <>
-                    <img 
+                    <img
                       src={capturedReferenceImage}
                       alt="Captured Reference"
                       style={{
                         width: '100%',
                         height: '100%',
                         objectFit: 'contain',
-                        maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%'
+                        maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%',
                       }}
                     />
                     {/* Success message overlay */}
                     {successMessage && (
-                      <Box sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        zIndex: 10
-                      }}>
-                        <Typography variant="body2" sx={{ 
-                          color: '#4caf50', 
-                          fontSize: '0.9rem', 
-                          fontWeight: 600,
-                          textAlign: 'center',
-                          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-                        }}>
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          zIndex: 10,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: '#4caf50',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                          }}
+                        >
                           {successMessage}
                         </Typography>
                       </Box>
@@ -1159,39 +1305,61 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   </>
                 ) : selectedReferenceImage ? (
                   <>
-                    <img 
+                    <img
                       src={selectedReferenceImage}
                       alt="Selected Reference"
                       style={{
                         width: '100%',
                         height: '100%',
                         objectFit: 'contain',
-                        maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%'
+                        maxHeight: finalLayoutConfig.isMobileModel ? 'none' : '100%',
                       }}
-                      onLoad={() => console.log('[@component:VerificationEditor] Selected reference image loaded successfully')}
-                      onError={(e) => console.error('[@component:VerificationEditor] Selected reference image failed to load:', e)}
+                      onLoad={() =>
+                        console.log(
+                          '[@component:VerificationEditor] Selected reference image loaded successfully',
+                        )
+                      }
+                      onError={(e) =>
+                        console.error(
+                          '[@component:VerificationEditor] Selected reference image failed to load:',
+                          e,
+                        )
+                      }
                     />
                     {/* Reference info overlay */}
-                    <Box sx={{
-                      position: 'absolute',
-                      top: 4,
-                      left: 4,
-                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                      borderRadius: 1,
-                      padding: '2px 6px',
-                      zIndex: 5
-                    }}>
-                      <Typography variant="caption" sx={{ 
-                        color: '#90caf9', 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600
-                      }}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 4,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: 1,
+                        padding: '2px 6px',
+                        zIndex: 5,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: '#90caf9',
+                          fontSize: '0.65rem',
+                          fontWeight: 600,
+                        }}
+                      >
                         📁 {selectedReferenceInfo?.name}
                       </Typography>
                     </Box>
                   </>
                 ) : (
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', textAlign: 'center', px: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      px: 0.5,
+                    }}
+                  >
                     {allowSelection ? 'Drag area on main image' : 'No image'}
                   </Typography>
                 )}
@@ -1212,7 +1380,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       if (onAreaSelected) {
                         onAreaSelected({
                           ...selectedArea,
-                          x: newX
+                          x: newX,
                         });
                       }
                     }}
@@ -1249,7 +1417,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       if (onAreaSelected) {
                         onAreaSelected({
                           ...selectedArea,
-                          y: newY
+                          y: newY,
                         });
                       }
                     }}
@@ -1286,7 +1454,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       if (onAreaSelected) {
                         onAreaSelected({
                           ...selectedArea,
-                          width: newWidth
+                          width: newWidth,
                         });
                       }
                     }}
@@ -1323,7 +1491,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       if (onAreaSelected) {
                         onAreaSelected({
                           ...selectedArea,
-                          height: newHeight
+                          height: newHeight,
                         });
                       }
                     }}
@@ -1352,7 +1520,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   />
                 </Box>
               ) : (
-                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}
+                >
                   No area selected
                 </Typography>
               )}
@@ -1360,7 +1531,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
             {/* 3. Reference Type Selection with Image Processing Options */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0, flexWrap: 'wrap' }}>
-              
               <RadioGroup
                 row
                 value={referenceType}
@@ -1398,10 +1568,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       <input
                         type="checkbox"
                         checked={imageProcessingOptions.autocrop}
-                        onChange={(e) => setImageProcessingOptions(prev => ({ 
-                          ...prev, 
-                          autocrop: e.target.checked 
-                        }))}
+                        onChange={(e) =>
+                          setImageProcessingOptions((prev) => ({
+                            ...prev,
+                            autocrop: e.target.checked,
+                          }))
+                        }
                         style={{ transform: 'scale(0.8)' }}
                       />
                     }
@@ -1419,10 +1591,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                       <input
                         type="checkbox"
                         checked={imageProcessingOptions.removeBackground}
-                        onChange={(e) => setImageProcessingOptions(prev => ({ 
-                          ...prev, 
-                          removeBackground: e.target.checked 
-                        }))}
+                        onChange={(e) =>
+                          setImageProcessingOptions((prev) => ({
+                            ...prev,
+                            removeBackground: e.target.checked,
+                          }))
+                        }
                         style={{ transform: 'scale(0.8)' }}
                       />
                     }
@@ -1449,7 +1623,9 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   value={referenceText}
                   onChange={(e) => setReferenceText(e.target.value)}
                   error={!!(referenceText && !validateRegex(referenceText))}
-                  helperText={referenceText && !validateRegex(referenceText) ? 'Invalid regex pattern' : ''}
+                  helperText={
+                    referenceText && !validateRegex(referenceText) ? 'Invalid regex pattern' : ''
+                  }
                   sx={{
                     flex: 1,
                     '& .MuiInputBase-input': {
@@ -1482,8 +1658,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
             {referenceType === 'text' && detectedTextData && (
               <Box sx={{ mb: 0.5 }}>
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
-                  Detected: Font Size {detectedTextData.fontSize}px, 
-                  Confidence {(detectedTextData.confidence * 100).toFixed(1)}%
+                  Detected: Font Size {detectedTextData.fontSize}px, Confidence{' '}
+                  {(detectedTextData.confidence * 100).toFixed(1)}%
                   {detectedTextData.detectedLanguageName && (
                     <>, Language: {detectedTextData.detectedLanguageName}</>
                   )}
@@ -1509,8 +1685,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
               {/* Action Buttons */}
               {referenceType === 'image' && (
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   startIcon={<CameraIcon sx={{ fontSize: '1rem' }} />}
                   variant="contained"
                   onClick={handleCaptureReference}
@@ -1524,15 +1700,15 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                     '&:disabled': {
                       bgcolor: '#333',
                       color: 'rgba(255,255,255,0.3)',
-                    }
+                    },
                   }}
                 >
                   Capture
                 </Button>
               )}
-              
-              <Button 
-                size="small" 
+
+              <Button
+                size="small"
                 variant="contained"
                 onClick={handleSaveReference}
                 disabled={!canSave || pendingSave}
@@ -1545,7 +1721,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                   '&:disabled': {
                     bgcolor: '#333',
                     color: 'rgba(255,255,255,0.3)',
-                  }
+                  },
                 }}
               >
                 {pendingSave ? 'Saving...' : 'Save'}
@@ -1559,8 +1735,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       <Box>
         {/* Verifications Section Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={() => setVerificationsCollapsed(!verificationsCollapsed)}
             sx={{ p: 0.25, mr: 0.5 }}
           >
@@ -1573,7 +1749,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
             Verifications
             {model && (
-              <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.secondary', ml: 1 }}>
+              <Typography
+                component="span"
+                sx={{ fontSize: '0.7rem', color: 'text.secondary', ml: 1 }}
+              >
                 ({verifications.length})
               </Typography>
             )}
@@ -1582,30 +1761,32 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
 
         {/* Collapsible Verifications Content */}
         <Collapse in={!verificationsCollapsed}>
-          <Box sx={{ 
-            '& .MuiTypography-subtitle2': {
-              fontSize: '0.75rem',
-            },
-            '& .MuiButton-root': {
-              fontSize: '0.7rem',
-            },
-            '& .MuiTextField-root': {
-              '& .MuiInputLabel-root': {
+          <Box
+            sx={{
+              '& .MuiTypography-subtitle2': {
                 fontSize: '0.75rem',
               },
-              '& .MuiInputBase-input': {
+              '& .MuiButton-root': {
+                fontSize: '0.7rem',
+              },
+              '& .MuiTextField-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                },
+              },
+              '& .MuiSelect-root': {
                 fontSize: '0.75rem',
               },
-            },
-            '& .MuiSelect-root': {
-              fontSize: '0.75rem',
-            },
-            '& .MuiFormControl-root': {
-              '& .MuiInputLabel-root': {
-                fontSize: '0.75rem',
+              '& .MuiFormControl-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
               },
-            },
-          }}>
+            }}
+          >
             <NodeVerificationsList
               verifications={verifications}
               availableActions={verificationActions}
@@ -1630,7 +1811,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           sx: {
             backgroundColor: '#2E2E2E',
             color: '#ffffff',
-          }
+          },
         }}
       >
         <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem' }}>
@@ -1638,12 +1819,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
-            A {referenceType} reference named "{referenceName}" already exists for model "{model}".<br />
+            A {referenceType} reference named "{referenceName}" already exists for model "{model}".
+            <br />
             Do you want to overwrite it?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ gap: 1, p: 2 }}>
-          <Button 
+          <Button
             onClick={handleCancelOverwrite}
             variant="outlined"
             size="small"
@@ -1654,12 +1836,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               '&:hover': {
                 borderColor: '#888',
                 backgroundColor: 'rgba(255,255,255,0.1)',
-              }
+              },
             }}
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleConfirmOverwrite}
             variant="contained"
             size="small"
@@ -1668,7 +1850,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
               fontSize: '0.75rem',
               '&:hover': {
                 bgcolor: '#d32f2f',
-              }
+              },
             }}
           >
             Confirm
@@ -1679,4 +1861,4 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   );
 };
 
-export default VerificationEditor; 
+export default VerificationEditor;

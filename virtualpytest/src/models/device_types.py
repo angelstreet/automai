@@ -30,7 +30,7 @@ class SystemStats:
 class DeviceConnection:
     """Device connection information"""
     flask_url: str
-    nginx_url: str
+    host_url: str
 
 
 @dataclass
@@ -84,7 +84,7 @@ class DeviceRegistration:
             },
             'connection': {
                 'flask_url': self.connection.flask_url,
-                'nginx_url': self.connection.nginx_url,
+                'host_url': self.connection.host_url,
             },
             'isLocked': self.isLocked,
             'lockedBy': self.lockedBy,
