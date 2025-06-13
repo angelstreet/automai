@@ -7,11 +7,6 @@ import { defineConfig } from 'vite';
 const serverUrl = process.env.VITE_SERVER_URL || 'http://localhost:5109';
 const shouldUseHttps = serverUrl.startsWith('https://');
 
-// Disable HMR client when using HTTPS
-if (shouldUseHttps) {
-  process.env.VITE_HMR = 'false';
-}
-
 // Certificate paths (only used if HTTPS is needed)
 const certPath = '/home/sunri-pi1/vite-certs/fullchain.pem';
 const keyPath = '/home/sunri-pi1/vite-certs/privkey.pem';
@@ -39,10 +34,6 @@ const registeredRoutes = [
 ];
 
 export default defineConfig({
-  // Set environment variable to disable HMR client when using HTTPS
-  define: {
-    __VITE_HMR_DISABLED__: shouldUseHttps,
-  },
   plugins: [
     react(),
     // Custom plugin for route validation
@@ -111,7 +102,7 @@ export default defineConfig({
         : undefined // Let Vite generate self-signed certificates
       : undefined, // No HTTPS
     // Disable HMR completely when using HTTPS to prevent WebSocket connection attempts
-    hmr: shouldUseHttps ? false : true,
+    hmr: !shouldUseHttps,
     // Configure how the dev server handles routing
     fs: {
       strict: false,
