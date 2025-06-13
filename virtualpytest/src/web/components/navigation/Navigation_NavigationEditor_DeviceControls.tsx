@@ -83,7 +83,9 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         variant={isControlActive ? 'contained' : 'outlined'}
         size="small"
         onClick={onTakeControl}
-        disabled={!selectedDevice || isLoading || !!error || isSelectedDeviceLocked}
+        disabled={
+          !selectedDevice || isLoading || !!error || isSelectedDeviceLocked || isControlActive
+        }
         startIcon={<TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
         sx={{
