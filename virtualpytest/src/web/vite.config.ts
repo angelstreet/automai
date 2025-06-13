@@ -33,9 +33,7 @@ const registeredRoutes = [
   '/navigation-editor', // Will match /navigation-editor/* paths
 ];
 
-export default defineConfig(({ mode }) => ({
-  // Force production mode when using HTTPS
-  mode: shouldUseHttps ? 'production' : mode,
+export default defineConfig({
   plugins: [
     react(),
     // Custom plugin for route validation
@@ -103,8 +101,6 @@ export default defineConfig(({ mode }) => ({
           }
         : undefined // Let Vite generate self-signed certificates
       : undefined, // No HTTPS
-    // Disable HMR completely when using HTTPS to prevent WebSocket connection attempts
-    hmr: !shouldUseHttps,
     // Configure how the dev server handles routing
     fs: {
       strict: false,
@@ -118,4 +114,4 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+});
