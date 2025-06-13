@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { PlayArrow, Videocam, Close as CloseIcon } from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -15,7 +15,8 @@ import {
   Chip,
   IconButton,
 } from '@mui/material';
-import { PlayArrow, Videocam, Close as CloseIcon } from '@mui/icons-material';
+import React, { useState, useEffect, useRef } from 'react';
+
 import { useRegistration } from '../../../contexts/RegistrationContext';
 
 interface HDMIStreamModalProps {

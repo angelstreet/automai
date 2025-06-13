@@ -1,6 +1,7 @@
-import React from 'react';
-import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material';
 import { Tv as TvIcon, Lock as LockIcon } from '@mui/icons-material';
+import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material';
+import React from 'react';
+
 import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigation_Header_Types';
 
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({

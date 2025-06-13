@@ -1,5 +1,6 @@
+import { Box, Typography } from '@mui/material';
 import React from 'react';
-import { Box, Typography, Chip } from '@mui/material';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface VerificationTextComparisonDisplayProps {
