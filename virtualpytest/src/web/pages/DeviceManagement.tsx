@@ -27,12 +27,15 @@ import {
   Paper,
   Snackbar,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
-import { Device, DeviceCreatePayload } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import CreateDeviceDialog from '../components/devicemanagement/DeviceManagement_CreateDialog';
 import EditDeviceDialog from '../components/devicemanagement/DeviceManagement_EditDialog';
+import { useRegistration } from '../contexts/RegistrationContext';
+import { Device, DeviceCreatePayload } from '../types';
 
 const DeviceManagement: React.FC = () => {
+  const { buildServerUrl } = useRegistration();
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,46 +45,35 @@ const DeviceManagement: React.FC = () => {
   const [selectedDeviceForEdit, setSelectedDeviceForEdit] = useState<Device | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ 
-    name: '', 
-    description: '', 
-    model: '' 
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    model: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch devices on component mount only
-  useEffect(() => {
-    fetchDevices();
-  }, []);
-
-  useEffect(() => {
-    const filtered = devices.filter(device =>
-      device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.model?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredDevices(filtered);
-  }, [devices, searchTerm]);
-
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     console.log('[@component:DeviceManagement] Fetching devices');
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/server/devices/getAllDevices');
-      
+
+      const response = await fetch(buildServerUrl('/server/devices/getAllDevices'));
+
       console.log('[@component:DeviceManagement] Response status:', response.status);
-      console.log('[@component:DeviceManagement] Response headers:', response.headers.get('content-type'));
-      
+      console.log(
+        '[@component:DeviceManagement] Response headers:',
+        response.headers.get('content-type'),
+      );
+
       if (!response.ok) {
         // Try to get error message from response
         let errorMessage = `Failed to fetch devices: ${response.status} ${response.statusText}`;
         try {
           const errorData = await response.text();
           console.log('[@component:DeviceManagement] Error response body:', errorData);
-          
+
           // Check if it's JSON
           if (response.headers.get('content-type')?.includes('application/json')) {
             const jsonError = JSON.parse(errorData);
@@ -89,32 +81,53 @@ const DeviceManagement: React.FC = () => {
           } else {
             // It's HTML or other content, likely a proxy/server issue
             if (errorData.includes('<!doctype') || errorData.includes('<html')) {
-              errorMessage = 'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
+              errorMessage =
+                'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
             }
           }
-        } catch (parseError) {
+        } catch {
           console.log('[@component:DeviceManagement] Could not parse error response');
         }
-        
+
         throw new Error(errorMessage);
       }
-      
+
       // Check if response is JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`);
+        throw new Error(
+          `Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`,
+        );
       }
-      
+
       const devicesData = await response.json();
       setDevices(devicesData || []);
-      console.log('[@component:DeviceManagement] Successfully fetched devices:', devicesData?.length || 0);
+      console.log(
+        '[@component:DeviceManagement] Successfully fetched devices:',
+        devicesData?.length || 0,
+      );
     } catch (error: any) {
       console.error('[@component:DeviceManagement] Error fetching devices:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch devices');
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildServerUrl]);
+
+  // Fetch devices on component mount only
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
+
+  useEffect(() => {
+    const filtered = devices.filter(
+      (device) =>
+        device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        device.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        device.model?.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+    setFilteredDevices(filtered);
+  }, [devices, searchTerm]);
 
   const handleAddNew = async (newDeviceData: DeviceCreatePayload) => {
     if (!newDeviceData.name.trim()) {
@@ -124,9 +137,9 @@ const DeviceManagement: React.FC = () => {
 
     // Check for duplicate names
     const isDuplicate = devices.some(
-      (d) => d.name.toLowerCase() === newDeviceData.name.toLowerCase().trim()
+      (d) => d.name.toLowerCase() === newDeviceData.name.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A device with this name already exists');
       return;
@@ -138,7 +151,7 @@ const DeviceManagement: React.FC = () => {
 
       console.log('[@component:DeviceManagement] Creating device with full data:', newDeviceData);
 
-      const response = await fetch('/server/devices/createDevice', {
+      const response = await fetch(buildServerUrl('/server/devices/createDevice'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,8 +184,8 @@ const DeviceManagement: React.FC = () => {
     console.log('[@component:DeviceManagement] Updating device:', deviceId, deviceData);
     try {
       setError(null);
-      
-      const response = await fetch(`/server/devices/updateDevice/${deviceId}`, {
+
+      const response = await fetch(buildServerUrl(`/server/devices/updateDevice/${deviceId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -188,9 +201,7 @@ const DeviceManagement: React.FC = () => {
       const result = await response.json();
       const updatedDevice: Device = result.device;
 
-      setDevices(prev => prev.map(device => 
-        device.id === deviceId ? updatedDevice : device
-      ));
+      setDevices((prev) => prev.map((device) => (device.id === deviceId ? updatedDevice : device)));
       setOpenEditDialog(false);
       setSelectedDeviceForEdit(null);
       setSuccessMessage('Device updated successfully');
@@ -208,8 +219,8 @@ const DeviceManagement: React.FC = () => {
 
     try {
       setError(null);
-      
-      const response = await fetch(`/server/devices/deleteDevice/${id}`, {
+
+      const response = await fetch(buildServerUrl(`/server/devices/deleteDevice/${id}`), {
         method: 'DELETE',
       });
 
@@ -219,7 +230,7 @@ const DeviceManagement: React.FC = () => {
       }
 
       // Update local state
-      setDevices(devices.filter(d => d.id !== id));
+      setDevices(devices.filter((d) => d.id !== id));
       setSuccessMessage('Device deleted successfully');
       console.log('[@component:DeviceManagement] Successfully deleted device');
     } catch (err) {
@@ -245,14 +256,14 @@ const DeviceManagement: React.FC = () => {
       console.log('[@component:DeviceManagement] Loading device for editing:', device.id);
 
       // Load the device's current configuration
-      const response = await fetch(`/server/devices/getDevice/${device.id}`);
+      const response = await fetch(buildServerUrl(`/server/devices/getDevice/${device.id}`));
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to load device: ${response.status}`);
       }
 
       const deviceWithConfig = await response.json();
-      
+
       console.log('[@component:DeviceManagement] Loaded device config:', deviceWithConfig);
 
       setSelectedDeviceForEdit(deviceWithConfig);
@@ -266,7 +277,7 @@ const DeviceManagement: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
-    
+
     if (!editForm.name.trim()) {
       setError('Name is required');
       return;
@@ -274,9 +285,9 @@ const DeviceManagement: React.FC = () => {
 
     // Check for duplicate names (excluding current item)
     const isDuplicate = devices.some(
-      (d) => d.id !== editingId && d.name.toLowerCase() === editForm.name.toLowerCase().trim()
+      (d) => d.id !== editingId && d.name.toLowerCase() === editForm.name.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A device with this name already exists');
       return;
@@ -286,7 +297,7 @@ const DeviceManagement: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const response = await fetch(`/server/devices/updateDevice/${editingId}`, {
+      const response = await fetch(buildServerUrl(`/server/devices/updateDevice/${editingId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -307,7 +318,7 @@ const DeviceManagement: React.FC = () => {
       const updatedDevice: Device = result.device;
 
       // Update local state
-      setDevices(devices.map(d => d.id === editingId ? updatedDevice : d));
+      setDevices(devices.map((d) => (d.id === editingId ? updatedDevice : d)));
       setEditingId(null);
       setSuccessMessage('Device updated successfully');
       console.log('[@component:DeviceManagement] Successfully updated device:', updatedDevice.name);
@@ -326,31 +337,38 @@ const DeviceManagement: React.FC = () => {
     }
 
     const configuredControllers = Object.keys(device.controllerConfigs).filter(
-      key => device.controllerConfigs[key] && 
-             typeof device.controllerConfigs[key] === 'object' && 
-             device.controllerConfigs[key].implementation
+      (key) =>
+        device.controllerConfigs[key] &&
+        typeof device.controllerConfigs[key] === 'object' &&
+        device.controllerConfigs[key].implementation,
     );
 
     const count = configuredControllers.length;
-    
+
     if (count === 0) {
       return { count: 0, summary: 'No controllers configured', types: [] };
     }
 
     // Create a summary of configured controller types
-    const summary = configuredControllers.map(type => 
-      type.charAt(0).toUpperCase() + type.slice(1)
-    ).join(', ');
+    const summary = configuredControllers
+      .map((type) => type.charAt(0).toUpperCase() + type.slice(1))
+      .join(', ');
 
     // Map controller types to display names
-    const typeDisplayNames = configuredControllers.map(type => {
+    const typeDisplayNames = configuredControllers.map((type) => {
       switch (type.toLowerCase()) {
-        case 'remote': return 'Remote';
-        case 'av': return 'AV';
-        case 'verification': return 'Verify';
-        case 'power': return 'Power';
-        case 'network': return 'Network';
-        default: return type.charAt(0).toUpperCase() + type.slice(1);
+        case 'remote':
+          return 'Remote';
+        case 'av':
+          return 'AV';
+        case 'verification':
+          return 'Verify';
+        case 'power':
+          return 'Power';
+        case 'network':
+          return 'Network';
+        default:
+          return type.charAt(0).toUpperCase() + type.slice(1);
       }
     });
 
@@ -358,14 +376,14 @@ const DeviceManagement: React.FC = () => {
   };
 
   const LoadingState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -376,14 +394,14 @@ const DeviceManagement: React.FC = () => {
   );
 
   const EmptyState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <DeviceIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
@@ -391,7 +409,9 @@ const DeviceManagement: React.FC = () => {
         {searchTerm ? 'No devices found' : 'No Devices Created'}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
-        {searchTerm ? 'Try adjusting your search criteria' : 'Create your first device to get started with device management and configuration.'}
+        {searchTerm
+          ? 'Try adjusting your search criteria'
+          : 'Create your first device to get started with device management and configuration.'}
       </Typography>
       {!searchTerm && (
         <Button
@@ -466,32 +486,44 @@ const DeviceManagement: React.FC = () => {
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-              <Table 
-                size="small" 
-                sx={{ 
+              <Table
+                size="small"
+                sx={{
                   '& .MuiTableCell-root': { py: 0.5, px: 1 },
                   '& .MuiTableRow-root:hover': {
-                    backgroundColor: (theme) => 
-                      theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08) !important' 
-                        : 'rgba(0, 0, 0, 0.04) !important'
-                  }
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08) !important'
+                        : 'rgba(0, 0, 0, 0.04) !important',
+                  },
                 }}
               >
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Model</strong></TableCell>
-                    <TableCell><strong>Description</strong></TableCell>
-                    <TableCell align="center"><strong>Controllers</strong></TableCell>
-                    <TableCell align="center"><strong>Edit Controllers</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
+                    <TableCell>
+                      <strong>Name</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Model</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Description</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Controllers</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Edit Controllers</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Actions</strong>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredDevices.map((device) => {
                     const controllerSummary = getControllerSummary(device);
-                    
+
                     return (
                       <TableRow key={device.id}>
                         <TableCell>
@@ -527,7 +559,9 @@ const DeviceManagement: React.FC = () => {
                             <TextField
                               size="small"
                               value={editForm.description}
-                              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, description: e.target.value })
+                              }
                               fullWidth
                               variant="outlined"
                               sx={{ '& .MuiInputBase-root': { height: '32px' } }}
@@ -538,9 +572,16 @@ const DeviceManagement: React.FC = () => {
                         </TableCell>
                         <TableCell align="center">
                           {controllerSummary.types.length > 0 ? (
-                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                gap: 0.5,
+                                justifyContent: 'center',
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               {controllerSummary.types.map((type, index) => (
-                                <Chip 
+                                <Chip
                                   key={index}
                                   label={type}
                                   size="small"
@@ -550,12 +591,7 @@ const DeviceManagement: React.FC = () => {
                               ))}
                             </Box>
                           ) : (
-                            <Chip 
-                              label="None"
-                              size="small"
-                              color="default"
-                              variant="outlined"
-                            />
+                            <Chip label="None" size="small" color="default" variant="outlined" />
                           )}
                         </TableCell>
                         <TableCell align="center">
@@ -580,7 +616,11 @@ const DeviceManagement: React.FC = () => {
                                 sx={{ p: 0.5 }}
                                 disabled={submitting}
                               >
-                                {submitting ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                                {submitting ? (
+                                  <CircularProgress size={16} />
+                                ) : (
+                                  <SaveIcon fontSize="small" />
+                                )}
                               </IconButton>
                               <IconButton
                                 size="small"

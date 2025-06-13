@@ -1,8 +1,9 @@
-import { Box, Button, Typography, Alert } from '@mui/material';
-import { useState, useRef, useEffect } from 'react';
+import { Box } from '@mui/material';
+import { useState, useRef } from 'react';
 
-import { AndroidElement, AndroidApp } from '../../../types/controller/Remote_Types';
+import { useRegistration } from '../../../contexts/RegistrationContext';
 import { Host } from '../../../types/common/Host_Types';
+import { AndroidElement, AndroidApp } from '../../../types/controller/Remote_Types';
 
 import { AndroidMobileCore } from './AndroidMobileControls';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
@@ -18,6 +19,7 @@ export function AndroidMobileRemote({
   onDisconnectComplete,
   sx = {},
 }: AndroidMobileRemoteProps) {
+  const { buildServerUrl } = useRegistration();
   // Simple state - no complex loading states
   const [isConnected, setIsConnected] = useState(true); // Always connected when shown
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function AndroidMobileRemote({
 
   // Direct server route calls - no hooks, no abstractions
   const takeScreenshot = async () => {
-    const response = await fetch('/server/remote/take-screenshot', {
+    const response = await fetch(buildServerUrl('/server/remote/take-screenshot'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ host_name: host.host_name }),
@@ -40,7 +42,7 @@ export function AndroidMobileRemote({
   };
 
   const screenshotAndDump = async () => {
-    const response = await fetch('/server/remote/screenshot-and-dump', {
+    const response = await fetch(buildServerUrl('/server/remote/screenshot-and-dump'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ host_name: host.host_name }),
@@ -61,7 +63,7 @@ export function AndroidMobileRemote({
   };
 
   const getApps = async () => {
-    const response = await fetch('/server/remote/get-apps', {
+    const response = await fetch(buildServerUrl('/server/remote/get-apps'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ host_name: host.host_name }),
@@ -76,7 +78,7 @@ export function AndroidMobileRemote({
   };
 
   const clickElement = async (element: AndroidElement) => {
-    const response = await fetch('/server/remote/click-element', {
+    const response = await fetch(buildServerUrl('/server/remote/click-element'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -88,7 +90,7 @@ export function AndroidMobileRemote({
   };
 
   const executeCommand = async (command: string, params?: any) => {
-    const response = await fetch('/server/remote/execute-command', {
+    const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

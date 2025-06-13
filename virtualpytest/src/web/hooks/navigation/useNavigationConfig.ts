@@ -1,4 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
+
+import { useRegistration } from '../../contexts/RegistrationContext';
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -6,8 +8,10 @@ import {
 } from '../../types/pages/Navigation_Types';
 
 export const useNavigationConfig = (state: NavigationConfigState) => {
-  // Note: Using relative URLs that go through Vite proxy instead of buildServerUrl
-  // This avoids CORS issues by routing through proxy (port 5073 -> 5109)
+  const { buildServerUrl } = useRegistration();
+
+  // Note: Using buildServerUrl instead of relative URLs to avoid CORS issues
+  // This routes through the proper server URL configuration
 
   // Session ID for lock management - persist across page reloads
   // Use lazy initialization to ensure it's only created once
@@ -40,124 +44,139 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   }, []);
 
   // Lock a navigation tree for editing
-  const lockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
-    try {
-      setIsCheckingLock(true);
+  const lockNavigationTree = useCallback(
+    async (treeName: string): Promise<boolean> => {
+      try {
+        setIsCheckingLock(true);
 
-      const statusResponse = await fetch(`/server/navigation/config/trees/${treeName}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+        const statusResponse = await fetch(
+          buildServerUrl(`/server/navigation/config/trees/${treeName}`),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
 
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        if (statusData.success && statusData.is_locked && isOurLock(statusData.lock_info)) {
-          // We already have the lock! Reclaim it.
-          console.log(
-            `[@hook:useNavigationConfig:lockNavigationTree] Reclaiming existing lock for tree: ${treeName} (same session)`,
-          );
-          setIsLocked(true);
-          setLockInfo(statusData.lock_info);
-          setShowReadOnlyOverlay(false);
-          return true;
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.success && statusData.is_locked && isOurLock(statusData.lock_info)) {
+            // We already have the lock! Reclaim it.
+            console.log(
+              `[@hook:useNavigationConfig:lockNavigationTree] Reclaiming existing lock for tree: ${treeName} (same session)`,
+            );
+            setIsLocked(true);
+            setLockInfo(statusData.lock_info);
+            setShowReadOnlyOverlay(false);
+            return true;
+          }
         }
-      }
 
-      // If we don't have the lock, try to acquire it normally
-      console.log(
-        `[@hook:useNavigationConfig:lockNavigationTree] Attempting to acquire new lock for tree: ${treeName}`,
-      );
-      const response = await fetch(`/server/navigation/config/trees/${treeName}/lock`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setIsLocked(true);
-        setLockInfo({
-          locked_by: sessionId,
-          locked_at: data.locked_at,
-        });
-        setShowReadOnlyOverlay(false); // We have the lock
+        // If we don't have the lock, try to acquire it normally
         console.log(
-          `[@hook:useNavigationConfig:lockNavigationTree] Successfully locked tree: ${treeName}`,
+          `[@hook:useNavigationConfig:lockNavigationTree] Attempting to acquire new lock for tree: ${treeName}`,
         );
-        return true;
-      } else {
-        console.log(
-          `[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${data.error}`,
+        const response = await fetch(
+          buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`),
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+            }),
+          },
         );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setIsLocked(true);
+          setLockInfo({
+            locked_by: sessionId,
+            locked_at: data.locked_at,
+          });
+          setShowReadOnlyOverlay(false); // We have the lock
+          console.log(
+            `[@hook:useNavigationConfig:lockNavigationTree] Successfully locked tree: ${treeName}`,
+          );
+          return true;
+        } else {
+          console.log(
+            `[@hook:useNavigationConfig:lockNavigationTree] Failed to lock tree: ${data.error}`,
+          );
+          setIsLocked(false);
+          setLockInfo(data.current_lock);
+          setShowReadOnlyOverlay(true); // Someone else has the lock
+          return false;
+        }
+      } catch (error) {
+        console.error(`[@hook:useNavigationConfig:lockNavigationTree] Error locking tree:`, error);
         setIsLocked(false);
-        setLockInfo(data.current_lock);
-        setShowReadOnlyOverlay(true); // Someone else has the lock
+        setShowReadOnlyOverlay(true); // Assume locked on error
         return false;
+      } finally {
+        setIsCheckingLock(false);
       }
-    } catch (error) {
-      console.error(`[@hook:useNavigationConfig:lockNavigationTree] Error locking tree:`, error);
-      setIsLocked(false);
-      setShowReadOnlyOverlay(true); // Assume locked on error
-      return false;
-    } finally {
-      setIsCheckingLock(false);
-    }
-  }, []);
+    },
+    [buildServerUrl],
+  );
 
   // Unlock a navigation tree
-  const unlockNavigationTree = useCallback(async (treeName: string): Promise<boolean> => {
-    try {
-      console.log(
-        `[@hook:useNavigationConfig:unlockNavigationTree] Attempting to unlock tree: ${treeName}`,
-      );
-
-      const response = await fetch(`/server/navigation/config/trees/${treeName}/unlock`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setIsLocked(false);
-        setLockInfo(null);
+  const unlockNavigationTree = useCallback(
+    async (treeName: string): Promise<boolean> => {
+      try {
         console.log(
-          `[@hook:useNavigationConfig:unlockNavigationTree] Successfully unlocked tree: ${treeName}`,
+          `[@hook:useNavigationConfig:unlockNavigationTree] Attempting to unlock tree: ${treeName}`,
         );
-        return true;
-      } else {
-        console.log(
-          `[@hook:useNavigationConfig:unlockNavigationTree] Failed to unlock tree: ${data.error}`,
+
+        const response = await fetch(
+          buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setIsLocked(false);
+          setLockInfo(null);
+          console.log(
+            `[@hook:useNavigationConfig:unlockNavigationTree] Successfully unlocked tree: ${treeName}`,
+          );
+          return true;
+        } else {
+          console.log(
+            `[@hook:useNavigationConfig:unlockNavigationTree] Failed to unlock tree: ${data.error}`,
+          );
+          return false;
+        }
+      } catch (error) {
+        console.error(
+          `[@hook:useNavigationConfig:unlockNavigationTree] Error unlocking tree:`,
+          error,
         );
         return false;
       }
-    } catch (error) {
-      console.error(
-        `[@hook:useNavigationConfig:unlockNavigationTree] Error unlocking tree:`,
-        error,
-      );
-      return false;
-    }
-  }, []);
+    },
+    [buildServerUrl],
+  );
 
   // Load tree from config file
   const loadFromConfig = useCallback(
@@ -166,11 +185,14 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(`/server/navigation/config/trees/${treeName}`, {
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          buildServerUrl(`/server/navigation/config/trees/${treeName}`),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
           },
-        });
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -234,7 +256,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsCheckingLock(false); // Ensure lock check is marked complete even on error
       }
     },
-    [state],
+    [state, buildServerUrl],
   );
 
   // Save tree to config file
@@ -262,13 +284,16 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
           },
         };
 
-        const response = await fetch(`/server/navigation/config/saveTree/${treeName}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          buildServerUrl(`/server/navigation/config/saveTree/${treeName}`),
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(saveData),
           },
-          body: JSON.stringify(saveData),
-        });
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -300,7 +325,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         state.setIsSaving(false);
       }
     },
-    [state],
+    [state, buildServerUrl],
   );
 
   // List available navigation trees
@@ -308,7 +333,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     try {
       console.log(`[@hook:useNavigationConfig:listAvailableTrees] Fetching available trees`);
 
-      const response = await fetch('/server/navigation/config/trees', {
+      const response = await fetch(buildServerUrl('/server/navigation/config/trees'), {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -332,41 +357,47 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       console.error(`[@hook:useNavigationConfig:listAvailableTrees] Error listing trees:`, error);
       return [];
     }
-  }, []);
+  }, [buildServerUrl]);
 
   // Check if tree is locked by another session
-  const checkTreeLockStatus = useCallback(async (treeName: string) => {
-    try {
-      const response = await fetch(`/server/navigation/config/trees/${treeName}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  const checkTreeLockStatus = useCallback(
+    async (treeName: string) => {
+      try {
+        const response = await fetch(
+          buildServerUrl(`/server/navigation/config/trees/${treeName}`),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setIsLocked(data.is_locked);
+          setLockInfo(data.lock_info);
+          return {
+            isLocked: data.is_locked,
+            lockInfo: data.lock_info,
+            isLockedByCurrentSession: data.lock_info?.locked_by === sessionId,
+          };
+        }
+        return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
+      } catch (error) {
+        console.error(
+          `[@hook:useNavigationConfig:checkTreeLockStatus] Error checking lock status:`,
+          error,
+        );
+        return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
       }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setIsLocked(data.is_locked);
-        setLockInfo(data.lock_info);
-        return {
-          isLocked: data.is_locked,
-          lockInfo: data.lock_info,
-          isLockedByCurrentSession: data.lock_info?.locked_by === sessionId,
-        };
-      }
-      return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
-    } catch (error) {
-      console.error(
-        `[@hook:useNavigationConfig:checkTreeLockStatus] Error checking lock status:`,
-        error,
-      );
-      return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
-    }
-  }, []);
+    },
+    [buildServerUrl],
+  );
 
   // Create an empty tree structure
   const createEmptyTree = useCallback((): {
@@ -401,7 +432,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
           // Use sendBeacon for reliable cleanup on page unload
           const unlockData = JSON.stringify({ session_id: sessionId });
           navigator.sendBeacon(
-            `/server/navigation/config/trees/${treeName}/unlock`,
+            buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
             new Blob([unlockData], { type: 'application/json' }),
           );
           // Clean up session storage
@@ -415,7 +446,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     },
-    [isLocked],
+    [isLocked, buildServerUrl],
   );
 
   return {

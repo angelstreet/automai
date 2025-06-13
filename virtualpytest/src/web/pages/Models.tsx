@@ -1,8 +1,4 @@
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Devices as DeviceIcon,
-} from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Devices as DeviceIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -22,8 +18,10 @@ import {
   Paper,
   Snackbar,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import CreateModelDialog from '../components/models/Models_CreateDialog';
+import { useRegistration } from '../contexts/RegistrationContext';
 
 // Simple model interface matching database
 interface Model {
@@ -45,6 +43,7 @@ export interface ModelCreatePayload {
 }
 
 const Models: React.FC = () => {
+  const { buildServerUrl } = useRegistration();
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -52,21 +51,16 @@ const Models: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load models on component mount
-  useEffect(() => {
-    loadModels();
-  }, []);
-
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/server/devicemodel/getAllModels');
+
+      const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.status}`);
       }
-      
+
       const modelsData = await response.json();
       setModels(modelsData || []);
       console.log('[@component:Models] Loaded models:', modelsData?.length || 0);
@@ -76,7 +70,12 @@ const Models: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildServerUrl]);
+
+  // Load models on component mount
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this model?')) {
@@ -85,8 +84,8 @@ const Models: React.FC = () => {
 
     try {
       setError(null);
-      
-      const response = await fetch(`/server/devicemodel/deleteDeviceModel/${id}`, {
+
+      const response = await fetch(buildServerUrl(`/server/devicemodel/deleteDeviceModel/${id}`), {
         method: 'DELETE',
       });
 
@@ -96,7 +95,7 @@ const Models: React.FC = () => {
       }
 
       // Update local state
-      setModels(models.filter(m => m.id !== id));
+      setModels(models.filter((m) => m.id !== id));
       setSuccessMessage('Model deleted successfully');
       console.log('[@component:Models] Deleted model');
     } catch (err) {
@@ -112,7 +111,7 @@ const Models: React.FC = () => {
 
       console.log('[@component:Models] Creating model:', newModelData);
 
-      const response = await fetch('/server/devicemodel/createDeviceModel', {
+      const response = await fetch(buildServerUrl('/server/devicemodel/createDeviceModel'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,14 +147,14 @@ const Models: React.FC = () => {
 
   // Loading state
   const LoadingState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <CircularProgress size={40} sx={{ mb: 2 }} />
@@ -167,14 +166,14 @@ const Models: React.FC = () => {
 
   // Empty state
   const EmptyState = () => (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         py: 8,
-        textAlign: 'center'
+        textAlign: 'center',
       }}
     >
       <DeviceIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -231,25 +230,35 @@ const Models: React.FC = () => {
             <EmptyState />
           ) : (
             <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-              <Table 
-                size="small" 
-                sx={{ 
+              <Table
+                size="small"
+                sx={{
                   '& .MuiTableCell-root': { py: 0.5, px: 1 },
                   '& .MuiTableRow-root:hover': {
-                    backgroundColor: (theme) => 
-                      theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08) !important' 
-                        : 'rgba(0, 0, 0, 0.04) !important'
-                  }
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08) !important'
+                        : 'rgba(0, 0, 0, 0.04) !important',
+                  },
                 }}
               >
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Types</strong></TableCell>
-                    <TableCell><strong>Version</strong></TableCell>
-                    <TableCell><strong>Description</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
+                    <TableCell>
+                      <strong>Name</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Types</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Version</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Description</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Actions</strong>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -311,4 +320,4 @@ const Models: React.FC = () => {
   );
 };
 
-export default Models; 
+export default Models;

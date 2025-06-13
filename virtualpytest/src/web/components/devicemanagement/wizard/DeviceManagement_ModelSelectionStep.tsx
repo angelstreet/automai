@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,6 +10,9 @@ import {
   Chip,
   FormHelperText,
 } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+
+import { useRegistration } from '../../../contexts/RegistrationContext';
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface ModelSelectionStepProps {
@@ -24,8 +26,9 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   formData,
   onUpdate,
   onModelSelected,
-  errors = {}
+  errors = {},
 }) => {
+  const { buildServerUrl } = useRegistration();
   const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -38,12 +41,14 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
       setModelsError(null);
       try {
         console.log('[@component:ModelSelectionStep] Fetching device models');
-        
-        const response = await fetch('/server/devicemodel/getAllModels');
+
+        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
         if (!response.ok) {
-          throw new Error(`Failed to fetch device models: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch device models: ${response.status} ${response.statusText}`,
+          );
         }
-        
+
         const models = await response.json();
         setDeviceModels(models || []);
         console.log(`[@component:ModelSelectionStep] Loaded ${models?.length || 0} device models`);
@@ -57,12 +62,12 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     };
 
     fetchModels();
-  }, []); // Only fetch on mount
+  }, [buildServerUrl]); // Added buildServerUrl to dependencies
 
   // Update selected model details when model changes
   useEffect(() => {
     if (formData.model && deviceModels.length > 0) {
-      const selectedModel = deviceModels.find(model => model.name === formData.model);
+      const selectedModel = deviceModels.find((model) => model.name === formData.model);
       setSelectedModelDetails(selectedModel || null);
       onModelSelected(selectedModel || null);
     } else {
@@ -74,7 +79,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   const handleModelChange = (event: any) => {
     const modelName = event.target.value;
     onUpdate({ model: modelName });
-    
+
     // Reset controller configurations when model changes
     onUpdate({ controllerConfigs: {} });
   };
@@ -83,13 +88,12 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
     const activeControllers = Object.entries(controllers)
       .filter(([_, value]) => value && value !== '')
       .map(([type, value]) => ({ type, value }));
-    
+
     return activeControllers;
   };
 
   return (
     <Box sx={{ pt: 1 }}>
-
       {modelsError && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {modelsError}
@@ -131,9 +135,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
               </MenuItem>
             ))}
           </Select>
-          {errors.model && (
-            <FormHelperText error>{errors.model}</FormHelperText>
-          )}
+          {errors.model && <FormHelperText error>{errors.model}</FormHelperText>}
         </FormControl>
       )}
 
@@ -143,7 +145,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
           <Typography variant="subtitle2" gutterBottom>
             Selected Model: {selectedModelDetails.name}
           </Typography>
-          
+
           {selectedModelDetails.description && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {selectedModelDetails.description}
@@ -181,7 +183,6 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
           )}
         </Box>
       )}
-
     </Box>
   );
-}; 
+};
