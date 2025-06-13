@@ -42,20 +42,16 @@ import {
   CircularProgress,
   Paper,
 } from '@mui/material';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { useRegistration } from '../contexts/RegistrationContext';
 import { TestCase, Campaign, Tree } from '../types';
 import { Host } from '../types/common/Host_Types';
-import { DashboardStats, RecentActivity, LogEntry, ViewMode } from '../types/pages/Dashboard_Types';
+import { DashboardStats, RecentActivity, ViewMode } from '../types/pages/Dashboard_Types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 const Dashboard: React.FC = () => {
-  const {
-    vite_buildServerUrl,
-    availableHosts,
-    fetchHosts,
-    isLoading: hostsLoading,
-  } = useRegistration();
+  const { availableHosts, fetchHosts, isLoading: hostsLoading } = useRegistration();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -66,31 +62,13 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  // Debug logs state
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [autoRefreshLogs] = useState(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  // Use useCallback to prevent fetchHosts from changing on every render
-  const memoizedFetchHosts = useCallback(() => {
-    fetchHosts();
-  }, []); // FIXED: Empty dependency array since fetchHosts is now stable
-
-  useEffect(() => {
-    fetchDashboardData();
-    memoizedFetchHosts();
-    // Set up auto-refresh for hosts every 30 seconds
-    const interval = setInterval(memoizedFetchHosts, 30000);
-    return () => clearInterval(interval);
-  }, []); // Empty dependency array to prevent infinite loop
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
-        fetch(vite_buildServerUrl('/server/campaigns/getAllCampaigns')),
-        fetch(vite_buildServerUrl('/server/testcases/getAllTestCases')),
-        fetch(vite_buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
+        fetch(buildServerUrl('/server/campaigns/getAllCampaigns')),
+        fetch(buildServerUrl('/server/testcases/getAllTestCases')),
+        fetch(buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
       ]);
 
       let testCases: TestCase[] = [];
@@ -143,66 +121,29 @@ const Dashboard: React.FC = () => {
       });
     } catch (err) {
       setError('Failed to fetch dashboard data');
-      addFrontendLog('error', 'Failed to fetch dashboard data', err);
+      console.error('Failed to fetch dashboard data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchLogs = async () => {
-    try {
-      // Fetch backend logs
-      const backendLogsRes = await fetch(vite_buildServerUrl('/server/system/logs'));
+  // Use useCallback to prevent fetchHosts from changing on every render
+  const memoizedFetchHosts = useCallback(() => {
+    fetchHosts();
+  }, [fetchHosts]);
 
-      if (backendLogsRes.ok) {
-        const backendLogs = await backendLogsRes.json();
-
-        // Convert backend logs to our format
-        const formattedBackendLogs: LogEntry[] = backendLogs.map((log: any) => ({
-          timestamp: log.timestamp || new Date().toISOString(),
-          level: log.level || 'info',
-          source: 'backend' as const,
-          message: log.message || log.msg || 'Unknown message',
-          details: log.details || log.data,
-        }));
-
-        // Get frontend logs from console (if available)
-        const frontendLogs = getFrontendLogs();
-
-        // Combine and sort logs by timestamp
-        const allLogs = [...formattedBackendLogs, ...frontendLogs]
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-          .slice(-100); // Keep only last 100 logs
-
-        setLogs(allLogs);
-      }
-    } catch (err) {
-      console.error('Failed to fetch logs:', err);
-      addFrontendLog('error', 'Failed to fetch server logs', err);
-    }
-  };
-
-  const getFrontendLogs = (): LogEntry[] => {
-    // This would ideally capture console logs, but for now return stored frontend logs
-    return logs.filter((log) => log.source === 'frontend');
-  };
-
-  const addFrontendLog = (level: LogEntry['level'], message: string, details?: any) => {
-    const newLog: LogEntry = {
-      timestamp: new Date().toISOString(),
-      level,
-      source: 'frontend',
-      message,
-      details,
-    };
-
-    setLogs((prevLogs) => [...prevLogs.slice(-99), newLog]); // Keep only last 100 logs
-  };
+  useEffect(() => {
+    fetchDashboardData();
+    memoizedFetchHosts();
+    // Set up auto-refresh for hosts every 30 seconds
+    const interval = setInterval(memoizedFetchHosts, 30000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData, memoizedFetchHosts]);
 
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: ViewMode) => {
     if (newViewMode !== null) {
       setViewMode(newViewMode);
-      addFrontendLog('info', `View mode changed to ${newViewMode}`);
+      console.log(`View mode changed to ${newViewMode}`);
     }
   };
 
