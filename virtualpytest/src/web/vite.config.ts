@@ -12,8 +12,83 @@ const certPath = '/etc/letsencrypt/live/virtualpytest.com/fullchain.pem';
 const keyPath = '/etc/letsencrypt/live/virtualpytest.com/privkey.pem';
 const hasCertificates = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
+// Define registered frontend routes (must match your React Router routes)
+const registeredRoutes = [
+  '/',
+  '/test-plan/test-cases',
+  '/test-plan/campaigns',
+  '/test-plan/collections',
+  '/test-execution/run-tests',
+  '/test-execution/monitoring',
+  '/test-results/reports',
+  '/configuration',
+  '/configuration/',
+  '/configuration/devices',
+  '/configuration/models',
+  '/configuration/interface',
+  '/configuration/controller',
+  '/configuration/library',
+  '/configuration/environment',
+  // Dynamic routes patterns
+  '/navigation-editor', // Will match /navigation-editor/* paths
+];
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Custom plugin for route validation
+    {
+      name: 'route-validator',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = req.url || '';
+
+          // Skip static assets, API routes, and other proxied paths
+          if (
+            url.startsWith('/assets/') ||
+            url.startsWith('/server/') ||
+            url.startsWith('/host/') ||
+            url.startsWith('/websockify') ||
+            url.includes('.') // Static files (js, css, images, etc.)
+          ) {
+            return next();
+          }
+
+          // Check if the route is registered
+          const isRegisteredRoute = registeredRoutes.some((route) => {
+            if (route === url) return true;
+            if (route.endsWith('/') && url.startsWith(route)) return true;
+            if (route === '/navigation-editor' && url.startsWith('/navigation-editor/'))
+              return true;
+            return false;
+          });
+
+          if (!isRegisteredRoute) {
+            // Return 404 for unregistered routes
+            res.statusCode = 404;
+            res.setHeader('Content-Type', 'text/html');
+            res.end(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>404 - Page Not Found</title>
+                  <meta name="robots" content="noindex">
+                </head>
+                <body>
+                  <h1>404 - Page Not Found</h1>
+                  <p>The requested page does not exist.</p>
+                  <a href="/">Return to Dashboard</a>
+                </body>
+              </html>
+            `);
+            return;
+          }
+
+          next();
+        });
+      },
+    },
+  ],
   server: {
     host: '0.0.0.0',
     port: 5073,
@@ -21,10 +96,22 @@ export default defineConfig({
     https: shouldUseHttps
       ? hasCertificates
         ? {
-            key: keyPath,
-            cert: certPath,
+            key: fs.readFileSync(keyPath),
+            cert: fs.readFileSync(certPath),
           }
-        : true // Self-signed certificates
-      : false, // No HTTPS
+        : undefined // Let Vite generate self-signed certificates
+      : undefined, // No HTTPS
+    // Configure how the dev server handles routing
+    fs: {
+      strict: false,
+    },
+  },
+  // Configure build for proper SPA handling
+  build: {
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      },
+    },
   },
 });

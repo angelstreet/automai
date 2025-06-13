@@ -27,16 +27,78 @@ const UserInterface = React.lazy(() => import('./pages/UserInterface'));
 const TestCaseEditor = React.lazy(() => import('./pages/TestCaseEditor'));
 const NavigationEditor = React.lazy(() => import('./pages/NavigationEditor'));
 
+// 404 Not Found component
+const NotFound: React.FC = () => {
+  // Set document title for 404 pages
+  React.useEffect(() => {
+    document.title = '404 - Page Not Found | VirtualPyTest';
+
+    // Set HTTP status to 404 if running on server
+    if (typeof window !== 'undefined' && window.history) {
+      // This helps with SEO and proper status codes
+      const meta = document.createElement('meta');
+      meta.name = 'robots';
+      meta.content = 'noindex';
+      document.head.appendChild(meta);
+
+      return () => {
+        document.head.removeChild(meta);
+      };
+    }
+  }, []);
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        textAlign: 'center',
+        gap: 3,
+      }}
+    >
+      <Typography
+        variant="h1"
+        component="h1"
+        sx={{ fontSize: '6rem', fontWeight: 'bold', color: 'error.main' }}
+      >
+        404
+      </Typography>
+      <Typography variant="h4" component="h2" gutterBottom>
+        Page Not Found
+      </Typography>
+      <Typography variant="body1" color="textSecondary" sx={{ maxWidth: '500px', mb: 3 }}>
+        The page you are looking for doesn't exist or has been moved.
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Typography
+          component="a"
+          href="/"
+          sx={{
+            textDecoration: 'none',
+            color: 'primary.main',
+            '&:hover': { textDecoration: 'underline' },
+          }}
+        >
+          ← Back to Dashboard
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 // Loading component for Suspense fallback
 const LoadingSpinner: React.FC = () => (
-  <Box 
-    sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       minHeight: '200px',
       flexDirection: 'column',
-      gap: 2
+      gap: 2,
     }}
   >
     <CircularProgress />
@@ -97,8 +159,14 @@ const App: React.FC = () => {
                 <Route path="/test-results/reports" element={<TestReports />} />
 
                 {/* Configuration Routes */}
-                <Route path="/configuration" element={<Navigate to="/configuration/models" replace />} />
-                <Route path="/configuration/" element={<Navigate to="/configuration/models" replace />} />
+                <Route
+                  path="/configuration"
+                  element={<Navigate to="/configuration/models" replace />}
+                />
+                <Route
+                  path="/configuration/"
+                  element={<Navigate to="/configuration/models" replace />}
+                />
                 <Route path="/configuration/devices" element={<DeviceManagement />} />
                 <Route path="/configuration/models" element={<Models />} />
                 <Route path="/configuration/interface" element={<UserInterface />} />
@@ -110,6 +178,8 @@ const App: React.FC = () => {
                 <Route path="/navigation-editor/:treeName/:treeId" element={<NavigationEditor />} />
                 <Route path="/navigation-editor/:treeName" element={<NavigationEditor />} />
 
+                {/* Catch-all route for 404 */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
           </Container>
