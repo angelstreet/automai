@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import { ControllerTypesResponse } from '../../types/controller/Remote_Types';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 export function useControllers() {
-  const { buildServerUrl } = useRegistration();
   const [controllerTypes, setControllerTypes] = useState<ControllerTypesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
