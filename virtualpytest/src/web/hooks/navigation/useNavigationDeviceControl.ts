@@ -19,10 +19,11 @@ export const useNavigationDeviceControl = ({
   // Device control state
   const [selectedHost, setSelectedHost] = useState<Host | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
+  const [isControlLoading, setIsControlLoading] = useState(false);
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [showRemotePanel, setShowRemotePanel] = useState(false);
   const [showAVPanel, setShowAVPanel] = useState(false);
-  const [isVerificationActive, setIsVerificationActive] = useState(false);
+  const [isVerificationActive, _setIsVerificationActive] = useState(false);
 
   // Filtered hosts based on interface models
   const [filteredAvailableHosts, setFilteredAvailableHosts] = useState<Host[]>([]);
@@ -68,6 +69,8 @@ export const useNavigationDeviceControl = ({
     console.log(
       `[@hook:useNavigationDeviceControl] Taking control of device: ${selectedHost.host_name}`,
     );
+
+    setIsControlLoading(true);
 
     try {
       if (!isControlActive) {
@@ -136,6 +139,8 @@ export const useNavigationDeviceControl = ({
       setShowRemotePanel(false);
       setShowAVPanel(false);
       setIsRemotePanelOpen(false);
+    } finally {
+      setIsControlLoading(false);
     }
   }, [selectedHost, isControlActive, buildServerUrl]);
 
@@ -176,7 +181,7 @@ export const useNavigationDeviceControl = ({
       console.log(`[@hook:useNavigationDeviceControl] No hosts available, triggering fetch...`);
       fetchHosts();
     }
-  }, []); // Only run on mount
+  }, [availableHosts.length, fetchHosts]); // Fixed dependencies
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
@@ -211,6 +216,7 @@ export const useNavigationDeviceControl = ({
     // Device control state
     selectedHost,
     isControlActive,
+    isControlLoading,
     isRemotePanelOpen,
     showRemotePanel,
     showAVPanel,
