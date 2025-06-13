@@ -21,6 +21,7 @@ from src.utils.device_lock_manager_utils import (
     get_device_lock_info,
     cleanup_expired_locks
 )
+from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
 # Create blueprint
 control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
@@ -307,4 +308,104 @@ def navigate():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+# =====================================================
+# CONTROLLER INFORMATION ENDPOINTS
+# =====================================================
+
+@control_bp.route('/getAllControllers', methods=['GET'])
+def get_all_controllers():
+    """Get all available controller implementations from Python code"""
+    try:
+        print("[@route:getAllControllers] Fetching all available controller implementations")
+        
+        # Get controller configurations for different device models to understand available implementations
+        controller_types = {
+            'remote': [
+                {
+                    'id': 'android_tv',
+                    'name': 'Android TV (ADB)',
+                    'description': 'Android TV control with ADB',
+                    'implementation': 'android_tv',
+                    'status': 'available',
+                    'parameters': ['device_ip', 'device_port', 'connection_timeout']
+                },
+                {
+                    'id': 'android_mobile',
+                    'name': 'Android Mobile (ADB)',
+                    'description': 'Android Mobile control with ADB',
+                    'implementation': 'android_mobile',
+                    'status': 'available',
+                    'parameters': ['device_ip', 'device_port', 'connection_timeout']
+                },
+                {
+                    'id': 'ir_remote',
+                    'name': 'IR Remote',
+                    'description': 'Infrared remote control with classic TV/STB buttons',
+                    'implementation': 'ir_remote',
+                    'status': 'available',
+                    'parameters': ['device_path', 'protocol', 'frequency']
+                },
+                {
+                    'id': 'bluetooth_remote',
+                    'name': 'Bluetooth Remote',
+                    'description': 'Bluetooth HID remote control',
+                    'implementation': 'bluetooth_remote',
+                    'status': 'available',
+                    'parameters': ['device_address', 'pairing_pin', 'connection_timeout']
+                }
+            ],
+            'av': [
+                {
+                    'id': 'hdmi_stream',
+                    'name': 'HDMI Stream (Video Capture)',
+                    'description': 'HDMI video capture via Flask host with video device',
+                    'implementation': 'hdmi_stream',
+                    'status': 'available',
+                    'parameters': ['video_device', 'resolution', 'fps', 'stream_path', 'service_name']
+                }
+            ],
+            'verification': [
+                {
+                    'id': 'adb',
+                    'name': 'ADB Verification',
+                    'description': 'Android device verification via ADB',
+                    'implementation': 'adb',
+                    'status': 'available',
+                    'parameters': ['device_ip', 'device_port', 'connection_timeout']
+                },
+                {
+                    'id': 'ocr',
+                    'name': 'OCR Verification',
+                    'description': 'Optical Character Recognition verification',
+                    'implementation': 'ocr',
+                    'status': 'available',
+                    'parameters': []
+                }
+            ],
+            'power': [
+                {
+                    'id': 'usb',
+                    'name': 'USB Hub Power Control',
+                    'description': 'USB hub power control via uhubctl',
+                    'implementation': 'usb',
+                    'status': 'available',
+                    'parameters': ['hub_location', 'port_number']
+                }
+            ]
+        }
+        
+        print(f"[@route:getAllControllers] Successfully retrieved {len(controller_types)} controller types")
+        
+        return jsonify({
+            'success': True,
+            'controller_types': controller_types
+        }), 200
+        
+    except Exception as e:
+        print(f"[@route:getAllControllers] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get controller types: {str(e)}'
         }), 500 
