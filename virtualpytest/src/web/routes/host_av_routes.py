@@ -43,9 +43,9 @@ def connect():
         print(f"[@route:host_av:connect] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
         # Connect to controller
-        connection_result = av_controller.connect()
+        connect_result = av_controller.connect()
         
-        if connection_result:
+        if connect_result:
             # Get status after connection
             status = av_controller.get_status()
             return jsonify({
@@ -146,7 +146,92 @@ def get_status():
             'error': str(e)
         }), 500
 
-@av_bp.route('/stream-url', methods=['GET'])
+@av_bp.route('/restart-stream', methods=['POST'])
+def restart_stream():
+    """Restart stream service using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = get_local_controller('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:restart_stream] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Restart stream service
+        restart_result = av_controller.restart_stream()
+        
+        if restart_result:
+            # Get updated status after restart
+            status = av_controller.get_status()
+            return jsonify({
+                'success': True,
+                'restarted': True,
+                'status': status,
+                'message': 'Stream service restarted successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to restart stream service'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@av_bp.route('/take-control', methods=['POST'])
+def take_control():
+    """Take control of AV system using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = get_local_controller('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:take_control] Using own AV controller: {type(av_controller).__name__}")
+        
+        # Take control of AV system
+        control_result = av_controller.take_control()
+        
+        return jsonify(control_result)
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@av_bp.route('/get-stream-url', methods=['GET'])
 def get_stream_url():
     """Get stream URL from AV controller using own stored host_device object"""
     try:

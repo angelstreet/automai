@@ -61,23 +61,6 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Error getting host info: {e}")
             return None
         
-    def connect(self) -> bool:
-        """Connect to the HDMI acquisition device."""
-        try:
-            print(f"HDMI[{self.capture_source}]: Connecting to HDMI stream service")
-            self.is_connected = True
-            return True
-        except Exception as e:
-            print(f"HDMI[{self.capture_source}]: Connection error: {e}")
-            self.is_connected = False
-            return False
-        
-    def disconnect(self) -> bool:
-        """Disconnect from the HDMI acquisition device."""
-        self.is_connected = False
-        print(f"HDMI[{self.capture_source}]: Disconnected")
-        return True
-        
     def restart_stream(self) -> bool:
         """Restart HDMI streaming service."""
         try:
@@ -126,7 +109,7 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Error getting service status: {e}")
             return {}
         
-    def get_stream_status(self) -> Dict[str, Any]:
+    def _get_stream_status(self) -> Dict[str, Any]:
         """Get current streaming service status."""
         service_status = self._get_service_status()
         
@@ -239,7 +222,7 @@ class HDMIStreamController(AVControllerInterface):
                     }
             
             # Check stream status
-            stream_status = self.get_stream_status()
+            stream_status = self._get_stream_status()
             is_streaming = stream_status.get('is_streaming', False)
             
             # Get stream URL for response

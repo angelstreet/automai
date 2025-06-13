@@ -42,7 +42,7 @@ export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
       console.log(`[@component:HDMIStream] Getting stream URL for host: ${host.host_name}`);
       setIsLoadingStream(true);
 
-      const response = await fetch('/server/av/stream-url', {
+      const response = await fetch('/server/av/get-stream-url', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
