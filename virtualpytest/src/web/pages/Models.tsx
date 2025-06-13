@@ -21,29 +21,10 @@ import {
 import React, { useState, useEffect, useCallback } from 'react';
 
 import CreateModelDialog from '../components/models/Models_CreateDialog';
-import { useRegistration } from '../contexts/RegistrationContext';
-
-// Simple model interface matching database
-interface Model {
-  id: string;
-  name: string;
-  types: string[];
-  version: string;
-  description: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// Create payload type
-export interface ModelCreatePayload {
-  name: string;
-  types: string[];
-  version: string;
-  description: string;
-}
+import { Model, ModelCreatePayload } from '../types/pages/Models_Types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 const Models: React.FC = () => {
-  const { buildServerUrl } = useRegistration();
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +51,7 @@ const Models: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [buildServerUrl]);
+  }, []);
 
   // Load models on component mount
   useEffect(() => {

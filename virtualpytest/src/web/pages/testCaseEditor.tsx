@@ -40,7 +40,7 @@ import {
 import React, { useState, useEffect } from 'react';
 
 // Import registration context
-import { useRegistration } from '../contexts/RegistrationContext';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 import { TestCase } from '../types';
 
@@ -67,8 +67,6 @@ function TabPanel(props: TabPanelProps) {
 
 const TestCaseEditor: React.FC = () => {
   // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
-
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -272,14 +270,14 @@ const TestCaseEditor: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table 
+        <Table
           sx={{
             '& .MuiTableRow-root:hover': {
-              backgroundColor: (theme) => 
-                theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.08) !important' 
-                  : 'rgba(0, 0, 0, 0.04) !important'
-            }
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.08) !important'
+                  : 'rgba(0, 0, 0, 0.04) !important',
+            },
           }}
         >
           <TableHead>

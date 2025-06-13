@@ -31,11 +31,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 import CreateDeviceDialog from '../components/devicemanagement/DeviceManagement_CreateDialog';
 import EditDeviceDialog from '../components/devicemanagement/DeviceManagement_EditDialog';
-import { useRegistration } from '../contexts/RegistrationContext';
 import { Device, DeviceCreatePayload } from '../types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 const DeviceManagement: React.FC = () => {
-  const { buildServerUrl } = useRegistration();
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +111,7 @@ const DeviceManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [buildServerUrl]);
+  }, []);
 
   // Fetch devices on component mount only
   useEffect(() => {
