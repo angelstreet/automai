@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import {
+  Camera as CameraIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -10,16 +14,13 @@ import {
   RadioGroup,
   Radio,
 } from '@mui/material';
-import {
-  Camera as CameraIcon,
-  KeyboardArrowDown as ArrowDownIcon,
-  KeyboardArrowRight as ArrowRightIcon,
-} from '@mui/icons-material';
+import { useState, useEffect, useCallback } from 'react';
 
-import { Host } from '../../../types/common/Host_Types';
 import { useHdmiStream } from '../../../hooks/useHdmiStream';
-import { StreamViewer } from './StreamViewer';
+import { Host } from '../../../types/common/Host_Types';
+
 import { ScreenshotCapture } from './ScreenshotCapture';
+import { StreamViewer } from './StreamViewer';
 import { VideoCapture } from './VideoCapture';
 
 interface HDMIStreamProps {
@@ -30,10 +31,56 @@ interface HDMIStreamProps {
 export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering for host: ${host.host_name}`);
 
-  // All business logic is in the hook
+  // Local state for stream info
+  const [streamUrl, setStreamUrl] = useState<string>('');
+  const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
+  const [isLoadingStream, setIsLoadingStream] = useState<boolean>(true);
+
+  // Get stream URL from AV controller
+  const getStreamUrl = useCallback(async () => {
+    try {
+      console.log(`[@component:HDMIStream] Getting stream URL for host: ${host.host_name}`);
+      setIsLoadingStream(true);
+
+      const response = await fetch('/server/av/stream-url', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.stream_url) {
+        console.log(`[@component:HDMIStream] Got stream URL: ${result.stream_url}`);
+        setStreamUrl(result.stream_url);
+        setIsStreamActive(true);
+      } else {
+        console.error(`[@component:HDMIStream] Failed to get stream URL:`, result.error);
+        setStreamUrl('');
+        setIsStreamActive(false);
+      }
+    } catch (error) {
+      console.error(`[@component:HDMIStream] Error getting stream URL:`, error);
+      setStreamUrl('');
+      setIsStreamActive(false);
+    } finally {
+      setIsLoadingStream(false);
+    }
+  }, [host.host_name]);
+
+  // Fetch stream URL when component mounts
+  useEffect(() => {
+    if (host?.controller_configs?.av?.implementation === 'hdmi_stream') {
+      getStreamUrl();
+    } else {
+      setIsLoadingStream(false);
+    }
+  }, [host, getStreamUrl]);
+
+  // All business logic is in the hook - now with stream info from component
   const {
     // State
-    streamUrl,
     captureMode,
     selectedArea,
     screenshotPath,
@@ -70,7 +117,7 @@ export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
     handleTakeScreenshot,
     handleAutoDetectText,
     validateRegex,
-  } = useHdmiStream(host);
+  } = useHdmiStream({ host, streamUrl, isStreamActive });
 
   // Local UI state
   const [expanded, setExpanded] = useState(!isCollapsed);
@@ -118,6 +165,21 @@ export function HDMIStream({ host, isCollapsed = true }: HDMIStreamProps) {
             {!layoutConfig.isMobileModel && (
               <Typography component="span" sx={{ fontSize: '0.7rem' }}>
                 [Landscape]
+              </Typography>
+            )}
+            {isLoadingStream && (
+              <Typography component="span" sx={{ fontSize: '0.7rem', color: 'orange' }}>
+                [Loading...]
+              </Typography>
+            )}
+            {!isLoadingStream && !isStreamActive && (
+              <Typography component="span" sx={{ fontSize: '0.7rem', color: 'red' }}>
+                [No Stream]
+              </Typography>
+            )}
+            {!isLoadingStream && isStreamActive && (
+              <Typography component="span" sx={{ fontSize: '0.7rem', color: 'green' }}>
+                [Active]
               </Typography>
             )}
           </Typography>

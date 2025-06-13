@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Box, Slider, IconButton, Typography } from '@mui/material';
 import { PlayArrow, Pause } from '@mui/icons-material';
-import { DragSelectionOverlay } from './DragSelectionOverlay';
+import { Box, Slider, IconButton, Typography } from '@mui/material';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
-import { useRegistration } from '../../../contexts/RegistrationContext';
+
+import { DragSelectionOverlay } from './DragSelectionOverlay';
 
 interface DragArea {
   x: number;

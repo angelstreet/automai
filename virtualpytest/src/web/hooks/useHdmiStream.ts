@@ -3,10 +3,20 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Host } from '../types/common/Host_Types';
 import { DragArea, HdmiStreamState, HdmiStreamActions } from '../types/controller/hdmi_types';
 
-export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
-  // Stream state
-  const [streamUrl, setStreamUrl] = useState<string>('');
-  const [isStreamActive, setIsStreamActive] = useState(false);
+interface UseHdmiStreamProps {
+  host: Host;
+  streamUrl?: string;
+  isStreamActive?: boolean;
+}
+
+export function useHdmiStream({
+  host,
+  streamUrl: providedStreamUrl = '',
+  isStreamActive: providedIsStreamActive = false,
+}: UseHdmiStreamProps): HdmiStreamState & HdmiStreamActions {
+  // Stream state - now controlled by component
+  const [streamUrl, setStreamUrl] = useState<string>(providedStreamUrl);
+  const [isStreamActive, setIsStreamActive] = useState(providedIsStreamActive);
   const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
 
   // Capture state
@@ -29,8 +39,8 @@ export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
   const [screenshotPath, setScreenshotPath] = useState<string>('');
 
   // Video state
-  const [videoFramesPath, setVideoFramesPath] = useState<string>('');
-  const [totalFrames, setTotalFrames] = useState<number>(0);
+  const [videoFramesPath, _setVideoFramesPath] = useState<string>('');
+  const [totalFrames, _setTotalFrames] = useState<number>(0);
   const [currentFrame, setCurrentFrame] = useState<number>(0);
 
   // UI state
@@ -58,15 +68,13 @@ export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
   const captureContainerRef = useRef<HTMLDivElement>(null);
   const videoElementRef = useRef<HTMLVideoElement>(null);
 
-  // Initialize stream URL from host
+  // Update stream state when props change
   useEffect(() => {
-    if (host?.controller_configs?.av?.implementation === 'hdmi_stream') {
-      const url = `https://${host.host_ip}:${host.host_port_web}/stream/live.m3u8`;
-      setStreamUrl(url);
-      setIsStreamActive(true);
-      console.log(`[@hook:useHdmiStream] Initialized stream URL: ${url}`);
-    }
-  }, [host]);
+    setStreamUrl(providedStreamUrl);
+    setIsStreamActive(providedIsStreamActive);
+    console.log(`[@hook:useHdmiStream] Stream URL updated: ${providedStreamUrl}`);
+    console.log(`[@hook:useHdmiStream] Stream active: ${providedIsStreamActive}`);
+  }, [providedStreamUrl, providedIsStreamActive]);
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -228,7 +236,16 @@ export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
     } catch (error) {
       console.error('[@hook:useHdmiStream] Error capturing reference:', error);
     }
-  }, [selectedArea, captureSourcePath, referenceName, host, referenceType, imageProcessingOptions]);
+  }, [
+    selectedArea,
+    captureSourcePath,
+    referenceName,
+    host,
+    referenceType,
+    imageProcessingOptions,
+    captureImageDimensions,
+    originalImageDimensions,
+  ]);
 
   // Handle take screenshot
   const handleTakeScreenshot = useCallback(async () => {
@@ -334,13 +351,13 @@ export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
     try {
       new RegExp(text);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }, []);
 
   // Computed values
-  const canCapture = selectedArea;
+  const canCapture = !!selectedArea;
   const canSave = useMemo(() => {
     if (
       !referenceName.trim() ||
@@ -368,7 +385,7 @@ export function useHdmiStream(host: Host): HdmiStreamState & HdmiStreamActions {
     validateRegex,
   ]);
 
-  const allowSelection = !isCaptureActive && captureSourcePath && captureImageRef;
+  const allowSelection = !isCaptureActive && !!captureSourcePath && !!captureImageRef;
 
   // Layout config based on device model
   const layoutConfig = useMemo(() => {

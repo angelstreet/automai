@@ -1,7 +1,9 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { Box, Typography, IconButton } from '@mui/material';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+
 import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
+
 import { StreamClickOverlay } from './StreamClickOverlay';
 
 interface StreamViewerProps {
