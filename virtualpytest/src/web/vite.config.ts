@@ -8,8 +8,8 @@ const serverUrl = process.env.VITE_SERVER_URL || 'http://localhost:5109';
 const shouldUseHttps = serverUrl.startsWith('https://');
 
 // Certificate paths (only used if HTTPS is needed)
-const certPath = '/etc/letsencrypt/live/virtualpytest.com/fullchain.pem';
-const keyPath = '/etc/letsencrypt/live/virtualpytest.com/privkey.pem';
+const certPath = '~/vite-certs/fullchain.pem';
+const keyPath = '~/vite-certs/privkey.pem';
 const hasCertificates = fs.existsSync(certPath) && fs.existsSync(keyPath);
 
 // Define registered frontend routes (must match your React Router routes)
