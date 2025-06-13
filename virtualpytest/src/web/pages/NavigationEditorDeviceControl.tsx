@@ -1,13 +1,13 @@
-import React, { useEffect, useCallback, useState, useMemo } from 'react';
-import { Box, Typography, IconButton, Grid, Alert } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { Box, Typography, IconButton } from '@mui/material';
+import React, { useCallback, useMemo } from 'react';
 
 // Import NEW generic remote components instead of device-specific ones
-import { RemotePanel } from '../components/controller/remote/RemotePanel';
+import { ScreenDefinitionEditor } from '../components/controller/av/ScreenDefinitionEditor';
 import { AndroidMobileRemote } from '../components/controller/remote/AndroidMobileRemote';
+import { RemotePanel } from '../components/controller/remote/RemotePanel';
 
 // Import ScreenDefinitionEditor
-import { ScreenDefinitionEditor } from '../components/controller/av/ScreenDefinitionEditor';
 
 // Simple placeholder functions to replace missing deviceRemoteMappingUtils
 const getDeviceRemoteConfig = (selectedHost: any) => {
@@ -29,9 +29,6 @@ const extractConnectionConfigForBluetooth = (remoteConfig: any) => {
   // Simple fallback - return Bluetooth config if available
   return remoteConfig?.bluetooth || null;
 };
-
-// Import registration context
-import { useRegistration } from '../contexts/RegistrationContext';
 
 // Import verification display
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';

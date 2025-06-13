@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import { useState, useRef } from 'react';
 
-import { useRegistration } from '../../../contexts/RegistrationContext';
+import { buildServerUrl } from '../../../utils/frontendUtils';
 import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement, AndroidApp } from '../../../types/controller/Remote_Types';
 
@@ -19,7 +19,6 @@ export function AndroidMobileRemote({
   onDisconnectComplete,
   sx = {},
 }: AndroidMobileRemoteProps) {
-  const { buildServerUrl } = useRegistration();
   // Simple state - no complex loading states
   const [isConnected, setIsConnected] = useState(true); // Always connected when shown
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);

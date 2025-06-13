@@ -1,6 +1,12 @@
 'use client';
 
 import {
+  PlayArrow as PlayArrowIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  History as HistoryIcon,
+} from '@mui/icons-material';
+import {
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,17 +33,11 @@ import {
   MenuItem,
   Alert,
 } from '@mui/material';
-import { 
-  PlayArrow as PlayArrowIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  History as HistoryIcon
-} from '@mui/icons-material';
-import { useState, useEffect } from 'react';
-import { useValidationUI } from '../../hooks/validation';
-import { useValidationColors } from '../../hooks/validation';
+import React, { useState, useEffect } from 'react';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
-import React from 'react';
+import { useValidationUI, useValidationColors } from '../../hooks/validation';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface ValidationPreviewClientProps {
   treeId: string;
@@ -67,7 +67,7 @@ interface OptimalPathData {
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const validation = useValidationUI(treeId);
   const { resetForNewValidation } = useValidationColors(treeId);
-  const { buildServerUrl, selectedHost } = useRegistration();
+  const { selectedHost } = useRegistration();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
@@ -89,25 +89,25 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   const fetchOptimalPath = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       console.log('[@component:ValidationPreviewClient] Fetching optimal path from server...');
-      
+
       // Simply check if host is selected - no need for controller proxy verification
       if (!selectedHost) {
         throw new Error('No host selected for validation');
       }
-      
+
       console.log('[@component:ValidationPreviewClient] Host available, fetching optimal path');
-      
+
       const response = await fetch(buildServerUrl(`server/validation/optimal-path/${treeId}`));
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch optimal path');
       }
-      
+
       const data = await response.json();
-      
+
       setOptimalPath(data);
       setTotalSteps(data.sequence.length);
       setEstimatedTime(data.summary.efficiency_ratio * data.sequence.length);
@@ -130,8 +130,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   };
 
   const handleSelectAll = () => {
-    const allSteps = optimalPath?.sequence
-      .map((step: OptimalPathStep) => step.step_number) || [];
+    const allSteps = optimalPath?.sequence.map((step: OptimalPathStep) => step.step_number) || [];
     setSelectedEdges(new Set(allSteps));
   };
 
@@ -151,58 +150,70 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
 
   const getFilteredSteps = () => {
     if (!optimalPath) return [];
-    
+
     return optimalPath.sequence.filter((step: OptimalPathStep) => {
       if (depthFilter === 'all') return true;
-      
+
       // Determine depth based on target node
-      const isDepth1 = step.to_node_label === 'home' || 
-                       (step.from_node_label === 'home' && !step.to_node_label.includes('_'));
-      const isDepth2 = step.to_node_label.includes('_') && step.to_node_label !== 'home_movies_series' && step.to_node_label !== 'home_saved' && step.to_node_label !== 'home_replay';
-      
-      if (depthFilter === '1') return isDepth1 || ['tvguide', 'home_movies_series', 'home_saved', 'home_replay'].includes(step.to_node_label);
+      const isDepth1 =
+        step.to_node_label === 'home' ||
+        (step.from_node_label === 'home' && !step.to_node_label.includes('_'));
+      const isDepth2 =
+        step.to_node_label.includes('_') &&
+        step.to_node_label !== 'home_movies_series' &&
+        step.to_node_label !== 'home_saved' &&
+        step.to_node_label !== 'home_replay';
+
+      if (depthFilter === '1')
+        return (
+          isDepth1 ||
+          ['tvguide', 'home_movies_series', 'home_saved', 'home_replay'].includes(
+            step.to_node_label,
+          )
+        );
       if (depthFilter === '2') return isDepth2;
-      
+
       return true;
     });
   };
 
   const handleRunValidation = () => {
-    console.log('[@component:ValidationPreviewClient] Starting validation - resetting all colors to grey (untested)');
-    
+    console.log(
+      '[@component:ValidationPreviewClient] Starting validation - resetting all colors to grey (untested)',
+    );
+
     // Reset all validation colors to grey (untested) before starting validation
     resetForNewValidation();
-    
-    const skippedEdges = optimalPath?.sequence
-      .filter((step: OptimalPathStep) => !selectedEdges.has(step.step_number))
-      .map((step: OptimalPathStep) => ({ from: step.from_node_id, to: step.to_node_id })) || [];
-    
+
+    const skippedEdges =
+      optimalPath?.sequence
+        .filter((step: OptimalPathStep) => !selectedEdges.has(step.step_number))
+        .map((step: OptimalPathStep) => ({ from: step.from_node_id, to: step.to_node_id })) || [];
+
     validation.runValidation(skippedEdges);
   };
 
   if (!validation.showPreview) return null;
 
   return (
-    <Dialog 
-      open={validation.showPreview} 
-      onClose={validation.closePreview} 
-      maxWidth="md" 
+    <Dialog
+      open={validation.showPreview}
+      onClose={validation.closePreview}
+      maxWidth="md"
       fullWidth
       disableEscapeKeyDown
       sx={{ zIndex: 1400 }}
       PaperProps={{
         sx: {
           bgcolor: 'background.paper',
-        }
+        },
       }}
     >
       {/* Header */}
-      <DialogTitle sx={{ bgcolor: 'background.paper', pb: 0 }}>
-        Validation Preview
-      </DialogTitle>
-      
+      <DialogTitle sx={{ bgcolor: 'background.paper', pb: 0 }}>Validation Preview</DialogTitle>
+
       <Divider />
-      
+
       {/* Content */}
       <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 1 }}>
         {!validation.previewData ? (
@@ -212,8 +223,6 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
           </Box>
         ) : (
           <>
-           
-            
             <Grid container spacing={3} mb={1}>
               <Grid item xs={4}>
                 <Box textAlign="center">
@@ -246,7 +255,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                 </Box>
               </Grid>
             </Grid>
-            
+
             {/* Details Section */}
             <Box mt={1}>
               <Button
@@ -258,7 +267,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
               >
                 {showDetails ? 'Hide Details' : 'Show Details'}
               </Button>
-              
+
               <Collapse in={showDetails}>
                 <Box mt={2}>
                   {/* NetworkX Optimal Path Table */}
@@ -302,9 +311,16 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                               <TableCell width="40px"></TableCell>
                               <TableCell padding="checkbox">
                                 <Checkbox
-                                  indeterminate={selectedEdges.size > 0 && selectedEdges.size < optimalPath.sequence.length}
+                                  indeterminate={
+                                    selectedEdges.size > 0 &&
+                                    selectedEdges.size < optimalPath.sequence.length
+                                  }
                                   checked={selectedEdges.size === optimalPath.sequence.length}
-                                  onChange={selectedEdges.size === optimalPath.sequence.length ? handleDeselectAll : handleSelectAll}
+                                  onChange={
+                                    selectedEdges.size === optimalPath.sequence.length
+                                      ? handleDeselectAll
+                                      : handleSelectAll
+                                  }
                                 />
                               </TableCell>
                               <TableCell>Step</TableCell>
@@ -316,16 +332,21 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                           </TableHead>
                           <TableBody>
                             {getFilteredSteps().map((step) => {
-                              const hasExpandableContent = (step.actions && step.actions.length > 0) || (step.retryActions && step.retryActions.length > 0);
-                              
+                              const hasExpandableContent =
+                                (step.actions && step.actions.length > 0) ||
+                                (step.retryActions && step.retryActions.length > 0);
+
                               return (
                                 <React.Fragment key={`step-${step.step_number}`}>
-                                  <TableRow 
+                                  <TableRow
                                     sx={{
                                       '&:hover': {
-                                        backgroundColor: 'transparent !important'
+                                        backgroundColor: 'transparent !important',
                                       },
-                                      backgroundColor: step.validation_type === 'navigation' ? 'rgba(255, 193, 7, 0.1)' : 'transparent'
+                                      backgroundColor:
+                                        step.validation_type === 'navigation'
+                                          ? 'rgba(255, 193, 7, 0.1)'
+                                          : 'transparent',
                                     }}
                                   >
                                     <TableCell>
@@ -335,7 +356,11 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                           onClick={() => toggleRow(step.step_number)}
                                           sx={{ p: 0 }}
                                         >
-                                          {expandedRows.has(step.step_number) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                          {expandedRows.has(step.step_number) ? (
+                                            <ExpandLessIcon />
+                                          ) : (
+                                            <ExpandMoreIcon />
+                                          )}
                                         </IconButton>
                                       )}
                                     </TableCell>
@@ -349,11 +374,17 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                     <TableCell>
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         {step.validation_type === 'edge' ? (
-                                          <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                                          <Typography
+                                            variant="body2"
+                                            sx={{ color: 'success.main', fontWeight: 'bold' }}
+                                          >
                                             EDGE
                                           </Typography>
                                         ) : (
-                                          <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                                          <Typography
+                                            variant="body2"
+                                            sx={{ color: 'warning.main', fontWeight: 'bold' }}
+                                          >
                                             NAV
                                           </Typography>
                                         )}
@@ -363,9 +394,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                       {step.from_node_label} → <strong>{step.to_node_label}</strong>
                                     </TableCell>
                                     <TableCell>{step.actions.length}</TableCell>
-                                    <TableCell>
-                                      {step.retryActions?.length || 0}
-                                    </TableCell>
+                                    <TableCell>{step.retryActions?.length || 0}</TableCell>
                                   </TableRow>
 
                                   {/* Detailed Actions/Verifications Row */}
@@ -383,35 +412,47 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                             {/* Actions to Execute */}
                                             {step.actions && step.actions.length > 0 && (
                                               <Box mb={2}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                                <Typography
+                                                  variant="subtitle2"
+                                                  sx={{ fontWeight: 'bold', mb: 1 }}
+                                                >
                                                   Actions to Execute ({step.actions.length}):
                                                 </Typography>
                                                 {step.actions.map((action, actionIndex) => (
                                                   <Alert
                                                     key={`action-${actionIndex}`}
                                                     severity="info"
-                                                    sx={{ 
-                                                      mb: 1, 
+                                                    sx={{
+                                                      mb: 1,
                                                       fontSize: '0.875rem',
                                                       '&:hover': {
                                                         backgroundColor: 'transparent !important',
-                                                      }
+                                                      },
                                                     }}
                                                   >
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                                      {actionIndex + 1}. {action.label || action.command}
+                                                    <Typography
+                                                      variant="body2"
+                                                      sx={{ fontWeight: 'bold', mb: 0.5 }}
+                                                    >
+                                                      {actionIndex + 1}.{' '}
+                                                      {action.label || action.command}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                                                       Command: <code>{action.command}</code>
                                                     </Typography>
-                                                    {action.params && Object.keys(action.params).length > 0 && (
-                                                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                        Params: {JSON.stringify(action.params)}
-                                                      </Typography>
-                                                    )}
+                                                    {action.params &&
+                                                      Object.keys(action.params).length > 0 && (
+                                                        <Typography
+                                                          variant="body2"
+                                                          sx={{ mb: 0.5 }}
+                                                        >
+                                                          Params: {JSON.stringify(action.params)}
+                                                        </Typography>
+                                                      )}
                                                     {action.inputValue && (
                                                       <Typography variant="body2">
-                                                        Input Value: <strong>{action.inputValue}</strong>
+                                                        Input Value:{' '}
+                                                        <strong>{action.inputValue}</strong>
                                                       </Typography>
                                                     )}
                                                   </Alert>
@@ -422,39 +463,56 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
                                             {/* Target Node Verifications */}
                                             {step.retryActions && step.retryActions.length > 0 && (
                                               <Box>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                                  Target Node Verifications ({step.retryActions.length}) for {step.to_node_label}:
+                                                <Typography
+                                                  variant="subtitle2"
+                                                  sx={{ fontWeight: 'bold', mb: 1 }}
+                                                >
+                                                  Target Node Verifications (
+                                                  {step.retryActions.length}) for{' '}
+                                                  {step.to_node_label}:
                                                 </Typography>
-                                                {step.retryActions.map((verification, verificationIndex) => (
-                                                  <Alert
-                                                    key={`verification-${verificationIndex}`}
-                                                    severity="success"
-                                                    sx={{ 
-                                                      mb: 1, 
-                                                      fontSize: '0.875rem',
-                                                      '&:hover': {
-                                                        backgroundColor: 'transparent !important',
-                                                      }
-                                                    }}
-                                                  >
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                                      {verification.label || verification.command}
-                                                    </Typography>
-                                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                      Command: <code>{verification.command}</code>
-                                                    </Typography>
-                                                    {verification.params && Object.keys(verification.params).length > 0 && (
+                                                {step.retryActions.map(
+                                                  (verification, verificationIndex) => (
+                                                    <Alert
+                                                      key={`verification-${verificationIndex}`}
+                                                      severity="success"
+                                                      sx={{
+                                                        mb: 1,
+                                                        fontSize: '0.875rem',
+                                                        '&:hover': {
+                                                          backgroundColor: 'transparent !important',
+                                                        },
+                                                      }}
+                                                    >
+                                                      <Typography
+                                                        variant="body2"
+                                                        sx={{ fontWeight: 'bold', mb: 0.5 }}
+                                                      >
+                                                        {verification.label || verification.command}
+                                                      </Typography>
                                                       <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                        Params: {JSON.stringify(verification.params)}
+                                                        Command: <code>{verification.command}</code>
                                                       </Typography>
-                                                    )}
-                                                    {verification.inputValue && (
-                                                      <Typography variant="body2">
-                                                        Input Value: <strong>{verification.inputValue}</strong>
-                                                      </Typography>
-                                                    )}
-                                                  </Alert>
-                                                ))}
+                                                      {verification.params &&
+                                                        Object.keys(verification.params).length >
+                                                          0 && (
+                                                          <Typography
+                                                            variant="body2"
+                                                            sx={{ mb: 0.5 }}
+                                                          >
+                                                            Params:{' '}
+                                                            {JSON.stringify(verification.params)}
+                                                          </Typography>
+                                                        )}
+                                                      {verification.inputValue && (
+                                                        <Typography variant="body2">
+                                                          Input Value:{' '}
+                                                          <strong>{verification.inputValue}</strong>
+                                                        </Typography>
+                                                      )}
+                                                    </Alert>
+                                                  ),
+                                                )}
                                               </Box>
                                             )}
                                           </Box>
@@ -480,19 +538,19 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
           </>
         )}
       </DialogContent>
-      
+
       <Divider />
-      
+
       {/* Footer */}
       <DialogActions sx={{ bgcolor: 'background.paper', p: 2 }}>
         <Button onClick={validation.closePreview} color="inherit">
           Cancel
         </Button>
-        
+
         {/* Last Result Button - Show if there's a cached result */}
         {validation.lastResult && (
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={validation.viewLastResult}
             startIcon={<HistoryIcon />}
             color="info"
@@ -501,17 +559,20 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
             Last Result
           </Button>
         )}
-        
-        <Button 
-          variant="contained" 
+
+        <Button
+          variant="contained"
           onClick={handleRunValidation}
           disabled={!validation.previewData}
           startIcon={<PlayArrowIcon />}
           color="primary"
         >
-          Run Validation{optimalPath && selectedEdges.size < optimalPath.sequence.length ? ` (${selectedEdges.size} selected)` : ''}
+          Run Validation
+          {optimalPath && selectedEdges.size < optimalPath.sequence.length
+            ? ` (${selectedEdges.size} selected)`
+            : ''}
         </Button>
       </DialogActions>
     </Dialog>
   );
-} 
+}

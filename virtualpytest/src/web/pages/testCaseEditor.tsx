@@ -40,9 +40,8 @@ import {
 import React, { useState, useEffect } from 'react';
 
 // Import registration context
-import { buildServerUrl } from '../utils/frontendUtils';
-
 import { TestCase } from '../types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;

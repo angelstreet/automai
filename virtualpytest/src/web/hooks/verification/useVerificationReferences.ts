@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ReferenceImage {
@@ -27,10 +28,12 @@ interface UseVerificationReferencesReturn {
   getModelReferences: (model?: string) => ReferenceImage[];
 }
 
-export const useVerificationReferences = (reloadTrigger?: number): UseVerificationReferencesReturn => {
+export const useVerificationReferences = (
+  reloadTrigger?: number,
+): UseVerificationReferencesReturn => {
   // Use registration context for centralized URL management
   const { buildServerUrl } = useRegistration();
-  
+
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
@@ -38,16 +41,18 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
     setReferencesLoading(true);
     try {
       console.log('[@hook:useVerificationReferences] Fetching available references...');
-      
+
       const response = await fetch(buildServerUrl('/server/verification/reference/list'));
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('[@hook:useVerificationReferences] Raw response:', result);
-        
+
         if (result.success && result.references) {
-          console.log(`[@hook:useVerificationReferences] Found ${result.references.length} references`);
-          
+          console.log(
+            `[@hook:useVerificationReferences] Found ${result.references.length} references`,
+          );
+
           // Process references to ensure consistent structure
           const processedReferences = result.references.map((ref: any) => ({
             name: ref.name,
@@ -60,17 +65,23 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
             // Text reference specific fields
             text: ref.text,
             font_size: ref.font_size,
-            confidence: ref.confidence
+            confidence: ref.confidence,
           }));
-          
+
           setAvailableReferences(processedReferences);
-          console.log('[@hook:useVerificationReferences] Processed references:', processedReferences);
+          console.log(
+            '[@hook:useVerificationReferences] Processed references:',
+            processedReferences,
+          );
         } else {
           console.log('[@hook:useVerificationReferences] No references found or request failed');
           setAvailableReferences([]);
         }
       } else {
-        console.error('[@hook:useVerificationReferences] Failed to fetch references:', response.status);
+        console.error(
+          '[@hook:useVerificationReferences] Failed to fetch references:',
+          response.status,
+        );
         setAvailableReferences([]);
       }
     } catch (error) {
@@ -84,8 +95,11 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
   // Filter references by current model
   const getModelReferences = (model?: string) => {
     if (!model) return availableReferences;
-    const filtered = availableReferences.filter(ref => ref.model === model);
-    console.log(`[@component:useVerificationReferences] Filtered references for model '${model}':`, filtered);
+    const filtered = availableReferences.filter((ref) => ref.model === model);
+    console.log(
+      `[@component:useVerificationReferences] Filtered references for model '${model}':`,
+      filtered,
+    );
     return filtered;
   };
 
@@ -98,6 +112,6 @@ export const useVerificationReferences = (reloadTrigger?: number): UseVerificati
     availableReferences,
     referencesLoading,
     fetchAvailableReferences,
-    getModelReferences
+    getModelReferences,
   };
-}; 
+};

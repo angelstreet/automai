@@ -1,12 +1,13 @@
 /**
  * Device Models Hook
- * 
+ *
  * This hook handles all device model operations using React Query for caching
  * and state management. It includes CRUD operations and proper error handling.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
 import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
 
@@ -49,10 +50,15 @@ class DeviceModelServerService {
       }
 
       const data = await response.json();
-      console.log(`[@hook:useDeviceModels:getAllDeviceModels] Successfully fetched ${data.length || 0} device models`);
+      console.log(
+        `[@hook:useDeviceModels:getAllDeviceModels] Successfully fetched ${data.length || 0} device models`,
+      );
       return data;
     } catch (error) {
-      console.error('[@hook:useDeviceModels:getAllDeviceModels] Error fetching device models:', error);
+      console.error(
+        '[@hook:useDeviceModels:getAllDeviceModels] Error fetching device models:',
+        error,
+      );
       throw error;
     }
   }
@@ -75,10 +81,15 @@ class DeviceModelServerService {
       }
 
       const data = await response.json();
-      console.log(`[@hook:useDeviceModels:getDeviceModel] Successfully fetched device model: ${id}`);
+      console.log(
+        `[@hook:useDeviceModels:getDeviceModel] Successfully fetched device model: ${id}`,
+      );
       return data;
     } catch (error) {
-      console.error(`[@hook:useDeviceModels:getDeviceModel] Error fetching device model ${id}:`, error);
+      console.error(
+        `[@hook:useDeviceModels:getDeviceModel] Error fetching device model ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -104,10 +115,15 @@ class DeviceModelServerService {
 
       const result = await response.json();
       const createdModel = result.model;
-      console.log(`[@hook:useDeviceModels:createDeviceModel] Successfully created device model: ${createdModel.name}`);
+      console.log(
+        `[@hook:useDeviceModels:createDeviceModel] Successfully created device model: ${createdModel.name}`,
+      );
       return createdModel;
     } catch (error) {
-      console.error('[@hook:useDeviceModels:createDeviceModel] Error creating device model:', error);
+      console.error(
+        '[@hook:useDeviceModels:createDeviceModel] Error creating device model:',
+        error,
+      );
       throw error;
     }
   }
@@ -115,7 +131,10 @@ class DeviceModelServerService {
   /**
    * Update an existing device model
    */
-  async updateDeviceModel(id: string, model: Partial<Omit<Model, 'id' | 'created_at' | 'updated_at'>>): Promise<Model> {
+  async updateDeviceModel(
+    id: string,
+    model: Partial<Omit<Model, 'id' | 'created_at' | 'updated_at'>>,
+  ): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:updateDeviceModel] Updating device model: ${id}`, model);
       const response = await fetch(this.buildUrl(`/server/devicemodel/updateDeviceModel/${id}`), {
@@ -133,10 +152,15 @@ class DeviceModelServerService {
 
       const result = await response.json();
       const updatedModel = result.model;
-      console.log(`[@hook:useDeviceModels:updateDeviceModel] Successfully updated device model: ${id}`);
+      console.log(
+        `[@hook:useDeviceModels:updateDeviceModel] Successfully updated device model: ${id}`,
+      );
       return updatedModel;
     } catch (error) {
-      console.error(`[@hook:useDeviceModels:updateDeviceModel] Error updating device model ${id}:`, error);
+      console.error(
+        `[@hook:useDeviceModels:updateDeviceModel] Error updating device model ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -159,9 +183,14 @@ class DeviceModelServerService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      console.log(`[@hook:useDeviceModels:deleteDeviceModel] Successfully deleted device model: ${id}`);
+      console.log(
+        `[@hook:useDeviceModels:deleteDeviceModel] Successfully deleted device model: ${id}`,
+      );
     } catch (error) {
-      console.error(`[@hook:useDeviceModels:deleteDeviceModel] Error deleting device model ${id}:`, error);
+      console.error(
+        `[@hook:useDeviceModels:deleteDeviceModel] Error deleting device model ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -174,7 +203,7 @@ class DeviceModelServerService {
 export const useDeviceModels = () => {
   const { buildServerUrl } = useRegistration();
   const queryClient = useQueryClient();
-  
+
   // Create stable server service instance
   const serverService = useMemo(() => {
     return new DeviceModelServerService(buildServerUrl);
@@ -197,11 +226,10 @@ export const useDeviceModels = () => {
     mutationFn: (payload: ModelCreateData) => serverService.createDeviceModel(payload),
     onSuccess: (newModel) => {
       // Add the new model to the cache
-      queryClient.setQueryData(QUERY_KEYS.deviceModels, (old: Model[] = []) => [
-        ...old,
-        newModel
-      ]);
-      console.log('[@hook:useDeviceModels:create] Successfully created and cached new device model');
+      queryClient.setQueryData(QUERY_KEYS.deviceModels, (old: Model[] = []) => [...old, newModel]);
+      console.log(
+        '[@hook:useDeviceModels:create] Successfully created and cached new device model',
+      );
     },
     onError: (error) => {
       console.error('[@hook:useDeviceModels:create] Error creating device model:', error);
@@ -215,7 +243,7 @@ export const useDeviceModels = () => {
     onSuccess: (updatedModel, variables) => {
       // Update the model in the cache
       queryClient.setQueryData(QUERY_KEYS.deviceModels, (old: Model[] = []) =>
-        old.map((model) => (model.id === variables.id ? updatedModel : model))
+        old.map((model) => (model.id === variables.id ? updatedModel : model)),
       );
       // Also update individual model cache if it exists
       queryClient.setQueryData(QUERY_KEYS.deviceModel(variables.id), updatedModel);
@@ -232,7 +260,7 @@ export const useDeviceModels = () => {
     onSuccess: (_, id) => {
       // Remove the model from the cache
       queryClient.setQueryData(QUERY_KEYS.deviceModels, (old: Model[] = []) =>
-        old.filter((model) => model.id !== id)
+        old.filter((model) => model.id !== id),
       );
       // Remove individual model cache
       queryClient.removeQueries({ queryKey: QUERY_KEYS.deviceModel(id) });
@@ -246,22 +274,22 @@ export const useDeviceModels = () => {
   return {
     // Data
     models,
-    
+
     // Status
     isLoading,
     error: error instanceof Error ? error.message : null,
-    
+
     // Actions
     refetch,
     createModel: createMutation.mutateAsync,
     updateModel: updateMutation.mutateAsync,
     deleteModel: deleteMutation.mutateAsync,
-    
+
     // Mutation status
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
-    
+
     // Mutation errors
     createError: createMutation.error instanceof Error ? createMutation.error.message : null,
     updateError: updateMutation.error instanceof Error ? updateMutation.error.message : null,
@@ -274,7 +302,7 @@ export const useDeviceModels = () => {
  */
 export const useDeviceModel = (id: string) => {
   const { buildServerUrl } = useRegistration();
-  
+
   // Create stable server service instance
   const serverService = useMemo(() => {
     return new DeviceModelServerService(buildServerUrl);
@@ -286,4 +314,4 @@ export const useDeviceModel = (id: string) => {
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-}; 
+};

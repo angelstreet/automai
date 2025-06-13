@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import { useRegistration } from '../../contexts/RegistrationContext';
 
 interface ImageComparisonDialogData {
@@ -19,7 +20,7 @@ interface UseImageComparisonModalReturn {
 
 export const useImageComparisonModal = (): UseImageComparisonModalReturn => {
   const { buildServerUrl } = useRegistration();
-  
+
   const [imageComparisonDialog, setImageComparisonDialog] = useState<ImageComparisonDialogData>({
     open: false,
     sourceUrl: '',
@@ -27,7 +28,7 @@ export const useImageComparisonModal = (): UseImageComparisonModalReturn => {
     userThreshold: undefined,
     matchingResult: undefined,
     resultType: undefined,
-    imageFilter: 'none'
+    imageFilter: 'none',
   });
 
   const openImageComparisonModal = (data: Partial<ImageComparisonDialogData>) => {
@@ -38,20 +39,20 @@ export const useImageComparisonModal = (): UseImageComparisonModalReturn => {
       userThreshold: data.userThreshold,
       matchingResult: data.matchingResult,
       resultType: data.resultType,
-      imageFilter: data.imageFilter || 'none'
+      imageFilter: data.imageFilter || 'none',
     });
   };
 
   const closeImageComparisonModal = () => {
-    setImageComparisonDialog(prev => ({
+    setImageComparisonDialog((prev) => ({
       ...prev,
-      open: false
+      open: false,
     }));
   };
 
   return {
     imageComparisonDialog,
     openImageComparisonModal,
-    closeImageComparisonModal
+    closeImageComparisonModal,
   };
-}; 
+};

@@ -19,6 +19,7 @@ import {
 import { useState, useEffect } from 'react';
 
 import { useRegistration } from '../../../contexts/RegistrationContext';
+import { buildServerUrl } from '../../../utils/frontendUtils';
 
 interface PowerPanelProps {
   /** Custom styling */
@@ -33,7 +34,7 @@ interface PowerStatus {
 
 export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
   // Use registration context for centralized URL management
-  const { buildServerUrl } = useRegistration();
+  const {} = useRegistration();
 
   // UI state
   const [isConnecting, setIsConnecting] = useState(false);
@@ -52,11 +53,11 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
   useEffect(() => {
     // Check if already connected
     checkConnectionStatus();
-  }, [buildServerUrl]);
+  }, []);
 
   const checkConnectionStatus = async () => {
     try {
-      const response = await fetch(buildServerUrl('/server/power/status'));
+      const response = await fetch('/server/power/status');
       const result = await response.json();
 
       if (result.success && result.connected) {
@@ -75,7 +76,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Checking power status...');
-      const response = await fetch(buildServerUrl('/server/power/power-status'));
+      const response = await fetch('/server/power/power-status');
       const result = await response.json();
 
       if (result.success && result.power_status) {
@@ -105,7 +106,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
     try {
       console.log('[@component:USBPowerPanel] Starting power connection...');
 
-      const response = await fetch(buildServerUrl('/server/power/take-control'), {
+      const response = await fetch('/server/power/take-control', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +144,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Disconnecting power controller...');
-      await fetch(buildServerUrl('/server/power/release-control'), {
+      await fetch('/server/power/release-control', {
         method: 'POST',
       });
 
@@ -175,7 +176,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Toggling power...');
-      const response = await fetch(buildServerUrl('/server/power/toggle'), {
+      const response = await fetch('/server/power/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,7 +222,7 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
 
     try {
       console.log('[@component:USBPowerPanel] Rebooting device...');
-      const response = await fetch(buildServerUrl('/server/power/reboot'), {
+      const response = await fetch('/server/power/reboot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

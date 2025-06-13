@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,39 +7,13 @@ import {
   Button,
   Box,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Grid,
-  Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Tooltip,
-  Paper,
-  Divider,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
-import {
-  ExpandMore as ExpandMoreIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  PlayArrow as PlayArrowIcon,
-  Edit as EditIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-} from '@mui/icons-material';
-import { UINavigationEdge, EdgeForm, EdgeAction } from '../../types/pages/Navigation_Types';
-import { EdgeActionsList } from './Navigation_EdgeActionsList';
+import React, { useState, useEffect } from 'react';
+
+import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
+
+import { EdgeActionsList } from './Navigation_EdgeActionsList';
 
 interface ControllerAction {
   id: string;
@@ -93,7 +66,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
-  const canRunActions = isControlActive && selectedDevice && edgeForm?.actions?.length > 0 && !isRunningActions;
+  const canRunActions =
+    isControlActive && selectedDevice && edgeForm?.actions?.length > 0 && !isRunningActions;
 
   useEffect(() => {
     if (!isOpen) {
@@ -106,7 +80,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     if (isOpen) {
       console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
       if (controllerTypes.length > 0 && selectedHostDevice) {
-        console.log(`[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`);
+        console.log(
+          `[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`,
+        );
         fetchControllerActions(controllerTypes[0]);
       } else {
         console.log('[@component:EdgeEditDialog] No controller types or host device available');
@@ -123,10 +99,10 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
     setLoadingActions(true);
     setActionsError(null);
-    
+
     try {
       console.log(`[@component:EdgeEditDialog] Fetching actions using server route`);
-      
+
       // Use server route instead of controller proxy
       const response = await fetch(`/server/remote/get-actions`, {
         method: 'POST',
@@ -135,17 +111,19 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         },
         body: JSON.stringify({
           host_name: selectedHostDevice.host_name,
-          controller_type: controllerType
-        })
+          controller_type: controllerType,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       console.log(`[@component:EdgeEditDialog] Server route response:`, result);
-      
+
       if (result.success) {
         setControllerActions(result.actions);
-        console.log(`[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for remote controller`);
+        console.log(
+          `[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for remote controller`,
+        );
       } else {
         console.error(`[@component:EdgeEditDialog] Server route returned error:`, result.error);
         setActionsError(result.error || 'Failed to load actions');
@@ -159,23 +137,30 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   const isFormValid = () => {
-    return edgeForm?.actions?.every(action => 
-      !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim())
-    ) ?? true;
+    return (
+      edgeForm?.actions?.every(
+        (action) =>
+          !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim()),
+      ) ?? true
+    );
   };
 
   const handleRunActions = async () => {
     if (!edgeForm?.actions || edgeForm.actions.length === 0) return;
-    
+
     if (isRunningActions) {
-      console.log('[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request');
+      console.log(
+        '[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request',
+      );
       return;
     }
-    
+
     setIsRunningActions(true);
     setActionResult(null);
-    console.log(`[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`);
-    
+    console.log(
+      `[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`,
+    );
+
     try {
       const result = await executeEdgeActions(
         edgeForm.actions,
@@ -184,18 +169,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         undefined,
         edgeForm?.finalWaitTime,
         edgeForm?.retryActions,
-        undefined
+        undefined,
       );
-      
+
       // Update the edge form with the updated actions
-      setEdgeForm(prev => ({
+      setEdgeForm((prev) => ({
         ...prev,
         actions: result.updatedActions,
-        retryActions: result.updatedRetryActions || prev?.retryActions || []
+        retryActions: result.updatedRetryActions || prev?.retryActions || [],
       }));
-      
+
       setActionResult(result.results.join('\n'));
-      
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);
       setActionResult(`❌ ${err.message}`);
@@ -206,9 +190,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        Edit Navigation Actions
-      </DialogTitle>
+      <DialogTitle>Edit Navigation Actions</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -229,7 +211,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               size="small"
             />
           </Box>
-          
+
           <TextField
             label="Edge Description"
             value={edgeForm?.description || ''}
@@ -237,28 +219,37 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             fullWidth
             size="small"
           />
-          
+
           <EdgeActionsList
             actions={edgeForm?.actions || []}
             retryActions={edgeForm?.retryActions || []}
             finalWaitTime={edgeForm?.finalWaitTime}
             availableActions={controllerActions}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
-            onRetryActionsChange={(newRetryActions) => setEdgeForm({ ...edgeForm, retryActions: newRetryActions })}
+            onRetryActionsChange={(newRetryActions) =>
+              setEdgeForm({ ...edgeForm, retryActions: newRetryActions })
+            }
             onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
           />
 
           {actionResult && (
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: actionResult.includes('❌ OVERALL RESULT: FAILED') ? 'error.light' : 
-                       actionResult.includes('✅ OVERALL RESULT: SUCCESS') ? 'success.light' :
-                       actionResult.includes('❌') && !actionResult.includes('✅') ? 'error.light' : 
-                       actionResult.includes('⚠️') ? 'warning.light' : 'success.light', 
-              borderRadius: 1,
-              maxHeight: 200,
-              overflow: 'auto'
-            }}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: actionResult.includes('❌ OVERALL RESULT: FAILED')
+                  ? 'error.light'
+                  : actionResult.includes('✅ OVERALL RESULT: SUCCESS')
+                    ? 'success.light'
+                    : actionResult.includes('❌') && !actionResult.includes('✅')
+                      ? 'error.light'
+                      : actionResult.includes('⚠️')
+                        ? 'warning.light'
+                        : 'success.light',
+                borderRadius: 1,
+                maxHeight: 200,
+                overflow: 'auto',
+              }}
+            >
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
                 {actionResult}
               </Typography>
@@ -268,15 +259,11 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button 
-          onClick={() => onSubmit(edgeForm)} 
-          variant="contained"
-          disabled={!isFormValid()}
-        >
+        <Button onClick={() => onSubmit(edgeForm)} variant="contained" disabled={!isFormValid()}>
           Save
         </Button>
-        <Button 
-          onClick={handleRunActions} 
+        <Button
+          onClick={handleRunActions}
           variant="contained"
           disabled={!canRunActions}
           sx={{ opacity: !canRunActions ? 0.5 : 1 }}
@@ -286,4 +273,4 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       </DialogActions>
     </Dialog>
   );
-}; 
+};

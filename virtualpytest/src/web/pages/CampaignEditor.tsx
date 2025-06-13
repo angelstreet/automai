@@ -18,14 +18,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 // Import registration context
-import { buildServerUrl } from '../utils/frontendUtils';
-
 import { Campaign } from '../types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 const CampaignEditor: React.FC = () => {
   // Use registration context for centralized URL management

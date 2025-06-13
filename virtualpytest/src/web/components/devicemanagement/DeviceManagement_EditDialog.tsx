@@ -22,9 +22,9 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import { useControllerConfig } from '../../hooks/controller';
 import { Device, DeviceFormData, DeviceModel } from '../../types/common/Common_BaseTypes';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';
@@ -50,7 +50,6 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { validateParameters } = useControllerConfig();
-  const { buildServerUrl } = useRegistration();
 
   // Wizard state
   const [activeStep, setActiveStep] = useState(0);
@@ -111,7 +110,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     if (open) {
       fetchModels();
     }
-  }, [open, buildServerUrl]); // Added buildServerUrl to dependencies
+  }, [open]); // Removed buildServerUrl from dependencies since it's a stable import
 
   // Initialize form when device or dialog state changes
   useEffect(() => {
