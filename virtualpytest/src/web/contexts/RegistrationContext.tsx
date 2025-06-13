@@ -60,10 +60,13 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   const SERVER_BASE_URL = getServerBaseUrl();
 
   // Build server URL (always goes to main server)
-  const buildServerUrl = useCallback((endpoint: string) => {
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    return `${SERVER_BASE_URL}/${cleanEndpoint}`;
-  }, []);
+  const buildServerUrl = useCallback(
+    (endpoint: string) => {
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      return `${SERVER_BASE_URL}/${cleanEndpoint}`;
+    },
+    [SERVER_BASE_URL],
+  );
 
   // Build host URL (goes directly to specific host)
   const buildHostUrl = useCallback(
@@ -118,7 +121,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     } finally {
       setIsLoading(false);
     }
-  }, []); // FIXED: Empty dependency array to prevent infinite loop
+  }, [SERVER_BASE_URL]); // FIXED: Include SERVER_BASE_URL dependency
 
   // Build nginx URL (for host media/files)
   const buildNginxUrl = useCallback(
