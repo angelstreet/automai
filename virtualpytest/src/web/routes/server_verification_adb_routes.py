@@ -9,7 +9,7 @@ This module contains the server-side ADB verification API endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
-from src.utils.app_utils import get_host_by_model, server_buildHostUrl
+from src.utils.app_utils import get_host_by_model, buildHostUrl
 
 # Create blueprint
 verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification')
@@ -42,7 +42,7 @@ def adb_element_lists():
         print(f"[@route:adb_element_lists] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = server_buildHostUrl(host_info, '/stream/adb-element-lists')
+        host_adb_url = buildHostUrl(host_info, '/stream/adb-element-lists')
         
         adb_payload = {
             'model': model,
@@ -109,7 +109,7 @@ def adb_wait_element_appear():
         print(f"[@route:adb_wait_element_appear] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = server_buildHostUrl(host_info, '/stream/adb-wait-element-appear')
+        host_adb_url = buildHostUrl(host_info, '/stream/adb-wait-element-appear')
         
         adb_payload = {
             'search_term': search_term,
@@ -176,7 +176,7 @@ def adb_wait_element_disappear():
         print(f"[@route:adb_wait_element_disappear] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = server_buildHostUrl(host_info, '/stream/adb-wait-element-disappear')
+        host_adb_url = buildHostUrl(host_info, '/stream/adb-wait-element-disappear')
         
         adb_payload = {
             'search_term': search_term,

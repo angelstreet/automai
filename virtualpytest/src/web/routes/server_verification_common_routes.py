@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 import os
-from src.utils.app_utils import get_host_by_model, server_buildHostWebUrl, server_buildHostUrl
+from src.utils.app_utils import get_host_by_model, buildHostWebUrl, buildHostUrl
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')
@@ -150,7 +150,7 @@ def list_references():
                     'error': f'No hosts available for model: {model}'
                 }), 503
             
-            host_url = server_buildHostUrl(host_info, '/stream/references')
+            host_url = buildHostUrl(host_info, '/stream/references')
             host_response = requests.get(
                 host_url,
                 params={'model': model},
@@ -218,7 +218,7 @@ def verification_actions():
                     'error': f'No hosts available for model: {model}'
                 }), 503
             
-            host_url = server_buildHostUrl(host_info, '/stream/reference-actions')
+            host_url = buildHostUrl(host_info, '/stream/reference-actions')
             host_response = requests.post(
                 host_url,
                 json={
@@ -278,7 +278,7 @@ def verification_status():
         
         # Try to get status from host (but this endpoint might not exist yet)
         try:
-            host_url = server_buildHostUrl(host_info, '/stream/verification-status')
+            host_url = buildHostUrl(host_info, '/stream/verification-status')
             host_response = requests.get(
                 host_url,
                 timeout=30,

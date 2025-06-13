@@ -33,7 +33,7 @@ global_host_object = None
 local_controller_objects = {}
 
 # Import centralized URL building from utils
-from src.utils.app_utils import host_buildServerUrl
+from src.utils.app_utils import buildServerUrl
 
 def register_host_with_server():
     """Register this host with the server"""
@@ -75,14 +75,14 @@ def register_host_with_server():
         }
         
         # Build server URLs using standardized host URL builder system
-        registration_url = host_buildServerUrl('/server/system/register')
+        registration_url = buildServerUrl('/server/system/register')
         
         # Store URLs for later use - all built with the standardized system
         urls = {
             'register': registration_url,
-            'unregister': host_buildServerUrl('/server/system/unregister'),
-            'ping': host_buildServerUrl('/server/system/ping'),
-            'health': host_buildServerUrl('/server/system/health')
+            'unregister': buildServerUrl('/server/system/unregister'),
+            'ping': buildServerUrl('/server/system/ping'),
+            'health': buildServerUrl('/server/system/health')
         }
         
         print(f"\n📡 [HOST] Sending registration request...")

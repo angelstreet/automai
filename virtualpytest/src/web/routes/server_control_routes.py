@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 import requests
 import urllib.parse
 
-from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, server_buildHostUrl
+from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, buildHostUrl
 from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -117,10 +117,10 @@ def take_control():
             # Host doesn't need any payload - it uses its own stored host_device object
             print(f"[@route:server_take_control] Forwarding to host using standardized URL building")
             
-            # Build URL using standardized server_buildHostUrl function
-            host_url = server_buildHostUrl(host_info, '/host/take-control')
+            # Build URL using standardized buildHostUrl function
+            host_url = buildHostUrl(host_info, '/host/take-control')
             
-            print(f"[@route:server_take_control] Built URL using server_buildHostUrl: {host_url}")
+            print(f"[@route:server_take_control] Built URL using buildHostUrl: {host_url}")
             
             # Make request without payload - host uses its own stored device info
             host_response = requests.post(
@@ -198,8 +198,8 @@ def release_control():
                 try:
                     print(f"[@route:server_release_control] Calling host release control")
                     
-                    # Build URL using standardized server_buildHostUrl function
-                    host_url = server_buildHostUrl(host_info, '/host/release-control')
+                    # Build URL using standardized buildHostUrl function
+                    host_url = buildHostUrl(host_info, '/host/release-control')
                     host_response = requests.post(
                         host_url,
                         json={},  # Empty payload since host uses its own stored device info
@@ -279,7 +279,7 @@ def navigate():
             }), 404
         
         # Forward request to host using standardized URL building
-        host_url = server_buildHostUrl(host_info, f'/host/navigation/execute/{tree_id}/{target_node_id}')
+        host_url = buildHostUrl(host_info, f'/host/navigation/execute/{tree_id}/{target_node_id}')
         
         payload = {
             'current_node_id': current_node_id,

@@ -23,7 +23,7 @@ from src.controllers.controller_config_factory import (
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
     get_host_registry,
-    server_buildHostUrl
+    buildHostUrl
 )
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
@@ -409,7 +409,7 @@ def start_health_check(client_id, client_ip, client_port):
                     try:
                         # Always use URL builder from registry data
                         host_info = connected_clients[client_id]
-                        health_url = server_buildHostUrl(host_info, "/server/system/health")
+                        health_url = buildHostUrl(host_info, "/server/system/health")
                         
                         response = requests.get(health_url, timeout=5)
                         if response.status_code == 200:

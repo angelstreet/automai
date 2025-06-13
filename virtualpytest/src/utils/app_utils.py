@@ -229,25 +229,7 @@ DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
 # URL BUILDER FUNCTIONS (Standardized - Only 3 Functions)
 # =====================================================
 
-def vite_buildServerUrl(endpoint: str) -> str:
-    """
-    Frontend URL builder - Build URLs for server endpoints using VITE environment
-    
-    Args:
-        endpoint: The endpoint path to append
-        
-    Returns:
-        Complete URL to the server endpoint for frontend use
-    """
-    # Frontend uses VITE_SERVER_URL environment variable
-    server_url = os.getenv('VITE_SERVER_URL', 'http://localhost:5109')
-    
-    # Clean endpoint
-    clean_endpoint = endpoint.lstrip('/')
-    
-    return f"{server_url}/{clean_endpoint}"
-
-def server_buildHostUrl(host_info: dict, endpoint: str) -> str:
+def buildHostUrl(host_info: dict, endpoint: str) -> str:
     """
     Server URL builder - Build URLs for host API endpoints using host registry data
     
@@ -259,7 +241,7 @@ def server_buildHostUrl(host_info: dict, endpoint: str) -> str:
         Complete URL to the host API endpoint
     """
     if not host_info:
-        raise ValueError("host_info is required for server_buildHostUrl")
+        raise ValueError("host_info is required for buildHostUrl")
     
     # Use host_url from registry (contains full base URL like http://host:6109)
     host_base_url = host_info.get('host_url')
@@ -271,7 +253,7 @@ def server_buildHostUrl(host_info: dict, endpoint: str) -> str:
     
     return f"{host_base_url}/{clean_endpoint}"
 
-def server_buildHostWebUrl(host_info: dict, path: str) -> str:
+def buildHostWebUrl(host_info: dict, path: str) -> str:
     """
     Server URL builder - Build URLs for host web/nginx endpoints using host registry data
     
@@ -283,7 +265,7 @@ def server_buildHostWebUrl(host_info: dict, path: str) -> str:
         Complete URL to the host web resource
     """
     if not host_info:
-        raise ValueError("host_info is required for server_buildHostWebUrl")
+        raise ValueError("host_info is required for buildHostWebUrl")
     
     # Use host_url from registry and modify for web access
     host_base_url = host_info.get('host_url')
@@ -296,7 +278,7 @@ def server_buildHostWebUrl(host_info: dict, path: str) -> str:
     
     return f"{host_base_url}/{clean_path}"
 
-def host_buildServerUrl(endpoint: str) -> str:
+def buildServerUrl(endpoint: str) -> str:
     """
     Host URL builder - Build URLs for server endpoints from host context
     

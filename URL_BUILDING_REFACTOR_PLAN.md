@@ -11,11 +11,11 @@ Consolidate all URL building into 3 simple functions in `app_utils.py` and updat
 vite_buildServerUrl(endpoint)                    # Frontend → Server API calls
 
 # Server (uses host registry data)
-server_buildHostUrl(host_info, endpoint)         # Server → Host API calls
-server_buildHostWebUrl(host_info, path)          # Server → Host nginx/web calls
+buildHostUrl(host_info, endpoint)         # Server → Host API calls
+buildHostWebUrl(host_info, path)          # Server → Host nginx/web calls
 
 # Host (uses SERVER_URL env var)
-host_buildServerUrl(endpoint)                    # Host → Server API calls
+buildServerUrl(endpoint)                    # Host → Server API calls
 ```
 
 ## Implementation Steps
@@ -34,58 +34,58 @@ host_buildServerUrl(endpoint)                    # Host → Server API calls
   - [x] Remove `buildHostUrl` and `buildHostWebUrl` (frontend only calls server)
   - [x] Update all URL building calls
 
-### Phase 3: Host Route Files (use `host_buildServerUrl`)
+### Phase 3: Host Route Files (use `buildServerUrl`)
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_av_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_control_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_remote_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_verification_adb_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_verification_execution_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_verification_image_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_verification_routes.py`
 
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/host_verification_text_routes.py`
-  - [ ] Replace manual URL building with `host_buildServerUrl()`
+  - [ ] Replace manual URL building with `buildServerUrl()`
   - [ ] Update imports
 
-### Phase 4: Server Route Files (use `server_buildHostUrl` and `server_buildHostWebUrl`)
+### Phase 4: Server Route Files (use `buildHostUrl` and `buildHostWebUrl`)
 
 - [x] **File**: `virtualpytest/src/web/routes/server_control_routes.py`
 
-  - [x] Replace manual URL building with `server_buildHostUrl(host_info, endpoint)`
+  - [x] Replace manual URL building with `buildHostUrl(host_info, endpoint)`
   - [x] Update imports
   - [x] **Priority**: HIGH (this fixes the current None:None error)
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_remote_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl(host_info, endpoint)`
+  - [ ] Replace manual URL building with `buildHostUrl(host_info, endpoint)`
   - [ ] Update imports
 
 - [x] **File**: `virtualpytest/src/web/routes/server_verification_common_routes.py`
@@ -100,76 +100,76 @@ host_buildServerUrl(endpoint)                    # Host → Server API calls
 
 - [x] **File**: `virtualpytest/src/web/routes/server_verification_image_routes.py`
 
-  - [x] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [x] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [x] Update imports
 
 - [x] **File**: `virtualpytest/src/web/routes/server_verification_text_routes.py`
 
-  - [x] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [x] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [x] Update imports
 
 - [x] **File**: `virtualpytest/src/web/routes/server_verification_adb_routes.py`
 
-  - [x] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [x] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [x] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_campaign_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_device_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_devicemodel_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_navigation_config_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_navigation_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_pathfinding_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_power_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_screen_definition_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [x] **File**: `virtualpytest/src/web/routes/server_system_routes.py`
 
-  - [x] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [x] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [x] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_testcase_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_userinterface_routes.py`
 
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 - [ ] **File**: `virtualpytest/src/web/routes/server_validation_routes.py`
-  - [ ] Replace manual URL building with `server_buildHostUrl` and `server_buildHostWebUrl`
+  - [ ] Replace manual URL building with `buildHostUrl` and `buildHostWebUrl`
   - [ ] Update imports
 
 ### Phase 5: Common/Utility Files
@@ -180,7 +180,7 @@ host_buildServerUrl(endpoint)                    # Host → Server API calls
   - [ ] Update imports
 
 - [x] **File**: `virtualpytest/src/utils/host_utils.py`
-  - [x] Replace `buildServerUrl` with `host_buildServerUrl`
+  - [x] Replace `buildServerUrl` with `buildServerUrl`
   - [x] Update imports
 
 ### Phase 6: Verification & Cleanup
@@ -203,7 +203,7 @@ url = f"http://localhost:5109/server/endpoint"
 url = buildServerUrl('/server/endpoint')
 
 # ✅ NEW
-url = host_buildServerUrl('/server/endpoint')
+url = buildServerUrl('/server/endpoint')
 ```
 
 ### In Server Routes:
@@ -215,7 +215,7 @@ host_port = host_info.get('host_port_external')
 url = f"http://{host_ip}:{host_port}/host/endpoint"
 
 # ✅ NEW
-url = server_buildHostUrl(host_info, '/host/endpoint')
+url = buildHostUrl(host_info, '/host/endpoint')
 ```
 
 ### In Frontend:

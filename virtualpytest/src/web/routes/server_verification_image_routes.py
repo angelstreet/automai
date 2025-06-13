@@ -10,7 +10,7 @@ This module contains the server-side image verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, server_buildHostUrl, server_buildHostWebUrl
+from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostWebUrl
 
 # Create blueprint
 verification_image_server_bp = Blueprint('verification_image_server', __name__, url_prefix='/server/verification')
@@ -54,7 +54,7 @@ def capture_reference_image():
         print(f"[@route:capture_reference_image] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_crop_url = server_buildHostUrl(host_info, '/stream/crop-area')
+        host_crop_url = buildHostUrl(host_info, '/stream/crop-area')
         
         crop_payload = {
             'source_filename': source_filename,
@@ -73,7 +73,7 @@ def capture_reference_image():
                 print(f"[@route:capture_reference_image] Host crop successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = server_buildHostWebUrl(host_info, cropped_path)
+                full_image_url = buildHostWebUrl(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -144,7 +144,7 @@ def process_area_reference():
         print(f"[@route:process_area_reference] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_process_url = server_buildHostUrl(host_info, '/stream/process-area')
+        host_process_url = buildHostUrl(host_info, '/stream/process-area')
         
         process_payload = {
             'source_filename': source_filename,
@@ -166,7 +166,7 @@ def process_area_reference():
                 print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
                 
                 # Convert relative path to full nginx-exposed URL
-                full_image_url = server_buildHostWebUrl(host_info, cropped_path)
+                full_image_url = buildHostWebUrl(host_info, cropped_path)
                 
                 # Extract the actual filename for later save operations
                 cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
@@ -248,7 +248,7 @@ def save_reference():
         print(f"[@route:save_reference] Using registered host: {host_info.get('host_name', 'unknown')}, cropped filename: {cropped_filename}")
         
         # Use pre-built URL from host registry
-        host_save_url = server_buildHostUrl(host_info, '/stream/save-resource')
+        host_save_url = buildHostUrl(host_info, '/stream/save-resource')
         
         save_payload = {
             'name': reference_name,
@@ -267,7 +267,7 @@ def save_reference():
                 print(f"[@route:save_reference] Host save successful: {public_url}")
                 
                 # Use pre-built nginx URL from host registry
-                full_public_url = server_buildHostWebUrl(host_info, public_url)
+                full_public_url = buildHostWebUrl(host_info, public_url)
                 
                 return jsonify({
                     'success': True,
@@ -329,7 +329,7 @@ def ensure_reference_stream_availability():
         print(f"[@route:ensure_reference_availability] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        ensure_url = server_buildHostUrl(host_info, '/stream/ensure-reference-availability')
+        ensure_url = buildHostUrl(host_info, '/stream/ensure-reference-availability')
         
         # Forward request to host
         host_response = requests.post(
