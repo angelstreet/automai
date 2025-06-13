@@ -1,5 +1,5 @@
-import { LayoutConfig, DeviceResolution } from '../types/screenEditorTypes';
-import { getVerificationEditorLayout } from "../../config/layoutConfig";
+import { LayoutConfig, DeviceResolution } from '../../types/screenEditorTypes';
+import { getVerificationEditorLayout } from '../../config/layoutConfig';
 
 /**
  * Creates layout configuration for compact view based on device model
@@ -48,7 +48,7 @@ export const formatRecordingTime = (seconds: number): string => {
  */
 export const calculateExpectedFrames = (startTime: Date | null, endTime: Date): number => {
   if (!startTime) return 0;
-  
+
   const durationMs = endTime.getTime() - startTime.getTime();
   const durationSeconds = Math.floor(durationMs / 1000);
   return Math.max(1, durationSeconds); // At least 1 frame
@@ -60,7 +60,7 @@ export const calculateExpectedFrames = (startTime: Date | null, endTime: Date): 
 export const createStreamViewerSx = (viewMode: string) => ({
   width: '100%',
   height: '100%',
-  display: viewMode === 'stream' ? 'block' : 'none'
+  display: viewMode === 'stream' ? 'block' : 'none',
 });
 
 /**
@@ -85,6 +85,6 @@ export const createBaseContainerStyles = () => ({
   msUserSelect: 'none' as const,
   '& @keyframes blink': {
     '0%, 50%': { opacity: 1 },
-    '51%, 100%': { opacity: 0.3 }
-  }
-}); 
+    '51%, 100%': { opacity: 0.3 },
+  },
+});
