@@ -2,6 +2,7 @@ import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 
 import { useRegistration } from '../../contexts/RegistrationContext';
+import { useDeviceControl } from '../../hooks/useDeviceControl';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -66,7 +67,16 @@ export const NavigationEditorHeader: React.FC<{
   onUpdateEdge,
 }) => {
   // Get host data from RegistrationContext
-  const { availableHosts, isDeviceLocked } = useRegistration();
+  const { availableHosts } = useRegistration();
+
+  // Get device control functions
+  const { isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+
+  // Create adapter function to match expected signature (hostName -> boolean)
+  const isDeviceLocked = (hostName: string): boolean => {
+    const host = availableHosts.find((h) => h.host_name === hostName) || null;
+    return isDeviceLockedByHost(host);
+  };
 
   return (
     <>

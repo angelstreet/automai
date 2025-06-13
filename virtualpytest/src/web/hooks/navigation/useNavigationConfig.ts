@@ -1,15 +1,13 @@
 import { useState, useCallback } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import {
   UINavigationNode,
   UINavigationEdge,
   NavigationConfigState,
 } from '../../types/pages/Navigation_Types';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 export const useNavigationConfig = (state: NavigationConfigState) => {
-  const { buildServerUrl } = useRegistration();
-
   // Note: Using buildServerUrl instead of relative URLs to avoid CORS issues
   // This routes through the proper server URL configuration
 
@@ -32,11 +30,14 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
   const [showReadOnlyOverlay, setShowReadOnlyOverlay] = useState(false); // Only true when definitively locked by someone else
 
   // Helper function to check if a lock belongs to our session
-  const isOurLock = useCallback((lockInfo: any): boolean => {
-    if (!lockInfo) return false;
-    const lockSession = lockInfo.session_id || lockInfo.locked_by;
-    return lockSession === sessionId;
-  }, []);
+  const isOurLock = useCallback(
+    (lockInfo: any): boolean => {
+      if (!lockInfo) return false;
+      const lockSession = lockInfo.session_id || lockInfo.locked_by;
+      return lockSession === sessionId;
+    },
+    [sessionId],
+  );
 
   // Set checking lock state immediately (fixes race condition)
   const setCheckingLockState = useCallback((checking: boolean) => {
@@ -124,7 +125,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsCheckingLock(false);
       }
     },
-    [buildServerUrl],
+    [isOurLock, sessionId],
   );
 
   // Unlock a navigation tree
@@ -175,7 +176,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         return false;
       }
     },
-    [buildServerUrl],
+    [sessionId],
   );
 
   // Load tree from config file
@@ -262,7 +263,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsCheckingLock(false); // Ensure lock check is marked complete even on error
       }
     },
-    [state, buildServerUrl],
+    [state, isOurLock],
   );
 
   // Save tree to config file
@@ -331,7 +332,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         state.setIsSaving(false);
       }
     },
-    [state, buildServerUrl],
+    [state, sessionId],
   );
 
   // List available navigation trees
@@ -363,7 +364,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
       console.error(`[@hook:useNavigationConfig:listAvailableTrees] Error listing trees:`, error);
       return [];
     }
-  }, [buildServerUrl]);
+  }, []);
 
   // Check if tree is locked by another session
   const checkTreeLockStatus = useCallback(
@@ -402,7 +403,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         return { isLocked: false, lockInfo: null, isLockedByCurrentSession: false };
       }
     },
-    [buildServerUrl],
+    [sessionId],
   );
 
   // Create an empty tree structure
@@ -452,7 +453,7 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     },
-    [isLocked, buildServerUrl],
+    [isLocked, sessionId],
   );
 
   return {
