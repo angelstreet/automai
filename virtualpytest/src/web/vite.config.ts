@@ -34,6 +34,12 @@ const registeredRoutes = [
 ];
 
 export default defineConfig({
+  // Disable HMR client injection when using HTTPS
+  define: shouldUseHttps
+    ? {
+        'import.meta.hot': 'false',
+      }
+    : {},
   plugins: [
     react(),
     // Custom plugin for route validation
@@ -101,8 +107,8 @@ export default defineConfig({
           }
         : undefined // Let Vite generate self-signed certificates
       : undefined, // No HTTPS
-    // Configure HMR WebSocket for auto-refresh (only for HTTP development)
-    hmr: shouldUseHttps ? false : { port: 5073 },
+    // Disable HMR completely when using HTTPS to prevent WebSocket connection attempts
+    hmr: !shouldUseHttps,
     // Configure how the dev server handles routing
     fs: {
       strict: false,
