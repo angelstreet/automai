@@ -29,6 +29,8 @@ interface AndroidMobileRemoteProps {
   panelWidth: string;
   panelHeight: string;
   deviceResolution: { width: number; height: number };
+  // Stream expanded state for overlay coordination
+  streamExpanded?: boolean;
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -40,6 +42,7 @@ export const AndroidMobileRemote = React.memo(
     panelWidth,
     panelHeight,
     deviceResolution,
+    streamExpanded,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -90,11 +93,12 @@ export const AndroidMobileRemote = React.memo(
         panelWidth,
         panelHeight,
         deviceResolution,
+        streamExpanded,
       });
 
-      // Get HDMI stream dimensions from config based on panel state
+      // Get HDMI stream dimensions from config based on stream expanded state (not panel state)
       const streamConfig = hdmiStreamMobileConfig.panel_layout;
-      const currentStreamConfig = isCollapsed ? streamConfig.collapsed : streamConfig.expanded;
+      const currentStreamConfig = streamExpanded ? streamConfig.expanded : streamConfig.collapsed;
 
       // Parse dimensions from config
       const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
@@ -141,7 +145,7 @@ export const AndroidMobileRemote = React.memo(
       };
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
       return info;
-    }, [isCollapsed, panelWidth, panelHeight, deviceResolution]);
+    }, [isCollapsed, panelWidth, panelHeight, deviceResolution, streamExpanded]);
 
     // Use remote configs for panel tap functionality
     // Create temporary adapter for compatibility with useRemoteConfigs
@@ -579,7 +583,8 @@ export const AndroidMobileRemote = React.memo(
       prevProps.isCollapsed === nextProps.isCollapsed &&
       prevProps.panelWidth === nextProps.panelWidth &&
       prevProps.panelHeight === nextProps.panelHeight &&
-      JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution)
+      JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
+      prevProps.streamExpanded === nextProps.streamExpanded
     );
   },
 );

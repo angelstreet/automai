@@ -215,7 +215,12 @@ const NavigationEditorContent: React.FC = () => {
   const lastLoadedTreeId = useRef<string | null>(null);
 
   // Track AV panel expanded state
-  const [_isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
+  const [isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
+
+  // Memoize the AV panel expanded change handler to prevent infinite loops
+  const handleAVPanelExpandedChange = useCallback((isExpanded: boolean) => {
+    setIsAVPanelExpanded(isExpanded);
+  }, []);
 
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
@@ -565,14 +570,18 @@ const NavigationEditorContent: React.FC = () => {
 
       {/* Autonomous Panels - Now self-positioning with configurable layouts */}
       {showRemotePanel && selectedHost && (
-        <RemotePanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
+        <RemotePanel
+          host={selectedHost}
+          onReleaseControl={handleDisconnectComplete}
+          streamExpanded={isAVPanelExpanded}
+        />
       )}
 
       {showAVPanel && selectedHost && (
         <HDMIStream
           host={selectedHost}
           onDisconnectComplete={handleDisconnectComplete}
-          onExpandedChange={setIsAVPanelExpanded}
+          onExpandedChange={handleAVPanelExpandedChange}
         />
       )}
 
