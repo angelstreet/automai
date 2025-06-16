@@ -68,10 +68,10 @@ def _register_server_routes(app):
         ('server_userinterface_routes', 'userinterface_bp'),  # ✅ Unified naming
         ('server_devicemodel_routes', 'devicemodel_bp'),  # ✅ Unified naming
         ('server_verification_common_routes', 'verification_common_bp'),
-        ('server_verification_image_routes', 'verification_image_server_bp'),
-        ('server_verification_text_routes', 'verification_text_server_bp'),
+        ('server_verification_image_routes', 'verification_av_image_bp'),
+        ('server_verification_text_routes', 'verification_av_text_bp'),
         ('server_verification_adb_routes', 'verification_adb_server_bp'),
-        ('server_verification_execution_routes', 'verification_execution_server_bp'),
+        ('server_verification_execution_routes', 'verification_av_execution_bp'),
         ('server_control_routes', 'control_bp'),  # ✅ Unified naming
         ('server_system_routes', 'system_bp'),
     ]
@@ -98,10 +98,12 @@ def _register_host_routes(app):
     print("📋 Loading ALL host-specific routes...")
     
     host_route_modules = [
-        ('host_verification_image_routes', 'verification_image_host_bp'),
-        ('host_verification_text_routes', 'verification_text_host_bp'),
+        ('host_verification_routes', 'verification_host_bp'),
         ('host_verification_adb_routes', 'verification_adb_host_bp'),
-        ('host_verification_execution_routes', 'verification_execution_host_bp'),
+        # TODO: Update these files to match new controller-based pattern
+        # ('host_verification_image_routes', 'verification_image_host_bp'),
+        # ('host_verification_text_routes', 'verification_text_host_bp'),
+        # ('host_verification_execution_routes', 'verification_execution_host_bp'),
         ('host_control_routes', 'control_bp'),  # ✅ Unified naming
         ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
         ('host_av_routes', 'av_bp'),  # ✅ Unified naming
