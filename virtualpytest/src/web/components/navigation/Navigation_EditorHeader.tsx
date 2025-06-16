@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useRegistration } from '../../hooks/useRegistration';
+import { useToast } from '../../hooks/useToast';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -70,7 +71,10 @@ export const NavigationEditorHeader: React.FC<{
   const { availableHosts } = useRegistration();
 
   // Get device control functions
-  const { lockDevice, unlockDevice, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+  const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+
+  // Get toast notifications
+  const { showError, showSuccess, showWarning } = useToast();
 
   // Local state for control loading
   const [isControlLoading, setIsControlLoading] = useState(false);
@@ -81,48 +85,81 @@ export const NavigationEditorHeader: React.FC<{
     return isDeviceLockedByHost(host);
   };
 
-  // Handle take control with proper device locking
+  // Handle take control using hook's business logic
   const handleTakeControl = useCallback(async () => {
     if (!selectedDevice) {
       console.warn('[@component:NavigationEditorHeader] No device selected for take control');
+      showWarning('Please select a device first');
       return;
     }
 
-    console.log(`[@component:NavigationEditorHeader] Taking control of device: ${selectedDevice}`);
+    console.log(
+      `[@component:NavigationEditorHeader] ${isControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedDevice}`,
+    );
     setIsControlLoading(true);
 
     try {
-      if (!isControlActive) {
-        // Take control using device control hook (handles locked_by_same_user)
-        const lockSuccess = await lockDevice(selectedDevice, 'navigation-editor-session');
+      if (isControlActive) {
+        // Release control using hook
+        const result = await releaseControl(selectedDevice, 'navigation-editor-session');
 
-        if (lockSuccess) {
-          console.log(`[@component:NavigationEditorHeader] Control taken successfully`);
-          onControlStateChange(true);
+        if (result.success) {
+          console.log(
+            `[@component:NavigationEditorHeader] Successfully released control of device: ${selectedDevice}`,
+          );
+          showSuccess(`Successfully released control of ${selectedDevice}`);
+          onControlStateChange(false);
         } else {
-          console.error(`[@component:NavigationEditorHeader] Failed to take control`);
+          console.error(`[@component:NavigationEditorHeader] Failed to release control:`, result);
+          showError(result.error || 'Failed to release control of device');
+          onControlStateChange(false);
         }
       } else {
-        // Release control
-        const unlockSuccess = await unlockDevice(selectedDevice, 'navigation-editor-session');
+        // Take control using hook
+        const result = await takeControl(selectedDevice, 'navigation-editor-session');
 
-        if (unlockSuccess) {
-          console.log(`[@component:NavigationEditorHeader] Control released successfully`);
-        } else {
-          console.warn(
-            `[@component:NavigationEditorHeader] Failed to release control, but continuing with UI cleanup`,
+        if (result.success) {
+          console.log(
+            `[@component:NavigationEditorHeader] Successfully took control of device: ${selectedDevice}`,
           );
-        }
+          showSuccess(`Successfully took control of ${selectedDevice}`);
+          onControlStateChange(true);
+        } else {
+          console.error(`[@component:NavigationEditorHeader] Failed to take control:`, result);
 
-        onControlStateChange(false);
+          // Handle specific error types with appropriate toast duration
+          if (
+            result.errorType === 'stream_service_error' ||
+            result.errorType === 'adb_connection_error'
+          ) {
+            showError(result.error || 'Service error occurred', { duration: 6000 });
+          } else {
+            showError(result.error || 'Failed to take control of device');
+          }
+
+          onControlStateChange(false);
+        }
       }
-    } catch (error) {
-      console.error('[@component:NavigationEditorHeader] Error during take control:', error);
-      onControlStateChange(false);
+    } catch (error: any) {
+      console.error(
+        '[@component:NavigationEditorHeader] Exception during control operation:',
+        error,
+      );
+      showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
+      logic in hookonControlStateChange(false);
     } finally {
       setIsControlLoading(false);
     }
-  }, [selectedDevice, isControlActive, lockDevice, unlockDevice, onControlStateChange]);
+  }, [
+    selectedDevice,
+    isControlActive,
+    takeControl,
+    releaseControl,
+    onControlStateChange,
+    showError,
+    showSuccess,
+    showWarning,
+  ]);
 
   return (
     <>

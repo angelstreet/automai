@@ -43,7 +43,7 @@ export const useDeviceControl = () => {
       activeLocks.forEach(async (sessionId, hostName) => {
         try {
           console.log(`[@hook:useDeviceControl] Cleaning up lock for ${hostName} on unmount`);
-          await unlockDevice(hostName, sessionId);
+          await releaseControl(hostName, sessionId);
         } catch (error) {
           console.error(`[@hook:useDeviceControl] Error cleaning up lock for ${hostName}:`, error);
         }
@@ -51,12 +51,26 @@ export const useDeviceControl = () => {
     };
   }, []);
 
-  // Lock device via server control endpoint
-  const lockDevice = useCallback(
-    async (hostName: string, sessionId?: string): Promise<boolean> => {
+  // Take control via server control endpoint with comprehensive error handling
+  const takeControl = useCallback(
+    async (
+      hostName: string,
+      sessionId?: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+      errorType?:
+        | 'stream_service_error'
+        | 'adb_connection_error'
+        | 'device_locked'
+        | 'device_not_found'
+        | 'network_error'
+        | 'generic_error';
+      details?: any;
+    }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
-        console.log(`[@hook:useDeviceControl] Attempting to lock device: ${hostName}`);
+        console.log(`[@hook:useDeviceControl] Taking control of device: ${hostName}`);
 
         const response = await fetch(buildServerUrl('/server/control/take-control'), {
           method: 'POST',
@@ -76,43 +90,74 @@ export const useDeviceControl = () => {
           console.log(`[@hook:useDeviceControl] Successfully took control of device: ${hostName}`);
           // Track this lock
           setActiveLocks((prev) => new Map(prev).set(hostName, effectiveSessionId));
-          return true;
+          return { success: true };
         } else {
-          // Check if it's locked by same user - if so, try to reacquire
-          if (response.status === 409 && result.locked_by_same_user) {
+          // Handle specific error cases
+          console.error(`[@hook:useDeviceControl] Failed to take control:`, result);
+
+          let errorType: any = 'generic_error';
+          let errorMessage = result.error || 'Failed to take control of device';
+
+          if (result.error_type === 'stream_service_error') {
+            errorType = 'stream_service_error';
+            errorMessage = `AV Stream Error: ${result.error}`;
+          } else if (result.error_type === 'adb_connection_error') {
+            errorType = 'adb_connection_error';
+            errorMessage = `Remote Connection Error: ${result.error}`;
+          } else if (result.status === 'device_locked') {
+            errorType = 'device_locked';
+            errorMessage = `Device is locked by ${result.locked_by || 'another user'}`;
+          } else if (result.status === 'device_not_found') {
+            errorType = 'device_not_found';
+            errorMessage = `Device ${hostName} not found or offline`;
+          } else if (response.status === 409 && result.locked_by_same_user) {
+            // Special case: locked by same user - treat as success
             console.log(
               `[@hook:useDeviceControl] Device ${hostName} locked by same user, treating as success`,
             );
             setActiveLocks((prev) => new Map(prev).set(hostName, effectiveSessionId));
-            return true;
+            return { success: true };
           }
 
-          console.error(
-            `[@hook:useDeviceControl] Server failed to take control of device: ${result.error}`,
-          );
-          return false;
+          return {
+            success: false,
+            error: errorMessage,
+            errorType,
+            details: result,
+          };
         }
       } catch (error: any) {
         console.error(
-          `[@hook:useDeviceControl] Error taking control of device ${hostName}:`,
+          `[@hook:useDeviceControl] Exception taking control of device ${hostName}:`,
           error,
         );
-        return false;
+        return {
+          success: false,
+          error: `Network error: ${error.message || 'Failed to communicate with server'}`,
+          errorType: 'network_error',
+          details: error,
+        };
       }
     },
     [browserSessionId, userId],
   );
 
-  // Unlock device via server control endpoint
-  const unlockDevice = useCallback(
-    async (hostName: string, sessionId?: string): Promise<boolean> => {
+  // Release control via server control endpoint
+  const releaseControl = useCallback(
+    async (
+      hostName: string,
+      sessionId?: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+      errorType?: 'network_error' | 'generic_error';
+      details?: any;
+    }> => {
       try {
         // Use provided session ID, or the one we used to lock this device, or browser session ID
         const effectiveSessionId = sessionId || activeLocks.get(hostName) || browserSessionId;
 
-        console.log(
-          `[@hook:useDeviceControl] Attempting to release control of device: ${hostName}`,
-        );
+        console.log(`[@hook:useDeviceControl] Releasing control of device: ${hostName}`);
 
         const response = await fetch(buildServerUrl('/server/control/release-control'), {
           method: 'POST',
@@ -142,22 +187,49 @@ export const useDeviceControl = () => {
             newMap.delete(hostName);
             return newMap;
           });
-          return true;
+          return { success: true };
         } else {
           console.error(
             `[@hook:useDeviceControl] Server failed to release control of device: ${result.error}`,
           );
-          return false;
+          return {
+            success: false,
+            error: result.error || 'Failed to release control of device',
+            errorType: 'generic_error',
+            details: result,
+          };
         }
       } catch (error: any) {
         console.error(
-          `[@hook:useDeviceControl] Error releasing control of device ${hostName}:`,
+          `[@hook:useDeviceControl] Exception releasing control of device ${hostName}:`,
           error,
         );
-        return false;
+        return {
+          success: false,
+          error: `Network error: ${error.message || 'Failed to communicate with server'}`,
+          errorType: 'network_error',
+          details: error,
+        };
       }
     },
     [activeLocks, browserSessionId, userId],
+  );
+
+  // Legacy methods for backward compatibility
+  const lockDevice = useCallback(
+    async (hostName: string, sessionId?: string): Promise<boolean> => {
+      const result = await takeControl(hostName, sessionId);
+      return result.success;
+    },
+    [takeControl],
+  );
+
+  const unlockDevice = useCallback(
+    async (hostName: string, sessionId?: string): Promise<boolean> => {
+      const result = await releaseControl(hostName, sessionId);
+      return result.success;
+    },
+    [releaseControl],
   );
 
   // Check if device is locked (based on host data)
@@ -172,8 +244,15 @@ export const useDeviceControl = () => {
   }, []);
 
   return {
+    // New methods with detailed error handling
+    takeControl,
+    releaseControl,
+
+    // Legacy methods for backward compatibility
     lockDevice,
     unlockDevice,
+
+    // Status checking methods
     isDeviceLocked,
     canLockDevice,
   };
