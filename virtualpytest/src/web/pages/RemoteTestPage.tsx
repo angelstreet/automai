@@ -169,11 +169,17 @@ export default function RemoteTestPage() {
       <Box sx={{ position: 'relative', minHeight: '600px' }}>
         {/* Remote Panel */}
         {selectedHost.controller_configs?.remote && (
-          <RemotePanel host={selectedHost} initialCollapsed={true} />
+          <RemotePanel
+            host={selectedHost}
+            initialCollapsed={true}
+            deviceResolution={{ width: 1920, height: 1080 }}
+          />
         )}
 
         {/* AV Stream */}
-        {selectedHost.controller_configs?.av && <HDMIStream host={selectedHost} />}
+        {selectedHost.controller_configs?.av && (
+          <HDMIStream host={selectedHost} deviceResolution={{ width: 1920, height: 1080 }} />
+        )}
 
         {/* Center message */}
         <Box

@@ -275,7 +275,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                   collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
                   expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
                   expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={streamInfo?.resolution}
+                  deviceResolution={{ width: 1920, height: 1080 }}
                 />
               ) : remoteConfig.type === 'ir_remote' ? (
                 <RemotePanel
@@ -285,7 +285,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                   collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
                   expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
                   expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={streamInfo?.resolution}
+                  deviceResolution={{ width: 1920, height: 1080 }}
                 />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
                 <RemotePanel
@@ -295,7 +295,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                   collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
                   expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
                   expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={streamInfo?.resolution}
+                  deviceResolution={{ width: 1920, height: 1080 }}
                 />
               ) : (
                 <Box sx={{ p: 2, textAlign: 'center' }}>

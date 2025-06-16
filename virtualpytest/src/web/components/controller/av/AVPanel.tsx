@@ -14,6 +14,10 @@ export function AVPanel({ host, onExpandedChange }: AVPanelProps) {
   console.log(`[@component:AVPanel] Rendering AV panel for device: ${host.device_model}`);
   console.log(`[@component:AVPanel] Controller config:`, host.controller_configs);
 
+  // Hardcoded default device resolution
+  const defaultDeviceResolution = { width: 1920, height: 1080 };
+  console.log(`[@component:AVPanel] Using default device resolution:`, defaultDeviceResolution);
+
   // Simple controller config detection - no loading, no fallback, no validation
   const renderAVComponent = () => {
     // Check if host has AV controller configuration
@@ -32,7 +36,13 @@ export function AVPanel({ host, onExpandedChange }: AVPanelProps) {
 
     switch (avType) {
       case 'hdmi_stream':
-        return <HDMIStream host={host} onExpandedChange={onExpandedChange} />;
+        return (
+          <HDMIStream 
+            host={host} 
+            onExpandedChange={onExpandedChange}
+            deviceResolution={defaultDeviceResolution}
+          />
+        );
       default:
         return (
           <Box sx={{ p: 2 }}>

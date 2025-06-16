@@ -26,6 +26,7 @@ interface HDMIStreamProps {
   host: Host;
   onDisconnectComplete?: () => void;
   onExpandedChange?: (isExpanded: boolean) => void;
+  deviceResolution?: { width: number; height: number };
   sx?: any;
 }
 
@@ -33,8 +34,12 @@ export function HDMIStream({
   host,
   onDisconnectComplete: _onDisconnectComplete,
   onExpandedChange,
+  deviceResolution,
   sx = {},
 }: HDMIStreamProps) {
+  console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
+  console.log(`[@component:HDMIStream] Device resolution:`, deviceResolution);
+
   // Stream URL fetching state
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
