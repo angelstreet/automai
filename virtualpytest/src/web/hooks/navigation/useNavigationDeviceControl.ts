@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 
+import { Host } from '../../types/common/Host_Types';
 import { useRegistration } from '../useRegistration';
 import { useToast } from '../useToast';
-import { Host } from '../../types/common/Host_Types';
 
 interface UseNavigationDeviceControlProps {
   userInterface: any;
@@ -83,7 +83,7 @@ export const useNavigationDeviceControl = ({
           `[@hook:useNavigationDeviceControl] Taking control of host: ${selectedHost?.host_name}`,
         );
 
-        // STEP 1: Take control using correct server route
+        // STEP 1: Take control using correct server route (with locked_by_same_user handling)
         const response = await fetch(buildServerUrl('server/control/take-control'), {
           method: 'POST',
           headers: {
@@ -107,11 +107,28 @@ export const useNavigationDeviceControl = ({
           setIsRemotePanelOpen(true);
           console.log(`[@hook:useNavigationDeviceControl] Panels shown after successful control`);
         } else {
-          console.error(`[@hook:useNavigationDeviceControl] Failed to take control:`, result.error);
-          const errorMessage = result.error || 'Failed to take control';
-          showError(`Device Control Failed: ${errorMessage}`);
-          errorShown = true;
-          throw new Error(errorMessage);
+          // Check if it's locked by same user - if so, treat as success (handles page refresh scenario)
+          if (response.status === 409 && result.locked_by_same_user) {
+            console.log(
+              `[@hook:useNavigationDeviceControl] Device ${selectedHost.host_name} locked by same user, treating as success`,
+            );
+
+            // STEP 2: Show panels after successful reclaim
+            setIsControlActive(true);
+            setShowRemotePanel(true);
+            setShowAVPanel(true);
+            setIsRemotePanelOpen(true);
+            console.log(`[@hook:useNavigationDeviceControl] Panels shown after successful reclaim`);
+          } else {
+            console.error(
+              `[@hook:useNavigationDeviceControl] Failed to take control:`,
+              result.error,
+            );
+            const errorMessage = result.error || 'Failed to take control';
+            showError(`Device Control Failed: ${errorMessage}`);
+            errorShown = true;
+            throw new Error(errorMessage);
+          }
         }
       } else {
         console.log(
@@ -156,7 +173,7 @@ export const useNavigationDeviceControl = ({
     } finally {
       setIsControlLoading(false);
     }
-  }, [selectedHost, isControlActive, buildServerUrl]);
+  }, [selectedHost, isControlActive, buildServerUrl, showError]);
 
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {

@@ -42,11 +42,35 @@ export function AndroidMobileOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const parseBounds = (bounds: { left: number; top: number; right: number; bottom: number }) => {
+    // Validate input bounds
+    if (
+      typeof bounds.left !== 'number' ||
+      typeof bounds.top !== 'number' ||
+      typeof bounds.right !== 'number' ||
+      typeof bounds.bottom !== 'number' ||
+      isNaN(bounds.left) ||
+      isNaN(bounds.top) ||
+      isNaN(bounds.right) ||
+      isNaN(bounds.bottom)
+    ) {
+      console.warn(`[@component:AndroidMobileOverlay] Invalid bounds object:`, bounds);
+      return null;
+    }
+
+    const width = bounds.right - bounds.left;
+    const height = bounds.bottom - bounds.top;
+
+    // Ensure positive dimensions
+    if (width <= 0 || height <= 0) {
+      console.warn(`[@component:AndroidMobileOverlay] Invalid dimensions: ${width}x${height}`);
+      return null;
+    }
+
     return {
       x: bounds.left,
       y: bounds.top,
-      width: bounds.right - bounds.left,
-      height: bounds.bottom - bounds.top,
+      width: width,
+      height: height,
     };
   };
 
@@ -66,7 +90,12 @@ export function AndroidMobileOverlay({
       const scaled = elements
         .map((element, index) => {
           const bounds = parseBounds(element.bounds);
-          if (!bounds) return null;
+          if (!bounds) {
+            console.warn(
+              `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
+            );
+            return null;
+          }
 
           const getElementLabel = (el: AndroidElement) => {
             if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
@@ -77,6 +106,14 @@ export function AndroidMobileOverlay({
             }
             return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
           };
+
+          // Ensure all values are valid numbers
+          if (isNaN(bounds.x) || isNaN(bounds.y) || isNaN(bounds.width) || isNaN(bounds.height)) {
+            console.warn(
+              `[@component:AndroidMobileOverlay] Invalid bounds for element ${index + 1}, skipping`,
+            );
+            return null;
+          }
 
           return {
             id: element.id,
@@ -147,7 +184,12 @@ export function AndroidMobileOverlay({
     const scaled = elements
       .map((element, index) => {
         const bounds = parseBounds(element.bounds);
-        if (!bounds) return null;
+        if (!bounds) {
+          console.warn(
+            `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
+          );
+          return null;
+        }
 
         const scaledX = bounds.x * scaleX + offsetX;
         const scaledY = bounds.y * scaleY + offsetY + MODAL_HEADER_HEIGHT_OFFSET;
@@ -168,6 +210,19 @@ export function AndroidMobileOverlay({
           }
           return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
         };
+
+        // Ensure all values are valid numbers
+        if (
+          isNaN(scaledX) ||
+          isNaN(scaledY) ||
+          isNaN(bounds.width * scaleX) ||
+          isNaN(bounds.height * scaleY)
+        ) {
+          console.warn(
+            `[@component:AndroidMobileOverlay] Invalid coordinates for element ${index + 1}, skipping`,
+          );
+          return null;
+        }
 
         return {
           id: element.id,
@@ -280,7 +335,7 @@ export function AndroidMobileOverlay({
           </div>
 
           {/* Debug coordinates for first 3 elements */}
-          {index < 3 && (
+          {index < 3 && element.x !== undefined && element.y !== undefined && (
             <div
               style={{
                 position: 'absolute',

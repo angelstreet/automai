@@ -9,7 +9,7 @@ import {
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
 
-import { useHdmiStream } from '../../../hooks/useHdmiStream';
+import { useHdmiStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 
 import {
