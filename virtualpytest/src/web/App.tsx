@@ -27,6 +27,7 @@ const TestReports = React.lazy(() => import('./pages/TestReports'));
 const UserInterface = React.lazy(() => import('./pages/UserInterface'));
 const TestCaseEditor = React.lazy(() => import('./pages/TestCaseEditor'));
 const NavigationEditor = React.lazy(() => import('./pages/NavigationEditor'));
+const RemoteTestPage = React.lazy(() => import('./pages/RemoteTestPage'));
 
 // 404 Not Found component
 const NotFound: React.FC = () => {
@@ -182,6 +183,9 @@ const App: React.FC = () => {
                     element={<NavigationEditor />}
                   />
                   <Route path="/navigation-editor/:treeName" element={<NavigationEditor />} />
+
+                  {/* Remote Testing Route */}
+                  <Route path="/remote-test" element={<RemoteTestPage />} />
 
                   {/* Catch-all route for 404 */}
                   <Route path="*" element={<NotFound />} />

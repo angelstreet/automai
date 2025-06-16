@@ -11,6 +11,7 @@ import {
   Gamepad as ControllerIcon,
   LibraryBooks as LibraryIcon,
   Memory as ModelIcon,
+  BugReport as TestingIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -96,6 +97,25 @@ const NavigationBar: React.FC = () => {
         }}
       >
         Dashboard
+      </Button>
+
+      {/* Remote Test - Simple button */}
+      <Button
+        component={Link}
+        to="/remote-test"
+        startIcon={<TestingIcon fontSize="small" />}
+        sx={{
+          color: location.pathname === '/remote-test' ? 'secondary.main' : 'inherit',
+          fontWeight: location.pathname === '/remote-test' ? 600 : 400,
+          textTransform: 'none',
+          px: 2,
+          py: 1,
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+        }}
+      >
+        Remote Test
       </Button>
 
       {/* Test Plan Dropdown */}

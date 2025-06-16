@@ -1,5 +1,7 @@
 {
-  con
+  "remote_info": {
+    "name": "Android Mobile Remote",
+    "type": "android_mobile"
   },
   "panel_layout": {
     "collapsed": {
