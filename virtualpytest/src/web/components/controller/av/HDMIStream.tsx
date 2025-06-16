@@ -44,12 +44,12 @@ export function HDMIStream({
   // Load AV config
   useEffect(() => {
     const loadConfig = async () => {
-      const config = await loadAVConfig('hdmi_stream');
+      const config = await loadAVConfig('hdmi_stream', host.device_model);
       setAvConfig(config);
     };
 
     loadConfig();
-  }, []);
+  }, [host.device_model]);
 
   // Get configurable layout from AV config
   const panelLayout = getConfigurableAVPanelLayout(host.device_model, avConfig);

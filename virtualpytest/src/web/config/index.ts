@@ -24,9 +24,10 @@ export { infraredRemoteConfig, type InfraredRemoteConfig } from './remote/infrar
 
 // AV Configurations
 export { hdmiStreamConfig, type HdmiStreamConfig } from './av/hdmiStream';
+export { hdmiStreamMobileConfig, type HdmiStreamMobileConfig } from './av/hdmiStream';
 
 // Import types for union types
-import type { HdmiStreamConfig } from './av/hdmiStream';
+import type { HdmiStreamConfig, HdmiStreamMobileConfig } from './av/hdmiStream';
 import type { AndroidMobileRemoteConfig } from './remote/androidMobileRemote';
 import type { AndroidTvRemoteConfig } from './remote/androidTvRemote';
 import type { BluetoothRemoteConfig } from './remote/bluetoothRemote';
@@ -41,6 +42,6 @@ export type RemoteConfig =
 
 export type RemoteType = RemoteConfig['remote_info']['type'];
 
-export type StreamConfig = HdmiStreamConfig;
+export type StreamConfig = HdmiStreamConfig | HdmiStreamMobileConfig;
 
 export type StreamType = StreamConfig['stream_info']['type'];

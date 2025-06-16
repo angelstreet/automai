@@ -3,6 +3,8 @@
  * Handles all AV panel positioning, sizing, and layout logic
  */
 
+import { hdmiStreamConfig, hdmiStreamMobileConfig } from './hdmiStream';
+
 // AV panel layout configuration from device config
 export interface ConfigurableAVPanelLayout {
   collapsed: {
@@ -108,32 +110,37 @@ export const getConfigurableAVPanelLayout = (
 };
 
 /**
- * Load AV configuration from JSON file
+ * Check if device model is mobile
+ * @param deviceModel The device model string
+ * @returns boolean indicating if device is mobile
+ */
+const isMobileDevice = (deviceModel: string): boolean => {
+  return deviceModel.includes('mobile') || deviceModel === 'android_mobile';
+};
+
+/**
+ * Load AV configuration based on stream type and device model
  * @param streamType The stream type (e.g., 'hdmi_stream')
+ * @param deviceModel The device model (optional, for mobile detection)
  * @returns Promise<any> The loaded configuration or null if failed
  */
-export const loadAVConfig = async (streamType: string): Promise<any> => {
+export const loadAVConfig = async (streamType: string, deviceModel?: string): Promise<any> => {
   try {
-    let configPath = '';
+    console.log(`[@config:avPanelLayout] Loading config for ${streamType}, device: ${deviceModel}`);
+
     switch (streamType) {
       case 'hdmi_stream':
-        configPath = '/src/web/config/av/hdmi_stream.json';
-        break;
+        // Use mobile config if device is mobile, otherwise use regular config
+        if (deviceModel && isMobileDevice(deviceModel)) {
+          console.log(`[@config:avPanelLayout] Using mobile HDMI config for ${deviceModel}`);
+          return hdmiStreamMobileConfig;
+        } else {
+          console.log(`[@config:avPanelLayout] Using regular HDMI config for ${deviceModel}`);
+          return hdmiStreamConfig;
+        }
       default:
         console.warn(`[@config:avPanelLayout] No config found for stream type: ${streamType}`);
         return null;
-    }
-
-    const response = await fetch(configPath);
-    if (response.ok) {
-      const config = await response.json();
-      console.log(`[@config:avPanelLayout] Loaded config for ${streamType}:`, config);
-      return config;
-    } else {
-      console.error(
-        `[@config:avPanelLayout] Failed to fetch config for ${streamType}: ${response.status}`,
-      );
-      return null;
     }
   } catch (error) {
     console.error(`[@config:avPanelLayout] Failed to load config for ${streamType}:`, error);
