@@ -10,11 +10,121 @@ This module contains the common verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import requests
 import json
-import os
-from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')
+
+def get_host_from_request():
+    """
+    Get host information from request data.
+    Frontend can provide:
+    - GET: host_name in query params (simple)
+    - POST: full host object in body (efficient - has host_url)
+    
+    Returns:
+        Tuple of (host_info, error_message)
+    """
+    try:
+        if request.method == 'GET':
+            host_name = request.args.get('host_name')
+            if not host_name:
+                return None, 'host_name parameter required'
+            # Simple host info for buildHostUrl
+            return {'host_name': host_name}, None
+        else:
+            data = request.get_json() or {}
+            host_object = data.get('host')
+            
+            if not host_object:
+                return None, 'host object required in request body'
+                
+            # Full host object with host_url - most efficient
+            return host_object, None
+                
+    except Exception as e:
+        return None, f'Error getting host from request: {str(e)}'
+
+def proxy_to_host(endpoint, method='GET', data=None):
+    """
+    Proxy a request to the specified host's verification endpoint using buildHostUrl
+    
+    Args:
+        endpoint: The host endpoint to call (e.g., '/host/verification/references')
+        method: HTTP method ('GET', 'POST', etc.)
+        data: Request data for POST requests (should include host info)
+    
+    Returns:
+        Tuple of (response_data, status_code)
+    """
+    try:
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return {
+                'success': False,
+                'error': error or 'Host information required'
+            }, 400
+        
+        # Use buildHostUrl to construct the proper URL
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host_info, endpoint)
+        
+        if not full_url:
+            return {
+                'success': False,
+                'error': 'Failed to build host URL'
+            }, 500
+        
+        print(f"[@route:server_verification:proxy] Proxying {method} {full_url}")
+        
+        # Prepare request parameters
+        kwargs = {
+            'timeout': 30,
+            'verify': False  # For self-signed certificates
+        }
+        
+        if data:
+            kwargs['json'] = data
+            kwargs['headers'] = {'Content-Type': 'application/json'}
+        
+        # Make the request to the host
+        if method.upper() == 'GET':
+            response = requests.get(full_url, **kwargs)
+        elif method.upper() == 'POST':
+            response = requests.post(full_url, **kwargs)
+        else:
+            return {
+                'success': False,
+                'error': f'Unsupported HTTP method: {method}'
+            }, 400
+        
+        # Return the host's response
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError:
+            response_data = {
+                'success': False,
+                'error': 'Invalid JSON response from host',
+                'raw_response': response.text[:500]  # First 500 chars for debugging
+            }
+        
+        return response_data, response.status_code
+        
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'error': 'Request to host timed out'
+        }, 504
+    except requests.exceptions.ConnectionError:
+        return {
+            'success': False,
+            'error': 'Could not connect to host'
+        }, 503
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Proxy error: {str(e)}'
+        }, 500
 
 # =====================================================
 # COMMON VERIFICATION ENDPOINTS
@@ -132,201 +242,56 @@ def get_verification_actions():
 
 @verification_common_bp.route('/reference-list', methods=['GET'])
 def list_references():
-    """Get list of available references from host."""
+    """Proxy reference list request to selected host"""
     try:
-        model = request.args.get('model', 'default')
+        print("[@route:server_verification:reference_list] Proxying reference list request")
         
-        print(f"[@route:list_references] Getting reference list for model: {model}")
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/references', 'GET')
         
-        # Use dynamic host discovery instead of hardcoded values
-        try:
-            # Find appropriate host using registry
-            host_info = get_host_by_model(model)
-            
-            if not host_info:
-                print(f"[@route:list_references] No hosts available for model: {model}")
-                return jsonify({
-                    'success': False,
-                    'error': f'No hosts available for model: {model}'
-                }), 503
-            
-            host_url = buildHostUrl(host_info, '/host/verification/references')
-            host_response = requests.get(
-                host_url,
-                params={'model': model},
-                timeout=30,
-                verify=False
-            )
-        except Exception as e:
-            print(f"[@route:list_references] Host discovery error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': f'No hosts available: {str(e)}'
-            }), 503
+        return jsonify(response_data), status_code
         
-        if host_response.status_code == 200:
-            host_result = host_response.json()
-            print(f"[@route:list_references] Host response: {len(host_result.get('references', []))} references")
-            return jsonify(host_result)
-        else:
-            print(f"[@route:list_references] Host request failed: {host_response.status_code}")
-            return jsonify({
-                'success': False,
-                'error': f'Host request failed: {host_response.status_code}'
-            }), host_response.status_code
-            
-    except requests.exceptions.RequestException as e:
-        print(f"[@route:list_references] Request error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to connect to host: {str(e)}'
-        }), 500
     except Exception as e:
-        print(f"[@route:list_references] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_common_bp.route('/reference-actions', methods=['POST'])
-def verification_actions():
-    """Handle verification actions like delete, update, etc."""
+def reference_actions():
+    """Proxy reference actions request to selected host"""
     try:
-        data = request.get_json()
-        action = data.get('action')
-        reference_name = data.get('reference_name')
-        model = data.get('model')
+        print("[@route:server_verification:reference_actions] Proxying reference actions request")
         
-        print(f"[@route:verification_actions] Action: {action} for reference: {reference_name} (model: {model})")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not action or not reference_name or not model:
-            return jsonify({
-                'success': False,
-                'error': 'action, reference_name, and model are required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/reference-actions', 'POST', request_data)
         
-        # Use dynamic host discovery instead of hardcoded values
-        try:
-            # Find appropriate host using registry
-            host_info = get_host_by_model(model)
-            
-            if not host_info:
-                print(f"[@route:verification_actions] No hosts available for model: {model}")
-                return jsonify({
-                    'success': False,
-                    'error': f'No hosts available for model: {model}'
-                }), 503
-            
-            host_url = buildHostUrl(host_info, '/host/verification/reference-actions')
-            host_response = requests.post(
-                host_url,
-                json={
-                    'action': action,
-                    'reference_name': reference_name,
-                    'model': model
-                },
-                timeout=30,
-                verify=False
-            )
-        except Exception as e:
-            print(f"[@route:verification_actions] Host discovery error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': f'No hosts available: {str(e)}'
-            }), 503
+        return jsonify(response_data), status_code
         
-        if host_response.status_code == 200:
-            host_result = host_response.json()
-            print(f"[@route:verification_actions] Host response: {host_result.get('success')}")
-            return jsonify(host_result)
-        else:
-            print(f"[@route:verification_actions] Host request failed: {host_response.status_code}")
-            return jsonify({
-                'success': False,
-                'error': f'Host request failed: {host_response.status_code}'
-            }), host_response.status_code
-            
-    except requests.exceptions.RequestException as e:
-        print(f"[@route:verification_actions] Request error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to connect to host: {str(e)}'
-        }), 500
     except Exception as e:
-        print(f"[@route:verification_actions] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_common_bp.route('/status', methods=['GET'])
 def verification_status():
-    """Get verification system status."""
+    """Proxy verification status request to selected host"""
     try:
-        print(f"[@route:verification_status] Getting verification system status")
+        print("[@route:server_verification:status] Proxying verification status request")
         
-        # Check if any hosts are available
-        host_info = get_host_by_model('default')
-        if not host_info:
-            print(f"[@route:verification_status] No hosts available")
-            return jsonify({
-                'success': False,
-                'error': 'No hosts available',
-                'status': 'no_hosts'
-            }), 503
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/status', 'GET')
         
-        # Try to get status from host (but this endpoint might not exist yet)
-        try:
-            host_url = buildHostUrl(host_info, '/host/verification/status')
-            host_response = requests.get(
-                host_url,
-                timeout=30,
-                verify=False
-            )
-            
-            if host_response.status_code == 200:
-                host_result = host_response.json()
-                print(f"[@route:verification_status] Host response: {host_result.get('status')}")
-                return jsonify(host_result)
-            else:
-                print(f"[@route:verification_status] Host request failed: {host_response.status_code}")
-                # If the endpoint doesn't exist (404), return a mock status
-                if host_response.status_code == 404:
-                    print(f"[@route:verification_status] Host endpoint not found, returning mock status")
-                    return jsonify({
-                        'success': True,
-                        'status': 'ready',
-                        'controllers_available': ['image', 'text', 'adb'],
-                        'message': 'Verification system is ready (mock status)',
-                        'host_connected': True,
-                        'device_model': host_info.get('device_model', 'unknown'),
-                        'host_id': host_info.get('client_id', 'unknown')
-                    })
-                else:
-                    return jsonify({
-                        'success': False,
-                        'error': f'Host request failed: {host_response.status_code}'
-                    }), host_response.status_code
-                    
-        except ValueError as e:
-            print(f"[@route:verification_status] Host discovery error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': f'No hosts available: {str(e)}'
-            }), 503
-            
-    except requests.exceptions.RequestException as e:
-        print(f"[@route:verification_status] Request error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to connect to host: {str(e)}'
-        }), 500
+        return jsonify(response_data), status_code
+        
     except Exception as e:
-        print(f"[@route:verification_status] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': str(e)
         }), 500
 
 # =====================================================

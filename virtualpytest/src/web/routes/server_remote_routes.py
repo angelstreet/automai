@@ -33,11 +33,7 @@ def get_host_from_request():
             host_object = data.get('host')
             
             if not host_object:
-                # Fallback to host_name in request body for compatibility
-                host_name = data.get('host_name')
-                if host_name:
-                    return {'host_name': host_name}, None
-                return None, 'host object or host_name required in request body'
+                return None, 'host object required in request body'
                 
             # Full host object with host_url - most efficient
             return host_object, None
@@ -128,14 +124,14 @@ def proxy_to_host(endpoint, method='GET', data=None):
         }, 500
 
 # =====================================================
-# REMOTE CONTROL PROXY ENDPOINTS  
+# REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
 @remote_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
-    """Proxy screenshot request to host remote controller."""
+    """Proxy take screenshot request to selected host"""
     try:
-        print(f"[@route:server_remote:take_screenshot] Proxying screenshot request")
+        print("[@route:server_remote:take_screenshot] Proxying take screenshot request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -146,17 +142,16 @@ def take_screenshot():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:take_screenshot] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Screenshot error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/screenshot-and-dump', methods=['POST'])
 def screenshot_and_dump():
-    """Proxy screenshot and UI dump request to host remote controller."""
+    """Proxy screenshot and dump request to selected host"""
     try:
-        print(f"[@route:server_remote:screenshot_and_dump] Proxying screenshot and dump request")
+        print("[@route:server_remote:screenshot_and_dump] Proxying screenshot and dump request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -167,17 +162,16 @@ def screenshot_and_dump():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:screenshot_and_dump] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Screenshot and dump error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/get-apps', methods=['POST'])
 def get_apps():
-    """Proxy get apps request to host remote controller."""
+    """Proxy get apps request to selected host"""
     try:
-        print(f"[@route:server_remote:get_apps] Proxying get apps request")
+        print("[@route:server_remote:get_apps] Proxying get apps request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -188,17 +182,16 @@ def get_apps():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:get_apps] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Get apps error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/click-element', methods=['POST'])
 def click_element():
-    """Proxy click element request to host remote controller."""
+    """Proxy click element request to selected host"""
     try:
-        print(f"[@route:server_remote:click_element] Proxying click element request")
+        print("[@route:server_remote:click_element] Proxying click element request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -209,17 +202,16 @@ def click_element():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:click_element] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Element click error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/tap-element', methods=['POST'])
 def tap_element():
-    """Proxy tap coordinates request to host remote controller."""
+    """Proxy tap element request to selected host"""
     try:
-        print(f"[@route:server_remote:tap_element] Proxying tap element request")
+        print("[@route:server_remote:tap_element] Proxying tap element request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -230,17 +222,16 @@ def tap_element():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:tap_element] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Coordinate tap error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/execute-command', methods=['POST'])
 def execute_command():
-    """Proxy command execution request to host remote controller."""
+    """Proxy execute command request to selected host"""
     try:
-        print(f"[@route:server_remote:execute_command] Proxying execute command request")
+        print("[@route:server_remote:execute_command] Proxying execute command request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -251,10 +242,9 @@ def execute_command():
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_remote:execute_command] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Command execution error: {str(e)}'
+            'error': str(e)
         }), 500
 
 # get-status endpoint removed - not needed

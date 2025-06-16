@@ -9,10 +9,122 @@ This module contains the server-side ADB verification API endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl
+import json
 
 # Create blueprint
 verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification/adb')
+
+def get_host_from_request():
+    """
+    Get host information from request data.
+    Frontend can provide:
+    - GET: host_name in query params (simple)
+    - POST: full host object in body (efficient - has host_url)
+    
+    Returns:
+        Tuple of (host_info, error_message)
+    """
+    try:
+        if request.method == 'GET':
+            host_name = request.args.get('host_name')
+            if not host_name:
+                return None, 'host_name parameter required'
+            # Simple host info for buildHostUrl
+            return {'host_name': host_name}, None
+        else:
+            data = request.get_json() or {}
+            host_object = data.get('host')
+            
+            if not host_object:
+                return None, 'host object required in request body'
+                
+            # Full host object with host_url - most efficient
+            return host_object, None
+                
+    except Exception as e:
+        return None, f'Error getting host from request: {str(e)}'
+
+def proxy_to_host(endpoint, method='GET', data=None):
+    """
+    Proxy a request to the specified host's ADB endpoint using buildHostUrl
+    
+    Args:
+        endpoint: The host endpoint to call (e.g., '/host/verification/adb/get-element-lists')
+        method: HTTP method ('GET', 'POST', etc.)
+        data: Request data for POST requests (should include host info)
+    
+    Returns:
+        Tuple of (response_data, status_code)
+    """
+    try:
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return {
+                'success': False,
+                'error': error or 'Host information required'
+            }, 400
+        
+        # Use buildHostUrl to construct the proper URL
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host_info, endpoint)
+        
+        if not full_url:
+            return {
+                'success': False,
+                'error': 'Failed to build host URL'
+            }, 500
+        
+        print(f"[@route:server_verification_adb:proxy] Proxying {method} {full_url}")
+        
+        # Prepare request parameters
+        kwargs = {
+            'timeout': 30,
+            'verify': False  # For self-signed certificates
+        }
+        
+        if data:
+            kwargs['json'] = data
+            kwargs['headers'] = {'Content-Type': 'application/json'}
+        
+        # Make the request to the host
+        if method.upper() == 'GET':
+            response = requests.get(full_url, **kwargs)
+        elif method.upper() == 'POST':
+            response = requests.post(full_url, **kwargs)
+        else:
+            return {
+                'success': False,
+                'error': f'Unsupported HTTP method: {method}'
+            }, 400
+        
+        # Return the host's response
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError:
+            response_data = {
+                'success': False,
+                'error': 'Invalid JSON response from host',
+                'raw_response': response.text[:500]  # First 500 chars for debugging
+            }
+        
+        return response_data, response.status_code
+        
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'error': 'Request to host timed out'
+        }, 504
+    except requests.exceptions.ConnectionError:
+        return {
+            'success': False,
+            'error': 'Could not connect to host'
+        }, 503
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Proxy error: {str(e)}'
+        }, 500
 
 # =====================================================
 # SERVER-SIDE ADB VERIFICATION ENDPOINTS (FORWARDS TO HOST)
@@ -20,195 +132,60 @@ verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_
 
 @verification_adb_server_bp.route('/get-element-lists', methods=['POST'])
 def adb_element_lists():
-    """Forward ADB element lists request to host."""
+    """Proxy ADB element lists request to selected host"""
     try:
-        data = request.get_json()
-        model = data.get('model', 'default')
-        search_term = data.get('search_term', '')
+        print("[@route:server_verification_adb:get_element_lists] Proxying ADB element lists request")
         
-        print(f"[@route:adb_element_lists] Forwarding ADB element lists request to host for model: {model}")
-        if search_term:
-            print(f"[@route:adb_element_lists] With search term: '{search_term}'")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/adb/get-element-lists', 'POST', request_data)
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
+        return jsonify(response_data), status_code
         
-        print(f"[@route:adb_element_lists] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/get-element-lists')
-        
-        adb_payload = {
-            'model': model,
-            'search_term': search_term
-        }
-        
-        print(f"[@route:adb_element_lists] Sending request to {host_adb_url} with payload: {adb_payload}")
-        
-        try:
-            host_response = requests.post(host_adb_url, json=adb_payload, timeout=30, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                data = host_result.get('data', {})
-                total_elements = data.get('total_elements', 0)
-                print(f"[@route:adb_element_lists] Host ADB element lists successful: {total_elements} elements")
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host ADB element lists failed')
-                print(f"[@route:adb_element_lists] Host ADB element lists failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:adb_element_lists] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for ADB element lists: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:adb_element_lists] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'ADB element lists error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_adb_server_bp.route('/wait-element-appear', methods=['POST'])
 def adb_wait_element_appear():
-    """Forward ADB wait element appear request to host."""
+    """Proxy ADB wait element appear request to selected host"""
     try:
-        data = request.get_json()
-        search_term = data.get('search_term', '')
-        timeout = data.get('timeout', 10.0)
-        model = data.get('model', 'default')
+        print("[@route:server_verification_adb:wait_element_appear] Proxying ADB wait element appear request")
         
-        print(f"[@route:adb_wait_element_appear] Forwarding ADB wait element appear to host: '{search_term}' (timeout: {timeout}s)")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not search_term:
-            return jsonify({
-                'success': False,
-                'error': 'search_term is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/adb/wait-element-appear', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:adb_wait_element_appear] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/wait-element-appear')
-        
-        adb_payload = {
-            'search_term': search_term,
-            'timeout': timeout,
-            'model': model
-        }
-        
-        print(f"[@route:adb_wait_element_appear] Sending request to {host_adb_url} with payload: {adb_payload}")
-        
-        try:
-            host_response = requests.post(host_adb_url, json=adb_payload, timeout=timeout+5, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                message = host_result.get('message', 'Element appeared')
-                print(f"[@route:adb_wait_element_appear] Host ADB wait element appear successful: {message}")
-                return jsonify(host_result)
-            else:
-                message = host_result.get('message', 'Element did not appear')
-                print(f"[@route:adb_wait_element_appear] Host ADB wait element appear failed: {message}")
-                return jsonify(host_result), 200  # Return 200 but success=False for timeout/not found
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:adb_wait_element_appear] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for ADB wait element appear: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:adb_wait_element_appear] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'ADB wait element appear error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_adb_server_bp.route('/wait-element-disappear', methods=['POST'])
 def adb_wait_element_disappear():
-    """Forward ADB wait element disappear request to host."""
+    """Proxy ADB wait element disappear request to selected host"""
     try:
-        data = request.get_json()
-        search_term = data.get('search_term', '')
-        timeout = data.get('timeout', 10.0)
-        model = data.get('model', 'default')
+        print("[@route:server_verification_adb:wait_element_disappear] Proxying ADB wait element disappear request")
         
-        print(f"[@route:adb_wait_element_disappear] Forwarding ADB wait element disappear to host: '{search_term}' (timeout: {timeout}s)")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not search_term:
-            return jsonify({
-                'success': False,
-                'error': 'search_term is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/adb/wait-element-disappear', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:adb_wait_element_disappear] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/wait-element-disappear')
-        
-        adb_payload = {
-            'search_term': search_term,
-            'timeout': timeout,
-            'model': model
-        }
-        
-        print(f"[@route:adb_wait_element_disappear] Sending request to {host_adb_url} with payload: {adb_payload}")
-        
-        try:
-            host_response = requests.post(host_adb_url, json=adb_payload, timeout=timeout+5, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                message = host_result.get('message', 'Element disappeared')
-                print(f"[@route:adb_wait_element_disappear] Host ADB wait element disappear successful: {message}")
-                return jsonify(host_result)
-            else:
-                message = host_result.get('message', 'Element still present')
-                print(f"[@route:adb_wait_element_disappear] Host ADB wait element disappear failed: {message}")
-                return jsonify(host_result), 200  # Return 200 but success=False for timeout/still present
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:adb_wait_element_disappear] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for ADB wait element disappear: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:adb_wait_element_disappear] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'ADB wait element disappear error: {str(e)}'
+            'error': str(e)
         }), 500 
