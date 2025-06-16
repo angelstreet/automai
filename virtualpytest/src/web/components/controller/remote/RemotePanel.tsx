@@ -162,24 +162,46 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            p: 1,
-            borderBottom: '1px solid #333',
-            bgcolor: '#1E1E1E',
-            color: '#ffffff',
+            p: parseInt(remoteConfig?.panel_layout?.header?.padding || '8px') / 8,
+            height: remoteConfig?.panel_layout?.header?.height || '48px',
+            borderBottom: `1px solid ${remoteConfig?.panel_layout?.header?.borderColor || '#333'}`,
+            bgcolor: remoteConfig?.panel_layout?.header?.backgroundColor || '#1E1E1E',
+            color: remoteConfig?.panel_layout?.header?.textColor || '#ffffff',
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontSize: remoteConfig?.panel_layout?.header?.fontSize || '0.875rem',
+              fontWeight: remoteConfig?.panel_layout?.header?.fontWeight || 'bold',
+            }}
+          >
             {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
           </Typography>
           <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
-            <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>
-              {isCollapsed ? <OpenInFull fontSize="small" /> : <CloseFullscreen fontSize="small" />}
+            <IconButton
+              size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+              onClick={toggleCollapsed}
+              sx={{ color: 'inherit' }}
+            >
+              {isCollapsed ? (
+                <OpenInFull fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'} />
+              ) : (
+                <CloseFullscreen
+                  fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                />
+              )}
             </IconButton>
           </Tooltip>
         </Box>
 
         {/* Remote Content */}
-        <Box sx={{ height: 'calc(100% - 48px)', overflow: 'hidden' }}>
+        <Box
+          sx={{
+            height: `calc(100% - ${remoteConfig?.panel_layout?.header?.height || '48px'})`,
+            overflow: 'hidden',
+          }}
+        >
           {renderRemoteComponent()}
         </Box>
       </Box>

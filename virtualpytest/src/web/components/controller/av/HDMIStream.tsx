@@ -244,24 +244,44 @@ export function HDMIStream({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            p: 1,
-            borderBottom: '1px solid #333',
-            bgcolor: '#1E1E1E',
-            color: '#ffffff',
+            p: parseInt(avConfig?.panel_layout?.header?.padding || '8px') / 8,
+            height: avConfig?.panel_layout?.header?.height || '48px',
+            borderBottom: `1px solid ${avConfig?.panel_layout?.header?.borderColor || '#333'}`,
+            bgcolor: avConfig?.panel_layout?.header?.backgroundColor || '#1E1E1E',
+            color: avConfig?.panel_layout?.header?.textColor || '#ffffff',
           }}
         >
-          <Box sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+          <Box
+            sx={{
+              fontSize: avConfig?.panel_layout?.header?.fontSize || '0.875rem',
+              fontWeight: avConfig?.panel_layout?.header?.fontWeight || 'bold',
+            }}
+          >
             {avConfig?.stream_info?.name || 'HDMI Stream'}
           </Box>
           <Tooltip title={isExpanded ? 'Collapse Panel' : 'Expand Panel'}>
-            <IconButton size="small" onClick={handleToggleExpanded} sx={{ color: 'inherit' }}>
-              {isExpanded ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
+            <IconButton
+              size={avConfig?.panel_layout?.header?.iconSize || 'small'}
+              onClick={handleToggleExpanded}
+              sx={{ color: 'inherit' }}
+            >
+              {isExpanded ? (
+                <FullscreenExit fontSize={avConfig?.panel_layout?.header?.iconSize || 'small'} />
+              ) : (
+                <Fullscreen fontSize={avConfig?.panel_layout?.header?.iconSize || 'small'} />
+              )}
             </IconButton>
           </Tooltip>
         </Box>
 
         {/* Stream Content */}
-        <Box sx={{ height: 'calc(100% - 48px)', position: 'relative', overflow: 'hidden' }}>
+        <Box
+          sx={{
+            height: `calc(100% - ${avConfig?.panel_layout?.header?.height || '48px'})`,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
           {/* Stream viewer - always rendered */}
           <StreamViewer
             key="stream-viewer"
@@ -347,7 +367,8 @@ export function HDMIStream({
               sx={{
                 position: 'absolute',
                 top: 8,
-                left: 8,
+                left: '50%',
+                transform: 'translateX(-50%)',
                 display: 'flex',
                 gap: 1,
                 zIndex: 10,
@@ -355,7 +376,7 @@ export function HDMIStream({
             >
               <Tooltip title="Take Screenshot">
                 <IconButton
-                  size="small"
+                  size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                   onClick={handleTakeScreenshot}
                   sx={{
                     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -365,14 +386,16 @@ export function HDMIStream({
                   }}
                   disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
                 >
-                  <PhotoCamera sx={{ fontSize: 16 }} />
+                  <PhotoCamera
+                    sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
+                  />
                 </IconButton>
               </Tooltip>
 
               {isCaptureActive ? (
                 <Tooltip title="Stop Capture">
                   <IconButton
-                    size="small"
+                    size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                     onClick={handleStopCapture}
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -380,13 +403,15 @@ export function HDMIStream({
                       '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
                     }}
                   >
-                    <StopCircle sx={{ fontSize: 16 }} />
+                    <StopCircle
+                      sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
+                    />
                   </IconButton>
                 </Tooltip>
               ) : (
                 <Tooltip title="Start Capture">
                   <IconButton
-                    size="small"
+                    size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                     onClick={handleStartCapture}
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -395,14 +420,16 @@ export function HDMIStream({
                     }}
                     disabled={!isStreamActive}
                   >
-                    <VideoCall sx={{ fontSize: 16 }} />
+                    <VideoCall
+                      sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
+                    />
                   </IconButton>
                 </Tooltip>
               )}
 
               <Tooltip title="Restart Stream">
                 <IconButton
-                  size="small"
+                  size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                   onClick={restartStream}
                   sx={{
                     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -411,7 +438,9 @@ export function HDMIStream({
                   }}
                   disabled={!isStreamActive || isCaptureActive}
                 >
-                  <Refresh sx={{ fontSize: 16 }} />
+                  <Refresh
+                    sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
+                  />
                 </IconButton>
               </Tooltip>
             </Box>

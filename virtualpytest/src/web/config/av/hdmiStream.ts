@@ -26,6 +26,20 @@ export const hdmiStreamConfig = {
     zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
+    header: {
+      height: '48px',
+      fontSize: '0.875rem',
+      fontWeight: 'bold',
+      iconSize: 'small',
+      padding: '8px',
+      backgroundColor: '#1E1E1E',
+      borderColor: '#333',
+      textColor: '#ffffff',
+    },
+    actionButtons: {
+      iconSize: 24, // Size in pixels for camera, video, restart icons
+      buttonSize: 'medium', // MUI IconButton size
+    },
   },
 } as const;
 
@@ -58,6 +72,20 @@ export const hdmiStreamMobileConfig = {
     zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
+    header: {
+      height: '40px',
+      fontSize: '0.875rem',
+      fontWeight: 'bold',
+      iconSize: 'small',
+      padding: '6px',
+      backgroundColor: '#1E1E1E',
+      borderColor: '#333',
+      textColor: '#ffffff',
+    },
+    actionButtons: {
+      iconSize: 24, // Smaller for mobile
+      buttonSize: 'small', // MUI IconButton size
+    },
   },
 } as const;
 

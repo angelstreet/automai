@@ -23,6 +23,16 @@ export const androidMobileRemoteConfig = {
     zIndex: 1000,
     showScreenshotInCollapsed: false,
     showScreenshotInExpanded: false,
+    header: {
+      height: '48px',
+      fontSize: '0.875rem',
+      fontWeight: 'bold',
+      iconSize: 'small',
+      padding: '8px',
+      backgroundColor: '#1E1E1E',
+      borderColor: '#333',
+      textColor: '#ffffff',
+    },
   },
   remote_layout: {
     collapsed: {
