@@ -65,6 +65,15 @@ export const AndroidMobileRemote = React.memo(
     const getElementDisplayName = (el: AndroidElement) => {
       let displayName = '';
 
+      // Debug logging for first few elements
+      if (parseInt(el.id) <= 3) {
+        console.log(`[@component:AndroidMobileRemote] Element ${el.id} debug:`, {
+          contentDesc: el.contentDesc,
+          text: el.text,
+          className: el.className,
+        });
+      }
+
       // Priority: ContentDesc → Text → Class Name (same as UIElementsOverlay)
       if (
         el.contentDesc &&
@@ -433,9 +442,9 @@ export const AndroidMobileRemote = React.memo(
   (prevProps, nextProps) => {
     // Only re-render if host object properties have actually changed
     return (
-      prevProps.host?.id === nextProps.host?.id &&
       prevProps.host?.host_name === nextProps.host?.host_name &&
       prevProps.host?.device_model === nextProps.host?.device_model &&
+      prevProps.host?.device_ip === nextProps.host?.device_ip &&
       prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
       JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx)
     );

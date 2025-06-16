@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { AndroidElement, AndroidApp } from '../../types/controller/Remote_Types';
@@ -28,6 +28,8 @@ export function useAndroidMobile(host: Host) {
   console.log(
     '[@hook:useAndroidMobile] Initializing Android mobile hook for host:',
     host.host_name,
+    'Host object reference:',
+    host,
   );
 
   // Configuration
@@ -67,6 +69,16 @@ export function useAndroidMobile(host: Host) {
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
 
   const screenshotRef = useRef<HTMLImageElement>(null);
+
+  // Track host object changes
+  useEffect(() => {
+    console.log('[@hook:useAndroidMobile] Host object changed:', {
+      host_name: host.host_name,
+      device_model: host.device_model,
+      device_ip: host.device_ip,
+      timestamp: Date.now(),
+    });
+  }, [host]);
 
   // API calls
   const screenshotAndDump = useCallback(async () => {

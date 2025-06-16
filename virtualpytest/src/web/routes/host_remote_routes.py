@@ -97,13 +97,23 @@ def screenshot_and_dump():
         if ui_success:
             elements_data = []
             for element in elements:
+                # Parse bounds string to object format expected by frontend
+                bounds_obj = {'left': 0, 'top': 0, 'right': 0, 'bottom': 0}
+                if element.bounds and element.bounds != '':
+                    import re
+                    # Bounds format: [x1,y1][x2,y2]
+                    bounds_match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', element.bounds)
+                    if bounds_match:
+                        x1, y1, x2, y2 = map(int, bounds_match.groups())
+                        bounds_obj = {'left': x1, 'top': y1, 'right': x2, 'bottom': y2}
+                
                 elements_data.append({
                     'id': element.id,
                     'text': element.text,
                     'className': element.class_name,
                     'contentDesc': element.content_desc,
                     'package': element.resource_id,
-                    'bounds': element.bounds,
+                    'bounds': bounds_obj,
                     'clickable': element.clickable,
                     'enabled': element.enabled
                 })
