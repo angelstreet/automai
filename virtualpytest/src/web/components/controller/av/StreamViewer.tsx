@@ -49,7 +49,7 @@ export function StreamViewer({
     return () => {
       console.log('[@component:StreamViewer] Component unmounting');
     };
-  }, []);
+  }, [streamUrl, isStreamActive, isCapturing, model, layoutConfig]);
 
   const finalLayoutConfig = layoutConfig || getStreamViewerLayout(model);
 
@@ -209,7 +209,7 @@ export function StreamViewer({
         attemptPlay();
       });
 
-      hls.on(HLS.Events.ERROR, (event, data) => {
+      hls.on(HLS.Events.ERROR, (_event, data) => {
         console.warn('[@component:StreamViewer] HLS error:', data.type, data.details, data.fatal);
 
         if (data.fatal) {
@@ -251,6 +251,7 @@ export function StreamViewer({
     attemptPlay,
     retryDelay,
     tryNativePlayback,
+    useNativePlayer,
   ]);
 
   const handleStreamError = useCallback(() => {
@@ -269,7 +270,7 @@ export function StreamViewer({
       setRetryCount((prev) => prev + 1);
       initializeStream();
     }, retryDelay);
-  }, [retryCount, maxRetries, retryDelay, initializeStream, tryNativePlayback]);
+  }, [retryCount, maxRetries, retryDelay, initializeStream, tryNativePlayback, setUseNativePlayer]);
 
   useEffect(() => {
     if (retryCount > 0 && retryCount <= maxRetries && streamUrl && isStreamActive) {
@@ -302,8 +303,8 @@ export function StreamViewer({
 
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
-      // Only reinitialize if the URL actually changed or if we don't have a current stream
-      if (currentStreamUrl !== streamUrl || !streamLoaded) {
+      // Only reinitialize if the URL actually changed
+      if (currentStreamUrl !== streamUrl) {
         console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
         setUseNativePlayer(false);
         setRetryCount(0);
@@ -323,7 +324,7 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl, streamLoaded]);
+  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl]);
 
   useEffect(() => {
     const checkVideoReady = () => {
