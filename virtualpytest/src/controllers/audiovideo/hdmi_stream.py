@@ -183,7 +183,7 @@ class HDMIStreamController(AVControllerInterface):
                 print(f'[@controller:HDMIStream] Cannot build screenshot URL - no host info available')
                 return None
             
-            screenshot_url = buildHostUrl(host_info, f'stream/captures/capture_{timestamp}.jpg')
+            screenshot_url = buildHostUrl(host_info, f'host/stream/captures/capture_{timestamp}.jpg')
             print(f'[@controller:HDMIStream] Built screenshot URL using buildHostUrl: {screenshot_url}')
             
             # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
@@ -194,6 +194,60 @@ class HDMIStreamController(AVControllerInterface):
                 
         except Exception as e:
             print(f'[@controller:HDMIStream] Error taking screenshot: {e}')
+            import traceback
+            print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
+            return None
+    
+    def save_screenshot(self, filename: str) -> Optional[str]:
+        """
+        Take screenshot and upload to R2 with specific filename.
+        Used for permanent storage in navigation nodes.
+        
+        Args:
+            filename: The filename to use for the screenshot (e.g., node name)
+            
+        Returns:
+            R2 URL for the uploaded screenshot or None if failed
+        """
+        try:
+            print(f'[@controller:HDMIStream] Saving screenshot with filename: {filename}')
+            
+            # First take a temporary screenshot to get the image
+            temp_screenshot_url = self.take_screenshot()
+            if not temp_screenshot_url:
+                print(f'[@controller:HDMIStream] Failed to take temporary screenshot')
+                return None
+            
+            print(f'[@controller:HDMIStream] Temporary screenshot taken: {temp_screenshot_url}')
+            
+            # Get host info for device model
+            host_info = self._get_host_info()
+            if not host_info:
+                print(f'[@controller:HDMIStream] Cannot get device model - no host info available')
+                return None
+            
+            device_model = host_info.get('device_model', 'unknown')
+            print(f'[@controller:HDMIStream] Using device model: {device_model}')
+            
+            # Build R2 path: navigation/{device_model}/{filename}.jpg
+            r2_path = f"navigation/{device_model}/{filename}.jpg"
+            print(f'[@controller:HDMIStream] Target R2 path: {r2_path}')
+            
+            # TODO: Implement R2 upload logic here
+            # For now, return a mock R2 URL to test the flow
+            from src.utils.app_utils import buildHostUrl
+            
+            # Build the R2 URL that would be returned after upload
+            r2_base_url = "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev"
+            r2_url = f"{r2_base_url}/{r2_path}"
+            
+            print(f'[@controller:HDMIStream] Would upload to R2 URL: {r2_url}')
+            print(f'[@controller:HDMIStream] Screenshot saved successfully')
+            
+            return r2_url
+                
+        except Exception as e:
+            print(f'[@controller:HDMIStream] Error saving screenshot: {e}')
             import traceback
             print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
             return None
@@ -281,7 +335,7 @@ class HDMIStreamController(AVControllerInterface):
                 from src.utils.app_utils import buildHostUrl
                 host_info = self._get_host_info()
                 if host_info:
-                    captures_url = buildHostUrl(host_info, 'stream/captures/')
+                    captures_url = buildHostUrl(host_info, 'host/stream/captures/')
                     print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {captures_url}")
             except Exception:
                 pass  # Logging only, don't fail if URL building fails

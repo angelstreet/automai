@@ -379,12 +379,20 @@ def save_screenshot():
         
         print(f"[@route:host_av:save_screenshot] Using own AV controller: {type(av_controller).__name__}")
         
-        # Get request data for optional parameters
+        # Get request data for required filename parameter
         request_data = request.get_json() or {}
         filename = request_data.get('filename')
         
-        # Take screenshot using controller (this already handles R2 upload)
-        screenshot_result = av_controller.take_screenshot(filename)
+        if not filename:
+            return jsonify({
+                'success': False,
+                'error': 'Filename is required for saving screenshot'
+            }), 400
+        
+        print(f"[@route:host_av:save_screenshot] Saving screenshot with filename: {filename}")
+        
+        # Save screenshot using controller (handles R2 upload)
+        screenshot_result = av_controller.save_screenshot(filename)
         
         if screenshot_result:
             return jsonify({

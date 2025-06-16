@@ -208,7 +208,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 }}
               >
                 <Typography variant="h6" component="div">
-                  Android Mobile Remote
+                  Android Mobile
                 </Typography>
               </Box>
 

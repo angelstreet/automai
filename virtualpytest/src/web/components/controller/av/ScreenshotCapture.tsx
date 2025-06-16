@@ -99,13 +99,8 @@ export function ScreenshotCapture({
     try {
       let imageUrl: string;
 
-      if (screenshotPath.includes('/tmp/screenshots/') || screenshotPath.endsWith('.jpg')) {
-        // Screenshot images - use server route for screenshots
-        imageUrl = `/server/av/screenshot/${filename}?host_name=${selectedHostDevice.host_name}`;
-      } else {
-        // General images - use server route for general images
-        imageUrl = `/server/av/image/${encodeURIComponent(screenshotPath)}?host_name=${selectedHostDevice.host_name}`;
-      }
+      // Screenshots from take-screenshot are already accessible URLs - use directly
+      imageUrl = screenshotPath;
 
       console.log(
         `[@component:ScreenshotCapture] Generated image URL via server route: ${imageUrl}`,

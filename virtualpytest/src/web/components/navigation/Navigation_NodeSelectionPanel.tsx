@@ -163,6 +163,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         },
         body: JSON.stringify({
           host: selectedHost,
+          filename: selectedNode.data.label, // Use node name as filename
         }),
       });
 
