@@ -1,6 +1,6 @@
 import { OpenInFull, CloseFullscreen } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { getConfigurableRemotePanelLayout } from '../../../config/layoutConfig';
 import { Host } from '../../../types/common/Host_Types';
