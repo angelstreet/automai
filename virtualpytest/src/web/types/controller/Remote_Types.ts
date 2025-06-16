@@ -4,6 +4,7 @@ export interface AndroidElement {
   text?: string;
   className?: string;
   package?: string;
+  contentDesc?: string;
   bounds: {
     left: number;
     top: number;

@@ -7,10 +7,9 @@ import {
   UINavigationEdge,
   ConnectionResult,
 } from '../../types/pages/Navigation_Types';
-import { buildServerUrl } from '../../utils/frontendUtils';
 import { useConnectionRules } from '../navigation/useConnectionRules';
 import { useNavigationConfig } from '../navigation/useNavigationConfig';
-import { useNavigationDeviceControl } from '../navigation/useNavigationDeviceControl';
+import { useNavigationPanels } from '../navigation/useNavigationPanels';
 import { useNavigationState } from '../navigation/useNavigationState';
 import { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 
@@ -78,10 +77,9 @@ export const useNavigationEditor = () => {
   // Additional state that might need local management
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
 
-  // Use device control hook for all device-related functionality
-  const deviceControl = useNavigationDeviceControl({
+  // Use navigation panels hook for panel management
+  const deviceControl = useNavigationPanels({
     userInterface: navigationState.userInterface,
-    buildServerUrl,
   });
 
   // Simplified onNodesChange with change tracking
@@ -644,21 +642,20 @@ export const useNavigationEditor = () => {
     setUserInterfaceFromProps,
 
     // ========================================
-    // DEVICE CONTROL STATE & HANDLERS
+    // NAVIGATION PANELS STATE & HANDLERS
     // ========================================
 
-    // Device control state
+    // Panel state
     selectedHost: deviceControl.selectedHost,
     isControlActive: deviceControl.isControlActive,
-    isControlLoading: deviceControl.isControlLoading,
     isRemotePanelOpen: deviceControl.isRemotePanelOpen,
     showRemotePanel: deviceControl.showRemotePanel,
     showAVPanel: deviceControl.showAVPanel,
     isVerificationActive: deviceControl.isVerificationActive,
 
-    // Device control handlers
+    // Panel handlers
     handleDeviceSelect: deviceControl.handleDeviceSelect,
-    handleTakeControl: deviceControl.handleTakeControl,
+    handleControlStateChange: deviceControl.handleControlStateChange,
     handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
     handleConnectionChange: deviceControl.handleConnectionChange,
     handleDisconnectComplete: deviceControl.handleDisconnectComplete,

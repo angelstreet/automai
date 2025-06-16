@@ -216,14 +216,16 @@ export function AndroidMobileCore({
             {androidElements.map((element) => {
               const getElementDisplayName = (el: AndroidElement) => {
                 let displayName = '';
-                if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-                  displayName = `"${el.text}" (${el.className?.split('.').pop() || 'Unknown'})`;
-                } else if (
-                  el.package &&
-                  el.package !== '<no package>' &&
-                  el.package.trim() !== ''
+
+                // Priority: ContentDesc → Text → Class Name (same as UIElementsOverlay)
+                if (
+                  el.contentDesc &&
+                  el.contentDesc !== '<no content-desc>' &&
+                  el.contentDesc.trim() !== ''
                 ) {
-                  displayName = `${el.package.split('.').pop()} (${el.className?.split('.').pop() || 'Unknown'})`;
+                  displayName = `${el.contentDesc}`;
+                } else if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
+                  displayName = `"${el.text}"`;
                 } else {
                   displayName = `${el.className?.split('.').pop() || 'Unknown'} #${el.id}`;
                 }
