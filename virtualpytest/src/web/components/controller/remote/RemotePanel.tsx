@@ -39,6 +39,7 @@ export function RemotePanel({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
   const [remoteConfig, setRemoteConfig] = useState<any>(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Load remote config for the device type
   useEffect(() => {
@@ -49,6 +50,22 @@ export function RemotePanel({
 
     loadConfig();
   }, [host.device_model]);
+
+  // Force re-render when panel state changes to recalculate positions
+  useEffect(() => {
+    setForceUpdate((prev) => prev + 1);
+  }, [isCollapsed, isMinimized]);
+
+  // Handle window resize to recalculate positions
+  useEffect(() => {
+    const handleResize = () => {
+      console.log(`[@component:RemotePanel] Window resized, recalculating positions`);
+      setForceUpdate((prev) => prev + 1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Get configurable layout from device config
   const panelLayout = getConfigurableRemotePanelLayout(host.device_model, remoteConfig);
@@ -115,10 +132,51 @@ export function RemotePanel({
 
   // Simple device model detection - no loading, no fallback, no validation
   const renderRemoteComponent = () => {
-    // Calculate current panel position and size for overlay
-    // In RemotePanel context, the overlay should be positioned relative to the panel itself
-    const currentPosition = isCollapsed ? collapsedPosition : expandedPosition;
-    const currentSize = isCollapsed ? collapsedSize : expandedSize;
+    // Calculate actual pixel positions for the panel
+    // Since we use fixed positioning with bottom/right anchors, we need to calculate the actual screen coordinates
+
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Parse CSS values to numbers
+    const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
+    const bottomOffset = parsePixels(panelLayout.collapsed.position.bottom || '20px');
+    const rightOffset = parsePixels(panelLayout.collapsed.position.right || '20px');
+
+    // Calculate current panel dimensions
+    const currentWidth = parsePixels(isCollapsed ? collapsedWidth : expandedWidth);
+    const currentHeight = parsePixels(isCollapsed ? collapsedHeight : expandedHeight);
+
+    // Calculate actual screen position (top-left coordinates)
+    const actualPosition = {
+      x: viewportWidth - rightOffset - currentWidth,
+      y: viewportHeight - bottomOffset - currentHeight,
+    };
+
+    const actualSize = {
+      width: currentWidth,
+      height: currentHeight,
+    };
+
+    console.log(`[@component:RemotePanel] Panel positioning debug:`, {
+      isCollapsed,
+      viewportSize: { width: viewportWidth, height: viewportHeight },
+      panelSize: actualSize,
+      panelPosition: actualPosition,
+      deviceResolution,
+    });
+
+    // Calculate positions for both states (for panelState prop)
+    const collapsedActualPosition = {
+      x: viewportWidth - rightOffset - parsePixels(collapsedWidth),
+      y: viewportHeight - bottomOffset - parsePixels(collapsedHeight),
+    };
+
+    const expandedActualPosition = {
+      x: viewportWidth - rightOffset - parsePixels(expandedWidth),
+      y: viewportHeight - bottomOffset - parsePixels(expandedHeight),
+    };
 
     switch (host.device_model) {
       case 'android_mobile':
@@ -126,15 +184,21 @@ export function RemotePanel({
           <AndroidMobileRemote
             host={host}
             onDisconnectComplete={onReleaseControl}
-            streamPosition={currentPosition}
-            streamSize={currentSize}
+            streamPosition={actualPosition}
+            streamSize={actualSize}
             streamResolution={deviceResolution}
             panelState={{
               isCollapsed,
-              collapsedPosition,
-              collapsedSize,
-              expandedPosition,
-              expandedSize,
+              collapsedPosition: collapsedActualPosition,
+              collapsedSize: {
+                width: parsePixels(collapsedWidth),
+                height: parsePixels(collapsedHeight),
+              },
+              expandedPosition: expandedActualPosition,
+              expandedSize: {
+                width: parsePixels(expandedWidth),
+                height: parsePixels(expandedHeight),
+              },
             }}
             sx={{
               height: '100%',

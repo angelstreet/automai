@@ -481,11 +481,11 @@ export const AndroidMobileRemote = React.memo(
         {/* AndroidMobileOverlay - rendered as portal to document body for proper positioning */}
         {showOverlay &&
           androidElements.length > 0 &&
+          panelInfo &&
           typeof document !== 'undefined' &&
           createPortal(
             <AndroidMobileOverlay
               elements={androidElements}
-              screenshotElement={screenshotRef.current}
               deviceWidth={layoutConfig.deviceResolution.width}
               deviceHeight={layoutConfig.deviceResolution.height}
               isVisible={showOverlay}
@@ -496,6 +496,42 @@ export const AndroidMobileRemote = React.memo(
             />,
             document.body,
           )}
+
+        {/* Debug info when overlay should show but panelInfo is missing */}
+        {showOverlay && androidElements.length > 0 && !panelInfo && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '10px',
+              right: '10px',
+              background: 'red',
+              color: 'white',
+              padding: '10px',
+              borderRadius: '4px',
+              zIndex: 999999,
+              fontSize: '12px',
+              maxWidth: '300px',
+            }}
+          >
+            <strong>Overlay Debug:</strong>
+            <br />
+            Elements: {androidElements.length}
+            <br />
+            ShowOverlay: {showOverlay.toString()}
+            <br />
+            StreamPosition:{' '}
+            {streamPosition ? `${streamPosition.x},${streamPosition.y}` : 'undefined'}
+            <br />
+            StreamSize: {streamSize ? `${streamSize.width}x${streamSize.height}` : 'undefined'}
+            <br />
+            StreamResolution:{' '}
+            {streamResolution
+              ? `${streamResolution.width}x${streamResolution.height}`
+              : 'undefined'}
+            <br />
+            PanelState: {panelState ? 'defined' : 'undefined'}
+          </div>
+        )}
       </Box>
     );
   },

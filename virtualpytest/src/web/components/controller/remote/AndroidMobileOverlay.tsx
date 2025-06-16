@@ -16,13 +16,12 @@ interface ScaledElement {
 
 interface AndroidMobileOverlayProps {
   elements: AndroidElement[];
-  screenshotElement: HTMLImageElement | HTMLVideoElement | null;
   deviceWidth: number;
   deviceHeight: number;
   isVisible: boolean;
   selectedElementId?: string;
   onElementClick?: (element: AndroidElement) => void;
-  panelInfo?: PanelInfo;
+  panelInfo: PanelInfo; // Made required - no fallback to screenshot
   onPanelTap?: (x: number, y: number) => Promise<void>;
 }
 
@@ -32,7 +31,6 @@ const COLORS = ['#FF0000', '#0066FF', '#FFD700', '#00CC00', '#9900FF'];
 export const AndroidMobileOverlay = React.memo(
   function AndroidMobileOverlay({
     elements,
-    screenshotElement,
     deviceWidth,
     deviceHeight,
     isVisible,
@@ -44,9 +42,9 @@ export const AndroidMobileOverlay = React.memo(
     console.log(
       `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
     );
+    console.log(`[@component:AndroidMobileOverlay] PanelInfo:`, panelInfo);
 
     const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
-    const overlayRef = useRef<HTMLDivElement>(null);
 
     const parseBounds = (bounds: { left: number; top: number; right: number; bottom: number }) => {
       // Validate input bounds
@@ -81,158 +79,24 @@ export const AndroidMobileOverlay = React.memo(
       };
     };
 
-    // Calculate scaled coordinates - same logic as UIElementsOverlay
+    // Calculate scaled coordinates for panel positioning
     useEffect(() => {
       if (!isVisible || elements.length === 0) {
+        console.log(
+          `[@component:AndroidMobileOverlay] Not visible or no elements, clearing overlay`,
+        );
         setScaledElements([]);
         return;
       }
 
-      // Handle panel positioning (dynamic collapsed/expanded)
-      if (panelInfo) {
-        console.log(
-          `[@component:AndroidMobileOverlay] Using panel positioning - ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
-        );
-
-        const scaled = elements
-          .map((element, index) => {
-            const bounds = parseBounds(element.bounds);
-            if (!bounds) {
-              console.warn(
-                `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
-              );
-              return null;
-            }
-
-            const getElementLabel = (el: AndroidElement) => {
-              if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-                return el.text.substring(0, 20);
-              }
-              if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
-                return el.package.split('.').pop()?.substring(0, 20) || '';
-              }
-              return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
-            };
-
-            // For panel positioning, we scale elements to fit the stream/panel size
-            // The overlay container will be positioned at panelInfo.position
-            const scaleX = panelInfo.size.width / deviceWidth;
-            const scaleY = panelInfo.size.height / deviceHeight;
-
-            return {
-              id: element.id,
-              x: bounds.x * scaleX,
-              y: bounds.y * scaleY,
-              width: bounds.width * scaleX,
-              height: bounds.height * scaleY,
-              color: COLORS[index % COLORS.length],
-              label: getElementLabel(element),
-            };
-          })
-          .filter(Boolean) as ScaledElement[];
-
-        setScaledElements(scaled);
-        return;
-      }
-
-      // Handle screenshot positioning (existing logic)
-      if (!screenshotElement) {
-        console.log(
-          `[@component:AndroidMobileOverlay] No screenshot element, creating elements with original bounds`,
-        );
-
-        const scaled = elements
-          .map((element, index) => {
-            const bounds = parseBounds(element.bounds);
-            if (!bounds) {
-              console.warn(
-                `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
-              );
-              return null;
-            }
-
-            const getElementLabel = (el: AndroidElement) => {
-              if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-                return el.text.substring(0, 20);
-              }
-              if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
-                return el.package.split('.').pop()?.substring(0, 20) || '';
-              }
-              return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
-            };
-
-            // Ensure all values are valid numbers
-            if (isNaN(bounds.x) || isNaN(bounds.y) || isNaN(bounds.width) || isNaN(bounds.height)) {
-              console.warn(
-                `[@component:AndroidMobileOverlay] Invalid bounds for element ${index + 1}, skipping`,
-              );
-              return null;
-            }
-
-            return {
-              id: element.id,
-              x: bounds.x,
-              y: bounds.y,
-              width: bounds.width,
-              height: bounds.height,
-              color: COLORS[index % COLORS.length],
-              label: getElementLabel(element),
-            };
-          })
-          .filter(Boolean) as ScaledElement[];
-
-        setScaledElements(scaled);
-        return;
-      }
-
-      // Original screenshot-based positioning logic (same as UIElementsOverlay)
-      const imageRect = screenshotElement.getBoundingClientRect();
-
-      // Debug logging
-      console.log(`[@component:AndroidMobileOverlay] Debug info:`);
-      console.log(`  Device resolution: ${deviceWidth}x${deviceHeight}`);
       console.log(
-        `  Screenshot element rect: ${imageRect.width}x${imageRect.height} at (${imageRect.left}, ${imageRect.top})`,
+        `[@component:AndroidMobileOverlay] Using panel positioning - ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
       );
-
-      // Calculate actual image content dimensions accounting for letterboxing
-      const deviceAspectRatio = deviceWidth / deviceHeight;
-      const containerAspectRatio = imageRect.width / imageRect.height;
-
-      console.log(`  Device aspect ratio: ${deviceAspectRatio.toFixed(3)}`);
-      console.log(`  Container aspect ratio: ${containerAspectRatio.toFixed(3)}`);
-
-      let actualImageWidth, actualImageHeight, offsetX, offsetY;
-
-      if (deviceAspectRatio > containerAspectRatio) {
-        // Image is wider - letterboxed top/bottom
-        actualImageWidth = imageRect.width;
-        actualImageHeight = imageRect.width / deviceAspectRatio;
-        offsetX = 0;
-        offsetY = (imageRect.height - actualImageHeight) / 2;
-      } else {
-        // Image is taller - letterboxed left/right
-        actualImageWidth = imageRect.height * deviceAspectRatio;
-        actualImageHeight = imageRect.height;
-        offsetX = (imageRect.width - actualImageWidth) / 2;
-        offsetY = 0;
-      }
-
+      console.log(`[@component:AndroidMobileOverlay] Panel position:`, panelInfo.position);
+      console.log(`[@component:AndroidMobileOverlay] Panel size:`, panelInfo.size);
       console.log(
-        `  Actual image content: ${actualImageWidth.toFixed(1)}x${actualImageHeight.toFixed(1)}`,
-      );
-      console.log(`  Content offset: (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
-
-      // HARDCODED FIXES based on UIElementsOverlay
-      const MODAL_HEADER_HEIGHT_OFFSET = 0; // Move overlay up by reducing offset
-      const WIDTH_CORRECTION_FACTOR = 1; // Increase scale slightly from 0.75 to 0.85
-
-      const scaleX = (actualImageWidth * WIDTH_CORRECTION_FACTOR) / deviceWidth;
-      const scaleY = actualImageHeight / deviceHeight;
-
-      console.log(`  Scale factors: X=${scaleX.toFixed(4)}, Y=${scaleY.toFixed(4)}`);
-      console.log(
-        `  Applied corrections: header_offset=${MODAL_HEADER_HEIGHT_OFFSET}, width_factor=${WIDTH_CORRECTION_FACTOR}`,
+        `[@component:AndroidMobileOverlay] Device resolution:`,
+        panelInfo.deviceResolution,
       );
 
       const scaled = elements
@@ -245,16 +109,6 @@ export const AndroidMobileOverlay = React.memo(
             return null;
           }
 
-          const scaledX = bounds.x * scaleX + offsetX;
-          const scaledY = bounds.y * scaleY + offsetY + MODAL_HEADER_HEIGHT_OFFSET;
-
-          // Debug first few elements
-          if (index < 3) {
-            console.log(
-              `  Element ${index + 1}: device(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → screen(${scaledX.toFixed(1)},${scaledY.toFixed(1)},${(bounds.width * scaleX).toFixed(1)},${(bounds.height * scaleY).toFixed(1)})`,
-            );
-          }
-
           const getElementLabel = (el: AndroidElement) => {
             if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
               return el.text.substring(0, 20);
@@ -265,72 +119,42 @@ export const AndroidMobileOverlay = React.memo(
             return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
           };
 
-          // Ensure all values are valid numbers
-          if (
-            isNaN(scaledX) ||
-            isNaN(scaledY) ||
-            isNaN(bounds.width * scaleX) ||
-            isNaN(bounds.height * scaleY)
-          ) {
-            console.warn(
-              `[@component:AndroidMobileOverlay] Invalid coordinates for element ${index + 1}, skipping`,
-            );
-            return null;
-          }
+          // Scale elements to fit the stream/panel size
+          // The overlay container will be positioned at panelInfo.position
+          const scaleX = panelInfo.size.width / deviceWidth;
+          const scaleY = panelInfo.size.height / deviceHeight;
 
-          return {
+          const scaledElement = {
             id: element.id,
-            x: scaledX,
-            y: scaledY,
+            x: bounds.x * scaleX,
+            y: bounds.y * scaleY,
             width: bounds.width * scaleX,
             height: bounds.height * scaleY,
             color: COLORS[index % COLORS.length],
             label: getElementLabel(element),
           };
+
+          // Debug first few elements
+          if (index < 3) {
+            console.log(
+              `[@component:AndroidMobileOverlay] Element ${index + 1}: device(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${scaledElement.x.toFixed(1)},${scaledElement.y.toFixed(1)},${scaledElement.width.toFixed(1)},${scaledElement.height.toFixed(1)})`,
+            );
+          }
+
+          return scaledElement;
         })
         .filter(Boolean) as ScaledElement[];
 
+      console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements`);
       setScaledElements(scaled);
-    }, [elements, screenshotElement, deviceWidth, deviceHeight, isVisible, panelInfo]);
-
-    // Update overlay position when image moves/resizes
-    useEffect(() => {
-      if (!screenshotElement || !isVisible || panelInfo) return;
-
-      const updatePosition = () => {
-        const imageRect = screenshotElement.getBoundingClientRect();
-        if (overlayRef.current) {
-          // Position overlay to match exactly the image element's position
-          overlayRef.current.style.left = `${imageRect.left}px`;
-          overlayRef.current.style.top = `${imageRect.top}px`;
-          overlayRef.current.style.width = `${imageRect.width}px`;
-          overlayRef.current.style.height = `${imageRect.height}px`;
-
-          console.log(
-            `[@component:AndroidMobileOverlay] Overlay positioned at: (${imageRect.left}, ${imageRect.top}) size: ${imageRect.width}x${imageRect.height}`,
-          );
-        }
-      };
-
-      updatePosition();
-
-      // Update on resize/scroll
-      const handleUpdate = () => updatePosition();
-      window.addEventListener('resize', handleUpdate);
-      window.addEventListener('scroll', handleUpdate);
-
-      return () => {
-        window.removeEventListener('resize', handleUpdate);
-        window.removeEventListener('scroll', handleUpdate);
-      };
-    }, [screenshotElement, isVisible, panelInfo]);
+    }, [elements, deviceWidth, deviceHeight, isVisible, panelInfo]);
 
     // Handle element click
     const handleElementClick = async (scaledElement: ScaledElement) => {
       const originalElement = elements.find((el) => el.id === scaledElement.id);
       if (!originalElement) return;
 
-      if (panelInfo && onPanelTap) {
+      if (onPanelTap) {
         // Convert overlay coordinates back to device coordinates
         // Since we scaled directly without offsets, conversion is straightforward
         const deviceX = Math.round(
@@ -353,23 +177,28 @@ export const AndroidMobileOverlay = React.memo(
       }
     };
 
-    if (!isVisible || scaledElements.length === 0) return null;
+    if (!isVisible || scaledElements.length === 0) {
+      console.log(
+        `[@component:AndroidMobileOverlay] Not rendering overlay - visible: ${isVisible}, elements: ${scaledElements.length}`,
+      );
+      return null;
+    }
 
     console.log(
       '[@component:AndroidMobileOverlay] Rendering overlay with',
       scaledElements.length,
-      'elements',
+      'elements at position',
+      panelInfo.position,
     );
 
     return (
       <div
-        ref={overlayRef}
         style={{
-          position: 'fixed', // Always fixed to window, not relative to remote panel
-          left: panelInfo ? `${panelInfo.position.x}px` : undefined,
-          top: panelInfo ? `${panelInfo.position.y}px` : undefined,
-          width: panelInfo ? `${panelInfo.size.width}px` : undefined,
-          height: panelInfo ? `${panelInfo.size.height}px` : undefined,
+          position: 'fixed',
+          left: `${panelInfo.position.x}px`,
+          top: `${panelInfo.position.y}px`,
+          width: `${panelInfo.size.width}px`,
+          height: `${panelInfo.size.height}px`,
           zIndex: 999999,
           contain: 'layout style size',
           willChange: 'transform',
@@ -400,7 +229,7 @@ export const AndroidMobileOverlay = React.memo(
               e.currentTarget.style.backgroundColor = `${element.color}20`; // Back to 20% opacity
             }}
           >
-            {/* Number label at bottom-right - same as UIElementsOverlay */}
+            {/* Number label at bottom-right */}
             <div
               style={{
                 position: 'absolute',
@@ -408,7 +237,7 @@ export const AndroidMobileOverlay = React.memo(
                 right: '0px',
                 backgroundColor: element.color,
                 color: 'white',
-                fontSize: '60px',
+                fontSize: '10px',
                 lineHeight: '12px',
                 padding: '1px 3px',
                 borderRadius: '2px',
@@ -448,7 +277,6 @@ export const AndroidMobileOverlay = React.memo(
     // Only re-render if props have actually changed
     return (
       prevProps.elements === nextProps.elements &&
-      prevProps.screenshotElement === nextProps.screenshotElement &&
       prevProps.deviceWidth === nextProps.deviceWidth &&
       prevProps.deviceHeight === nextProps.deviceHeight &&
       prevProps.isVisible === nextProps.isVisible &&
