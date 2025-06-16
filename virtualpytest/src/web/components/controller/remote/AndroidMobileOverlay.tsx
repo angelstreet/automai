@@ -84,6 +84,15 @@ export const AndroidMobileOverlay = React.memo(
         return;
       }
 
+      // Skip calculation if panelInfo is not properly defined
+      if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
+        console.log(
+          `[@component:AndroidMobileOverlay] Invalid panelInfo, skipping element scaling`,
+        );
+        setScaledElements([]);
+        return;
+      }
+
       console.log(
         `[@component:AndroidMobileOverlay] Processing ${elements.length} elements for overlay`,
       );

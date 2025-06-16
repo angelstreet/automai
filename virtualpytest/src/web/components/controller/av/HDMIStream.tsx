@@ -38,7 +38,13 @@ export function HDMIStream({
   sx = {},
 }: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
-  console.log(`[@component:HDMIStream] Device resolution:`, deviceResolution);
+
+  // Hardcode device resolution to break circular dependency
+  const hardcodedResolution = { width: 1920, height: 1080 };
+  console.log(`[@component:HDMIStream] Using resolution:`, hardcodedResolution);
+
+  // Pass hardcoded resolution to any components that need it
+  const effectiveResolution = deviceResolution || hardcodedResolution;
 
   // Stream URL fetching state
   const [streamUrl, setStreamUrl] = useState<string>('');

@@ -86,81 +86,69 @@ export const AndroidMobileRemote = React.memo(
       // Hardcode device resolution for now
       const hardcodedResolution = { width: 1920, height: 1080 };
 
+      // Skip unnecessary recalculations if missing required props
+      if (!streamPosition || !streamSize || !panelState) {
+        console.log(
+          '[@component:AndroidMobileRemote] panelInfo is undefined - missing required props',
+        );
+        return undefined;
+      }
+
       console.log('[@component:AndroidMobileRemote] PanelInfo debug:', {
         streamPosition,
         streamSize,
         streamResolution: streamResolution || hardcodedResolution,
         panelState,
-        hasAllRequired: !!(streamPosition && streamSize && panelState),
       });
 
-      // Always create panelInfo when we have stream position/size - overlay should always be visible
-      if (streamPosition && streamSize && panelState) {
-        // Get HDMI stream dimensions from config based on panel state
-        const streamConfig = hdmiStreamMobileConfig.panel_layout;
-        const currentStreamConfig = panelState.isCollapsed
-          ? streamConfig.collapsed
-          : streamConfig.expanded;
+      // Get HDMI stream dimensions from config based on panel state
+      const streamConfig = hdmiStreamMobileConfig.panel_layout;
+      const currentStreamConfig = panelState.isCollapsed
+        ? streamConfig.collapsed
+        : streamConfig.expanded;
 
-        // Parse dimensions from config
-        const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
-        const panelWidth = parsePixels(currentStreamConfig.width);
-        const panelHeight = parsePixels(currentStreamConfig.height);
-        const headerHeight = parsePixels(hdmiStreamMobileConfig.panel_layout.header.height);
+      // Parse dimensions from config
+      const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
+      const panelWidth = parsePixels(currentStreamConfig.width);
+      const panelHeight = parsePixels(currentStreamConfig.height);
 
-        // Calculate available content area (panel minus header)
-        const availableWidth = panelWidth;
-        const availableHeight = panelHeight - headerHeight;
+      // Calculate actual stream content area
+      const headerHeight = parsePixels(hdmiStreamMobileConfig.panel_layout.header.height);
+      const streamContentHeight = panelHeight - headerHeight; // Panel height minus header
 
-        // Calculate actual stream size respecting 16:9 aspect ratio
-        const deviceAspectRatio = 1920 / 1080; // 1.777...
+      // Calculate stream width based on 1920x1080 aspect ratio (16:9)
+      const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
+      const streamContentWidth = Math.min(panelWidth, streamContentHeight * deviceAspectRatio);
 
-        let streamWidth, streamHeight;
+      // Calculate stream position - centered in panel
+      const panelX =
+        'left' in currentStreamConfig.position
+          ? parsePixels(currentStreamConfig.position.left)
+          : 20;
+      const panelY =
+        window.innerHeight -
+        parsePixels(currentStreamConfig.position.bottom || '20px') -
+        panelHeight;
 
-        // Fit stream within available area while maintaining aspect ratio
-        if (availableWidth / availableHeight > deviceAspectRatio) {
-          // Available area is wider than 16:9, constrain by height
-          streamHeight = availableHeight;
-          streamWidth = streamHeight * deviceAspectRatio;
-        } else {
-          // Available area is taller than 16:9, constrain by width
-          streamWidth = availableWidth;
-          streamHeight = streamWidth / deviceAspectRatio;
-        }
+      // Calculate content position (accounting for header)
+      const streamActualPosition = {
+        x: panelX + (panelWidth - streamContentWidth) / 2, // Center horizontally
+        y: panelY + headerHeight, // Position below header
+      };
 
-        // Calculate stream position - centered in available content area
-        const panelX =
-          'left' in currentStreamConfig.position
-            ? parsePixels(currentStreamConfig.position.left)
-            : 20;
-        const panelY =
-          window.innerHeight -
-          parsePixels(currentStreamConfig.position.bottom || '20px') -
-          panelHeight;
+      const streamActualSize = {
+        width: Math.round(streamContentWidth),
+        height: Math.round(streamContentHeight),
+      };
 
-        const streamActualPosition = {
-          x: panelX + (availableWidth - streamWidth) / 2, // Center horizontally
-          y: panelY + headerHeight + (availableHeight - streamHeight) / 2, // Center vertically in content area
-        };
-
-        const streamActualSize = {
-          width: Math.round(streamWidth),
-          height: Math.round(streamHeight),
-        };
-
-        const info = {
-          position: streamActualPosition, // Use calculated stream position
-          size: streamActualSize, // Use calculated stream size with proper aspect ratio
-          deviceResolution: streamResolution || hardcodedResolution,
-          isCollapsed: panelState.isCollapsed,
-        };
-        console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
-        return info;
-      }
-      console.log(
-        '[@component:AndroidMobileRemote] panelInfo is undefined - missing required props',
-      );
-      return undefined;
+      const info = {
+        position: streamActualPosition, // Use calculated stream position
+        size: streamActualSize, // Use calculated stream size with proper aspect ratio
+        deviceResolution: streamResolution || hardcodedResolution,
+        isCollapsed: panelState.isCollapsed,
+      };
+      console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
+      return info;
     }, [streamPosition, streamSize, streamResolution, panelState]);
 
     // Use remote configs for panel tap functionality

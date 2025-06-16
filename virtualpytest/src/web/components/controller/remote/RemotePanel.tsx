@@ -5,7 +5,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 
 import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
@@ -46,10 +46,26 @@ export function RemotePanel({
     initialCollapsed,
   });
 
+  // Use refs to store window dimensions - changes won't trigger re-renders
+  const windowDimensionsRef = useRef({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
+  });
+
   // Panel state - three states: expanded, collapsed, minimized
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
   const [remoteConfig, setRemoteConfig] = useState<any>(null);
+
+  // Panel positions state - only update when needed
+  const [panelPositions, setPanelPositions] = useState<any>({
+    actualPosition: { x: 0, y: 0 },
+    actualSize: { width: 240, height: 380 },
+    collapsedActualPosition: { x: 0, y: 0 },
+    expandedActualPosition: { x: 0, y: 0 },
+    collapsedSize: { width: 240, height: 380 },
+    expandedSize: { width: 300, height: 600 },
+  });
 
   // Load remote config for the device type
   useEffect(() => {
@@ -71,11 +87,39 @@ export function RemotePanel({
   const expandedHeight = panelLayout.expanded.height;
   const headerHeight = remoteConfig?.panel_layout?.header?.height || '48px';
 
-  // Calculate positions once, not on every render
-  const panelPositions = React.useMemo(() => {
-    // Get viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+  // Handle window resize - update ref but don't trigger re-render
+  useEffect(() => {
+    const handleResize = () => {
+      windowDimensionsRef.current = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+      // Only recalculate positions when window size changes
+      calculatePanelPositions();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate positions when panel state changes or config loads
+  useEffect(() => {
+    calculatePanelPositions();
+  }, [
+    isCollapsed,
+    isMinimized,
+    collapsedWidth,
+    collapsedHeight,
+    expandedWidth,
+    expandedHeight,
+    panelLayout,
+  ]);
+
+  // Calculate panel positions without triggering re-renders
+  const calculatePanelPositions = () => {
+    // Get viewport dimensions from ref
+    const viewportWidth = windowDimensionsRef.current.width;
+    const viewportHeight = windowDimensionsRef.current.height;
 
     // Parse CSS values to numbers
     const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
@@ -108,7 +152,8 @@ export function RemotePanel({
       y: viewportHeight - bottomOffset - parsePixels(expandedHeight),
     };
 
-    return {
+    // Update state with new positions
+    setPanelPositions({
       actualPosition,
       actualSize,
       collapsedActualPosition,
@@ -121,8 +166,8 @@ export function RemotePanel({
         width: parsePixels(expandedWidth),
         height: parsePixels(expandedHeight),
       },
-    };
-  }, [isCollapsed, collapsedWidth, collapsedHeight, expandedWidth, expandedHeight, panelLayout]);
+    });
+  };
 
   console.log(`[@component:RemotePanel] Panel positioning debug:`, {
     isCollapsed,
@@ -186,6 +231,9 @@ export function RemotePanel({
 
   // Simple device model detection - no loading, no fallback, no validation
   const renderRemoteComponent = () => {
+    // Use hardcoded device resolution if not provided
+    const effectiveDeviceResolution = deviceResolution || { width: 1920, height: 1080 };
+
     switch (host.device_model) {
       case 'android_mobile':
         return (
@@ -194,7 +242,7 @@ export function RemotePanel({
             onDisconnectComplete={onReleaseControl}
             streamPosition={panelPositions.actualPosition}
             streamSize={panelPositions.actualSize}
-            streamResolution={deviceResolution}
+            streamResolution={effectiveDeviceResolution}
             panelState={{
               isCollapsed,
               collapsedPosition: panelPositions.collapsedActualPosition,
