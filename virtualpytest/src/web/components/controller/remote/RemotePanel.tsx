@@ -2,7 +2,7 @@ import { OpenInFull, CloseFullscreen } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState, useEffect } from 'react';
 
-import { getConfigurableRemotePanelLayout } from '../../../config/layoutConfig';
+import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
 import { Host } from '../../../types/common/Host_Types';
 
 import { AndroidMobileRemote } from './AndroidMobileRemote';
@@ -20,38 +20,12 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
 
   // Load remote config for the device type
   useEffect(() => {
-    const loadRemoteConfig = async () => {
-      try {
-        let configPath = '';
-        switch (host.device_model) {
-          case 'android_mobile':
-            configPath = '/src/web/config/remote/android_mobile_remote.json';
-            break;
-          case 'android_tv':
-            configPath = '/src/web/config/remote/android_tv_remote.json';
-            break;
-          default:
-            console.warn(
-              `[@component:RemotePanel] No config found for device model: ${host.device_model}`,
-            );
-            return;
-        }
-
-        const response = await fetch(configPath);
-        if (response.ok) {
-          const config = await response.json();
-          setRemoteConfig(config);
-          console.log(`[@component:RemotePanel] Loaded config for ${host.device_model}:`, config);
-        }
-      } catch (error) {
-        console.error(
-          `[@component:RemotePanel] Failed to load config for ${host.device_model}:`,
-          error,
-        );
-      }
+    const loadConfig = async () => {
+      const config = await loadRemoteConfig(host.device_model);
+      setRemoteConfig(config);
     };
 
-    loadRemoteConfig();
+    loadConfig();
   }, [host.device_model]);
 
   // Get configurable layout from device config

@@ -1,15 +1,14 @@
-import androidMobileRemote from './android_mobile_remote.json';
-import androidTVRemote from './android_tv_remote.json';
-import bluetoothRemote from './bluetooth_remote.json';
-import infraredRemote from './infrared_remote.json';
+// Export layout configurations
+export * from './layoutConfig';
 
-// Export all remote configurations from a single place
-export { androidTVRemote, infraredRemote, bluetoothRemote, androidMobileRemote };
+// Export remote panel configurations
+export * from './remote/remotePanelLayout';
 
-// Default export for backward compatibility
-export default {
-  androidTV: androidTVRemote,
-  infrared: infraredRemote,
-  bluetooth: bluetoothRemote,
-  androidMobile: androidMobileRemote,
-};
+// Export AV panel configurations
+export * from './av/avPanelLayout';
+
+// Export power configurations
+export * from './powerConfigs';
+
+// Export validation colors
+export * from './validationColors';

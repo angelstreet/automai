@@ -9,7 +9,7 @@ import {
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
 
-import { getConfigurableAVPanelLayout } from '../../../config/layoutConfig';
+import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 
@@ -43,20 +43,12 @@ export function HDMIStream({
 
   // Load AV config
   useEffect(() => {
-    const loadAVConfig = async () => {
-      try {
-        const response = await fetch('/src/web/config/av/hdmi_stream.json');
-        if (response.ok) {
-          const config = await response.json();
-          setAvConfig(config);
-          console.log(`[@component:HDMIStream] Loaded AV config:`, config);
-        }
-      } catch (error) {
-        console.error(`[@component:HDMIStream] Failed to load AV config:`, error);
-      }
+    const loadConfig = async () => {
+      const config = await loadAVConfig('hdmi_stream');
+      setAvConfig(config);
     };
 
-    loadAVConfig();
+    loadConfig();
   }, []);
 
   // Get configurable layout from AV config
