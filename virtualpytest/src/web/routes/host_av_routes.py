@@ -12,6 +12,7 @@ These endpoints run on the host and use the host's own stored device object.
 from flask import Blueprint, request, jsonify, current_app, send_file
 from src.utils.host_utils import get_local_controller
 import os
+import shutil
 
 # Create blueprint
 av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
@@ -278,7 +279,7 @@ def get_stream_url():
 
 @av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
-    """Take screenshot using own stored host_device object"""
+    """Take temporary screenshot to nginx folder using own stored host_device object"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -301,22 +302,94 @@ def take_screenshot():
         
         print(f"[@route:host_av:take_screenshot] Using own AV controller: {type(av_controller).__name__}")
         
+        # Take screenshot and save to nginx temp folder
+        # Use a fixed filename that gets overwritten each time
+        temp_filename = "screenshot.jpg"
+        
+        # Take screenshot using controller (this will save to /tmp/screenshots/)
+        screenshot_result = av_controller.take_screenshot(temp_filename)
+        
+        if screenshot_result:
+            # Copy from /tmp/screenshots/ to nginx folder
+            
+            # Ensure nginx directory exists
+            nginx_dir = "/var/www/html/captures/tmp"
+            os.makedirs(nginx_dir, exist_ok=True)
+            
+            # Source path (where controller saves)
+            source_path = f"/tmp/screenshots/{temp_filename}"
+            # Destination path (nginx folder)
+            nginx_path = f"{nginx_dir}/{temp_filename}"
+            
+            # Copy file to nginx folder
+            if os.path.exists(source_path):
+                shutil.copy2(source_path, nginx_path)
+                print(f"[@route:host_av:take_screenshot] Copied screenshot from {source_path} to {nginx_path}")
+            else:
+                print(f"[@route:host_av:take_screenshot] Warning: Source file not found at {source_path}")
+            
+            # Build nginx URL for immediate access
+            host_ip = host_device.get('device_ip') or host_device.get('host_ip')
+            nginx_url = f"https://{host_ip}/captures/tmp/{temp_filename}"
+            
+            return jsonify({
+                'success': True,
+                'screenshot_path': nginx_url  # Nginx URL for immediate access
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to take temporary screenshot'
+            }), 500
+            
+    except Exception as e:
+        print(f"[@route:host_av:take_screenshot] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@av_bp.route('/save-screenshot', methods=['POST'])
+def save_screenshot():
+    """Take screenshot and upload to R2 using own stored host_device object"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        # Get controller object directly from own stored host_device
+        av_controller = get_local_controller('av')
+        
+        if not av_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No AV controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_av:save_screenshot] Using own AV controller: {type(av_controller).__name__}")
+        
         # Get request data for optional parameters
         request_data = request.get_json() or {}
         filename = request_data.get('filename')
         
-        # Take screenshot using controller
+        # Take screenshot using controller (this already handles R2 upload)
         screenshot_result = av_controller.take_screenshot(filename)
         
         if screenshot_result:
             return jsonify({
                 'success': True,
-                'screenshot_path': screenshot_result  # ✅ FIXED: Use screenshot_path to match frontend expectation
+                'screenshot_path': screenshot_result  # R2 URL for permanent storage
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to take screenshot'
+                'error': 'Failed to take and save screenshot'
             }), 500
             
     except Exception as e:

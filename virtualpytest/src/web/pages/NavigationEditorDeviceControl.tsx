@@ -287,8 +287,8 @@ export const createDeviceControlHandlers = (
         `[@handlers:DeviceControl] Taking screenshot for host: ${selectedHost.host_name}`,
       );
 
-      // Call take-screenshot server route
-      const response = await fetch(`/server/remote/take-screenshot`, {
+      // Call save-screenshot server route for permanent R2 storage
+      const response = await fetch(`/server/av/save-screenshot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -300,15 +300,15 @@ export const createDeviceControlHandlers = (
 
       const result = await response.json();
 
-      if (result.success && result.screenshot) {
-        console.log('[@handlers:DeviceControl] Screenshot taken successfully');
+      if (result.success && result.screenshot_path) {
+        console.log('[@handlers:DeviceControl] Screenshot saved successfully to R2');
 
-        // Create updated node with screenshot
+        // Create updated node with screenshot R2 URL
         const updatedNode = {
           ...selectedNode,
           data: {
             ...selectedNode.data,
-            screenshot: `data:image/png;base64,${result.screenshot}`,
+            screenshot: result.screenshot_path, // R2 URL for permanent storage
           },
         };
 
@@ -320,7 +320,7 @@ export const createDeviceControlHandlers = (
         onSetSelectedNode(updatedNode);
         onSetHasUnsavedChanges(true);
 
-        console.log(`[@handlers:DeviceControl] Screenshot captured and node updated`);
+        console.log(`[@handlers:DeviceControl] Screenshot captured and node updated with R2 URL`);
       } else {
         console.error('[@handlers:DeviceControl] Screenshot failed - no data returned');
       }

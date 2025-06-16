@@ -182,7 +182,7 @@ def get_status():
 
 @av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
-    """Proxy take screenshot request to selected host"""
+    """Proxy take screenshot request to selected host (temporary nginx storage)"""
     try:
         print("[@route:server_av:take_screenshot] Proxying take screenshot request")
         
@@ -191,6 +191,26 @@ def take_screenshot():
         
         # Proxy to host
         response_data, status_code = proxy_to_host('/host/av/take-screenshot', 'POST', request_data)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@av_bp.route('/save-screenshot', methods=['POST'])
+def save_screenshot():
+    """Proxy save screenshot request to selected host (uploads to R2)"""
+    try:
+        print("[@route:server_av:save_screenshot] Proxying save screenshot request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/av/save-screenshot', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
