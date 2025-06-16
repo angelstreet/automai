@@ -32,11 +32,6 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-import {
-  getAVPanelLayout,
-  getRemotePanelLayout,
-  getPanelPositioning,
-} from '../config/layoutConfig';
 import { useNavigationEditor } from '../hooks';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -221,11 +216,6 @@ const NavigationEditorContent: React.FC = () => {
 
   // Track AV panel expanded state
   const [isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
-
-  // Get layout configurations
-  const remotePanelLayout = getRemotePanelLayout();
-  const avPanelLayout = getAVPanelLayout(selectedHost?.device_model);
-  const panelPositioning = getPanelPositioning();
 
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT

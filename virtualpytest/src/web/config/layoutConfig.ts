@@ -28,32 +28,6 @@ export interface RemoteLayoutConfig {
   compactMaxWidth: number;
 }
 
-// Layout configuration for AV Panel dimensions
-export interface AVPanelLayoutConfig {
-  collapsed: {
-    width: string;
-    height: string;
-  };
-  expanded: {
-    width: string;
-    height: string;
-  };
-}
-
-// Layout configuration for Remote Panel dimensions (legacy)
-export interface RemotePanelLayoutConfig {
-  width: string;
-  height: string;
-}
-
-// Layout configuration for panel positioning (legacy)
-export interface PanelPositioningConfig {
-  top: string;
-  right: string;
-  rightWhenBothOpen: string; // Position when both remote and AV panels are open
-  zIndex: number;
-}
-
 // New configurable remote panel layout from device config
 export interface ConfigurableRemotePanelLayout {
   collapsed: {
@@ -79,6 +53,32 @@ export interface ConfigurableRemotePanelLayout {
   zIndex: number;
   showScreenshotInCollapsed: boolean;
   showScreenshotInExpanded: boolean;
+}
+
+export interface ConfigurableAVPanelLayout {
+  collapsed: {
+    width: string;
+    height: string;
+    position: {
+      top?: string;
+      bottom?: string;
+      left?: string;
+      right?: string;
+    };
+  };
+  expanded: {
+    width: string;
+    height: string;
+    position: {
+      top?: string;
+      bottom?: string;
+      left?: string;
+      right?: string;
+    };
+  };
+  zIndex: number;
+  showControlsInCollapsed: boolean;
+  showControlsInExpanded: boolean;
 }
 
 /**
@@ -177,60 +177,6 @@ export const getRemoteLayout = (remoteType?: string): RemoteLayoutConfig => {
         compactMaxWidth: 400,
       };
   }
-};
-
-/**
- * Get the appropriate AV Panel layout configuration based on device model
- * @param model The device model string
- * @returns AVPanelLayoutConfig with the appropriate settings
- */
-export const getAVPanelLayout = (model?: string): AVPanelLayoutConfig => {
-  const mobile = isMobileModel(model);
-  return mobile
-    ? {
-        collapsed: {
-          width: '300px',
-          height: '600px',
-        },
-        expanded: {
-          width: '800px',
-          height: '600px',
-        },
-      }
-    : {
-        collapsed: {
-          width: '400px',
-          height: '300px',
-        },
-        expanded: {
-          width: '800px',
-          height: '600px',
-        },
-      };
-};
-
-/**
- * Get the Remote Panel layout configuration
- * @returns RemotePanelLayoutConfig with the appropriate settings
- */
-export const getRemotePanelLayout = (): RemotePanelLayoutConfig => {
-  return {
-    width: '400px',
-    height: 'calc(100vh - 140px)',
-  };
-};
-
-/**
- * Get the panel positioning configuration
- * @returns PanelPositioningConfig with the appropriate settings
- */
-export const getPanelPositioning = (): PanelPositioningConfig => {
-  return {
-    top: '100px',
-    right: '20px',
-    rightWhenBothOpen: '440px', // 400px (remote panel width) + 20px (gap) + 20px (margin)
-    zIndex: 1000,
-  };
 };
 
 /**
@@ -342,4 +288,75 @@ export const getConfigurableRemotePanelLayout = (
         showScreenshotInExpanded: true,
       };
   }
+};
+
+export const getConfigurableAVPanelLayout = (
+  deviceModel: string,
+  avConfig: any,
+): ConfigurableAVPanelLayout => {
+  // Default fallback layout
+  const defaultLayout: ConfigurableAVPanelLayout = {
+    collapsed: {
+      width: '300px',
+      height: '200px',
+      position: {
+        bottom: '20px',
+        left: '20px',
+      },
+    },
+    expanded: {
+      width: '800px',
+      height: '600px',
+      position: {
+        top: '100px',
+        left: '20px',
+      },
+    },
+    zIndex: 1000,
+    showControlsInCollapsed: false,
+    showControlsInExpanded: true,
+  };
+
+  if (!avConfig?.panel_layout) {
+    return defaultLayout;
+  }
+
+  const panelLayout = avConfig.panel_layout;
+  const deviceSpecific = avConfig.device_specific?.[deviceModel];
+
+  return {
+    collapsed: {
+      width:
+        deviceSpecific?.collapsed?.width ||
+        panelLayout.collapsed?.width ||
+        defaultLayout.collapsed.width,
+      height:
+        deviceSpecific?.collapsed?.height ||
+        panelLayout.collapsed?.height ||
+        defaultLayout.collapsed.height,
+      position: {
+        ...defaultLayout.collapsed.position,
+        ...panelLayout.collapsed?.position,
+      },
+    },
+    expanded: {
+      width:
+        deviceSpecific?.expanded?.width ||
+        panelLayout.expanded?.width ||
+        defaultLayout.expanded.width,
+      height:
+        deviceSpecific?.expanded?.height ||
+        panelLayout.expanded?.height ||
+        defaultLayout.expanded.height,
+      position: {
+        ...defaultLayout.expanded.position,
+        ...panelLayout.expanded?.position,
+      },
+    },
+    zIndex: panelLayout.zIndex || defaultLayout.zIndex,
+    showControlsInCollapsed:
+      panelLayout.showControlsInCollapsed ?? defaultLayout.showControlsInCollapsed,
+    showControlsInExpanded:
+      panelLayout.showControlsInExpanded ?? defaultLayout.showControlsInExpanded,
+  };
 };

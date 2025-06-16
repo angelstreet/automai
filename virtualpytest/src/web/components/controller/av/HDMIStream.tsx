@@ -9,15 +9,11 @@ import {
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
 
+import { getConfigurableAVPanelLayout } from '../../../config/layoutConfig';
 import { useHdmiStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 
-import {
-  RecordingOverlay,
-  LoadingOverlay,
-  ModeIndicatorDot,
-  StatusIndicator,
-} from './ScreenEditorOverlay';
+import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot } from './ScreenEditorOverlay';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { StreamViewer } from './StreamViewer';
 import { VideoCapture } from './VideoCapture';
@@ -38,9 +34,36 @@ export function HDMIStream({
   // Stream URL fetching state
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
-  const [isLoadingStream, setIsLoadingStream] = useState<boolean>(false);
+  const [_isLoadingStream, setIsLoadingStream] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState<boolean>(false);
+
+  // AV config state
+  const [avConfig, setAvConfig] = useState<any>(null);
+
+  // Load AV config
+  useEffect(() => {
+    const loadAVConfig = async () => {
+      try {
+        const response = await fetch('/src/config/av/hdmi_stream.json');
+        if (response.ok) {
+          const config = await response.json();
+          setAvConfig(config);
+          console.log(`[@component:HDMIStream] Loaded AV config:`, config);
+        }
+      } catch (error) {
+        console.error(`[@component:HDMIStream] Failed to load AV config:`, error);
+      }
+    };
+
+    loadAVConfig();
+  }, []);
+
+  // Get configurable layout from AV config
+  const panelLayout = getConfigurableAVPanelLayout(host.device_model, avConfig);
+
+  // Determine current layout based on expanded state
+  const currentLayout = isExpanded ? panelLayout.expanded : panelLayout.collapsed;
 
   // Use the existing hook with our fetched stream data
   const {
@@ -50,19 +73,19 @@ export function HDMIStream({
     captureImageRef: _captureImageRef,
     captureImageDimensions: _captureImageDimensions,
     originalImageDimensions: _originalImageDimensions,
-    captureSourcePath,
+    captureSourcePath: _captureSourcePath,
     selectedArea,
     screenshotPath,
     videoFramesPath,
     totalFrames,
     currentFrame,
-    layoutConfig,
+    layoutConfig: _layoutConfig,
 
     // Actions from hook
     setCaptureMode,
     setCurrentFrame,
     handleAreaSelected,
-    handleClearSelection,
+    handleClearSelection: _handleClearSelection,
     handleImageLoad,
     handleTakeScreenshot: hookTakeScreenshot,
   } = useHdmiStream({
@@ -169,11 +192,6 @@ export function HDMIStream({
     onExpandedChange?.(newExpanded);
   }, [isExpanded, onExpandedChange]);
 
-  // Back to stream from other modes
-  const handleBackToStream = useCallback(() => {
-    setCaptureMode('stream');
-  }, [setCaptureMode]);
-
   // Handle frame changes in video capture
   const handleFrameChange = useCallback(
     (frame: number) => {
@@ -181,6 +199,11 @@ export function HDMIStream({
     },
     [setCurrentFrame],
   );
+
+  // Back to stream from other modes
+  const handleBackToStream = useCallback(() => {
+    setCaptureMode('stream');
+  }, [setCaptureMode]);
 
   // Handle tap on stream (for remote control)
   const handleTap = useCallback((x: number, y: number) => {
@@ -191,288 +214,84 @@ export function HDMIStream({
   // Get device resolution for click overlay
   const deviceResolution = { width: 1920, height: 1080 }; // Default, should come from host config
 
-  // Determine stream status for UI
-  const streamStatus = isLoadingStream ? 'loading' : isStreamActive ? 'running' : 'stopped';
-
-  // Compact dimensions based on device model
-  const compactDimensions = {
-    width: layoutConfig.isMobileModel ? 300 : 400,
-    height: layoutConfig.isMobileModel ? 600 : 300,
-  };
-
-  // Base container styles
-  const baseContainerStyles = {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
+  // Build position styles from config
+  const positionStyles: any = {
+    position: 'fixed',
+    zIndex: panelLayout.zIndex,
+    width: currentLayout.width,
+    height: currentLayout.height,
+    backgroundColor: '#1E1E1E',
+    border: '2px solid #1E1E1E',
+    borderRadius: 1,
+    boxShadow: 3,
+    overflow: 'hidden',
+    transition: 'all 0.3s ease-in-out',
     ...sx,
   };
 
+  // Add positioning based on config
+  if (currentLayout.position.top) positionStyles.top = currentLayout.position.top;
+  if (currentLayout.position.bottom) positionStyles.bottom = currentLayout.position.bottom;
+  if (currentLayout.position.left) positionStyles.left = currentLayout.position.left;
+  if (currentLayout.position.right) positionStyles.right = currentLayout.position.right;
+
   return (
-    <Box sx={baseContainerStyles}>
-      {isExpanded ? (
-        // Expanded view with header controls
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0,
-            boxShadow: 2,
-            borderRadius: 1,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Main HDMI Stream Panel */}
-          <Box
-            sx={{
-              width: 800,
-              height: 600,
-              bgcolor: '#1E1E1E',
-              border: '2px solid #1E1E1E',
-              borderRadius: '1px 0 0 1px',
-            }}
-          >
-            {/* Header with controls */}
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                p: 1,
-                borderBottom: '1px solid #333',
-                height: '48px',
-              }}
-            >
-              {/* Left section - status indicator */}
-              <Box
-                sx={{
-                  width: '80px',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                }}
-              >
-                <StatusIndicator streamStatus={streamStatus} />
-              </Box>
-
-              {/* Center section - action buttons */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flex: 1,
-                }}
-              >
-                <Tooltip title="Take Screenshot">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={handleTakeScreenshot}
-                      sx={{
-                        color:
-                          captureMode === 'screenshot' || isScreenshotLoading
-                            ? '#ff4444'
-                            : '#ffffff',
-                        borderBottom:
-                          captureMode === 'screenshot' || isScreenshotLoading
-                            ? '2px solid #ff4444'
-                            : 'none',
-                      }}
-                      disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
-                    >
-                      <PhotoCamera />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-
-                {isCaptureActive ? (
-                  <Tooltip title="Stop Capture">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={handleStopCapture}
-                        sx={{
-                          color: captureMode === 'video' || isCaptureActive ? '#ff4444' : '#ffffff',
-                          borderBottom:
-                            captureMode === 'video' || isCaptureActive
-                              ? '2px solid #ff4444'
-                              : 'none',
-                        }}
-                      >
-                        <StopCircle />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <Tooltip title="Start Capture">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={handleStartCapture}
-                        sx={{
-                          color:
-                            captureMode === 'capture' || isCaptureActive ? '#ff4444' : '#ffffff',
-                          borderBottom:
-                            captureMode === 'capture' || isCaptureActive
-                              ? '2px solid #ff4444'
-                              : 'none',
-                        }}
-                        disabled={!isStreamActive}
-                      >
-                        <VideoCall />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                )}
-
-                <Tooltip title="Restart Stream">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={restartStream}
-                      sx={{ color: '#ffffff' }}
-                      disabled={!isStreamActive || isCaptureActive}
-                    >
-                      <Refresh />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
-
-              {/* Right section - minimize button */}
-              <Box
-                sx={{
-                  width: '40px',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                }}
-              >
-                <Tooltip title="Minimize">
-                  <span>
-                    <IconButton
-                      size="small"
-                      onClick={handleToggleExpanded}
-                      sx={{ color: '#ffffff' }}
-                    >
-                      <FullscreenExit />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
-            </Box>
-
-            {/* Main viewing area */}
-            <Box
-              sx={{
-                flex: 1,
-                position: 'relative',
-                overflow: 'hidden',
-                height: 'calc(100% - 48px)',
-              }}
-            >
-              {/* Stream viewer - always rendered at top level */}
-              <StreamViewer
-                key="main-stream-viewer"
-                streamUrl={streamUrl}
-                isStreamActive={isStreamActive && !isScreenshotLoading}
-                isCapturing={isCaptureActive}
-                model={host.device_model}
-                enableClick={true}
-                deviceResolution={deviceResolution}
-                deviceId={`${host.host_ip}:5555`}
-                onTap={handleTap}
-                selectedHostDevice={host}
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-
-              {/* Screenshot capture overlay */}
-              {captureMode === 'screenshot' && (
-                <ScreenshotCapture
-                  screenshotPath={screenshotPath}
-                  isCapturing={false}
-                  isSaving={isScreenshotLoading}
-                  onImageLoad={handleImageLoad}
-                  selectedArea={selectedArea}
-                  onAreaSelected={handleAreaSelected}
-                  model={host.device_model}
-                  selectedHostDevice={host}
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 5,
-                  }}
-                />
-              )}
-
-              {/* Video capture overlay */}
-              {captureMode === 'capture' && (
-                <VideoCapture
-                  deviceModel={host.device_model}
-                  hostIp={host.host_ip}
-                  hostPort="444"
-                  videoFramesPath={videoFramesPath}
-                  currentFrame={currentFrame}
-                  totalFrames={totalFrames}
-                  onFrameChange={handleFrameChange}
-                  onBackToStream={handleBackToStream}
-                  isSaving={false}
-                  savedFrameCount={0}
-                  onImageLoad={handleImageLoad}
-                  selectedArea={selectedArea}
-                  onAreaSelected={handleAreaSelected}
-                  isCapturing={isCaptureActive}
-                  selectedHostDevice={host}
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 5,
-                  }}
-                />
-              )}
-
-              {/* Overlays */}
-              <LoadingOverlay isScreenshotLoading={isScreenshotLoading} />
-              <RecordingOverlay isCapturing={isCaptureActive} />
-            </Box>
-          </Box>
+    <Box sx={positionStyles}>
+      {/* Header with toggle button */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 1,
+          borderBottom: '1px solid #333',
+          bgcolor: '#1E1E1E',
+          color: '#ffffff',
+        }}
+      >
+        <Box sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+          {avConfig?.stream_info?.name || 'HDMI Stream'} - {host.host_name}
         </Box>
-      ) : (
-        // Compact view
-        <Box
+        <Tooltip title={isExpanded ? 'Collapse Panel' : 'Expand Panel'}>
+          <IconButton size="small" onClick={handleToggleExpanded} sx={{ color: 'inherit' }}>
+            {isExpanded ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Stream Content */}
+      <Box sx={{ height: 'calc(100% - 48px)', position: 'relative', overflow: 'hidden' }}>
+        {/* Stream viewer - always rendered */}
+        <StreamViewer
+          key="stream-viewer"
+          streamUrl={streamUrl}
+          isStreamActive={isStreamActive && !isScreenshotLoading}
+          isCapturing={isCaptureActive}
+          model={host.device_model}
+          enableClick={true}
+          deviceResolution={deviceResolution}
+          deviceId={`${host.host_name}:5555`}
+          onTap={handleTap}
+          selectedHostDevice={host}
           sx={{
-            width: compactDimensions.width,
-            height: compactDimensions.height,
-            bgcolor: '#1E1E1E',
-            border: '2px solid #1E1E1E',
-            borderRadius: 1,
-            overflow: 'hidden',
-            position: 'relative',
-            boxShadow: 2,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
           }}
-        >
-          {/* Stream viewer - always rendered */}
-          <StreamViewer
-            key="compact-stream-viewer"
-            streamUrl={streamUrl}
-            isStreamActive={isStreamActive && !isScreenshotLoading}
-            isCapturing={isCaptureActive}
+        />
+
+        {/* Screenshot capture overlay */}
+        {captureMode === 'screenshot' && (
+          <ScreenshotCapture
+            screenshotPath={screenshotPath}
+            isCapturing={false}
+            isSaving={isScreenshotLoading}
+            onImageLoad={handleImageLoad}
+            selectedArea={selectedArea}
+            onAreaSelected={handleAreaSelected}
             model={host.device_model}
-            enableClick={true}
-            deviceResolution={deviceResolution}
-            deviceId={`${host.host_ip}:5555`}
-            onTap={handleTap}
             selectedHostDevice={host}
             sx={{
               position: 'absolute',
@@ -480,83 +299,123 @@ export function HDMIStream({
               left: 0,
               width: '100%',
               height: '100%',
+              zIndex: 5,
             }}
           />
+        )}
 
-          {/* Screenshot capture overlay */}
-          {captureMode === 'screenshot' && (
-            <ScreenshotCapture
-              screenshotPath={screenshotPath}
-              isCapturing={false}
-              isSaving={isScreenshotLoading}
-              onImageLoad={handleImageLoad}
-              selectedArea={selectedArea}
-              onAreaSelected={handleAreaSelected}
-              model={host.device_model}
-              selectedHostDevice={host}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 5,
-              }}
-            />
-          )}
-
-          {/* Video capture overlay */}
-          {captureMode === 'capture' && (
-            <VideoCapture
-              deviceModel={host.device_model}
-              hostIp={host.host_ip}
-              hostPort="444"
-              videoFramesPath={videoFramesPath}
-              currentFrame={currentFrame}
-              totalFrames={totalFrames}
-              onFrameChange={handleFrameChange}
-              onBackToStream={handleBackToStream}
-              isSaving={false}
-              savedFrameCount={0}
-              onImageLoad={handleImageLoad}
-              selectedArea={selectedArea}
-              onAreaSelected={handleAreaSelected}
-              isCapturing={isCaptureActive}
-              selectedHostDevice={host}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 5,
-              }}
-            />
-          )}
-
-          {/* Mode indicator dot */}
-          <ModeIndicatorDot viewMode={captureMode} />
-
-          {/* Expand button */}
-          <IconButton
-            size="small"
-            onClick={handleToggleExpanded}
+        {/* Video capture overlay */}
+        {captureMode === 'capture' && (
+          <VideoCapture
+            deviceModel={host.device_model}
+            hostIp={host.host_name}
+            hostPort="444"
+            videoFramesPath={videoFramesPath}
+            currentFrame={currentFrame}
+            totalFrames={totalFrames}
+            onFrameChange={handleFrameChange}
+            onBackToStream={handleBackToStream}
+            isSaving={false}
+            savedFrameCount={0}
+            onImageLoad={handleImageLoad}
+            selectedArea={selectedArea}
+            onAreaSelected={handleAreaSelected}
+            isCapturing={isCaptureActive}
+            selectedHostDevice={host}
             sx={{
               position: 'absolute',
-              top: 4,
-              right: 4,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              color: '#ffffff',
-              zIndex: 1,
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              },
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 5,
+            }}
+          />
+        )}
+
+        {/* Overlays */}
+        <LoadingOverlay isScreenshotLoading={isScreenshotLoading} />
+        <RecordingOverlay isCapturing={isCaptureActive} />
+
+        {/* Mode indicator dot for collapsed view */}
+        {!isExpanded && <ModeIndicatorDot viewMode={captureMode} />}
+
+        {/* Action buttons for expanded view */}
+        {isExpanded && panelLayout.showControlsInExpanded && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              display: 'flex',
+              gap: 1,
+              zIndex: 10,
             }}
           >
-            <Fullscreen sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
-      )}
+            <Tooltip title="Take Screenshot">
+              <IconButton
+                size="small"
+                onClick={handleTakeScreenshot}
+                sx={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  color:
+                    captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                }}
+                disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
+              >
+                <PhotoCamera sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+
+            {isCaptureActive ? (
+              <Tooltip title="Stop Capture">
+                <IconButton
+                  size="small"
+                  onClick={handleStopCapture}
+                  sx={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    color: '#ff4444',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                  }}
+                >
+                  <StopCircle sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Start Capture">
+                <IconButton
+                  size="small"
+                  onClick={handleStartCapture}
+                  sx={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    color: captureMode === 'capture' ? '#ff4444' : '#ffffff',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                  }}
+                  disabled={!isStreamActive}
+                >
+                  <VideoCall sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Restart Stream">
+              <IconButton
+                size="small"
+                onClick={restartStream}
+                sx={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  color: '#ffffff',
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                }}
+                disabled={!isStreamActive || isCaptureActive}
+              >
+                <Refresh sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }
