@@ -180,17 +180,17 @@ def get_status():
             'error': str(e)
         }), 500
 
-@av_bp.route('/screenshot', methods=['POST'])
+@av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
     """Proxy take screenshot request to selected host"""
     try:
-        print("[@route:server_av:screenshot] Proxying take screenshot request")
+        print("[@route:server_av:take_screenshot] Proxying take screenshot request")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/screenshot', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/av/take-screenshot', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

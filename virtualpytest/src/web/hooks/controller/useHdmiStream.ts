@@ -250,7 +250,7 @@ export function useHdmiStream({
   // Handle take screenshot
   const handleTakeScreenshot = useCallback(async () => {
     try {
-      const response = await fetch(`/server/av/screenshot`, {
+      const response = await fetch(`/server/av/take-screenshot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -267,7 +267,7 @@ export function useHdmiStream({
     } catch (error) {
       console.error('[@hook:useHdmiStream] Screenshot failed:', error);
     }
-  }, [host.host_name]);
+  }, [host]);
 
   const handleAutoDetectText = useCallback(async () => {
     if (!selectedArea || !host.device_model) {

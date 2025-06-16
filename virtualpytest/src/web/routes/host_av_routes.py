@@ -276,7 +276,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@av_bp.route('/screenshot', methods=['POST'])
+@av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
     """Take screenshot using own stored host_device object"""
     try:
@@ -299,7 +299,7 @@ def take_screenshot():
                 'available_controllers': list(host_device.get('controller_objects', {}).keys())
             }), 404
         
-        print(f"[@route:host_av:screenshot] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:take_screenshot] Using own AV controller: {type(av_controller).__name__}")
         
         # Get request data for optional parameters
         request_data = request.get_json() or {}
@@ -311,7 +311,7 @@ def take_screenshot():
         if screenshot_result:
             return jsonify({
                 'success': True,
-                'screenshot_url': screenshot_result  # ✅ FIXED: Use screenshot_url instead of screenshot
+                'screenshot_path': screenshot_result  # ✅ FIXED: Use screenshot_path to match frontend expectation
             })
         else:
             return jsonify({
