@@ -49,7 +49,6 @@ export function RemotePanel({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
   const [remoteConfig, setRemoteConfig] = useState<any>(null);
-  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Load remote config for the device type
   useEffect(() => {
@@ -60,22 +59,6 @@ export function RemotePanel({
 
     loadConfig();
   }, [host.device_model]);
-
-  // Force re-render when panel state changes to recalculate positions
-  useEffect(() => {
-    setForceUpdate((prev) => prev + 1);
-  }, [isCollapsed, isMinimized]);
-
-  // Handle window resize to recalculate positions
-  useEffect(() => {
-    const handleResize = () => {
-      console.log(`[@component:RemotePanel] Window resized, recalculating positions`);
-      setForceUpdate((prev) => prev + 1);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Get configurable layout from device config
   const panelLayout = getConfigurableRemotePanelLayout(host.device_model, remoteConfig);

@@ -16,6 +16,7 @@ import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
 import { createPortal } from 'react-dom';
+import { hdmiStreamMobileConfig } from '../../../config/av/hdmiStream';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
@@ -95,21 +96,36 @@ export const AndroidMobileRemote = React.memo(
 
       // Always create panelInfo when we have stream position/size - overlay should always be visible
       if (streamPosition && streamSize && panelState) {
-        // Calculate the actual stream position (not the remote panel position)
-        // The stream should be positioned relative to the viewport, not the remote panel
+        // Get HDMI stream dimensions from config based on panel state
+        const streamConfig = hdmiStreamMobileConfig.panel_layout;
+        const currentStreamConfig = panelState.isCollapsed
+          ? streamConfig.collapsed
+          : streamConfig.expanded;
+
+        // Parse dimensions from config
+        const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
+        const streamWidth = parsePixels(currentStreamConfig.width);
+        const streamHeight = parsePixels(currentStreamConfig.height);
+
+        // Calculate stream position (left side of screen, not remote panel position)
         const streamActualPosition = {
-          x: 50, // Hardcode stream position for now - left side of screen
-          y: 100, // Hardcode stream position for now - top area
+          x: currentStreamConfig.position.left
+            ? parsePixels(currentStreamConfig.position.left)
+            : 20,
+          y:
+            window.innerHeight -
+            parsePixels(currentStreamConfig.position.bottom || '20px') -
+            streamHeight,
         };
 
         const streamActualSize = {
-          width: 400, // Hardcode stream size for now
-          height: 300, // Hardcode stream size for now
+          width: streamWidth,
+          height: streamHeight,
         };
 
         const info = {
-          position: streamActualPosition, // Use stream position, not panel position
-          size: streamActualSize, // Use stream size, not panel size
+          position: streamActualPosition, // Use HDMI stream position from config
+          size: streamActualSize, // Use HDMI stream size from config
           deviceResolution: streamResolution || hardcodedResolution,
           isCollapsed: panelState.isCollapsed,
         };
@@ -503,7 +519,6 @@ export const AndroidMobileRemote = React.memo(
               deviceWidth={layoutConfig.deviceResolution.width}
               deviceHeight={layoutConfig.deviceResolution.height}
               isVisible={true} // Always visible when remote is active
-              selectedElementId={selectedElement ? selectedElement : undefined}
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
               onPanelTap={panelInfo ? handleStreamTap : undefined}
