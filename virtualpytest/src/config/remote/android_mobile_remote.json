@@ -12,6 +12,27 @@
       "y": 20
     }
   },
+  "panel_layout": {
+    "collapsed": {
+      "width": "200px",
+      "height": "300px",
+      "position": {
+        "bottom": "20px",
+        "left": "20px"
+      }
+    },
+    "expanded": {
+      "width": "400px",
+      "height": "calc(100vh - 140px)",
+      "position": {
+        "top": "100px",
+        "right": "20px"
+      }
+    },
+    "zIndex": 1000,
+    "showScreenshotInCollapsed": false,
+    "showScreenshotInExpanded": true
+  },
   "button_layout": {
     "back": {
       "key": "BACK",
@@ -84,4 +105,4 @@
       "comment": "Power button"
     }
   }
-} 
+}

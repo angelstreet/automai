@@ -8,11 +8,15 @@ import {
   Paper,
   Alert,
   TextField,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import { ExpandMore, ExpandLess, OpenInFull, CloseFullscreen } from '@mui/icons-material';
 import { useRemoteConnection } from '../../hooks/remote/useRemoteConnection';
 import { RemoteCore } from './RemoteCore';
 import { RemoteType, BaseConnectionConfig } from '../../types/remote/remoteTypes';
 import { ConnectionForm } from '../../types/remote/types';
+import { getConfigurableRemotePanelLayout } from '../../../config/layoutConfig';
 
 interface RemotePanelProps {
   /** The type of remote device */
@@ -21,6 +25,8 @@ interface RemotePanelProps {
   connectionConfig?: BaseConnectionConfig;
   /** Show/hide screenshot display */
   showScreenshot?: boolean;
+  /** Initial collapsed state */
+  initialCollapsed?: boolean;
   /** Custom styling */
   sx?: any;
 }
@@ -29,8 +35,12 @@ export function RemotePanel({
   remoteType,
   connectionConfig,
   showScreenshot = true,
-  sx = {}
+  initialCollapsed = true,
+  sx = {},
 }: RemotePanelProps) {
+  // Panel state
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
+
   // Screenshot UI state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
@@ -52,6 +62,15 @@ export function RemotePanel({
     deviceConfig,
   } = useRemoteConnection(remoteType);
 
+  // Get configurable layout from device config
+  const panelLayout = getConfigurableRemotePanelLayout(remoteType, remoteConfig);
+
+  // Determine current layout based on collapsed state
+  const currentLayout = isCollapsed ? panelLayout.collapsed : panelLayout.expanded;
+  const shouldShowScreenshot = isCollapsed
+    ? panelLayout.showScreenshotInCollapsed
+    : panelLayout.showScreenshotInExpanded;
+
   // Reset screenshot loading state on mount
   useEffect(() => {
     setIsScreenshotLoading(false);
@@ -70,14 +89,16 @@ export function RemotePanel({
         device_port: connectionConfig.device_port || '5555',
       });
     } else {
-      console.log(`[@component:RemotePanel] No config provided for ${remoteType}, fetching defaults`);
+      console.log(
+        `[@component:RemotePanel] No config provided for ${remoteType}, fetching defaults`,
+      );
       fetchDefaultValues();
     }
   }, [connectionConfig, fetchDefaultValues, setConnectionForm, remoteType]);
 
   const handleScreenshotClick = async () => {
     if (!deviceConfig?.hasScreenshot) return;
-    
+
     setIsScreenshotLoading(true);
     setScreenshotError(null);
     try {
@@ -93,9 +114,9 @@ export function RemotePanel({
   };
 
   const handleFormChange = (field: string, value: string) => {
-    setConnectionForm(prev => ({
+    setConnectionForm((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -109,138 +130,257 @@ export function RemotePanel({
     }
   };
 
+  const toggleCollapsed = () => {
+    setIsCollapsed(!isCollapsed);
+    console.log(
+      `[@component:RemotePanel] Toggling panel state to ${!isCollapsed ? 'collapsed' : 'expanded'}`,
+    );
+  };
+
+  // Build position styles from config
+  const positionStyles: any = {
+    position: 'fixed',
+    zIndex: panelLayout.zIndex,
+    width: currentLayout.width,
+    height: currentLayout.height,
+    backgroundColor: 'background.paper',
+    border: '1px solid',
+    borderColor: 'divider',
+    borderRadius: 1,
+    boxShadow: 3,
+    overflow: 'hidden',
+    transition: 'all 0.3s ease-in-out',
+    ...sx,
+  };
+
+  // Add positioning based on config
+  if (currentLayout.position.top) positionStyles.top = currentLayout.position.top;
+  if (currentLayout.position.bottom) positionStyles.bottom = currentLayout.position.bottom;
+  if (currentLayout.position.left) positionStyles.left = currentLayout.position.left;
+  if (currentLayout.position.right) positionStyles.right = currentLayout.position.right;
+
   // Connection status display
   if (!session.connected) {
-    // Full connection form
+    // Connection form with collapse/expand toggle
     return (
-      <Box sx={{ p: 2, ...sx }}>
-        {connectionError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {connectionError}
-          </Alert>
-        )}
-
-        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Connection Settings
+      <Box sx={positionStyles}>
+        {/* Header with toggle button */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            p: 1,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            {deviceConfig?.name || `${remoteType} Remote`}
           </Typography>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            {deviceConfig?.connectionFields.map((field) => (
-              <Grid item xs={12} sm={6} key={field.name}>
-                <TextField
-                  fullWidth
-                  label={field.label}
-                  type={field.type || 'text'}
-                  value={connectionForm[field.name as keyof ConnectionForm] || ''}
-                  onChange={(e) => handleFormChange(field.name, e.target.value)}
-                  size="small"
-                />
+          <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
+            <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>
+              {isCollapsed ? <OpenInFull fontSize="small" /> : <CloseFullscreen fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <Box sx={{ p: 2, height: 'calc(100% - 48px)', overflow: 'auto' }}>
+          {connectionError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {connectionError}
+            </Alert>
+          )}
+
+          {!isCollapsed && (
+            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Connection Settings
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                {deviceConfig?.connectionFields.map((field) => (
+                  <Grid item xs={12} sm={6} key={field.name}>
+                    <TextField
+                      fullWidth
+                      label={field.label}
+                      type={field.type || 'text'}
+                      value={connectionForm[field.name as keyof ConnectionForm] || ''}
+                      onChange={(e) => handleFormChange(field.name, e.target.value)}
+                      size="small"
+                    />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-          
-          <Button
-            variant="contained"
-            onClick={handleTakeControl}
-            disabled={connectionLoading}
-            fullWidth
-          >
-            {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
-          </Button>
-        </Paper>
+
+              <Button
+                variant="contained"
+                onClick={handleTakeControl}
+                disabled={connectionLoading}
+                fullWidth
+              >
+                {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
+              </Button>
+            </Paper>
+          )}
+
+          {isCollapsed && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2" color="textSecondary" textAlign="center">
+                Disconnected
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleTakeControl}
+                disabled={connectionLoading}
+                size="small"
+                fullWidth
+              >
+                {connectionLoading ? <CircularProgress size={16} /> : 'Connect'}
+              </Button>
+            </Box>
+          )}
+        </Box>
       </Box>
     );
   }
 
-  // Connected state - Two-column layout
+  // Connected state - Responsive layout based on collapsed/expanded state
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', ...sx }}>
-      <Grid container spacing={3} sx={{ flex: 1 }}>
-        {/* Screenshot Section */}
-        {deviceConfig?.hasScreenshot && showScreenshot && (
-          <Grid item xs={12} md={8}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              height: '100%',
-              position: 'relative'
-            }}>
-              {screenshotError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {screenshotError}
-                </Alert>
+    <Box sx={positionStyles}>
+      {/* Header with toggle button */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 1,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'success.main',
+          color: 'success.contrastText',
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+          {deviceConfig?.name || `${remoteType} Remote`} - Connected
+        </Typography>
+        <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
+          <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>
+            {isCollapsed ? <OpenInFull fontSize="small" /> : <CloseFullscreen fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: isCollapsed ? 'column' : 'row',
+          height: 'calc(100% - 48px)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Screenshot Section - Only show if configured and not collapsed or if expanded */}
+        {deviceConfig?.hasScreenshot && shouldShowScreenshot && showScreenshot && (
+          <Box
+            sx={{
+              flex: isCollapsed ? 'none' : 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: isCollapsed ? '120px' : '250px',
+              maxHeight: isCollapsed ? '120px' : 'none',
+            }}
+          >
+            {screenshotError && (
+              <Alert severity="error" sx={{ m: 1 }}>
+                {screenshotError}
+              </Alert>
+            )}
+
+            <Box
+              sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                m: 1,
+                p: 1,
+                border: '2px dashed #ccc',
+                borderRadius: 2,
+                bgcolor: 'transparent',
+                aspectRatio: isCollapsed ? '16/9' : undefined,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+              }}
+            >
+              {androidScreenshot ? (
+                <img
+                  src={`data:image/png;base64,${androidScreenshot}`}
+                  alt={`${deviceConfig.name} Screenshot`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    MozUserSelect: 'none',
+                    msUserSelect: 'none',
+                    pointerEvents: 'none',
+                  }}
+                  draggable={false}
+                />
+              ) : (
+                <Typography variant="body2" color="textSecondary" textAlign="center">
+                  {isCollapsed
+                    ? 'No Screenshot'
+                    : 'Click "Take Screenshot" to capture the current screen'}
+                </Typography>
               )}
-              
-              <Box 
-                sx={{ 
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: 250,
-                  ml: 2,
-                  p: 2,
-                  border: '2px dashed #ccc',
-                  borderRadius: 2,
-                  bgcolor: 'transparent',
-                  aspectRatio: '16/9',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  MozUserSelect: 'none',
-                  msUserSelect: 'none'
-                }}
-              >
-                {androidScreenshot ? (
-                  <img 
-                    src={`data:image/png;base64,${androidScreenshot}`} 
-                    alt={`${deviceConfig.name} Screenshot`}
-                    style={{ 
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      MozUserSelect: 'none',
-                      msUserSelect: 'none',
-                      pointerEvents: 'none'
-                    }}
-                    draggable={false}
-                  />
-                ) : (
-                  <Typography variant="body2" color="textSecondary" textAlign="center">
-                    Click "Take Screenshot" to capture the current screen
-                  </Typography>
-                )}
-              </Box>
-              
-              <Button
-                variant="contained"
-                onClick={handleScreenshotClick}
-                disabled={isScreenshotLoading}
-                fullWidth
-                size="small"
-                sx={{ 
-                  height: '28px',
-                  mt: 2,
-                  ml: 2,
-                  mr: 2,
-                }}
-              >
-                {isScreenshotLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2">Taking Screenshot...</Typography>
-                  </Box>
-                ) : (
-                  'Take Screenshot'
-                )}
-              </Button>
             </Box>
-          </Grid>
+
+            <Button
+              variant="contained"
+              onClick={handleScreenshotClick}
+              disabled={isScreenshotLoading}
+              fullWidth
+              size="small"
+              sx={{
+                height: '32px',
+                m: 1,
+              }}
+            >
+              {isScreenshotLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="body2">Taking...</Typography>
+                </Box>
+              ) : isCollapsed ? (
+                'Screenshot'
+              ) : (
+                'Take Screenshot'
+              )}
+            </Button>
+          </Box>
         )}
-        
+
         {/* Remote Section */}
-        <Grid item xs={12} md={deviceConfig?.hasScreenshot && showScreenshot ? 4 : 12}>
+        <Box
+          sx={{
+            flex: isCollapsed
+              ? 1
+              : deviceConfig?.hasScreenshot && shouldShowScreenshot && showScreenshot
+                ? 'none'
+                : 1,
+            width: isCollapsed
+              ? '100%'
+              : deviceConfig?.hasScreenshot && shouldShowScreenshot && showScreenshot
+                ? '200px'
+                : '100%',
+            minWidth: isCollapsed ? 'auto' : '200px',
+          }}
+        >
           <RemoteCore
             remoteType={remoteType}
             isConnected={session.connected}
@@ -249,9 +389,15 @@ export function RemotePanel({
             onCommand={handleRemoteCommand}
             onDisconnect={handleDisconnect}
             style="panel"
+            sx={{
+              height: '100%',
+              '& .MuiButton-root': {
+                fontSize: isCollapsed ? '0.7rem' : '0.875rem',
+              },
+            }}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
-} 
+}

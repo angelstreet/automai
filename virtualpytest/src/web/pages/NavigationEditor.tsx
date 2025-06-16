@@ -207,12 +207,11 @@ const NavigationEditorContent: React.FC = () => {
     // Device control state & handlers
     selectedHost,
     isControlActive,
-    isControlLoading,
     isRemotePanelOpen,
     showRemotePanel,
     showAVPanel,
     handleDeviceSelect,
-    handleTakeControl,
+    handleControlStateChange,
     handleToggleRemotePanel,
     handleDisconnectComplete,
   } = useNavigationEditor();
@@ -379,7 +378,6 @@ const NavigationEditorContent: React.FC = () => {
         // Device control props - now provided by hook
         selectedDevice={selectedHost?.host_name || ''}
         isControlActive={isControlActive}
-        isControlLoading={isControlLoading}
         isRemotePanelOpen={isRemotePanelOpen}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
@@ -397,7 +395,7 @@ const NavigationEditorContent: React.FC = () => {
         onResetFocus={resetFocus}
         onToggleRemotePanel={handleToggleRemotePanel}
         onDeviceSelect={handleDeviceSelect}
-        onTakeControl={handleTakeControl}
+        onControlStateChange={handleControlStateChange}
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
       />

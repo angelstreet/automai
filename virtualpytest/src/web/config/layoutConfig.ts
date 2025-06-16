@@ -40,18 +40,45 @@ export interface AVPanelLayoutConfig {
   };
 }
 
-// Layout configuration for Remote Panel dimensions
+// Layout configuration for Remote Panel dimensions (legacy)
 export interface RemotePanelLayoutConfig {
   width: string;
   height: string;
 }
 
-// Layout configuration for panel positioning
+// Layout configuration for panel positioning (legacy)
 export interface PanelPositioningConfig {
   top: string;
   right: string;
   rightWhenBothOpen: string; // Position when both remote and AV panels are open
   zIndex: number;
+}
+
+// New configurable remote panel layout from device config
+export interface ConfigurableRemotePanelLayout {
+  collapsed: {
+    width: string;
+    height: string;
+    position: {
+      top?: string;
+      bottom?: string;
+      left?: string;
+      right?: string;
+    };
+  };
+  expanded: {
+    width: string;
+    height: string;
+    position: {
+      top?: string;
+      bottom?: string;
+      left?: string;
+      right?: string;
+    };
+  };
+  zIndex: number;
+  showScreenshotInCollapsed: boolean;
+  showScreenshotInExpanded: boolean;
 }
 
 /**
@@ -204,4 +231,115 @@ export const getPanelPositioning = (): PanelPositioningConfig => {
     rightWhenBothOpen: '440px', // 400px (remote panel width) + 20px (gap) + 20px (margin)
     zIndex: 1000,
   };
+};
+
+/**
+ * Get configurable remote panel layout from device config
+ * @param remoteType The remote type (e.g., 'android_mobile', 'android_tv')
+ * @param remoteConfig The loaded remote configuration object
+ * @returns ConfigurableRemotePanelLayout with device-specific or default settings
+ */
+export const getConfigurableRemotePanelLayout = (
+  remoteType?: string,
+  remoteConfig?: any,
+): ConfigurableRemotePanelLayout => {
+  // Try to get layout from device config
+  if (remoteConfig?.panel_layout) {
+    const panelLayout = remoteConfig.panel_layout;
+    return {
+      collapsed: {
+        width: panelLayout.collapsed?.width || '200px',
+        height: panelLayout.collapsed?.height || '300px',
+        position: {
+          top: panelLayout.collapsed?.position?.top,
+          bottom: panelLayout.collapsed?.position?.bottom || '20px',
+          left: panelLayout.collapsed?.position?.left || '20px',
+          right: panelLayout.collapsed?.position?.right,
+        },
+      },
+      expanded: {
+        width: panelLayout.expanded?.width || '400px',
+        height: panelLayout.expanded?.height || 'calc(100vh - 140px)',
+        position: {
+          top: panelLayout.expanded?.position?.top || '100px',
+          bottom: panelLayout.expanded?.position?.bottom,
+          left: panelLayout.expanded?.position?.left,
+          right: panelLayout.expanded?.position?.right || '20px',
+        },
+      },
+      zIndex: panelLayout.zIndex || 1000,
+      showScreenshotInCollapsed: panelLayout.showScreenshotInCollapsed ?? false,
+      showScreenshotInExpanded: panelLayout.showScreenshotInExpanded ?? true,
+    };
+  }
+
+  // Fallback to default values based on remote type
+  switch (remoteType) {
+    case 'android_mobile':
+      return {
+        collapsed: {
+          width: '200px',
+          height: '300px',
+          position: {
+            bottom: '20px',
+            left: '20px',
+          },
+        },
+        expanded: {
+          width: '400px',
+          height: 'calc(100vh - 140px)',
+          position: {
+            top: '100px',
+            right: '20px',
+          },
+        },
+        zIndex: 1000,
+        showScreenshotInCollapsed: false,
+        showScreenshotInExpanded: true,
+      };
+    case 'android_tv':
+      return {
+        collapsed: {
+          width: '250px',
+          height: '200px',
+          position: {
+            bottom: '20px',
+            left: '20px',
+          },
+        },
+        expanded: {
+          width: '450px',
+          height: 'calc(100vh - 140px)',
+          position: {
+            top: '100px',
+            right: '20px',
+          },
+        },
+        zIndex: 1000,
+        showScreenshotInCollapsed: false,
+        showScreenshotInExpanded: false,
+      };
+    default:
+      return {
+        collapsed: {
+          width: '200px',
+          height: '250px',
+          position: {
+            bottom: '20px',
+            left: '20px',
+          },
+        },
+        expanded: {
+          width: '400px',
+          height: 'calc(100vh - 140px)',
+          position: {
+            top: '100px',
+            right: '20px',
+          },
+        },
+        zIndex: 1000,
+        showScreenshotInCollapsed: false,
+        showScreenshotInExpanded: true,
+      };
+  }
 };

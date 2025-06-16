@@ -1,5 +1,5 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useRegistration } from '../../hooks/useRegistration';
@@ -26,7 +26,6 @@ export const NavigationEditorHeader: React.FC<{
   treeId: string;
   selectedDevice: string;
   isControlActive: boolean;
-  isControlLoading: boolean;
   isRemotePanelOpen: boolean;
   onAddNewNode: () => void;
   onFitView: () => void;
@@ -36,7 +35,7 @@ export const NavigationEditorHeader: React.FC<{
   onDepthChange: (depth: number) => void;
   onResetFocus: () => void;
   onToggleRemotePanel: () => void;
-  onTakeControl: () => Promise<void>;
+  onControlStateChange: (active: boolean) => void;
   onDeviceSelect: (device: string | null) => void;
   onUpdateNode: (nodeId: string, updatedData: any) => void;
   onUpdateEdge: (edgeId: string, updatedData: any) => void;
@@ -53,7 +52,6 @@ export const NavigationEditorHeader: React.FC<{
   treeId,
   selectedDevice,
   isControlActive,
-  isControlLoading,
   isRemotePanelOpen,
   onAddNewNode,
   onFitView,
@@ -63,7 +61,7 @@ export const NavigationEditorHeader: React.FC<{
   onDepthChange,
   onResetFocus,
   onToggleRemotePanel,
-  onTakeControl,
+  onControlStateChange,
   onDeviceSelect,
   onUpdateNode,
   onUpdateEdge,
@@ -72,13 +70,59 @@ export const NavigationEditorHeader: React.FC<{
   const { availableHosts } = useRegistration();
 
   // Get device control functions
-  const { isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+  const { lockDevice, unlockDevice, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+
+  // Local state for control loading
+  const [isControlLoading, setIsControlLoading] = useState(false);
 
   // Create adapter function to match expected signature (hostName -> boolean)
   const isDeviceLocked = (hostName: string): boolean => {
     const host = availableHosts.find((h) => h.host_name === hostName) || null;
     return isDeviceLockedByHost(host);
   };
+
+  // Handle take control with proper device locking
+  const handleTakeControl = useCallback(async () => {
+    if (!selectedDevice) {
+      console.warn('[@component:NavigationEditorHeader] No device selected for take control');
+      return;
+    }
+
+    console.log(`[@component:NavigationEditorHeader] Taking control of device: ${selectedDevice}`);
+    setIsControlLoading(true);
+
+    try {
+      if (!isControlActive) {
+        // Take control using device control hook (handles locked_by_same_user)
+        const lockSuccess = await lockDevice(selectedDevice, 'navigation-editor-session');
+
+        if (lockSuccess) {
+          console.log(`[@component:NavigationEditorHeader] Control taken successfully`);
+          onControlStateChange(true);
+        } else {
+          console.error(`[@component:NavigationEditorHeader] Failed to take control`);
+        }
+      } else {
+        // Release control
+        const unlockSuccess = await unlockDevice(selectedDevice, 'navigation-editor-session');
+
+        if (unlockSuccess) {
+          console.log(`[@component:NavigationEditorHeader] Control released successfully`);
+        } else {
+          console.warn(
+            `[@component:NavigationEditorHeader] Failed to release control, but continuing with UI cleanup`,
+          );
+        }
+
+        onControlStateChange(false);
+      }
+    } catch (error) {
+      console.error('[@component:NavigationEditorHeader] Error during take control:', error);
+      onControlStateChange(false);
+    } finally {
+      setIsControlLoading(false);
+    }
+  }, [selectedDevice, isControlActive, lockDevice, unlockDevice, onControlStateChange]);
 
   return (
     <>
@@ -152,7 +196,7 @@ export const NavigationEditorHeader: React.FC<{
               availableHosts={availableHosts}
               isDeviceLocked={isDeviceLocked}
               onDeviceSelect={onDeviceSelect}
-              onTakeControl={onTakeControl}
+              onTakeControl={handleTakeControl}
               onToggleRemotePanel={onToggleRemotePanel}
             />
           </Box>
