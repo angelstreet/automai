@@ -1,6 +1,6 @@
 export const androidMobileRemoteConfig = {
   remote_info: {
-    name: 'Android Mobile Remote',
+    name: 'Android Mobile',
     type: 'android_mobile' as const,
   },
   panel_layout: {
