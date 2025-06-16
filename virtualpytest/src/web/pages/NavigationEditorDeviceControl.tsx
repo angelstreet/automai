@@ -294,7 +294,7 @@ export const createDeviceControlHandlers = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name,
+          host: selectedHost,
         }),
       });
 

@@ -196,8 +196,19 @@ def click_element():
         # Get request data
         request_data = request.get_json() or {}
         
+        # Extract host info and remove it from the data to be sent to host
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required'
+            }), 400
+        
+        # Remove host from request data before sending to host (host doesn't need its own info)
+        host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
+        
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/click-element', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/click-element', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         
@@ -236,8 +247,19 @@ def execute_command():
         # Get request data
         request_data = request.get_json() or {}
         
+        # Extract host info and remove it from the data to be sent to host
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required'
+            }), 400
+        
+        # Remove host from request data before sending to host (host doesn't need its own info)
+        host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
+        
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/execute-command', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/execute-command', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         

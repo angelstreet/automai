@@ -61,14 +61,23 @@ export function useRemoteConnection(remoteType: RemoteType) {
   // Load the remote configuration based on device config
   useEffect(() => {
     if (deviceConfig) {
-      // Create a basic RemoteConfig from the deviceConfig
+      // Create a basic RemoteConfig from the deviceConfig, mapping endpoint names
       const basicRemoteConfig: RemoteConfig = {
         type: deviceConfig.type,
         name: deviceConfig.name,
         icon: deviceConfig.icon,
         hasScreenshot: deviceConfig.hasScreenshot,
         hasOverlay: deviceConfig.hasOverlay,
-        serverEndpoints: deviceConfig.serverEndpoints,
+        serverEndpoints: {
+          takeScreenshot: deviceConfig.serverEndpoints.screenshot || '',
+          screenshotAndDump: deviceConfig.serverEndpoints.screenshotAndDump || '',
+          getApps: deviceConfig.serverEndpoints.getApps || '',
+          clickElement: deviceConfig.serverEndpoints.clickElement || '',
+          tapElement: deviceConfig.serverEndpoints.tapElement || '',
+          executeCommand:
+            deviceConfig.serverEndpoints.executeCommand || deviceConfig.serverEndpoints.command,
+          getStatus: deviceConfig.serverEndpoints.getStatus || '',
+        },
       };
 
       setRemoteConfig(basicRemoteConfig);
@@ -251,7 +260,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name,
+          host: selectedHost,
         }),
       });
 
@@ -335,7 +344,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              host_name: selectedHost.host_name,
+              host: selectedHost,
               command: 'launch_app',
               params: { package: params.package },
             }),
@@ -358,7 +367,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host_name: selectedHost.host_name,
+            host: selectedHost,
             command: 'press_key',
             params: { key: command },
           }),

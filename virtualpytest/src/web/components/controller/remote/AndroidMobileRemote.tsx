@@ -35,7 +35,7 @@ export function AndroidMobileRemote({
     const response = await fetch(buildServerUrl('/server/remote/take-screenshot'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host_name: host.host_name }),
+      body: JSON.stringify({ host: host }),
     });
     return response.json();
   };
@@ -44,7 +44,7 @@ export function AndroidMobileRemote({
     const response = await fetch(buildServerUrl('/server/remote/screenshot-and-dump'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host_name: host.host_name }),
+      body: JSON.stringify({ host: host }),
     });
     const result = await response.json();
 
@@ -65,7 +65,7 @@ export function AndroidMobileRemote({
     const response = await fetch(buildServerUrl('/server/remote/get-apps'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host_name: host.host_name }),
+      body: JSON.stringify({ host: host }),
     });
     const result = await response.json();
 
@@ -81,7 +81,7 @@ export function AndroidMobileRemote({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        host_name: host.host_name,
+        host: host,
         elementId: element.id.toString(),
       }),
     });
@@ -93,7 +93,7 @@ export function AndroidMobileRemote({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        host_name: host.host_name,
+        host: host,
         command,
         params,
       }),
