@@ -13,13 +13,13 @@ import requests
 from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
 
 # Create blueprint
-verification_execution_server_bp = Blueprint('verification_execution_server', __name__, url_prefix='/server/verification')
+verification_av_server_bp = Blueprint('verification_av_server', __name__, url_prefix='/server/verification/av')
 
 # =====================================================
 # SERVER-SIDE VERIFICATION EXECUTION (FORWARDS TO HOST)
 # =====================================================
 
-@verification_execution_server_bp.route('/execute', methods=['POST'])
+@verification_av_server_bp.route('/execute', methods=['POST'])
 def execute_verification():
     """Forward verification execution request to host."""
     try:
@@ -61,7 +61,7 @@ def execute_verification():
         print(f"[@route:execute_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_execute_url = buildHostUrl(host_info, '/stream/execute-verification')
+        host_execute_url = buildHostUrl(host_info, '/host/verification/av/execute')
         
         execute_payload = {
             'source_filename': source_filename,
@@ -107,7 +107,7 @@ def execute_verification():
             'error': f'Verification execution error: {str(e)}'
         }), 500
 
-@verification_execution_server_bp.route('/execute-batch', methods=['POST'])
+@verification_av_server_bp.route('/execute-batch', methods=['POST'])
 def execute_batch_verification():
     """Forward batch verification execution request to host."""
     try:
@@ -143,7 +143,7 @@ def execute_batch_verification():
         print(f"[@route:execute_batch_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
         
         # Use pre-built URL from host registry
-        host_batch_url = buildHostUrl(host_info, '/stream/execute-batch-verification')
+        host_batch_url = buildHostUrl(host_info, '/host/verification/av/execute-batch')
         
         batch_payload = {
             'source_filename': source_filename,

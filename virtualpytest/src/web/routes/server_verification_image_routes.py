@@ -1,41 +1,41 @@
 """
 Verification Image Server Routes
 
-This module contains the server-side image verification API endpoints that:
-- Forward image cropping requests to host
-- Handle image verification execution coordination
-- Manage image reference actions and status
+This module contains the server-side image verification endpoints that:
+- Forward image verification requests to host AV controller
+- Handle reference image management
+- Manage image processing operations
 """
 
 from flask import Blueprint, request, jsonify
-import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
+from src.utils.app_utils import get_host_by_model, buildHostUrl
 
-# Create blueprint
-verification_image_server_bp = Blueprint('verification_image_server', __name__, url_prefix='/server/verification')
+# Create blueprint - using av since image verification uses AV controller
+verification_av_image_bp = Blueprint('verification_av_image', __name__, url_prefix='/server/verification/av')
 
 # =====================================================
-# SERVER-SIDE REFERENCE IMAGE CAPTURE (FORWARDS TO HOST)
+# SERVER-SIDE IMAGE VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_image_server_bp.route('/reference/capture', methods=['POST'])
-def capture_reference_image():
-    """Forward crop request to host instead of processing locally."""
+@verification_av_image_bp.route('/capture-reference', methods=['POST'])
+def capture_reference():
+    """Forward reference capture request to host."""
     try:
         data = request.get_json()
-        area = data.get('area')
-        source_path = data.get('source_path')
         reference_name = data.get('reference_name')
-        model = data.get('model')
+        model = data.get('model', 'default')
+        area = data.get('area')  # Optional area selection
         
-        print(f"[@route:capture_reference_image] Forwarding crop request to host from {source_path} with area: {area}")
+        print(f"[@route:capture_reference] Forwarding reference capture to host: {reference_name} (model: {model})")
+        if area:
+            print(f"[@route:capture_reference] With area selection: {area}")
         
         # Validate required parameters
-        if not area or not source_path or not reference_name or not model:
+        if not reference_name:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
+                'error': 'reference_name is required'
             }), 400
         
         # Find appropriate host using registry
@@ -47,85 +47,67 @@ def capture_reference_image():
                 'error': f'No available host found for model: {model}'
             }), 404
         
-        # Extract filename from source_path URL
-        parsed_url = urllib.parse.urlparse(source_path)
-        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
-        
-        print(f"[@route:capture_reference_image] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
+        print(f"[@route:capture_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_crop_url = buildHostUrl(host_info, '/stream/crop-area')
+        host_capture_url = buildHostUrl(host_info, '/host/verification/av/capture-reference')
         
-        crop_payload = {
-            'source_filename': source_filename,
-            'area': area,
-            'model': model
+        capture_payload = {
+            'reference_name': reference_name,
+            'model': model,
+            'area': area
         }
         
-        print(f"[@route:capture_reference_image] Sending request to {host_crop_url} with payload: {crop_payload}")
+        print(f"[@route:capture_reference] Sending request to {host_capture_url} with payload: {capture_payload}")
         
         try:
-            host_response = requests.post(host_crop_url, json=crop_payload, timeout=30, verify=False)
+            host_response = requests.post(host_capture_url, json=capture_payload, timeout=30, verify=False)
             host_result = host_response.json()
             
             if host_result.get('success'):
-                cropped_path = host_result.get('cropped_path')
-                print(f"[@route:capture_reference_image] Host crop successful: {cropped_path}")
+                reference_path = host_result.get('reference_path', '')
+                print(f"[@route:capture_reference] Host reference capture successful: {reference_path}")
                 
-                # Convert relative path to full nginx-exposed URL
-                full_image_url = buildHostUrl(host_info, cropped_path)
+                # Convert host URL to nginx-exposed URL using registry-based URL builder
+                if host_result.get('reference_url'):
+                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
                 
-                # Extract the actual filename for later save operations
-                cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
-                
-                return jsonify({
-                    'success': True,
-                    'message': f'Reference image cropped on host: {reference_name}',
-                    'image_url': full_image_url,
-                    'cropped_filename': cropped_filename  # Return actual filename
-                })
+                return jsonify(host_result)
             else:
-                error_msg = host_result.get('error', 'Host cropping failed')
-                print(f"[@route:capture_reference_image] Host cropping failed: {error_msg}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Host cropping failed: {error_msg}'
-                }), 500
+                error_msg = host_result.get('error', 'Host reference capture failed')
+                print(f"[@route:capture_reference] Host reference capture failed: {error_msg}")
+                return jsonify(host_result), 500
                 
         except requests.exceptions.RequestException as e:
-            print(f"[@route:capture_reference_image] Failed to connect to host: {e}")
+            print(f"[@route:capture_reference] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to connect to host for cropping: {str(e)}'
+                'error': f'Failed to connect to host for reference capture: {str(e)}'
             }), 500
             
     except Exception as e:
-        print(f"[@route:capture_reference_image] Error: {str(e)}")
+        print(f"[@route:capture_reference] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Reference capture error: {str(e)}'
         }), 500
 
-@verification_image_server_bp.route('/reference/process-area', methods=['POST'])
-def process_area_reference():
-    """Forward process request to host instead of processing locally."""
+@verification_av_image_bp.route('/process-area', methods=['POST'])
+def process_area():
+    """Forward area processing request to host."""
     try:
         data = request.get_json()
         area = data.get('area')
-        source_path = data.get('source_path')
-        reference_name = data.get('reference_name')
-        model = data.get('model')
-        autocrop = data.get('autocrop', False)
-        remove_background = data.get('remove_background', False)
+        model = data.get('model', 'default')
         
-        print(f"[@route:process_area_reference] Forwarding process request to host from {source_path} with area: {area}")
-        print(f"[@route:process_area_reference] Processing options: autocrop={autocrop}, remove_background={remove_background}")
+        print(f"[@route:process_area] Forwarding area processing to host (model: {model})")
+        print(f"[@route:process_area] Area: {area}")
         
         # Validate required parameters
-        if not area or not source_path or not reference_name or not model:
+        if not area:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: area, source_path, reference_name, and model are all required'
+                'error': 'area is required'
             }), 400
         
         # Find appropriate host using registry
@@ -137,156 +119,112 @@ def process_area_reference():
                 'error': f'No available host found for model: {model}'
             }), 404
         
-        # Extract filename from source_path URL
-        parsed_url = urllib.parse.urlparse(source_path)
-        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
-        
-        print(f"[@route:process_area_reference] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
+        print(f"[@route:process_area] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_process_url = buildHostUrl(host_info, '/stream/process-area')
+        host_process_url = buildHostUrl(host_info, '/host/verification/av/process-area')
         
         process_payload = {
-            'source_filename': source_filename,
             'area': area,
-            'model': model,
-            'autocrop': autocrop,
-            'remove_background': remove_background
+            'model': model
         }
         
-        print(f"[@route:process_area_reference] Sending request to {host_process_url} with payload: {process_payload}")
+        print(f"[@route:process_area] Sending request to {host_process_url} with payload: {process_payload}")
         
         try:
             host_response = requests.post(host_process_url, json=process_payload, timeout=30, verify=False)
             host_result = host_response.json()
             
             if host_result.get('success'):
-                cropped_path = host_result.get('cropped_path')
-                processed_area = host_result.get('processed_area')
-                print(f"[@route:process_area_reference] Host processing successful: {cropped_path}")
+                print(f"[@route:process_area] Host area processing successful")
                 
-                # Convert relative path to full nginx-exposed URL
-                full_image_url = buildHostUrl(host_info, cropped_path)
+                # Convert host URLs to nginx-exposed URLs using registry-based URL builder
+                if host_result.get('processed_image_url'):
+                    host_result['processed_image_url'] = buildHostUrl(host_info, host_result['processed_image_url'])
                 
-                # Extract the actual filename for later save operations
-                cropped_filename = cropped_path.split('/')[-1] if cropped_path else None
-                
-                return jsonify({
-                    'success': True,
-                    'message': f'Reference image processed on host: {reference_name}',
-                    'image_url': full_image_url,
-                    'processed_area': processed_area,
-                    'cropped_filename': cropped_filename  # Return actual filename
-                })
+                return jsonify(host_result)
             else:
-                error_msg = host_result.get('error', 'Host processing failed')
-                print(f"[@route:process_area_reference] Host processing failed: {error_msg}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Host processing failed: {error_msg}'
-                }), 500
+                error_msg = host_result.get('error', 'Host area processing failed')
+                print(f"[@route:process_area] Host area processing failed: {error_msg}")
+                return jsonify(host_result), 500
                 
         except requests.exceptions.RequestException as e:
-            print(f"[@route:process_area_reference] Failed to connect to host: {e}")
+            print(f"[@route:process_area] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to connect to host for processing: {str(e)}'
+                'error': f'Failed to connect to host for area processing: {str(e)}'
             }), 500
             
     except Exception as e:
-        print(f"[@route:process_area_reference] Error: {str(e)}")
+        print(f"[@route:process_area] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Reference processing error: {str(e)}'
+            'error': f'Area processing error: {str(e)}'
         }), 500
 
-# =====================================================
-# SERVER-SIDE REFERENCE SAVE (FORWARDS TO HOST)
-# =====================================================
-
-@verification_image_server_bp.route('/reference/save', methods=['POST'])
+@verification_av_image_bp.route('/save-reference', methods=['POST'])
 def save_reference():
-    """Forward save request to host to save resource to git repository."""
+    """Forward reference save request to host."""
     try:
         data = request.get_json()
         reference_name = data.get('reference_name')
-        model_name = data.get('model_name')
-        area = data.get('area')
-        reference_type = data.get('reference_type', 'reference_image')
-        source_path = data.get('source_path')  # Source path to extract filename
-        cropped_filename = data.get('cropped_filename')  # NEW: Use provided cropped filename if available
+        image_data = data.get('image_data')
+        model = data.get('model', 'default')
         
-        print(f"[@route:save_reference] Forwarding save request to host: {reference_name} for model: {model_name}")
-        print(f"[@route:save_reference] Source path: {source_path}")
-        print(f"[@route:save_reference] Provided cropped filename: {cropped_filename}")
+        print(f"[@route:save_reference] Forwarding reference save to host: {reference_name} (model: {model})")
         
         # Validate required parameters
-        if not reference_name or not model_name or not area:
+        if not reference_name or not image_data:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: reference_name, model_name, and area are all required'
+                'error': 'reference_name and image_data are required'
             }), 400
         
         # Find appropriate host using registry
-        host_info = get_host_by_model(model_name)
+        host_info = get_host_by_model(model)
         
         if not host_info:
             return jsonify({
                 'success': False,
-                'error': f'No available host found for model: {model_name}'
+                'error': f'No available host found for model: {model}'
             }), 404
         
-        # Use provided cropped_filename or build it from source_path (fallback)
-        if not cropped_filename:
-            if source_path:
-                parsed_url = urllib.parse.urlparse(source_path)
-                source_filename = parsed_url.path.split('/')[-1]
-                cropped_filename = f"cropped_{source_filename}"
-            else:
-                cropped_filename = f'cropped_{reference_name}.jpg'
-        
-        print(f"[@route:save_reference] Using registered host: {host_info.get('host_name', 'unknown')}, cropped filename: {cropped_filename}")
+        print(f"[@route:save_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_save_url = buildHostUrl(host_info, '/stream/save-resource')
+        host_save_url = buildHostUrl(host_info, '/host/verification/av/save-reference')
         
         save_payload = {
-            'name': reference_name,
-            'model': model_name,
-            'cropped_filename': cropped_filename
+            'reference_name': reference_name,
+            'image_data': image_data,
+            'model': model
         }
         
-        print(f"[@route:save_reference] Sending request to {host_save_url} with payload: {save_payload}")
+        print(f"[@route:save_reference] Sending request to {host_save_url}")
         
         try:
-            host_response = requests.post(host_save_url, json=save_payload, timeout=60, verify=False)
+            host_response = requests.post(host_save_url, json=save_payload, timeout=30, verify=False)
             host_result = host_response.json()
             
             if host_result.get('success'):
-                public_url = host_result.get('public_url')
-                print(f"[@route:save_reference] Host save successful: {public_url}")
+                reference_path = host_result.get('reference_path', '')
+                print(f"[@route:save_reference] Host reference save successful: {reference_path}")
                 
-                # Use pre-built nginx URL from host registry
-                full_public_url = buildHostUrl(host_info, public_url)
+                # Convert host URL to nginx-exposed URL using registry-based URL builder
+                if host_result.get('reference_url'):
+                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
                 
-                return jsonify({
-                    'success': True,
-                    'message': f'Reference saved to git repository: {reference_name}',
-                    'public_url': full_public_url
-                })
+                return jsonify(host_result)
             else:
-                error_msg = host_result.get('error', 'Host save failed')
-                print(f"[@route:save_reference] Host save failed: {error_msg}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Host save failed: {error_msg}'
-                }), 500
+                error_msg = host_result.get('error', 'Host reference save failed')
+                print(f"[@route:save_reference] Host reference save failed: {error_msg}")
+                return jsonify(host_result), 500
                 
         except requests.exceptions.RequestException as e:
             print(f"[@route:save_reference] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to connect to host for saving: {str(e)}'
+                'error': f'Failed to connect to host for reference save: {str(e)}'
             }), 500
             
     except Exception as e:
@@ -296,25 +234,21 @@ def save_reference():
             'error': f'Reference save error: {str(e)}'
         }), 500
 
-# =====================================================
-# SERVER-SIDE IMAGE REFERENCE STREAM AVAILABILITY ENDPOINT
-# =====================================================
-
-@verification_image_server_bp.route('/reference/ensure-stream-availability', methods=['POST'])
-def ensure_reference_stream_availability():
-    """Ensure reference image is available in stream directory for preview."""
+@verification_av_image_bp.route('/ensure-reference-availability', methods=['POST'])
+def ensure_reference_availability():
+    """Forward reference availability check to host."""
     try:
         data = request.get_json()
         reference_name = data.get('reference_name')
-        model = data.get('model')
+        model = data.get('model', 'default')
         
-        print(f"[@route:ensure_reference_stream_availability] Ensuring availability for: {reference_name} (model: {model})")
+        print(f"[@route:ensure_reference_availability] Checking reference availability: {reference_name} (model: {model})")
         
         # Validate required parameters
-        if not reference_name or not model:
+        if not reference_name:
             return jsonify({
                 'success': False,
-                'error': 'reference_name and model are required'
+                'error': 'reference_name is required'
             }), 400
         
         # Find appropriate host using registry
@@ -329,39 +263,43 @@ def ensure_reference_stream_availability():
         print(f"[@route:ensure_reference_availability] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        ensure_url = buildHostUrl(host_info, '/stream/ensure-reference-availability')
+        host_check_url = buildHostUrl(host_info, '/host/verification/av/ensure-reference-availability')
         
-        # Forward request to host
-        host_response = requests.post(
-            ensure_url,
-            json={
-                'reference_name': reference_name,
-                'model': model
-            },
-            timeout=30,
-            verify=False
-        )
+        check_payload = {
+            'reference_name': reference_name,
+            'model': model
+        }
         
-        if host_response.status_code == 200:
+        print(f"[@route:ensure_reference_availability] Sending request to {host_check_url} with payload: {check_payload}")
+        
+        try:
+            host_response = requests.post(host_check_url, json=check_payload, timeout=30, verify=False)
             host_result = host_response.json()
-            print(f"[@route:ensure_reference_stream_availability] Host response: {host_result.get('success')}")
-            return jsonify(host_result)
-        else:
-            print(f"[@route:ensure_reference_stream_availability] Host request failed: {host_response.status_code}")
+            
+            if host_result.get('success'):
+                available = host_result.get('available', False)
+                print(f"[@route:ensure_reference_availability] Reference availability check successful: {available}")
+                
+                # Convert host URL to nginx-exposed URL using registry-based URL builder
+                if host_result.get('reference_url'):
+                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
+                
+                return jsonify(host_result)
+            else:
+                error_msg = host_result.get('error', 'Host reference availability check failed')
+                print(f"[@route:ensure_reference_availability] Host reference availability check failed: {error_msg}")
+                return jsonify(host_result), 500
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:ensure_reference_availability] Failed to connect to host: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Host request failed: {host_response.status_code}'
-            }), host_response.status_code
+                'error': f'Failed to connect to host for reference availability check: {str(e)}'
+            }), 500
             
-    except requests.exceptions.RequestException as e:
-        print(f"[@route:ensure_reference_stream_availability] Request error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to connect to host: {str(e)}'
-        }), 500
     except Exception as e:
-        print(f"[@route:ensure_reference_stream_availability] Error: {str(e)}")
+        print(f"[@route:ensure_reference_availability] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': f'Reference availability check error: {str(e)}'
         }), 500 

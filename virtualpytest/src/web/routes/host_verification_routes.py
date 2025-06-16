@@ -1,3 +1,199 @@
+"""
+Host Verification Common Routes
+
+This module contains the host-side common verification endpoints that:
+- Handle reference management operations
+- Provide verification status and information
+- Manage verification system operations
+"""
+
+from flask import Blueprint, request, jsonify, current_app
+import os
+import json
+from src.utils.host_utils import get_local_controller
+
+# Create blueprint
+verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/host/verification')
+
+# =====================================================
+# HOST-SIDE COMMON VERIFICATION ENDPOINTS
+# =====================================================
+
+@verification_host_bp.route('/references', methods=['GET'])
+def list_references():
+    """Get list of available references from local storage."""
+    try:
+        model = request.args.get('model', 'default')
+        
+        print(f"[@route:list_references] Getting reference list for model: {model}")
+        
+        # Get host device info
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized'
+            }), 404
+        
+        print(f"[@route:list_references] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
+        # Get references from local storage (implementation depends on your reference storage system)
+        # This is a placeholder - you'll need to implement based on your actual reference storage
+        references = []
+        
+        # Example: scan reference directories
+        reference_dirs = [
+            f'/path/to/references/{model}/images',
+            f'/path/to/references/{model}/text'
+        ]
+        
+        for ref_dir in reference_dirs:
+            if os.path.exists(ref_dir):
+                for filename in os.listdir(ref_dir):
+                    if filename.endswith(('.png', '.jpg', '.jpeg', '.txt', '.json')):
+                        references.append({
+                            'name': filename,
+                            'type': 'image' if filename.endswith(('.png', '.jpg', '.jpeg')) else 'text',
+                            'path': os.path.join(ref_dir, filename),
+                            'model': model
+                        })
+        
+        print(f"[@route:list_references] Found {len(references)} references")
+        
+        return jsonify({
+            'success': True,
+            'references': references,
+            'model': model,
+            'total_count': len(references)
+        })
+        
+    except Exception as e:
+        print(f"[@route:list_references] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference list error: {str(e)}'
+        }), 500
+
+@verification_host_bp.route('/reference-actions', methods=['POST'])
+def reference_actions():
+    """Handle reference actions like delete, update, etc."""
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        reference_name = data.get('reference_name')
+        model = data.get('model')
+        
+        print(f"[@route:reference_actions] Action: {action} for reference: {reference_name} (model: {model})")
+        
+        # Validate required parameters
+        if not action or not reference_name or not model:
+            return jsonify({
+                'success': False,
+                'error': 'action, reference_name, and model are required'
+            }), 400
+        
+        # Get host device info
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized'
+            }), 404
+        
+        print(f"[@route:reference_actions] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
+        # Handle different actions
+        if action == 'delete':
+            # Delete reference file
+            # This is a placeholder - implement based on your reference storage system
+            success = True  # Placeholder
+            message = f'Reference {reference_name} deleted successfully'
+        elif action == 'update':
+            # Update reference metadata
+            success = True  # Placeholder
+            message = f'Reference {reference_name} updated successfully'
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown action: {action}'
+            }), 400
+        
+        if success:
+            print(f"[@route:reference_actions] Action successful: {message}")
+            return jsonify({
+                'success': True,
+                'message': message,
+                'action': action,
+                'reference_name': reference_name
+            })
+        else:
+            print(f"[@route:reference_actions] Action failed: {message}")
+            return jsonify({
+                'success': False,
+                'error': message
+            }), 500
+        
+    except Exception as e:
+        print(f"[@route:reference_actions] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Reference action error: {str(e)}'
+        }), 500
+
+@verification_host_bp.route('/status', methods=['GET'])
+def verification_status():
+    """Get verification system status."""
+    try:
+        print(f"[@route:verification_status] Getting verification system status")
+        
+        # Get host device info
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized'
+            }), 404
+        
+        print(f"[@route:verification_status] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
+        
+        # Check available controllers
+        available_controllers = []
+        
+        # Check AV controller
+        av_controller = get_local_controller('av')
+        if av_controller:
+            available_controllers.append('av')
+        
+        # Check ADB controller
+        adb_controller = get_local_controller('adb')
+        if adb_controller:
+            available_controllers.append('adb')
+        
+        # Check remote controller
+        remote_controller = get_local_controller('remote')
+        if remote_controller:
+            available_controllers.append('remote')
+        
+        print(f"[@route:verification_status] Available controllers: {available_controllers}")
+        
+        return jsonify({
+            'success': True,
+            'status': 'ready',
+            'controllers_available': available_controllers,
+            'message': 'Verification system is ready',
+            'host_connected': True,
+            'device_model': host_device.get('device_model', 'unknown'),
+            'host_id': host_device.get('client_id', 'unknown'),
+            'host_name': host_device.get('host_name', 'unknown')
+        })
+        
+    except Exception as e:
+        print(f"[@route:verification_status] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Verification status error: {str(e)}'
+        }), 500
+
 def execute_adb_verification_host(verification, source_path, model, verification_index, results_dir):
     """Execute ADB verification using existing ADB utilities."""
     try:

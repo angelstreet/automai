@@ -130,7 +130,7 @@ def get_verification_actions():
             'error': f'Error getting verification actions: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/reference/list', methods=['GET'])
+@verification_common_bp.route('/reference-list', methods=['GET'])
 def list_references():
     """Get list of available references from host."""
     try:
@@ -150,7 +150,7 @@ def list_references():
                     'error': f'No hosts available for model: {model}'
                 }), 503
             
-            host_url = buildHostUrl(host_info, '/stream/references')
+            host_url = buildHostUrl(host_info, '/host/verification/references')
             host_response = requests.get(
                 host_url,
                 params={'model': model},
@@ -188,7 +188,7 @@ def list_references():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/verification/actions', methods=['POST'])
+@verification_common_bp.route('/reference-actions', methods=['POST'])
 def verification_actions():
     """Handle verification actions like delete, update, etc."""
     try:
@@ -218,7 +218,7 @@ def verification_actions():
                     'error': f'No hosts available for model: {model}'
                 }), 503
             
-            host_url = buildHostUrl(host_info, '/stream/reference-actions')
+            host_url = buildHostUrl(host_info, '/host/verification/reference-actions')
             host_response = requests.post(
                 host_url,
                 json={
@@ -260,7 +260,7 @@ def verification_actions():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/verification/status', methods=['GET'])
+@verification_common_bp.route('/status', methods=['GET'])
 def verification_status():
     """Get verification system status."""
     try:
@@ -278,7 +278,7 @@ def verification_status():
         
         # Try to get status from host (but this endpoint might not exist yet)
         try:
-            host_url = buildHostUrl(host_info, '/stream/verification-status')
+            host_url = buildHostUrl(host_info, '/host/verification/status')
             host_response = requests.get(
                 host_url,
                 timeout=30,

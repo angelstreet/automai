@@ -12,13 +12,13 @@ import requests
 from src.utils.app_utils import get_host_by_model, buildHostUrl
 
 # Create blueprint
-verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification')
+verification_adb_server_bp = Blueprint('verification_adb_server', __name__, url_prefix='/server/verification/adb')
 
 # =====================================================
 # SERVER-SIDE ADB VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_adb_server_bp.route('/adb/element-lists', methods=['POST'])
+@verification_adb_server_bp.route('/get-element-lists', methods=['POST'])
 def adb_element_lists():
     """Forward ADB element lists request to host."""
     try:
@@ -42,7 +42,7 @@ def adb_element_lists():
         print(f"[@route:adb_element_lists] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/stream/adb-element-lists')
+        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/get-element-lists')
         
         adb_payload = {
             'model': model,
@@ -79,7 +79,7 @@ def adb_element_lists():
             'error': f'ADB element lists error: {str(e)}'
         }), 500
 
-@verification_adb_server_bp.route('/adb/wait-element-appear', methods=['POST'])
+@verification_adb_server_bp.route('/wait-element-appear', methods=['POST'])
 def adb_wait_element_appear():
     """Forward ADB wait element appear request to host."""
     try:
@@ -109,7 +109,7 @@ def adb_wait_element_appear():
         print(f"[@route:adb_wait_element_appear] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/stream/adb-wait-element-appear')
+        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/wait-element-appear')
         
         adb_payload = {
             'search_term': search_term,
@@ -146,7 +146,7 @@ def adb_wait_element_appear():
             'error': f'ADB wait element appear error: {str(e)}'
         }), 500
 
-@verification_adb_server_bp.route('/adb/wait-element-disappear', methods=['POST'])
+@verification_adb_server_bp.route('/wait-element-disappear', methods=['POST'])
 def adb_wait_element_disappear():
     """Forward ADB wait element disappear request to host."""
     try:
@@ -176,7 +176,7 @@ def adb_wait_element_disappear():
         print(f"[@route:adb_wait_element_disappear] Using registered host: {host_info.get('host_name', 'unknown')}")
         
         # Use pre-built URL from host registry
-        host_adb_url = buildHostUrl(host_info, '/stream/adb-wait-element-disappear')
+        host_adb_url = buildHostUrl(host_info, '/host/verification/adb/wait-element-disappear')
         
         adb_payload = {
             'search_term': search_term,
