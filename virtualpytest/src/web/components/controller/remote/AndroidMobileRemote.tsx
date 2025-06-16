@@ -104,23 +104,33 @@ export const AndroidMobileRemote = React.memo(
 
         // Parse dimensions from config
         const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
-        const streamWidth = parsePixels(currentStreamConfig.width);
-        const streamHeight = parsePixels(currentStreamConfig.height);
+        const panelWidth = parsePixels(currentStreamConfig.width);
+        const panelHeight = parsePixels(currentStreamConfig.height);
 
-        // Calculate stream position (left side of screen, not remote panel position)
+        // Calculate actual stream content area
+        const headerHeight = parsePixels(hdmiStreamMobileConfig.panel_layout.header.height);
+        const streamContentHeight = panelHeight - headerHeight; // Panel height minus header
+
+        // Calculate stream width based on 1920x1080 aspect ratio (16:9)
+        const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
+        const streamContentWidth = Math.min(panelWidth, streamContentHeight * deviceAspectRatio);
+
+        // Calculate stream position - centered in panel
         const streamActualPosition = {
-          x: currentStreamConfig.position.left
-            ? parsePixels(currentStreamConfig.position.left)
-            : 20,
+          x:
+            'left' in currentStreamConfig.position
+              ? parsePixels(currentStreamConfig.position.left)
+              : 20,
           y:
             window.innerHeight -
             parsePixels(currentStreamConfig.position.bottom || '20px') -
-            streamHeight,
+            panelHeight +
+            headerHeight, // Account for header offset
         };
 
         const streamActualSize = {
-          width: streamWidth,
-          height: streamHeight,
+          width: Math.round(streamContentWidth),
+          height: Math.round(streamContentHeight),
         };
 
         const info = {
