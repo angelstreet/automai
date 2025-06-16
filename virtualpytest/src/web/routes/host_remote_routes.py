@@ -398,44 +398,76 @@ def execute_command():
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:
-        print(f"[@route:host_remote] Dumping UI elements without screenshot")
+        print(f"[@route:host_remote:dump_ui] Dumping UI elements without screenshot")
         
-        # Get remote controller
+        host_device = getattr(current_app, 'my_host_device', None)
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
-            
-        # Execute dump UI command without screenshot
-        if hasattr(remote_controller, 'dump_ui_elements'):
-            ui_success, elements, ui_error = remote_controller.dump_ui_elements()
-            result = {'success': ui_success, 'elements': elements if ui_success else [], 'error': ui_error}
-        else:
-            result = {'success': False, 'error': 'UI dump not supported by this remote controller'}
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
         
-        if result.get('success'):
-            elements = result.get('elements', [])
-            print(f"[@route:host_remote] UI dump successful, found {len(elements)} elements")
+        print(f"[@route:host_remote:dump_ui] Using own remote controller: {type(remote_controller).__name__}")
+        
+        if not hasattr(remote_controller, 'dump_ui_elements'):
+            return jsonify({
+                'success': False,
+                'error': 'UI dump not supported by this remote controller'
+            }), 400
+        
+        ui_success, elements, ui_error = remote_controller.dump_ui_elements()
+        
+        if ui_success:
+            # Serialize elements to JSON format (same as screenshot-and-dump)
+            elements_data = []
+            for element in elements:
+                # Parse bounds string to object format expected by frontend
+                bounds_obj = {'left': 0, 'top': 0, 'right': 0, 'bottom': 0}
+                if element.bounds and element.bounds != '':
+                    import re
+                    # Bounds format: [x1,y1][x2,y2]
+                    bounds_match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', element.bounds)
+                    if bounds_match:
+                        x1, y1, x2, y2 = map(int, bounds_match.groups())
+                        bounds_obj = {'left': x1, 'top': y1, 'right': x2, 'bottom': y2}
+                
+                elements_data.append({
+                    'id': element.id,
+                    'text': element.text,
+                    'className': element.class_name,
+                    'contentDesc': element.content_desc,
+                    'package': element.resource_id,
+                    'bounds': bounds_obj,
+                    'clickable': element.clickable,
+                    'enabled': element.enabled
+                })
+            
+            print(f"[@route:host_remote:dump_ui] UI dump successful, found {len(elements_data)} elements")
             
             return jsonify({
                 'success': True,
-                'elements': elements,
-                'message': f'UI dumped successfully, found {len(elements)} elements'
+                'elements': elements_data
             })
         else:
-            print(f"[@route:host_remote] UI dump failed: {result.get('error', 'Unknown error')}")
+            print(f"[@route:host_remote:dump_ui] UI dump failed: {ui_error}")
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'UI dump failed')
-            }), 500
+                'error': ui_error or 'UI dump failed'
+            }), 400
             
     except Exception as e:
-        print(f"[@route:host_remote] Error in dump_ui: {str(e)}")
+        print(f"[@route:host_remote:dump_ui] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': f'UI dump error: {str(e)}'
         }), 500
 
 # get-status endpoint removed - not needed 
