@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../useRegistration';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 export interface NavigationHookResult {
   // Interface data
@@ -47,7 +48,7 @@ export const useNavigation = (): NavigationHookResult => {
   const { interfaceName } = useParams<{ interfaceName: string }>();
 
   // Get hosts from registration context
-  const { availableHosts, fetchHosts, buildServerUrl } = useRegistration();
+  const { availableHosts, fetchHosts } = useRegistration();
 
   // Interface state
   const [interfaceModels, setInterfaceModels] = useState<string[]>([]);

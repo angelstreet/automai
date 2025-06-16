@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../useRegistration';
 import { Host } from '../../types/common/Host_Types';
 
 interface UseNavigationDeviceControlProps {

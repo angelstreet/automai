@@ -8,7 +8,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../useRegistration';
+import { buildServerUrl } from '../../utils/frontendUtils';
 import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
 
 // Server Response interface
@@ -201,7 +202,6 @@ class DeviceModelServerService {
  * Provides CRUD operations with React Query caching and state management
  */
 export const useDeviceModels = () => {
-  const { buildServerUrl } = useRegistration();
   const queryClient = useQueryClient();
 
   // Create stable server service instance
@@ -301,8 +301,6 @@ export const useDeviceModels = () => {
  * Hook for getting a single device model by ID
  */
 export const useDeviceModel = (id: string) => {
-  const { buildServerUrl } = useRegistration();
-
   // Create stable server service instance
   const serverService = useMemo(() => {
     return new DeviceModelServerService(buildServerUrl);

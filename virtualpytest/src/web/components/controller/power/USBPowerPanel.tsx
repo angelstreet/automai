@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../../contexts/RegistrationContext';
+import { useRegistration } from '../../../hooks/useRegistration';
 
 interface PowerPanelProps {
   /** Custom styling */

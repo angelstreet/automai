@@ -1,8 +1,8 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useRegistration } from '../../hooks/useRegistration';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,

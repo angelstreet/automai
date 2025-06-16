@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../../hooks/useRegistration';
 
 interface VerificationTextComparisonDisplayProps {
   searchedText: string;

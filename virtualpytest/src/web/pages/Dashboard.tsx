@@ -44,7 +44,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRegistration } from '../contexts/RegistrationContext';
+import { useRegistration } from '../hooks/useRegistration';
 import { TestCase, Campaign, Tree } from '../types';
 import { Host } from '../types/common/Host_Types';
 import { DashboardStats, RecentActivity, ViewMode } from '../types/pages/Dashboard_Types';

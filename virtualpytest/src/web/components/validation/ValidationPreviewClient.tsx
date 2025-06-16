@@ -35,7 +35,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../../hooks/useRegistration';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
 import { buildServerUrl } from '../../utils/frontendUtils';
 

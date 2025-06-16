@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 
-import { useRegistration } from '../../contexts/RegistrationContext';
 import {
   RemoteSession,
   ConnectionForm,
@@ -9,6 +8,7 @@ import {
   AndroidApp,
   RemoteType,
 } from '../../types/controller/Remote_Types';
+import { useRegistration } from '../useRegistration';
 
 import { getRemoteConfig } from './useRemoteConfigs';
 
