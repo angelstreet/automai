@@ -302,40 +302,45 @@ def take_screenshot():
         
         print(f"[@route:host_av:take_screenshot] Using own AV controller: {type(av_controller).__name__}")
         
-        # Take screenshot and save to nginx temp folder
-        # Use a fixed filename that gets overwritten each time
-        temp_filename = "screenshot.jpg"
-        
-        # Take screenshot using controller (this will save to /tmp/screenshots/)
-        screenshot_result = av_controller.take_screenshot(temp_filename)
+        # Take screenshot using controller
+        # For HDMI controller, this returns a URL to the captured screenshot
+        screenshot_result = av_controller.take_screenshot()
         
         if screenshot_result:
-            # Copy from /tmp/screenshots/ to nginx folder
+            print(f"[@route:host_av:take_screenshot] Screenshot URL from controller: {screenshot_result}")
             
-            # Ensure nginx directory exists
-            nginx_dir = "/var/www/html/captures/tmp"
-            os.makedirs(nginx_dir, exist_ok=True)
-            
-            # Source path (where controller saves)
-            source_path = f"/tmp/screenshots/{temp_filename}"
-            # Destination path (nginx folder)
-            nginx_path = f"{nginx_dir}/{temp_filename}"
-            
-            # Copy file to nginx folder
-            if os.path.exists(source_path):
-                shutil.copy2(source_path, nginx_path)
-                print(f"[@route:host_av:take_screenshot] Copied screenshot from {source_path} to {nginx_path}")
+            # For HDMI controller, the result is already a URL we can return directly
+            # For other controllers, we might need to handle file paths differently
+            if screenshot_result.startswith('http'):
+                # It's already a URL, return it directly
+                return jsonify({
+                    'success': True,
+                    'screenshot_path': screenshot_result
+                })
             else:
-                print(f"[@route:host_av:take_screenshot] Warning: Source file not found at {source_path}")
-            
-            # Build nginx URL for immediate access
-            host_ip = host_device.get('device_ip') or host_device.get('host_ip')
-            nginx_url = f"https://{host_ip}/captures/tmp/{temp_filename}"
-            
-            return jsonify({
-                'success': True,
-                'screenshot_path': nginx_url  # Nginx URL for immediate access
-            })
+                # It's a file path, we need to copy it to nginx folder
+                temp_filename = "screenshot.jpg"
+                
+                # Ensure nginx directory exists
+                nginx_dir = "/var/www/html/captures/tmp"
+                os.makedirs(nginx_dir, exist_ok=True)
+                
+                # Copy file to nginx folder
+                nginx_path = f"{nginx_dir}/{temp_filename}"
+                if os.path.exists(screenshot_result):
+                    shutil.copy2(screenshot_result, nginx_path)
+                    print(f"[@route:host_av:take_screenshot] Copied screenshot from {screenshot_result} to {nginx_path}")
+                else:
+                    print(f"[@route:host_av:take_screenshot] Warning: Source file not found at {screenshot_result}")
+                
+                # Build nginx URL for immediate access
+                host_ip = host_device.get('device_ip') or host_device.get('host_ip')
+                nginx_url = f"https://{host_ip}/captures/tmp/{temp_filename}"
+                
+                return jsonify({
+                    'success': True,
+                    'screenshot_path': nginx_url
+                })
         else:
             return jsonify({
                 'success': False,

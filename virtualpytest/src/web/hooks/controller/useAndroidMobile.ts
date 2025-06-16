@@ -81,12 +81,15 @@ export function useAndroidMobile(host: Host) {
   }, [host]);
 
   // API calls
-  const screenshotAndDump = useCallback(async () => {
-    console.log('[@hook:useAndroidMobile] Starting screenshot and dump for host:', host.host_name);
+  const dump = useCallback(async () => {
+    console.log(
+      '[@hook:useAndroidMobile] Starting UI dump (without screenshot) for host:',
+      host.host_name,
+    );
     setIsDumpingUI(true);
 
     try {
-      const response = await fetch(buildServerUrl('/server/remote/screenshot-and-dump'), {
+      const response = await fetch(buildServerUrl('/server/remote/dump-ui'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host: host }),
@@ -94,22 +97,19 @@ export function useAndroidMobile(host: Host) {
       const result = await response.json();
 
       if (result.success) {
-        console.log('[@hook:useAndroidMobile] Screenshot and dump successful');
-        if (result.screenshot) {
-          setAndroidScreenshot(result.screenshot);
-        }
+        console.log('[@hook:useAndroidMobile] UI dump successful');
         if (result.elements) {
           setAndroidElements(result.elements);
           console.log('[@hook:useAndroidMobile] Found', result.elements.length, 'UI elements');
         }
         setShowOverlay(true);
       } else {
-        console.error('[@hook:useAndroidMobile] Screenshot and dump failed:', result.error);
+        console.error('[@hook:useAndroidMobile] UI dump failed:', result.error);
       }
 
       return result;
     } catch (error) {
-      console.error('[@hook:useAndroidMobile] Error during screenshot and dump:', error);
+      console.error('[@hook:useAndroidMobile] Error during UI dump:', error);
       return { success: false, error: error };
     } finally {
       setIsDumpingUI(false);
@@ -237,10 +237,10 @@ export function useAndroidMobile(host: Host) {
       // Auto-refresh after click
       setTimeout(() => {
         console.log('[@hook:useAndroidMobile] Auto-refreshing UI after element click');
-        screenshotAndDump();
+        dump();
       }, layoutConfig.autoDumpDelay);
     },
-    [clickElement, screenshotAndDump, layoutConfig.autoDumpDelay],
+    [clickElement, dump, layoutConfig.autoDumpDelay],
   );
 
   const handleRemoteCommand = useCallback(
@@ -270,8 +270,8 @@ export function useAndroidMobile(host: Host) {
 
   const handleDumpUIWithLoading = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Dumping UI with loading state');
-    await screenshotAndDump();
-  }, [screenshotAndDump]);
+    await dump();
+  }, [dump]);
 
   return {
     // State
@@ -288,7 +288,7 @@ export function useAndroidMobile(host: Host) {
     screenshotRef,
 
     // Actions
-    screenshotAndDump,
+    dump,
     getApps,
     clickElement,
     executeCommand,

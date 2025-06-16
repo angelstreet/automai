@@ -1,9 +1,15 @@
-export { AVPanel } from './AVPanel';
+// Main AV Components (Flat Structure)
 export { HDMIStream } from './HDMIStream';
+export { ScreenDefinitionEditor } from './ScreenDefinitionEditor';
+export { ScreenshotCapture } from './ScreenshotCapture';
 export { StreamViewer } from './StreamViewer';
 export { VideoCapture } from './VideoCapture';
-export { ScreenshotCapture } from './ScreenshotCapture';
+
+// AV Overlay Components
 export { DragSelectionOverlay } from './DragSelectionOverlay';
-export { StreamClickOverlay } from './StreamClickOverlay';
-export { ScreenDefinitionEditor } from './ScreenDefinitionEditor';
-export { ScreenEditorOverlay } from './ScreenEditorOverlay';
+export {
+  RecordingOverlay,
+  LoadingOverlay,
+  ModeIndicatorDot,
+  StatusIndicator,
+} from './ScreenEditorOverlay';

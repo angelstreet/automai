@@ -4,8 +4,6 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
 
-import { StreamClickOverlay } from './StreamClickOverlay';
-
 interface StreamViewerProps {
   streamUrl?: string;
   isStreamActive?: boolean;
@@ -13,14 +11,7 @@ interface StreamViewerProps {
   sx?: any;
   videoElementRef?: React.RefObject<HTMLVideoElement>;
   model?: string;
-  layoutConfig?: StreamViewerLayoutConfig; // Allow direct override if needed
-  // New props for click functionality
-  enableClick?: boolean;
-  deviceResolution?: { width: number; height: number };
-  deviceId?: string;
-  onTap?: (x: number, y: number) => void;
-  // Host device with controller proxies
-  selectedHostDevice?: any;
+  layoutConfig?: StreamViewerLayoutConfig;
 }
 
 export function StreamViewer({
@@ -31,11 +22,6 @@ export function StreamViewer({
   videoElementRef,
   model,
   layoutConfig,
-  enableClick,
-  deviceResolution,
-  deviceId,
-  onTap,
-  selectedHostDevice,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -45,12 +31,10 @@ export function StreamViewer({
   const [retryCount, setRetryCount] = useState(0);
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
   const [useNativePlayer, setUseNativePlayer] = useState(false);
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const maxRetries = 3; // Reduced from 5
-  const retryDelay = 2000; // Reduced from 3000
+  const maxRetries = 3;
+  const retryDelay = 2000;
   const lastInitTime = useRef<number>(0);
 
-  // Debug component lifecycle
   useEffect(() => {
     console.log('[@component:StreamViewer] Component mounted with props:', {
       streamUrl,
@@ -64,19 +48,16 @@ export function StreamViewer({
     return () => {
       console.log('[@component:StreamViewer] Component unmounting');
     };
-  }, []); // Empty dependency array - only runs on mount/unmount
+  }, []);
 
-  // Use the provided layout config or get it from the model type
   const finalLayoutConfig = layoutConfig || getStreamViewerLayout(model);
 
-  // Expose video ref to parent if provided
   useEffect(() => {
     if (videoElementRef && videoRef.current) {
       (videoElementRef as any).current = videoRef.current;
     }
   }, [videoElementRef]);
 
-  // Clean up stream resources
   const cleanupStream = useCallback(() => {
     if (hlsRef.current) {
       try {
@@ -97,7 +78,6 @@ export function StreamViewer({
     setStreamError(null);
   }, []);
 
-  // Attempt to play the video, handling autoplay restrictions
   const attemptPlay = useCallback(() => {
     if (!videoRef.current) return;
 
@@ -114,13 +94,11 @@ export function StreamViewer({
     }
   }, []);
 
-  // Handle user-initiated play
   const handleUserPlay = useCallback(() => {
     setRequiresUserInteraction(false);
     attemptPlay();
   }, [attemptPlay]);
 
-  // Try native HTML5 video as fallback
   const tryNativePlayback = useCallback(async () => {
     if (!streamUrl || !videoRef.current) return false;
 
@@ -128,7 +106,6 @@ export function StreamViewer({
     setUseNativePlayer(true);
 
     try {
-      // Clean up any existing HLS
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -136,7 +113,6 @@ export function StreamViewer({
 
       const video = videoRef.current;
 
-      // Set up event listeners for native playback
       const handleLoadedMetadata = () => {
         console.log('[@component:StreamViewer] Native playback loaded successfully');
         setStreamLoaded(true);
@@ -159,7 +135,6 @@ export function StreamViewer({
       video.addEventListener('error', handleError);
       video.addEventListener('canplay', handleCanPlay);
 
-      // Try direct URL first, then with cache busting
       video.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
       video.load();
 
@@ -170,11 +145,9 @@ export function StreamViewer({
     }
   }, [streamUrl, attemptPlay]);
 
-  // Initialize or reinitialize stream with simplified approach
   const initializeStream = useCallback(async () => {
     const now = Date.now();
     if (now - lastInitTime.current < 1000) {
-      // Reduced debounce
       return;
     }
     lastInitTime.current = now;
@@ -188,7 +161,6 @@ export function StreamViewer({
     setStreamLoaded(false);
     setRequiresUserInteraction(false);
 
-    // If we've had too many failures, try native playback first
     if (retryCount >= 2 || useNativePlayer) {
       const nativeSuccess = await tryNativePlayback();
       if (nativeSuccess) return;
@@ -203,38 +175,32 @@ export function StreamViewer({
 
       setCurrentStreamUrl(streamUrl);
 
-      // Dynamic import of HLS.js
       const HLSModule = await import('hls.js');
       const HLS = HLSModule.default;
 
-      // Check if HLS is supported
       if (!HLS.isSupported()) {
         console.log('[@component:StreamViewer] HLS.js not supported, using native playback');
         await tryNativePlayback();
         return;
       }
 
-      // Create HLS instance with simplified, robust config
       const hls = new HLS({
-        // Simplified config - more like VLC's approach
-        enableWorker: false, // Disable worker to avoid parsing issues
-        lowLatencyMode: false, // Disable low latency for stability
-        liveSyncDuration: 3, // Increased for stability
-        liveMaxLatencyDuration: 10, // Increased for stability
-        maxBufferLength: 30, // Increased buffer
-        maxMaxBufferLength: 60, // Increased max buffer
-        backBufferLength: 10, // Keep some back buffer
-        maxBufferSize: 60 * 1000 * 1000, // 60MB buffer
-        maxBufferHole: 0.5, // Allow small holes
-        // Error recovery
-        fragLoadingTimeOut: 20000, // 20 second timeout
-        manifestLoadingTimeOut: 10000, // 10 second timeout
-        levelLoadingTimeOut: 10000, // 10 second timeout
+        enableWorker: false,
+        lowLatencyMode: false,
+        liveSyncDuration: 3,
+        liveMaxLatencyDuration: 10,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        backBufferLength: 10,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        fragLoadingTimeOut: 20000,
+        manifestLoadingTimeOut: 10000,
+        levelLoadingTimeOut: 10000,
       });
 
       hlsRef.current = hls;
 
-      // Simplified event handling
       hls.on(HLS.Events.MANIFEST_PARSED, () => {
         console.log('[@component:StreamViewer] HLS manifest parsed successfully');
         setStreamLoaded(true);
@@ -247,11 +213,9 @@ export function StreamViewer({
 
         if (data.fatal) {
           console.error('[@component:StreamViewer] Fatal HLS error, trying native playback');
-          // Don't retry HLS, switch to native immediately
           setUseNativePlayer(true);
           setTimeout(() => tryNativePlayback(), 500);
         } else {
-          // Non-fatal errors - try to recover
           if (data.details === 'fragParsingError' || data.details === 'fragLoadError') {
             console.log('[@component:StreamViewer] Fragment error, attempting HLS recovery');
             try {
@@ -269,7 +233,6 @@ export function StreamViewer({
         }
       });
 
-      // Load the stream
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
     } catch (error: any) {
@@ -286,7 +249,6 @@ export function StreamViewer({
     tryNativePlayback,
   ]);
 
-  // Handle stream errors with simplified retry logic
   const handleStreamError = useCallback(() => {
     if (retryCount >= maxRetries) {
       console.warn('[@component:StreamViewer] Max retries reached, switching to native playback');
@@ -315,11 +277,9 @@ export function StreamViewer({
     tryNativePlayback,
   ]);
 
-  // Handle tab visibility changes - simplified
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isStreamActive && streamUrl) {
-        // Reset retry count when tab becomes visible
         setRetryCount(0);
         setTimeout(() => initializeStream(), 1000);
       }
@@ -328,17 +288,14 @@ export function StreamViewer({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isStreamActive, streamUrl, initializeStream]);
 
-  // Initialize stream when URL is available and active
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
       console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
-      // Reset state for new stream
       setUseNativePlayer(false);
       setRetryCount(0);
-      setStreamLoaded(false); // Force reload by resetting loaded state
+      setStreamLoaded(false);
       setStreamError(null);
 
-      // Add a small delay to ensure clean state reset
       setTimeout(() => {
         initializeStream();
       }, 100);
@@ -350,41 +307,6 @@ export function StreamViewer({
       cleanupStream();
     };
   }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
-
-  // Log click overlay status
-  useEffect(() => {
-    if (enableClick) {
-      const overlayEnabled =
-        streamLoaded && !requiresUserInteraction && deviceResolution && isVideoReady;
-      console.log('[@component:StreamViewer] Click overlay status:', {
-        enabled: overlayEnabled,
-        streamLoaded,
-        requiresUserInteraction,
-        hasDeviceResolution: !!deviceResolution,
-        hasVideoRef: !!videoRef.current,
-        isVideoReady,
-        deviceResolution,
-      });
-    }
-  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution, isVideoReady]);
-
-  // Track video ref readiness
-  useEffect(() => {
-    const checkVideoReady = () => {
-      const ready = !!videoRef.current;
-      if (ready !== isVideoReady) {
-        setIsVideoReady(ready);
-        console.log('[@component:StreamViewer] Video ready state changed:', ready);
-      }
-    };
-
-    checkVideoReady();
-
-    // Check periodically in case video element changes
-    const interval = setInterval(checkVideoReady, 100);
-
-    return () => clearInterval(interval);
-  }, [streamLoaded, isVideoReady]);
 
   return (
     <Box
@@ -433,7 +355,6 @@ export function StreamViewer({
         playsInline
         muted
         draggable={false}
-        // Add some native video attributes for better compatibility
         preload="none"
         crossOrigin="anonymous"
       />
@@ -494,21 +415,6 @@ export function StreamViewer({
         </Box>
       )}
 
-      {/* Stream Click Overlay - only show when click is enabled and stream is loaded */}
-      {enableClick &&
-        streamLoaded &&
-        !requiresUserInteraction &&
-        deviceResolution &&
-        isVideoReady && (
-          <StreamClickOverlay
-            videoRef={videoRef}
-            deviceResolution={deviceResolution}
-            deviceId={deviceId}
-            onTap={onTap}
-            selectedHostDevice={selectedHostDevice}
-          />
-        )}
-
       {(!streamUrl || !isStreamActive) && (
         <Box
           sx={{
@@ -551,64 +457,16 @@ export function StreamViewer({
 }
 
 export default React.memo(StreamViewer, (prevProps, nextProps) => {
-  // Compare all props that could cause stream reinitialization
   const isEqual =
     prevProps.streamUrl === nextProps.streamUrl &&
     prevProps.isStreamActive === nextProps.isStreamActive &&
     prevProps.isCapturing === nextProps.isCapturing &&
     prevProps.model === nextProps.model &&
-    prevProps.enableClick === nextProps.enableClick &&
-    prevProps.deviceId === nextProps.deviceId &&
     prevProps.layoutConfig === nextProps.layoutConfig &&
-    prevProps.onTap === nextProps.onTap &&
-    JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
-    JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
-    prevProps.selectedHostDevice === nextProps.selectedHostDevice;
+    JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx);
 
   if (!isEqual) {
-    console.log('[@component:StreamViewer] Props changed, component will re-render:', {
-      streamUrl:
-        prevProps.streamUrl !== nextProps.streamUrl
-          ? { prev: prevProps.streamUrl, next: nextProps.streamUrl }
-          : 'same',
-      isStreamActive:
-        prevProps.isStreamActive !== nextProps.isStreamActive
-          ? { prev: prevProps.isStreamActive, next: nextProps.isStreamActive }
-          : 'same',
-      isCapturing:
-        prevProps.isCapturing !== nextProps.isCapturing
-          ? { prev: prevProps.isCapturing, next: nextProps.isCapturing }
-          : 'same',
-      model:
-        prevProps.model !== nextProps.model
-          ? { prev: prevProps.model, next: nextProps.model }
-          : 'same',
-      enableClick:
-        prevProps.enableClick !== nextProps.enableClick
-          ? { prev: prevProps.enableClick, next: nextProps.enableClick }
-          : 'same',
-      deviceId:
-        prevProps.deviceId !== nextProps.deviceId
-          ? { prev: prevProps.deviceId, next: nextProps.deviceId }
-          : 'same',
-      layoutConfig:
-        prevProps.layoutConfig !== nextProps.layoutConfig
-          ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig }
-          : 'same',
-      onTap: prevProps.onTap !== nextProps.onTap ? { prev: 'function', next: 'function' } : 'same',
-      sx:
-        JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx)
-          ? { prev: prevProps.sx, next: nextProps.sx }
-          : 'same',
-      deviceResolution:
-        JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution)
-          ? { prev: prevProps.deviceResolution, next: nextProps.deviceResolution }
-          : 'same',
-      selectedHostDevice:
-        prevProps.selectedHostDevice !== nextProps.selectedHostDevice
-          ? { prev: prevProps.selectedHostDevice, next: nextProps.selectedHostDevice }
-          : 'same',
-    });
+    console.log('[@component:StreamViewer] Props changed, re-rendering');
   }
 
   return isEqual;

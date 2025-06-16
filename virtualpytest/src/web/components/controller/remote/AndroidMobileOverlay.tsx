@@ -13,14 +13,23 @@ interface ScaledElement {
   label: string;
 }
 
+interface StreamInfo {
+  videoElement: HTMLVideoElement;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  deviceResolution: { width: number; height: number };
+}
+
 interface AndroidMobileOverlayProps {
   elements: AndroidElement[];
-  screenshotElement: HTMLImageElement | null;
+  screenshotElement: HTMLImageElement | HTMLVideoElement | null;
   deviceWidth: number;
   deviceHeight: number;
   isVisible: boolean;
   selectedElementId?: string;
   onElementClick?: (element: AndroidElement) => void;
+  streamInfo?: StreamInfo;
+  onStreamTap?: (x: number, y: number) => Promise<void>;
 }
 
 // Same colors as the original UIElementsOverlay
@@ -35,6 +44,8 @@ export const AndroidMobileOverlay = React.memo(
     isVisible,
     selectedElementId,
     onElementClick,
+    streamInfo,
+    onStreamTap,
   }: AndroidMobileOverlayProps) {
     console.log(
       `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
@@ -83,7 +94,51 @@ export const AndroidMobileOverlay = React.memo(
         return;
       }
 
-      // If no screenshot element, we can't position properly, but still create elements for debugging
+      // Handle stream positioning
+      if (streamInfo) {
+        console.log(`[@component:AndroidMobileOverlay] Using stream positioning`);
+
+        const scaled = elements
+          .map((element, index) => {
+            const bounds = parseBounds(element.bounds);
+            if (!bounds) {
+              console.warn(
+                `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
+              );
+              return null;
+            }
+
+            const getElementLabel = (el: AndroidElement) => {
+              if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
+                return el.text.substring(0, 20);
+              }
+              if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
+                return el.package.split('.').pop()?.substring(0, 20) || '';
+              }
+              return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
+            };
+
+            // For stream, use direct positioning within the stream container
+            const scaleX = streamInfo.size.width / deviceWidth;
+            const scaleY = streamInfo.size.height / deviceHeight;
+
+            return {
+              id: element.id,
+              x: bounds.x * scaleX,
+              y: bounds.y * scaleY,
+              width: bounds.width * scaleX,
+              height: bounds.height * scaleY,
+              color: COLORS[index % COLORS.length],
+              label: getElementLabel(element),
+            };
+          })
+          .filter(Boolean) as ScaledElement[];
+
+        setScaledElements(scaled);
+        return;
+      }
+
+      // Handle screenshot positioning (existing logic)
       if (!screenshotElement) {
         console.log(
           `[@component:AndroidMobileOverlay] No screenshot element, creating elements with original bounds`,
@@ -239,11 +294,11 @@ export const AndroidMobileOverlay = React.memo(
         .filter(Boolean) as ScaledElement[];
 
       setScaledElements(scaled);
-    }, [elements, screenshotElement, deviceWidth, deviceHeight, isVisible]);
+    }, [elements, screenshotElement, deviceWidth, deviceHeight, isVisible, streamInfo]);
 
     // Update overlay position when image moves/resizes
     useEffect(() => {
-      if (!screenshotElement || !isVisible) return;
+      if (!screenshotElement || !isVisible || streamInfo) return;
 
       const updatePosition = () => {
         const imageRect = screenshotElement.getBoundingClientRect();
@@ -271,12 +326,28 @@ export const AndroidMobileOverlay = React.memo(
         window.removeEventListener('resize', handleUpdate);
         window.removeEventListener('scroll', handleUpdate);
       };
-    }, [screenshotElement, isVisible]);
+    }, [screenshotElement, isVisible, streamInfo]);
 
     // Handle element click
-    const handleElementClick = (scaledElement: ScaledElement) => {
+    const handleElementClick = async (scaledElement: ScaledElement) => {
       const originalElement = elements.find((el) => el.id === scaledElement.id);
-      if (originalElement && onElementClick) {
+      if (!originalElement) return;
+
+      if (streamInfo && onStreamTap) {
+        // Calculate device coordinates for stream tap
+        const deviceX = Math.round(
+          (scaledElement.x * streamInfo.deviceResolution.width) / streamInfo.size.width,
+        );
+        const deviceY = Math.round(
+          (scaledElement.y * streamInfo.deviceResolution.height) / streamInfo.size.height,
+        );
+
+        console.log(
+          `[@component:AndroidMobileOverlay] Stream tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
+        );
+
+        await onStreamTap(deviceX, deviceY);
+      } else if (onElementClick) {
         console.log(
           `[@component:AndroidMobileOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
         );
@@ -296,9 +367,10 @@ export const AndroidMobileOverlay = React.memo(
       <div
         ref={overlayRef}
         style={{
-          position: 'fixed',
+          position: streamInfo ? 'absolute' : 'fixed',
+          width: streamInfo ? '100%' : undefined,
+          height: streamInfo ? '100%' : undefined,
           zIndex: 999999,
-          // Prevent overlay from affecting page layout and scrollbars
           contain: 'layout style size',
           willChange: 'transform',
           pointerEvents: 'none', // Allow clicks to pass through the container
@@ -381,7 +453,9 @@ export const AndroidMobileOverlay = React.memo(
       prevProps.deviceHeight === nextProps.deviceHeight &&
       prevProps.isVisible === nextProps.isVisible &&
       prevProps.selectedElementId === nextProps.selectedElementId &&
-      prevProps.onElementClick === nextProps.onElementClick
+      prevProps.onElementClick === nextProps.onElementClick &&
+      JSON.stringify(prevProps.streamInfo) === JSON.stringify(nextProps.streamInfo) &&
+      prevProps.onStreamTap === nextProps.onStreamTap
     );
   },
 );
