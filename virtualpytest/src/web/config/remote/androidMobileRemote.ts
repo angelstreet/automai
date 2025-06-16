@@ -14,9 +14,9 @@ export const androidMobileRemoteConfig = {
     },
     expanded: {
       width: '280px',
-      height: '420',
+      height: '520px',
       position: {
-        top: '100px',
+        bottom: '20px',
         right: '20px',
       },
     },

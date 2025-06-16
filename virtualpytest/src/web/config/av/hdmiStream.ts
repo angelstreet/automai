@@ -16,7 +16,7 @@ export const hdmiStreamConfig = {
       },
     },
     expanded: {
-      width: '800px',
+      width: '700px',
       height: '600px',
       position: {
         bottom: '20px',
@@ -48,7 +48,7 @@ export const hdmiStreamMobileConfig = {
       },
     },
     expanded: {
-      width: '400px',
+      width: '300px',
       height: '600px', // Portrait - taller than wide
       position: {
         bottom: '20px',
