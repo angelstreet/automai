@@ -106,36 +106,51 @@ export const AndroidMobileRemote = React.memo(
         const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
         const panelWidth = parsePixels(currentStreamConfig.width);
         const panelHeight = parsePixels(currentStreamConfig.height);
-
-        // Calculate actual stream content area
         const headerHeight = parsePixels(hdmiStreamMobileConfig.panel_layout.header.height);
-        const streamContentHeight = panelHeight - headerHeight; // Panel height minus header
 
-        // Calculate stream width based on 1920x1080 aspect ratio (16:9)
-        const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
-        const streamContentWidth = Math.min(panelWidth, streamContentHeight * deviceAspectRatio);
+        // Calculate available content area (panel minus header)
+        const availableWidth = panelWidth;
+        const availableHeight = panelHeight - headerHeight;
 
-        // Calculate stream position - centered in panel
+        // Calculate actual stream size respecting 16:9 aspect ratio
+        const deviceAspectRatio = 1920 / 1080; // 1.777...
+
+        let streamWidth, streamHeight;
+
+        // Fit stream within available area while maintaining aspect ratio
+        if (availableWidth / availableHeight > deviceAspectRatio) {
+          // Available area is wider than 16:9, constrain by height
+          streamHeight = availableHeight;
+          streamWidth = streamHeight * deviceAspectRatio;
+        } else {
+          // Available area is taller than 16:9, constrain by width
+          streamWidth = availableWidth;
+          streamHeight = streamWidth / deviceAspectRatio;
+        }
+
+        // Calculate stream position - centered in available content area
+        const panelX =
+          'left' in currentStreamConfig.position
+            ? parsePixels(currentStreamConfig.position.left)
+            : 20;
+        const panelY =
+          window.innerHeight -
+          parsePixels(currentStreamConfig.position.bottom || '20px') -
+          panelHeight;
+
         const streamActualPosition = {
-          x:
-            'left' in currentStreamConfig.position
-              ? parsePixels(currentStreamConfig.position.left)
-              : 20,
-          y:
-            window.innerHeight -
-            parsePixels(currentStreamConfig.position.bottom || '20px') -
-            panelHeight +
-            headerHeight, // Account for header offset
+          x: panelX + (availableWidth - streamWidth) / 2, // Center horizontally
+          y: panelY + headerHeight + (availableHeight - streamHeight) / 2, // Center vertically in content area
         };
 
         const streamActualSize = {
-          width: Math.round(streamContentWidth),
-          height: Math.round(streamContentHeight),
+          width: Math.round(streamWidth),
+          height: Math.round(streamHeight),
         };
 
         const info = {
-          position: streamActualPosition, // Use HDMI stream position from config
-          size: streamActualSize, // Use HDMI stream size from config
+          position: streamActualPosition, // Use calculated stream position
+          size: streamActualSize, // Use calculated stream size with proper aspect ratio
           deviceResolution: streamResolution || hardcodedResolution,
           isCollapsed: panelState.isCollapsed,
         };
