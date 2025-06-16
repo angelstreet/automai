@@ -17,8 +17,6 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
   selectedDevice,
   isControlActive,
   isControlLoading,
-  isLoading,
-  error,
   availableHosts,
   isDeviceLocked,
   onDeviceSelect,
@@ -47,11 +45,11 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           value={selectedDevice || ''}
           onChange={(e) => onDeviceSelect(e.target.value || null)}
           label="Device"
-          disabled={isLoading || !!error}
+          disabled={isControlLoading}
           sx={{ height: 32, fontSize: '0.75rem' }}
         >
           <MenuItem value="">
-            <em>{isLoading ? 'Loading...' : 'None'}</em>
+            <em>None</em>
           </MenuItem>
           {availableHosts.map((device) => {
             const deviceIsLocked = isDeviceLocked(device.host_name);
@@ -92,9 +90,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         variant={isControlActive ? 'contained' : 'outlined'}
         size="small"
         onClick={onTakeControl}
-        disabled={
-          !selectedDevice || isLoading || isControlLoading || !!error || isSelectedDeviceLocked
-        }
+        disabled={!selectedDevice || isControlLoading || isSelectedDeviceLocked}
         startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
         sx={{

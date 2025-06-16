@@ -30,8 +30,6 @@ export interface NavigationEditorDeviceControlsProps {
   isControlActive: boolean;
   isControlLoading: boolean;
   isRemotePanelOpen: boolean;
-  isLoading: boolean;
-  error: string | null;
   availableHosts: Host[];
   isDeviceLocked: (hostName: string) => boolean;
   onDeviceSelect: (device: string | null) => void;

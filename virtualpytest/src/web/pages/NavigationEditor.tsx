@@ -366,7 +366,7 @@ const NavigationEditorContent: React.FC = () => {
         maxDisplayDepth={maxDisplayDepth}
         totalNodes={allNodes.length}
         visibleNodes={nodes.length}
-        isLoading={isControlLoading} // Use control loading state for device controls
+        isLoading={false} // Tree loading handled separately from device control loading
         error={null} // Error handling moved to device control component
         // History props removed - using page reload for cancel changes
         isLocked={isLocked}

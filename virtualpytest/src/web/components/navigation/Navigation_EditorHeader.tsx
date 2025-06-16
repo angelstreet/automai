@@ -149,8 +149,6 @@ export const NavigationEditorHeader: React.FC<{
               isControlActive={isControlActive}
               isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}
-              isLoading={isLoading}
-              error={error}
               availableHosts={availableHosts}
               isDeviceLocked={isDeviceLocked}
               onDeviceSelect={onDeviceSelect}
