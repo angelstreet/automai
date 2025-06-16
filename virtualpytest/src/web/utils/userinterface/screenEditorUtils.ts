@@ -1,4 +1,4 @@
-import { LayoutConfig, DeviceResolution } from '../../types/screenEditorTypes';
+import { LayoutConfig, DeviceResolution } from '../../types/pages/UserInterface_Types';
 import { getVerificationEditorLayout } from '../../config/layoutConfig';
 
 /**

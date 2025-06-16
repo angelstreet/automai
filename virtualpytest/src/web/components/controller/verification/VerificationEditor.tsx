@@ -23,11 +23,11 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   VerificationEditorLayoutConfig,
   getVerificationEditorLayout,
-} from '../../config/layoutConfig';
+} from '../../../config/layoutConfig';
 
 // Import registration context
 
-import { NodeVerificationsList } from '../navigation/Navigation_NodeVerificationsList';
+import { NodeVerificationsList } from '../../navigation/Navigation_NodeVerificationsList';
 
 // Define DeviceConnection interface locally since it's not exported
 interface DeviceConnection {

@@ -24,13 +24,9 @@ export interface TestCase {
 
 export interface Campaign {
   campaign_id: string;
-  campaign_name: string;
-  navigation_tree_id: string;
-  remote_controller: string;
-  audio_video_acquisition: string;
-  test_case_ids: string[];
-  auto_tests?: { mode: string; nodes?: string[] };
-  prioritize: boolean;
+  name: string;
+  description?: string;
+  test_case_ids?: string[];
 }
 
 export interface Tree {

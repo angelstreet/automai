@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
-import { Host } from '../types/common/Host_Types';
-import { DragArea, HdmiStreamState, HdmiStreamActions } from '../types/controller/hdmi_types';
+import { Host } from '../../types/common/Host_Types';
+import { DragArea, HdmiStreamState, HdmiStreamActions } from '../../types/controller/hdmi_types';
 
 interface UseHdmiStreamProps {
   host: Host;
