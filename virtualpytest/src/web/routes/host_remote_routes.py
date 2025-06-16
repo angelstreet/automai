@@ -86,6 +86,11 @@ def screenshot_and_dump():
         ui_success, elements, ui_error = False, [], None
         if hasattr(remote_controller, 'dump_ui_elements'):
             ui_success, elements, ui_error = remote_controller.dump_ui_elements()
+            
+            # Store elements in controller for subsequent click operations
+            if ui_success and elements:
+                remote_controller.last_ui_elements = elements
+                print(f"[@route:host_remote:screenshot_and_dump] Stored {len(elements)} elements in controller for clicking")
         
         response = {
             'success': screenshot_success and (ui_success or not hasattr(remote_controller, 'dump_ui_elements'))
@@ -225,16 +230,30 @@ def click_element():
                 'error': 'Element clicking not supported by this remote controller'
             }), 400
         
+        # Check if we have any elements stored
+        if not remote_controller.last_ui_elements:
+            return jsonify({
+                'success': False,
+                'error': 'No UI elements available. Please dump UI elements first using screenshot-and-dump or dump-ui.'
+            }), 400
+        
+        print(f"[@route:host_remote:click_element] Found {len(remote_controller.last_ui_elements)} stored elements")
+        
+        # Convert elementId to appropriate type for comparison
         element = None
+        available_ids = []
         for el in remote_controller.last_ui_elements:
-            if el.id == elementId:
+            available_ids.append(str(el.id))
+            # Try both string and int comparison
+            if str(el.id) == str(elementId) or el.id == elementId:
                 element = el
                 break
         
         if not element:
+            print(f"[@route:host_remote:click_element] Element {elementId} not found. Available IDs: {available_ids}")
             return jsonify({
                 'success': False,
-                'error': f'Element with ID {elementId} not found. Please dump UI elements first.'
+                'error': f'Element with ID {elementId} not found. Available IDs: {available_ids}. Please dump UI elements first.'
             }), 400
         
         success = remote_controller.click_element(element)
@@ -426,6 +445,11 @@ def dump_ui():
         ui_success, elements, ui_error = remote_controller.dump_ui_elements()
         
         if ui_success:
+            # Store elements in controller for subsequent click operations
+            if elements:
+                remote_controller.last_ui_elements = elements
+                print(f"[@route:host_remote:dump_ui] Stored {len(elements)} elements in controller for clicking")
+            
             # Serialize elements to JSON format (same as screenshot-and-dump)
             elements_data = []
             for element in elements:
