@@ -146,7 +146,7 @@ export const NavigationEditorHeader: React.FC<{
         error,
       );
       showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
-      logic in hookonControlStateChange(false);
+      onControlStateChange(false);
     } finally {
       setIsControlLoading(false);
     }
