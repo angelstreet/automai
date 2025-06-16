@@ -14,3 +14,9 @@ export * from './pages/useScreenEditor';
 export * from './pages/useNavigationEditor';
 export * from './pages/useDevice';
 export * from './pages/useUserInterface';
+
+export { useDeviceControl } from './useDeviceControl';
+export { useUserSession } from './useUserSession';
+export { useToast } from './useToast';
+export { useRegistration } from './useRegistration';
+export { useVerification } from './verification/useVerification';

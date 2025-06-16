@@ -114,6 +114,7 @@ interface UseVerificationProps {
   onClearSelection?: () => void;
   screenshotPath?: string;
   selectedHostDevice?: any;
+  isCaptureActive?: boolean;
 }
 
 export const useVerification = ({
@@ -125,6 +126,7 @@ export const useVerification = ({
   onClearSelection,
   screenshotPath,
   selectedHostDevice,
+  isCaptureActive,
 }: UseVerificationProps) => {
   // State for verification actions and verifications
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
