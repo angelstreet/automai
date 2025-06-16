@@ -203,6 +203,8 @@ export const AndroidMobileOverlay = React.memo(
           contain: 'layout style size',
           willChange: 'transform',
           pointerEvents: 'none', // Allow clicks to pass through the container
+          border: '3px solid red', // Debug border to see overlay position
+          backgroundColor: 'rgba(255, 0, 0, 0.1)', // Light red background for visibility
         }}
       >
         {scaledElements.map((element, index) => (

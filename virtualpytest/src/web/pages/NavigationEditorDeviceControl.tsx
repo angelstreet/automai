@@ -217,7 +217,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 onDisconnectComplete={onReleaseControl}
                 streamPosition={streamInfo?.position}
                 streamSize={streamInfo?.size}
-                streamResolution={streamInfo?.resolution}
+                streamResolution={{ width: 1080, height: 1920 }}
                 videoElement={streamInfo?.videoElement || undefined}
                 panelState={{
                   isCollapsed: false, // Fixed panel is always expanded
