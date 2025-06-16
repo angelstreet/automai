@@ -97,7 +97,7 @@ export const useNavigationEditor = () => {
         navigationState.setHasUnsavedChanges(true);
       }
     },
-    [navigationState.onNodesChange, navigationState.setHasUnsavedChanges],
+    [navigationState],
   );
 
   // Handle edge changes and track modifications
@@ -112,7 +112,7 @@ export const useNavigationEditor = () => {
         navigationState.setHasUnsavedChanges(true);
       }
     },
-    [navigationState.onEdgesChange, navigationState.setHasUnsavedChanges],
+    [navigationState],
   );
 
   // Handle new connections
@@ -226,13 +226,7 @@ export const useNavigationEditor = () => {
       // Mark as having unsaved changes
       navigationState.setHasUnsavedChanges(true);
     },
-    [
-      navigationState.nodes,
-      navigationState.setNodes,
-      navigationState.setEdges,
-      navigationState.setHasUnsavedChanges,
-      typedValidateConnection,
-    ],
+    [navigationState, typedValidateConnection],
   );
 
   // Set user interface from props (passed from UserInterface.tsx via navigation state)
@@ -250,7 +244,7 @@ export const useNavigationEditor = () => {
   const onPaneClick = useCallback(() => {
     navigationState.setSelectedNode(null);
     navigationState.setSelectedEdge(null);
-  }, [navigationState.setSelectedNode, navigationState.setSelectedEdge]);
+  }, [navigationState]);
 
   // Handle node selection
   const onNodeClick = useCallback(
@@ -259,7 +253,7 @@ export const useNavigationEditor = () => {
       navigationState.setSelectedNode(node as UINavigationNode);
       navigationState.setSelectedEdge(null);
     },
-    [navigationState.setSelectedNode, navigationState.setSelectedEdge],
+    [navigationState],
   );
 
   // Handle edge selection
@@ -269,7 +263,7 @@ export const useNavigationEditor = () => {
       navigationState.setSelectedEdge(edge as UINavigationEdge);
       navigationState.setSelectedNode(null);
     },
-    [navigationState.setSelectedEdge, navigationState.setSelectedNode],
+    [navigationState],
   );
 
   // Handle double-click on node for navigation
@@ -321,7 +315,7 @@ export const useNavigationEditor = () => {
       // Load tree data for that level from config (nodes/edges only, not interface metadata)
       configHook.loadFromConfig(targetTreeName);
     },
-    [navigationState, configHook.loadFromConfig, navigate],
+    [navigationState, configHook, navigate],
   );
 
   // Go back to parent tree
@@ -341,16 +335,7 @@ export const useNavigationEditor = () => {
       // Load parent tree data from config (nodes/edges only, not interface metadata)
       configHook.loadFromConfig(targetTreeName);
     }
-  }, [navigationState, configHook.loadFromConfig, navigate]);
-
-  // Discard changes function with confirmation
-  const discardChanges = useCallback(() => {
-    if (navigationState.hasUnsavedChanges) {
-      navigationState.setIsDiscardDialogOpen(true);
-    } else {
-      performDiscardChanges();
-    }
-  }, [navigationState.hasUnsavedChanges, navigationState.setIsDiscardDialogOpen]);
+  }, [navigationState, configHook, navigate]);
 
   // Actually perform the discard operation
   const performDiscardChanges = useCallback(() => {
@@ -363,6 +348,15 @@ export const useNavigationEditor = () => {
       navigationState.setIsDiscardDialogOpen(false);
     }
   }, [navigationState]);
+
+  // Discard changes function with confirmation
+  const discardChanges = useCallback(() => {
+    if (navigationState.hasUnsavedChanges) {
+      navigationState.setIsDiscardDialogOpen(true);
+    } else {
+      performDiscardChanges();
+    }
+  }, [navigationState, performDiscardChanges]);
 
   // Fit view
   const fitView = useCallback(() => {
@@ -382,7 +376,7 @@ export const useNavigationEditor = () => {
         navigationState.reactFlowInstance.fitView();
       }
     }
-  }, [navigationState.reactFlowInstance, navigationState.nodes]);
+  }, [navigationState]);
 
   // Navigate back to parent
   const navigateToParent = useCallback(() => {
@@ -397,7 +391,7 @@ export const useNavigationEditor = () => {
 
   // Helper function to check if a node is descendant of another
   const isNodeDescendantOf = useCallback(
-    (node: UINavigationNode, ancestorId: string, nodes: UINavigationNode[]): boolean => {
+    (node: UINavigationNode, ancestorId: string, _nodes: UINavigationNode[]): boolean => {
       if (!node.data.parent || node.data.parent.length === 0) return false;
 
       // Check if ancestorId is in the parent chain
@@ -490,7 +484,7 @@ export const useNavigationEditor = () => {
       .sort((a, b) => a.depth - b.depth || a.label.localeCompare(b.label));
 
     navigationState.setAvailableFocusNodes(focusableNodes);
-  }, [navigationState.nodes]);
+  }, [navigationState]);
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback(
