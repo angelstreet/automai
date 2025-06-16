@@ -88,4 +88,15 @@ export type {
   ControllerType as RemoteControllerTypeAlias,
 } from './controller/Remote_Types';
 
+// Panel types for dynamic panel state management
+export type {
+  PanelInfo,
+  PanelDimensions,
+  PanelContentArea,
+  PanelState,
+  PanelLayoutConfig,
+  PanelAwareProps,
+  PanelManagerProps,
+} from './controller/Panel_Types';
+
 export * from './features/Validation_Types';

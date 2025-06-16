@@ -1,6 +1,6 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, IconButton } from '@mui/material';
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 
 import { ScreenDefinitionEditor } from '../components/controller/av/ScreenDefinitionEditor';
 import { AndroidMobileRemote } from '../components/controller/remote/AndroidMobileRemote';
@@ -261,11 +261,35 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
 
               {/* Remote Panel Content - Dynamic based on device type */}
               {remoteConfig.type === 'android_tv' ? (
-                <RemotePanel host={selectedHost} onReleaseControl={onReleaseControl} />
+                <RemotePanel
+                  host={selectedHost}
+                  onReleaseControl={onReleaseControl}
+                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  deviceResolution={streamInfo?.resolution}
+                />
               ) : remoteConfig.type === 'ir_remote' ? (
-                <RemotePanel host={selectedHost} onReleaseControl={onReleaseControl} />
+                <RemotePanel
+                  host={selectedHost}
+                  onReleaseControl={onReleaseControl}
+                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  deviceResolution={streamInfo?.resolution}
+                />
               ) : remoteConfig.type === 'bluetooth_remote' ? (
-                <RemotePanel host={selectedHost} onReleaseControl={onReleaseControl} />
+                <RemotePanel
+                  host={selectedHost}
+                  onReleaseControl={onReleaseControl}
+                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  deviceResolution={streamInfo?.resolution}
+                />
               ) : (
                 <Box sx={{ p: 2, textAlign: 'center' }}>
                   <Typography variant="body2" color="textSecondary">

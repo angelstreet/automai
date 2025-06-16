@@ -16,9 +16,25 @@ interface RemotePanelProps {
   host: Host;
   onReleaseControl?: () => void;
   initialCollapsed?: boolean;
+  // Panel dimensions and positions for overlay positioning
+  collapsedPosition?: { x: number; y: number };
+  collapsedSize?: { width: number; height: number };
+  expandedPosition?: { x: number; y: number };
+  expandedSize?: { width: number; height: number };
+  // Device resolution for overlay scaling
+  deviceResolution?: { width: number; height: number };
 }
 
-export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }: RemotePanelProps) {
+export function RemotePanel({
+  host,
+  onReleaseControl,
+  initialCollapsed = true,
+  collapsedPosition,
+  collapsedSize,
+  expandedPosition,
+  expandedSize,
+  deviceResolution,
+}: RemotePanelProps) {
   // Panel state - three states: expanded, collapsed, minimized
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -99,12 +115,26 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
 
   // Simple device model detection - no loading, no fallback, no validation
   const renderRemoteComponent = () => {
+    // Calculate current panel position and size for overlay
+    const currentPosition = isCollapsed ? collapsedPosition : expandedPosition;
+    const currentSize = isCollapsed ? collapsedSize : expandedSize;
+
     switch (host.device_model) {
       case 'android_mobile':
         return (
           <AndroidMobileRemote
             host={host}
             onDisconnectComplete={onReleaseControl}
+            streamPosition={currentPosition}
+            streamSize={currentSize}
+            streamResolution={deviceResolution}
+            panelState={{
+              isCollapsed,
+              collapsedPosition,
+              collapsedSize,
+              expandedPosition,
+              expandedSize,
+            }}
             sx={{
               height: '100%',
               '& .MuiButton-root': {

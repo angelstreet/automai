@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import React from 'react';
 
 import { AndroidElement } from '../../../types/controller/Remote_Types';
+import { PanelInfo } from '../../../types/controller/Panel_Types';
 
 interface ScaledElement {
   id: string;
@@ -13,13 +14,6 @@ interface ScaledElement {
   label: string;
 }
 
-interface StreamInfo {
-  videoElement: HTMLVideoElement;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  deviceResolution: { width: number; height: number };
-}
-
 interface AndroidMobileOverlayProps {
   elements: AndroidElement[];
   screenshotElement: HTMLImageElement | HTMLVideoElement | null;
@@ -28,8 +22,8 @@ interface AndroidMobileOverlayProps {
   isVisible: boolean;
   selectedElementId?: string;
   onElementClick?: (element: AndroidElement) => void;
-  streamInfo?: StreamInfo;
-  onStreamTap?: (x: number, y: number) => Promise<void>;
+  panelInfo?: PanelInfo;
+  onPanelTap?: (x: number, y: number) => Promise<void>;
 }
 
 // Same colors as the original UIElementsOverlay
@@ -44,8 +38,8 @@ export const AndroidMobileOverlay = React.memo(
     isVisible,
     selectedElementId,
     onElementClick,
-    streamInfo,
-    onStreamTap,
+    panelInfo,
+    onPanelTap,
   }: AndroidMobileOverlayProps) {
     console.log(
       `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
@@ -94,9 +88,11 @@ export const AndroidMobileOverlay = React.memo(
         return;
       }
 
-      // Handle stream positioning
-      if (streamInfo) {
-        console.log(`[@component:AndroidMobileOverlay] Using stream positioning`);
+      // Handle panel positioning (dynamic collapsed/expanded)
+      if (panelInfo) {
+        console.log(
+          `[@component:AndroidMobileOverlay] Using panel positioning - ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
+        );
 
         const scaled = elements
           .map((element, index) => {
@@ -118,14 +114,23 @@ export const AndroidMobileOverlay = React.memo(
               return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
             };
 
-            // For stream, use direct positioning within the stream container
-            const scaleX = streamInfo.size.width / deviceWidth;
-            const scaleY = streamInfo.size.height / deviceHeight;
+            // Calculate content area based on panel state
+            const contentOffset = panelInfo.isCollapsed
+              ? { x: 10, y: 50 } // Smaller offset for collapsed panel
+              : { x: 20, y: 60 }; // Larger offset for expanded panel
+
+            const contentArea = panelInfo.isCollapsed
+              ? { width: panelInfo.size.width - 20, height: panelInfo.size.height - 100 }
+              : { width: panelInfo.size.width - 40, height: panelInfo.size.height - 120 };
+
+            // Scale elements relative to panel content area
+            const scaleX = contentArea.width / deviceWidth;
+            const scaleY = contentArea.height / deviceHeight;
 
             return {
               id: element.id,
-              x: bounds.x * scaleX,
-              y: bounds.y * scaleY,
+              x: bounds.x * scaleX + contentOffset.x,
+              y: bounds.y * scaleY + contentOffset.y,
               width: bounds.width * scaleX,
               height: bounds.height * scaleY,
               color: COLORS[index % COLORS.length],
@@ -294,11 +299,11 @@ export const AndroidMobileOverlay = React.memo(
         .filter(Boolean) as ScaledElement[];
 
       setScaledElements(scaled);
-    }, [elements, screenshotElement, deviceWidth, deviceHeight, isVisible, streamInfo]);
+    }, [elements, screenshotElement, deviceWidth, deviceHeight, isVisible, panelInfo]);
 
     // Update overlay position when image moves/resizes
     useEffect(() => {
-      if (!screenshotElement || !isVisible || streamInfo) return;
+      if (!screenshotElement || !isVisible || panelInfo) return;
 
       const updatePosition = () => {
         const imageRect = screenshotElement.getBoundingClientRect();
@@ -326,27 +331,36 @@ export const AndroidMobileOverlay = React.memo(
         window.removeEventListener('resize', handleUpdate);
         window.removeEventListener('scroll', handleUpdate);
       };
-    }, [screenshotElement, isVisible, streamInfo]);
+    }, [screenshotElement, isVisible, panelInfo]);
 
     // Handle element click
     const handleElementClick = async (scaledElement: ScaledElement) => {
       const originalElement = elements.find((el) => el.id === scaledElement.id);
       if (!originalElement) return;
 
-      if (streamInfo && onStreamTap) {
-        // Calculate device coordinates for stream tap
+      if (panelInfo && onPanelTap) {
+        // Calculate device coordinates for panel tap
+        const contentArea = panelInfo.isCollapsed
+          ? { width: panelInfo.size.width - 20, height: panelInfo.size.height - 100 }
+          : { width: panelInfo.size.width - 40, height: panelInfo.size.height - 120 };
+
+        const contentOffset = panelInfo.isCollapsed ? { x: 10, y: 50 } : { x: 20, y: 60 };
+
+        // Convert overlay coordinates back to device coordinates
         const deviceX = Math.round(
-          (scaledElement.x * streamInfo.deviceResolution.width) / streamInfo.size.width,
+          ((scaledElement.x - contentOffset.x) * panelInfo.deviceResolution.width) /
+            contentArea.width,
         );
         const deviceY = Math.round(
-          (scaledElement.y * streamInfo.deviceResolution.height) / streamInfo.size.height,
+          ((scaledElement.y - contentOffset.y) * panelInfo.deviceResolution.height) /
+            contentArea.height,
         );
 
         console.log(
-          `[@component:AndroidMobileOverlay] Stream tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
+          `[@component:AndroidMobileOverlay] Panel tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY}) - panel ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
         );
 
-        await onStreamTap(deviceX, deviceY);
+        await onPanelTap(deviceX, deviceY);
       } else if (onElementClick) {
         console.log(
           `[@component:AndroidMobileOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
@@ -367,9 +381,11 @@ export const AndroidMobileOverlay = React.memo(
       <div
         ref={overlayRef}
         style={{
-          position: streamInfo ? 'absolute' : 'fixed',
-          width: streamInfo ? '100%' : undefined,
-          height: streamInfo ? '100%' : undefined,
+          position: panelInfo ? 'absolute' : 'fixed',
+          left: panelInfo ? `${panelInfo.position.x}px` : undefined,
+          top: panelInfo ? `${panelInfo.position.y}px` : undefined,
+          width: panelInfo ? `${panelInfo.size.width}px` : undefined,
+          height: panelInfo ? `${panelInfo.size.height}px` : undefined,
           zIndex: 999999,
           contain: 'layout style size',
           willChange: 'transform',
@@ -454,8 +470,8 @@ export const AndroidMobileOverlay = React.memo(
       prevProps.isVisible === nextProps.isVisible &&
       prevProps.selectedElementId === nextProps.selectedElementId &&
       prevProps.onElementClick === nextProps.onElementClick &&
-      JSON.stringify(prevProps.streamInfo) === JSON.stringify(nextProps.streamInfo) &&
-      prevProps.onStreamTap === nextProps.onStreamTap
+      JSON.stringify(prevProps.panelInfo) === JSON.stringify(nextProps.panelInfo) &&
+      prevProps.onPanelTap === nextProps.onPanelTap
     );
   },
 );

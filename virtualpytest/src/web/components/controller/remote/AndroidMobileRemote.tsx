@@ -14,6 +14,7 @@ import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
 import { useRemoteConfigs } from '../../../hooks/controller/useRemoteConfigs';
 import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
+import { PanelInfo } from '../../../types/controller/Panel_Types';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
@@ -26,6 +27,14 @@ interface AndroidMobileRemoteProps {
   streamSize?: { width: number; height: number };
   streamResolution?: { width: number; height: number };
   videoElement?: HTMLVideoElement;
+  // Panel state for dynamic overlay positioning
+  panelState?: {
+    isCollapsed: boolean;
+    collapsedPosition?: { x: number; y: number };
+    collapsedSize?: { width: number; height: number };
+    expandedPosition?: { x: number; y: number };
+    expandedSize?: { width: number; height: number };
+  };
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -37,6 +46,7 @@ export const AndroidMobileRemote = React.memo(
     streamSize,
     streamResolution,
     videoElement,
+    panelState,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -69,23 +79,36 @@ export const AndroidMobileRemote = React.memo(
       session,
     } = useAndroidMobile(host);
 
-    // Stream integration - prepare streamInfo for overlay
-    const streamInfo = React.useMemo(() => {
-      if (streamPosition && streamSize && streamResolution && videoElement) {
+    // Panel integration - prepare panelInfo for overlay
+    const panelInfo = React.useMemo((): PanelInfo | undefined => {
+      if (streamPosition && streamSize && streamResolution && panelState) {
         return {
-          videoElement,
           position: streamPosition,
           size: streamSize,
           deviceResolution: streamResolution,
+          isCollapsed: panelState.isCollapsed,
         };
       }
       return undefined;
-    }, [streamPosition, streamSize, streamResolution, videoElement]);
+    }, [streamPosition, streamSize, streamResolution, panelState]);
 
-    // Use remote configs for stream tap functionality
+    // Use remote configs for panel tap functionality
+    // Create temporary adapter for compatibility with useRemoteConfigs
+    const streamInfoAdapter = React.useMemo(() => {
+      if (panelInfo) {
+        return {
+          videoElement: null as any, // Not needed for panel tap
+          position: panelInfo.position,
+          size: panelInfo.size,
+          deviceResolution: panelInfo.deviceResolution,
+        };
+      }
+      return undefined;
+    }, [panelInfo]);
+
     const { handleStreamTap } = useRemoteConfigs({
       host,
-      streamInfo,
+      streamInfo: streamInfoAdapter,
     });
 
     const handleDisconnectWithCallback = async () => {
@@ -441,43 +464,19 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - positioned outside or over stream */}
+        {/* AndroidMobileOverlay - positioned outside or over panel */}
         {showOverlay && androidElements.length > 0 && (
-          <div
-            style={{
-              position: streamInfo ? 'absolute' : 'fixed',
-              left: streamInfo
-                ? streamInfo.position.x
-                : layoutConfig.overlayConfig.defaultPosition.left,
-              top: streamInfo
-                ? streamInfo.position.y
-                : layoutConfig.overlayConfig.defaultPosition.top,
-              width: streamInfo ? streamInfo.size.width : undefined,
-              height: streamInfo ? streamInfo.size.height : undefined,
-              zIndex: 99999999,
-              pointerEvents: 'all',
-              transformOrigin: 'top left',
-              transform: streamInfo
-                ? 'none'
-                : `scale(${layoutConfig.overlayConfig.defaultScale.x}, ${layoutConfig.overlayConfig.defaultScale.y})`,
-              background: 'rgba(0,0,0,0.01)',
-              // Prevent overlay from affecting page layout
-              contain: 'layout style size',
-              willChange: 'transform',
-            }}
-          >
-            <AndroidMobileOverlay
-              elements={androidElements}
-              screenshotElement={screenshotRef.current}
-              deviceWidth={layoutConfig.deviceResolution.width}
-              deviceHeight={layoutConfig.deviceResolution.height}
-              isVisible={showOverlay}
-              selectedElementId={selectedElement ? selectedElement : undefined}
-              onElementClick={handleOverlayElementClick}
-              streamInfo={streamInfo}
-              onStreamTap={streamInfo ? handleStreamTap : undefined}
-            />
-          </div>
+          <AndroidMobileOverlay
+            elements={androidElements}
+            screenshotElement={screenshotRef.current}
+            deviceWidth={layoutConfig.deviceResolution.width}
+            deviceHeight={layoutConfig.deviceResolution.height}
+            isVisible={showOverlay}
+            selectedElementId={selectedElement ? selectedElement : undefined}
+            onElementClick={handleOverlayElementClick}
+            panelInfo={panelInfo}
+            onPanelTap={panelInfo ? handleStreamTap : undefined}
+          />
         )}
       </Box>
     );
@@ -493,7 +492,8 @@ export const AndroidMobileRemote = React.memo(
       JSON.stringify(prevProps.streamPosition) === JSON.stringify(nextProps.streamPosition) &&
       JSON.stringify(prevProps.streamSize) === JSON.stringify(nextProps.streamSize) &&
       JSON.stringify(prevProps.streamResolution) === JSON.stringify(nextProps.streamResolution) &&
-      prevProps.videoElement === nextProps.videoElement
+      prevProps.videoElement === nextProps.videoElement &&
+      JSON.stringify(prevProps.panelState) === JSON.stringify(nextProps.panelState)
     );
   },
 );
