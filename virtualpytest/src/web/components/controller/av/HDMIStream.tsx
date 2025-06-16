@@ -142,7 +142,7 @@ export function HDMIStream({
     } finally {
       setIsLoadingStream(false);
     }
-  }, [host, streamUrl, isStreamActive]);
+  }, [host]); // Remove streamUrl and isStreamActive to prevent infinite loops
 
   // Initialize stream URL on mount and when host changes
   useEffect(() => {
@@ -152,7 +152,7 @@ export function HDMIStream({
   // Notify parent of initial expanded state
   useEffect(() => {
     onExpandedChange?.(isExpanded);
-  }, [isExpanded, onExpandedChange]);
+  }, [isExpanded]); // Remove onExpandedChange from deps to prevent infinite loops
 
   // Enhanced screenshot handler that updates capture mode
   const handleTakeScreenshot = useCallback(async () => {
