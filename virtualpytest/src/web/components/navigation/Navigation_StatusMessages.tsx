@@ -1,18 +1,12 @@
+import { Snackbar, Alert } from '@mui/material';
 import React from 'react';
-import {
-  Snackbar,
-  Alert,
-} from '@mui/material';
 
 interface StatusMessagesProps {
   error: string | null;
   success: string | null;
 }
 
-export const StatusMessages: React.FC<StatusMessagesProps> = ({
-  error,
-  success,
-}) => {
+export const StatusMessages: React.FC<StatusMessagesProps> = ({ error, success }) => {
   return (
     <>
       {/* Success Messages */}
@@ -28,7 +22,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
           </Alert>
         </Snackbar>
       )}
-      
+
       {/* Error Messages */}
       {error && (
         <Snackbar
@@ -44,4 +38,4 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
       )}
     </>
   );
-}; 
+};

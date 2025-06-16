@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import type { UINavigationNode as UINavigationNodeType, NodeVerification } from '../../types/pages/Navigation_Types';
-import { NodeType, NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
+
+import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
+import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
 import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
-export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({ 
-  data, 
-  selected 
+export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
+  data,
+  selected,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
 
@@ -17,7 +18,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isRootNode = data.is_root === true;
   // Check if this is an entry point node
   const isEntryNode = data.type === 'entry';
-  
+
   // Entry node styling - small circular point
   if (isEntryNode) {
     const entryColors = NODE_TYPE_COLORS.entry;
@@ -29,7 +30,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           borderRadius: '50%',
           background: entryColors.background,
           border: `3px solid ${entryColors.border}`,
-          boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.6)' : '0 2px 8px rgba(211, 47, 47, 0.4)',
+          boxShadow: selected
+            ? '0 4px 12px rgba(211, 47, 47, 0.6)'
+            : '0 2px 8px rgba(211, 47, 47, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -41,19 +44,17 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }}
         title="Entry Point - Click to edit entry method"
       >
-        ⚡
-        
-        {/* Single source handle for outgoing connections */}
-        <Handle 
-          type="source" 
-          position={Position.Right} 
+        ⚡{/* Single source handle for outgoing connections */}
+        <Handle
+          type="source"
+          position={Position.Right}
           id="entry-source"
           isConnectable={false}
           isConnectableStart={false}
           isConnectableEnd={false}
-          style={{ 
+          style={{
             background: entryColors.border,
-            width: '12px', 
+            width: '12px',
             height: '12px',
             border: '2px solid #fff',
             borderRadius: '50%',
@@ -62,39 +63,51 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             transform: 'translateY(-50%)',
             opacity: 1,
             cursor: 'not-allowed',
-          }} 
+          }}
         />
       </div>
     );
   }
-  
+
   // Root node styling - more prominent than normal nodes
   const rootNodeStyle = {
     background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
     border: '2px solid #d32f2f',
-    boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)'
+    boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)',
   };
-  
+
   // Normal node styling - based on node type
   const getNodeColor = (type: string) => {
     switch (type) {
-      case 'screen': return '#e3f2fd';
-      case 'dialog': return '#f3e5f5';
-      case 'popup': return '#fff3e0';
-      case 'overlay': return '#e8f5e8';
-      case 'menu': return '#fff8e1';
-      default: return '#f5f5f5';
+      case 'screen':
+        return '#e3f2fd';
+      case 'dialog':
+        return '#f3e5f5';
+      case 'popup':
+        return '#fff3e0';
+      case 'overlay':
+        return '#e8f5e8';
+      case 'menu':
+        return '#fff8e1';
+      default:
+        return '#f5f5f5';
     }
   };
 
   const getNodeBorderColor = (type: string) => {
     switch (type) {
-      case 'screen': return '#2196f3';
-      case 'dialog': return '#9c27b0';
-      case 'popup': return '#ff9800';
-      case 'overlay': return '#4caf50';
-      case 'menu': return '#ffc107';
-      default: return '#757575';
+      case 'screen':
+        return '#2196f3';
+      case 'dialog':
+        return '#9c27b0';
+      case 'popup':
+        return '#ff9800';
+      case 'overlay':
+        return '#4caf50';
+      case 'menu':
+        return '#ffc107';
+      default:
+        return '#757575';
     }
   };
 
@@ -121,7 +134,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: isRootNode ? rootNodeStyle.boxShadow : (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
+        boxShadow: isRootNode
+          ? rootNodeStyle.boxShadow
+          : selected
+            ? '0 4px 12px rgba(0,0,0,0.2)'
+            : '0 2px 4px rgba(0,0,0,0.1)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -147,19 +164,19 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           ROOT
         </div>
       )}
-      
+
       {/* Left Handles */}
       {/* Top-left: TARGET for receiving connections from right-side nodes */}
-      <Handle 
-        type="target" 
-        position={Position.Left} 
+      <Handle
+        type="target"
+        position={Position.Left}
         id="left-top-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #90caf9, #64b5f6)', // Muted blue gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
@@ -167,61 +184,61 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           top: '30%',
           boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }} 
+        }}
       />
-      
+
       {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
-      <Handle 
-        type="source" 
-        position={Position.Left} 
+      <Handle
+        type="source"
+        position={Position.Left}
         id="left-bottom-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #ff5722, #ff8a65)', // Bright red gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: -5,
           top: '70%',
           boxShadow: '0 3px 8px rgba(255, 87, 34, 0.4), 0 0 12px rgba(255, 87, 34, 0.3)',
-        }} 
+        }}
       />
-      
+
       {/* Right Handles */}
       {/* Top-right: SOURCE for sending connections to right-side nodes */}
-      <Handle 
-        type="source" 
-        position={Position.Right} 
+      <Handle
+        type="source"
+        position={Position.Right}
         id="right-top-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #1976d2, #42a5f5)', // Bright blue gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           right: -5,
           top: '30%',
           boxShadow: '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
-        }} 
+        }}
       />
 
       {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
-      <Handle 
-        type="target" 
-        position={Position.Right} 
+      <Handle
+        type="target"
+        position={Position.Right}
         id="right-bottom-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
@@ -229,42 +246,42 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           top: '70%',
           boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }} 
+        }}
       />
 
       {/* NEW MENU NAVIGATION HANDLES */}
       {/* Top Handles for Menu Navigation */}
       {/* Top-left: Purple - SOURCE for menu connections */}
-      <Handle 
-        type="source" 
-        position={Position.Top} 
+      <Handle
+        type="source"
+        position={Position.Top}
         id="top-left-menu-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #9c27b0, #ba68c8)', // Bright purple gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '30%',
           top: -5,
           boxShadow: '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
-        }} 
+        }}
       />
-      
+
       {/* Top-right: Green - TARGET for menu connections */}
-      <Handle 
-        type="target" 
-        position={Position.Top} 
+      <Handle
+        type="target"
+        position={Position.Top}
         id="top-right-menu-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #a5d6a7, #81c784)', // Muted green gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
@@ -272,21 +289,21 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           top: -5,
           boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }} 
+        }}
       />
 
       {/* Bottom Handles for Menu Navigation */}
       {/* Bottom-left: Purple - TARGET for menu connections */}
-      <Handle 
-        type="target" 
-        position={Position.Bottom} 
+      <Handle
+        type="target"
+        position={Position.Bottom}
         id="bottom-left-menu-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #ce93d8, #ba68c8)', // Muted purple gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
@@ -294,27 +311,27 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           bottom: -5,
           boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
           opacity: 0.8,
-        }} 
+        }}
       />
-      
+
       {/* Bottom-right: Green - SOURCE for menu connections */}
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
+      <Handle
+        type="source"
+        position={Position.Bottom}
         id="bottom-right-menu-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
-        style={{ 
+        style={{
           background: 'linear-gradient(135deg, #4caf50, #66bb6a)', // Bright green gradient
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           bottom: -5,
           boxShadow: '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
-        }} 
+        }}
       />
 
       {/* Header with node name and type */}
@@ -326,7 +343,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-         
         }}
       >
         <div
@@ -367,17 +383,25 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          cursor: screenshotUrl ? 'pointer' : (data.type === 'menu' ? 'pointer' : 'default'),
+          cursor: screenshotUrl ? 'pointer' : data.type === 'menu' ? 'pointer' : 'default',
         }}
         onDoubleClick={handleScreenshotDoubleClick}
-        title={screenshotUrl ? 'Double-click to view full size' : (data.type === 'menu' ? 'Double-click to navigate to nested tree' : '')}
+        title={
+          screenshotUrl
+            ? 'Double-click to view full size'
+            : data.type === 'menu'
+              ? 'Double-click to navigate to nested tree'
+              : ''
+        }
       >
         {!screenshotUrl && (
-          <div style={{ 
-            fontSize: '11px', 
-            color: '#666',
-            textAlign: 'center',
-          }}>
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#666',
+              textAlign: 'center',
+            }}
+          >
             {data.type === 'menu' ? 'Menu - Double-click to explore' : 'No Screenshot'}
           </div>
         )}
@@ -434,7 +458,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               onDoubleClick={closeModal}
               title="Double-click to close"
             />
-            
+
             {/* Caption and Close Button */}
             <div
               style={{
@@ -459,7 +483,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               >
                 {data.label} - {data.type}
               </div>
-              
+
               {/* Close button */}
               <button
                 onClick={closeModal}
@@ -493,4 +517,4 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       )}
     </div>
   );
-}; 
+};

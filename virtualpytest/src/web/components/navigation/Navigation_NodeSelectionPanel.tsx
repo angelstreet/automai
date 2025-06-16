@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Close as CloseIcon,
+  Camera as CameraIcon,
+  Route as RouteIcon,
+  Verified as VerifiedIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -15,15 +20,12 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  Camera as CameraIcon,
-  Route as RouteIcon,
-  Verified as VerifiedIcon,
-} from '@mui/icons-material';
-import { UINavigationNode, NodeVerification, NodeForm } from '../../types/pages/Navigation_Types';
-import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
+import React, { useState, useEffect } from 'react';
+
+import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
+
+import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -79,13 +81,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
   // Add state to control showing/hiding the NodeGotoPanel
   const [showGotoPanel, setShowGotoPanel] = useState(false);
-  
+
   // Clear the goto panel when the component unmounts or when a new node is selected
   useEffect(() => {
     // Close the goto panel when the selected node changes
     setShowGotoPanel(false);
   }, [selectedNode.id]);
-  
+
   // Add states for confirmation dialogs
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
@@ -94,19 +96,26 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   // Add states for verification execution
   const [isRunningVerifications, setIsRunningVerifications] = useState(false);
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
-  const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{[index: number]: boolean[]}>({});
+  const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{
+    [index: number]: boolean[];
+  }>({});
 
   // Clear verification results when node selection changes
   useEffect(() => {
     setVerificationResult(null);
     setLocalVerificationUpdates({});
-    
+
     // Debug: Log verification data when node changes
     console.log(`[@component:NodeSelectionPanel] Selected node changed: ${selectedNode.id}`);
     if (selectedNode.data.verifications) {
-      console.log(`[@component:NodeSelectionPanel] Node has ${selectedNode.data.verifications.length} verifications`);
+      console.log(
+        `[@component:NodeSelectionPanel] Node has ${selectedNode.data.verifications.length} verifications`,
+      );
       selectedNode.data.verifications.forEach((v, index) => {
-        console.log(`[@component:NodeSelectionPanel] Verification ${index}: ${v.label}, last_run_result:`, v.last_run_result);
+        console.log(
+          `[@component:NodeSelectionPanel] Verification ${index}: ${v.label}, last_run_result:`,
+          v.last_run_result,
+        );
       });
     } else {
       console.log(`[@component:NodeSelectionPanel] Node has no verifications`);
@@ -152,7 +161,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   // Update verification results in the actual node data
   const updateVerificationResults = (verificationIndex: number, success: boolean) => {
     if (!onUpdateNode) {
-      console.warn('[@component:NodeSelectionPanel] onUpdateNode callback not provided - verification results will not be saved!');
+      console.warn(
+        '[@component:NodeSelectionPanel] onUpdateNode callback not provided - verification results will not be saved!',
+      );
       return;
     }
 
@@ -161,31 +172,38 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       return;
     }
 
-    console.log(`[@component:NodeSelectionPanel] Updating verification ${verificationIndex} with result: ${success}`);
+    console.log(
+      `[@component:NodeSelectionPanel] Updating verification ${verificationIndex} with result: ${success}`,
+    );
 
     const updatedVerifications = [...selectedNode.data.verifications];
     const verification = updatedVerifications[verificationIndex];
-    
+
     // Update the last_run_result array
     const currentResults = verification.last_run_result || [];
     const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
-    
+
     console.log(`[@component:NodeSelectionPanel] Previous results:`, currentResults);
     console.log(`[@component:NodeSelectionPanel] New results:`, newResults);
-    
+
     updatedVerifications[verificationIndex] = {
       ...verification,
-      last_run_result: newResults
+      last_run_result: newResults,
     };
 
     // Update the node data
     const updatedNodeData = {
       ...selectedNode.data,
-      verifications: updatedVerifications
+      verifications: updatedVerifications,
     };
 
-    console.log(`[@component:NodeSelectionPanel] Calling onUpdateNode with updated data for node: ${selectedNode.id}`);
-    console.log(`[@component:NodeSelectionPanel] Updated verification data:`, updatedVerifications[verificationIndex]);
+    console.log(
+      `[@component:NodeSelectionPanel] Calling onUpdateNode with updated data for node: ${selectedNode.id}`,
+    );
+    console.log(
+      `[@component:NodeSelectionPanel] Updated verification data:`,
+      updatedVerifications[verificationIndex],
+    );
 
     // Call the parent callback to update the node
     onUpdateNode(selectedNode.id, updatedNodeData);
@@ -197,21 +215,23 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       console.log('[@component:NodeSelectionPanel] No verifications to run');
       return;
     }
-    
+
     setIsRunningVerifications(true);
     setVerificationResult(null);
-    
+
     try {
       let results: string[] = [];
       const verifications = selectedNode.data.verifications;
-      
+
       for (let i = 0; i < verifications.length; i++) {
         const verification = verifications[i];
-        
-        console.log(`[@component:NodeSelectionPanel] Executing verification ${i + 1}/${verifications.length}: ${verification.label}`);
-        
+
+        console.log(
+          `[@component:NodeSelectionPanel] Executing verification ${i + 1}/${verifications.length}: ${verification.label}`,
+        );
+
         let verificationSuccess = false;
-        
+
         try {
           // Use server route for verification (to be implemented)
           // Note: This component currently shows verification UI but actual execution
@@ -222,27 +242,30 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
           verificationSuccess = false;
         }
-        
+
         // Update verification result in the actual node data
         updateVerificationResults(i, verificationSuccess);
-        
+
         // Also store locally for immediate confidence display
-        setLocalVerificationUpdates(prev => ({
+        setLocalVerificationUpdates((prev) => ({
           ...prev,
-          [i]: [verificationSuccess, ...(verification.last_run_result || [])].slice(0, 10)
+          [i]: [verificationSuccess, ...(verification.last_run_result || [])].slice(0, 10),
         }));
-        
+
         // Calculate and display confidence
         const currentResults = verification.last_run_result || [];
         const newResults = [verificationSuccess, ...currentResults].slice(0, 10);
         const newConfidence = calculateConfidenceScore(newResults);
-        results.push(`   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`);
-        console.log(`[@component:NodeSelectionPanel] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${newConfidence.toFixed(3)}`);
+        results.push(
+          `   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`,
+        );
+        console.log(
+          `[@component:NodeSelectionPanel] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${newConfidence.toFixed(3)}`,
+        );
       }
-      
+
       setVerificationResult(results.join('\n'));
       console.log(`[@component:NodeSelectionPanel] All verifications completed`);
-      
     } catch (err: any) {
       console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
       setVerificationResult(`❌ ${err.message}`);
@@ -254,71 +277,73 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   const getParentNames = (parentIds: string[]): string => {
     if (!parentIds || parentIds.length === 0) return 'None';
     if (!nodes || !Array.isArray(nodes)) return 'None';
-    
-    const parentNames = parentIds.map(id => {
-      const parentNode = nodes.find(node => node.id === id);
+
+    const parentNames = parentIds.map((id) => {
+      const parentNode = nodes.find((node) => node.id === id);
       return parentNode ? parentNode.data.label : id;
     });
-    
+
     return parentNames.join(' > ');
   };
 
   // Check if screenshot button should be displayed
   const showScreenshotButton = isControlActive && selectedDevice && onTakeScreenshot;
-  
+
   // Check if Go To button should be displayed
   // Show for all nodes when device is under control
   const showGoToButton = isControlActive && selectedDevice && treeId;
 
   // Check if verification button should be displayed
-  const hasNodeVerifications = selectedNode.data.verifications && 
-                             selectedNode.data.verifications.length > 0;
-  const hasAvailableControllers = verificationControllerStatus?.image_controller_available || 
-                                verificationControllerStatus?.text_controller_available;
-  const showVerificationButton = isVerificationActive && 
-                               hasAvailableControllers && 
-                               hasNodeVerifications &&
-                               onVerification;
+  const hasNodeVerifications =
+    selectedNode.data.verifications && selectedNode.data.verifications.length > 0;
+  const hasAvailableControllers =
+    verificationControllerStatus?.image_controller_available ||
+    verificationControllerStatus?.text_controller_available;
+  const showVerificationButton =
+    isVerificationActive && hasAvailableControllers && hasNodeVerifications && onVerification;
 
   // Can run verifications if we have control and device (same logic as NodeEditDialog)
-  const canRunVerifications = isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
+  const canRunVerifications =
+    isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
 
   // Check if node can be deleted (protect entry points and home nodes)
-  const isProtectedNode = selectedNode.data.is_root || 
-                         selectedNode.data.type === 'entry' ||
-                         selectedNode.id === 'entry-node' ||
-                         selectedNode.data.label?.toLowerCase() === 'home' ||
-                         selectedNode.id?.toLowerCase().includes('entry') ||
-                         selectedNode.id?.toLowerCase().includes('home');
+  const isProtectedNode =
+    selectedNode.data.is_root ||
+    selectedNode.data.type === 'entry' ||
+    selectedNode.id === 'entry-node' ||
+    selectedNode.data.label?.toLowerCase() === 'home' ||
+    selectedNode.id?.toLowerCase().includes('entry') ||
+    selectedNode.id?.toLowerCase().includes('home');
 
   // Calculate overall confidence for node verifications
   const getNodeConfidenceInfo = (): { score: number | null; text: string } => {
     if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
       return { score: null, text: 'unknown' };
     }
-    
+
     // Get all verifications with results (use local updates if available)
     const verificationsWithResults = selectedNode.data.verifications.filter((v, index) => {
       const localResults = localVerificationUpdates[index];
       const results = localResults || v.last_run_result;
       return results && results.length > 0;
     });
-    
+
     if (verificationsWithResults.length === 0) {
       return { score: null, text: 'unknown' };
     }
-    
+
     // Calculate average confidence across all verifications (use local updates if available)
     const confidenceScores = verificationsWithResults.map((v, index) => {
       const localResults = localVerificationUpdates[index];
       const results = localResults || v.last_run_result;
       return calculateConfidenceScore(results);
     });
-    const averageConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
-    
-    return { 
-      score: averageConfidence, 
-      text: `${(averageConfidence * 100).toFixed(0)}%` 
+    const averageConfidence =
+      confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
+
+    return {
+      score: averageConfidence,
+      text: `${(averageConfidence * 100).toFixed(0)}%`,
     };
   };
 
@@ -338,21 +363,26 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                 {selectedNode.data.label}
               </Typography>
               {/* Show confidence percentage with color coding if available */}
               {confidenceInfo.score !== null && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
+                <Typography
+                  variant="caption"
+                  sx={{
                     fontSize: '0.75rem',
                     fontWeight: 'bold',
-                    color: confidenceInfo.score >= 0.7 ? '#4caf50' : // Green for 70%+
-                           confidenceInfo.score >= 0.5 ? '#ff9800' : // Orange for 50-70%
-                           '#f44336', // Red for <50%
+                    color:
+                      confidenceInfo.score >= 0.7
+                        ? '#4caf50' // Green for 70%+
+                        : confidenceInfo.score >= 0.5
+                          ? '#ff9800' // Orange for 50-70%
+                          : '#f44336', // Red for <50%
                     padding: '2px 6px',
                     borderRadius: '4px',
                   }}
@@ -372,7 +402,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
-          
+
           {/* Parent and Depth Info */}
           <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
             <Typography variant="caption" display="block">
@@ -381,9 +411,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
             <Typography variant="caption" display="block">
               <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
             </Typography>
-           
           </Box>
-          
+
           <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {/* Edit and Delete buttons */}
             <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -408,7 +437,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 </Button>
               )}
             </Box>
-            
+
             {/* Reset button */}
             {onReset && (
               <Button
@@ -475,8 +504,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 disabled={!canRunVerifications}
                 startIcon={<VerifiedIcon fontSize="small" />}
                 title={
-                  !isControlActive || !selectedDevice 
-                    ? 'Device control required to run verifications' 
+                  !isControlActive || !selectedDevice
+                    ? 'Device control required to run verifications'
                     : ''
                 }
               >
@@ -486,26 +515,35 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
             {/* Debug: Show when node has no verifications */}
             {!hasNodeVerifications && (
-              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', fontStyle: 'italic' }}>
+              <Typography
+                variant="caption"
+                sx={{ fontSize: '0.7rem', color: 'text.secondary', fontStyle: 'italic' }}
+              >
                 No verifications configured
               </Typography>
             )}
 
             {/* Linear Progress - shown when running verifications */}
-            {isRunningVerifications && (
-              <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
-            )}
+            {isRunningVerifications && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
 
             {/* Verification result display */}
             {verificationResult && (
-              <Box sx={{ 
-                mt: 0.5,
-                p: 0.5,
-                bgcolor: verificationResult.includes('❌') ? 'error.light' : 
-                         verificationResult.includes('⚠️') ? 'warning.light' : 'success.light',
-                borderRadius: 0.5
-              }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+              <Box
+                sx={{
+                  mt: 0.5,
+                  p: 0.5,
+                  bgcolor: verificationResult.includes('❌')
+                    ? 'error.light'
+                    : verificationResult.includes('⚠️')
+                      ? 'warning.light'
+                      : 'success.light',
+                  borderRadius: 0.5,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}
+                >
                   {verificationResult}
                 </Typography>
               </Box>
@@ -529,9 +567,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       <Dialog open={showResetConfirm} onClose={() => setShowResetConfirm(false)}>
         <DialogTitle>Reset Node</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to reset this node ?
-          </Typography>
+          <Typography>Are you sure you want to reset this node ?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowResetConfirm(false)}>Cancel</Button>
@@ -559,13 +595,18 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       </Dialog>
 
       {/* Verification Confirmation Dialog */}
-      <Dialog open={showVerificationConfirm} onClose={() => setShowVerificationConfirm(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showVerificationConfirm}
+        onClose={() => setShowVerificationConfirm(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Execute Verification</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
             Execute {selectedNode.data.verifications?.length || 0} verification(s) for this node?
           </Typography>
-          
+
           {/* Show verification list summary */}
           {selectedNode.data.verifications && selectedNode.data.verifications.length > 0 && (
             <Box>
@@ -581,11 +622,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                           <Typography variant="body2">
                             {verification.label || verification.id}
                           </Typography>
-                          <Chip 
-                            label={verification.controller_type || 'unknown'} 
-                            size="small" 
+                          <Chip
+                            label={verification.controller_type || 'unknown'}
+                            size="small"
                             variant="outlined"
-                            color={verification.controller_type === 'image' ? 'primary' : 'secondary'}
+                            color={
+                              verification.controller_type === 'image' ? 'primary' : 'secondary'
+                            }
                           />
                         </Box>
                       }
@@ -607,17 +650,25 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               Controller Status:
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-              <Chip 
-                label="Image" 
-                size="small" 
-                color={verificationControllerStatus?.image_controller_available ? 'success' : 'default'}
-                variant={verificationControllerStatus?.image_controller_available ? 'filled' : 'outlined'}
+              <Chip
+                label="Image"
+                size="small"
+                color={
+                  verificationControllerStatus?.image_controller_available ? 'success' : 'default'
+                }
+                variant={
+                  verificationControllerStatus?.image_controller_available ? 'filled' : 'outlined'
+                }
               />
-              <Chip 
-                label="Text" 
-                size="small" 
-                color={verificationControllerStatus?.text_controller_available ? 'success' : 'default'}
-                variant={verificationControllerStatus?.text_controller_available ? 'filled' : 'outlined'}
+              <Chip
+                label="Text"
+                size="small"
+                color={
+                  verificationControllerStatus?.text_controller_available ? 'success' : 'default'
+                }
+                variant={
+                  verificationControllerStatus?.text_controller_available ? 'filled' : 'outlined'
+                }
               />
             </Box>
           </Box>
@@ -631,4 +682,4 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
       </Dialog>
     </>
   );
-}; 
+};

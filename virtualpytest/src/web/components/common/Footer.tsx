@@ -1,9 +1,5 @@
+import { Box, Typography, Paper } from '@mui/material';
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-} from '@mui/material';
 
 const Footer: React.FC = () => {
   return (
@@ -19,16 +15,11 @@ const Footer: React.FC = () => {
         borderColor: 'divider',
       }}
     >
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        minHeight={40}
-      >
+      <Box display="flex" justifyContent="space-between" alignItems="center" minHeight={40}>
         <Typography variant="body2" color="text.secondary">
           © 2024 VirtualPyTest - Automated Testing Platform
         </Typography>
-        
+
         <Box display="flex" alignItems="center" gap={1}>
           <Typography variant="caption" color="text.secondary">
             v1.0.0
@@ -39,4 +30,4 @@ const Footer: React.FC = () => {
   );
 };
 
-export default Footer; 
+export default Footer;

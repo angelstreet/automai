@@ -15,8 +15,6 @@ interface StreamClickOverlayProps {
 export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   videoRef,
   deviceResolution,
-  deviceId,
-  onTap,
   sx = {},
   selectedHostDevice,
   showOverlay,
@@ -26,47 +24,6 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(
     null,
   );
-
-  const getVideoBounds = useCallback(() => {
-    if (!videoRef.current || !overlayRef.current) {
-      return null;
-    }
-
-    const video = videoRef.current;
-    const overlay = overlayRef.current;
-
-    const videoRect = video.getBoundingClientRect();
-    const overlayRect = overlay.getBoundingClientRect();
-
-    // Calculate the actual displayed video dimensions (accounting for object-fit)
-    const videoAspectRatio = deviceResolution.width / deviceResolution.height;
-    const containerAspectRatio = videoRect.width / videoRect.height;
-
-    let displayedWidth, displayedHeight, offsetX, offsetY;
-
-    if (videoAspectRatio > containerAspectRatio) {
-      // Video is wider than container - limited by width
-      displayedWidth = videoRect.width;
-      displayedHeight = videoRect.width / videoAspectRatio;
-      offsetX = 0;
-      offsetY = (videoRect.height - displayedHeight) / 2;
-    } else {
-      // Video is taller than container - limited by height
-      displayedWidth = videoRect.height * videoAspectRatio;
-      displayedHeight = videoRect.height;
-      offsetX = (videoRect.width - displayedWidth) / 2;
-      offsetY = 0;
-    }
-
-    return {
-      left: videoRect.left - overlayRect.left + offsetX,
-      top: videoRect.top - overlayRect.top + offsetY,
-      width: displayedWidth,
-      height: displayedHeight,
-      scaleX: deviceResolution.width / displayedWidth,
-      scaleY: deviceResolution.height / displayedHeight,
-    };
-  }, [videoRef, deviceResolution]);
 
   const handleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isActive || !selectedHostDevice) return;
@@ -110,16 +67,6 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       console.error('[@component:StreamClickOverlay] Error performing tap:', error);
     }
   };
-
-  const showClickAnimation = useCallback((x: number, y: number) => {
-    const animationId = Date.now();
-    setClickAnimation({ x, y, id: animationId });
-
-    // Remove animation after 500ms
-    setTimeout(() => {
-      setClickAnimation((prev) => (prev?.id === animationId ? null : prev));
-    }, 500);
-  }, []);
 
   // Render overlay with appropriate styling
   const shouldRender = selectedHostDevice && (showOverlay || isActive);

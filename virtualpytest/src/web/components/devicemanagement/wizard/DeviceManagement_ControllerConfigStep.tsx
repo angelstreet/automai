@@ -1,12 +1,8 @@
+import { Box, Typography, Alert, Divider } from '@mui/material';
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Alert,
-  FormHelperText,
-  Divider,
-} from '@mui/material';
+
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+
 import { ControllerTypeSection } from './DeviceManagement_ControllerTypeSection';
 
 interface ControllerConfigurationStepProps {
@@ -20,7 +16,7 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
   formData,
   selectedModel,
   onUpdate,
-  errors = {}
+  errors = {},
 }) => {
   if (!selectedModel) {
     return (
@@ -35,14 +31,14 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
   const handleControllerConfigUpdate = (
     controllerType: string,
     implementation: string,
-    parameters: { [key: string]: any }
+    parameters: { [key: string]: any },
   ) => {
     const updatedConfigs = {
       ...formData.controllerConfigs,
       [controllerType]: {
         implementation,
-        parameters
-      }
+        parameters,
+      },
     };
     onUpdate({ controllerConfigs: updatedConfigs });
   };
@@ -50,13 +46,13 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
   // Get active controllers from the model
   const getActiveControllers = () => {
     const activeControllers: Array<{ type: string; value: string }> = [];
-    
+
     Object.entries(selectedModel.controllers).forEach(([type, value]) => {
       if (value && value !== '') {
         activeControllers.push({ type, value });
       }
     });
-    
+
     return activeControllers;
   };
 
@@ -69,34 +65,33 @@ export const ControllerConfigurationStep: React.FC<ControllerConfigurationStepPr
           Controller Configuration
         </Typography>
         <Alert severity="info">
-          The selected model "{selectedModel.name}" does not have any controllers configured. 
-          You can still create the device, but no controller functionality will be available.
+          The selected model "{selectedModel.name}" does not have any controllers configured. You
+          can still create the device, but no controller functionality will be available.
         </Alert>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ pt: 1 }}>  
+    <Box sx={{ pt: 1 }}>
       {activeControllers.map(({ type, value }, index) => (
         <React.Fragment key={type}>
           <ControllerTypeSection
             controllerType={type}
             controllerImplementation={value}
-            currentConfig={formData.controllerConfigs[type] || { implementation: '', parameters: {} }}
-            onConfigUpdate={(implementation, parameters) => 
+            currentConfig={
+              formData.controllerConfigs[type] || { implementation: '', parameters: {} }
+            }
+            onConfigUpdate={(implementation, parameters) =>
               handleControllerConfigUpdate(type, implementation, parameters)
             }
             errors={errors}
           />
-          
+
           {/* Add divider between sections except for the last one */}
-          {index < activeControllers.length - 1 && (
-            <Divider sx={{ my: 3 }} />
-          )}
+          {index < activeControllers.length - 1 && <Divider sx={{ my: 3 }} />}
         </React.Fragment>
       ))}
-
     </Box>
   );
-}; 
+};

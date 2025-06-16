@@ -1,2 +1,2 @@
 export { useControllers } from './useControllers';
-export { useControllerConfig } from './useControllerConfig'; 
+export { useControllerConfig } from './useControllerConfig';

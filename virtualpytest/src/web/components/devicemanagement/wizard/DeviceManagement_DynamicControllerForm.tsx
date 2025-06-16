@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   TextField,
@@ -7,10 +6,14 @@ import {
   Select,
   MenuItem,
   Typography,
-  FormHelperText,
   Grid,
 } from '@mui/material';
-import { ControllerConfiguration, ControllerInputField } from '../../../types/common/Common_BaseTypes';
+import React from 'react';
+
+import {
+  ControllerConfiguration,
+  ControllerInputField,
+} from '../../../types/common/Common_BaseTypes';
 
 interface DynamicControllerFormProps {
   configuration: ControllerConfiguration;
@@ -25,12 +28,12 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
   parameters,
   onParametersChange,
   errors = {},
-  fieldPrefix = ''
+  fieldPrefix = '',
 }) => {
   const handleFieldChange = (fieldName: string, value: any) => {
     const updatedParameters = {
       ...parameters,
-      [fieldName]: value
+      [fieldName]: value,
     };
     onParametersChange(updatedParameters);
   };
@@ -56,7 +59,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
                 </MenuItem>
               ))}
             </Select>
-           
           </FormControl>
         );
 
@@ -73,7 +75,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            
           />
         );
 
@@ -89,7 +90,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            
             inputProps={{
               min: field.validation?.min,
               max: field.validation?.max,
@@ -109,7 +109,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            
           />
         );
 
@@ -126,7 +125,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
             placeholder={field.placeholder}
             required={field.required}
             error={!!fieldError}
-            
           />
         );
     }
@@ -138,17 +136,26 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
       connection: [],
       device: [],
       configuration: [],
-      other: []
+      other: [],
     };
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       if (field.name.includes('host_') || field.name.includes('ssh_')) {
         groups.connection.push(field);
-      } else if (field.name.includes('device_') || field.name.includes('target_') || field.name === 'video_device') {
+      } else if (
+        field.name.includes('device_') ||
+        field.name.includes('target_') ||
+        field.name === 'video_device'
+      ) {
         groups.device.push(field);
-      } else if (field.name.includes('config') || field.name.includes('setting') || 
-                 field.name === 'stream_path' || field.name === 'resolution' || 
-                 field.name === 'fps' || field.name === 'connection_timeout') {
+      } else if (
+        field.name.includes('config') ||
+        field.name.includes('setting') ||
+        field.name === 'stream_path' ||
+        field.name === 'resolution' ||
+        field.name === 'fps' ||
+        field.name === 'connection_timeout'
+      ) {
         groups.configuration.push(field);
       } else {
         groups.other.push(field);
@@ -181,7 +188,6 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
 
   return (
     <Box>
-
       {/* SSH/Host Connection Fields */}
       {renderFieldGroup('Connection Settings', fieldGroups.connection)}
 
@@ -203,4 +209,4 @@ export const DynamicControllerForm: React.FC<DynamicControllerFormProps> = ({
       )}
     </Box>
   );
-}; 
+};

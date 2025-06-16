@@ -1,10 +1,17 @@
-import React from 'react';
-import { Dialog, DialogTitle, DialogContent, Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { Dialog, DialogTitle, DialogContent, Box, Typography, IconButton } from '@mui/material';
+import React from 'react';
+
 import { RemotePanel } from './remote/RemotePanel';
 
 interface RemoteControllerProps {
-  deviceType: 'android_mobile' | 'android_tv' | 'ir_remote' | 'bluetooth_remote' | 'hdmi_stream' | 'unknown';
+  deviceType:
+    | 'android_mobile'
+    | 'android_tv'
+    | 'ir_remote'
+    | 'bluetooth_remote'
+    | 'hdmi_stream'
+    | 'unknown';
   device?: {
     id: string;
     name: string;
@@ -16,11 +23,13 @@ interface RemoteControllerProps {
 }
 
 export function RemoteController({ deviceType, device, open, onClose }: RemoteControllerProps) {
-  console.log(`[@component:RemoteController] Rendering remote controller for device type: ${deviceType}`);
+  console.log(
+    `[@component:RemoteController] Rendering remote controller for device type: ${deviceType}`,
+  );
 
   const getAndroidConnectionConfig = () => {
     if (!device?.controller_configs?.remote) return undefined;
-    
+
     const config = device.controller_configs.remote;
     return {
       device_ip: config.device_ip,
@@ -30,7 +39,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
 
   const getIRConnectionConfig = () => {
     if (!device?.controller_configs?.remote) return undefined;
-    
+
     const config = device.controller_configs.remote;
     return {
       device_path: config.ir_device || config.device_path,
@@ -41,7 +50,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
 
   const getBluetoothConnectionConfig = () => {
     if (!device?.controller_configs?.remote) return undefined;
-    
+
     const config = device.controller_configs.remote;
     return {
       device_address: config.device_address,
@@ -61,7 +70,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
             showScreenshot={true}
           />
         );
-        
+
       case 'android_tv':
         return (
           <RemotePanel
@@ -70,7 +79,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
             showScreenshot={true}
           />
         );
-        
+
       case 'ir_remote':
         return (
           <RemotePanel
@@ -79,7 +88,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
             showScreenshot={false}
           />
         );
-        
+
       case 'bluetooth_remote':
         return (
           <RemotePanel
@@ -88,7 +97,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
             showScreenshot={false}
           />
         );
-        
+
       case 'hdmi_stream':
         // HDMI Stream doesn't have a generic component yet, show unsupported message
         return (
@@ -101,7 +110,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
             </Typography>
           </Box>
         );
-        
+
       case 'unknown':
       default:
         return (
@@ -110,8 +119,8 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
               Unsupported Device Type
             </Typography>
             <Typography color="textSecondary">
-              No remote controller available for this device type.
-              Please configure the device controller settings.
+              No remote controller available for this device type. Please configure the device
+              controller settings.
             </Typography>
           </Box>
         );
@@ -119,21 +128,23 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{
-        sx: { height: '80vh', maxHeight: '800px' }
+        sx: { height: '80vh', maxHeight: '800px' },
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        pb: 1 
-      }}>
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: 1,
+        }}
+      >
         <Box>
           <Typography variant="h6" component="div">
             Remote Controller
@@ -148,19 +159,21 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
-      <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
-        {renderRemoteController()}
-      </DialogContent>
+
+      <DialogContent sx={{ p: 0, overflow: 'hidden' }}>{renderRemoteController()}</DialogContent>
     </Dialog>
   );
 }
 
 // Helper function to determine device type from device model/name
-export function getDeviceType(device: { name: string; model: string; controller_configs?: any }): RemoteControllerProps['deviceType'] {
+export function getDeviceType(device: {
+  name: string;
+  model: string;
+  controller_configs?: any;
+}): RemoteControllerProps['deviceType'] {
   const deviceName = device.name.toLowerCase();
   const deviceModel = device.model.toLowerCase();
-  
+
   // Check controller configs first
   if (device.controller_configs?.remote) {
     const remoteType = device.controller_configs.remote.type;
@@ -180,12 +193,16 @@ export function getDeviceType(device: { name: string; model: string; controller_
       return 'hdmi_stream';
     }
   }
-  
+
   // Fallback to name/model detection
   if (deviceName.includes('android') || deviceModel.includes('android')) {
     // Determine if it's mobile or TV based on model/name
-    if (deviceName.includes('phone') || deviceName.includes('mobile') || 
-        deviceModel.includes('phone') || deviceModel.includes('mobile')) {
+    if (
+      deviceName.includes('phone') ||
+      deviceName.includes('mobile') ||
+      deviceModel.includes('phone') ||
+      deviceModel.includes('mobile')
+    ) {
       return 'android_mobile';
     }
     if (deviceName.includes('tv') || deviceModel.includes('tv')) {
@@ -194,19 +211,19 @@ export function getDeviceType(device: { name: string; model: string; controller_
     // Default Android devices to mobile
     return 'android_mobile';
   }
-  
+
   // Check for other device types
   if (deviceName.includes('ir') || deviceName.includes('infrared')) {
     return 'ir_remote';
   }
-  
+
   if (deviceName.includes('bluetooth') || deviceName.includes('bt')) {
     return 'bluetooth_remote';
   }
-  
+
   if (deviceName.includes('hdmi') || deviceName.includes('hdmi_stream')) {
     return 'hdmi_stream';
   }
-  
+
   return 'unknown';
-} 
+}

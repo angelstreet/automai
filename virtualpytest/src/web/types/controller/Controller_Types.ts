@@ -17,7 +17,7 @@ export const ControllerTypes = {
   VERIFICATION: 'verification',
 } as const;
 
-export type ControllerType = typeof ControllerTypes[keyof typeof ControllerTypes];
+export type ControllerType = (typeof ControllerTypes)[keyof typeof ControllerTypes];
 
 // Controller status interface
 export interface ControllerStatus {
@@ -45,11 +45,11 @@ export interface DeviceFormData {
 }
 
 // Re-export controller configuration types from Common_BaseTypes with correct path
-export type { 
+export type {
   ControllerConfiguration,
   ControllerInputField,
   ControllerConfigMap,
-  DeviceFormData as CommonDeviceFormData // Alias to avoid conflict with local DeviceFormData
+  DeviceFormData as CommonDeviceFormData, // Alias to avoid conflict with local DeviceFormData
 } from '../common/Common_BaseTypes';
 
 // Import types for creating aliases
@@ -57,4 +57,4 @@ import type { ControllerConfiguration } from '../common/Common_BaseTypes';
 
 // Additional type aliases for backward compatibility
 export type ControllerImplementation = ControllerConfiguration;
-export type ControllerConfig = ControllerConfiguration; 
+export type ControllerConfig = ControllerConfiguration;

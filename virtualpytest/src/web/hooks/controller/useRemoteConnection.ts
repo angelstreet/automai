@@ -1,14 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
+
+import { useRegistration } from '../../contexts/RegistrationContext';
 import {
   RemoteSession,
   ConnectionForm,
   RemoteConfig,
   AndroidElement,
   AndroidApp,
+  RemoteType,
 } from '../../types/controller/Remote_Types';
-import { RemoteType } from '../../types/controller/Remote_Types';
+
 import { getRemoteConfig } from './useRemoteConfigs';
-import { useRegistration } from '../../contexts/RegistrationContext';
 
 // Simplified connection form - no SSH fields needed with abstract controller
 const initialConnectionForm: ConnectionForm = {

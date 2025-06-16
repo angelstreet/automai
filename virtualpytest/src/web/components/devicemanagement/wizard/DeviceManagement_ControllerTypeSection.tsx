@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import {
+  Settings as SettingsIcon,
+  SportsEsports as RemoteIcon,
+  Tv as AVIcon,
+  Wifi as NetworkIcon,
+  Power as PowerIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -7,18 +13,13 @@ import {
   Select,
   MenuItem,
   Paper,
-  Chip,
   FormHelperText,
 } from '@mui/material';
-import { 
-  Settings as SettingsIcon,
-  SportsEsports as RemoteIcon,
-  Tv as AVIcon,
-  Wifi as NetworkIcon,
-  Power as PowerIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+
 import { useControllerConfig } from '../../../hooks/controller';
 import { ControllerConfiguration } from '../../../types/common/Common_BaseTypes';
+
 import { DynamicControllerForm } from './DeviceManagement_DynamicControllerForm';
 
 interface ControllerTypeSectionProps {
@@ -37,7 +38,7 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
   controllerImplementation,
   currentConfig,
   onConfigUpdate,
-  errors = {}
+  errors = {},
 }) => {
   const { getConfigurationsByType } = useControllerConfig();
   const [availableConfigs, setAvailableConfigs] = useState<ControllerConfiguration[]>([]);
@@ -46,24 +47,24 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
   // Load available configurations for this controller type
   useEffect(() => {
     const configs = getConfigurationsByType(
-      controllerType as 'remote' | 'av' | 'network' | 'power'
+      controllerType as 'remote' | 'av' | 'network' | 'power',
     );
-    
+
     // Remove status filtering - show all controllers regardless of status
     setAvailableConfigs(configs);
 
     // Auto-select if there's a matching implementation or only one option
     if (controllerImplementation && configs.length > 0) {
-      const matchingConfig = configs.find(config => 
-        config.implementation === controllerImplementation
+      const matchingConfig = configs.find(
+        (config) => config.implementation === controllerImplementation,
       );
       if (matchingConfig) {
         setSelectedConfig(matchingConfig);
-        
+
         // Initialize with default values if no current config
         if (!currentConfig.implementation) {
           const defaultParams: { [key: string]: any } = {};
-          matchingConfig.inputFields.forEach(field => {
+          matchingConfig.inputFields.forEach((field) => {
             if (field.defaultValue !== undefined) {
               defaultParams[field.name] = field.defaultValue;
             }
@@ -75,10 +76,10 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
       // Auto-select if only one option
       const config = configs[0];
       setSelectedConfig(config);
-      
+
       if (!currentConfig.implementation) {
         const defaultParams: { [key: string]: any } = {};
-        config.inputFields.forEach(field => {
+        config.inputFields.forEach((field) => {
           if (field.defaultValue !== undefined) {
             defaultParams[field.name] = field.defaultValue;
           }
@@ -90,19 +91,19 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
 
   const handleImplementationChange = (event: any) => {
     const implementation = event.target.value;
-    const config = availableConfigs.find(c => c.implementation === implementation);
-    
+    const config = availableConfigs.find((c) => c.implementation === implementation);
+
     if (config) {
       setSelectedConfig(config);
-      
+
       // Initialize with default values
       const defaultParams: { [key: string]: any } = {};
-      config.inputFields.forEach(field => {
+      config.inputFields.forEach((field) => {
         if (field.defaultValue !== undefined) {
           defaultParams[field.name] = field.defaultValue;
         }
       });
-      
+
       onConfigUpdate(implementation, defaultParams);
     }
   };
@@ -165,9 +166,7 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
     <Paper sx={{ p: 2, border: 1, borderColor: 'divider' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
         {getControllerIcon()}
-        <Typography variant="subtitle1">
-          {getControllerTypeDisplayName()}
-        </Typography>
+        <Typography variant="subtitle1">{getControllerTypeDisplayName()}</Typography>
       </Box>
 
       {availableConfigs.length > 1 ? (
@@ -222,4 +221,4 @@ export const ControllerTypeSection: React.FC<ControllerTypeSectionProps> = ({
       )}
     </Paper>
   );
-}; 
+};

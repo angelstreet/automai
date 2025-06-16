@@ -9,54 +9,54 @@ export const NODE_TYPE_COLORS = {
     background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)',
     border: '#ffc107',
     textColor: '#ffffff',
-    badgeColor: '#ffc107'
+    badgeColor: '#ffc107',
   },
   menu: {
     background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
     border: '#ffc107',
     textColor: '#e65100',
-    badgeColor: '#ff8f00'
+    badgeColor: '#ff8f00',
   },
   screen: {
     background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
     border: '#2196f3',
     textColor: '#0d47a1',
-    badgeColor: '#1976d2'
+    badgeColor: '#1976d2',
   },
   dialog: {
     background: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
     border: '#9c27b0',
     textColor: '#4a148c',
-    badgeColor: '#7b1fa2'
+    badgeColor: '#7b1fa2',
   },
   popup: {
     background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
     border: '#ff9800',
     textColor: '#e65100',
-    badgeColor: '#f57c00'
+    badgeColor: '#f57c00',
   },
   overlay: {
     background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
     border: '#4caf50',
     textColor: '#1b5e20',
-    badgeColor: '#388e3c'
-  }
+    badgeColor: '#388e3c',
+  },
 } as const;
 
 // UI Badge colors for different badge types
 export const UI_BADGE_COLORS = {
   root: {
     background: '#d32f2f',
-    textColor: '#ffffff'
+    textColor: '#ffffff',
   },
   menu: {
     background: '#ff8f00',
-    textColor: '#ffffff'
+    textColor: '#ffffff',
   },
   entry: {
     background: '#ffc107',
-    textColor: '#ffffff'
-  }
+    textColor: '#ffffff',
+  },
 } as const;
 
 // Status colors based on validation confidence levels
@@ -66,7 +66,7 @@ export const VALIDATION_STATUS_COLORS = {
     background: 'rgba(158, 158, 158, 0.1)',
     handle: '#9e9e9e',
     glow: 'rgba(158, 158, 158, 0.3)',
-    textColor: '#757575'
+    textColor: '#757575',
   },
   testing: {
     border: '#2196f3',
@@ -74,29 +74,32 @@ export const VALIDATION_STATUS_COLORS = {
     handle: '#2196f3',
     glow: 'rgba(33, 150, 243, 0.6)',
     textColor: '#1976d2',
-    animation: 'testing-pulse 2s ease-in-out infinite'
+    animation: 'testing-pulse 2s ease-in-out infinite',
   },
-  high: { // >70% confidence
+  high: {
+    // >70% confidence
     border: '#4caf50',
     background: 'rgba(76, 175, 80, 0.1)',
     handle: '#4caf50',
     glow: 'rgba(76, 175, 80, 0.4)',
-    textColor: '#2e7d32'
+    textColor: '#2e7d32',
   },
-  medium: { // 50-70% confidence
+  medium: {
+    // 50-70% confidence
     border: '#ff9800',
     background: 'rgba(255, 152, 0, 0.1)',
     handle: '#ff9800',
     glow: 'rgba(255, 152, 0, 0.4)',
-    textColor: '#f57c00'
+    textColor: '#f57c00',
   },
-  low: { // <50% confidence
+  low: {
+    // <50% confidence
     border: '#f44336',
     background: 'rgba(244, 67, 54, 0.1)',
     handle: '#f44336',
     glow: 'rgba(244, 67, 54, 0.4)',
-    textColor: '#d32f2f'
-  }
+    textColor: '#d32f2f',
+  },
 } as const;
 
 // Edge colors for different validation states
@@ -105,39 +108,39 @@ export const EDGE_COLORS = {
     stroke: '#9e9e9e',
     strokeWidth: 3,
     strokeDasharray: '',
-    opacity: 0.6
+    opacity: 0.6,
   },
   testing: {
     stroke: '#2196f3',
     strokeWidth: 3,
     strokeDasharray: '',
     opacity: 1,
-    animation: 'edge-pulse 1.5s ease-in-out infinite'
+    animation: 'edge-pulse 1.5s ease-in-out infinite',
   },
   high: {
     stroke: '#4caf50',
     strokeWidth: 3,
     strokeDasharray: '',
-    opacity: 1
+    opacity: 1,
   },
   medium: {
     stroke: '#ff9800',
     strokeWidth: 3,
     strokeDasharray: '',
-    opacity: 1
+    opacity: 1,
   },
   low: {
     stroke: '#f44336',
     strokeWidth: 3,
     strokeDasharray: '5,5',
-    opacity: 1
+    opacity: 1,
   },
   entry: {
     stroke: '#ffc107',
     strokeWidth: 3,
     strokeDasharray: '',
-    opacity: 1
-  }
+    opacity: 1,
+  },
 } as const;
 
 // Handle colors for different positions and states
@@ -148,14 +151,14 @@ export const HANDLE_COLORS = {
     testing: 'linear-gradient(135deg, #2196f3, #42a5f5)',
     high: 'linear-gradient(135deg, #81c784, #66bb6a)',
     medium: 'linear-gradient(135deg, #ffb74d, #ffa726)',
-    low: 'linear-gradient(135deg, #ef9a9a, #e57373)'
+    low: 'linear-gradient(135deg, #ef9a9a, #e57373)',
   },
   leftBottom: {
     untested: 'linear-gradient(135deg, #ff8a65, #ff7043)',
     testing: 'linear-gradient(135deg, #2196f3, #42a5f5)',
     high: 'linear-gradient(135deg, #66bb6a, #4caf50)',
     medium: 'linear-gradient(135deg, #ffa726, #ff9800)',
-    low: 'linear-gradient(135deg, #e57373, #f44336)'
+    low: 'linear-gradient(135deg, #e57373, #f44336)',
   },
   // Right handles (horizontal navigation)
   rightTop: {
@@ -163,14 +166,14 @@ export const HANDLE_COLORS = {
     testing: 'linear-gradient(135deg, #2196f3, #1565c0)',
     high: 'linear-gradient(135deg, #4caf50, #388e3c)',
     medium: 'linear-gradient(135deg, #ff9800, #f57c00)',
-    low: 'linear-gradient(135deg, #f44336, #d32f2f)'
+    low: 'linear-gradient(135deg, #f44336, #d32f2f)',
   },
   rightBottom: {
     untested: 'linear-gradient(135deg, #ef9a9a, #e57373)',
     testing: 'linear-gradient(135deg, #2196f3, #42a5f5)',
     high: 'linear-gradient(135deg, #81c784, #66bb6a)',
     medium: 'linear-gradient(135deg, #ffb74d, #ffa726)',
-    low: 'linear-gradient(135deg, #e57373, #ef5350)'
+    low: 'linear-gradient(135deg, #e57373, #ef5350)',
   },
   // Top handles (menu navigation)
   topLeft: {
@@ -178,14 +181,14 @@ export const HANDLE_COLORS = {
     testing: 'linear-gradient(135deg, #2196f3, #1976d2)',
     high: 'linear-gradient(135deg, #66bb6a, #4caf50)',
     medium: 'linear-gradient(135deg, #ffa726, #ff9800)',
-    low: 'linear-gradient(135deg, #ef5350, #f44336)'
+    low: 'linear-gradient(135deg, #ef5350, #f44336)',
   },
   topRight: {
     untested: 'linear-gradient(135deg, #a5d6a7, #81c784)',
     testing: 'linear-gradient(135deg, #2196f3, #42a5f5)',
     high: 'linear-gradient(135deg, #4caf50, #388e3c)',
     medium: 'linear-gradient(135deg, #ff9800, #f57c00)',
-    low: 'linear-gradient(135deg, #f44336, #d32f2f)'
+    low: 'linear-gradient(135deg, #f44336, #d32f2f)',
   },
   // Bottom handles (menu navigation)
   bottomLeft: {
@@ -193,15 +196,15 @@ export const HANDLE_COLORS = {
     testing: 'linear-gradient(135deg, #2196f3, #42a5f5)',
     high: 'linear-gradient(135deg, #81c784, #66bb6a)',
     medium: 'linear-gradient(135deg, #ffb74d, #ffa726)',
-    low: 'linear-gradient(135deg, #ef9a9a, #e57373)'
+    low: 'linear-gradient(135deg, #ef9a9a, #e57373)',
   },
   bottomRight: {
     untested: 'linear-gradient(135deg, #4caf50, #66bb6a)',
     testing: 'linear-gradient(135deg, #2196f3, #1976d2)',
     high: 'linear-gradient(135deg, #388e3c, #2e7d32)',
     medium: 'linear-gradient(135deg, #f57c00, #ef6c00)',
-    low: 'linear-gradient(135deg, #d32f2f, #c62828)'
-  }
+    low: 'linear-gradient(135deg, #d32f2f, #c62828)',
+  },
 } as const;
 
 // Animation configurations
@@ -224,7 +227,7 @@ export const VALIDATION_ANIMATIONS = {
         box-shadow: 0 0 5px var(--glow-color);
         transform: scale(1);
       }
-    `
+    `,
   },
   edgePulse: {
     name: 'edge-pulse',
@@ -244,7 +247,7 @@ export const VALIDATION_ANIMATIONS = {
         opacity: 0.8;
         stroke-width: var(--base-width);
       }
-    `
+    `,
   },
   handleGlow: {
     name: 'handle-glow',
@@ -261,14 +264,14 @@ export const VALIDATION_ANIMATIONS = {
       100% {
         box-shadow: 0 0 3px var(--handle-color);
       }
-    `
-  }
+    `,
+  },
 } as const;
 
 // Confidence level thresholds
 export const CONFIDENCE_THRESHOLDS = {
   HIGH: 0.7,
-  MEDIUM: 0.49
+  MEDIUM: 0.49,
 } as const;
 
 // Type definitions for validation status
@@ -310,4 +313,4 @@ export function getAnimationCSS(): string {
       animation: ${VALIDATION_ANIMATIONS.handleGlow.name} ${VALIDATION_ANIMATIONS.handleGlow.duration} ${VALIDATION_ANIMATIONS.handleGlow.timing} ${VALIDATION_ANIMATIONS.handleGlow.iteration};
     }
   `;
-} 
+}

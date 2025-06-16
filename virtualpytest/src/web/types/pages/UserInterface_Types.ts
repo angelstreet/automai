@@ -49,7 +49,7 @@ export interface ScreenEditorState {
   connectionError: string | null;
   streamStatus: StreamStatus;
   streamUrl: string | undefined;
-  
+
   // Capture state
   lastScreenshotPath: string | undefined;
   videoFramesPath: string | undefined;
@@ -60,19 +60,19 @@ export interface ScreenEditorState {
   isStoppingCapture: boolean;
   captureStartTime: Date | null;
   captureEndTime: Date | null;
-  
+
   // UI state
   isExpanded: boolean;
   isScreenshotLoading: boolean;
   isSaving: boolean;
   savedFrameCount: number;
-  
+
   // Selection state
   selectedArea: SelectedArea | null;
   captureImageRef: React.RefObject<HTMLImageElement> | undefined;
   captureImageDimensions: { width: number; height: number } | undefined;
   captureSourcePath: string | undefined;
-  
+
   // Resolution state
   resolutionInfo: ResolutionInfo;
 }
@@ -87,7 +87,11 @@ export interface ScreenEditorActions {
   handleFrameChange: (frame: number) => void;
   handleBackToStream: () => void;
   handleScreenshotTaken: (path: string) => void;
-  handleImageLoad: (ref: React.RefObject<HTMLImageElement>, dimensions: { width: number; height: number }, sourcePath: string) => void;
+  handleImageLoad: (
+    ref: React.RefObject<HTMLImageElement>,
+    dimensions: { width: number; height: number },
+    sourcePath: string,
+  ) => void;
   handleAreaSelected: (area: SelectedArea) => void;
   handleClearSelection: () => void;
   handleTap: (x: number, y: number) => Promise<void>;
@@ -131,4 +135,4 @@ export interface ApiResponse<T> {
   status: string;
   userinterface?: T;
   error?: string;
-} 
+}

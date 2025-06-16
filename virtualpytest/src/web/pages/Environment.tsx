@@ -87,19 +87,26 @@ const Environment: React.FC = () => {
 
     // Check for duplicate keys (excluding current item)
     const isDuplicate = variables.some(
-      (v) => v.id !== editingId && v.key.toLowerCase() === editForm.key.toLowerCase().trim()
+      (v) => v.id !== editingId && v.key.toLowerCase() === editForm.key.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A variable with this key already exists');
       return;
     }
 
-    setVariables(variables.map(v => 
-      v.id === editingId 
-        ? { ...v, key: editForm.key.trim(), value: editForm.value.trim(), description: editForm.description.trim() }
-        : v
-    ));
+    setVariables(
+      variables.map((v) =>
+        v.id === editingId
+          ? {
+              ...v,
+              key: editForm.key.trim(),
+              value: editForm.value.trim(),
+              description: editForm.description.trim(),
+            }
+          : v,
+      ),
+    );
     setEditingId(null);
     setError(null);
   };
@@ -111,7 +118,7 @@ const Environment: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    setVariables(variables.filter(v => v.id !== id));
+    setVariables(variables.filter((v) => v.id !== id));
   };
 
   const handleAddNew = () => {
@@ -122,21 +129,24 @@ const Environment: React.FC = () => {
 
     // Check for duplicate keys
     const isDuplicate = variables.some(
-      (v) => v.key.toLowerCase() === newVariable.key.toLowerCase().trim()
+      (v) => v.key.toLowerCase() === newVariable.key.toLowerCase().trim(),
     );
-    
+
     if (isDuplicate) {
       setError('A variable with this key already exists');
       return;
     }
 
-    const newId = (Math.max(...variables.map(v => parseInt(v.id))) + 1).toString();
-    setVariables([...variables, {
-      id: newId,
-      key: newVariable.key.trim(),
-      value: newVariable.value.trim(),
-      description: newVariable.description.trim(),
-    }]);
+    const newId = (Math.max(...variables.map((v) => parseInt(v.id))) + 1).toString();
+    setVariables([
+      ...variables,
+      {
+        id: newId,
+        key: newVariable.key.trim(),
+        value: newVariable.value.trim(),
+        description: newVariable.description.trim(),
+      },
+    ]);
     setNewVariable({ key: '', value: '', description: '' });
     setOpenDialog(false);
     setError(null);
@@ -178,24 +188,32 @@ const Environment: React.FC = () => {
       <Card sx={{ boxShadow: 1 }}>
         <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
           <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none' }}>
-            <Table 
-              size="small" 
-              sx={{ 
+            <Table
+              size="small"
+              sx={{
                 '& .MuiTableCell-root': { py: 0.5, px: 1 },
                 '& .MuiTableRow-root:hover': {
-                  backgroundColor: (theme) => 
-                    theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.08) !important' 
-                      : 'rgba(0, 0, 0, 0.04) !important'
-                }
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.08) !important'
+                      : 'rgba(0, 0, 0, 0.04) !important',
+                },
               }}
             >
               <TableHead>
                 <TableRow>
-                  <TableCell><strong>Key</strong></TableCell>
-                  <TableCell><strong>Value</strong></TableCell>
-                  <TableCell><strong>Description</strong></TableCell>
-                  <TableCell align="center"><strong>Actions</strong></TableCell>
+                  <TableCell>
+                    <strong>Key</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Value</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Description</strong>
+                  </TableCell>
+                  <TableCell align="center">
+                    <strong>Actions</strong>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -234,7 +252,9 @@ const Environment: React.FC = () => {
                         <TextField
                           size="small"
                           value={editForm.description}
-                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, description: e.target.value })
+                          }
                           fullWidth
                           variant="outlined"
                           sx={{ '& .MuiInputBase-root': { height: '32px' } }}
@@ -330,7 +350,9 @@ const Environment: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ pt: 1, pb: 2 }}>
-          <Button onClick={handleCloseDialog} size="small">Cancel</Button>
+          <Button onClick={handleCloseDialog} size="small">
+            Cancel
+          </Button>
           <Button onClick={handleAddNew} variant="contained" size="small">
             Add Variable
           </Button>

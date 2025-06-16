@@ -113,4 +113,4 @@ export interface ValidationProgress {
     isValid: boolean;
     errors: string[];
   }>;
-} 
+}

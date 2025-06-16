@@ -18,21 +18,21 @@ export type {
   ControllerCapabilities,
   RemoteActionExecutionResult,
   COMMON_KEYS,
-  createNavigationAction
+  createNavigationAction,
 } from './common/Common_ActionTypes';
 
 // Host types
-export type { 
+export type {
   Host,
   HostRegistrationPayload,
   HostStatus,
-  HostStatusType
+  HostStatusType,
 } from './common/Host_Types';
 
 export type {
   ControllerImplementation,
   ControllerConfig,
-  ControllerConfigMap
+  ControllerConfigMap,
 } from './controller/Controller_Types';
 
 export * from './pages/Environment_Types';
@@ -41,7 +41,7 @@ export * from './pages/Environment_Types';
 export * from './pages/Navigation_Types';
 export * from './pages/TestCase_Types';
 
-// Export UserInterface types 
+// Export UserInterface types
 export type {
   UserInterface,
   UserInterfaceCreatePayload,
@@ -56,21 +56,21 @@ export type {
   ScreenEditorState,
   ScreenEditorActions,
   RecordingTimerProps,
-  OverlayProps
+  OverlayProps,
 } from './pages/UserInterface_Types';
 
 export * from './pages/Dashboard_Types';
 
 // Feature-specific types - Remote types with explicit exports to avoid conflicts
-export type { 
-  AndroidElement, 
-  AndroidApp, 
+export type {
+  AndroidElement,
+  AndroidApp,
   RemoteConfig,
   RemoteDeviceConfig,
-  ConnectionForm, 
-  RemoteSession, 
-  AndroidTVSession, 
-  AndroidMobileSession, 
+  ConnectionForm,
+  RemoteSession,
+  AndroidTVSession,
+  AndroidMobileSession,
   TestResult,
   RemoteType as RemoteControllerType,
   BaseConnectionConfig,
@@ -79,13 +79,13 @@ export type {
   BluetoothConnectionConfig,
   AnyConnectionConfig,
   ControllerItem,
-  ControllerTypesResponse
+  ControllerTypesResponse,
 } from './controller/Remote_Types';
 
 // Export the Remote ControllerTypes with alias to avoid conflict
-export type { 
+export type {
   ControllerTypes as RemoteControllerTypes,
-  ControllerType as RemoteControllerTypeAlias
+  ControllerType as RemoteControllerTypeAlias,
 } from './controller/Remote_Types';
 
-export * from './features/Validation_Types'; 
+export * from './features/Validation_Types';

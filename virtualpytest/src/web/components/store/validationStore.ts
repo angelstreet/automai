@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ValidationState, ValidationResults, ValidationPreview, ValidationProgress } from '../../types/features/Validation_Types';
+
 import { ValidationStatus } from '../../config/validationColors';
+import {
+  ValidationState,
+  ValidationResults,
+  ValidationPreview,
+  ValidationProgress,
+} from '../../types/features/Validation_Types';
 
 interface ValidationStatusData {
   status: ValidationStatus;
@@ -11,8 +17,14 @@ interface ValidationStatusData {
 
 interface ValidationStore extends ValidationState {
   lastResult: ValidationResults | null;
-  nodeValidationStatus: Map<string, { status: ValidationStatus; confidence: number; lastTested: Date }>;
-  edgeValidationStatus: Map<string, { status: ValidationStatus; confidence: number; lastTested: Date }>;
+  nodeValidationStatus: Map<
+    string,
+    { status: ValidationStatus; confidence: number; lastTested: Date }
+  >;
+  edgeValidationStatus: Map<
+    string,
+    { status: ValidationStatus; confidence: number; lastTested: Date }
+  >;
   currentTestingNode: string | null;
   currentTestingEdge: string | null;
   setShowPreview: (show: boolean) => void;
@@ -45,8 +57,8 @@ const serializeValidationStatus = (map: Map<string, ValidationStatusData>) => {
     key,
     {
       ...value,
-      lastTested: value.lastTested?.toISOString()
-    }
+      lastTested: value.lastTested?.toISOString(),
+    },
   ]);
 };
 
@@ -56,7 +68,7 @@ const deserializeValidationStatus = (data: any[]): Map<string, ValidationStatusD
     data.forEach(([key, value]) => {
       map.set(key, {
         ...value,
-        lastTested: value.lastTested ? new Date(value.lastTested) : new Date()
+        lastTested: value.lastTested ? new Date(value.lastTested) : new Date(),
       });
     });
   }
@@ -78,107 +90,111 @@ export const useValidationStore = create<ValidationStore>()(
       edgeValidationStatus: new Map(),
       currentTestingNode: null,
       currentTestingEdge: null,
-      
+
       setShowPreview: (show) => {
         set({ showPreview: show });
       },
-      
+
       setShowResults: (show) => {
         set({ showResults: show });
       },
-      
+
       setShowProgress: (show) => {
         set({ showProgress: show });
       },
-      
+
       setPreviewData: (data) => {
         set({ previewData: data });
       },
-      
+
       setResults: (results) => {
         set({ results });
-        
+
         if (results) {
           set({ lastResult: results });
         }
       },
-      
+
       setLastResult: (results) => {
         set({ lastResult: results });
       },
-      
+
       setProgress: (progress) => {
         set({ progress });
-        
+
         // Update current testing node/edge based on progress
         if (progress) {
-          set({ 
+          set({
             currentTestingNode: progress.currentEdgeTo,
-            currentTestingEdge: progress.currentEdgeFrom && progress.currentEdgeTo 
-              ? `${progress.currentEdgeFrom}-${progress.currentEdgeTo}` 
-              : null
+            currentTestingEdge:
+              progress.currentEdgeFrom && progress.currentEdgeTo
+                ? `${progress.currentEdgeFrom}-${progress.currentEdgeTo}`
+                : null,
           });
         }
       },
-      
+
       setValidating: (validating) => {
         set({ isValidating: validating });
-        
+
         // Reset testing indicators when validation stops
         if (!validating) {
-          set({ 
+          set({
             currentTestingNode: null,
-            currentTestingEdge: null 
+            currentTestingEdge: null,
           });
         }
       },
-      
+
       setNodeValidationStatus: (nodeId, status) => {
         const { nodeValidationStatus } = get();
         const newMap = new Map(nodeValidationStatus);
         newMap.set(nodeId, status);
         set({ nodeValidationStatus: newMap });
       },
-      
+
       setEdgeValidationStatus: (edgeId, status) => {
-        console.log(`[@store:validationStore] Setting edge validation status for ${edgeId}:`, status.status);
+        console.log(
+          `[@store:validationStore] Setting edge validation status for ${edgeId}:`,
+          status.status,
+        );
         const { edgeValidationStatus } = get();
         const newMap = new Map(edgeValidationStatus);
         newMap.set(edgeId, status);
         set({ edgeValidationStatus: newMap });
       },
-      
+
       setCurrentTestingNode: (nodeId) => {
         set({ currentTestingNode: nodeId });
       },
-      
+
       setCurrentTestingEdge: (edgeId) => {
         set({ currentTestingEdge: edgeId });
       },
-      
+
       resetValidationColors: () => {
         console.log(`[@store:validationStore] Resetting validation colors`);
-        set({ 
+        set({
           nodeValidationStatus: new Map(),
           edgeValidationStatus: new Map(),
           currentTestingNode: null,
-          currentTestingEdge: null
+          currentTestingEdge: null,
         });
       },
-      
+
       showLastResult: () => {
         const { lastResult } = get();
         if (lastResult) {
           console.log(`[@store:validationStore] Showing cached result`);
-          set({ 
+          set({
             results: lastResult,
-            showResults: true 
+            showResults: true,
           });
         } else {
           console.log(`[@store:validationStore] No cached result available`);
         }
       },
-      
+
       reset: () => {
         console.log(`[@store:validationStore] Resetting validation store`);
         set({
@@ -203,15 +219,19 @@ export const useValidationStore = create<ValidationStore>()(
           const str = localStorage.getItem(name);
           if (!str) return null;
           const parsed = JSON.parse(str);
-          
+
           // Deserialize Maps
           if (parsed.state.nodeValidationStatus) {
-            parsed.state.nodeValidationStatus = deserializeValidationStatus(parsed.state.nodeValidationStatus);
+            parsed.state.nodeValidationStatus = deserializeValidationStatus(
+              parsed.state.nodeValidationStatus,
+            );
           }
           if (parsed.state.edgeValidationStatus) {
-            parsed.state.edgeValidationStatus = deserializeValidationStatus(parsed.state.edgeValidationStatus);
+            parsed.state.edgeValidationStatus = deserializeValidationStatus(
+              parsed.state.edgeValidationStatus,
+            );
           }
-          
+
           return parsed;
         },
         setItem: (name, value) => {
@@ -232,12 +252,12 @@ export const useValidationStore = create<ValidationStore>()(
               progress: null,
               currentTestingNode: null,
               currentTestingEdge: null,
-            }
+            },
           };
           localStorage.setItem(name, JSON.stringify(serialized));
         },
         removeItem: (name) => localStorage.removeItem(name),
       },
-    }
-  )
-); 
+    },
+  ),
+);

@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
-
-import { Host } from '../types/common/Host_Types';
+import { useContext, useCallback } from 'react';
+import { RegistrationContext } from '../contexts/RegistrationContextDefinition';
 import { buildServerUrl } from '../utils/frontendUtils';
+import { Host } from '../types/common/Host_Types';
 
 /**
  * Registration Hook - Business Logic for Host Management
@@ -42,4 +42,13 @@ export const useRegistrationLogic = () => {
   return {
     fetchHosts,
   };
+};
+
+// Hook to use registration context
+export const useRegistration = () => {
+  const context = useContext(RegistrationContext);
+  if (context === undefined) {
+    throw new Error('useRegistration must be used within a RegistrationProvider');
+  }
+  return context;
 };

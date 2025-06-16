@@ -12,7 +12,7 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
     disconnect: '/server/control/release-control',
     screenshot: '/server/remote/take-screenshot',
     command: '/server/remote/execute-command',
-  }
+  },
 };
 
 // Android Mobile configuration - uses server route proxying to host
@@ -30,8 +30,8 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     dumpUI: '/server/remote/screenshot-and-dump',
     getApps: '/server/remote/get-apps',
     clickElement: '/server/remote/click-element',
-    tapCoordinates: '/server/remote/tap-element'
-  }
+    tapCoordinates: '/server/remote/tap-element',
+  },
 };
 
 // IR Remote configuration - uses server route proxying to host
@@ -45,7 +45,7 @@ export const IR_CONFIG: RemoteDeviceConfig = {
     connect: '/server/remote/connect',
     disconnect: '/server/remote/disconnect',
     command: '/server/remote/execute-command',
-  }
+  },
 };
 
 // Bluetooth Remote configuration - uses server route proxying to host
@@ -59,30 +59,30 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
     connect: '/server/remote/connect',
     disconnect: '/server/remote/disconnect',
     command: '/server/remote/execute-command',
-  }
+  },
 };
 
 // Configuration registry (USB_POWER_CONFIG moved to power controller)
 export const REMOTE_CONFIGS = {
   'android-tv': ANDROID_TV_CONFIG,
   'android-mobile': ANDROID_MOBILE_CONFIG,
-  'ir': IR_CONFIG,
-  'bluetooth': BLUETOOTH_CONFIG,
+  ir: IR_CONFIG,
+  bluetooth: BLUETOOTH_CONFIG,
 } as const;
 
 // Hook to get remote configurations
 export function useRemoteConfigs() {
   // Get all available remote configurations
   const getConfigs = () => REMOTE_CONFIGS;
-  
+
   // Get config by type
   const getConfigByType = (remoteType: string): RemoteDeviceConfig | null => {
     return REMOTE_CONFIGS[remoteType as keyof typeof REMOTE_CONFIGS] || null;
   };
-  
+
   // Get all config types
   const getConfigTypes = () => Object.keys(REMOTE_CONFIGS);
-  
+
   // Get configs as array
   const getConfigsArray = (): RemoteDeviceConfig[] => {
     return Object.values(REMOTE_CONFIGS);
@@ -100,4 +100,4 @@ export function useRemoteConfigs() {
 // Helper function to get config by type (kept for backward compatibility)
 export function getRemoteConfig(remoteType: string): RemoteDeviceConfig | null {
   return REMOTE_CONFIGS[remoteType as keyof typeof REMOTE_CONFIGS] || null;
-} 
+}

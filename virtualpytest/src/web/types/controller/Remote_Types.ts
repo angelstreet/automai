@@ -53,10 +53,10 @@ export interface BluetoothConnectionConfig extends BaseConnectionConfig {
 }
 
 // Union type for all connection configurations
-export type AnyConnectionConfig = 
-  | AndroidConnectionConfig 
-  | IRConnectionConfig 
-  | BluetoothConnectionConfig 
+export type AnyConnectionConfig =
+  | AndroidConnectionConfig
+  | IRConnectionConfig
+  | BluetoothConnectionConfig
   | BaseConnectionConfig;
 
 // Connection form interface for UI forms
@@ -96,7 +96,7 @@ export interface AndroidTVSession extends RemoteSession {
   adbConnected?: boolean;
 }
 
-// Android Mobile session interface  
+// Android Mobile session interface
 export interface AndroidMobileSession extends RemoteSession {
   deviceInfo?: {
     model: string;
@@ -157,4 +157,4 @@ export interface ControllerTypesResponse {
 
 // Export aliases for compatibility with useControllerTypes hook
 export type ControllerTypes = ControllerTypesResponse;
-export type ControllerType = ControllerItem; 
+export type ControllerType = ControllerItem;

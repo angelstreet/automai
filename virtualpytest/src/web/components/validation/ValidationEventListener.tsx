@@ -21,11 +21,11 @@ export default function ValidationEventListener() {
     };
 
     window.addEventListener(ValidationEvents.VALIDATION_COMPLETE, handleValidationComplete);
-    
+
     return () => {
       window.removeEventListener(ValidationEvents.VALIDATION_COMPLETE, handleValidationComplete);
     };
   }, [navigate]);
 
   return null;
-} 
+}

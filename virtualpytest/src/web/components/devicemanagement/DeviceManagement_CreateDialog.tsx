@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import {
+  ArrowBack as BackIcon,
+  ArrowForward as NextIcon,
+  Check as CheckIcon,
+} from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -16,18 +20,15 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { 
-  ArrowBack as BackIcon,
-  ArrowForward as NextIcon,
-  Check as CheckIcon,
-} from '@mui/icons-material';
-import { Device } from '../../types';
+import React, { useState, useEffect } from 'react';
+
 import { useControllerConfig } from '../../hooks/controller';
+import { Device } from '../../types';
 
 // Import wizard step components
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';
-import { ModelSelectionStep } from './wizard/DeviceManagement_ModelSelectionStep';
 import { ControllerConfigurationStep } from './wizard/DeviceManagement_ControllerConfigStep';
+import { ModelSelectionStep } from './wizard/DeviceManagement_ModelSelectionStep';
 import { ReviewStep } from './wizard/DeviceManagement_ReviewStep';
 
 interface DeviceFormData {
@@ -70,7 +71,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
     name: '',
     description: '',
     model: '',
-    controllerConfigs: {}
+    controllerConfigs: {},
   });
 
   const steps = [
@@ -100,7 +101,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
         name: '',
         description: '',
         model: '',
-        controllerConfigs: {}
+        controllerConfigs: {},
       });
       setSelectedModel(null);
       setFormErrors({});
@@ -115,11 +116,11 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   };
 
   const handleFormDataUpdate = (updates: Partial<DeviceFormData>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-    
+    setFormData((prev) => ({ ...prev, ...updates }));
+
     // Clear related errors when data is updated
     const updatedErrors = { ...formErrors };
-    Object.keys(updates).forEach(key => {
+    Object.keys(updates).forEach((key) => {
       delete updatedErrors[key];
     });
     setFormErrors(updatedErrors);
@@ -148,9 +149,9 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
             const validation = validateParameters(
               controllerType as any,
               config.implementation,
-              config.parameters
+              config.parameters,
             );
-            
+
             if (!validation.isValid) {
               validation.errors.forEach((errorMsg, index) => {
                 errors[`${controllerType}_param_${index}`] = errorMsg;
@@ -194,7 +195,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
 
     try {
       setIsSubmitting(true);
-      
+
       // Convert our form data to the expected format with controller configurations
       const deviceData = {
         name: formData.name.trim(),
@@ -204,9 +205,11 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       };
 
       console.log('[@component:CreateDeviceDialog] Creating device with data:', deviceData);
-      console.log('[@component:CreateDeviceDialog] Controller configs detail:', JSON.stringify(formData.controllerConfigs, null, 2));
+      console.log(
+        '[@component:CreateDeviceDialog] Controller configs detail:',
+        JSON.stringify(formData.controllerConfigs, null, 2),
+      );
       await onSubmit(deviceData as any);
-      
     } catch (err) {
       console.error('[@component:CreateDeviceDialog] Error creating device:', err);
     } finally {
@@ -218,11 +221,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
     switch (step) {
       case 0:
         return (
-          <BasicInfoStep
-            formData={formData}
-            onUpdate={handleFormDataUpdate}
-            errors={formErrors}
-          />
+          <BasicInfoStep formData={formData} onUpdate={handleFormDataUpdate} errors={formErrors} />
         );
       case 1:
         return (
@@ -243,13 +242,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
           />
         );
       case 3:
-        return (
-          <ReviewStep
-            formData={formData}
-            selectedModel={selectedModel}
-            errors={formErrors}
-          />
-        );
+        return <ReviewStep formData={formData} selectedModel={selectedModel} errors={formErrors} />;
       default:
         return null;
     }
@@ -262,8 +255,12 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
       case 1:
         return !!formData.model;
       case 2:
-        return Object.keys(formData.controllerConfigs).length > 0 || 
-               Boolean(selectedModel && Object.values(selectedModel.controllers).every(c => !c || c === ''));
+        return (
+          Object.keys(formData.controllerConfigs).length > 0 ||
+          Boolean(
+            selectedModel && Object.values(selectedModel.controllers).every((c) => !c || c === ''),
+          )
+        );
       case 3:
         return Object.keys(formErrors).length === 0;
       default:
@@ -274,23 +271,16 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   const canProceed = isStepComplete(activeStep);
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="lg" 
-      fullWidth
-      fullScreen={isMobile}
-    >
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
         <Typography variant="h5">Add New Device</Typography>
-      
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1, mb: 1 }}>
         <Box sx={{ width: '100%' }}>
           {/* Stepper */}
-          <Stepper 
-            activeStep={activeStep} 
+          <Stepper
+            activeStep={activeStep}
             orientation={isMobile ? 'vertical' : 'horizontal'}
             sx={{ mb: 0 }}
           >
@@ -298,12 +288,9 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
               <Step key={step.label} completed={isStepComplete(index)}>
                 <StepLabel>
                   <Typography variant="subtitle2">{step.label}</Typography>
-              
                 </StepLabel>
                 {isMobile && (
-                  <StepContent>
-                    {index === activeStep && renderStepContent(activeStep)}
-                  </StepContent>
+                  <StepContent>{index === activeStep && renderStepContent(activeStep)}</StepContent>
                 )}
               </Step>
             ))}
@@ -311,9 +298,7 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
 
           {/* Step Content for non-mobile */}
           {!isMobile && (
-            <Box sx={{ mt: 1.5, mb: 1.5, minHeight: 200 }}>
-              {renderStepContent(activeStep)}
-            </Box>
+            <Box sx={{ mt: 1.5, mb: 1.5, minHeight: 200 }}>{renderStepContent(activeStep)}</Box>
           )}
 
           {/* Validation Errors Display */}
@@ -343,13 +328,9 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
         <Button onClick={handleClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        
+
         {activeStep > 0 && (
-          <Button
-            onClick={handleBack}
-            disabled={isSubmitting}
-            startIcon={<BackIcon />}
-          >
+          <Button onClick={handleBack} disabled={isSubmitting} startIcon={<BackIcon />}>
             Back
           </Button>
         )}
@@ -378,4 +359,4 @@ const CreateDeviceDialog: React.FC<CreateDeviceDialogProps> = ({
   );
 };
 
-export default CreateDeviceDialog; 
+export default CreateDeviceDialog;

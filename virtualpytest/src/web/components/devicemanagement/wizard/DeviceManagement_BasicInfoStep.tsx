@@ -1,10 +1,6 @@
+import { Box, TextField } from '@mui/material';
 import React from 'react';
-import {
-  Box,
-  TextField,
-  Typography,
-  FormHelperText,
-} from '@mui/material';
+
 import { DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface BasicInfoStepProps {
@@ -16,13 +12,12 @@ interface BasicInfoStepProps {
 export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
   formData,
   onUpdate,
-  errors = {}
+  errors = {},
 }) => {
-  const handleInputChange = (field: keyof DeviceFormData) => (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    onUpdate({ [field]: event.target.value });
-  };
+  const handleInputChange =
+    (field: keyof DeviceFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdate({ [field]: event.target.value });
+    };
 
   return (
     <Box sx={{ pt: 1 }}>
@@ -57,7 +52,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         error={!!errors.description}
         helperText={errors.description || 'Add any additional notes about this device (optional)'}
       />
-
     </Box>
   );
-}; 
+};

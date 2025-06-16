@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   FormControl,
@@ -10,20 +9,21 @@ import {
   Chip,
   Tooltip,
 } from '@mui/material';
+import React from 'react';
 
 interface TreeFilterControlsProps {
   // Focus node selection
   focusNodeId: string | null;
   availableFocusNodes: { id: string; label: string; depth: number }[];
   onFocusNodeChange: (nodeId: string | null) => void;
-  
+
   // Depth selection
   maxDisplayDepth: number;
   onDepthChange: (depth: number) => void;
-  
+
   // Reset functionality
   onResetFocus: () => void;
-  
+
   // Statistics
   totalNodes: number;
   visibleNodes: number;
@@ -41,7 +41,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
 }) => {
   const getFocusNodeLabel = () => {
     if (!focusNodeId) return 'All';
-    const node = availableFocusNodes.find(n => n.id === focusNodeId);
+    const node = availableFocusNodes.find((n) => n.id === focusNodeId);
     return node ? node.label : 'All';
   };
 
@@ -50,8 +50,8 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
   };
 
   // Get the focus node's depth for calculating dynamic labels
-  const focusNodeDepth = focusNodeId 
-    ? availableFocusNodes.find(n => n.id === focusNodeId)?.depth || 0 
+  const focusNodeDepth = focusNodeId
+    ? availableFocusNodes.find((n) => n.id === focusNodeId)?.depth || 0
     : 0;
 
   // Generate dynamic depth menu items
@@ -61,7 +61,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
       items.push(
         <MenuItem key={i} value={i} sx={{ fontSize: '0.75rem' }}>
           D{i}
-        </MenuItem>
+        </MenuItem>,
       );
     }
     return items;
@@ -71,13 +71,15 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
   const isFilterActive = focusNodeId !== null;
 
   return (
-    <Box sx={{ 
-      display: 'grid',
-      gridTemplateColumns: '80px 80px 60px 80px 120px 150px',
-      alignItems: 'center',
-      gap: 1,
-      minWidth: '570px'
-    }}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: '80px 80px 60px 80px 120px 150px',
+        alignItems: 'center',
+        gap: 1,
+        minWidth: '570px',
+      }}
+    >
       {/* Node Selection */}
       <Tooltip title="Focus on specific node or show all nodes">
         <FormControl size="small" sx={{ minWidth: 100 }}>
@@ -86,7 +88,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
             value={focusNodeId || 'all'}
             label="Node"
             onChange={(e) => onFocusNodeChange(e.target.value === 'all' ? null : e.target.value)}
-            sx={{ 
+            sx={{
               fontSize: '0.75rem',
               '& .MuiSelect-select': { py: 0.5 },
               ...(isFilterActive && {
@@ -94,11 +96,13 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
                 '& .MuiOutlinedInput-notchedOutline': {
                   borderColor: 'primary.main',
                   borderWidth: 2,
-                }
-              })
+                },
+              }),
             }}
           >
-            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All</MenuItem>
+            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>
+              All
+            </MenuItem>
             {availableFocusNodes.map((node) => (
               <MenuItem key={node.id} value={node.id} sx={{ fontSize: '0.75rem' }}>
                 {node.label}
@@ -115,9 +119,9 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
             value={maxDisplayDepth}
             onChange={(e) => onDepthChange(Number(e.target.value))}
             displayEmpty
-            sx={{ 
+            sx={{
               fontSize: '0.75rem',
-              '& .MuiSelect-select': { py: 0.5 }
+              '& .MuiSelect-select': { py: 0.5 },
             }}
           >
             {generateDepthMenuItems()}
@@ -128,10 +132,10 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
       {/* Reset Button */}
       <Tooltip title="Reset filter to show all nodes (or double-click any node when filter is active)">
         <Button
-          variant={isFilterActive ? "contained" : "outlined"}
+          variant={isFilterActive ? 'contained' : 'outlined'}
           size="small"
           onClick={onResetFocus}
-          sx={{ 
+          sx={{
             minWidth: 'auto',
             px: 1,
             fontSize: '0.7rem',
@@ -141,8 +145,8 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
               color: 'warning.contrastText',
               '&:hover': {
                 backgroundColor: 'warning.dark',
-              }
-            })
+              },
+            }),
           }}
         >
           Reset
@@ -151,9 +155,9 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
 
       {/* Node Statistics - Fixed width container */}
       <Box sx={{ minWidth: 20 }}>
-        <Typography 
-          variant="caption" 
-          sx={{ 
+        <Typography
+          variant="caption"
+          sx={{
             fontSize: '0.7rem',
             color: isFilterActive ? 'primary.main' : 'text.secondary',
             fontWeight: isFilterActive ? 'bold' : 'normal',
@@ -162,7 +166,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
           {visibleNodes}/{totalNodes} nodes
         </Typography>
       </Box>
-           {/* Filter Status Indicator - Fixed width container */}
+      {/* Filter Status Indicator - Fixed width container */}
       <Box sx={{ minWidth: 20 }}>
         {isFilterActive && (
           <Chip
@@ -170,7 +174,7 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
             size="small"
             color="primary"
             variant="outlined"
-            sx={{ 
+            sx={{
               fontSize: '0.65rem',
               height: 20,
             }}
@@ -179,4 +183,4 @@ export const TreeFilterControls: React.FC<TreeFilterControlsProps> = ({
       </Box>
     </Box>
   );
-}; 
+};

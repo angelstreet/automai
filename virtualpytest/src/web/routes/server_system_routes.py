@@ -100,14 +100,15 @@ def register_host():
         
         print(f"[@route:register_host] Factory built:")
         print(f"   Controller configs: {list(controller_configs.keys()) if controller_configs else 'None'}")
-        print(f"   Capabilities: {capabilities}")
-        print(f"   Controller types: {controller_types}")
+        print(f"   Abstract capabilities: {capabilities}")
+        print(f"   Specific implementations: {controller_types}")
         
         # Use controller config names as capabilities
         capabilities = list(controller_configs.keys()) if controller_configs else []
         
-        print(f"[@route:register_host] Controller configs available:")
-        print(f"   Controller types: {capabilities}")
+        print(f"[@route:register_host] Final controller mapping:")
+        print(f"   Abstract types (capabilities): {capabilities}")
+        print(f"   Specific implementations: {controller_types}")
         
         # Create flat host object matching Host_Types.ts interface
         host_object: Host = {

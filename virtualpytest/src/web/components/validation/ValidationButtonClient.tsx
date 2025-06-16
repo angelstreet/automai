@@ -1,21 +1,22 @@
 'use client';
 
-import { 
-  Button, 
-  CircularProgress, 
-  Menu, 
-  MenuItem, 
-  ListItemIcon, 
-  ListItemText,
-  Box
-} from '@mui/material';
-import { 
+import {
   CheckCircle as CheckCircleIcon,
   ArrowDropDown as ArrowDropDownIcon,
   PlayArrow as PlayArrowIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
 } from '@mui/icons-material';
+import {
+  Button,
+  CircularProgress,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Box,
+} from '@mui/material';
 import { useState } from 'react';
+
 import { useValidationUI } from '../../hooks/validation';
 
 interface ValidationButtonClientProps {
@@ -30,7 +31,7 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
 
   const getButtonColor = () => {
     if (!validation.results) return 'primary';
-    
+
     switch (validation.results.summary.overallHealth) {
       case 'excellent':
         return 'success';
@@ -49,7 +50,9 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
       setAnchorEl(event.currentTarget);
     } else {
       // Otherwise, just open preview directly
-      console.log(`[@component:ValidationButtonClient] Validation button clicked for tree: ${treeId}`);
+      console.log(
+        `[@component:ValidationButtonClient] Validation button clicked for tree: ${treeId}`,
+      );
       validation.openPreview();
     }
   };
@@ -83,10 +86,10 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
         disabled={disabled || validation.isValidating}
         variant="outlined"
         color={getButtonColor()}
-        sx={{ 
+        sx={{
           minWidth: 'auto',
           whiteSpace: 'nowrap',
-          fontSize: '0.75rem'
+          fontSize: '0.75rem',
         }}
       >
         Validate
@@ -121,4 +124,4 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
       </Menu>
     </Box>
   );
-} 
+}

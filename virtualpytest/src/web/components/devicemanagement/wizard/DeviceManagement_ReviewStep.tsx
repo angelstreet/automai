@@ -1,4 +1,4 @@
-import React from 'react';
+import { CheckCircle as CheckIcon, Warning as WarningIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -11,12 +11,10 @@ import {
   ListItemText,
   Alert,
 } from '@mui/material';
-import { 
-  CheckCircle as CheckIcon,
-  Warning as WarningIcon,
-} from '@mui/icons-material';
-import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import React from 'react';
+
 import { useControllerConfig } from '../../../hooks/controller';
+import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface ReviewStepProps {
   formData: DeviceFormData;
@@ -24,18 +22,14 @@ interface ReviewStepProps {
   errors?: { [key: string]: string };
 }
 
-export const ReviewStep: React.FC<ReviewStepProps> = ({
-  formData,
-  selectedModel,
-  errors = {}
-}) => {
+export const ReviewStep: React.FC<ReviewStepProps> = ({ formData, selectedModel, errors = {} }) => {
   const { getConfigurationByImplementation } = useControllerConfig();
   const hasErrors = Object.keys(errors).length > 0;
 
   const renderControllerSummary = (controllerType: string, config: any) => {
     const controllerConfig = getConfigurationByImplementation(
       controllerType as any,
-      config.implementation
+      config.implementation,
     );
 
     if (!controllerConfig) {
@@ -46,20 +40,25 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       );
     }
 
-    const requiredFields = controllerConfig.inputFields.filter(field => field.required);
+    const requiredFields = controllerConfig.inputFields.filter((field) => field.required);
     const configuredFields = Object.keys(config.parameters).filter(
-      key => config.parameters[key] !== '' && config.parameters[key] !== null && config.parameters[key] !== undefined
+      (key) =>
+        config.parameters[key] !== '' &&
+        config.parameters[key] !== null &&
+        config.parameters[key] !== undefined,
     );
     const missingRequired = requiredFields.filter(
-      field => !configuredFields.includes(field.name) || !config.parameters[field.name]
+      (field) => !configuredFields.includes(field.name) || !config.parameters[field.name],
     );
 
     return (
-      <Paper sx={{ 
-        p: 2, 
-        border: 1, 
-        borderColor: missingRequired.length > 0 ? 'warning.main' : 'success.main'
-      }}>
+      <Paper
+        sx={{
+          p: 2,
+          border: 1,
+          borderColor: missingRequired.length > 0 ? 'warning.main' : 'success.main',
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           {missingRequired.length > 0 ? (
             <WarningIcon color="warning" />
@@ -69,16 +68,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           <Typography variant="h6">
             {controllerType.charAt(0).toUpperCase() + controllerType.slice(1)} Controller
           </Typography>
-          <Chip 
-            label={controllerConfig.name} 
-            size="small" 
+          <Chip
+            label={controllerConfig.name}
+            size="small"
             color={missingRequired.length > 0 ? 'warning' : 'success'}
           />
         </Box>
 
         {missingRequired.length > 0 && (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Missing required fields: {missingRequired.map(f => f.label).join(', ')}
+            Missing required fields: {missingRequired.map((f) => f.label).join(', ')}
           </Alert>
         )}
 
@@ -89,7 +88,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           {controllerConfig.inputFields.map((field) => {
             const value = config.parameters[field.name];
             const hasValue = value !== '' && value !== null && value !== undefined;
-            
+
             return (
               <ListItem key={field.name} sx={{ py: 0.5 }}>
                 <ListItemText
@@ -99,9 +98,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                         {field.label}
                       </Typography>
                       {field.required && (
-                        <Chip 
-                          label="Required" 
-                          size="small" 
+                        <Chip
+                          label="Required"
+                          size="small"
                           color={hasValue ? 'success' : 'error'}
                           variant="outlined"
                         />
@@ -110,9 +109,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                   }
                   secondary={
                     hasValue ? (
-                      field.type === 'password' ? 
-                        '••••••••' : 
+                      field.type === 'password' ? (
+                        '••••••••'
+                      ) : (
                         String(value)
+                      )
                     ) : (
                       <Typography component="span" color="text.secondary" fontStyle="italic">
                         Not configured
@@ -134,7 +135,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         Review Configuration
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Review your device configuration before creating the device. Make sure all required fields are filled.
+        Review your device configuration before creating the device. Make sure all required fields
+        are filled.
       </Typography>
 
       {hasErrors && (
@@ -215,14 +217,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           </Typography>
           {Object.keys(formData.controllerConfigs).length === 0 ? (
             <Alert severity="info">
-              No controllers configured. The device will be created without controller functionality.
+              No controllers configured. The device will be created without controller
+              functionality.
             </Alert>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {Object.entries(formData.controllerConfigs).map(([controllerType, config]) => (
-                <div key={controllerType}>
-                  {renderControllerSummary(controllerType, config)}
-                </div>
+                <div key={controllerType}>{renderControllerSummary(controllerType, config)}</div>
               ))}
             </Box>
           )}
@@ -234,14 +235,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
       <Alert severity={hasErrors ? 'error' : 'success'} sx={{ mt: 2 }}>
         {hasErrors ? (
           <Typography>
-            <strong>Configuration incomplete:</strong> Please go back and fix the errors before creating the device.
+            <strong>Configuration incomplete:</strong> Please go back and fix the errors before
+            creating the device.
           </Typography>
         ) : (
           <Typography>
-            <strong>Ready to create:</strong> Your device configuration is complete and ready for creation.
+            <strong>Ready to create:</strong> Your device configuration is complete and ready for
+            creation.
           </Typography>
         )}
       </Alert>
     </Box>
   );
-}; 
+};

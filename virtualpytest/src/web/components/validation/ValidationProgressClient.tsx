@@ -1,35 +1,30 @@
 'use client';
 
-import { 
-  Box, 
-  LinearProgress, 
-  Typography, 
-  Paper, 
-  Fade,
-  Chip
-} from '@mui/material';
+import { Box, LinearProgress, Typography, Paper, Fade, Chip } from '@mui/material';
 import { useEffect, useRef } from 'react';
-import { useValidationUI } from '../../hooks/validation';
+
+import { useValidationUI, useValidationColors } from '../../hooks/validation';
 import { useValidationStore } from '../store/validationStore';
-import { useValidationColors } from '../../hooks/validation';
-import { getValidationStatusFromConfidence } from '../../config/validationColors';
 
 interface ValidationProgressClientProps {
   treeId: string;
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
-
 }
 
-const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ treeId, onUpdateEdge, onUpdateNode }) => {
+const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
+  treeId,
+  onUpdateEdge,
+  onUpdateNode,
+}) => {
   const validation = useValidationUI(treeId);
   const { isValidating, progress, showProgress } = validation;
   const { resetForNewValidation } = useValidationColors(treeId);
-  const { 
-    setCurrentTestingNode, 
+  const {
+    setCurrentTestingNode,
     setCurrentTestingEdge,
     setNodeValidationStatus,
-    setEdgeValidationStatus 
+    setEdgeValidationStatus,
   } = useValidationStore();
 
   // Track if auto-save has been triggered for this validation session
@@ -40,7 +35,9 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   // Helper function to update edge confidence with validation results
   const updateEdgeConfidence = (edgeId: string, success: boolean) => {
     if (!onUpdateEdge) {
-      console.warn('[@component:ValidationProgressClient] onUpdateEdge callback not provided - confidence will not be persisted!');
+      console.warn(
+        '[@component:ValidationProgressClient] onUpdateEdge callback not provided - confidence will not be persisted!',
+      );
       return;
     }
 
@@ -53,18 +50,22 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       _validation_result: {
         success,
         timestamp: new Date().toISOString(),
-        type: 'validation'
-      }
+        type: 'validation',
+      },
     };
 
-    console.log(`[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`);
+    console.log(
+      `[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`,
+    );
     onUpdateEdge(edgeId, validationUpdate);
   };
 
   // Helper function to update node confidence with validation results
   const updateNodeConfidence = (nodeId: string, success: boolean) => {
     if (!onUpdateNode) {
-      console.warn('[@component:ValidationProgressClient] onUpdateNode callback not provided - confidence will not be persisted!');
+      console.warn(
+        '[@component:ValidationProgressClient] onUpdateNode callback not provided - confidence will not be persisted!',
+      );
       return;
     }
 
@@ -77,18 +78,22 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       _validation_result: {
         success,
         timestamp: new Date().toISOString(),
-        type: 'validation'
-      }
+        type: 'validation',
+      },
     };
 
-    console.log(`[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`);
+    console.log(
+      `[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`,
+    );
     onUpdateNode(nodeId, validationUpdate);
   };
 
   // Reset auto-save flag when validation starts
   useEffect(() => {
     if (isValidating) {
-      console.log('[@component:ValidationProgressClient] Validation starting - resetting auto-save flag');
+      console.log(
+        '[@component:ValidationProgressClient] Validation starting - resetting auto-save flag',
+      );
       autoSaveTriggeredRef.current = false;
     }
   }, [isValidating]);
@@ -96,7 +101,9 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   // Reset all colors when validation starts
   useEffect(() => {
     if (isValidating && progress?.currentStep === 1) {
-      console.log('[@component:ValidationProgressClient] Validation starting - resetting all colors to grey');
+      console.log(
+        '[@component:ValidationProgressClient] Validation starting - resetting all colors to grey',
+      );
       resetForNewValidation();
     }
   }, [isValidating, progress?.currentStep, resetForNewValidation]);
@@ -104,7 +111,9 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   // Also reset when validation first becomes true (backup detection)
   useEffect(() => {
     if (isValidating && !progress) {
-      console.log('[@component:ValidationProgressClient] Validation started (no progress yet) - resetting all colors to grey');
+      console.log(
+        '[@component:ValidationProgressClient] Validation started (no progress yet) - resetting all colors to grey',
+      );
       resetForNewValidation();
     }
   }, [isValidating, progress, resetForNewValidation]);
@@ -115,7 +124,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       console.log('[@component:ValidationProgressClient] Updating testing indicators', {
         currentEdgeFrom: progress.currentEdgeFrom,
         currentEdgeTo: progress.currentEdgeTo,
-        currentNodeName: progress.currentNodeName
+        currentNodeName: progress.currentNodeName,
       });
 
       // Set current testing node
@@ -132,7 +141,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       // Update validation status based on edge status
       if (progress.currentEdgeStatus && progress.currentEdgeStatus !== 'testing') {
         const edgeId = `${progress.currentEdgeFrom}-${progress.currentEdgeTo}`;
-        
+
         // Determine validation status and calculate real confidence
         let validationStatus: 'high' | 'medium' | 'low' | 'untested' = 'untested';
         let confidence = 0;
@@ -168,7 +177,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
             currentEdgeStatus: progress.currentEdgeStatus,
             validationStatus,
             confidence,
-            success
+            success,
           });
 
           // Update edge confidence in the actual navigation tree data
@@ -181,27 +190,42 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
           setEdgeValidationStatus(edgeId, {
             status: validationStatus,
             confidence,
-            lastTested: new Date()
+            lastTested: new Date(),
           });
 
           setNodeValidationStatus(progress.currentEdgeTo, {
             status: validationStatus,
             confidence,
-            lastTested: new Date()
+            lastTested: new Date(),
           });
 
-          console.log('[@component:ValidationProgressClient] AFTER updating validation status - status should now be preserved:', {
-            edgeId,
-            nodeId: progress.currentEdgeTo,
-            status: validationStatus,
-            confidence,
-            success,
-            message: 'This edge/node should now show as ' + (success ? 'GREEN' : 'RED') + ' and stay that color during validation'
-          });
+          console.log(
+            '[@component:ValidationProgressClient] AFTER updating validation status - status should now be preserved:',
+            {
+              edgeId,
+              nodeId: progress.currentEdgeTo,
+              status: validationStatus,
+              confidence,
+              success,
+              message:
+                'This edge/node should now show as ' +
+                (success ? 'GREEN' : 'RED') +
+                ' and stay that color during validation',
+            },
+          );
         }
       }
     }
-  }, [progress, isValidating, setCurrentTestingNode, setCurrentTestingEdge, setNodeValidationStatus, setEdgeValidationStatus, onUpdateEdge, onUpdateNode]);
+  }, [
+    progress,
+    isValidating,
+    setCurrentTestingNode,
+    setCurrentTestingEdge,
+    setNodeValidationStatus,
+    setEdgeValidationStatus,
+    onUpdateEdge,
+    onUpdateNode,
+  ]);
 
   // Clear testing indicators when validation stops
   useEffect(() => {
@@ -216,10 +240,10 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
     // Detect transition from validating to not validating (validation just completed)
     const wasValidating = prevIsValidatingRef.current;
     const isNowValidating = isValidating;
-    
+
     // Update the ref for next time
     prevIsValidatingRef.current = isValidating;
-    
+
     // Auto-save removed - validation completes without database save
     if (wasValidating && !isNowValidating && !autoSaveTriggeredRef.current) {
       console.log('[@component:ValidationProgressClient] Validation completed');
@@ -229,40 +253,51 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
 
   if (!showProgress || !isValidating) return null;
 
-  const progressPercentage = progress 
+  const progressPercentage = progress
     ? Math.round((progress.currentStep / progress.totalSteps) * 100)
     : 0;
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'success': return 'success';
-      case 'failed': return 'error';
-      case 'skipped': return 'default';
-      case 'testing': return 'primary';
-      default: return 'default';
+      case 'success':
+        return 'success';
+      case 'failed':
+        return 'error';
+      case 'skipped':
+        return 'default';
+      case 'testing':
+        return 'primary';
+      default:
+        return 'default';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'success': return 'SUCCESS';
-      case 'failed': return 'FAILED';
-      case 'skipped': return 'SKIPPED';
-      case 'testing': return 'TESTING';
-      case 'completed': return 'COMPLETED';
-      default: return status.toUpperCase();
+      case 'success':
+        return 'SUCCESS';
+      case 'failed':
+        return 'FAILED';
+      case 'skipped':
+        return 'SKIPPED';
+      case 'testing':
+        return 'TESTING';
+      case 'completed':
+        return 'COMPLETED';
+      default:
+        return status.toUpperCase();
     }
   };
 
   return (
     <Fade in={isValidating && showProgress}>
-      <Paper 
-        elevation={4} 
-        sx={{ 
-          position: 'fixed', 
-          bottom: 20, 
-          right: 20, 
-          p: 2, 
+      <Paper
+        elevation={4}
+        sx={{
+          position: 'fixed',
+          bottom: 20,
+          right: 20,
+          p: 2,
           width: 400,
           maxHeight: 500,
           bgcolor: 'background.paper',
@@ -270,39 +305,39 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
           zIndex: 1300,
           border: '1px solid',
           borderColor: 'divider',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       >
         <Typography variant="body2" gutterBottom fontWeight="medium">
           Validating Navigation Edges... ({progressPercentage}%)
         </Typography>
-        
-        <LinearProgress 
+
+        <LinearProgress
           variant="determinate"
           value={progressPercentage}
-          sx={{ 
-            height: 6, 
+          sx={{
+            height: 6,
             borderRadius: 3,
             bgcolor: 'action.hover',
-            mb: 1
-          }} 
+            mb: 1,
+          }}
         />
-        
+
         {progress && (
           <>
             <Typography variant="caption" color="textSecondary" display="block" mb={1}>
-              {progress.currentEdgeFrom && progress.currentEdgeTo 
-                ? `${progress.currentEdgeFromName || progress.currentEdgeFrom} → ${progress.currentEdgeToName || progress.currentEdgeTo}` 
+              {progress.currentEdgeFrom && progress.currentEdgeTo
+                ? `${progress.currentEdgeFromName || progress.currentEdgeFrom} → ${progress.currentEdgeToName || progress.currentEdgeTo}`
                 : progress.currentNodeName || 'Preparing...'}
             </Typography>
-            
+
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
               <Typography variant="caption" color="textSecondary">
                 {progress.currentStep} of {progress.totalSteps}
               </Typography>
-              
+
               {progress.currentEdgeStatus && progress.currentEdgeStatus !== 'completed' && (
-                <Chip 
+                <Chip
                   label={getStatusLabel(progress.currentEdgeStatus)}
                   color={getStatusColor(progress.currentEdgeStatus)}
                   size="small"
@@ -310,8 +345,6 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
                 />
               )}
             </Box>
-
-           
           </>
         )}
       </Paper>
@@ -319,4 +352,4 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   );
 };
 
-export default ValidationProgressClient; 
+export default ValidationProgressClient;

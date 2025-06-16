@@ -1,5 +1,7 @@
 // Cloudflare R2 configuration from environment variables
-const CLOUDFLARE_R2_PUBLIC_URL = (import.meta as any).env.VITE_CLOUDFLARE_R2_PUBLIC_URL || 'https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev';
+const CLOUDFLARE_R2_PUBLIC_URL =
+  (import.meta as any).env.VITE_CLOUDFLARE_R2_PUBLIC_URL ||
+  'https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev';
 
 /**
  * Builds the full Cloudflare R2 public URL for a screenshot
@@ -8,15 +10,15 @@ const CLOUDFLARE_R2_PUBLIC_URL = (import.meta as any).env.VITE_CLOUDFLARE_R2_PUB
  * @returns Full Cloudflare R2 public URL or undefined if no screenshot path provided
  */
 export const buildScreenshotUrl = (
-  screenshotPath: string | undefined, 
-  deviceModel: string = 'android_mobile'
+  screenshotPath: string | undefined,
+  deviceModel: string = 'android_mobile',
 ): string | undefined => {
   if (!screenshotPath) return undefined;
   // If it's already a full URL (local or Cloudflare), return as-is
   if (screenshotPath.startsWith('http://') || screenshotPath.startsWith('https://')) {
     return screenshotPath;
   }
-  
+
   // Handle local API URLs - extract filename from path parameter
   if (screenshotPath.includes('/server/virtualpytest/screen-definition/images?path=')) {
     try {
@@ -24,7 +26,7 @@ export const buildScreenshotUrl = (
       const pathParam = url.searchParams.get('path');
       if (pathParam) {
         const decodedPath = decodeURIComponent(pathParam);
-        
+
         // Extract just the filename from the full path
         const filename = decodedPath.split('/').pop();
         if (filename) {
@@ -33,16 +35,18 @@ export const buildScreenshotUrl = (
         }
       }
     } catch (error) {
-      console.error(`[@utils:cloudflareUtils:buildScreenshotUrl] Error parsing local URL: ${error}`);
+      console.error(
+        `[@utils:cloudflareUtils:buildScreenshotUrl] Error parsing local URL: ${error}`,
+      );
     }
   }
-  
+
   // If it's a relative path starting with virtualpytest/, use it directly
   if (screenshotPath.startsWith('virtualpytest/')) {
     const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/${screenshotPath}`;
     return cloudflareUrl;
   }
-  
+
   // If it's just a filename, use the navigation folder structure
   const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/navigation/${deviceModel}/${screenshotPath}`;
   return cloudflareUrl;
@@ -65,7 +69,7 @@ export const isCloudflareR2Url = (url: string | undefined): boolean => {
  */
 export const extractR2Path = (cloudflareUrl: string): string | null => {
   if (!isCloudflareR2Url(cloudflareUrl)) return null;
-  
+
   try {
     const url = new URL(cloudflareUrl);
     // Remove leading slash from pathname
@@ -74,4 +78,4 @@ export const extractR2Path = (cloudflareUrl: string): string | null => {
     console.error('[@utils:cloudflareUtils:extractR2Path] Invalid URL:', cloudflareUrl);
     return null;
   }
-}; 
+};

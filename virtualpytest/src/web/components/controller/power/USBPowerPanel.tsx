@@ -19,7 +19,6 @@ import {
 import { useState, useEffect } from 'react';
 
 import { useRegistration } from '../../../contexts/RegistrationContext';
-import { buildServerUrl } from '../../../utils/frontendUtils';
 
 interface PowerPanelProps {
   /** Custom styling */

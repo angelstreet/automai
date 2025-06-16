@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  Camera as CameraIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -10,38 +14,20 @@ import {
   DialogActions,
   Collapse,
   IconButton,
-  CircularProgress,
-  Divider,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
   FormControlLabel,
   RadioGroup,
   Radio,
-  FormLabel,
-  Chip,
 } from '@mui/material';
-import {
-  Camera as CameraIcon,
-  KeyboardArrowDown as ArrowDownIcon,
-  KeyboardArrowRight as ArrowRightIcon,
-} from '@mui/icons-material';
-import { NodeVerificationsList } from '../navigation/Navigation_NodeVerificationsList';
-import { styled } from '@mui/material/styles';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
 import {
   VerificationEditorLayoutConfig,
   getVerificationEditorLayout,
 } from '../../config/layoutConfig';
 
 // Import registration context
-import { useRegistration } from '../../contexts/RegistrationContext';
 
-import { VerificationCondition } from '../../type';
-import { VerificationTextComparisonDisplay } from '../verification/VerificationTextComparisonDisplay';
-import { useImageComparisonModal } from '../../hooks/verification/useImageComparisonModal';
-import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
+import { NodeVerificationsList } from '../navigation/Navigation_NodeVerificationsList';
 
 // Define DeviceConnection interface locally since it's not exported
 interface DeviceConnection {

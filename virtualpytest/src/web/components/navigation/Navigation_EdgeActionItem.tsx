@@ -1,15 +1,8 @@
-import React from 'react';
-import {
-  Box,
-  FormControl,
-  Select,
-  MenuItem,
-  TextField,
-  IconButton,
-} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { Box, FormControl, Select, MenuItem, TextField, IconButton } from '@mui/material';
+import React from 'react';
 
 interface EdgeAction {
   id: string;
@@ -60,8 +53,8 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
       onUpdate({ id: '', label: '', command: '', params: {}, inputValue: '' });
       return;
     }
-    
-    const selectedAction = availableActions.find(a => a.id === actionId);
+
+    const selectedAction = availableActions.find((a) => a.id === actionId);
     if (selectedAction) {
       onUpdate({
         id: selectedAction.id,
@@ -76,7 +69,7 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
 
   const handleInputValueChange = (value: string) => {
     const updatedParams = { ...action.params };
-    
+
     if (action.command === 'launch_app') {
       updatedParams.package = value;
     } else if (action.command === 'input_text') {
@@ -84,13 +77,13 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
     } else if (action.command === 'click_element') {
       updatedParams.element_id = value;
     } else if (action.command === 'coordinate_tap') {
-      const coords = value.split(',').map(coord => parseInt(coord.trim()));
+      const coords = value.split(',').map((coord) => parseInt(coord.trim()));
       if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
         updatedParams.x = coords[0];
         updatedParams.y = coords[1];
       }
     }
-    
+
     onUpdate({
       inputValue: value,
       params: updatedParams,
@@ -98,75 +91,83 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
   };
 
   return (
-    <Box sx={{ 
-      border: 1, 
-      borderColor: 'divider', 
-      borderRadius: 1, 
-      px: 1.5,
-      py: 0.5,
-      mb: 0.25
-    }}>
+    <Box
+      sx={{
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 1,
+        px: 1.5,
+        py: 0.5,
+        mb: 0.25,
+      }}
+    >
       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={availableActions.find(a => a.id === action.id) ? action.id : ''}
+            value={availableActions.find((a) => a.id === action.id) ? action.id : ''}
             onChange={(e) => handleActionChange(e.target.value)}
             displayEmpty
-            sx={{ 
+            sx={{
               fontSize: '0.8rem',
               '& .MuiSelect-select': {
                 py: 0.5,
-                fontSize: '0.8rem'
-              }
+                fontSize: '0.8rem',
+              },
             }}
           >
-            <MenuItem value="" sx={{ fontSize: '0.8rem' }}>Select Action</MenuItem>
+            <MenuItem value="" sx={{ fontSize: '0.8rem' }}>
+              Select Action
+            </MenuItem>
             {availableActions.map((availableAction) => (
-              <MenuItem key={availableAction.id} value={availableAction.id} sx={{ fontSize: '0.8rem' }}>
+              <MenuItem
+                key={availableAction.id}
+                value={availableAction.id}
+                sx={{ fontSize: '0.8rem' }}
+              >
                 {availableAction.label}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
-        
+
         <TextField
           size="small"
           type="number"
           value={action.waitTime}
           onChange={(e) => onUpdate({ waitTime: parseInt(e.target.value) || 0 })}
-          sx={{ 
+          sx={{
             width: 80,
             '& .MuiInputBase-input': {
               fontSize: '0.8rem',
-              py: 0.5
-            }
+              py: 0.5,
+            },
           }}
           inputProps={{ min: 0, step: 100 }}
         />
-        
-        <IconButton 
-          size="small" 
-          onClick={onMoveUp} 
+
+        <IconButton
+          size="small"
+          onClick={onMoveUp}
           disabled={!canMoveUp}
           sx={{ opacity: !canMoveUp ? 0.3 : 1 }}
         >
           <KeyboardArrowUpIcon fontSize="small" />
         </IconButton>
-        
-        <IconButton 
-          size="small" 
-          onClick={onMoveDown} 
+
+        <IconButton
+          size="small"
+          onClick={onMoveDown}
           disabled={!canMoveDown}
           sx={{ opacity: !canMoveDown ? 0.3 : 1 }}
         >
           <KeyboardArrowDownIcon fontSize="small" />
         </IconButton>
-        
+
         <IconButton size="small" onClick={onRemove} color="error">
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
-      
+
       {showInput && action.requiresInput && action.id && (
         <Box sx={{ mb: 0 }}>
           <TextField
@@ -174,21 +175,26 @@ export const EdgeActionItem: React.FC<EdgeActionItemProps> = ({
             value={action.inputValue || ''}
             onChange={(e) => handleInputValueChange(e.target.value)}
             placeholder={
-              action.command === 'launch_app' ? 'com.example.app' :
-              action.command === 'input_text' ? 'Enter text' :
-              action.command === 'click_element' ? 'Element text (e.g., "OK|Accept")' :
-              action.command === 'coordinate_tap' ? 'x,y' : 'Element text (e.g., "text1|text2")'
+              action.command === 'launch_app'
+                ? 'com.example.app'
+                : action.command === 'input_text'
+                  ? 'Enter text'
+                  : action.command === 'click_element'
+                    ? 'Element text (e.g., "OK|Accept")'
+                    : action.command === 'coordinate_tap'
+                      ? 'x,y'
+                      : 'Element text (e.g., "text1|text2")'
             }
             fullWidth
             sx={{
               '& .MuiInputBase-input': {
                 fontSize: '0.8rem',
-                py: 0.5
-              }
+                py: 0.5,
+              },
             }}
           />
         </Box>
       )}
     </Box>
   );
-}; 
+};

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,6 +7,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
+import React from 'react';
 
 interface ImageComparisonModalProps {
   open: boolean;
@@ -28,7 +28,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
   matchingResult,
   resultType,
   imageFilter,
-  onClose
+  onClose,
 }) => {
   return (
     <Dialog
@@ -41,8 +41,8 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
           backgroundColor: '#2E2E2E',
           color: '#ffffff',
           maxWidth: '95vw',
-          maxHeight: '95vh'
-        }
+          maxHeight: '95vh',
+        },
       }}
     >
       <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem', textAlign: 'center' }}>
@@ -55,31 +55,44 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
                 </Typography>
               )}
               {matchingResult !== undefined && (
-                <Typography component="span" sx={{ 
-                  fontSize: '0.9rem',
-                  color: resultType === 'PASS' ? '#4caf50' : '#f44336',
-                  fontWeight: 600
-                }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: '0.9rem',
+                    color: resultType === 'PASS' ? '#4caf50' : '#f44336',
+                    fontWeight: 600,
+                  }}
+                >
                   Matching: {(matchingResult * 100).toFixed(1)}%
                 </Typography>
               )}
               {resultType && (
-                <Typography component="span" sx={{ 
-                  color: resultType === 'PASS' ? '#4caf50' : 
-                        resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                  fontWeight: 600,
-                  fontSize: '0.9rem'
-                }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    color:
+                      resultType === 'PASS'
+                        ? '#4caf50'
+                        : resultType === 'ERROR'
+                          ? '#ff9800'
+                          : '#f44336',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                >
                   [{resultType}]
                 </Typography>
               )}
             </Box>
             {imageFilter && imageFilter !== 'none' && (
-              <Typography component="span" sx={{ 
-                color: '#90caf9',
-                fontWeight: 500,
-                fontSize: '0.8rem'
-              }}>
+              <Typography
+                component="span"
+                sx={{
+                  color: '#90caf9',
+                  fontWeight: 500,
+                  fontSize: '0.8rem',
+                }}
+              >
                 Filter: {imageFilter}
               </Typography>
             )}
@@ -90,12 +103,19 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               {referenceUrl ? 'Image Comparison' : 'Text Verification'}
             </Typography>
             {resultType && (
-              <Typography component="span" sx={{ 
-                color: resultType === 'PASS' ? '#4caf50' : 
-                      resultType === 'ERROR' ? '#ff9800' : '#f44336',
-                fontWeight: 600,
-                fontSize: '0.9rem'
-              }}>
+              <Typography
+                component="span"
+                sx={{
+                  color:
+                    resultType === 'PASS'
+                      ? '#4caf50'
+                      : resultType === 'ERROR'
+                        ? '#ff9800'
+                        : '#f44336',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                }}
+              >
                 [{resultType}]
               </Typography>
             )}
@@ -103,13 +123,15 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
         )}
       </DialogTitle>
       <DialogContent sx={{ p: 2 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          width: '100%'
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            width: '100%',
+          }}
+        >
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
             {referenceUrl && (
               <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1, color: '#ffffff' }}>
@@ -124,7 +146,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
                 maxHeight: '70vh',
                 objectFit: 'contain',
                 border: '2px solid #666',
-                borderRadius: '8px'
+                borderRadius: '8px',
               }}
             />
           </Box>
@@ -141,7 +163,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
                   maxHeight: '70vh',
                   objectFit: 'contain',
                   border: '2px solid #666',
-                  borderRadius: '8px'
+                  borderRadius: '8px',
                 }}
               />
             </Box>
@@ -149,7 +171,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
         </Box>
       </DialogContent>
       <DialogActions sx={{ justifyContent: 'center', p: 2 }}>
-        <Button 
+        <Button
           onClick={onClose}
           variant="outlined"
           size="small"
@@ -160,7 +182,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
             '&:hover': {
               borderColor: '#888',
               backgroundColor: 'rgba(255,255,255,0.1)',
-            }
+            },
           }}
         >
           Close
@@ -168,4 +190,4 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
       </DialogActions>
     </Dialog>
   );
-}; 
+};

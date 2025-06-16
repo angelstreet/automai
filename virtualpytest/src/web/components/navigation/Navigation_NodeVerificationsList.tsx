@@ -1,40 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { Add as AddIcon, PlayArrow as PlayIcon } from '@mui/icons-material';
 import {
   Box,
   Button,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
-  TextField,
   Typography,
-  IconButton,
   Alert,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControlLabel,
-  RadioGroup,
-  Radio,
-  FormLabel,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, PlayArrow as PlayIcon, ZoomIn as ZoomInIcon } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 
 // Import extracted components
-import { VerificationItem } from '../verification/VerificationItem';
-import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-import { 
-  NodeVerification, 
-  VerificationTestResult, 
-  VerificationAction, 
-  VerificationActions, 
-  NodeVerificationsListProps 
+import {
+  NodeVerification,
+  VerificationAction,
+  NodeVerificationsListProps,
 } from '../../types/pages/Navigation_Types';
+import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
+import { VerificationItem } from '../verification/VerificationItem';
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   verifications,
@@ -64,15 +51,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     userThreshold: undefined,
     matchingResult: undefined,
     resultType: undefined,
-    imageFilter: undefined
+    imageFilter: undefined,
   });
 
   // Use extracted hooks
-  const {
-    availableReferences,
-    referencesLoading,
-    getModelReferences
-  } = useVerificationReferences(reloadTrigger);
+  const { availableReferences, referencesLoading, getModelReferences } =
+    useVerificationReferences(reloadTrigger);
 
   // Debug logging for testResults changes - keep this for troubleshooting
   useEffect(() => {
@@ -97,8 +81,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   };
 
   const updateVerification = (index: number, updates: Partial<NodeVerification>) => {
-    const newVerifications = verifications.map((verification, i) => 
-      i === index ? { ...verification, ...updates } : verification
+    const newVerifications = verifications.map((verification, i) =>
+      i === index ? { ...verification, ...updates } : verification,
     );
     onVerificationsChange(newVerifications);
   };
@@ -106,14 +90,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   const moveVerificationUp = (index: number) => {
     if (index === 0) return; // Can't move first item up
     const newVerifications = [...verifications];
-    [newVerifications[index - 1], newVerifications[index]] = [newVerifications[index], newVerifications[index - 1]];
+    [newVerifications[index - 1], newVerifications[index]] = [
+      newVerifications[index],
+      newVerifications[index - 1],
+    ];
     onVerificationsChange(newVerifications);
   };
 
   const moveVerificationDown = (index: number) => {
     if (index === verifications.length - 1) return; // Can't move last item down
     const newVerifications = [...verifications];
-    [newVerifications[index], newVerifications[index + 1]] = [newVerifications[index + 1], newVerifications[index]];
+    [newVerifications[index], newVerifications[index + 1]] = [
+      newVerifications[index + 1],
+      newVerifications[index],
+    ];
     onVerificationsChange(newVerifications);
   };
 
@@ -121,10 +111,10 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     // Find the selected action from available actions
     let selectedAction: VerificationAction | undefined = undefined;
     let controllerType: 'text' | 'image' | 'adb' = 'text';
-    
+
     // Search through all categories to find the action
     for (const [category, actions] of Object.entries(availableActions)) {
-      const action = actions.find(a => a.id === actionId);
+      const action = actions.find((a) => a.id === actionId);
       if (action) {
         selectedAction = action;
         // Determine controller type from category or action properties
@@ -150,13 +140,13 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         requiresInput: selectedAction.requiresInput,
         inputLabel: selectedAction.inputLabel,
         inputPlaceholder: selectedAction.inputPlaceholder,
-        inputValue: ''
+        inputValue: '',
       });
     }
   };
 
   const handleReferenceSelect = (index: number, referenceName: string) => {
-    const selectedRef = getModelReferences(model).find(ref => ref.name === referenceName);
+    const selectedRef = getModelReferences(model).find((ref) => ref.name === referenceName);
     if (selectedRef) {
       console.log('[@component:NodeVerificationsList] Selected reference details:', {
         name: selectedRef.name,
@@ -164,17 +154,17 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         type: selectedRef.type,
         path: selectedRef.path,
         full_path: selectedRef.full_path,
-        area: selectedRef.area
+        area: selectedRef.area,
       });
-      
+
       const baseParams = {
         ...verifications[index].params,
         area: {
           x: selectedRef.area.x,
           y: selectedRef.area.y,
           width: selectedRef.area.width,
-          height: selectedRef.area.height
-        }
+          height: selectedRef.area.height,
+        },
       };
 
       if (selectedRef.type === 'image') {
@@ -185,14 +175,17 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             ...baseParams,
             reference_image: selectedRef.name,
             reference_path: selectedRef.path,
-            full_path: selectedRef.full_path
-          }
+            full_path: selectedRef.full_path,
+          },
         });
-        console.log('[@component:NodeVerificationsList] Updated verification with image reference:', {
-          reference_image: selectedRef.name,
-          reference_path: selectedRef.path,
-          full_path: selectedRef.full_path
-        });
+        console.log(
+          '[@component:NodeVerificationsList] Updated verification with image reference:',
+          {
+            reference_image: selectedRef.name,
+            reference_path: selectedRef.path,
+            full_path: selectedRef.full_path,
+          },
+        );
       } else if (selectedRef.type === 'text') {
         // Text reference parameters
         updateVerification(index, {
@@ -201,14 +194,17 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             ...baseParams,
             reference_text: selectedRef.text,
             reference_name: selectedRef.name,
-            font_size: selectedRef.font_size
-          }
+            font_size: selectedRef.font_size,
+          },
         });
-        console.log('[@component:NodeVerificationsList] Updated verification with text reference:', {
-          reference_text: selectedRef.text,
-          reference_name: selectedRef.name,
-          font_size: selectedRef.font_size
-        });
+        console.log(
+          '[@component:NodeVerificationsList] Updated verification with text reference:',
+          {
+            reference_text: selectedRef.text,
+            reference_name: selectedRef.name,
+            font_size: selectedRef.font_size,
+          },
+        );
       }
 
       if (onReferenceSelected) {
@@ -221,8 +217,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     updateVerification(index, {
       params: {
         ...verifications[index].params,
-        image_filter: filter
-      }
+        image_filter: filter,
+      },
     });
     console.log('[@component:NodeVerificationsList] Changed image filter to:', filter);
   };
@@ -231,13 +227,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     updateVerification(index, {
       params: {
         ...verifications[index].params,
-        text_filter: filter
-      }
+        text_filter: filter,
+      },
     });
     console.log('[@component:NodeVerificationsList] Changed text filter to:', filter);
   };
 
-  const handleImageClick = (sourceUrl: string, referenceUrl: string, userThreshold?: number, matchingResult?: number, resultType?: 'PASS' | 'FAIL' | 'ERROR', imageFilter?: 'none' | 'greyscale' | 'binary') => {
+  const handleImageClick = (
+    sourceUrl: string,
+    referenceUrl: string,
+    userThreshold?: number,
+    matchingResult?: number,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => {
     setImageComparisonDialog({
       open: true,
       sourceUrl,
@@ -245,7 +248,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       userThreshold,
       matchingResult,
       resultType,
-      imageFilter
+      imageFilter,
     });
   };
 
@@ -257,23 +260,24 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       resultType,
       userThreshold: undefined,
       matchingResult: undefined,
-      imageFilter: undefined
+      imageFilter: undefined,
     });
   };
 
   // Check if all verifications have required inputs
   const areVerificationsValid = () => {
     if (verifications.length === 0) return false;
-    
-    return verifications.every(verification => {
+
+    return verifications.every((verification) => {
       // Skip verifications that don't have an id (not configured yet)
       if (!verification.id) return true;
-      
+
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath = verification.params?.full_path || 
-                            verification.params?.reference_path || 
-                            verification.inputValue;
+        const hasImagePath =
+          verification.params?.full_path ||
+          verification.params?.reference_path ||
+          verification.inputValue;
         return Boolean(hasImagePath);
       } else if (verification.controller_type === 'text') {
         // Text verifications need text to search for
@@ -284,12 +288,12 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
         return Boolean(hasSearchTerm);
       }
-      
+
       // For other types, check if requiresInput is set and if so, validate accordingly
       if (verification.requiresInput) {
         return Boolean(verification.inputValue && verification.inputValue.trim() !== '');
       }
-      
+
       return true;
     });
   };
@@ -367,14 +371,18 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               height: '30px',
               '& .MuiSelect-select': {
                 padding: '5px 10px',
-              }
+              },
             }}
           >
-            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All must pass</MenuItem>
-            <MenuItem value="any" sx={{ fontSize: '0.75rem' }}>Any can pass</MenuItem>
+            <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>
+              All must pass
+            </MenuItem>
+            <MenuItem value="any" sx={{ fontSize: '0.75rem' }}>
+              Any can pass
+            </MenuItem>
           </Select>
         </FormControl>
-        
+
         {onTest && (
           <Button
             size="small"
@@ -398,58 +406,67 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
               '&:disabled': {
                 borderColor: '#333',
                 color: 'rgba(255,255,255,0.3)',
-              }
+              },
             }}
           >
             Test
           </Button>
         )}
       </Box>
-      
+
       {/* Final Result indicator */}
       {testResults.length > 0 && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          mt: 2,
-          p: 1,
-          borderRadius: 1,
-          backgroundColor: passCondition === 'all'
-            ? (testResults.every(result => result.success || result.resultType === 'PASS') 
-              ? 'rgba(76, 175, 80, 0.1)' 
-              : 'rgba(244, 67, 54, 0.1)')
-            : (testResults.some(result => result.success || result.resultType === 'PASS')
-              ? 'rgba(76, 175, 80, 0.1)' 
-              : 'rgba(244, 67, 54, 0.1)'),
-          border: `1px solid ${
-            passCondition === 'all'
-              ? (testResults.every(result => result.success || result.resultType === 'PASS') 
-                ? '#4caf50' 
-                : '#f44336')
-              : (testResults.some(result => result.success || result.resultType === 'PASS')
-                ? '#4caf50' 
-                : '#f44336')
-          }`
-        }}>
-          <Typography sx={{ 
-            fontWeight: 'bold',
-            color: passCondition === 'all'
-              ? (testResults.every(result => result.success || result.resultType === 'PASS') 
-                ? '#4caf50' 
-                : '#f44336')
-              : (testResults.some(result => result.success || result.resultType === 'PASS')
-                ? '#4caf50' 
-                : '#f44336')
-          }}>
-            Final Result: {
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            mt: 2,
+            p: 1,
+            borderRadius: 1,
+            backgroundColor:
               passCondition === 'all'
-                ? (testResults.every(result => result.success || result.resultType === 'PASS') ? 'PASS' : 'FAIL')
-                : (testResults.some(result => result.success || result.resultType === 'PASS') ? 'PASS' : 'FAIL')
-            }
+                ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                  ? 'rgba(76, 175, 80, 0.1)'
+                  : 'rgba(244, 67, 54, 0.1)'
+                : testResults.some((result) => result.success || result.resultType === 'PASS')
+                  ? 'rgba(76, 175, 80, 0.1)'
+                  : 'rgba(244, 67, 54, 0.1)',
+            border: `1px solid ${
+              passCondition === 'all'
+                ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                  ? '#4caf50'
+                  : '#f44336'
+                : testResults.some((result) => result.success || result.resultType === 'PASS')
+                  ? '#4caf50'
+                  : '#f44336'
+            }`,
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 'bold',
+              color:
+                passCondition === 'all'
+                  ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                    ? '#4caf50'
+                    : '#f44336'
+                  : testResults.some((result) => result.success || result.resultType === 'PASS')
+                    ? '#4caf50'
+                    : '#f44336',
+            }}
+          >
+            Final Result:{' '}
+            {passCondition === 'all'
+              ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                ? 'PASS'
+                : 'FAIL'
+              : testResults.some((result) => result.success || result.resultType === 'PASS')
+                ? 'PASS'
+                : 'FAIL'}
           </Typography>
         </Box>
       )}
-      
+
       {/* Image Comparison Dialog */}
       <VerificationImageComparisonDialog
         open={imageComparisonDialog.open}
@@ -459,8 +476,8 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         matchingResult={imageComparisonDialog.matchingResult}
         resultType={imageComparisonDialog.resultType}
         imageFilter={imageComparisonDialog.imageFilter}
-        onClose={() => setImageComparisonDialog(prev => ({ ...prev, open: false }))}
+        onClose={() => setImageComparisonDialog((prev) => ({ ...prev, open: false }))}
       />
     </Box>
   );
-}; 
+};

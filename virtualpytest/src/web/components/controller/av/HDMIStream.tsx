@@ -7,7 +7,7 @@ import {
   Refresh,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip } from '@mui/material';
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { useHdmiStream } from '../../../hooks/useHdmiStream';
 import { Host } from '../../../types/common/Host_Types';

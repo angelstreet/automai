@@ -36,8 +36,6 @@ interface ScreenshotCaptureProps {
 export function ScreenshotCapture({
   screenshotPath,
   isCapturing,
-  isSaving,
-  resolutionInfo,
   onImageLoad,
   selectedArea,
   onAreaSelected,

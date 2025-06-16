@@ -1,15 +1,13 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, IconButton } from '@mui/material';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 
-// Import NEW generic remote components instead of device-specific ones
 import { ScreenDefinitionEditor } from '../components/controller/av/ScreenDefinitionEditor';
 import { AndroidMobileRemote } from '../components/controller/remote/AndroidMobileRemote';
 import { RemotePanel } from '../components/controller/remote/RemotePanel';
+import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
+import { NavigationEditorDeviceControlProps } from '../types/pages/Navigation_Types';
 
-// Import ScreenDefinitionEditor
-
-// Simple placeholder functions to replace missing deviceRemoteMappingUtils
 const getDeviceRemoteConfig = (selectedHost: any) => {
   // Simple fallback - just return basic config
   return selectedHost?.controller_configs?.remote || null;
@@ -30,31 +28,20 @@ const extractConnectionConfigForBluetooth = (remoteConfig: any) => {
   return remoteConfig?.bluetooth || null;
 };
 
-// Import verification display
-import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
-import { NavigationEditorDeviceControlProps } from '../types/pages/Navigation_Types';
-
 export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceControlProps> = ({
   selectedHost,
   isControlActive,
   isRemotePanelOpen,
-  isVerificationActive,
-  verificationControllerStatus,
   verificationResults,
   verificationPassCondition,
   lastVerifiedNodeId,
   nodes,
   selectedNode,
   selectedEdge,
-  userInterface,
   onReleaseControl,
-  onUpdateNode,
   onSetVerificationResults,
   onSetLastVerifiedNodeId,
   onSetVerificationPassCondition,
-  onSetNodes,
-  onSetSelectedNode,
-  onSetHasUnsavedChanges,
 }) => {
   // Memoize computed values based on selectedHost from registration context
   const remoteConfig = useMemo(() => {
@@ -80,208 +67,6 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
     if (!selectedHost?.controller_configs?.remote) return null;
     return extractConnectionConfigForBluetooth(selectedHost.controller_configs.remote);
   }, [selectedHost?.controller_configs?.remote]);
-
-  // Handle taking screenshot using AV controller proxy
-  const handleTakeScreenshot = useCallback(async () => {
-    if (!selectedHost || !isControlActive || !selectedNode) {
-      return;
-    }
-
-    try {
-      // Use server route instead of AV controller proxy
-      if (!selectedHost) {
-        throw new Error('No host selected for screenshot operation');
-      }
-
-      console.log(
-        `[@handlers:DeviceControl] Taking screenshot for host: ${selectedHost.host_name}`,
-      );
-
-      // Call take-screenshot server route
-      const response = await fetch(`/server/remote/take-screenshot`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedHost.host_name,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.screenshot) {
-        console.log('[@handlers:DeviceControl] Screenshot taken successfully');
-
-        // Create updated node with screenshot
-        const updatedNode = {
-          ...selectedNode,
-          data: {
-            ...selectedNode.data,
-            screenshot: `data:image/png;base64,${result.screenshot}`,
-          },
-        };
-
-        // Update nodes
-        const updateNodeFunction = (nodes: any[]) =>
-          nodes.map((node) => (node.id === selectedNode.id ? updatedNode : node));
-
-        onSetNodes(updateNodeFunction);
-        onSetSelectedNode(updatedNode);
-        onSetHasUnsavedChanges(true);
-
-        console.log(`[@handlers:DeviceControl] Screenshot captured and node updated`);
-      } else {
-        console.error('[@handlers:DeviceControl] Screenshot failed - no data returned');
-      }
-    } catch (error) {
-      console.error('[@handlers:DeviceControl] Error taking screenshot:', error);
-    }
-  }, [
-    selectedHost,
-    isControlActive,
-    selectedNode,
-    nodes,
-    onSetNodes,
-    onSetSelectedNode,
-    onSetHasUnsavedChanges,
-  ]);
-
-  // Handle verification execution using verification server route
-  const handleVerification = useCallback(
-    async (nodeId: string, verifications: any[]) => {
-      if (!isVerificationActive || !verifications || verifications.length === 0) {
-        console.log(
-          '[@handlers:DeviceControl] Verification not active or no verifications provided',
-        );
-        return;
-      }
-
-      try {
-        console.log(
-          `[@handlers:DeviceControl] Executing verification for node: ${nodeId}, verifications count: ${verifications.length}`,
-        );
-
-        // Clear previous results and set current node
-        onSetVerificationResults([]);
-        onSetLastVerifiedNodeId(nodeId);
-
-        // Use server route instead of verification controller proxy
-        if (!selectedHost) {
-          throw new Error('No host selected for verification operation');
-        }
-
-        console.log('[@handlers:DeviceControl] Using server route for verification execution...');
-
-        // Call execute-batch verification server route
-        const response = await fetch(`/server/verification/execute-batch`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host_name: selectedHost.host_name,
-            verifications: verifications,
-            model: selectedHost?.model || 'android_mobile',
-            node_id: nodeId,
-            source_filename: 'current_screenshot.jpg',
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.data?.results) {
-          console.log(
-            '[@handlers:DeviceControl] Verification completed successfully, processing results...',
-          );
-
-          // Process results to match VerificationTestResult interface
-          const processedResults = result.data.results.map((result: any, index: number) => {
-            const verification = verifications[index];
-
-            console.log(
-              `[@handlers:DeviceControl] Processing verification result ${index + 1}/${verifications.length}:`,
-              {
-                success: result.success,
-                message: result.message,
-                error: result.error,
-              },
-            );
-
-            // Determine result type
-            let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
-            if (result.success) {
-              resultType = 'PASS';
-            } else if (result.error && !result.message) {
-              resultType = 'ERROR';
-            }
-
-            const processedResult = {
-              success: result.success,
-              message: result.message,
-              error: result.error,
-              threshold: result.threshold,
-              resultType: resultType,
-              sourceImageUrl: result.source_image_url,
-              referenceImageUrl: result.reference_image_url,
-              extractedText: result.extracted_text,
-              searchedText: result.searched_text,
-              imageFilter: result.image_filter,
-              detectedLanguage: result.detected_language,
-              languageConfidence: result.language_confidence,
-              ocrConfidence: result.ocr_confidence,
-              // Add ADB-specific fields
-              search_term: result.search_term,
-              wait_time: result.wait_time,
-              total_matches: result.total_matches,
-              matches: result.matches,
-            };
-
-            console.log(
-              `[@handlers:DeviceControl] Processed result ${index + 1}:`,
-              processedResult,
-            );
-            return processedResult;
-          });
-
-          console.log(
-            '[@handlers:DeviceControl] All verification results processed, updating state',
-          );
-          onSetVerificationResults(processedResults);
-
-          // Show summary like in NodeVerificationsList
-          if (result.data.results) {
-            const passed = result.data.results.filter((r: any) => r.success).length;
-            const total = result.data.results.length;
-
-            console.log(
-              `[@handlers:DeviceControl] Verification summary: ${passed}/${total} passed`,
-            );
-
-            // Log final result based on pass condition
-            const finalPassed = verificationPassCondition === 'all' ? passed === total : passed > 0;
-
-            console.log(
-              `[@handlers:DeviceControl] Final result (${verificationPassCondition} condition): ${finalPassed ? 'PASSED' : 'FAILED'}`,
-            );
-          }
-        } else {
-          console.error('[@handlers:DeviceControl] Verification failed:', result.error);
-          onSetVerificationResults([]);
-        }
-      } catch (error) {
-        console.error('[@handlers:DeviceControl] Verification execution error:', error);
-        onSetVerificationResults([]);
-      }
-    },
-    [
-      isVerificationActive,
-      selectedHost,
-      verificationPassCondition,
-      onSetVerificationResults,
-      onSetLastVerifiedNodeId,
-    ],
-  );
 
   return (
     <>
@@ -478,7 +263,6 @@ export const createDeviceControlHandlers = (
   selectedHost: any,
   isControlActive: boolean,
   selectedNode: any,
-  nodes: any[],
   onSetNodes: (updateFunction: (nodes: any[]) => any[]) => void,
   onSetSelectedNode: (node: any) => void,
   onSetHasUnsavedChanges: (hasChanges: boolean) => void,
@@ -592,8 +376,6 @@ export const createDeviceControlHandlers = (
 
         // Process results to match VerificationTestResult interface
         const processedResults = result.data.results.map((result: any, index: number) => {
-          const verification = verifications[index];
-
           console.log(
             `[@handlers:DeviceControl] Processing verification result ${index + 1}/${verifications.length}:`,
             {

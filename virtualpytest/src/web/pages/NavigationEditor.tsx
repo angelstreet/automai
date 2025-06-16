@@ -1,13 +1,3 @@
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
-import ReactFlow, {
-  Background,
-  Controls,
-  ReactFlowProvider,
-  MiniMap,
-  ConnectionLineType,
-  BackgroundVariant,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
 import {
   Box,
   Dialog,
@@ -19,7 +9,17 @@ import {
   Typography,
   Button,
 } from '@mui/material';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import ReactFlow, {
+  Background,
+  Controls,
+  ReactFlowProvider,
+  MiniMap,
+  ConnectionLineType,
+  BackgroundVariant,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
 // Import extracted components and hooks
 import { AVPanel } from '../components/controller/av/AVPanel';
@@ -32,12 +32,6 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-
-// Import autonomous panels
-
-// Import registration context
-
-// Import NavigationEdgeComponent
 import { useNavigationEditor } from '../hooks';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -189,7 +183,6 @@ const NavigationEditorContent: React.FC = () => {
     saveToConfig,
     isLocked,
     lockInfo,
-    isCheckingLock,
     showReadOnlyOverlay,
     setCheckingLockState,
     sessionId,
@@ -224,15 +217,10 @@ const NavigationEditorContent: React.FC = () => {
     isRemotePanelOpen,
     showRemotePanel,
     showAVPanel,
-    isVerificationActive,
     handleDeviceSelect,
     handleTakeControl,
     handleToggleRemotePanel,
-    handleConnectionChange,
     handleDisconnectComplete,
-    availableHosts,
-    getHostByName,
-    fetchHosts,
   } = useNavigationEditor();
 
   // Track the last loaded tree ID to prevent unnecessary reloads

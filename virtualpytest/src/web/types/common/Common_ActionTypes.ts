@@ -6,7 +6,13 @@ export type RemoteType = 'android_tv' | 'android_mobile' | 'infrared' | 'bluetoo
 
 // Base action interface
 export interface BaseAction {
-  type: 'key_press' | 'input_text' | 'execute_sequence' | 'launch_app' | 'click_element' | 'coordinate_tap';
+  type:
+    | 'key_press'
+    | 'input_text'
+    | 'execute_sequence'
+    | 'launch_app'
+    | 'click_element'
+    | 'coordinate_tap';
   description?: string;
   delay?: number; // milliseconds to wait after execution
 }
@@ -52,12 +58,12 @@ export interface SequenceAction extends BaseAction {
 }
 
 // Union type for all possible actions
-export type NavigationAction = 
-  | KeyPressAction 
-  | TextInputAction 
-  | AppLaunchAction 
-  | ElementClickAction 
-  | CoordinateTapAction 
+export type NavigationAction =
+  | KeyPressAction
+  | TextInputAction
+  | AppLaunchAction
+  | ElementClickAction
+  | CoordinateTapAction
   | SequenceAction;
 
 // Edge action data structure
@@ -108,27 +114,27 @@ export const COMMON_KEYS = {
   // Navigation
   UP: 'UP',
   DOWN: 'DOWN',
-  LEFT: 'LEFT', 
+  LEFT: 'LEFT',
   RIGHT: 'RIGHT',
   OK: 'OK',
   SELECT: 'SELECT',
-  
+
   // System
   HOME: 'HOME',
   BACK: 'BACK',
   MENU: 'MENU',
   POWER: 'POWER',
-  
+
   // Media
   PLAY: 'PLAY',
   PAUSE: 'PAUSE',
   STOP: 'STOP',
-  
+
   // Volume
   VOLUME_UP: 'VOLUME_UP',
   VOLUME_DOWN: 'VOLUME_DOWN',
   MUTE: 'MUTE',
-  
+
   // Numbers
   NUM_0: '0',
   NUM_1: '1',
@@ -149,35 +155,38 @@ export const createNavigationAction = {
     key,
     description,
   }),
-  
+
   inputText: (text: string, description?: string): TextInputAction => ({
     type: 'input_text',
     text,
     description,
   }),
-  
+
   launchApp: (packageName: string, description?: string): AppLaunchAction => ({
     type: 'launch_app',
     package: packageName,
     description,
   }),
-  
-  clickElement: (options: { elementId?: string; text?: string; resourceId?: string; contentDesc?: string }, description?: string): ElementClickAction => ({
+
+  clickElement: (
+    options: { elementId?: string; text?: string; resourceId?: string; contentDesc?: string },
+    description?: string,
+  ): ElementClickAction => ({
     type: 'click_element',
     ...options,
     description,
   }),
-  
+
   tap: (x: number, y: number, description?: string): CoordinateTapAction => ({
     type: 'coordinate_tap',
     x,
     y,
     description,
   }),
-  
+
   sequence: (actions: NavigationAction[], description?: string): SequenceAction => ({
     type: 'execute_sequence',
     sequence: actions,
     description,
   }),
-}; 
+};

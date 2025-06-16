@@ -7,14 +7,12 @@ import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigatio
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({
   selectedDevice,
   isControlActive,
-  isRemotePanelOpen,
   isLoading,
   error,
   availableHosts,
   isDeviceLocked,
   onDeviceSelect,
   onTakeControl,
-  onToggleRemotePanel,
 }) => {
   // Find the selected device data
   const selectedDeviceHost = availableHosts.find((device) => device.host_name === selectedDevice);

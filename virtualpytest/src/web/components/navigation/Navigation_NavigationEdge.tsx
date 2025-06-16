@@ -1,7 +1,8 @@
 import React from 'react';
 import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
-import { UINavigationEdge as UINavigationEdgeType, EdgeAction } from '../../types/pages/Navigation_Types';
+
 import { useValidationColors } from '../../hooks/validation';
+import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
 
 export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = ({
   id,
@@ -24,16 +25,19 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   const { getEdgeColors } = useValidationColors(data?.treeId || 'default', currentEdges);
 
   // Validate that both nodes exist
-  const sourceNode = currentNodes.find(node => node.id === source);
-  const targetNode = currentNodes.find(node => node.id === target);
-  
+  const sourceNode = currentNodes.find((node) => node.id === source);
+  const targetNode = currentNodes.find((node) => node.id === target);
+
   if (!sourceNode || !targetNode) {
-    console.warn(`[@component:NavigationEdgeComponent] Edge ${id} references non-existent nodes - source: ${!!sourceNode}, target: ${!!targetNode}`);
+    console.warn(
+      `[@component:NavigationEdgeComponent] Edge ${id} references non-existent nodes - source: ${!!sourceNode}, target: ${!!targetNode}`,
+    );
     return null;
   }
 
   // Check if this is an entry edge
-  const isSourceEntryNode = sourceNode?.data?.type === 'entry' || sourceNode?.data?.node_type === 'entry';
+  const isSourceEntryNode =
+    sourceNode?.data?.type === 'entry' || sourceNode?.data?.node_type === 'entry';
   const isEntryEdge = data?.isEntryEdge || sourceHandle === 'entry-source' || isSourceEntryNode;
 
   // Get edge colors based on validation status
@@ -63,7 +67,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
         className="react-flow__edge-interaction"
         d={edgePath}
       />
-      
+
       {/* Visible edge path */}
       <path
         id={id}
@@ -79,7 +83,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
         className="react-flow__edge-path"
         d={edgePath}
       />
-      
+
       {/* Selection indicator */}
       {selected && (
         <path
@@ -93,7 +97,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
           }}
         />
       )}
-      
+
       {/* Edge label if provided */}
       {data?.label && (
         <text
@@ -114,4 +118,4 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
       )}
     </g>
   );
-}; 
+};

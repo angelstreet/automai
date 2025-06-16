@@ -1,26 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { useRegistrationLogic } from '../hooks/useRegistration';
 import { Host } from '../types/common/Host_Types';
 
-interface RegistrationContextType {
-  // Host data
-  availableHosts: Host[];
-  selectedHost: Host | null;
-  isLoading: boolean;
-  error: string | null;
-
-  // Data Management
-  fetchHosts: () => Promise<void>;
-  selectHost: (hostName: string) => void;
-  clearSelection: () => void;
-
-  // Convenience getters
-  getHostByName: (hostName: string) => Host | null;
-  getAvailableHosts: () => Host[];
-}
-
-const RegistrationContext = createContext<RegistrationContextType | undefined>(undefined);
+import { RegistrationContext, type RegistrationContextType } from './RegistrationContextDefinition';
 
 interface RegistrationProviderProps {
   children: React.ReactNode;
@@ -98,13 +81,4 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
   };
 
   return <RegistrationContext.Provider value={value}>{children}</RegistrationContext.Provider>;
-};
-
-// Hook to use registration context
-export const useRegistration = () => {
-  const context = useContext(RegistrationContext);
-  if (context === undefined) {
-    throw new Error('useRegistration must be used within a RegistrationProvider');
-  }
-  return context;
 };

@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
-import { UINavigationNode } from '../../types/pages/Navigation_Types';
+
+import { UI_BADGE_COLORS } from '../../config/validationColors';
 import { useValidationColors } from '../../hooks/validation';
-import { NodeType, UI_BADGE_COLORS, NODE_TYPE_COLORS } from '../../config/validationColors';
+import { UINavigationNode } from '../../types/pages/Navigation_Types';
 import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
-export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({ 
-  data, 
+export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
+  data,
   selected,
-  id
+  id,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
-  const { getNodeColors, getHandleColors } = useValidationColors(data.tree_id || 'default', currentEdges);
+  const { getNodeColors, getHandleColors } = useValidationColors(
+    data.tree_id || 'default',
+    currentEdges,
+  );
 
   // Build the screenshot URL using Cloudflare R2
   const screenshotUrl = buildScreenshotUrl(data.screenshot);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);
-  
+
   // Get handle colors for different positions
   const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source', 'menu');
   const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target', 'menu');
@@ -101,37 +105,39 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       {!data.is_root && (
         <>
           {/* Top-left: SOURCE for menu connections */}
-          <Handle 
-            type="source" 
-            position={Position.Top} 
+          <Handle
+            type="source"
+            position={Position.Top}
             id="top-left-menu-source"
             isConnectable={true}
             isConnectableStart={true}
             isConnectableEnd={false}
-            style={{ 
+            style={{
               background: topLeftHandle.background,
-              width: '14px', 
+              width: '14px',
               height: '14px',
               border: '2px solid #fff',
               borderRadius: '50%',
               left: '30%',
               top: -5,
-              boxShadow: topLeftHandle.boxShadow || '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
+              boxShadow:
+                topLeftHandle.boxShadow ||
+                '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
             }}
             className={topLeftHandle.className}
           />
-          
+
           {/* Top-right: TARGET for menu connections */}
-          <Handle 
-            type="target" 
-            position={Position.Top} 
+          <Handle
+            type="target"
+            position={Position.Top}
             id="top-right-menu-target"
             isConnectable={true}
             isConnectableStart={false}
             isConnectableEnd={true}
-            style={{ 
+            style={{
               background: topRightHandle.background,
-              width: '14px', 
+              width: '14px',
               height: '14px',
               border: '2px solid #fff',
               borderRadius: '50%',
@@ -147,16 +153,16 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
 
       {/* Left Handle - Only for root nodes */}
       {data.is_root && (
-        <Handle 
-          type="target" 
-          position={Position.Left} 
+        <Handle
+          type="target"
+          position={Position.Left}
           id="left-target"
           isConnectable={true}
           isConnectableStart={false}
           isConnectableEnd={true}
-          style={{ 
+          style={{
             background: leftHandle.background,
-            width: '14px', 
+            width: '14px',
             height: '14px',
             border: '2px solid #fff',
             borderRadius: '50%',
@@ -172,16 +178,16 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
 
       {/* Bottom Handles for Menu Navigation */}
       {/* Bottom-left: TARGET for menu connections */}
-      <Handle 
-        type="target" 
-        position={Position.Bottom} 
+      <Handle
+        type="target"
+        position={Position.Bottom}
         id="bottom-left-menu-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
-        style={{ 
+        style={{
           background: bottomLeftHandle.background,
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
@@ -192,24 +198,26 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         }}
         className={bottomLeftHandle.className}
       />
-      
+
       {/* Bottom-right: SOURCE for menu connections */}
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
+      <Handle
+        type="source"
+        position={Position.Bottom}
         id="bottom-right-menu-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
-        style={{ 
+        style={{
           background: bottomRightHandle.background,
-          width: '14px', 
+          width: '14px',
           height: '14px',
           border: '2px solid #fff',
           borderRadius: '50%',
           left: '70%',
           bottom: -5,
-          boxShadow: bottomRightHandle.boxShadow || '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
+          boxShadow:
+            bottomRightHandle.boxShadow ||
+            '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
         }}
         className={bottomRightHandle.className}
       />
@@ -269,11 +277,13 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         title={screenshotUrl ? 'Double-click to view full size' : 'Menu - Double-click to explore'}
       >
         {!screenshotUrl && (
-          <div style={{ 
-            fontSize: '11px', 
-            color: '#666',
-            textAlign: 'center',
-          }}>
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#666',
+              textAlign: 'center',
+            }}
+          >
             Menu - Double-click to explore
           </div>
         )}
@@ -329,7 +339,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               onDoubleClick={closeModal}
               title="Double-click to close"
             />
-            
+
             <div
               style={{
                 marginTop: '0px',
@@ -352,7 +362,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               >
                 {data.label} - Menu
               </div>
-              
+
               <button
                 onClick={closeModal}
                 style={{
@@ -385,4 +395,4 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       )}
     </div>
   );
-}; 
+};

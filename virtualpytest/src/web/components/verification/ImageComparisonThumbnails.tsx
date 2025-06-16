@@ -18,9 +18,6 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
   sourceUrl,
   referenceUrl,
   resultType,
-  userThreshold,
-  matchingResult,
-  imageFilter,
   onImageClick,
 }) => {
   // Use registration context to get selected host

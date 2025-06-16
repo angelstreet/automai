@@ -47,7 +47,7 @@ const CampaignEditor: React.FC = () => {
       } else {
         setCampaigns([]);
       }
-    } catch (err) {
+    } catch (_e) {
       setError('Error fetching campaigns');
       setCampaigns([]);
     } finally {
@@ -70,7 +70,7 @@ const CampaignEditor: React.FC = () => {
       } else {
         setError('Failed to delete campaign');
       }
-    } catch (err) {
+    } catch (_e) {
       setError('Error deleting campaign');
     } finally {
       setLoading(false);

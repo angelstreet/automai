@@ -3,4 +3,4 @@ export { default as ValidationPreviewClient } from './ValidationPreviewClient';
 export { default as ValidationResultsClient } from './ValidationResultsClient';
 export { default as ValidationProgressClient } from './ValidationProgressClient';
 export { default as ValidationEventListener } from './ValidationEventListener';
-export { ValidationEvents } from './ValidationEventListener'; 
+export { ValidationEvents } from './ValidationEventListener';

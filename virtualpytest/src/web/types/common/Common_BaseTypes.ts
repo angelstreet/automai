@@ -37,7 +37,7 @@ export const CONTROLLER_TYPES = [
   'Network Controller',
 ] as const;
 
-export type ModelType = typeof MODEL_TYPES[number];
+export type ModelType = (typeof MODEL_TYPES)[number];
 
 // Device types
 export interface Device extends DeviceFormData {
@@ -87,7 +87,10 @@ export interface DeviceModel {
 }
 
 // Device model create payload
-export type DeviceModelCreatePayload = Omit<DeviceModel, 'id' | 'created_at' | 'updated_at' | 'team_id'>;
+export type DeviceModelCreatePayload = Omit<
+  DeviceModel,
+  'id' | 'created_at' | 'updated_at' | 'team_id'
+>;
 
 // Device model update payload
 export type DeviceModelUpdatePayload = Partial<DeviceModelCreatePayload>;
@@ -108,30 +111,22 @@ export interface DeviceModelsListResponse {
 // Controller Configuration Types
 export type ControllerType = 'remote' | 'av' | 'verification' | 'network' | 'power';
 
-export type RemoteControllerImplementation = 
-  | 'android_tv' 
-  | 'android_mobile' 
-  | 'ir_remote' 
+export type RemoteControllerImplementation =
+  | 'android_tv'
+  | 'android_mobile'
+  | 'ir_remote'
   | 'bluetooth_remote';
 
-export type AVControllerImplementation = 
-  | 'hdmi_stream';
+export type AVControllerImplementation = 'hdmi_stream';
 
-export type VerificationControllerImplementation = 
+export type VerificationControllerImplementation =
   | 'adb_verification'
   | 'image_verification'
   | 'text_verification';
 
-export type NetworkControllerImplementation = 
-  | 'network' 
-  | 'rtsp' 
-  | 'http_stream' 
-  | 'webrtc';
+export type NetworkControllerImplementation = 'network' | 'rtsp' | 'http_stream' | 'webrtc';
 
-export type PowerControllerImplementation = 
-  | 'mock' 
-  | 'smart_plug' 
-  | 'ipmi';
+export type PowerControllerImplementation = 'mock' | 'smart_plug' | 'ipmi';
 
 export interface ControllerInputField {
   name: string;
@@ -141,7 +136,7 @@ export interface ControllerInputField {
   placeholder?: string;
   defaultValue?: string | number;
   description?: string;
-  options?: { value: string; label: string; }[]; // For select fields
+  options?: { value: string; label: string }[]; // For select fields
   validation?: {
     min?: number;
     max?: number;
@@ -198,4 +193,4 @@ export interface ServerResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
-} 
+}

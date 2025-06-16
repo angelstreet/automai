@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,6 +16,7 @@ import {
   Checkbox,
   ListItemText,
 } from '@mui/material';
+import React, { useState } from 'react';
 
 // Import the simplified interface from Models.tsx
 import { ModelCreatePayload } from '../../pages/Models';
@@ -90,12 +90,13 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
     });
   };
 
-  const handleInputChange = (field: keyof ModelCreatePayload) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [field]: event.target.value,
-    });
-  };
+  const handleInputChange =
+    (field: keyof ModelCreatePayload) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData({
+        ...formData,
+        [field]: event.target.value,
+      });
+    };
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -179,4 +180,4 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
 };
 
 export default CreateModelDialog;
-export { CreateModelDialog }; 
+export { CreateModelDialog };

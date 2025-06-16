@@ -9,7 +9,7 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 

@@ -1,11 +1,12 @@
 /**
  * Controller Configuration Hook
- * 
+ *
  * This hook provides controller configuration definitions and validation logic.
  * Based on the VirtualPyTest controller system requirements.
  */
 
 import { useMemo } from 'react';
+
 import {
   ControllerConfigMap,
   ControllerConfiguration,
@@ -22,8 +23,9 @@ const createDeviceIPFields = (): ControllerInputField[] => [
     placeholder: '192.168.1.200',
     description: 'IP address of the target device',
     validation: {
-      pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-    }
+      pattern:
+        '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$',
+    },
   },
   {
     name: 'device_port',
@@ -35,9 +37,9 @@ const createDeviceIPFields = (): ControllerInputField[] => [
     description: 'ADB port on the device',
     validation: {
       min: 1,
-      max: 65535
-    }
-  }
+      max: 65535,
+    },
+  },
 ];
 
 // Define controller configurations
@@ -61,10 +63,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Timeout for establishing connections',
           validation: {
             min: 5,
-            max: 120
-          }
-        }
-      ]
+            max: 120,
+          },
+        },
+      ],
     },
     {
       id: 'android_mobile',
@@ -84,10 +86,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Timeout for establishing connections',
           validation: {
             min: 5,
-            max: 120
-          }
-        }
-      ]
+            max: 120,
+          },
+        },
+      ],
     },
     {
       id: 'ir_remote',
@@ -102,7 +104,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           type: 'text',
           required: true,
           placeholder: '/dev/lirc0',
-          description: 'Path to the IR device on the host'
+          description: 'Path to the IR device on the host',
         },
         {
           name: 'protocol',
@@ -115,8 +117,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
             { value: 'RC6', label: 'RC6' },
             { value: 'NEC', label: 'NEC' },
             { value: 'Samsung', label: 'Samsung' },
-            { value: 'Sony', label: 'Sony' }
-          ]
+            { value: 'Sony', label: 'Sony' },
+          ],
         },
         {
           name: 'frequency',
@@ -128,10 +130,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'IR carrier frequency',
           validation: {
             min: 30000,
-            max: 60000
-          }
-        }
-      ]
+            max: 60000,
+          },
+        },
+      ],
     },
     {
       id: 'bluetooth_remote',
@@ -148,8 +150,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           placeholder: '00:11:22:33:44:55',
           description: 'MAC address of the Bluetooth device',
           validation: {
-            pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
-          }
+            pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$',
+          },
         },
         {
           name: 'pairing_pin',
@@ -157,7 +159,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           type: 'text',
           required: false,
           placeholder: '0000',
-          description: 'PIN for pairing if required'
+          description: 'PIN for pairing if required',
         },
         {
           name: 'connection_timeout',
@@ -169,11 +171,11 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Timeout for Bluetooth connection',
           validation: {
             min: 10,
-            max: 120
-          }
-        }
-      ]
-    }
+            max: 120,
+          },
+        },
+      ],
+    },
   ],
   av: [
     {
@@ -190,10 +192,11 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           required: true,
           defaultValue: '/dev/video0',
           placeholder: '/dev/video0',
-          description: 'Path to the video capture device on the host (e.g., /dev/video0, /dev/video1)',
+          description:
+            'Path to the video capture device on the host (e.g., /dev/video0, /dev/video1)',
           validation: {
-            pattern: '^/dev/video[0-9]+$'
-          }
+            pattern: '^/dev/video[0-9]+$',
+          },
         },
         {
           name: 'stream_path',
@@ -202,7 +205,7 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           required: false,
           defaultValue: '/tmp/video_stream',
           placeholder: '/tmp/video_stream',
-          description: 'Directory path where video streams will be saved'
+          description: 'Directory path where video streams will be saved',
         },
         {
           name: 'resolution',
@@ -214,8 +217,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           options: [
             { value: '1920x1080', label: '1920x1080 (Full HD)' },
             { value: '1280x720', label: '1280x720 (HD)' },
-            { value: '3840x2160', label: '3840x2160 (4K)' }
-          ]
+            { value: '3840x2160', label: '3840x2160 (4K)' },
+          ],
         },
         {
           name: 'framerate',
@@ -227,11 +230,11 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Video capture frame rate',
           validation: {
             min: 1,
-            max: 60
-          }
-        }
-      ]
-    }
+            max: 60,
+          },
+        },
+      ],
+    },
   ],
   verification: [
     {
@@ -251,8 +254,8 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Minimum confidence for image matching (0.0-1.0)',
           validation: {
             min: 0.0,
-            max: 1.0
-          }
+            max: 1.0,
+          },
         },
         {
           name: 'timeout',
@@ -264,12 +267,12 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
           description: 'Maximum time to wait for verification',
           validation: {
             min: 1,
-            max: 300
-          }
-        }
-      ]
-    }
-  ]
+            max: 300,
+          },
+        },
+      ],
+    },
+  ],
 };
 
 export const useControllerConfig = () => {
@@ -277,47 +280,59 @@ export const useControllerConfig = () => {
   const configurations = useMemo(() => CONTROLLER_CONFIGURATIONS, []);
 
   const getAllConfigurations = (): ControllerConfigMap => {
-    console.log('[@hook:useControllerConfig:getAllConfigurations] Getting all controller configurations');
+    console.log(
+      '[@hook:useControllerConfig:getAllConfigurations] Getting all controller configurations',
+    );
     return configurations;
   };
 
   const getConfigurationsByType = (type: keyof ControllerConfigMap): ControllerConfiguration[] => {
-    console.log(`[@hook:useControllerConfig:getConfigurationsByType] Getting configurations for type: ${type}`);
+    console.log(
+      `[@hook:useControllerConfig:getConfigurationsByType] Getting configurations for type: ${type}`,
+    );
     return configurations[type] || [];
   };
 
   const getConfigurationByImplementation = (
-    type: keyof ControllerConfigMap, 
-    implementation: string
+    type: keyof ControllerConfigMap,
+    implementation: string,
   ): ControllerConfiguration | null => {
-    console.log(`[@hook:useControllerConfig:getConfigurationByImplementation] Getting configuration for ${type}:${implementation}`);
+    console.log(
+      `[@hook:useControllerConfig:getConfigurationByImplementation] Getting configuration for ${type}:${implementation}`,
+    );
     const typeConfigs = configurations[type] || [];
-    return typeConfigs.find(config => config.implementation === implementation) || null;
+    return typeConfigs.find((config) => config.implementation === implementation) || null;
   };
 
   const getAvailableConfigurations = (): ControllerConfigMap => {
-    console.log('[@hook:useControllerConfig:getAvailableConfigurations] Getting available controller configurations');
+    console.log(
+      '[@hook:useControllerConfig:getAvailableConfigurations] Getting available controller configurations',
+    );
     const available: ControllerConfigMap = {};
-    
+
     for (const [type, configs] of Object.entries(configurations)) {
-      available[type as keyof ControllerConfigMap] = configs.filter(config => config.status === 'available');
+      available[type as keyof ControllerConfigMap] = configs.filter(
+        (config) => config.status === 'available',
+      );
     }
-    
+
     return available;
   };
 
   const validateParameters = (
     type: keyof ControllerConfigMap,
     implementation: string,
-    parameters: { [key: string]: any }
+    parameters: { [key: string]: any },
   ): { isValid: boolean; errors: string[] } => {
-    console.log(`[@hook:useControllerConfig:validateParameters] Validating parameters for ${type}:${implementation}`);
-    
+    console.log(
+      `[@hook:useControllerConfig:validateParameters] Validating parameters for ${type}:${implementation}`,
+    );
+
     const config = getConfigurationByImplementation(type, implementation);
     if (!config) {
       return {
         isValid: false,
-        errors: [`Configuration not found for ${type}:${implementation}`]
+        errors: [`Configuration not found for ${type}:${implementation}`],
       };
     }
 
@@ -326,18 +341,18 @@ export const useControllerConfig = () => {
     // Validate each required field
     for (const field of config.inputFields) {
       const value = parameters[field.name];
-      
+
       // Check required fields
       if (field.required && (value === undefined || value === null || value === '')) {
         errors.push(`${field.label} is required`);
         continue;
       }
-      
+
       // Skip validation if field is not provided and not required
       if (value === undefined || value === null || value === '') {
         continue;
       }
-      
+
       // Type validation
       if (field.type === 'number') {
         const numValue = Number(value);
@@ -345,7 +360,7 @@ export const useControllerConfig = () => {
           errors.push(`${field.label} must be a valid number`);
           continue;
         }
-        
+
         // Range validation
         if (field.validation?.min !== undefined && numValue < field.validation.min) {
           errors.push(`${field.label} must be at least ${field.validation.min}`);
@@ -354,7 +369,7 @@ export const useControllerConfig = () => {
           errors.push(`${field.label} must be at most ${field.validation.max}`);
         }
       }
-      
+
       // Pattern validation
       if (field.validation?.pattern && typeof value === 'string') {
         const regex = new RegExp(field.validation.pattern);
@@ -366,15 +381,18 @@ export const useControllerConfig = () => {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   };
 
-  return useMemo(() => ({
-    getAllConfigurations,
-    getConfigurationsByType,
-    getConfigurationByImplementation,
-    getAvailableConfigurations,
-    validateParameters,
-  }), [configurations]);
-}; 
+  return useMemo(
+    () => ({
+      getAllConfigurations,
+      getConfigurationsByType,
+      getConfigurationByImplementation,
+      getAvailableConfigurations,
+      validateParameters,
+    }),
+    [configurations],
+  );
+};

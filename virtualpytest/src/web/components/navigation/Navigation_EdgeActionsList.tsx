@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  Collapse,
-  IconButton,
-} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Box, Typography, Button, TextField, Collapse, IconButton } from '@mui/material';
+import React, { useState } from 'react';
+
 import { EdgeActionItem } from './Navigation_EdgeActionItem';
 
 interface EdgeAction {
@@ -62,7 +56,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   // Get all actions as flat list
   const getAllActions = (): ControllerAction[] => {
     const allActions: ControllerAction[] = [];
-    Object.values(availableActions).forEach(categoryActions => {
+    Object.values(availableActions).forEach((categoryActions) => {
       allActions.push(...categoryActions);
     });
     return allActions;
@@ -105,15 +99,15 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   };
 
   const updateAction = (index: number, updates: Partial<EdgeAction>) => {
-    const newActions = actions.map((action, i) => 
-      i === index ? { ...action, ...updates } : action
+    const newActions = actions.map((action, i) =>
+      i === index ? { ...action, ...updates } : action,
     );
     onActionsChange(newActions);
   };
 
   const updateRetryAction = (index: number, updates: Partial<EdgeAction>) => {
-    const newRetryActions = retryActions.map((action, i) => 
-      i === index ? { ...action, ...updates } : action
+    const newRetryActions = retryActions.map((action, i) =>
+      i === index ? { ...action, ...updates } : action,
     );
     onRetryActionsChange(newRetryActions);
   };
@@ -135,14 +129,20 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
   const moveRetryActionUp = (index: number) => {
     if (index === 0) return; // Can't move first item up
     const newRetryActions = [...retryActions];
-    [newRetryActions[index - 1], newRetryActions[index]] = [newRetryActions[index], newRetryActions[index - 1]];
+    [newRetryActions[index - 1], newRetryActions[index]] = [
+      newRetryActions[index],
+      newRetryActions[index - 1],
+    ];
     onRetryActionsChange(newRetryActions);
   };
 
   const moveRetryActionDown = (index: number) => {
     if (index === retryActions.length - 1) return; // Can't move last item down
     const newRetryActions = [...retryActions];
-    [newRetryActions[index], newRetryActions[index + 1]] = [newRetryActions[index + 1], newRetryActions[index]];
+    [newRetryActions[index], newRetryActions[index + 1]] = [
+      newRetryActions[index + 1],
+      newRetryActions[index],
+    ];
     onRetryActionsChange(newRetryActions);
   };
 
@@ -159,22 +159,25 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     onMoveUp: (index: number) => void,
     onMoveDown: (index: number) => void,
     emptyMessage: string,
-    isRetrySection: boolean = false
+    isRetrySection: boolean = false,
   ) => (
     <Box sx={{ mb: 2 }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 0.5,
-        cursor: 'pointer',
-        '&:hover': {
-          backgroundColor: 'action.hover',
-        },
-        borderRadius: 1,
-        px: 1,
-        py: 0.5
-      }} onClick={onToggleExpanded}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 0.5,
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'action.hover',
+          },
+          borderRadius: 1,
+          px: 1,
+          py: 0.5,
+        }}
+        onClick={onToggleExpanded}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton size="small" sx={{ mr: 0.5, p: 0 }}>
             {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -207,16 +210,18 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
 
       <Collapse in={isExpanded}>
         <Box sx={{ pl: 4 }}>
-          {(!actionsList || actionsList.length === 0) ? (
-            <Box sx={{ 
-              py: 1, 
-              px: 2, 
-              border: '1px dashed', 
-              borderColor: 'divider', 
-              borderRadius: 1,
-              textAlign: 'center',
-              mb: 0.5
-            }}>
+          {!actionsList || actionsList.length === 0 ? (
+            <Box
+              sx={{
+                py: 1,
+                px: 2,
+                border: '1px dashed',
+                borderColor: 'divider',
+                borderRadius: 1,
+                textAlign: 'center',
+                mb: 0.5,
+              }}
+            >
               <Typography variant="body2" color="text.secondary">
                 {emptyMessage}
               </Typography>
@@ -248,7 +253,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
     <Box>
       {/* Main Actions Section */}
       {renderActionSection(
-        "Actions",
+        'Actions',
         actions,
         isActionsExpanded,
         () => setIsActionsExpanded(!isActionsExpanded),
@@ -257,12 +262,12 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
         updateAction,
         moveActionUp,
         moveActionDown,
-        'No actions added. Click "Add" to create your first action.'
+        'No actions added. Click "Add" to create your first action.',
       )}
 
       {/* Retry Actions Section */}
       {renderActionSection(
-        "Retry on Failure",
+        'Retry on Failure',
         retryActions,
         isRetryExpanded,
         () => setIsRetryExpanded(!isRetryExpanded),
@@ -272,7 +277,7 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
         moveRetryActionUp,
         moveRetryActionDown,
         'No retry actions added. These will execute if main actions fail.',
-        true
+        true,
       )}
 
       {/* Final Wait Time */}
@@ -284,7 +289,12 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
           value={finalWaitTime}
           onChange={(e) => {
             const newValue = parseInt(e.target.value) || 0;
-            console.log('[@component:EdgeActionsList] finalWaitTime changed from', finalWaitTime, 'to', newValue);
+            console.log(
+              '[@component:EdgeActionsList] finalWaitTime changed from',
+              finalWaitTime,
+              'to',
+              newValue,
+            );
             onFinalWaitTimeChange(newValue);
           }}
           inputProps={{ min: 0, step: 100 }}
@@ -293,4 +303,4 @@ export const EdgeActionsList: React.FC<EdgeActionsListProps> = ({
       </Box>
     </Box>
   );
-}; 
+};

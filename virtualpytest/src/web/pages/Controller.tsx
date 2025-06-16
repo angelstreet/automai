@@ -1,14 +1,10 @@
+import { Box, Typography, Grid, Alert, CircularProgress, Container } from '@mui/material';
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Grid,
-  Alert,
-  CircularProgress,
-  Container,
-} from '@mui/material';
 
-import { ControllerTypesOverview, ControllerImplementations } from '../components/controller/remote';
+import {
+  ControllerTypesOverview,
+  ControllerImplementations,
+} from '../components/controller/remote';
 import { useControllers } from '../hooks/controller';
 
 const ControllerPage: React.FC = () => {
@@ -31,9 +27,7 @@ const ControllerPage: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <button onClick={refetch}>
-          Retry
-        </button>
+        <button onClick={refetch}>Retry</button>
       </Container>
     );
   }
@@ -59,4 +53,4 @@ const ControllerPage: React.FC = () => {
   );
 };
 
-export default ControllerPage; 
+export default ControllerPage;

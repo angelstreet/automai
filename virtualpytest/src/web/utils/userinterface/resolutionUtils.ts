@@ -1,6 +1,6 @@
 /**
  * Simple Resolution Utilities
- * 
+ *
  * Basic utilities for handling device resolution information.
  * Complex scaling and coordinate mapping removed since screenshots now
  * capture at native device resolution and display uses CSS for fitting.
@@ -21,10 +21,10 @@ export interface DeviceResolution extends Resolution {
 export function parseResolution(resolutionString: string): Resolution | null {
   const match = resolutionString.match(/(\d+)x(\d+)/);
   if (!match) return null;
-  
+
   return {
     width: parseInt(match[1]),
-    height: parseInt(match[2])
+    height: parseInt(match[2]),
   };
 }
 
@@ -42,7 +42,7 @@ export function createDeviceResolution(width: number, height: number): DeviceRes
   return {
     width,
     height,
-    orientation: getDeviceOrientation(width, height)
+    orientation: getDeviceOrientation(width, height),
   };
 }
 
@@ -50,13 +50,18 @@ export function createDeviceResolution(width: number, height: number): DeviceRes
  * Validate that resolutions are reasonable
  */
 export function validateResolution(resolution: Resolution, label: string = ''): boolean {
-  const isValid = resolution.width > 0 && resolution.height > 0 && 
-                  resolution.width <= 4096 && resolution.height <= 4096;
-  
+  const isValid =
+    resolution.width > 0 &&
+    resolution.height > 0 &&
+    resolution.width <= 4096 &&
+    resolution.height <= 4096;
+
   if (!isValid) {
-    console.warn(`[@ResolutionUtils] Invalid resolution ${label}: ${resolution.width}x${resolution.height}`);
+    console.warn(
+      `[@ResolutionUtils] Invalid resolution ${label}: ${resolution.width}x${resolution.height}`,
+    );
   }
-  
+
   return isValid;
 }
 
@@ -71,5 +76,7 @@ export function formatResolution(resolution: Resolution): string {
  * Debug helper to log basic resolution information
  */
 export function logResolutionInfo(resolution: DeviceResolution, label: string = '') {
-  console.log(`[@ResolutionUtils] ${label} Resolution: ${formatResolution(resolution)} (${resolution.orientation})`);
-} 
+  console.log(
+    `[@ResolutionUtils] ${label} Resolution: ${formatResolution(resolution)} (${resolution.orientation})`,
+  );
+}

@@ -28,16 +28,16 @@ export interface UINavigationNodeData {
   is_root?: boolean; // True only for the first entry node
   tree_id?: string; // For menu nodes, references the associated tree
   tree_name?: string; // For menu nodes, the name of the associated tree
-  
+
   // NEW: Simple parent chain approach
-  parent?: string[];    // ["home", "tvguide"] - array of parent node IDs
-  depth?: number;       // parent?.length || 0
-  
+  parent?: string[]; // ["home", "tvguide"] - array of parent node IDs
+  depth?: number; // parent?.length || 0
+
   is_loaded?: boolean; // Whether this node's children have been loaded
   has_children?: boolean; // Whether this node has child nodes
   child_count?: number; // Number of direct children
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
-  
+
   // NEW: Verification support
   verifications?: NodeVerification[]; // Array of verifications for this node
 }
@@ -63,20 +63,22 @@ export interface UINavigationEdgeData {
   retryActions?: EdgeAction[]; // New: array of retry actions for failure scenarios
   finalWaitTime?: number; // New: wait time after all actions
   description?: string;
-  from?: string;        // Source node label
-  to?: string;          // Target node label
-  edgeType?: 'horizontal' | 'vertical';  // For edge coloring: horizontal=siblings, vertical=parent-child
-  
+  from?: string; // Source node label
+  to?: string; // Target node label
+  edgeType?: 'horizontal' | 'vertical'; // For edge coloring: horizontal=siblings, vertical=parent-child
+
   // Keep old action for compatibility during transition
-  action?: string | {
-    id: string;
-    label: string;
-    command: string;
-    params: any;
-    description?: string;
-    requiresInput?: boolean;
-    inputValue?: string;
-  };
+  action?:
+    | string
+    | {
+        id: string;
+        label: string;
+        command: string;
+        params: any;
+        description?: string;
+        requiresInput?: boolean;
+        inputValue?: string;
+      };
 }
 
 // Use ReactFlow's Edge type with our custom data
@@ -85,7 +87,7 @@ export type UINavigationEdge = Edge<UINavigationEdgeData>;
 export interface NavigationTreeData {
   nodes: UINavigationNode[];
   edges: UINavigationEdge[];
-  
+
   // Progressive loading removed - loading all nodes at once
   root_node_id?: string; // ID of the root node
   metadata?: {
@@ -102,13 +104,13 @@ export interface NodeForm {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   description: string;
-  screenshot?: string;  // Add screenshot field to preserve during editing
-  
+  screenshot?: string; // Add screenshot field to preserve during editing
+
   // New form fields for TV menus
   depth?: number;
   parent?: string[];
   menu_type?: 'main' | 'submenu' | 'leaf';
-  
+
   // Add verifications field to preserve during editing
   verifications?: NodeVerification[];
 }
@@ -276,7 +278,7 @@ export interface NavigationConfigState {
   setCurrentTreeName: (name: string) => void;
   setNodes: (nodes: UINavigationNode[]) => void;
   setEdges: (edges: UINavigationEdge[]) => void;
-  setInitialState: (state: { nodes: UINavigationNode[], edges: UINavigationEdge[] } | null) => void;
+  setInitialState: (state: { nodes: UINavigationNode[]; edges: UINavigationEdge[] } | null) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -319,37 +321,37 @@ export interface NavigationEditorHeaderProps {
   navigationNamePath: string[];
   viewPath: { id: string; name: string }[];
   hasUnsavedChanges: boolean;
-  
+
   // Tree filtering props
   focusNodeId: string | null;
   availableFocusNodes: { id: string; label: string; depth: number }[];
   maxDisplayDepth: number;
   totalNodes: number;
   visibleNodes: number;
-  
+
   // Loading and error states
   isLoading: boolean;
   error: string | null;
-  
+
   // Lock management props
   isLocked?: boolean;
   lockInfo?: any;
   sessionId?: string;
-  
+
   // Remote control props
   isRemotePanelOpen: boolean;
   selectedDevice: string | null;
   isControlActive: boolean;
-  
+
   // User interface props
   userInterface: any;
-  
+
   // Device props
   devicesLoading?: boolean;
-  
+
   // Validation props
   treeId: string;
-  
+
   // Action handlers
   onNavigateToParent: () => void;
   onNavigateToTreeLevel: (index: number) => void;
@@ -360,17 +362,17 @@ export interface NavigationEditorHeaderProps {
   onLockTree?: (treeName: string) => void;
   onUnlockTree?: (treeName: string) => void;
   onDiscardChanges: () => void;
-  
+
   // Tree filtering handlers
   onFocusNodeChange: (nodeId: string | null) => void;
   onDepthChange: (depth: number) => void;
   onResetFocus: () => void;
-  
+
   // Remote control handlers
   onToggleRemotePanel: () => void;
   onDeviceSelect: (device: string | null) => void;
   onTakeControl: () => void;
-  
+
   // Update handlers for validation confidence tracking
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
@@ -381,7 +383,7 @@ export interface NavigationEditorDeviceControlProps {
   selectedHost: any;
   isControlActive: boolean;
   isRemotePanelOpen: boolean;
-  
+
   // Verification state
   isVerificationActive: boolean;
   verificationControllerStatus: {
@@ -391,15 +393,15 @@ export interface NavigationEditorDeviceControlProps {
   verificationResults: any[];
   verificationPassCondition: 'all' | 'any';
   lastVerifiedNodeId: string | null;
-  
+
   // Node/Edge data for verification
   nodes: any[];
   selectedNode: any;
   selectedEdge: any;
-  
+
   // UI state
   userInterface: any;
-  
+
   // Event handlers
   onReleaseControl: () => void;
   onUpdateNode: (nodeId: string, updatedData: any) => void;
@@ -554,4 +556,4 @@ export interface NodeVerificationsListProps {
   onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
 }
 
-// Progressive loading interfaces removed - loading all nodes at once 
+// Progressive loading interfaces removed - loading all nodes at once
