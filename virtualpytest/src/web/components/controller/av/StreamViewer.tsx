@@ -31,6 +31,7 @@ export function StreamViewer({
   const [retryCount, setRetryCount] = useState(0);
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
   const [useNativePlayer, setUseNativePlayer] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const maxRetries = 3;
   const retryDelay = 2000;
   const lastInitTime = useRef<number>(0);
@@ -208,8 +209,8 @@ export function StreamViewer({
         attemptPlay();
       });
 
-      hls.on(HLS.Events.ERROR, (_: any, data: any) => {
-        console.warn('[@component:StreamViewer] HLS error:', data.type, data.details);
+      hls.on(HLS.Events.ERROR, (event, data) => {
+        console.warn('[@component:StreamViewer] HLS error:', data.type, data.details, data.fatal);
 
         if (data.fatal) {
           console.error('[@component:StreamViewer] Fatal HLS error, trying native playback');
@@ -219,16 +220,16 @@ export function StreamViewer({
           if (data.details === 'fragParsingError' || data.details === 'fragLoadError') {
             console.log('[@component:StreamViewer] Fragment error, attempting HLS recovery');
             try {
-              if (data.details === 'fragParsingError') {
-                hls.recoverMediaError();
-              } else {
-                hls.startLoad();
-              }
+              hls.startLoad();
             } catch (recoveryError) {
-              console.warn('[@component:StreamViewer] HLS recovery failed, switching to native');
-              setUseNativePlayer(true);
-              setTimeout(() => tryNativePlayback(), 500);
+              console.warn('[@component:StreamViewer] HLS recovery failed:', recoveryError);
+              setStreamError('Stream connection issues. Retrying...');
+              setTimeout(() => {
+                setRetryCount((prev) => prev + 1);
+              }, retryDelay);
             }
+          } else {
+            setStreamError('Stream connection issues. Retrying...');
           }
         }
       });
@@ -236,16 +237,19 @@ export function StreamViewer({
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
     } catch (error: any) {
-      console.error('[@component:StreamViewer] HLS initialization failed, trying native:', error);
-      await tryNativePlayback();
+      console.error('[@component:StreamViewer] Stream initialization failed:', error);
+      setStreamError(`Stream initialization failed: ${error.message}`);
+      setTimeout(() => {
+        setRetryCount((prev) => prev + 1);
+      }, retryDelay);
     }
   }, [
     streamUrl,
-    currentStreamUrl,
-    cleanupStream,
-    attemptPlay,
     retryCount,
-    useNativePlayer,
+    cleanupStream,
+    currentStreamUrl,
+    attemptPlay,
+    retryDelay,
     tryNativePlayback,
   ]);
 
@@ -257,25 +261,33 @@ export function StreamViewer({
       return;
     }
 
-    setRetryCount((prev) => prev + 1);
-    console.log(`[@component:StreamViewer] Retrying stream (${retryCount + 1}/${maxRetries})`);
+    console.log(
+      `[@component:StreamViewer] Stream error, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`,
+    );
 
-    const timeout = setTimeout(() => {
-      if (isStreamActive && streamUrl) {
-        initializeStream();
-      }
+    setTimeout(() => {
+      setRetryCount((prev) => prev + 1);
+      initializeStream();
     }, retryDelay);
+  }, [retryCount, maxRetries, retryDelay, initializeStream, tryNativePlayback]);
 
-    return () => clearTimeout(timeout);
-  }, [
-    retryCount,
-    isStreamActive,
-    streamUrl,
-    initializeStream,
-    maxRetries,
-    retryDelay,
-    tryNativePlayback,
-  ]);
+  useEffect(() => {
+    if (retryCount > 0 && retryCount <= maxRetries && streamUrl && isStreamActive) {
+      initializeStream();
+    }
+  }, [retryCount, maxRetries, streamUrl, isStreamActive, initializeStream]);
+
+  useEffect(() => {
+    if (streamError && retryCount < maxRetries) {
+      handleStreamError();
+    }
+  }, [streamError, retryCount, maxRetries, handleStreamError]);
+
+  useEffect(() => {
+    if (useNativePlayer && streamUrl && isStreamActive) {
+      tryNativePlayback();
+    }
+  }, [useNativePlayer, streamUrl, isStreamActive, tryNativePlayback]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -308,50 +320,46 @@ export function StreamViewer({
     };
   }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
 
+  useEffect(() => {
+    const checkVideoReady = () => {
+      const ready = !!videoRef.current;
+      if (ready !== isVideoReady) {
+        setIsVideoReady(ready);
+        console.log('[@component:StreamViewer] Video ready state changed:', ready);
+      }
+    };
+
+    checkVideoReady();
+
+    const interval = setInterval(checkVideoReady, 100);
+
+    return () => clearInterval(interval);
+  }, [streamLoaded, isVideoReady]);
+
   return (
     <Box
       sx={{
         position: 'relative',
-        width: finalLayoutConfig.isMobileModel ? '100%' : 'calc(100% + 200px)',
-        maxWidth: finalLayoutConfig.isMobileModel ? 'none' : 'none',
+        width: '100%',
         height: '100%',
-        minHeight: finalLayoutConfig.minHeight,
-        aspectRatio: finalLayoutConfig.aspectRatio,
         backgroundColor: '#000000',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none',
-        ...(finalLayoutConfig.isMobileModel && {
-          maxHeight: 'none',
-          flexGrow: 1,
-        }),
-        ...(!finalLayoutConfig.isMobileModel && {
-          margin: '0 auto',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        }),
         ...sx,
       }}
     >
       <video
         ref={videoRef}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
           width: '100%',
           height: '100%',
-          objectFit: finalLayoutConfig.objectFit,
+          objectFit: finalLayoutConfig.objectFit || 'contain',
           backgroundColor: '#000000',
-          display: streamLoaded && !requiresUserInteraction ? 'block' : 'none',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-          pointerEvents: 'none',
+          display: streamLoaded ? 'block' : 'none',
         }}
+        autoPlay
         playsInline
         muted
         draggable={false}
@@ -359,97 +367,111 @@ export function StreamViewer({
         crossOrigin="anonymous"
       />
 
-      {streamLoaded && requiresUserInteraction && (
+      {streamError && (
         <Box
           sx={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'white',
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: 2,
+            borderRadius: 1,
+            zIndex: 10,
           }}
         >
-          <IconButton
-            onClick={handleUserPlay}
-            sx={{ color: '#ffffff', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-          >
-            <PlayArrowIcon fontSize="large" />
-          </IconButton>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {streamError}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Retry {retryCount}/{maxRetries}
+          </Typography>
         </Box>
       )}
 
-      {!streamLoaded && streamUrl && isStreamActive && (
+      {!streamLoaded && !streamError && streamUrl && isStreamActive && (
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent',
-            flexDirection: 'column',
-            padding: 2,
-            gap: 1,
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'white',
+            zIndex: 10,
           }}
         >
-          <Typography variant="caption" sx={{ color: '#999999', textAlign: 'center' }}>
-            {streamError
-              ? retryCount < maxRetries
-                ? `Connecting... (${retryCount + 1}/${maxRetries})`
-                : 'Connecting with fallback player...'
-              : 'Loading stream...'}
-          </Typography>
+          <Typography variant="body2">Loading stream...</Typography>
+        </Box>
+      )}
 
-          {streamError && (
-            <Typography
-              variant="caption"
-              sx={{ color: '#777777', textAlign: 'center', fontSize: '0.65rem', maxWidth: '80%' }}
-            >
-              {useNativePlayer
-                ? 'Using native player for better compatibility'
-                : 'Stream will auto-reconnect'}
-            </Typography>
-          )}
+      {requiresUserInteraction && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'white',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 3,
+            borderRadius: 2,
+            zIndex: 15,
+          }}
+        >
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Click to start stream
+          </Typography>
+          <IconButton
+            onClick={handleUserPlay}
+            sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              },
+            }}
+          >
+            <PlayArrowIcon />
+          </IconButton>
         </Box>
       )}
 
       {(!streamUrl || !isStreamActive) && (
         <Box
           sx={{
-            width: '100%',
-            height: '100%',
-            minHeight: finalLayoutConfig.minHeight,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent',
-            border: '1px solid #333333',
-            p: 2,
-            gap: 2,
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            color: 'text.secondary',
+            zIndex: 10,
           }}
         >
-          {!isStreamActive ? (
-            <>
-              <Typography variant="h6" sx={{ color: '#666666', textAlign: 'center' }}>
-                Stream Offline
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
-                Stream service is not running. Press the refresh button to try again.
-              </Typography>
-            </>
-          ) : (
-            <>
-              <Typography variant="h6" sx={{ color: '#666666', textAlign: 'center' }}>
-                No Stream URL
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#666666', textAlign: 'center' }}>
-                Stream URL not configured in device settings.
-              </Typography>
-            </>
-          )}
+          <Typography variant="body2">No stream available</Typography>
+        </Box>
+      )}
+
+      {isCapturing && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: 'error.main',
+            color: 'white',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            fontSize: '0.75rem',
+            zIndex: 10,
+          }}
+        >
+          RECORDING
         </Box>
       )}
     </Box>
@@ -466,7 +488,32 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
     JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx);
 
   if (!isEqual) {
-    console.log('[@component:StreamViewer] Props changed, re-rendering');
+    console.log('[@component:StreamViewer] Props changed, component will re-render:', {
+      streamUrl:
+        prevProps.streamUrl !== nextProps.streamUrl
+          ? { prev: prevProps.streamUrl, next: nextProps.streamUrl }
+          : 'same',
+      isStreamActive:
+        prevProps.isStreamActive !== nextProps.isStreamActive
+          ? { prev: prevProps.isStreamActive, next: nextProps.isStreamActive }
+          : 'same',
+      isCapturing:
+        prevProps.isCapturing !== nextProps.isCapturing
+          ? { prev: prevProps.isCapturing, next: nextProps.isCapturing }
+          : 'same',
+      model:
+        prevProps.model !== nextProps.model
+          ? { prev: prevProps.model, next: nextProps.model }
+          : 'same',
+      layoutConfig:
+        prevProps.layoutConfig !== nextProps.layoutConfig
+          ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig }
+          : 'same',
+      sx:
+        JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx)
+          ? { prev: prevProps.sx, next: nextProps.sx }
+          : 'same',
+    });
   }
 
   return isEqual;
