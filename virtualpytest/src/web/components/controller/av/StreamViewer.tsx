@@ -45,6 +45,7 @@ export function StreamViewer({
   const [retryCount, setRetryCount] = useState(0);
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
   const [useNativePlayer, setUseNativePlayer] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const maxRetries = 3; // Reduced from 5
   const retryDelay = 2000; // Reduced from 3000
   const lastInitTime = useRef<number>(0);
@@ -354,17 +355,36 @@ export function StreamViewer({
   useEffect(() => {
     if (enableClick) {
       const overlayEnabled =
-        streamLoaded && !requiresUserInteraction && deviceResolution && videoRef.current;
+        streamLoaded && !requiresUserInteraction && deviceResolution && isVideoReady;
       console.log('[@component:StreamViewer] Click overlay status:', {
         enabled: overlayEnabled,
         streamLoaded,
         requiresUserInteraction,
         hasDeviceResolution: !!deviceResolution,
         hasVideoRef: !!videoRef.current,
+        isVideoReady,
         deviceResolution,
       });
     }
-  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution]);
+  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution, isVideoReady]);
+
+  // Track video ref readiness
+  useEffect(() => {
+    const checkVideoReady = () => {
+      const ready = !!videoRef.current;
+      if (ready !== isVideoReady) {
+        setIsVideoReady(ready);
+        console.log('[@component:StreamViewer] Video ready state changed:', ready);
+      }
+    };
+
+    checkVideoReady();
+
+    // Check periodically in case video element changes
+    const interval = setInterval(checkVideoReady, 100);
+
+    return () => clearInterval(interval);
+  }, [streamLoaded, isVideoReady]);
 
   return (
     <Box
@@ -479,7 +499,7 @@ export function StreamViewer({
         streamLoaded &&
         !requiresUserInteraction &&
         deviceResolution &&
-        videoRef.current && (
+        isVideoReady && (
           <StreamClickOverlay
             videoRef={videoRef}
             deviceResolution={deviceResolution}
