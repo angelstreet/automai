@@ -1,5 +1,14 @@
 import { Tv as TvIcon, Lock as LockIcon } from '@mui/icons-material';
-import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
 import React from 'react';
 
 import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigation_Header_Types';
@@ -7,6 +16,7 @@ import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigatio
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({
   selectedDevice,
   isControlActive,
+  isControlLoading,
   isLoading,
   error,
   availableHosts,
@@ -37,7 +47,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           value={selectedDevice || ''}
           onChange={(e) => onDeviceSelect(e.target.value || null)}
           label="Device"
-          disabled={isLoading || !!error}
+          disabled={isLoading || !!error || isControlLoading}
           sx={{ height: 32, fontSize: '0.75rem' }}
         >
           <MenuItem value="">
@@ -83,9 +93,9 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         size="small"
         onClick={onTakeControl}
         disabled={
-          !selectedDevice || isLoading || !!error || isSelectedDeviceLocked || isControlActive
+          !selectedDevice || isLoading || !!error || isSelectedDeviceLocked || isControlLoading
         }
-        startIcon={<TvIcon />}
+        startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
         sx={{
           height: 32,
@@ -96,14 +106,16 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           px: 1.5,
         }}
         title={
-          isSelectedDeviceLocked
-            ? `Device is locked by ${selectedDeviceHost?.lockedBy || 'another user'}`
-            : isControlActive
-              ? 'Release Control'
-              : 'Take Control'
+          isControlLoading
+            ? 'Processing...'
+            : isSelectedDeviceLocked
+              ? `Device is locked by ${selectedDeviceHost?.lockedBy || 'another user'}`
+              : isControlActive
+                ? 'Release Control'
+                : 'Take Control'
         }
       >
-        {isControlActive ? 'Release' : 'Control'}
+        {isControlLoading ? 'Processing...' : isControlActive ? 'Release' : 'Control'}
       </Button>
     </Box>
   );

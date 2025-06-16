@@ -1,4 +1,4 @@
-import { Host } from '../Host';
+import { Host } from '../common/Host_Types';
 
 export interface NavigationEditorTreeControlsProps {
   focusNodeId: string | null;

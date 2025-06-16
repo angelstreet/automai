@@ -214,6 +214,7 @@ const NavigationEditorContent: React.FC = () => {
     // Device control state & handlers
     selectedHost,
     isControlActive,
+    isControlLoading,
     isRemotePanelOpen,
     showRemotePanel,
     showAVPanel,
@@ -365,7 +366,7 @@ const NavigationEditorContent: React.FC = () => {
         maxDisplayDepth={maxDisplayDepth}
         totalNodes={allNodes.length}
         visibleNodes={nodes.length}
-        isLoading={false} // Loading handled by device control component
+        isLoading={isControlLoading} // Use control loading state for device controls
         error={null} // Error handling moved to device control component
         // History props removed - using page reload for cancel changes
         isLocked={isLocked}
