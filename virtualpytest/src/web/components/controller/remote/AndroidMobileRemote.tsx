@@ -11,6 +11,7 @@ import {
 import React from 'react';
 
 import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
+import { useRemoteConfigs } from '../../../hooks/controller/useRemoteConfigs';
 import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 
@@ -20,10 +21,23 @@ interface AndroidMobileRemoteProps {
   host: Host;
   onDisconnectComplete?: () => void;
   sx?: any;
+  // Stream integration props - make remote autonomous
+  streamPosition?: { x: number; y: number };
+  streamSize?: { width: number; height: number };
+  streamResolution?: { width: number; height: number };
+  videoElement?: HTMLVideoElement;
 }
 
 export const AndroidMobileRemote = React.memo(
-  function AndroidMobileRemote({ host, onDisconnectComplete, sx = {} }: AndroidMobileRemoteProps) {
+  function AndroidMobileRemote({
+    host,
+    onDisconnectComplete,
+    sx = {},
+    streamPosition,
+    streamSize,
+    streamResolution,
+    videoElement,
+  }: AndroidMobileRemoteProps) {
     const {
       // State
       androidElements,
@@ -54,6 +68,25 @@ export const AndroidMobileRemote = React.memo(
       // Session info
       session,
     } = useAndroidMobile(host);
+
+    // Stream integration - prepare streamInfo for overlay
+    const streamInfo = React.useMemo(() => {
+      if (streamPosition && streamSize && streamResolution && videoElement) {
+        return {
+          videoElement,
+          position: streamPosition,
+          size: streamSize,
+          deviceResolution: streamResolution,
+        };
+      }
+      return undefined;
+    }, [streamPosition, streamSize, streamResolution, videoElement]);
+
+    // Use remote configs for stream tap functionality
+    const { handleStreamTap } = useRemoteConfigs({
+      host,
+      streamInfo,
+    });
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
@@ -408,17 +441,25 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - positioned outside */}
+        {/* AndroidMobileOverlay - positioned outside or over stream */}
         {showOverlay && androidElements.length > 0 && (
           <div
             style={{
-              position: 'fixed',
-              left: layoutConfig.overlayConfig.defaultPosition.left,
-              top: layoutConfig.overlayConfig.defaultPosition.top,
+              position: streamInfo ? 'absolute' : 'fixed',
+              left: streamInfo
+                ? streamInfo.position.x
+                : layoutConfig.overlayConfig.defaultPosition.left,
+              top: streamInfo
+                ? streamInfo.position.y
+                : layoutConfig.overlayConfig.defaultPosition.top,
+              width: streamInfo ? streamInfo.size.width : undefined,
+              height: streamInfo ? streamInfo.size.height : undefined,
               zIndex: 99999999,
               pointerEvents: 'all',
               transformOrigin: 'top left',
-              transform: `scale(${layoutConfig.overlayConfig.defaultScale.x}, ${layoutConfig.overlayConfig.defaultScale.y})`,
+              transform: streamInfo
+                ? 'none'
+                : `scale(${layoutConfig.overlayConfig.defaultScale.x}, ${layoutConfig.overlayConfig.defaultScale.y})`,
               background: 'rgba(0,0,0,0.01)',
               // Prevent overlay from affecting page layout
               contain: 'layout style size',
@@ -433,6 +474,8 @@ export const AndroidMobileRemote = React.memo(
               isVisible={showOverlay}
               selectedElementId={selectedElement ? selectedElement : undefined}
               onElementClick={handleOverlayElementClick}
+              streamInfo={streamInfo}
+              onStreamTap={streamInfo ? handleStreamTap : undefined}
             />
           </div>
         )}
@@ -440,13 +483,17 @@ export const AndroidMobileRemote = React.memo(
     );
   },
   (prevProps, nextProps) => {
-    // Only re-render if host object properties have actually changed
+    // Only re-render if host object properties or stream props have actually changed
     return (
       prevProps.host?.host_name === nextProps.host?.host_name &&
       prevProps.host?.device_model === nextProps.host?.device_model &&
       prevProps.host?.device_ip === nextProps.host?.device_ip &&
       prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
-      JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx)
+      JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
+      JSON.stringify(prevProps.streamPosition) === JSON.stringify(nextProps.streamPosition) &&
+      JSON.stringify(prevProps.streamSize) === JSON.stringify(nextProps.streamSize) &&
+      JSON.stringify(prevProps.streamResolution) === JSON.stringify(nextProps.streamResolution) &&
+      prevProps.videoElement === nextProps.videoElement
     );
   },
 );

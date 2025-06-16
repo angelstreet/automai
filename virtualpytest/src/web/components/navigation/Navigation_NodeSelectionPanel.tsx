@@ -41,7 +41,7 @@ interface NodeSelectionPanelProps {
   // Device control props
   isControlActive?: boolean;
   selectedDevice?: string | null;
-  onTakeScreenshot?: () => void;
+  onSaveScreenshot?: () => void;
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
@@ -67,7 +67,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   onUpdateNode,
   isControlActive = false,
   selectedDevice = null,
-  onTakeScreenshot,
+  onSaveScreenshot,
   treeId = '',
   currentNodeId,
   onVerification,
@@ -144,10 +144,60 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     setShowResetConfirm(false);
   };
 
-  const handleScreenshotConfirm = () => {
-    if (onTakeScreenshot) {
-      onTakeScreenshot();
+  const handleScreenshotConfirm = async () => {
+    if (!isControlActive || !selectedDevice) {
+      console.warn(
+        '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active',
+      );
+      setShowScreenshotConfirm(false);
+      return;
     }
+
+    try {
+      console.log(`[@component:NodeSelectionPanel] Taking screenshot for node: ${selectedNode.id}`);
+
+      const response = await fetch('/server/av/save-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // The server route will handle host selection automatically
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.screenshot_url) {
+        console.log(
+          `[@component:NodeSelectionPanel] Screenshot saved to R2: ${result.screenshot_url}`,
+        );
+
+        // Update the node with the new screenshot URL
+        if (onUpdateNode) {
+          const updatedNodeData = {
+            ...selectedNode.data,
+            screenshot: result.screenshot_url,
+          };
+          onUpdateNode(selectedNode.id, updatedNodeData);
+          console.log(
+            `[@component:NodeSelectionPanel] Updated node ${selectedNode.id} with new screenshot`,
+          );
+        } else {
+          console.warn(
+            '[@component:NodeSelectionPanel] onUpdateNode callback not provided - screenshot URL not saved to node',
+          );
+        }
+      } else {
+        console.error(
+          '[@component:NodeSelectionPanel] Screenshot failed:',
+          result.error || 'Unknown error',
+        );
+      }
+    } catch (error) {
+      console.error('[@component:NodeSelectionPanel] Screenshot request failed:', error);
+    }
+
     setShowScreenshotConfirm(false);
   };
 
@@ -287,7 +337,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   };
 
   // Check if screenshot button should be displayed
-  const showScreenshotButton = isControlActive && selectedDevice && onTakeScreenshot;
+  const showSaveScreenshotButton = isControlActive && selectedDevice;
 
   // Check if Go To button should be displayed
   // Show for all nodes when device is under control
@@ -451,8 +501,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
               </Button>
             )}
 
-            {/* Screenshot button - only shown when device is under control */}
-            {showScreenshotButton && (
+            {/* Save Screenshot button - only shown when device is under control */}
+            {showSaveScreenshotButton && (
               <Button
                 size="small"
                 variant="outlined"

@@ -1,6 +1,6 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, IconButton } from '@mui/material';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 
 import { ScreenDefinitionEditor } from '../components/controller/av/ScreenDefinitionEditor';
 import { AndroidMobileRemote } from '../components/controller/remote/AndroidMobileRemote';
@@ -27,6 +27,17 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
   onSetLastVerifiedNodeId,
   onSetVerificationPassCondition,
 }) => {
+  // Stream integration state for AndroidMobileRemote
+  const [streamInfo, setStreamInfo] = useState<{
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    resolution: { width: number; height: number };
+    videoElement: HTMLVideoElement | null;
+  } | null>(null);
+
+  // Ref to track the ScreenDefinitionEditor container for position calculation
+  const screenEditorRef = useRef<HTMLDivElement>(null);
+
   // Memoize computed values based on selectedHost from registration context
   const remoteConfig = useMemo(() => {
     return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
@@ -36,15 +47,77 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
     return selectedHost?.controller_configs?.av?.parameters != null;
   }, [selectedHost]);
 
+  // Effect to find and track the video element from ScreenDefinitionEditor
+  React.useEffect(() => {
+    if (!screenEditorRef.current || !isControlActive || !hasAVCapabilities) {
+      setStreamInfo(null);
+      return;
+    }
+
+    const updateStreamInfo = () => {
+      const videoElement = screenEditorRef.current?.querySelector('video') as HTMLVideoElement;
+
+      if (!videoElement) {
+        setStreamInfo(null);
+        return;
+      }
+
+      const videoRect = videoElement.getBoundingClientRect();
+
+      // Only update if video has actual dimensions
+      if (videoRect.width > 0 && videoRect.height > 0) {
+        setStreamInfo({
+          position: { x: videoRect.left, y: videoRect.top },
+          size: { width: videoRect.width, height: videoRect.height },
+          resolution: { width: 1920, height: 1080 }, // Default device resolution
+          videoElement,
+        });
+
+        console.log('[@component:NavigationEditorDeviceControl] Stream info updated:', {
+          position: { x: videoRect.left, y: videoRect.top },
+          size: { width: videoRect.width, height: videoRect.height },
+        });
+      }
+    };
+
+    // Initial update
+    updateStreamInfo();
+
+    // Update on resize/scroll
+    const handleUpdate = () => updateStreamInfo();
+    window.addEventListener('resize', handleUpdate);
+    window.addEventListener('scroll', handleUpdate);
+
+    // Use MutationObserver to detect when video element is added/changed
+    const observer = new MutationObserver(() => {
+      updateStreamInfo();
+    });
+
+    observer.observe(screenEditorRef.current, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'style'],
+    });
+
+    return () => {
+      window.removeEventListener('resize', handleUpdate);
+      window.removeEventListener('scroll', handleUpdate);
+      observer.disconnect();
+    };
+  }, [isControlActive, hasAVCapabilities, selectedHost]);
+
   return (
     <>
       {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
       {selectedHost && hasAVCapabilities && isControlActive && (
-        <ScreenDefinitionEditor
-          selectedHostDevice={selectedHost}
-          autoConnect={true}
-          onDisconnectComplete={onReleaseControl}
-        />
+        <div ref={screenEditorRef}>
+          <ScreenDefinitionEditor
+            selectedHostDevice={selectedHost}
+            autoConnect={true}
+            onDisconnectComplete={onReleaseControl}
+          />
+        </div>
       )}
 
       {/* Verification Results Display - Show when there are verification results */}
@@ -139,7 +212,14 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 </Typography>
               </Box>
 
-              <AndroidMobileRemote host={selectedHost} onDisconnectComplete={onReleaseControl} />
+              <AndroidMobileRemote
+                host={selectedHost}
+                onDisconnectComplete={onReleaseControl}
+                streamPosition={streamInfo?.position}
+                streamSize={streamInfo?.size}
+                streamResolution={streamInfo?.resolution}
+                videoElement={streamInfo?.videoElement || undefined}
+              />
             </Box>
           ) : (
             <Box
