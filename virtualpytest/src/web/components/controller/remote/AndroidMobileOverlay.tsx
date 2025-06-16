@@ -1,8 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
+import { AndroidElement } from '../../../types/controller/Remote_Types';
 
 interface ScaledElement {
   id: string;
@@ -19,7 +18,6 @@ interface AndroidMobileOverlayProps {
   deviceWidth: number;
   deviceHeight: number;
   isVisible: boolean;
-  selectedElementId?: string;
   onElementClick?: (element: AndroidElement) => void;
   panelInfo: PanelInfo; // Made required - no fallback to screenshot
   onPanelTap?: (x: number, y: number) => Promise<void>;
@@ -34,7 +32,6 @@ export const AndroidMobileOverlay = React.memo(
     deviceWidth,
     deviceHeight,
     isVisible,
-    selectedElementId,
     onElementClick,
     panelInfo,
     onPanelTap,
@@ -81,16 +78,14 @@ export const AndroidMobileOverlay = React.memo(
 
     // Calculate scaled coordinates for panel positioning
     useEffect(() => {
-      if (!isVisible || elements.length === 0) {
-        console.log(
-          `[@component:AndroidMobileOverlay] Not visible or no elements, clearing overlay`,
-        );
+      if (elements.length === 0) {
+        console.log(`[@component:AndroidMobileOverlay] No elements, clearing overlay elements`);
         setScaledElements([]);
         return;
       }
 
       console.log(
-        `[@component:AndroidMobileOverlay] Using panel positioning - ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
+        `[@component:AndroidMobileOverlay] Processing ${elements.length} elements for overlay`,
       );
       console.log(`[@component:AndroidMobileOverlay] Panel position:`, panelInfo.position);
       console.log(`[@component:AndroidMobileOverlay] Panel size:`, panelInfo.size);
@@ -120,7 +115,6 @@ export const AndroidMobileOverlay = React.memo(
           };
 
           // Scale elements to fit the stream/panel size
-          // The overlay container will be positioned at panelInfo.position
           const scaleX = panelInfo.size.width / deviceWidth;
           const scaleY = panelInfo.size.height / deviceHeight;
 
@@ -147,16 +141,15 @@ export const AndroidMobileOverlay = React.memo(
 
       console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements`);
       setScaledElements(scaled);
-    }, [elements, deviceWidth, deviceHeight, isVisible, panelInfo]);
+    }, [elements, deviceWidth, deviceHeight, panelInfo]);
 
-    // Handle element click
+    // Handle element click (higher priority)
     const handleElementClick = async (scaledElement: ScaledElement) => {
       const originalElement = elements.find((el) => el.id === scaledElement.id);
       if (!originalElement) return;
 
       if (onPanelTap) {
         // Convert overlay coordinates back to device coordinates
-        // Since we scaled directly without offsets, conversion is straightforward
         const deviceX = Math.round(
           (scaledElement.x * panelInfo.deviceResolution.width) / panelInfo.size.width,
         );
@@ -165,7 +158,7 @@ export const AndroidMobileOverlay = React.memo(
         );
 
         console.log(
-          `[@component:AndroidMobileOverlay] Panel tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY}) - panel ${panelInfo.isCollapsed ? 'collapsed' : 'expanded'}`,
+          `[@component:AndroidMobileOverlay] Element tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
         );
 
         await onPanelTap(deviceX, deviceY);
@@ -177,91 +170,163 @@ export const AndroidMobileOverlay = React.memo(
       }
     };
 
-    if (!isVisible || scaledElements.length === 0) {
-      console.log(
-        `[@component:AndroidMobileOverlay] Not rendering overlay - visible: ${isVisible}, elements: ${scaledElements.length}`,
+    // Handle base layer tap (lower priority, only when not clicking on elements)
+    const handleBaseTap = async (event: React.MouseEvent) => {
+      if (!onPanelTap) return;
+
+      // Get click coordinates relative to the overlay container
+      const rect = event.currentTarget.getBoundingClientRect();
+      const overlayX = event.clientX - rect.left;
+      const overlayY = event.clientY - rect.top;
+
+      // Convert to device coordinates
+      const deviceX = Math.round(
+        (overlayX * panelInfo.deviceResolution.width) / panelInfo.size.width,
       );
+      const deviceY = Math.round(
+        (overlayY * panelInfo.deviceResolution.height) / panelInfo.size.height,
+      );
+
+      console.log(
+        `[@component:AndroidMobileOverlay] Base tap at overlay(${overlayX.toFixed(1)}, ${overlayY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
+      );
+
+      await onPanelTap(deviceX, deviceY);
+    };
+
+    if (!isVisible) {
+      console.log(`[@component:AndroidMobileOverlay] Not visible, not rendering`);
       return null;
     }
 
     console.log(
-      '[@component:AndroidMobileOverlay] Rendering overlay with',
+      '[@component:AndroidMobileOverlay] Rendering overlay with base tap layer and',
       scaledElements.length,
-      'elements at position',
-      panelInfo.position,
+      'element overlays',
     );
 
     return (
-      <div
-        style={{
-          position: 'fixed',
-          left: `${panelInfo.position.x}px`,
-          top: `${panelInfo.position.y}px`,
-          width: `${panelInfo.size.width}px`,
-          height: `${panelInfo.size.height}px`,
-          zIndex: 999999,
-          contain: 'layout style size',
-          willChange: 'transform',
-          pointerEvents: 'none', // Allow clicks to pass through the container
-          border: '3px solid blue', // Blue border for debugging
-          backgroundColor: 'rgba(0, 0, 255, 0.2)', // Blue background with 20% transparency
-        }}
-      >
-        {/* Debug info overlay */}
+      <>
+        {/* Base transparent tap layer - Always visible, lower z-index */}
         <div
           style={{
-            position: 'absolute',
-            top: '5px',
-            left: '5px',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '5px',
-            fontSize: '12px',
-            borderRadius: '3px',
-            pointerEvents: 'none',
+            position: 'fixed',
+            left: `${panelInfo.position.x}px`,
+            top: `${panelInfo.position.y}px`,
+            width: `${panelInfo.size.width}px`,
+            height: `${panelInfo.size.height}px`,
+            zIndex: 999998, // Lower z-index than elements
+            contain: 'layout style size',
+            willChange: 'transform',
+            pointerEvents: 'auto', // Allow tapping on base layer
+            border: '3px solid blue', // Blue border for debugging
+            backgroundColor: 'rgba(0, 0, 255, 0.2)', // Blue background with 20% transparency
+            cursor: 'crosshair',
           }}
+          onClick={handleBaseTap}
         >
-          <div>Elements: {elements.length}</div>
-          <div>
-            Position: {panelInfo.position.x},{panelInfo.position.y}
-          </div>
-          <div>
-            Size: {panelInfo.size.width}x{panelInfo.size.height}
-          </div>
-          <div>
-            Device: {panelInfo.deviceResolution.width}x{panelInfo.deviceResolution.height}
-          </div>
-        </div>
-
-        {/* Render scaled elements as colored rectangles */}
-        {scaledElements.map((scaledElement) => (
+          {/* Debug info overlay */}
           <div
-            key={scaledElement.id}
             style={{
               position: 'absolute',
-              left: `${scaledElement.x}px`,
-              top: `${scaledElement.y}px`,
-              width: `${scaledElement.width}px`,
-              height: `${scaledElement.height}px`,
-              backgroundColor: scaledElement.color,
-              border: '1px solid rgba(255, 255, 255, 0.5)',
-              pointerEvents: 'auto', // Allow clicks on elements
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
+              top: '5px',
+              left: '5px',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
               color: 'white',
-              textShadow: '1px 1px 1px rgba(0, 0, 0, 0.8)',
-              overflow: 'hidden',
+              padding: '5px',
+              fontSize: '12px',
+              borderRadius: '3px',
+              pointerEvents: 'none',
             }}
-            onClick={() => handleElementClick(scaledElement)}
-            title={scaledElement.label}
           >
-            {scaledElement.id}
+            <div>Elements: {elements.length}</div>
+            <div>
+              Position: {panelInfo.position.x},{panelInfo.position.y}
+            </div>
+            <div>
+              Size: {panelInfo.size.width}x{panelInfo.size.height}
+            </div>
+            <div>
+              Device: {panelInfo.deviceResolution.width}x{panelInfo.deviceResolution.height}
+            </div>
+            <div style={{ color: 'cyan', marginTop: '5px' }}>
+              {elements.length === 0
+                ? 'Tap anywhere • Dump UI for elements'
+                : 'Elements have priority'}
+            </div>
           </div>
-        ))}
-      </div>
+
+          {/* Show message when no elements are available */}
+          {elements.length === 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                color: 'white',
+                padding: '10px',
+                borderRadius: '5px',
+                fontSize: '14px',
+                textAlign: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              Stream Tap Layer Active
+              <br />
+              <small>Tap anywhere to interact • Dump UI for precise elements</small>
+            </div>
+          )}
+        </div>
+
+        {/* Elements layer - Higher z-index, only visible when elements exist */}
+        {scaledElements.length > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              left: `${panelInfo.position.x}px`,
+              top: `${panelInfo.position.y}px`,
+              width: `${panelInfo.size.width}px`,
+              height: `${panelInfo.size.height}px`,
+              zIndex: 999999, // Higher z-index than base layer
+              contain: 'layout style size',
+              willChange: 'transform',
+              pointerEvents: 'none', // Allow clicks to pass through to individual elements
+            }}
+          >
+            {/* Render scaled elements as colored rectangles */}
+            {scaledElements.map((scaledElement) => (
+              <div
+                key={scaledElement.id}
+                style={{
+                  position: 'absolute',
+                  left: `${scaledElement.x}px`,
+                  top: `${scaledElement.y}px`,
+                  width: `${scaledElement.width}px`,
+                  height: `${scaledElement.height}px`,
+                  backgroundColor: scaledElement.color,
+                  border: '2px solid rgba(255, 255, 255, 0.8)',
+                  pointerEvents: 'auto', // Allow clicks on elements (higher priority)
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  color: 'white',
+                  textShadow: '1px 1px 1px rgba(0, 0, 0, 0.8)',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                }}
+                onClick={() => handleElementClick(scaledElement)}
+                title={`Element ${scaledElement.id}: ${scaledElement.label}`}
+              >
+                {scaledElement.id}
+              </div>
+            ))}
+          </div>
+        )}
+      </>
     );
   },
   (prevProps, nextProps) => {
@@ -271,7 +336,6 @@ export const AndroidMobileOverlay = React.memo(
       prevProps.deviceWidth === nextProps.deviceWidth &&
       prevProps.deviceHeight === nextProps.deviceHeight &&
       prevProps.isVisible === nextProps.isVisible &&
-      prevProps.selectedElementId === nextProps.selectedElementId &&
       prevProps.onElementClick === nextProps.onElementClick &&
       JSON.stringify(prevProps.panelInfo) === JSON.stringify(nextProps.panelInfo) &&
       prevProps.onPanelTap === nextProps.onPanelTap

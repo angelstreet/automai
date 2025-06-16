@@ -93,14 +93,27 @@ export const AndroidMobileRemote = React.memo(
         hasAllRequired: !!(streamPosition && streamSize && panelState),
       });
 
+      // Always create panelInfo when we have stream position/size - overlay should always be visible
       if (streamPosition && streamSize && panelState) {
+        // Calculate the actual stream position (not the remote panel position)
+        // The stream should be positioned relative to the viewport, not the remote panel
+        const streamActualPosition = {
+          x: 50, // Hardcode stream position for now - left side of screen
+          y: 100, // Hardcode stream position for now - top area
+        };
+
+        const streamActualSize = {
+          width: 400, // Hardcode stream size for now
+          height: 300, // Hardcode stream size for now
+        };
+
         const info = {
-          position: streamPosition,
-          size: streamSize,
-          deviceResolution: streamResolution || hardcodedResolution, // Use hardcoded fallback
+          position: streamActualPosition, // Use stream position, not panel position
+          size: streamActualSize, // Use stream size, not panel size
+          deviceResolution: streamResolution || hardcodedResolution,
           isCollapsed: panelState.isCollapsed,
         };
-        console.log('[@component:AndroidMobileRemote] Created panelInfo:', info);
+        console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
         return info;
       }
       console.log(
@@ -481,17 +494,15 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - rendered as portal to document body for proper positioning */}
-        {showOverlay &&
-          androidElements.length > 0 &&
-          panelInfo &&
+        {/* AndroidMobileOverlay - Always visible when remote is active, positioned over stream */}
+        {panelInfo &&
           typeof document !== 'undefined' &&
           createPortal(
             <AndroidMobileOverlay
-              elements={androidElements}
+              elements={androidElements} // Can be empty array when no UI dumped yet
               deviceWidth={layoutConfig.deviceResolution.width}
               deviceHeight={layoutConfig.deviceResolution.height}
-              isVisible={showOverlay}
+              isVisible={true} // Always visible when remote is active
               selectedElementId={selectedElement ? selectedElement : undefined}
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
@@ -500,8 +511,8 @@ export const AndroidMobileRemote = React.memo(
             document.body,
           )}
 
-        {/* Debug info when overlay should show but panelInfo is missing */}
-        {showOverlay && androidElements.length > 0 && !panelInfo && (
+        {/* Debug info when panelInfo is missing */}
+        {!panelInfo && (
           <div
             style={{
               position: 'fixed',
