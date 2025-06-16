@@ -227,8 +227,19 @@ def tap_element():
         # Get request data
         request_data = request.get_json() or {}
         
+        # Extract host info and remove it from the data to be sent to host
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required'
+            }), 400
+        
+        # Remove host from request data before sending to host (host doesn't need its own info)
+        host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
+        
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/tap-element', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/tap-element', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         
@@ -268,36 +279,3 @@ def execute_command():
             'success': False,
             'error': str(e)
         }), 500
-
-# get-status endpoint removed - not needed
-
-# NOTE: Navigation actions (navigate, click, swipe, key-press) are typically
-# handled by navigation/pathfinding routes or direct controller calls.
-# 
-# If additional specific remote control endpoints are needed, they should be added here
-# using the abstract remote controller pattern:
-#
-# @remote_bp.route('/navigate', methods=['POST'])
-# def navigate():
-#     """Navigate using abstract remote controller."""
-#     try:
-#         host_device = getattr(current_app, 'my_host_device', None)
-#         if not host_device:
-#             return jsonify({'success': False, 'error': 'Host device not initialized'}), 500
-#         
-#         remote_controller = host_device.get('controller_objects', {}).get('remote')
-#         if not remote_controller:
-#             return jsonify({'success': False, 'error': 'Remote controller not available'}), 400
-#         
-#         data = request.get_json()
-#         result = remote_controller.navigate(data.get('direction'))
-#         return jsonify({'success': True, 'result': result})
-#     except Exception as e:
-#         return jsonify({'success': False, 'error': str(e)}), 500
-
-# DELETED: All device-specific /android-tv/* and /android-mobile/* endpoints
-# - /config endpoints: Configuration happens at registration
-# - /defaults endpoints: Controllers are pre-configured
-# 
-# Controllers are instantiated and configured during host registration.
-# Routes should use the abstract controller methods only. 

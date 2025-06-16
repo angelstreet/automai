@@ -45,7 +45,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHostDevice.host_name,
+          host: selectedHostDevice, // Send full host object instead of just host_name
           x: deviceX,
           y: deviceY,
         }),

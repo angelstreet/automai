@@ -6,53 +6,19 @@ import {
   NavigationConfigState,
 } from '../../types/pages/Navigation_Types';
 import { buildServerUrl } from '../../utils/frontendUtils';
+import { useUserSession } from '../useUserSession';
 
 export const useNavigationConfig = (state: NavigationConfigState) => {
   // Note: Using buildServerUrl instead of relative URLs to avoid CORS issues
   // This routes through the proper server URL configuration
 
-  // Use user ID as the primary lock identifier (simplified approach like device control)
-  const [userId] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('cached_user');
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          const id = user.id || 'browser-user';
-          console.log(`[@hook:useNavigationConfig:init] Using user ID for locks: ${id}`);
-          return id;
-        } catch (e) {
-          console.log(`[@hook:useNavigationConfig:init] Error parsing cached user, using default`);
-        }
-      }
-    }
-    const defaultId = 'browser-user';
-    console.log(`[@hook:useNavigationConfig:init] Using default user ID: ${defaultId}`);
-    return defaultId;
-  });
-
-  // Simple session ID for server communication (but user ID is the lock identifier)
-  const [sessionId] = useState(() => {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${userId}-${timestamp}-${random}`;
-  });
+  // Use shared user session for consistent identification
+  const { userId, sessionId, isOurLock } = useUserSession();
 
   const [isLocked, setIsLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState<any>(null);
   const [isCheckingLock, setIsCheckingLock] = useState(false); // Start as false, only true when actively checking
   const [showReadOnlyOverlay, setShowReadOnlyOverlay] = useState(false); // Only true when definitively locked by someone else
-
-  // Helper function to check if a lock belongs to our user (simplified)
-  const isOurLock = useCallback(
-    (lockInfo: any): boolean => {
-      if (!lockInfo) return false;
-      const lockOwner = lockInfo.session_id || lockInfo.locked_by;
-      // Check if the lock owner is our user ID (simplified matching)
-      return lockOwner === userId;
-    },
-    [userId],
-  );
 
   // Set checking lock state immediately (fixes race condition)
   const setCheckingLockState = useCallback((checking: boolean) => {
@@ -66,30 +32,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
         setIsCheckingLock(true);
         console.log(
           `[@hook:useNavigationConfig:lockNavigationTree] Attempting to lock tree: ${treeName} with user ID: ${userId}`,
-        );
-
-        // First check if tree is already locked by us
-        const statusResponse = await fetch(
-          buildServerUrl(`/server/navigation/config/trees/${treeName}/status`),
-        );
-
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          if (statusData.success && statusData.is_locked && isOurLock(statusData.lock_info)) {
-            // We already have the lock! Reclaim it.
-            console.log(
-              `[@hook:useNavigationConfig:lockNavigationTree] Reclaiming existing lock for tree: ${treeName} (same user)`,
-            );
-            setIsLocked(true);
-            setLockInfo(statusData.lock_info);
-            setShowReadOnlyOverlay(false);
-            return true;
-          }
-        }
-
-        // If we don't have the lock, try to acquire it using user ID
-        console.log(
-          `[@hook:useNavigationConfig:lockNavigationTree] Attempting to acquire new lock for tree: ${treeName}`,
         );
         const response = await fetch(
           buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`),
@@ -417,14 +359,16 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     [state],
   );
 
-  // Check tree lock status
+  // Check tree lock status using existing tree endpoint
   const checkTreeLockStatus = useCallback(
     async (treeName: string) => {
       try {
         setIsCheckingLock(true);
-        const response = await fetch(
-          buildServerUrl(`/server/navigation/config/trees/${treeName}/status`),
+        console.log(
+          `[@hook:useNavigationConfig:checkTreeLockStatus] Checking lock status for tree: ${treeName}`,
         );
+
+        const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`));
 
         if (response.ok) {
           const data = await response.json();
@@ -433,6 +377,9 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
             setLockInfo(data.lock_info);
             const isLockedByOther = data.is_locked && !isOurLock(data.lock_info);
             setShowReadOnlyOverlay(isLockedByOther);
+            console.log(
+              `[@hook:useNavigationConfig:checkTreeLockStatus] Lock status updated for tree: ${treeName}, locked: ${data.is_locked}`,
+            );
           }
         }
       } catch (error) {
@@ -474,8 +421,6 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     isCheckingLock,
     showReadOnlyOverlay,
     setCheckingLockState,
-    sessionId,
-    userId, // Expose user ID for debugging
     lockNavigationTree,
     unlockNavigationTree,
     checkTreeLockStatus,
@@ -486,5 +431,9 @@ export const useNavigationConfig = (state: NavigationConfigState) => {
     saveToConfig,
     listAvailableTrees,
     createEmptyTree,
+
+    // User identification
+    sessionId,
+    userId,
   };
 };

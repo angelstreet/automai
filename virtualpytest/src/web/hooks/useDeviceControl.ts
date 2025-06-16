@@ -2,49 +2,19 @@ import { useCallback, useState, useEffect } from 'react';
 
 import { Host } from '../types/common/Host_Types';
 import { buildServerUrl } from '../utils/frontendUtils';
+import { useUserSession } from './useUserSession';
 
 /**
  * Device Control Hook - Business Logic for Device Locking/Unlocking
  *
- * Handles device control operations via server endpoints with simplified session tracking
- * using user ID as the primary identifier for lock ownership.
+ * Handles device control operations via server endpoints using consistent user identification.
  */
 export const useDeviceControl = () => {
-  // Track active locks by host name -> user ID (simplified from session tracking)
+  // Use shared user session for consistent identification
+  const { userId, sessionId: browserSessionId, isOurLock } = useUserSession();
+
+  // Track active locks by host name -> user ID
   const [activeLocks, setActiveLocks] = useState<Map<string, string>>(new Map());
-
-  // Get user ID from browser storage - this is our primary lock identifier
-  const [userId] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('cached_user');
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          return user.id || 'browser-user';
-        } catch (e) {
-          // Ignore parsing errors
-        }
-      }
-    }
-    return 'browser-user';
-  });
-
-  // Simple session ID for this browser session (used for server communication but not lock ownership)
-  const [browserSessionId] = useState(() => {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8); // Shorter random string
-    return `${userId}-${timestamp}-${random}`;
-  });
-
-  // Check if a lock belongs to our user
-  const isOurLock = useCallback(
-    (lockInfo: any): boolean => {
-      if (!lockInfo) return false;
-      const lockOwner = lockInfo.lockedBy || lockInfo.locked_by;
-      return lockOwner === userId;
-    },
-    [userId],
-  );
 
   // Automatically reclaim locks for devices that belong to this user
   const reclaimUserLocks = useCallback(async () => {
@@ -125,7 +95,6 @@ export const useDeviceControl = () => {
       details?: any;
     }> => {
       try {
-        // Use user ID as the primary session identifier for lock ownership
         const effectiveSessionId = sessionId || browserSessionId;
         console.log(`[@hook:useDeviceControl] Taking control of device: ${hostName}`);
         console.log(`[@hook:useDeviceControl] Using user ID for lock: ${userId}`);
@@ -138,7 +107,7 @@ export const useDeviceControl = () => {
           body: JSON.stringify({
             host_name: hostName,
             session_id: effectiveSessionId,
-            user_id: userId, // This is the key identifier for lock ownership
+            user_id: userId,
           }),
         });
 
@@ -146,7 +115,6 @@ export const useDeviceControl = () => {
 
         if (response.ok && result.success) {
           console.log(`[@hook:useDeviceControl] Successfully took control of device: ${hostName}`);
-          // Track this lock using user ID
           setActiveLocks((prev) => new Map(prev).set(hostName, userId));
           return { success: true };
         } else {
@@ -169,7 +137,6 @@ export const useDeviceControl = () => {
             errorType = 'device_not_found';
             errorMessage = `Device ${hostName} not found or offline`;
           } else if (response.status === 409 && result.locked_by_same_user) {
-            // Special case: locked by same user - treat as success (this handles page refresh scenario)
             console.log(
               `[@hook:useDeviceControl] Device ${hostName} locked by same user, reclaiming lock`,
             );
@@ -212,7 +179,6 @@ export const useDeviceControl = () => {
       details?: any;
     }> => {
       try {
-        // Use provided session ID or browser session ID for server communication
         const effectiveSessionId = sessionId || browserSessionId;
 
         console.log(`[@hook:useDeviceControl] Releasing control of device: ${hostName}`);
@@ -226,7 +192,7 @@ export const useDeviceControl = () => {
           body: JSON.stringify({
             host_name: hostName,
             session_id: effectiveSessionId,
-            user_id: userId, // This is the key identifier for lock ownership
+            user_id: userId,
           }),
         });
 
@@ -240,7 +206,6 @@ export const useDeviceControl = () => {
           console.log(
             `[@hook:useDeviceControl] Successfully released control of device: ${hostName}`,
           );
-          // Remove from active locks tracking
           setActiveLocks((prev) => {
             const newMap = new Map(prev);
             newMap.delete(hostName);
@@ -274,23 +239,6 @@ export const useDeviceControl = () => {
     [browserSessionId, userId],
   );
 
-  // Legacy methods for backward compatibility
-  const lockDevice = useCallback(
-    async (hostName: string, sessionId?: string): Promise<boolean> => {
-      const result = await takeControl(hostName, sessionId);
-      return result.success;
-    },
-    [takeControl],
-  );
-
-  const unlockDevice = useCallback(
-    async (hostName: string, sessionId?: string): Promise<boolean> => {
-      const result = await releaseControl(hostName, sessionId);
-      return result.success;
-    },
-    [releaseControl],
-  );
-
   // Check if we have an active lock for a device
   const hasActiveLock = useCallback(
     (hostName: string): boolean => {
@@ -322,13 +270,9 @@ export const useDeviceControl = () => {
   }, []);
 
   return {
-    // New methods with detailed error handling
+    // Control methods
     takeControl,
     releaseControl,
-
-    // Legacy methods for backward compatibility
-    lockDevice,
-    unlockDevice,
 
     // Status checking methods
     isDeviceLocked,
@@ -338,7 +282,7 @@ export const useDeviceControl = () => {
     // Lock management
     reclaimUserLocks,
 
-    // Expose user ID for debugging/logging
+    // User identification
     userId,
   };
 };
