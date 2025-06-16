@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { useRegistration } from '../useRegistration';
@@ -133,25 +133,46 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
     }
   }, [availableHosts, userInterface?.models]);
 
-  return {
-    // Panel and UI state
-    selectedHost,
-    isControlActive,
-    isRemotePanelOpen,
-    showRemotePanel,
-    showAVPanel,
-    isVerificationActive,
+  return useMemo(
+    () => ({
+      // Panel and UI state
+      selectedHost,
+      isControlActive,
+      isRemotePanelOpen,
+      showRemotePanel,
+      showAVPanel,
+      isVerificationActive,
 
-    // Panel and UI handlers
-    handleDeviceSelect,
-    handleControlStateChange,
-    handleToggleRemotePanel,
-    handleConnectionChange,
-    handleDisconnectComplete,
+      // Panel and UI handlers
+      handleDeviceSelect,
+      handleControlStateChange,
+      handleToggleRemotePanel,
+      handleConnectionChange,
+      handleDisconnectComplete,
 
-    // Host data (filtered by interface models)
-    availableHosts: filteredAvailableHosts,
-    getHostByName,
-    fetchHosts,
-  };
+      // Host data (filtered by interface models)
+      availableHosts: filteredAvailableHosts,
+      getHostByName,
+      fetchHosts,
+    }),
+    [
+      // State values
+      selectedHost,
+      isControlActive,
+      isRemotePanelOpen,
+      showRemotePanel,
+      showAVPanel,
+      isVerificationActive,
+      filteredAvailableHosts,
+      // Handlers (these are stable due to useCallback)
+      handleDeviceSelect,
+      handleControlStateChange,
+      handleToggleRemotePanel,
+      handleConnectionChange,
+      handleDisconnectComplete,
+      // External functions (these should be stable from useRegistration)
+      getHostByName,
+      fetchHosts,
+    ],
+  );
 };
