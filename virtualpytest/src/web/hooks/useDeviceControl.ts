@@ -36,6 +36,62 @@ export const useDeviceControl = () => {
     return `${userId}-${timestamp}-${random}`;
   });
 
+  // Check if a lock belongs to our user
+  const isOurLock = useCallback(
+    (lockInfo: any): boolean => {
+      if (!lockInfo) return false;
+      const lockOwner = lockInfo.lockedBy || lockInfo.locked_by;
+      return lockOwner === userId;
+    },
+    [userId],
+  );
+
+  // Automatically reclaim locks for devices that belong to this user
+  const reclaimUserLocks = useCallback(async () => {
+    try {
+      console.log(`[@hook:useDeviceControl] Checking for locks to reclaim for user: ${userId}`);
+
+      // Get list of all locked devices from server
+      const response = await fetch(buildServerUrl('/server/control/locked-devices'), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.locked_devices) {
+          const userLockedDevices = Object.entries(result.locked_devices).filter(
+            ([_, lockInfo]: [string, any]) => isOurLock(lockInfo),
+          );
+
+          if (userLockedDevices.length > 0) {
+            console.log(
+              `[@hook:useDeviceControl] Found ${userLockedDevices.length} devices locked by current user, reclaiming...`,
+            );
+
+            // Reclaim each device lock
+            for (const [deviceId, lockInfo] of userLockedDevices) {
+              const hostName = (lockInfo as any).hostName || deviceId;
+              console.log(`[@hook:useDeviceControl] Reclaiming lock for device: ${hostName}`);
+              setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+            }
+          } else {
+            console.log(`[@hook:useDeviceControl] No devices locked by current user found`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[@hook:useDeviceControl] Error reclaiming user locks:`, error);
+    }
+  }, [userId, isOurLock]);
+
+  // Initialize lock reclaim on mount
+  useEffect(() => {
+    reclaimUserLocks();
+  }, [reclaimUserLocks]);
+
   // Clean up locks on unmount
   useEffect(() => {
     return () => {
@@ -235,10 +291,29 @@ export const useDeviceControl = () => {
     [releaseControl],
   );
 
-  // Check if device is locked (based on host data)
-  const isDeviceLocked = useCallback((host: Host | null): boolean => {
-    return host?.isLocked || false;
-  }, []);
+  // Check if we have an active lock for a device
+  const hasActiveLock = useCallback(
+    (hostName: string): boolean => {
+      return activeLocks.has(hostName);
+    },
+    [activeLocks],
+  );
+
+  // Check if device is locked (based on host data and local active locks)
+  const isDeviceLocked = useCallback(
+    (host: Host | null): boolean => {
+      if (!host) return false;
+
+      // If we have an active lock for this device, it's not locked for us
+      if (hasActiveLock(host.host_name)) {
+        return false;
+      }
+
+      // Otherwise, check the server-provided lock status
+      return host.isLocked || false;
+    },
+    [hasActiveLock],
+  );
 
   // Check if device can be locked (based on host data)
   const canLockDevice = useCallback((host: Host | null): boolean => {
@@ -258,6 +333,10 @@ export const useDeviceControl = () => {
     // Status checking methods
     isDeviceLocked,
     canLockDevice,
+    hasActiveLock,
+
+    // Lock management
+    reclaimUserLocks,
 
     // Expose user ID for debugging/logging
     userId,

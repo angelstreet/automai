@@ -64,6 +64,7 @@ export function useAndroidMobile(host: Host) {
   const [selectedApp, setSelectedApp] = useState('');
   const [isDumpingUI, setIsDumpingUI] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isRefreshingApps, setIsRefreshingApps] = useState(false);
 
   const screenshotRef = useRef<HTMLImageElement>(null);
 
@@ -105,6 +106,7 @@ export function useAndroidMobile(host: Host) {
 
   const getApps = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Getting apps for host:', host.host_name);
+    setIsRefreshingApps(true);
 
     try {
       const response = await fetch(buildServerUrl('/server/remote/get-apps'), {
@@ -125,6 +127,8 @@ export function useAndroidMobile(host: Host) {
     } catch (error) {
       console.error('[@hook:useAndroidMobile] Error getting apps:', error);
       return { success: false, error: error };
+    } finally {
+      setIsRefreshingApps(false);
     }
   }, [host]);
 
@@ -268,6 +272,7 @@ export function useAndroidMobile(host: Host) {
     selectedApp,
     isDumpingUI,
     isDisconnecting,
+    isRefreshingApps,
     screenshotRef,
 
     // Actions

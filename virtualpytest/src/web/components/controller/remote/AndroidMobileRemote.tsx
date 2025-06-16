@@ -35,6 +35,7 @@ export function AndroidMobileRemote({
     selectedApp,
     isDumpingUI,
     isDisconnecting,
+    isRefreshingApps,
     screenshotRef,
 
     // Actions
@@ -83,7 +84,9 @@ export function AndroidMobileRemote({
   };
 
   return (
-    <Box sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box
+      sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+    >
       <Box
         sx={{
           p: 2,
@@ -92,6 +95,8 @@ export function AndroidMobileRemote({
           maxWidth: `${layoutConfig.containerWidth}px`,
           margin: '0 auto',
           width: '100%',
+          // Prevent the container from affecting global scrollbar
+          contain: 'layout style',
         }}
       >
         <Box
@@ -113,7 +118,7 @@ export function AndroidMobileRemote({
                 <Select
                   value={selectedApp}
                   label="Select an app..."
-                  disabled={androidApps.length === 0}
+                  disabled={androidApps.length === 0 || isRefreshingApps}
                   onChange={(e) => {
                     const appPackage = e.target.value;
                     if (appPackage) {
@@ -121,9 +126,29 @@ export function AndroidMobileRemote({
                       handleRemoteCommand('LAUNCH_APP', { package: appPackage });
                     }
                   }}
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 200,
+                        width: 'auto',
+                        maxWidth: '100%',
+                      },
+                    },
+                  }}
                 >
                   {androidApps.map((app) => (
-                    <MenuItem key={app.packageName} value={app.packageName}>
+                    <MenuItem
+                      key={app.packageName}
+                      value={app.packageName}
+                      sx={{
+                        fontSize: '0.875rem',
+                        py: 1,
+                        px: 2,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
                       {app.label}
                     </MenuItem>
                   ))}
@@ -135,10 +160,17 @@ export function AndroidMobileRemote({
               variant="outlined"
               size="small"
               onClick={handleGetApps}
-              disabled={!session.connected}
+              disabled={!session.connected || isRefreshingApps}
               fullWidth
             >
-              Refresh Apps
+              {isRefreshingApps ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="caption">Loading...</Typography>
+                </Box>
+              ) : (
+                'Refresh Apps'
+              )}
             </Button>
           </Box>
 
@@ -224,6 +256,9 @@ export function AndroidMobileRemote({
                       maxWidth: '100%',
                     },
                   },
+                  // Prevent dropdown from affecting page scrollbar
+                  disableScrollLock: true,
+                  keepMounted: false,
                 }}
               >
                 {androidElements.map((element) => (
@@ -374,6 +409,9 @@ export function AndroidMobileRemote({
             transformOrigin: 'top left',
             transform: `scale(${layoutConfig.overlayConfig.defaultScale.x}, ${layoutConfig.overlayConfig.defaultScale.y})`,
             background: 'rgba(0,0,0,0.01)',
+            // Prevent overlay from affecting page layout
+            contain: 'layout style size',
+            willChange: 'transform',
           }}
         >
           <AndroidMobileOverlay

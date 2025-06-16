@@ -19,7 +19,8 @@ from src.utils.device_lock_manager_utils import (
     unlock_device_in_registry,
     is_device_locked_in_registry,
     get_device_lock_info,
-    cleanup_expired_locks
+    cleanup_expired_locks,
+    get_all_locked_devices
 )
 from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
@@ -329,6 +330,33 @@ def navigate():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+# =====================================================
+# DEVICE LOCK STATUS ENDPOINTS
+# =====================================================
+
+@control_bp.route('/locked-devices', methods=['GET'])
+def get_locked_devices():
+    """Get all currently locked devices"""
+    try:
+        print("[@route:get_locked_devices] Fetching all locked devices")
+        
+        # Get all locked devices from the device lock manager
+        locked_devices = get_all_locked_devices()
+        
+        print(f"[@route:get_locked_devices] Found {len(locked_devices)} locked devices")
+        
+        return jsonify({
+            'success': True,
+            'locked_devices': locked_devices
+        }), 200
+        
+    except Exception as e:
+        print(f"[@route:get_locked_devices] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get locked devices: {str(e)}'
         }), 500
 
 # =====================================================

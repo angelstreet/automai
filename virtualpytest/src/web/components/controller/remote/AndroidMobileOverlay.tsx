@@ -291,7 +291,17 @@ export function AndroidMobileOverlay({
   );
 
   return (
-    <div ref={overlayRef} style={{ position: 'fixed', zIndex: 999999 }}>
+    <div
+      ref={overlayRef}
+      style={{
+        position: 'fixed',
+        zIndex: 999999,
+        // Prevent overlay from affecting page layout and scrollbars
+        contain: 'layout style size',
+        willChange: 'transform',
+        pointerEvents: 'none', // Allow clicks to pass through the container
+      }}
+    >
       {scaledElements.map((element, index) => (
         <div
           key={element.id}
@@ -305,6 +315,7 @@ export function AndroidMobileOverlay({
             backgroundColor: `${element.color}20`, // 20% opacity
             cursor: 'pointer',
             transition: 'all 0.15s ease',
+            pointerEvents: 'auto', // Re-enable pointer events for individual elements
           }}
           onClick={() => handleElementClick(element)}
           title={`Click to interact with: ${element.label}`}
