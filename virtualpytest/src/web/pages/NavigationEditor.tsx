@@ -9,7 +9,7 @@ import {
   Typography,
   Button,
 } from '@mui/material';
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactFlow, {
   Background,
@@ -101,19 +101,7 @@ const NavigationEditorContent: React.FC = () => {
   // 1. INITIALIZATION & SETUP
   // ========================================
 
-  // Memoize nodeTypes and edgeTypes as extra safety for hot reloading
-  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
-  const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
-  const memoizedDefaultEdgeOptions = useMemo(() => defaultEdgeOptions, []);
-  const memoizedDefaultViewport = useMemo(() => defaultViewport, []);
-  const memoizedTranslateExtent = useMemo(() => translateExtent, []);
-  const memoizedNodeExtent = useMemo(() => nodeExtent, []);
-  const memoizedSnapGrid = useMemo(() => snapGrid, []);
-  const memoizedReactFlowStyle = useMemo(() => reactFlowStyle, []);
-  const memoizedNodeOrigin = useMemo(() => nodeOrigin, []);
-  const memoizedProOptions = useMemo(() => proOptions, []);
-  const memoizedMiniMapStyle = useMemo(() => miniMapStyle, []);
-  const memoizedMiniMapNodeColor = useMemo(() => miniMapNodeColor, []);
+  // Objects are already defined outside component, no need to memoize again
 
   // Get user interface data from navigation state (passed from UserInterface.tsx)
   const location = useLocation();
@@ -474,20 +462,20 @@ const NavigationEditorContent: React.FC = () => {
                     setReactFlowInstance(instance);
                   }
                 }}
-                nodeTypes={memoizedNodeTypes}
-                edgeTypes={memoizedEdgeTypes}
-                defaultEdgeOptions={memoizedDefaultEdgeOptions}
-                defaultViewport={memoizedDefaultViewport}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultEdgeOptions={defaultEdgeOptions}
+                defaultViewport={defaultViewport}
                 // Ensure consistent viewport and prevent auto-fitting
-                translateExtent={memoizedTranslateExtent}
-                nodeExtent={memoizedNodeExtent}
+                translateExtent={translateExtent}
+                nodeExtent={nodeExtent}
                 attributionPosition="bottom-left"
                 connectionLineType={ConnectionLineType.SmoothStep}
                 snapToGrid={true}
-                snapGrid={memoizedSnapGrid}
+                snapGrid={snapGrid}
                 deleteKeyCode={isLocked ? 'Delete' : null}
                 multiSelectionKeyCode="Shift"
-                style={memoizedReactFlowStyle}
+                style={reactFlowStyle}
                 fitView={false}
                 nodesDraggable={isLocked}
                 nodesConnectable={isLocked}
@@ -501,9 +489,9 @@ const NavigationEditorContent: React.FC = () => {
                 minZoom={0.1}
                 maxZoom={4}
                 // Disable React Flow's auto-positioning features
-                proOptions={memoizedProOptions}
+                proOptions={proOptions}
                 // Prevent automatic layout algorithms
-                nodeOrigin={memoizedNodeOrigin}
+                nodeOrigin={nodeOrigin}
                 // Additional props to prevent automatic positioning
                 autoPanOnConnect={false}
                 autoPanOnNodeDrag={false}
@@ -520,8 +508,8 @@ const NavigationEditorContent: React.FC = () => {
                 />
                 <MiniMap
                   position="bottom-right"
-                  style={memoizedMiniMapStyle}
-                  nodeColor={memoizedMiniMapNodeColor}
+                  style={miniMapStyle}
+                  nodeColor={miniMapNodeColor}
                   maskColor="rgba(0, 0, 0, 0.1)"
                 />
               </ReactFlow>
