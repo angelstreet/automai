@@ -54,9 +54,6 @@ export function HDMIStream({
   // Get configurable layout from AV config
   const panelLayout = getConfigurableAVPanelLayout(host.device_model, avConfig);
 
-  // Determine current layout based on expanded state
-  const currentLayout = isExpanded ? panelLayout.expanded : panelLayout.collapsed;
-
   // Use the existing hook with our fetched stream data
   const {
     // State from hook
@@ -206,26 +203,39 @@ export function HDMIStream({
   // Get device resolution for click overlay
   const deviceResolution = { width: 1920, height: 1080 }; // Default, should come from host config
 
-  // Build position styles from config
+  // Use dimensions directly from the loaded config (no device_specific needed)
+  const collapsedWidth = panelLayout.collapsed.width;
+  const collapsedHeight = panelLayout.collapsed.height;
+  const expandedWidth = panelLayout.expanded.width;
+  const expandedHeight = panelLayout.expanded.height;
+
+  // Calculate scale factors based on actual config dimensions
+  const scaleX = parseInt(expandedWidth) / parseInt(collapsedWidth);
+  const scaleY = parseInt(expandedHeight) / parseInt(collapsedHeight);
+
+  // Build position styles with transform-based animation
   const positionStyles: any = {
     position: 'fixed',
     zIndex: panelLayout.zIndex,
-    width: currentLayout.width,
-    height: currentLayout.height,
+    // Use actual collapsed dimensions from config
+    width: collapsedWidth,
+    height: collapsedHeight,
+    // Always anchor at bottom-left (collapsed position)
+    bottom: panelLayout.collapsed.position.bottom || '20px',
+    left: panelLayout.collapsed.position.left || '20px',
+    // Transform origin for scaling toward top-right
+    transformOrigin: 'bottom left',
+    // Scale animation based on expanded state using exact config ratios
+    transform: isExpanded ? `scale(${scaleX}, ${scaleY})` : 'scale(1, 1)',
     backgroundColor: '#1E1E1E',
     border: '2px solid #1E1E1E',
     borderRadius: 1,
     boxShadow: 3,
     overflow: 'hidden',
-    transition: 'all 0.3s ease-in-out',
+    // Only animate transform for smooth scaling
+    transition: 'transform 0.3s ease-in-out',
     ...sx,
   };
-
-  // Add positioning based on config
-  if (currentLayout.position.top) positionStyles.top = currentLayout.position.top;
-  if (currentLayout.position.bottom) positionStyles.bottom = currentLayout.position.bottom;
-  if (currentLayout.position.left) positionStyles.left = currentLayout.position.left;
-  if (currentLayout.position.right) positionStyles.right = currentLayout.position.right;
 
   return (
     <Box sx={positionStyles}>

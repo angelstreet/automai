@@ -19,27 +19,13 @@ export const hdmiStreamConfig = {
       width: '800px',
       height: '600px',
       position: {
-        top: '100px',
-        left: '20px',
+        bottom: '20px',
+        right: '20px',
       },
     },
     zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
-  },
-  device_specific: {
-    android_mobile: {
-      collapsed: {
-        width: '300px',
-        height: '600px',
-      },
-    },
-    android_tv: {
-      collapsed: {
-        width: '400px',
-        height: '300px',
-      },
-    },
   },
 } as const;
 
@@ -63,27 +49,15 @@ export const hdmiStreamMobileConfig = {
     },
     expanded: {
       width: '400px',
-      height: '700px', // Portrait - taller than wide
+      height: '600px', // Portrait - taller than wide
       position: {
-        top: '100px',
-        left: '20px',
+        bottom: '20px',
+        right: '20px',
       },
     },
     zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
-  },
-  device_specific: {
-    android_mobile: {
-      collapsed: {
-        width: '200px',
-        height: '350px',
-      },
-      expanded: {
-        width: '400px',
-        height: '700px',
-      },
-    },
   },
 } as const;
 
