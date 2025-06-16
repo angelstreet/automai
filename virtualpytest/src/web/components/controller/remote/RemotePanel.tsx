@@ -116,6 +116,7 @@ export function RemotePanel({
   // Simple device model detection - no loading, no fallback, no validation
   const renderRemoteComponent = () => {
     // Calculate current panel position and size for overlay
+    // In RemotePanel context, the overlay should be positioned relative to the panel itself
     const currentPosition = isCollapsed ? collapsedPosition : expandedPosition;
     const currentSize = isCollapsed ? collapsedSize : expandedSize;
 

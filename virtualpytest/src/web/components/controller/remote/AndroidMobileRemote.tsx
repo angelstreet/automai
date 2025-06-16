@@ -15,6 +15,7 @@ import { useRemoteConfigs } from '../../../hooks/controller/useRemoteConfigs';
 import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
+import { createPortal } from 'react-dom';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
@@ -464,20 +465,24 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - positioned outside or over panel */}
-        {showOverlay && androidElements.length > 0 && (
-          <AndroidMobileOverlay
-            elements={androidElements}
-            screenshotElement={screenshotRef.current}
-            deviceWidth={layoutConfig.deviceResolution.width}
-            deviceHeight={layoutConfig.deviceResolution.height}
-            isVisible={showOverlay}
-            selectedElementId={selectedElement ? selectedElement : undefined}
-            onElementClick={handleOverlayElementClick}
-            panelInfo={panelInfo}
-            onPanelTap={panelInfo ? handleStreamTap : undefined}
-          />
-        )}
+        {/* AndroidMobileOverlay - rendered as portal to document body for proper positioning */}
+        {showOverlay &&
+          androidElements.length > 0 &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <AndroidMobileOverlay
+              elements={androidElements}
+              screenshotElement={screenshotRef.current}
+              deviceWidth={layoutConfig.deviceResolution.width}
+              deviceHeight={layoutConfig.deviceResolution.height}
+              isVisible={showOverlay}
+              selectedElementId={selectedElement ? selectedElement : undefined}
+              onElementClick={handleOverlayElementClick}
+              panelInfo={panelInfo}
+              onPanelTap={panelInfo ? handleStreamTap : undefined}
+            />,
+            document.body,
+          )}
       </Box>
     );
   },

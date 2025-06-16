@@ -114,23 +114,15 @@ export const AndroidMobileOverlay = React.memo(
               return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
             };
 
-            // Calculate content area based on panel state
-            const contentOffset = panelInfo.isCollapsed
-              ? { x: 10, y: 50 } // Smaller offset for collapsed panel
-              : { x: 20, y: 60 }; // Larger offset for expanded panel
-
-            const contentArea = panelInfo.isCollapsed
-              ? { width: panelInfo.size.width - 20, height: panelInfo.size.height - 100 }
-              : { width: panelInfo.size.width - 40, height: panelInfo.size.height - 120 };
-
-            // Scale elements relative to panel content area
-            const scaleX = contentArea.width / deviceWidth;
-            const scaleY = contentArea.height / deviceHeight;
+            // For panel positioning, we scale elements to fit the stream/panel size
+            // The overlay container will be positioned at panelInfo.position
+            const scaleX = panelInfo.size.width / deviceWidth;
+            const scaleY = panelInfo.size.height / deviceHeight;
 
             return {
               id: element.id,
-              x: bounds.x * scaleX + contentOffset.x,
-              y: bounds.y * scaleY + contentOffset.y,
+              x: bounds.x * scaleX,
+              y: bounds.y * scaleY,
               width: bounds.width * scaleX,
               height: bounds.height * scaleY,
               color: COLORS[index % COLORS.length],
@@ -339,21 +331,13 @@ export const AndroidMobileOverlay = React.memo(
       if (!originalElement) return;
 
       if (panelInfo && onPanelTap) {
-        // Calculate device coordinates for panel tap
-        const contentArea = panelInfo.isCollapsed
-          ? { width: panelInfo.size.width - 20, height: panelInfo.size.height - 100 }
-          : { width: panelInfo.size.width - 40, height: panelInfo.size.height - 120 };
-
-        const contentOffset = panelInfo.isCollapsed ? { x: 10, y: 50 } : { x: 20, y: 60 };
-
         // Convert overlay coordinates back to device coordinates
+        // Since we scaled directly without offsets, conversion is straightforward
         const deviceX = Math.round(
-          ((scaledElement.x - contentOffset.x) * panelInfo.deviceResolution.width) /
-            contentArea.width,
+          (scaledElement.x * panelInfo.deviceResolution.width) / panelInfo.size.width,
         );
         const deviceY = Math.round(
-          ((scaledElement.y - contentOffset.y) * panelInfo.deviceResolution.height) /
-            contentArea.height,
+          (scaledElement.y * panelInfo.deviceResolution.height) / panelInfo.size.height,
         );
 
         console.log(
@@ -381,7 +365,7 @@ export const AndroidMobileOverlay = React.memo(
       <div
         ref={overlayRef}
         style={{
-          position: panelInfo ? 'absolute' : 'fixed',
+          position: 'fixed', // Always fixed to window, not relative to remote panel
           left: panelInfo ? `${panelInfo.position.x}px` : undefined,
           top: panelInfo ? `${panelInfo.position.y}px` : undefined,
           width: panelInfo ? `${panelInfo.size.width}px` : undefined,
