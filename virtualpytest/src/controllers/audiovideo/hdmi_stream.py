@@ -154,10 +154,6 @@ class HDMIStreamController(AVControllerInterface):
         Take screenshot using timestamp logic from ScreenDefinitionEditor.
         Uses buildHostUrl to reference continuously captured screenshots.
         """
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
-            return None
-            
         try:
             from src.utils.app_utils import buildHostUrl
             

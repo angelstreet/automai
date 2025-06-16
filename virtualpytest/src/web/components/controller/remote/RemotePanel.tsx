@@ -1,4 +1,9 @@
-import { OpenInFull, CloseFullscreen, Minimize, KeyboardArrowUp } from '@mui/icons-material';
+import {
+  OpenInFull,
+  CloseFullscreen,
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+} from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState, useEffect } from 'react';
 
@@ -210,23 +215,6 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
             color: remoteConfig?.panel_layout?.header?.textColor || '#ffffff',
           }}
         >
-          {/* Left side: Minimize/Restore button */}
-          <Tooltip title={isMinimized ? 'Restore Panel' : 'Minimize Panel'}>
-            <IconButton
-              size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
-              onClick={handleMinimizeToggle}
-              sx={{ color: 'inherit' }}
-            >
-              {isMinimized ? (
-                <KeyboardArrowUp
-                  fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
-                />
-              ) : (
-                <Minimize fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'} />
-              )}
-            </IconButton>
-          </Tooltip>
-
           {/* Center: Title */}
           <Typography
             variant="subtitle2"
@@ -240,24 +228,48 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
             {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
           </Typography>
 
-          {/* Right side: Expand/Collapse button */}
-          <Tooltip
-            title={isMinimized ? 'Restore Panel' : isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
-          >
-            <IconButton
-              size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
-              onClick={handleExpandCollapseToggle}
-              sx={{ color: 'inherit' }}
+          {/* Right side: Minimize and Expand/Collapse buttons */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {/* Minimize/Restore button */}
+            <Tooltip title={isMinimized ? 'Restore Panel' : 'Minimize Panel'}>
+              <IconButton
+                size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                onClick={handleMinimizeToggle}
+                sx={{ color: 'inherit' }}
+              >
+                {isMinimized ? (
+                  <KeyboardArrowUp
+                    fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                  />
+                ) : (
+                  <KeyboardArrowDown
+                    fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                  />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            {/* Expand/Collapse button */}
+            <Tooltip
+              title={
+                isMinimized ? 'Restore Panel' : isCollapsed ? 'Expand Panel' : 'Collapse Panel'
+              }
             >
-              {isCollapsed ? (
-                <OpenInFull fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'} />
-              ) : (
-                <CloseFullscreen
-                  fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
-                />
-              )}
-            </IconButton>
-          </Tooltip>
+              <IconButton
+                size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                onClick={handleExpandCollapseToggle}
+                sx={{ color: 'inherit' }}
+              >
+                {isCollapsed ? (
+                  <OpenInFull fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'} />
+                ) : (
+                  <CloseFullscreen
+                    fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                  />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         {/* Remote Content - hidden when minimized */}

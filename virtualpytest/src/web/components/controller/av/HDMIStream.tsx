@@ -7,7 +7,7 @@ import {
   Refresh,
   OpenInFull,
   CloseFullscreen,
-  Minimize,
+  KeyboardArrowDown,
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
@@ -185,7 +185,9 @@ export function HDMIStream({
       // Restore from minimized to collapsed state
       setIsMinimized(false);
       setIsExpanded(false);
-      console.log(`[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`);
+      console.log(
+        `[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`,
+      );
     } else {
       // Minimize the panel
       setIsMinimized(true);
@@ -198,7 +200,9 @@ export function HDMIStream({
       // First restore from minimized to collapsed, then user can click again to expand
       setIsMinimized(false);
       setIsExpanded(false);
-      console.log(`[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`);
+      console.log(
+        `[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`,
+      );
     } else {
       // Normal expand/collapse logic
       const newExpanded = !isExpanded;
@@ -284,21 +288,6 @@ export function HDMIStream({
             color: '#ffffff',
           }}
         >
-          {/* Left side: Minimize/Restore button */}
-          <Tooltip title={isMinimized ? 'Restore Panel' : 'Minimize Panel'}>
-            <IconButton
-              size="small"
-              onClick={handleMinimizeToggle}
-              sx={{ color: 'inherit' }}
-            >
-              {isMinimized ? (
-                <KeyboardArrowUp fontSize="small" />
-              ) : (
-                <Minimize fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
-
           {/* Center: Title */}
           <Typography
             variant="subtitle2"
@@ -312,26 +301,36 @@ export function HDMIStream({
             HDMI Stream
           </Typography>
 
-          {/* Right side: Expand/Collapse button */}
-          <Tooltip title={
-            isMinimized 
-              ? 'Restore Panel' 
-              : isExpanded 
-                ? 'Collapse Panel' 
-                : 'Expand Panel'
-          }>
-            <IconButton
-              size="small"
-              onClick={handleExpandCollapseToggle}
-              sx={{ color: 'inherit' }}
+          {/* Right side: Minimize and Expand/Collapse buttons */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {/* Minimize/Restore button */}
+            <Tooltip title={isMinimized ? 'Restore Panel' : 'Minimize Panel'}>
+              <IconButton size="small" onClick={handleMinimizeToggle} sx={{ color: 'inherit' }}>
+                {isMinimized ? (
+                  <KeyboardArrowUp fontSize="small" />
+                ) : (
+                  <KeyboardArrowDown fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            {/* Expand/Collapse button */}
+            <Tooltip
+              title={isMinimized ? 'Restore Panel' : isExpanded ? 'Collapse Panel' : 'Expand Panel'}
             >
-              {isExpanded ? (
-                <CloseFullscreen fontSize="small" />
-              ) : (
-                <OpenInFull fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
+              <IconButton
+                size="small"
+                onClick={handleExpandCollapseToggle}
+                sx={{ color: 'inherit' }}
+              >
+                {isExpanded ? (
+                  <CloseFullscreen fontSize="small" />
+                ) : (
+                  <OpenInFull fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         {/* Stream Content - hidden when minimized */}
