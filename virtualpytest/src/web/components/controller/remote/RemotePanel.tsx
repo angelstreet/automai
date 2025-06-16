@@ -119,10 +119,11 @@ export function RemotePanel({
   };
 
   // Simple device model detection - no loading, no fallback, no validation
-  const renderRemoteComponent = () => {
-    // Use hardcoded device resolution if not provided
-    const effectiveDeviceResolution = deviceResolution || { width: 1920, height: 1080 };
+  const effectiveDeviceResolution = useMemo(() => {
+    return deviceResolution || { width: 1920, height: 1080 };
+  }, [deviceResolution]);
 
+  const renderRemoteComponent = useMemo(() => {
     switch (host.device_model) {
       case 'android_mobile':
         return (
@@ -207,7 +208,16 @@ export function RemotePanel({
           </Box>
         );
     }
-  };
+  }, [
+    host.device_model,
+    host,
+    onReleaseControl,
+    isCollapsed,
+    currentWidth,
+    currentHeight,
+    effectiveDeviceResolution,
+    streamExpanded,
+  ]);
 
   return (
     <Box sx={positionStyles}>
@@ -309,7 +319,7 @@ export function RemotePanel({
               overflow: 'hidden',
             }}
           >
-            {renderRemoteComponent()}
+            {renderRemoteComponent}
           </Box>
         )}
       </Box>

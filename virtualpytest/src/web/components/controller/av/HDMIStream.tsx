@@ -11,7 +11,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
@@ -67,8 +67,10 @@ export function HDMIStream({
     loadConfig();
   }, [host.device_model]);
 
-  // Get configurable layout from AV config
-  const panelLayout = getConfigurableAVPanelLayout(host.device_model, avConfig);
+  // Get configurable layout from AV config - memoized to prevent infinite loops
+  const panelLayout = useMemo(() => {
+    return getConfigurableAVPanelLayout(host.device_model, avConfig);
+  }, [host.device_model, avConfig]);
 
   // Use the existing hook with our fetched stream data
   const {
@@ -397,7 +399,7 @@ export function HDMIStream({
             )}
 
             {/* Video capture overlay */}
-            {captureMode === 'capture' && (
+            {captureMode === 'video' && (
               <VideoCapture
                 deviceModel={host.device_model}
                 hostIp={host.host_name}
@@ -488,7 +490,7 @@ export function HDMIStream({
                       onClick={handleStartCapture}
                       sx={{
                         backgroundColor: '#000000',
-                        color: captureMode === 'capture' ? '#ff4444' : '#ffffff',
+                        color: captureMode === 'video' ? '#ff4444' : '#ffffff',
                         '&:hover': { backgroundColor: '#333333' },
                         border: '1px solid #333333',
                       }}
