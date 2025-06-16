@@ -75,6 +75,7 @@ export const useNavigationDeviceControl = ({
     );
 
     setIsControlLoading(true);
+    let errorShown = false; // Flag to prevent duplicate toasts
 
     try {
       if (!isControlActive) {
@@ -109,6 +110,7 @@ export const useNavigationDeviceControl = ({
           console.error(`[@hook:useNavigationDeviceControl] Failed to take control:`, result.error);
           const errorMessage = result.error || 'Failed to take control';
           showError(`Device Control Failed: ${errorMessage}`);
+          errorShown = true;
           throw new Error(errorMessage);
         }
       } else {
@@ -141,8 +143,8 @@ export const useNavigationDeviceControl = ({
     } catch (error) {
       console.error('[@hook:useNavigationDeviceControl] Error during take control:', error);
 
-      // Show error toast if not already shown (to avoid duplicate toasts)
-      if (error instanceof Error && !error.message.includes('Failed to take control')) {
+      // Only show toast if we haven't already shown one
+      if (!errorShown && error instanceof Error) {
         showError(`Device Control Error: ${error.message}`);
       }
 
