@@ -85,7 +85,7 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     return () => {
       console.log('[@component:StreamClickOverlay] Click overlay unmounted');
     };
-  }, [deviceResolution, selectedHostDevice, videoRef]);
+  }, [deviceResolution, selectedHostDevice]);
 
   // Add mouse event logging for debugging
   const handleMouseMove = useCallback((_e: React.MouseEvent) => {
