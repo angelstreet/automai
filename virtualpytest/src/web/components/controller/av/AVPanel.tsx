@@ -7,9 +7,10 @@ import { HDMIStream } from './HDMIStream';
 interface AVPanelProps {
   host: Host;
   onReleaseControl?: () => void;
+  onExpandedChange?: (isExpanded: boolean) => void;
 }
 
-export function AVPanel({ host }: AVPanelProps) {
+export function AVPanel({ host, onExpandedChange }: AVPanelProps) {
   console.log(`[@component:AVPanel] Rendering AV panel for device: ${host.device_model}`);
   console.log(`[@component:AVPanel] Controller config:`, host.controller_configs);
 
@@ -31,7 +32,7 @@ export function AVPanel({ host }: AVPanelProps) {
 
     switch (avType) {
       case 'hdmi_stream':
-        return <HDMIStream host={host} />;
+        return <HDMIStream host={host} onExpandedChange={onExpandedChange} />;
       case 'usb_stream':
         return (
           <Box sx={{ p: 2 }}>

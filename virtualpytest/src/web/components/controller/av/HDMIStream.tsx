@@ -25,12 +25,14 @@ import { VideoCapture } from './VideoCapture';
 interface HDMIStreamProps {
   host: Host;
   onDisconnectComplete?: () => void;
+  onExpandedChange?: (isExpanded: boolean) => void;
   sx?: any;
 }
 
 export function HDMIStream({
   host,
   onDisconnectComplete: _onDisconnectComplete,
+  onExpandedChange,
   sx = {},
 }: HDMIStreamProps) {
   // Stream URL fetching state
@@ -112,6 +114,11 @@ export function HDMIStream({
     fetchStreamUrl();
   }, [fetchStreamUrl]);
 
+  // Notify parent of initial expanded state
+  useEffect(() => {
+    onExpandedChange?.(isExpanded);
+  }, [isExpanded, onExpandedChange]);
+
   // Enhanced screenshot handler that updates capture mode
   const handleTakeScreenshot = useCallback(async () => {
     setIsScreenshotLoading(true);
@@ -157,8 +164,10 @@ export function HDMIStream({
 
   // Toggle expanded view
   const handleToggleExpanded = useCallback(() => {
-    setIsExpanded(!isExpanded);
-  }, [isExpanded]);
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    onExpandedChange?.(newExpanded);
+  }, [isExpanded, onExpandedChange]);
 
   // Back to stream from other modes
   const handleBackToStream = useCallback(() => {

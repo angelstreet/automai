@@ -28,6 +28,32 @@ export interface RemoteLayoutConfig {
   compactMaxWidth: number;
 }
 
+// Layout configuration for AV Panel dimensions
+export interface AVPanelLayoutConfig {
+  collapsed: {
+    width: string;
+    height: string;
+  };
+  expanded: {
+    width: string;
+    height: string;
+  };
+}
+
+// Layout configuration for Remote Panel dimensions
+export interface RemotePanelLayoutConfig {
+  width: string;
+  height: string;
+}
+
+// Layout configuration for panel positioning
+export interface PanelPositioningConfig {
+  top: string;
+  right: string;
+  rightWhenBothOpen: string; // Position when both remote and AV panels are open
+  zIndex: number;
+}
+
 /**
  * Determines if a model name refers to a mobile device
  * @param model The model name string
@@ -124,4 +150,58 @@ export const getRemoteLayout = (remoteType?: string): RemoteLayoutConfig => {
         compactMaxWidth: 400,
       };
   }
+};
+
+/**
+ * Get the appropriate AV Panel layout configuration based on device model
+ * @param model The device model string
+ * @returns AVPanelLayoutConfig with the appropriate settings
+ */
+export const getAVPanelLayout = (model?: string): AVPanelLayoutConfig => {
+  const mobile = isMobileModel(model);
+  return mobile
+    ? {
+        collapsed: {
+          width: '300px',
+          height: '600px',
+        },
+        expanded: {
+          width: '800px',
+          height: '600px',
+        },
+      }
+    : {
+        collapsed: {
+          width: '400px',
+          height: '300px',
+        },
+        expanded: {
+          width: '800px',
+          height: '600px',
+        },
+      };
+};
+
+/**
+ * Get the Remote Panel layout configuration
+ * @returns RemotePanelLayoutConfig with the appropriate settings
+ */
+export const getRemotePanelLayout = (): RemotePanelLayoutConfig => {
+  return {
+    width: '400px',
+    height: 'calc(100vh - 140px)',
+  };
+};
+
+/**
+ * Get the panel positioning configuration
+ * @returns PanelPositioningConfig with the appropriate settings
+ */
+export const getPanelPositioning = (): PanelPositioningConfig => {
+  return {
+    top: '100px',
+    right: '20px',
+    rightWhenBothOpen: '440px', // 400px (remote panel width) + 20px (gap) + 20px (margin)
+    zIndex: 1000,
+  };
 };

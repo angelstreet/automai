@@ -24,15 +24,19 @@ def take_screenshot():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_remote:take_screenshot] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:take_screenshot] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
         success, screenshot_data, error = remote_controller.take_screenshot()
         
@@ -64,27 +68,27 @@ def screenshot_and_dump():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
         
-        if not hasattr(remote_controller, 'dump_ui_elements'):
-            return jsonify({
-                'success': False,
-                'error': 'UI dumping not supported by this remote controller'
-            }), 400
+        print(f"[@route:host_remote:screenshot_and_dump] Using own remote controller: {type(remote_controller).__name__}")
         
         screenshot_success, screenshot_data, screenshot_error = remote_controller.take_screenshot()
-        ui_success, elements, ui_error = remote_controller.dump_ui_elements()
+        
+        ui_success, elements, ui_error = False, [], None
+        if hasattr(remote_controller, 'dump_ui_elements'):
+            ui_success, elements, ui_error = remote_controller.dump_ui_elements()
         
         response = {
-            'success': screenshot_success and ui_success
+            'success': screenshot_success and (ui_success or not hasattr(remote_controller, 'dump_ui_elements'))
         }
         
         if screenshot_success:
@@ -95,22 +99,21 @@ def screenshot_and_dump():
             for element in elements:
                 elements_data.append({
                     'id': element.id,
-                    'tag': element.tag,
                     'text': element.text,
-                    'resourceId': element.resource_id,
-                    'contentDesc': element.content_desc,
                     'className': element.class_name,
-                    'bounds': element.bounds
+                    'bounds': element.bounds,
+                    'clickable': element.clickable,
+                    'enabled': element.enabled
                 })
             response['elements'] = elements_data
         
         if not response['success']:
-            error_msg = []
+            error_messages = []
             if not screenshot_success:
-                error_msg.append(f"Screenshot: {screenshot_error}")
-            if not ui_success:
-                error_msg.append(f"UI dump: {ui_error}")
-            response['error'] = "; ".join(error_msg)
+                error_messages.append(f"Screenshot: {screenshot_error}")
+            if not ui_success and hasattr(remote_controller, 'dump_ui_elements'):
+                error_messages.append(f"UI dump: {ui_error}")
+            response['error'] = "; ".join(error_messages)
             return jsonify(response), 400
         
         return jsonify(response)
@@ -132,15 +135,18 @@ def get_apps():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_remote:get_apps] Using own remote controller: {type(remote_controller).__name__}")
         
         if not hasattr(remote_controller, 'get_installed_apps'):
             return jsonify({
@@ -188,15 +194,18 @@ def click_element():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_remote:click_element] Using own remote controller: {type(remote_controller).__name__}")
         
         if not hasattr(remote_controller, 'last_ui_elements'):
             return jsonify({
@@ -256,15 +265,18 @@ def tap_element():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_remote:tap_element] Using own remote controller: {type(remote_controller).__name__}")
         
         if not hasattr(remote_controller, 'tap_coordinates'):
             return jsonify({
@@ -312,15 +324,18 @@ def execute_command():
         if not host_device:
             return jsonify({
                 'success': False,
-                'error': 'Host device not initialized'
-            }), 500
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
         
         remote_controller = get_local_controller('remote')
         if not remote_controller:
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': 'No remote controller object found in own host_device',
+                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+            }), 404
+        
+        print(f"[@route:host_remote:execute_command] Using own remote controller: {type(remote_controller).__name__}")
         
         success = False
         

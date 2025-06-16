@@ -9,7 +9,7 @@ import {
   Typography,
   Button,
 } from '@mui/material';
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactFlow, {
   Background,
@@ -32,6 +32,11 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import {
+  getAVPanelLayout,
+  getRemotePanelLayout,
+  getPanelPositioning,
+} from '../config/layoutConfig';
 import { useNavigationEditor } from '../hooks';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -214,6 +219,14 @@ const NavigationEditorContent: React.FC = () => {
 
   // Track the last loaded tree ID to prevent unnecessary reloads
   const lastLoadedTreeId = useRef<string | null>(null);
+
+  // Track AV panel expanded state
+  const [isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
+
+  // Get layout configurations
+  const remotePanelLayout = getRemotePanelLayout();
+  const avPanelLayout = getAVPanelLayout(selectedHost?.device_model);
+  const panelPositioning = getPanelPositioning();
 
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
@@ -563,11 +576,11 @@ const NavigationEditorContent: React.FC = () => {
         <Box
           sx={{
             position: 'fixed',
-            top: '100px',
-            right: '20px',
-            width: '400px',
-            height: 'calc(100vh - 140px)',
-            zIndex: 1000,
+            top: panelPositioning.top,
+            right: panelPositioning.right,
+            width: remotePanelLayout.width,
+            height: remotePanelLayout.height,
+            zIndex: panelPositioning.zIndex,
             backgroundColor: 'background.paper',
             border: '1px solid',
             borderColor: 'divider',
@@ -584,11 +597,13 @@ const NavigationEditorContent: React.FC = () => {
         <Box
           sx={{
             position: 'fixed',
-            top: '100px',
-            right: showRemotePanel ? '440px' : '20px', // Position next to remote panel if both are open
-            width: '400px',
-            height: 'calc(100vh - 140px)',
-            zIndex: 1000,
+            top: panelPositioning.top,
+            right: showRemotePanel ? panelPositioning.rightWhenBothOpen : panelPositioning.right,
+            width: isAVPanelExpanded ? avPanelLayout.expanded.width : avPanelLayout.collapsed.width,
+            height: isAVPanelExpanded
+              ? avPanelLayout.expanded.height
+              : avPanelLayout.collapsed.height,
+            zIndex: panelPositioning.zIndex,
             backgroundColor: 'background.paper',
             border: '1px solid',
             borderColor: 'divider',
@@ -597,7 +612,11 @@ const NavigationEditorContent: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <AVPanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
+          <AVPanel
+            host={selectedHost}
+            onReleaseControl={handleDisconnectComplete}
+            onExpandedChange={setIsAVPanelExpanded}
+          />
         </Box>
       )}
 

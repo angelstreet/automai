@@ -21,7 +21,7 @@ export function AndroidMobileRemote({
 }: AndroidMobileRemoteProps) {
   // Simple state - no complex loading states
   const [isConnected, setIsConnected] = useState(true); // Always connected when shown
-  const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
+  const [_androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
   const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
   const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
   const [showOverlay, setShowOverlay] = useState(false);
@@ -31,7 +31,7 @@ export function AndroidMobileRemote({
   const screenshotRef = useRef<HTMLImageElement>(null);
 
   // Direct server route calls - no hooks, no abstractions
-  const takeScreenshot = async () => {
+  const _takeScreenshot = async () => {
     const response = await fetch(buildServerUrl('/server/remote/take-screenshot'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,7 +101,7 @@ export function AndroidMobileRemote({
     return response.json();
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     setIsConnected(false);
     setShowOverlay(false);
     setAndroidScreenshot(null);
