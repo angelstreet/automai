@@ -36,7 +36,7 @@ import {
 } from '../../../config/layoutConfig';
 
 // Import registration context
-import { useRegistration } from '../../contexts/RegistrationContext';
+import { useRegistration } from '../../../hooks/useRegistration';
 
 import { VerificationCondition } from '../../type';
 

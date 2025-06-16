@@ -53,7 +53,7 @@ import { VerificationResultsDisplay } from '../components/verification/Verificat
 // Import the useValidationColors hook
 
 // Import registration context
-import { useRegistration } from '../contexts/RegistrationContext';
+import { useRegistration } from '../../../hooks/useRegistration';
 import { useRemoteConnection } from '../hooks/remote/useRemoteConnection';
 import { useNavigationEditor } from '../hooks/useNavigationEditor';
 import { Device } from '../services/deviceService';
