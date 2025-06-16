@@ -302,15 +302,20 @@ export function StreamViewer({
 
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
-      console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
-      setUseNativePlayer(false);
-      setRetryCount(0);
-      setStreamLoaded(false);
-      setStreamError(null);
+      // Only reinitialize if the URL actually changed or if we don't have a current stream
+      if (currentStreamUrl !== streamUrl || !streamLoaded) {
+        console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
+        setUseNativePlayer(false);
+        setRetryCount(0);
+        setStreamLoaded(false);
+        setStreamError(null);
 
-      setTimeout(() => {
-        initializeStream();
-      }, 100);
+        setTimeout(() => {
+          initializeStream();
+        }, 100);
+      } else {
+        console.log('[@component:StreamViewer] Stream URL unchanged, skipping reinitialization');
+      }
     } else if (!isStreamActive && videoRef.current) {
       cleanupStream();
     }
@@ -318,7 +323,7 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
+  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl, streamLoaded]);
 
   useEffect(() => {
     const checkVideoReady = () => {

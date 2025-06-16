@@ -82,14 +82,27 @@ export const AndroidMobileRemote = React.memo(
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo = React.useMemo((): PanelInfo | undefined => {
+      console.log('[@component:AndroidMobileRemote] PanelInfo debug:', {
+        streamPosition,
+        streamSize,
+        streamResolution,
+        panelState,
+        hasAllRequired: !!(streamPosition && streamSize && streamResolution && panelState),
+      });
+
       if (streamPosition && streamSize && streamResolution && panelState) {
-        return {
+        const info = {
           position: streamPosition,
           size: streamSize,
           deviceResolution: streamResolution,
           isCollapsed: panelState.isCollapsed,
         };
+        console.log('[@component:AndroidMobileRemote] Created panelInfo:', info);
+        return info;
       }
+      console.log(
+        '[@component:AndroidMobileRemote] panelInfo is undefined - missing required props',
+      );
       return undefined;
     }, [streamPosition, streamSize, streamResolution, panelState]);
 

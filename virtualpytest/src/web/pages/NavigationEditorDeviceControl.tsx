@@ -219,6 +219,13 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 streamSize={streamInfo?.size}
                 streamResolution={streamInfo?.resolution}
                 videoElement={streamInfo?.videoElement || undefined}
+                panelState={{
+                  isCollapsed: false, // Fixed panel is always expanded
+                  collapsedPosition: { x: window.innerWidth - 320, y: 130 },
+                  collapsedSize: { width: 320, height: window.innerHeight - 130 },
+                  expandedPosition: { x: window.innerWidth - 320, y: 130 },
+                  expandedSize: { width: 320, height: window.innerHeight - 130 },
+                }}
               />
             </Box>
           ) : (

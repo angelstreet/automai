@@ -110,8 +110,13 @@ export function HDMIStream({
 
       if (result.success && result.stream_url) {
         console.log(`[@component:HDMIStream] Stream URL received: ${result.stream_url}`);
-        setStreamUrl(result.stream_url);
-        setIsStreamActive(true);
+        // Set both URL and active state together to prevent double initialization
+        if (result.stream_url !== streamUrl) {
+          setStreamUrl(result.stream_url);
+          setIsStreamActive(true);
+        } else if (!isStreamActive) {
+          setIsStreamActive(true);
+        }
       } else {
         console.error(`[@component:HDMIStream] Failed to get stream URL:`, result.error);
         setStreamUrl('');
@@ -124,7 +129,7 @@ export function HDMIStream({
     } finally {
       setIsLoadingStream(false);
     }
-  }, [host]);
+  }, [host, streamUrl, isStreamActive]);
 
   // Initialize stream URL on mount and when host changes
   useEffect(() => {
