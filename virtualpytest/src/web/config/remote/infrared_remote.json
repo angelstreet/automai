@@ -1,12 +1,47 @@
 {
   "remote_info": {
     "name": "Sunrise Remote",
-    "type": "ir_remote",
-    "image_url": "/suncherry_remote.png",
-    "default_scale": 1.1,
-    "min_scale": 0.5,
-    "max_scale": 2.0,
-    "button_scale_factor": 1.0,
+    "type": "ir_remote"
+  },
+  "panel_layout": {
+    "collapsed": {
+      "width": "200px",
+      "height": "280px",
+      "position": {
+        "bottom": "20px",
+        "right": "20px"
+      }
+    },
+    "expanded": {
+      "width": "380px",
+      "height": "calc(100vh - 140px)",
+      "position": {
+        "top": "100px",
+        "right": "20px"
+      }
+    },
+    "zIndex": 1000,
+    "showScreenshotInCollapsed": false,
+    "showScreenshotInExpanded": false
+  },
+  "remote_layout": {
+    "collapsed": {
+      "width": "160px",
+      "height": "240px",
+      "scale": 0.8,
+      "padding": "20px"
+    },
+    "expanded": {
+      "width": "280px",
+      "height": "450px",
+      "scale": 1.0,
+      "padding": "50px"
+    },
+    "background_image": {
+      "url": "/suncherry_remote.png",
+      "width": 280,
+      "height": 450
+    },
     "global_offset": {
       "x": 0,
       "y": 30
@@ -182,4 +217,4 @@
       "comment": "Back/Exit button"
     }
   }
-} 
+}

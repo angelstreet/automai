@@ -1,28 +1,17 @@
 {
-  "remote_info": {
-    "name": "Android Mobile Remote",
-    "type": "android_mobile",
-    "image_url": "/android-mobile-remote.png",
-    "default_scale": 1.0,
-    "min_scale": 0.5,
-    "max_scale": 2.0,
-    "button_scale_factor": 1.0,
-    "global_offset": {
-      "x": 0,
-      "y": 20
-    }
+  con
   },
   "panel_layout": {
     "collapsed": {
-      "width": "200px",
-      "height": "300px",
+      "width": "220px",
+      "height": "320px",
       "position": {
         "bottom": "20px",
         "right": "20px"
       }
     },
     "expanded": {
-      "width": "400px",
+      "width": "420px",
       "height": "calc(100vh - 140px)",
       "position": {
         "top": "100px",
@@ -31,7 +20,30 @@
     },
     "zIndex": 1000,
     "showScreenshotInCollapsed": false,
-    "showScreenshotInExpanded": true
+    "showScreenshotInExpanded": false
+  },
+  "remote_layout": {
+    "collapsed": {
+      "width": "180px",
+      "height": "280px",
+      "scale": 0.8,
+      "padding": "20px"
+    },
+    "expanded": {
+      "width": "350px",
+      "height": "500px",
+      "scale": 1.0,
+      "padding": "35px"
+    },
+    "background_image": {
+      "url": "/android-mobile-remote.png",
+      "width": 350,
+      "height": 500
+    },
+    "global_offset": {
+      "x": 0,
+      "y": 0
+    }
   },
   "button_layout": {
     "back": {

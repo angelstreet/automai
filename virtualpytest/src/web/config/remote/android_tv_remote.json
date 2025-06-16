@@ -1,12 +1,47 @@
 {
   "remote_info": {
     "name": "Fire TV Remote",
-    "type": "android_tv",
-    "image_url": "/android-tv-remote.png",
-    "default_scale": 1.2,
-    "min_scale": 1,
-    "max_scale": 1,
-    "button_scale_factor": 1,
+    "type": "android_tv"
+  },
+  "panel_layout": {
+    "collapsed": {
+      "width": "180px",
+      "height": "220px",
+      "position": {
+        "bottom": "20px",
+        "right": "20px"
+      }
+    },
+    "expanded": {
+      "width": "320px",
+      "height": "calc(100vh - 140px)",
+      "position": {
+        "top": "100px",
+        "right": "20px"
+      }
+    },
+    "zIndex": 1000,
+    "showScreenshotInCollapsed": false,
+    "showScreenshotInExpanded": false
+  },
+  "remote_layout": {
+    "collapsed": {
+      "width": "140px",
+      "height": "180px",
+      "scale": 0.7,
+      "padding": "20px"
+    },
+    "expanded": {
+      "width": "250px",
+      "height": "400px",
+      "scale": 1.0,
+      "padding": "35px"
+    },
+    "background_image": {
+      "url": "/android-tv-remote.png",
+      "width": 250,
+      "height": 400
+    },
     "global_offset": {
       "x": -15,
       "y": -35
@@ -17,27 +52,6 @@
       "color": "white",
       "textShadow": "2px 2px 4px rgba(0,0,0,0.9)"
     }
-  },
-  "panel_layout": {
-    "collapsed": {
-      "width": "250px",
-      "height": "200px",
-      "position": {
-        "top": "20px",
-        "right": "20px"
-      }
-    },
-    "expanded": {
-      "width": "450px",
-      "height": "calc(100vh - 140px)",
-      "position": {
-        "top": "100px",
-        "right": "20px"
-      }
-    },
-    "zIndex": 1000,
-    "showScreenshotInCollapsed": false,
-    "showScreenshotInExpanded": false
   },
   "button_layout": {
     "power": {
