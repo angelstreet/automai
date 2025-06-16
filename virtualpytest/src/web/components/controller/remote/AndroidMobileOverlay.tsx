@@ -203,73 +203,62 @@ export const AndroidMobileOverlay = React.memo(
           contain: 'layout style size',
           willChange: 'transform',
           pointerEvents: 'none', // Allow clicks to pass through the container
-          border: '3px solid red', // Debug border to see overlay position
-          backgroundColor: 'rgba(255, 0, 0, 0.1)', // Light red background for visibility
+          border: '3px solid blue', // Blue border for debugging
+          backgroundColor: 'rgba(0, 0, 255, 0.2)', // Blue background with 20% transparency
         }}
       >
-        {scaledElements.map((element, index) => (
+        {/* Debug info overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '5px',
+            left: '5px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '5px',
+            fontSize: '12px',
+            borderRadius: '3px',
+            pointerEvents: 'none',
+          }}
+        >
+          <div>Elements: {elements.length}</div>
+          <div>
+            Position: {panelInfo.position.x},{panelInfo.position.y}
+          </div>
+          <div>
+            Size: {panelInfo.size.width}x{panelInfo.size.height}
+          </div>
+          <div>
+            Device: {panelInfo.deviceResolution.width}x{panelInfo.deviceResolution.height}
+          </div>
+        </div>
+
+        {/* Render scaled elements as colored rectangles */}
+        {scaledElements.map((scaledElement) => (
           <div
-            key={element.id}
+            key={scaledElement.id}
             style={{
               position: 'absolute',
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-              width: `${element.width}px`,
-              height: `${element.height}px`,
-              border: `${selectedElementId === element.id ? '3px' : '2px'} solid ${element.color}`,
-              backgroundColor: `${element.color}20`, // 20% opacity
+              left: `${scaledElement.x}px`,
+              top: `${scaledElement.y}px`,
+              width: `${scaledElement.width}px`,
+              height: `${scaledElement.height}px`,
+              backgroundColor: scaledElement.color,
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+              pointerEvents: 'auto', // Allow clicks on elements
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              pointerEvents: 'auto', // Re-enable pointer events for individual elements
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '10px',
+              color: 'white',
+              textShadow: '1px 1px 1px rgba(0, 0, 0, 0.8)',
+              overflow: 'hidden',
             }}
-            onClick={() => handleElementClick(element)}
-            title={`Click to interact with: ${element.label}`}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = `${element.color}40`; // 40% opacity on hover
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${element.color}20`; // Back to 20% opacity
-            }}
+            onClick={() => handleElementClick(scaledElement)}
+            title={scaledElement.label}
           >
-            {/* Number label at bottom-right */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '0px',
-                right: '0px',
-                backgroundColor: element.color,
-                color: 'white',
-                fontSize: '10px',
-                lineHeight: '12px',
-                padding: '1px 3px',
-                borderRadius: '2px',
-                fontWeight: 'bold',
-                pointerEvents: 'none',
-              }}
-            >
-              {index + 1}
-            </div>
-
-            {/* Debug coordinates for first 3 elements */}
-            {index < 3 && element.x !== undefined && element.y !== undefined && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '-20px',
-                  left: '0px',
-                  fontSize: '8px',
-                  backgroundColor: 'black',
-                  color: 'white',
-                  padding: '1px 3px',
-                  borderRadius: '2px',
-                  opacity: 0.75,
-                  pointerEvents: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {element.x.toFixed(0)},{element.y.toFixed(0)}
-              </div>
-            )}
+            {scaledElement.id}
           </div>
         ))}
       </div>

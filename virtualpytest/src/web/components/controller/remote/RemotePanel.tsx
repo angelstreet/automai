@@ -35,6 +35,16 @@ export function RemotePanel({
   expandedSize,
   deviceResolution,
 }: RemotePanelProps) {
+  console.log(`[@component:RemotePanel] Props debug:`, {
+    hostDeviceModel: host.device_model,
+    deviceResolution,
+    collapsedPosition,
+    collapsedSize,
+    expandedPosition,
+    expandedSize,
+    initialCollapsed,
+  });
+
   // Panel state - three states: expanded, collapsed, minimized
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
