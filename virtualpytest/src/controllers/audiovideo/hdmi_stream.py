@@ -260,10 +260,6 @@ class HDMIStreamController(AVControllerInterface):
             resolution: Video resolution (ignored - uses host stream resolution)
             fps: Video FPS (ignored - uses 1 frame per second from screenshots)
         """
-        if not self.is_connected:
-            print(f"HDMI[{self.capture_source}]: ERROR - Not connected")
-            return False
-            
         if self.is_capturing_video:
             print(f"HDMI[{self.capture_source}]: Video capture already active")
             return True
