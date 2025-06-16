@@ -33,18 +33,6 @@ export function AVPanel({ host, onExpandedChange }: AVPanelProps) {
     switch (avType) {
       case 'hdmi_stream':
         return <HDMIStream host={host} onExpandedChange={onExpandedChange} />;
-      case 'usb_stream':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Alert severity="info">USB Stream Panel - Coming Soon</Alert>
-          </Box>
-        );
-      case 'wireless_stream':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Alert severity="info">Wireless Stream Panel - Coming Soon</Alert>
-          </Box>
-        );
       default:
         return (
           <Box sx={{ p: 2 }}>

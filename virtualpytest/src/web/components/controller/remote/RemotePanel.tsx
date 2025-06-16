@@ -161,7 +161,7 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
         }}
       >
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-          {remoteConfig?.remote_info?.name || `${host.device_model} Remote`} - {host.host_name}
+          {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
         </Typography>
         <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
           <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>

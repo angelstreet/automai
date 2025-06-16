@@ -242,7 +242,7 @@ export function HDMIStream({
         }}
       >
         <Box sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
-          {avConfig?.stream_info?.name || 'HDMI Stream'} - {host.host_name}
+          {avConfig?.stream_info?.name || 'HDMI Stream'}
         </Box>
         <Tooltip title={isExpanded ? 'Collapse Panel' : 'Expand Panel'}>
           <IconButton size="small" onClick={handleToggleExpanded} sx={{ color: 'inherit' }}>
