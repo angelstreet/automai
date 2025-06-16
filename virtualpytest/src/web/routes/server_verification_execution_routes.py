@@ -8,12 +8,123 @@ This module contains the server-side verification execution endpoints that:
 """
 
 from flask import Blueprint, request, jsonify
-import urllib.parse
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl, buildHostUrl
+import json
 
 # Create blueprint
 verification_av_execution_bp = Blueprint('verification_av_execution', __name__, url_prefix='/server/verification/av')
+
+def get_host_from_request():
+    """
+    Get host information from request data.
+    Frontend can provide:
+    - GET: host_name in query params (simple)
+    - POST: full host object in body (efficient - has host_url)
+    
+    Returns:
+        Tuple of (host_info, error_message)
+    """
+    try:
+        if request.method == 'GET':
+            host_name = request.args.get('host_name')
+            if not host_name:
+                return None, 'host_name parameter required'
+            # Simple host info for buildHostUrl
+            return {'host_name': host_name}, None
+        else:
+            data = request.get_json() or {}
+            host_object = data.get('host')
+            
+            if not host_object:
+                return None, 'host object required in request body'
+                
+            # Full host object with host_url - most efficient
+            return host_object, None
+                
+    except Exception as e:
+        return None, f'Error getting host from request: {str(e)}'
+
+def proxy_to_host(endpoint, method='GET', data=None):
+    """
+    Proxy a request to the specified host's AV execution endpoint using buildHostUrl
+    
+    Args:
+        endpoint: The host endpoint to call (e.g., '/host/verification/av/execute')
+        method: HTTP method ('GET', 'POST', etc.)
+        data: Request data for POST requests (should include host info)
+    
+    Returns:
+        Tuple of (response_data, status_code)
+    """
+    try:
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return {
+                'success': False,
+                'error': error or 'Host information required'
+            }, 400
+        
+        # Use buildHostUrl to construct the proper URL
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host_info, endpoint)
+        
+        if not full_url:
+            return {
+                'success': False,
+                'error': 'Failed to build host URL'
+            }, 500
+        
+        print(f"[@route:server_verification_av_execution:proxy] Proxying {method} {full_url}")
+        
+        # Prepare request parameters
+        kwargs = {
+            'timeout': 60,  # Longer timeout for execution operations
+            'verify': False  # For self-signed certificates
+        }
+        
+        if data:
+            kwargs['json'] = data
+            kwargs['headers'] = {'Content-Type': 'application/json'}
+        
+        # Make the request to the host
+        if method.upper() == 'GET':
+            response = requests.get(full_url, **kwargs)
+        elif method.upper() == 'POST':
+            response = requests.post(full_url, **kwargs)
+        else:
+            return {
+                'success': False,
+                'error': f'Unsupported HTTP method: {method}'
+            }, 400
+        
+        # Return the host's response
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError:
+            response_data = {
+                'success': False,
+                'error': 'Invalid JSON response from host',
+                'raw_response': response.text[:500]  # First 500 chars for debugging
+            }
+        
+        return response_data, response.status_code
+        
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'error': 'Request to host timed out'
+        }, 504
+    except requests.exceptions.ConnectionError:
+        return {
+            'success': False,
+            'error': 'Could not connect to host'
+        }, 503
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Proxy error: {str(e)}'
+        }, 500
 
 # =====================================================
 # SERVER-SIDE VERIFICATION EXECUTION (FORWARDS TO HOST)
@@ -21,175 +132,105 @@ verification_av_execution_bp = Blueprint('verification_av_execution', __name__, 
 
 @verification_av_execution_bp.route('/execute', methods=['POST'])
 def execute_verification():
-    """Forward verification execution request to host."""
+    """Proxy verification execution request to selected host"""
     try:
-        data = request.get_json()
-        verification_params = data.get('verification_params', {})
-        model = data.get('model', 'default')
+        print("[@route:server_verification_av_execution:execute] Proxying verification execution request")
         
-        print(f"[@route:execute_verification] Forwarding verification execution to host for model: {model}")
-        print(f"[@route:execute_verification] Verification params: {verification_params}")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not verification_params:
-            return jsonify({
-                'success': False,
-                'error': 'verification_params is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/av/execute', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        verification = verification_params.get('verification')
-        source_path = verification_params.get('source_path')
-        
-        print(f"[@route:execute_verification] Verification type: {verification.get('type') if verification else 'unknown'}")
-        
-        # Extract filename from source_path URL if provided
-        if source_path:
-            parsed_url = urllib.parse.urlparse(source_path)
-            source_filename = parsed_url.path.split('/')[-1]  # Extract filename
-        else:
-            source_filename = 'no_source'
-        
-        print(f"[@route:execute_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
-        
-        # Use pre-built URL from host registry
-        host_execute_url = buildHostUrl(host_info, '/host/verification/av/execute')
-        
-        execute_payload = {
-            'source_filename': source_filename,
-            'verification': verification,
-            'model': model
-        }
-        
-        print(f"[@route:execute_verification] Sending request to {host_execute_url} with payload: {execute_payload}")
-        
-        try:
-            host_response = requests.post(host_execute_url, json=execute_payload, timeout=60, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                verification_result = host_result.get('verification_result', {})
-                print(f"[@route:execute_verification] Host verification successful")
-                
-                # Convert host URLs to nginx-exposed URLs using registry-based URL builder
-                if verification_result.get('source_image_url'):
-                    verification_result['source_image_url'] = buildHostUrl(host_info, verification_result['source_image_url'])
-                if verification_result.get('result_overlay_url'):
-                    verification_result['result_overlay_url'] = buildHostUrl(host_info, verification_result['result_overlay_url'])
-                if verification_result.get('reference_image_url'):
-                    verification_result['reference_image_url'] = buildHostUrl(host_info, verification_result['reference_image_url'])
-                
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host execution failed')
-                print(f"[@route:execute_verification] Host execution failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:execute_verification] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for execution: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:execute_verification] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Verification execution error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_av_execution_bp.route('/execute-batch', methods=['POST'])
 def execute_batch_verification():
-    """Forward batch verification execution request to host."""
+    """Proxy batch verification execution request to selected host"""
     try:
-        data = request.get_json()
-        verifications = data.get('verifications', [])
-        source_path = data.get('source_path')
-        model = data.get('model', 'default')
+        print("[@route:server_verification_av_execution:execute_batch] Proxying batch verification execution request")
         
-        print(f"[@route:execute_batch_verification] Forwarding batch verification execution to host")
-        print(f"[@route:execute_batch_verification] Source: {source_path}, Model: {model}")
-        print(f"[@route:execute_batch_verification] Verification count: {len(verifications)}")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not verifications or not source_path:
-            return jsonify({
-                'success': False,
-                'error': 'verifications and source_path are required'
-            }), 400
-        
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
-        
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        # Extract filename from source_path URL
-        parsed_url = urllib.parse.urlparse(source_path)
-        source_filename = parsed_url.path.split('/')[-1]  # Extract filename
-        
-        print(f"[@route:execute_batch_verification] Using registered host: {host_info.get('host_name', 'unknown')}, filename: {source_filename}")
-        
-        # Use pre-built URL from host registry
-        host_batch_url = buildHostUrl(host_info, '/host/verification/av/execute-batch')
-        
-        batch_payload = {
-            'source_filename': source_filename,
-            'verifications': verifications,
-            'model': model
-        }
-        
-        print(f"[@route:execute_batch_verification] Sending request to {host_batch_url} with {len(verifications)} verifications")
-        
-        try:
-            host_response = requests.post(host_batch_url, json=batch_payload, timeout=120, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                results = host_result.get('results', [])
-                print(f"[@route:execute_batch_verification] Host batch verification successful: {len(results)} results")
+        # Use longer timeout for batch operations
+        def proxy_to_host_batch(endpoint, method='POST', data=None):
+            """Extended proxy function with longer timeout for batch operations"""
+            try:
+                # Get host information from request
+                host_info, error = get_host_from_request()
+                if not host_info:
+                    return {
+                        'success': False,
+                        'error': error or 'Host information required'
+                    }, 400
                 
-                # Convert all host URLs to nginx-exposed URLs using registry-based URL builder
-                for result in results:
-                    if result.get('source_image_url'):
-                        result['source_image_url'] = buildHostUrl(host_info, result['source_image_url'])
-                    if result.get('result_overlay_url'):
-                        result['result_overlay_url'] = buildHostUrl(host_info, result['result_overlay_url'])
-                    if result.get('reference_image_url'):
-                        result['reference_image_url'] = buildHostUrl(host_info, result['reference_image_url'])
+                # Use buildHostUrl to construct the proper URL
+                from src.utils.app_utils import buildHostUrl
+                full_url = buildHostUrl(host_info, endpoint)
                 
-                # Convert results directory URL
-                if host_result.get('results_directory'):
-                    host_result['results_directory_url'] = buildHostUrl(host_info, host_result['results_directory'])
+                if not full_url:
+                    return {
+                        'success': False,
+                        'error': 'Failed to build host URL'
+                    }, 500
                 
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host batch execution failed')
-                print(f"[@route:execute_batch_verification] Host batch execution failed: {error_msg}")
-                return jsonify(host_result), 500
+                print(f"[@route:server_verification_av_execution:proxy_batch] Proxying {method} {full_url}")
                 
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:execute_batch_verification] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for batch execution: {str(e)}'
-            }), 500
-            
+                # Prepare request parameters with extended timeout
+                kwargs = {
+                    'timeout': 120,  # Extended timeout for batch operations
+                    'verify': False  # For self-signed certificates
+                }
+                
+                if data:
+                    kwargs['json'] = data
+                    kwargs['headers'] = {'Content-Type': 'application/json'}
+                
+                # Make the request to the host
+                response = requests.post(full_url, **kwargs)
+                
+                # Return the host's response
+                try:
+                    response_data = response.json()
+                except json.JSONDecodeError:
+                    response_data = {
+                        'success': False,
+                        'error': 'Invalid JSON response from host',
+                        'raw_response': response.text[:500]  # First 500 chars for debugging
+                    }
+                
+                return response_data, response.status_code
+                
+            except requests.exceptions.Timeout:
+                return {
+                    'success': False,
+                    'error': 'Request to host timed out'
+                }, 504
+            except requests.exceptions.ConnectionError:
+                return {
+                    'success': False,
+                    'error': 'Could not connect to host'
+                }, 503
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f'Proxy error: {str(e)}'
+                }, 500
+        
+        # Proxy to host with extended timeout
+        response_data, status_code = proxy_to_host_batch('/host/verification/av/execute-batch', 'POST', request_data)
+        
+        return jsonify(response_data), status_code
+        
     except Exception as e:
-        print(f"[@route:execute_batch_verification] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Batch verification execution error: {str(e)}'
+            'error': str(e)
         }), 500 

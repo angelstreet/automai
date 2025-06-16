@@ -9,10 +9,122 @@ This module contains the server-side image verification endpoints that:
 
 from flask import Blueprint, request, jsonify
 import requests
-from src.utils.app_utils import get_host_by_model, buildHostUrl
+import json
 
 # Create blueprint - using av since image verification uses AV controller
 verification_av_image_bp = Blueprint('verification_av_image', __name__, url_prefix='/server/verification/av')
+
+def get_host_from_request():
+    """
+    Get host information from request data.
+    Frontend can provide:
+    - GET: host_name in query params (simple)
+    - POST: full host object in body (efficient - has host_url)
+    
+    Returns:
+        Tuple of (host_info, error_message)
+    """
+    try:
+        if request.method == 'GET':
+            host_name = request.args.get('host_name')
+            if not host_name:
+                return None, 'host_name parameter required'
+            # Simple host info for buildHostUrl
+            return {'host_name': host_name}, None
+        else:
+            data = request.get_json() or {}
+            host_object = data.get('host')
+            
+            if not host_object:
+                return None, 'host object required in request body'
+                
+            # Full host object with host_url - most efficient
+            return host_object, None
+                
+    except Exception as e:
+        return None, f'Error getting host from request: {str(e)}'
+
+def proxy_to_host(endpoint, method='GET', data=None):
+    """
+    Proxy a request to the specified host's AV image endpoint using buildHostUrl
+    
+    Args:
+        endpoint: The host endpoint to call (e.g., '/host/verification/av/capture-reference')
+        method: HTTP method ('GET', 'POST', etc.)
+        data: Request data for POST requests (should include host info)
+    
+    Returns:
+        Tuple of (response_data, status_code)
+    """
+    try:
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return {
+                'success': False,
+                'error': error or 'Host information required'
+            }, 400
+        
+        # Use buildHostUrl to construct the proper URL
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host_info, endpoint)
+        
+        if not full_url:
+            return {
+                'success': False,
+                'error': 'Failed to build host URL'
+            }, 500
+        
+        print(f"[@route:server_verification_av_image:proxy] Proxying {method} {full_url}")
+        
+        # Prepare request parameters
+        kwargs = {
+            'timeout': 30,
+            'verify': False  # For self-signed certificates
+        }
+        
+        if data:
+            kwargs['json'] = data
+            kwargs['headers'] = {'Content-Type': 'application/json'}
+        
+        # Make the request to the host
+        if method.upper() == 'GET':
+            response = requests.get(full_url, **kwargs)
+        elif method.upper() == 'POST':
+            response = requests.post(full_url, **kwargs)
+        else:
+            return {
+                'success': False,
+                'error': f'Unsupported HTTP method: {method}'
+            }, 400
+        
+        # Return the host's response
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError:
+            response_data = {
+                'success': False,
+                'error': 'Invalid JSON response from host',
+                'raw_response': response.text[:500]  # First 500 chars for debugging
+            }
+        
+        return response_data, response.status_code
+        
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'error': 'Request to host timed out'
+        }, 504
+    except requests.exceptions.ConnectionError:
+        return {
+            'success': False,
+            'error': 'Could not connect to host'
+        }, 503
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Proxy error: {str(e)}'
+        }, 500
 
 # =====================================================
 # SERVER-SIDE IMAGE VERIFICATION ENDPOINTS (FORWARDS TO HOST)
@@ -20,286 +132,80 @@ verification_av_image_bp = Blueprint('verification_av_image', __name__, url_pref
 
 @verification_av_image_bp.route('/capture-reference', methods=['POST'])
 def capture_reference():
-    """Forward reference capture request to host."""
+    """Proxy reference capture request to selected host"""
     try:
-        data = request.get_json()
-        reference_name = data.get('reference_name')
-        model = data.get('model', 'default')
-        area = data.get('area')  # Optional area selection
+        print("[@route:server_verification_av_image:capture_reference] Proxying reference capture request")
         
-        print(f"[@route:capture_reference] Forwarding reference capture to host: {reference_name} (model: {model})")
-        if area:
-            print(f"[@route:capture_reference] With area selection: {area}")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not reference_name:
-            return jsonify({
-                'success': False,
-                'error': 'reference_name is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/av/capture-reference', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:capture_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_capture_url = buildHostUrl(host_info, '/host/verification/av/capture-reference')
-        
-        capture_payload = {
-            'reference_name': reference_name,
-            'model': model,
-            'area': area
-        }
-        
-        print(f"[@route:capture_reference] Sending request to {host_capture_url} with payload: {capture_payload}")
-        
-        try:
-            host_response = requests.post(host_capture_url, json=capture_payload, timeout=30, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                reference_path = host_result.get('reference_path', '')
-                print(f"[@route:capture_reference] Host reference capture successful: {reference_path}")
-                
-                # Convert host URL to nginx-exposed URL using registry-based URL builder
-                if host_result.get('reference_url'):
-                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
-                
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host reference capture failed')
-                print(f"[@route:capture_reference] Host reference capture failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:capture_reference] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for reference capture: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:capture_reference] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Reference capture error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_av_image_bp.route('/process-area', methods=['POST'])
 def process_area():
-    """Forward area processing request to host."""
+    """Proxy area processing request to selected host"""
     try:
-        data = request.get_json()
-        area = data.get('area')
-        model = data.get('model', 'default')
+        print("[@route:server_verification_av_image:process_area] Proxying area processing request")
         
-        print(f"[@route:process_area] Forwarding area processing to host (model: {model})")
-        print(f"[@route:process_area] Area: {area}")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not area:
-            return jsonify({
-                'success': False,
-                'error': 'area is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/av/process-area', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:process_area] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_process_url = buildHostUrl(host_info, '/host/verification/av/process-area')
-        
-        process_payload = {
-            'area': area,
-            'model': model
-        }
-        
-        print(f"[@route:process_area] Sending request to {host_process_url} with payload: {process_payload}")
-        
-        try:
-            host_response = requests.post(host_process_url, json=process_payload, timeout=30, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                print(f"[@route:process_area] Host area processing successful")
-                
-                # Convert host URLs to nginx-exposed URLs using registry-based URL builder
-                if host_result.get('processed_image_url'):
-                    host_result['processed_image_url'] = buildHostUrl(host_info, host_result['processed_image_url'])
-                
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host area processing failed')
-                print(f"[@route:process_area] Host area processing failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:process_area] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for area processing: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:process_area] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Area processing error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_av_image_bp.route('/save-reference', methods=['POST'])
 def save_reference():
-    """Forward reference save request to host."""
+    """Proxy reference save request to selected host"""
     try:
-        data = request.get_json()
-        reference_name = data.get('reference_name')
-        image_data = data.get('image_data')
-        model = data.get('model', 'default')
+        print("[@route:server_verification_av_image:save_reference] Proxying reference save request")
         
-        print(f"[@route:save_reference] Forwarding reference save to host: {reference_name} (model: {model})")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not reference_name or not image_data:
-            return jsonify({
-                'success': False,
-                'error': 'reference_name and image_data are required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/av/save-reference', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:save_reference] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_save_url = buildHostUrl(host_info, '/host/verification/av/save-reference')
-        
-        save_payload = {
-            'reference_name': reference_name,
-            'image_data': image_data,
-            'model': model
-        }
-        
-        print(f"[@route:save_reference] Sending request to {host_save_url}")
-        
-        try:
-            host_response = requests.post(host_save_url, json=save_payload, timeout=30, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                reference_path = host_result.get('reference_path', '')
-                print(f"[@route:save_reference] Host reference save successful: {reference_path}")
-                
-                # Convert host URL to nginx-exposed URL using registry-based URL builder
-                if host_result.get('reference_url'):
-                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
-                
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host reference save failed')
-                print(f"[@route:save_reference] Host reference save failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:save_reference] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for reference save: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:save_reference] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Reference save error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @verification_av_image_bp.route('/ensure-reference-availability', methods=['POST'])
 def ensure_reference_availability():
-    """Forward reference availability check to host."""
+    """Proxy reference availability check to selected host"""
     try:
-        data = request.get_json()
-        reference_name = data.get('reference_name')
-        model = data.get('model', 'default')
+        print("[@route:server_verification_av_image:ensure_reference_availability] Proxying reference availability check request")
         
-        print(f"[@route:ensure_reference_availability] Checking reference availability: {reference_name} (model: {model})")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Validate required parameters
-        if not reference_name:
-            return jsonify({
-                'success': False,
-                'error': 'reference_name is required'
-            }), 400
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/av/ensure-reference-availability', 'POST', request_data)
         
-        # Find appropriate host using registry
-        host_info = get_host_by_model(model)
+        return jsonify(response_data), status_code
         
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': f'No available host found for model: {model}'
-            }), 404
-        
-        print(f"[@route:ensure_reference_availability] Using registered host: {host_info.get('host_name', 'unknown')}")
-        
-        # Use pre-built URL from host registry
-        host_check_url = buildHostUrl(host_info, '/host/verification/av/ensure-reference-availability')
-        
-        check_payload = {
-            'reference_name': reference_name,
-            'model': model
-        }
-        
-        print(f"[@route:ensure_reference_availability] Sending request to {host_check_url} with payload: {check_payload}")
-        
-        try:
-            host_response = requests.post(host_check_url, json=check_payload, timeout=30, verify=False)
-            host_result = host_response.json()
-            
-            if host_result.get('success'):
-                available = host_result.get('available', False)
-                print(f"[@route:ensure_reference_availability] Reference availability check successful: {available}")
-                
-                # Convert host URL to nginx-exposed URL using registry-based URL builder
-                if host_result.get('reference_url'):
-                    host_result['reference_url'] = buildHostUrl(host_info, host_result['reference_url'])
-                
-                return jsonify(host_result)
-            else:
-                error_msg = host_result.get('error', 'Host reference availability check failed')
-                print(f"[@route:ensure_reference_availability] Host reference availability check failed: {error_msg}")
-                return jsonify(host_result), 500
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:ensure_reference_availability] Failed to connect to host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to connect to host for reference availability check: {str(e)}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:ensure_reference_availability] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Reference availability check error: {str(e)}'
+            'error': str(e)
         }), 500 
