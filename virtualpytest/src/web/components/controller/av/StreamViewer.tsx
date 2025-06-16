@@ -49,7 +49,7 @@ export function StreamViewer({
     return () => {
       console.log('[@component:StreamViewer] Component unmounting');
     };
-  }, [streamUrl, isStreamActive, isCapturing, model, layoutConfig]);
+  }, []);
 
   const finalLayoutConfig = layoutConfig || getStreamViewerLayout(model);
 
@@ -251,7 +251,6 @@ export function StreamViewer({
     attemptPlay,
     retryDelay,
     tryNativePlayback,
-    useNativePlayer,
   ]);
 
   const handleStreamError = useCallback(() => {
@@ -303,20 +302,15 @@ export function StreamViewer({
 
   useEffect(() => {
     if (streamUrl && isStreamActive && videoRef.current) {
-      // Only reinitialize if the URL actually changed
-      if (currentStreamUrl !== streamUrl) {
-        console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
-        setUseNativePlayer(false);
-        setRetryCount(0);
-        setStreamLoaded(false);
-        setStreamError(null);
+      console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
+      setUseNativePlayer(false);
+      setRetryCount(0);
+      setStreamLoaded(false);
+      setStreamError(null);
 
-        setTimeout(() => {
-          initializeStream();
-        }, 100);
-      } else {
-        console.log('[@component:StreamViewer] Stream URL unchanged, skipping reinitialization');
-      }
+      setTimeout(() => {
+        initializeStream();
+      }, 100);
     } else if (!isStreamActive && videoRef.current) {
       cleanupStream();
     }
@@ -324,7 +318,7 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl]);
+  }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
 
   useEffect(() => {
     const checkVideoReady = () => {
