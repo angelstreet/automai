@@ -31,28 +31,19 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
   // ========================================
 
   // Handle device selection
-  const handleDeviceSelect = useCallback(
-    (hostName: string | null) => {
-      console.log(`[@hook:useNavigationPanels] Device selected: ${hostName}`);
+  const handleDeviceSelect = useCallback((host: Host | null) => {
+    console.log(`[@hook:useNavigationPanels] Device selected:`, host?.host_name || 'null');
 
-      if (!hostName) {
-        setSelectedHost(null);
-        return;
-      }
+    if (!host) {
+      setSelectedHost(null);
+      return;
+    }
 
-      const host = getHostByName(hostName);
-      if (host) {
-        setSelectedHost(host);
-        console.log(
-          `[@hook:useNavigationPanels] Host found and selected: ${host.host_name} (device: ${host.device_name})`,
-        );
-      } else {
-        console.warn(`[@hook:useNavigationPanels] Host not found: ${hostName}`);
-        setSelectedHost(null);
-      }
-    },
-    [getHostByName],
-  );
+    setSelectedHost(host);
+    console.log(
+      `[@hook:useNavigationPanels] Host selected: ${host.host_name} (device: ${host.device_name})`,
+    );
+  }, []);
 
   // Handle control state changes (called from header after successful device control)
   const handleControlStateChange = useCallback((active: boolean) => {
