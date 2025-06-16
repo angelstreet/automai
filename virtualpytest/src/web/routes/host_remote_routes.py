@@ -5,7 +5,7 @@ Host-side remote control endpoints that execute remote commands using instantiat
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from src.utils.host_utils import get_local_controller, get_controller_proxy
+from src.utils.host_utils import get_local_controller
 
 # Create blueprint
 remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
@@ -273,16 +273,17 @@ def tap_coordinates():
             
         print(f"[@route:host_remote] Handling tap coordinates: ({x}, {y})")
         
-        # Get remote controller proxy
-        remote_proxy = get_controller_proxy('remote')
-        if not remote_proxy:
+        # Get remote controller
+        remote_controller = get_local_controller('remote')
+        if not remote_controller:
             return jsonify({
                 'success': False,
                 'error': 'Remote controller not available'
             }), 400
             
         # Execute tap command through remote controller
-        result = remote_proxy.execute_command('TAP_COORDINATES', {'x': x, 'y': y})
+        success = remote_controller.tap_coordinates(x, y)
+        result = {'success': success}
         
         if result.get('success'):
             print(f"[@route:host_remote] Tap executed successfully at ({x}, {y})")
@@ -399,16 +400,20 @@ def dump_ui():
     try:
         print(f"[@route:host_remote] Dumping UI elements without screenshot")
         
-        # Get remote controller proxy
-        remote_proxy = get_controller_proxy('remote')
-        if not remote_proxy:
+        # Get remote controller
+        remote_controller = get_local_controller('remote')
+        if not remote_controller:
             return jsonify({
                 'success': False,
                 'error': 'Remote controller not available'
             }), 400
             
         # Execute dump UI command without screenshot
-        result = remote_proxy.execute_command('DUMP_UI', {})
+        if hasattr(remote_controller, 'dump_ui_elements'):
+            ui_success, elements, ui_error = remote_controller.dump_ui_elements()
+            result = {'success': ui_success, 'elements': elements if ui_success else [], 'error': ui_error}
+        else:
+            result = {'success': False, 'error': 'UI dump not supported by this remote controller'}
         
         if result.get('success'):
             elements = result.get('elements', [])

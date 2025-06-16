@@ -222,48 +222,31 @@ def click_element():
 def tap_coordinates():
     """Handle tap coordinates for mobile devices - centralized mobile control"""
     try:
-        data = request.get_json()
-        host = data.get('host')
-        x = data.get('x')
-        y = data.get('y')
+        print("[@route:server_remote:tap_coordinates] Proxying tap coordinates request")
         
-        if not host or x is None or y is None:
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Extract host info and remove it from the data to be sent to host
+        host_info, error = get_host_from_request()
+        if not host_info:
             return jsonify({
                 'success': False,
-                'error': 'Missing required parameters: host, x, y'
+                'error': error or 'Host information required'
             }), 400
-            
-        print(f"[@route:server_remote] Handling tap coordinates for {host.get('host_name', 'unknown')}: ({x}, {y})")
         
-        # Get the appropriate remote controller
-        controller_proxy = get_controller_proxy(host, 'remote')
-        if not controller_proxy:
-            return jsonify({
-                'success': False,
-                'error': 'Remote controller not available for this host'
-            }), 400
-            
-        # Execute tap command
-        result = controller_proxy.execute_command('TAP_COORDINATES', {'x': x, 'y': y})
+        # Remove host from request data before sending to host (host doesn't need its own info)
+        host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
         
-        if result.get('success'):
-            print(f"[@route:server_remote] Tap executed successfully at ({x}, {y})")
-            return jsonify({
-                'success': True,
-                'message': f'Tap executed at coordinates ({x}, {y})'
-            })
-        else:
-            print(f"[@route:server_remote] Tap failed: {result.get('error', 'Unknown error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Tap execution failed')
-            }), 500
-            
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/remote/tap-coordinates', 'POST', host_request_data)
+        
+        return jsonify(response_data), status_code
+        
     except Exception as e:
-        print(f"[@route:server_remote] Error in tap_coordinates: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': str(e)
         }), 500
 
 @remote_bp.route('/stream-tap', methods=['POST'])
@@ -305,27 +288,33 @@ def stream_tap():
 def tap_coordinates_internal(host, x, y):
     """Internal helper for tap coordinate handling"""
     try:
-        controller_proxy = get_controller_proxy(host, 'remote')
-        if not controller_proxy:
-            return jsonify({
-                'success': False,
-                'error': 'Remote controller not available for this host'
-            }), 400
-            
-        result = controller_proxy.execute_command('TAP_COORDINATES', {'x': x, 'y': y})
+        # Use the proxy system to forward to host
+        from src.utils.app_utils import buildHostUrl
+        full_url = buildHostUrl(host, '/host/remote/tap-coordinates')
         
-        if result.get('success'):
-            print(f"[@route:server_remote] Internal tap executed successfully at ({x}, {y})")
-            return jsonify({
-                'success': True,
-                'message': f'Tap executed at coordinates ({x}, {y})'
-            })
-        else:
-            print(f"[@route:server_remote] Internal tap failed: {result.get('error', 'Unknown error')}")
+        if not full_url:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'Tap execution failed')
+                'error': 'Failed to build host URL'
             }), 500
+        
+        print(f"[@route:server_remote] Internal tap proxying to {full_url}: ({x}, {y})")
+        
+        import requests
+        response = requests.post(
+            full_url,
+            json={'x': x, 'y': y},
+            timeout=30,
+            verify=False,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        try:
+            result = response.json()
+        except:
+            result = {'success': False, 'error': 'Invalid response from host'}
+        
+        return jsonify(result), response.status_code
             
     except Exception as e:
         print(f"[@route:server_remote] Error in tap_coordinates_internal: {str(e)}")
@@ -369,47 +358,18 @@ def execute_command():
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:
-        data = request.get_json()
-        host = data.get('host')
+        print("[@route:server_remote:dump_ui] Proxying dump UI request")
         
-        if not host:
-            return jsonify({
-                'success': False,
-                'error': 'Missing required parameter: host'
-            }), 400
-            
-        print(f"[@route:server_remote] Dumping UI elements for {host.get('host_name', 'unknown')}")
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Get the appropriate remote controller
-        controller_proxy = get_controller_proxy(host, 'remote')
-        if not controller_proxy:
-            return jsonify({
-                'success': False,
-                'error': 'Remote controller not available for this host'
-            }), 400
-            
-        # Execute dump UI command without screenshot
-        result = controller_proxy.execute_command('DUMP_UI', {})
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/remote/dump-ui', 'POST', request_data)
         
-        if result.get('success'):
-            elements = result.get('elements', [])
-            print(f"[@route:server_remote] UI dump successful, found {len(elements)} elements")
-            
-            return jsonify({
-                'success': True,
-                'elements': elements,
-                'message': f'UI dumped successfully, found {len(elements)} elements'
-            })
-        else:
-            print(f"[@route:server_remote] UI dump failed: {result.get('error', 'Unknown error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'UI dump failed')
-            }), 500
-            
+        return jsonify(response_data), status_code
+        
     except Exception as e:
-        print(f"[@route:server_remote] Error in dump_ui: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': str(e)
         }), 500
