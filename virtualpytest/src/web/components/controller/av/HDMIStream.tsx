@@ -45,7 +45,7 @@ export function HDMIStream({
   useEffect(() => {
     const loadAVConfig = async () => {
       try {
-        const response = await fetch('/src/config/av/hdmi_stream.json');
+        const response = await fetch('/src/web/config/av/hdmi_stream.json');
         if (response.ok) {
           const config = await response.json();
           setAvConfig(config);

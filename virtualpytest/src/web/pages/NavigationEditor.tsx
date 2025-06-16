@@ -22,7 +22,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 // Import extracted components and hooks
-import { AVPanel } from '../components/controller/av/AVPanel';
+import { HDMIStream } from '../components/controller/av/HDMIStream';
 import { RemotePanel } from '../components/controller/remote/RemotePanel';
 import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
@@ -215,7 +215,7 @@ const NavigationEditorContent: React.FC = () => {
   const lastLoadedTreeId = useRef<string | null>(null);
 
   // Track AV panel expanded state
-  const [isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
+  const [_isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
 
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
@@ -559,53 +559,17 @@ const NavigationEditorContent: React.FC = () => {
         {/* Remote Control Panel is now handled by NavigationEditorDeviceControl component */}
       </Box>
 
-      {/* Autonomous Panels - Rendered based on hook state */}
+      {/* Autonomous Panels - Now self-positioning with configurable layouts */}
       {showRemotePanel && selectedHost && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: panelPositioning.top,
-            right: panelPositioning.right,
-            width: remotePanelLayout.width,
-            height: remotePanelLayout.height,
-            zIndex: panelPositioning.zIndex,
-            backgroundColor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            boxShadow: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <RemotePanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
-        </Box>
+        <RemotePanel host={selectedHost} onReleaseControl={handleDisconnectComplete} />
       )}
 
       {showAVPanel && selectedHost && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: panelPositioning.top,
-            right: showRemotePanel ? panelPositioning.rightWhenBothOpen : panelPositioning.right,
-            width: isAVPanelExpanded ? avPanelLayout.expanded.width : avPanelLayout.collapsed.width,
-            height: isAVPanelExpanded
-              ? avPanelLayout.expanded.height
-              : avPanelLayout.collapsed.height,
-            zIndex: panelPositioning.zIndex,
-            backgroundColor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            boxShadow: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <AVPanel
-            host={selectedHost}
-            onReleaseControl={handleDisconnectComplete}
-            onExpandedChange={setIsAVPanelExpanded}
-          />
-        </Box>
+        <HDMIStream
+          host={selectedHost}
+          onDisconnectComplete={handleDisconnectComplete}
+          onExpandedChange={setIsAVPanelExpanded}
+        />
       )}
 
       {/* Node Edit Dialog */}

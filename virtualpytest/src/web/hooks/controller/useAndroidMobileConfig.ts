@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // Import the configuration directly from the config directory
-import androidMobileRemoteConfig from '../../../../config/remote/android_mobile_remote.json';
+import androidMobileRemoteConfig from '../../config/remote/android_mobile_remote.json';
 
 interface AndroidMobileConfig {
   remote_info: {

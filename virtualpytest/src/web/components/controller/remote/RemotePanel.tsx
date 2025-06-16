@@ -25,10 +25,10 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
         let configPath = '';
         switch (host.device_model) {
           case 'android_mobile':
-            configPath = '/src/config/remote/android_mobile_remote.json';
+            configPath = '/src/web/config/remote/android_mobile_remote.json';
             break;
           case 'android_tv':
-            configPath = '/src/config/remote/android_tv_remote.json';
+            configPath = '/src/web/config/remote/android_tv_remote.json';
             break;
           default:
             console.warn(
