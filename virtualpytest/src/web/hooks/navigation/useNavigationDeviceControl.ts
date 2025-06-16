@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { useRegistration } from '../useRegistration';
+import { useToast } from '../useToast';
 import { Host } from '../../types/common/Host_Types';
 
 interface UseNavigationDeviceControlProps {
@@ -30,6 +31,9 @@ export const useNavigationDeviceControl = ({
 
   // Get registration context for host management
   const { availableHosts, getHostByName, fetchHosts } = useRegistration();
+
+  // Get toast context for error notifications
+  const { showError } = useToast();
 
   // ========================================
   // DEVICE CONTROL HANDLERS
@@ -103,7 +107,9 @@ export const useNavigationDeviceControl = ({
           console.log(`[@hook:useNavigationDeviceControl] Panels shown after successful control`);
         } else {
           console.error(`[@hook:useNavigationDeviceControl] Failed to take control:`, result.error);
-          throw new Error(result.error || 'Failed to take control');
+          const errorMessage = result.error || 'Failed to take control';
+          showError(`Device Control Failed: ${errorMessage}`);
+          throw new Error(errorMessage);
         }
       } else {
         console.log(
@@ -134,6 +140,12 @@ export const useNavigationDeviceControl = ({
       }
     } catch (error) {
       console.error('[@hook:useNavigationDeviceControl] Error during take control:', error);
+
+      // Show error toast if not already shown (to avoid duplicate toasts)
+      if (error instanceof Error && !error.message.includes('Failed to take control')) {
+        showError(`Device Control Error: ${error.message}`);
+      }
+
       // Reset state on error
       setIsControlActive(false);
       setShowRemotePanel(false);

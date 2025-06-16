@@ -378,6 +378,7 @@ const NavigationEditorContent: React.FC = () => {
         // Device control props - now provided by hook
         selectedDevice={selectedHost?.host_name || ''}
         isControlActive={isControlActive}
+        isControlLoading={isControlLoading}
         isRemotePanelOpen={isRemotePanelOpen}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}

@@ -26,6 +26,7 @@ export const NavigationEditorHeader: React.FC<{
   treeId: string;
   selectedDevice: string;
   isControlActive: boolean;
+  isControlLoading: boolean;
   isRemotePanelOpen: boolean;
   onAddNewNode: () => void;
   onFitView: () => void;
@@ -52,6 +53,7 @@ export const NavigationEditorHeader: React.FC<{
   treeId,
   selectedDevice,
   isControlActive,
+  isControlLoading,
   isRemotePanelOpen,
   onAddNewNode,
   onFitView,
@@ -145,6 +147,7 @@ export const NavigationEditorHeader: React.FC<{
             <NavigationEditorDeviceControls
               selectedDevice={selectedDevice}
               isControlActive={isControlActive}
+              isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}
               isLoading={isLoading}
               error={error}

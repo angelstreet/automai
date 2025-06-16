@@ -28,6 +28,7 @@ export interface NavigationEditorActionButtonsProps {
 export interface NavigationEditorDeviceControlsProps {
   selectedDevice: string | null;
   isControlActive: boolean;
+  isControlLoading: boolean;
   isRemotePanelOpen: boolean;
   isLoading: boolean;
   error: string | null;

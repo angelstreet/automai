@@ -47,7 +47,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           value={selectedDevice || ''}
           onChange={(e) => onDeviceSelect(e.target.value || null)}
           label="Device"
-          disabled={isLoading || !!error || isControlLoading}
+          disabled={isLoading || !!error}
           sx={{ height: 32, fontSize: '0.75rem' }}
         >
           <MenuItem value="">
@@ -93,7 +93,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         size="small"
         onClick={onTakeControl}
         disabled={
-          !selectedDevice || isLoading || !!error || isSelectedDeviceLocked || isControlLoading
+          !selectedDevice || isLoading || isControlLoading || !!error || isSelectedDeviceLocked
         }
         startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
