@@ -9,12 +9,12 @@ import {
 import { Box, IconButton, Tooltip } from '@mui/material';
 import React from 'react';
 
-import { useScreenEditor } from '../../hooks/pages/useScreenEditor';
-import { ScreenDefinitionEditorProps } from '../../types/pages/UserInterface_Types';
+import { useScreenEditor } from '../../../hooks/pages/useScreenEditor';
+import { ScreenDefinitionEditorProps } from '../../../types/pages/UserInterface_Types';
 import {
   getCompactViewDimensions,
   createBaseContainerStyles,
-} from '../../utils/userinterface/screenEditorUtils';
+} from '../../../utils/userinterface/screenEditorUtils';
 
 import {
   RecordingOverlay,
