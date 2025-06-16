@@ -484,14 +484,14 @@ export const useNavigationEditor = () => {
       .sort((a, b) => a.depth - b.depth || a.label.localeCompare(b.label));
 
     navigationState.setAvailableFocusNodes(focusableNodes);
-  }, [navigationState]);
+  }, [navigationState.nodes, navigationState.setAvailableFocusNodes]); // Only depend on specific properties
 
   // Focus on specific node (dropdown selection)
   const setFocusNode = useCallback(
     (nodeId: string | null) => {
       navigationState.setFocusNodeId(nodeId);
     },
-    [navigationState],
+    [navigationState.setFocusNodeId],
   );
 
   // Set max display depth (dropdown selection)
@@ -499,14 +499,14 @@ export const useNavigationEditor = () => {
     (depth: number) => {
       navigationState.setMaxDisplayDepth(depth);
     },
-    [navigationState],
+    [navigationState.setMaxDisplayDepth],
   );
 
   // Reset focus to show all root level nodes
   const resetFocus = useCallback(() => {
     navigationState.setFocusNodeId(null);
     navigationState.setMaxDisplayDepth(5);
-  }, [navigationState]);
+  }, [navigationState.setFocusNodeId, navigationState.setMaxDisplayDepth]);
 
   return {
     // State (filtered views for ReactFlow display)

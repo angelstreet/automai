@@ -149,10 +149,8 @@ export function HDMIStream({
     fetchStreamUrl();
   }, [fetchStreamUrl]);
 
-  // Notify parent of initial expanded state
-  useEffect(() => {
-    onExpandedChange?.(isExpanded);
-  }, [isExpanded]); // Remove onExpandedChange from deps to prevent infinite loops
+  // NOTE: Removed automatic onExpandedChange call to prevent infinite loops
+  // onExpandedChange is now only called when user manually toggles expand/collapse
 
   // Enhanced screenshot handler that updates capture mode
   const handleTakeScreenshot = useCallback(async () => {
