@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { AndroidElement, AndroidApp } from '../../types/controller/Remote_Types';
@@ -31,25 +31,28 @@ export function useAndroidMobile(host: Host) {
   );
 
   // Configuration
-  const layoutConfig: AndroidMobileLayoutConfig = {
-    containerWidth: 300,
-    containerHeight: 600,
-    deviceResolution: {
-      width: 1080,
-      height: 2340,
-    },
-    overlayConfig: {
-      defaultPosition: {
-        left: '74px',
-        top: '186px',
+  const layoutConfig: AndroidMobileLayoutConfig = useMemo(
+    () => ({
+      containerWidth: 300,
+      containerHeight: 600,
+      deviceResolution: {
+        width: 1080,
+        height: 2340,
       },
-      defaultScale: {
-        x: 0.198,
-        y: 0.195,
+      overlayConfig: {
+        defaultPosition: {
+          left: '74px',
+          top: '186px',
+        },
+        defaultScale: {
+          x: 0.198,
+          y: 0.195,
+        },
       },
-    },
-    autoDumpDelay: 1200,
-  };
+      autoDumpDelay: 1200,
+    }),
+    [],
+  );
 
   // State management
   const [isConnected, setIsConnected] = useState(true);
@@ -65,7 +68,7 @@ export function useAndroidMobile(host: Host) {
   const screenshotRef = useRef<HTMLImageElement>(null);
 
   // API calls
-  const screenshotAndDump = async () => {
+  const screenshotAndDump = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Starting screenshot and dump for host:', host.host_name);
     setIsDumpingUI(true);
 
@@ -98,9 +101,9 @@ export function useAndroidMobile(host: Host) {
     } finally {
       setIsDumpingUI(false);
     }
-  };
+  }, [host]);
 
-  const getApps = async () => {
+  const getApps = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Getting apps for host:', host.host_name);
 
     try {
@@ -123,65 +126,71 @@ export function useAndroidMobile(host: Host) {
       console.error('[@hook:useAndroidMobile] Error getting apps:', error);
       return { success: false, error: error };
     }
-  };
+  }, [host]);
 
-  const clickElement = async (element: AndroidElement) => {
-    console.log('[@hook:useAndroidMobile] Clicking element:', element.id);
+  const clickElement = useCallback(
+    async (element: AndroidElement) => {
+      console.log('[@hook:useAndroidMobile] Clicking element:', element.id);
 
-    try {
-      const response = await fetch(buildServerUrl('/server/remote/click-element'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: host,
-          elementId: element.id.toString(),
-        }),
-      });
-      const result = await response.json();
+      try {
+        const response = await fetch(buildServerUrl('/server/remote/click-element'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: host,
+            elementId: element.id.toString(),
+          }),
+        });
+        const result = await response.json();
 
-      if (result.success) {
-        console.log('[@hook:useAndroidMobile] Element click successful');
-      } else {
-        console.error('[@hook:useAndroidMobile] Element click failed:', result.error);
+        if (result.success) {
+          console.log('[@hook:useAndroidMobile] Element click successful');
+        } else {
+          console.error('[@hook:useAndroidMobile] Element click failed:', result.error);
+        }
+
+        return result;
+      } catch (error) {
+        console.error('[@hook:useAndroidMobile] Error clicking element:', error);
+        return { success: false, error: error };
       }
+    },
+    [host],
+  );
 
-      return result;
-    } catch (error) {
-      console.error('[@hook:useAndroidMobile] Error clicking element:', error);
-      return { success: false, error: error };
-    }
-  };
+  const executeCommand = useCallback(
+    async (command: string, params?: any) => {
+      console.log('[@hook:useAndroidMobile] Executing command:', command, 'with params:', params);
 
-  const executeCommand = async (command: string, params?: any) => {
-    console.log('[@hook:useAndroidMobile] Executing command:', command, 'with params:', params);
+      try {
+        const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: host,
+            command,
+            params,
+          }),
+        });
+        const result = await response.json();
 
-    try {
-      const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: host,
-          command,
-          params,
-        }),
-      });
-      const result = await response.json();
+        if (result.success) {
+          console.log('[@hook:useAndroidMobile] Command executed successfully');
+        } else {
+          console.error('[@hook:useAndroidMobile] Command execution failed:', result.error);
+        }
 
-      if (result.success) {
-        console.log('[@hook:useAndroidMobile] Command executed successfully');
-      } else {
-        console.error('[@hook:useAndroidMobile] Command execution failed:', result.error);
+        return result;
+      } catch (error) {
+        console.error('[@hook:useAndroidMobile] Error executing command:', error);
+        return { success: false, error: error };
       }
-
-      return result;
-    } catch (error) {
-      console.error('[@hook:useAndroidMobile] Error executing command:', error);
-      return { success: false, error: error };
-    }
-  };
+    },
+    [host],
+  );
 
   // Business logic
-  const handleDisconnect = async () => {
+  const handleDisconnect = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Starting disconnect process');
     setIsDisconnecting(true);
 
@@ -200,47 +209,53 @@ export function useAndroidMobile(host: Host) {
     } finally {
       setIsDisconnecting(false);
     }
-  };
+  }, []);
 
-  const handleOverlayElementClick = async (element: AndroidElement) => {
-    console.log('[@hook:useAndroidMobile] Handling overlay element click:', element.id);
+  const handleOverlayElementClick = useCallback(
+    async (element: AndroidElement) => {
+      console.log('[@hook:useAndroidMobile] Handling overlay element click:', element.id);
 
-    await clickElement(element);
-    setSelectedElement(element.id.toString());
+      await clickElement(element);
+      setSelectedElement(element.id.toString());
 
-    // Auto-refresh after click
-    setTimeout(() => {
-      console.log('[@hook:useAndroidMobile] Auto-refreshing UI after element click');
-      screenshotAndDump();
-    }, layoutConfig.autoDumpDelay);
-  };
+      // Auto-refresh after click
+      setTimeout(() => {
+        console.log('[@hook:useAndroidMobile] Auto-refreshing UI after element click');
+        screenshotAndDump();
+      }, layoutConfig.autoDumpDelay);
+    },
+    [clickElement, screenshotAndDump, layoutConfig.autoDumpDelay],
+  );
 
-  const handleRemoteCommand = async (command: string, params?: any) => {
-    console.log('[@hook:useAndroidMobile] Handling remote command:', command);
+  const handleRemoteCommand = useCallback(
+    async (command: string, params?: any) => {
+      console.log('[@hook:useAndroidMobile] Handling remote command:', command);
 
-    if (command === 'LAUNCH_APP') {
-      await executeCommand('launch_app', { package: params.package });
-    } else {
-      await executeCommand('press_key', { key: command });
-    }
-  };
+      if (command === 'LAUNCH_APP') {
+        await executeCommand('launch_app', { package: params.package });
+      } else {
+        await executeCommand('press_key', { key: command });
+      }
+    },
+    [executeCommand],
+  );
 
-  const clearElements = async () => {
+  const clearElements = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Clearing UI elements');
     setShowOverlay(false);
     setAndroidElements([]);
     setSelectedElement('');
-  };
+  }, []);
 
-  const handleGetApps = async () => {
+  const handleGetApps = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Refreshing apps list');
     await getApps();
-  };
+  }, [getApps]);
 
-  const handleDumpUIWithLoading = async () => {
+  const handleDumpUIWithLoading = useCallback(async () => {
     console.log('[@hook:useAndroidMobile] Dumping UI with loading state');
     await screenshotAndDump();
-  };
+  }, [screenshotAndDump]);
 
   return {
     // State

@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 
 interface StreamClickOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -8,8 +8,8 @@ interface StreamClickOverlayProps {
   onTap?: (x: number, y: number) => void;
   sx?: any;
   selectedHostDevice?: any; // Add host device prop for controller proxy access
-  showOverlay: boolean;
-  isActive: boolean;
+  showOverlay?: boolean; // Make optional since StreamViewer handles conditional rendering
+  isActive?: boolean; // Make optional since StreamViewer handles conditional rendering
 }
 
 export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
@@ -17,13 +17,10 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
   deviceResolution,
   sx = {},
   selectedHostDevice,
-  showOverlay,
-  isActive,
+  showOverlay = true, // Default to true since StreamViewer handles conditional rendering
+  isActive = true, // Default to true since StreamViewer handles conditional rendering
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [clickAnimation, setClickAnimation] = useState<{ x: number; y: number; id: number } | null>(
-    null,
-  );
 
   const handleClick = async (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isActive || !selectedHostDevice) return;
@@ -88,10 +85,10 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
     return () => {
       console.log('[@component:StreamClickOverlay] Click overlay unmounted');
     };
-  }, [deviceResolution, selectedHostDevice]);
+  }, [deviceResolution, selectedHostDevice, videoRef]);
 
   // Add mouse event logging for debugging
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((_e: React.MouseEvent) => {
     // Only log occasionally to avoid spam
     if (Math.random() < 0.01) {
       // 1% chance
@@ -131,35 +128,6 @@ export const StreamClickOverlay: React.FC<StreamClickOverlayProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Click animation - make it more visible */}
-      {clickAnimation && (
-        <Box
-          sx={{
-            position: 'absolute',
-            left: clickAnimation.x - 20,
-            top: clickAnimation.y - 20,
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            border: '3px solid #00ff00',
-            backgroundColor: 'rgba(0, 255, 0, 0.3)',
-            pointerEvents: 'none',
-            zIndex: 10,
-            animation: 'clickPulse 0.6s ease-out',
-            '@keyframes clickPulse': {
-              '0%': {
-                transform: 'scale(0.3)',
-                opacity: 1,
-              },
-              '100%': {
-                transform: 'scale(2.5)',
-                opacity: 0,
-              },
-            },
-          }}
-        />
-      )}
-
       {/* LED indicator moved to top-left */}
       <Box
         sx={{

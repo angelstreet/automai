@@ -364,7 +364,7 @@ export function StreamViewer({
         deviceResolution,
       });
     }
-  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution, videoRef.current]);
+  }, [enableClick, streamLoaded, requiresUserInteraction, deviceResolution]);
 
   return (
     <Box

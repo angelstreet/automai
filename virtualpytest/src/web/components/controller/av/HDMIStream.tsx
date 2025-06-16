@@ -379,10 +379,11 @@ export function HDMIStream({
                   size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                   onClick={handleTakeScreenshot}
                   sx={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: '#000000',
                     color:
                       captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                    '&:hover': { backgroundColor: '#333333' },
+                    border: '1px solid #333333',
                   }}
                   disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
                 >
@@ -398,9 +399,10 @@ export function HDMIStream({
                     size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                     onClick={handleStopCapture}
                     sx={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      backgroundColor: '#000000',
                       color: '#ff4444',
-                      '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                      '&:hover': { backgroundColor: '#333333' },
+                      border: '1px solid #333333',
                     }}
                   >
                     <StopCircle
@@ -414,9 +416,10 @@ export function HDMIStream({
                     size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                     onClick={handleStartCapture}
                     sx={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      backgroundColor: '#000000',
                       color: captureMode === 'capture' ? '#ff4444' : '#ffffff',
-                      '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                      '&:hover': { backgroundColor: '#333333' },
+                      border: '1px solid #333333',
                     }}
                     disabled={!isStreamActive}
                   >
@@ -432,9 +435,10 @@ export function HDMIStream({
                   size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
                   onClick={restartStream}
                   sx={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: '#000000',
                     color: '#ffffff',
-                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+                    '&:hover': { backgroundColor: '#333333' },
+                    border: '1px solid #333333',
                   }}
                   disabled={!isStreamActive || isCaptureActive}
                 >
