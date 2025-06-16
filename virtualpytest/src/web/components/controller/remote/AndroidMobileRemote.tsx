@@ -24,19 +24,11 @@ interface AndroidMobileRemoteProps {
   host: Host;
   onDisconnectComplete?: () => void;
   sx?: any;
-  // Stream integration props - make remote autonomous
-  streamPosition?: { x: number; y: number };
-  streamSize?: { width: number; height: number };
-  streamResolution?: { width: number; height: number };
-  videoElement?: HTMLVideoElement;
-  // Panel state for dynamic overlay positioning
-  panelState?: {
-    isCollapsed: boolean;
-    collapsedPosition?: { x: number; y: number };
-    collapsedSize?: { width: number; height: number };
-    expandedPosition?: { x: number; y: number };
-    expandedSize?: { width: number; height: number };
-  };
+  // Simplified panel state props
+  isCollapsed: boolean;
+  panelWidth: string;
+  panelHeight: string;
+  deviceResolution: { width: number; height: number };
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -44,11 +36,10 @@ export const AndroidMobileRemote = React.memo(
     host,
     onDisconnectComplete,
     sx = {},
-    streamPosition,
-    streamSize,
-    streamResolution,
-    videoElement,
-    panelState,
+    isCollapsed,
+    panelWidth,
+    panelHeight,
+    deviceResolution,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -82,12 +73,12 @@ export const AndroidMobileRemote = React.memo(
     } = useAndroidMobile(host);
 
     // Panel integration - prepare panelInfo for overlay
-    const panelInfo = React.useMemo((): PanelInfo | undefined => {
+    const panelInfo: PanelInfo | undefined = React.useMemo(() => {
       // Hardcode device resolution for now
       const hardcodedResolution = { width: 1920, height: 1080 };
 
       // Skip unnecessary recalculations if missing required props
-      if (!streamPosition || !streamSize || !panelState) {
+      if (!panelWidth || !panelHeight || !deviceResolution) {
         console.log(
           '[@component:AndroidMobileRemote] panelInfo is undefined - missing required props',
         );
@@ -95,30 +86,31 @@ export const AndroidMobileRemote = React.memo(
       }
 
       console.log('[@component:AndroidMobileRemote] PanelInfo debug:', {
-        streamPosition,
-        streamSize,
-        streamResolution: streamResolution || hardcodedResolution,
-        panelState,
+        isCollapsed,
+        panelWidth,
+        panelHeight,
+        deviceResolution,
       });
 
       // Get HDMI stream dimensions from config based on panel state
       const streamConfig = hdmiStreamMobileConfig.panel_layout;
-      const currentStreamConfig = panelState.isCollapsed
-        ? streamConfig.collapsed
-        : streamConfig.expanded;
+      const currentStreamConfig = isCollapsed ? streamConfig.collapsed : streamConfig.expanded;
 
       // Parse dimensions from config
       const parsePixels = (value: string) => parseInt(value.replace('px', ''), 10);
-      const panelWidth = parsePixels(currentStreamConfig.width);
-      const panelHeight = parsePixels(currentStreamConfig.height);
+      const panelWidthParsed = parsePixels(panelWidth);
+      const panelHeightParsed = parsePixels(panelHeight);
 
       // Calculate actual stream content area
       const headerHeight = parsePixels(hdmiStreamMobileConfig.panel_layout.header.height);
-      const streamContentHeight = panelHeight - headerHeight; // Panel height minus header
+      const streamContentHeight = panelHeightParsed - headerHeight; // Panel height minus header
 
       // Calculate stream width based on 1920x1080 aspect ratio (16:9)
       const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
-      const streamContentWidth = Math.min(panelWidth, streamContentHeight * deviceAspectRatio);
+      const streamContentWidth = Math.min(
+        panelWidthParsed,
+        streamContentHeight * deviceAspectRatio,
+      );
 
       // Calculate stream position - centered in panel
       const panelX =
@@ -128,11 +120,11 @@ export const AndroidMobileRemote = React.memo(
       const panelY =
         window.innerHeight -
         parsePixels(currentStreamConfig.position.bottom || '20px') -
-        panelHeight;
+        panelHeightParsed;
 
       // Calculate content position (accounting for header)
       const streamActualPosition = {
-        x: panelX + (panelWidth - streamContentWidth) / 2, // Center horizontally
+        x: panelX + (panelWidthParsed - streamContentWidth) / 2, // Center horizontally
         y: panelY + headerHeight, // Position below header
       };
 
@@ -144,12 +136,12 @@ export const AndroidMobileRemote = React.memo(
       const info = {
         position: streamActualPosition, // Use calculated stream position
         size: streamActualSize, // Use calculated stream size with proper aspect ratio
-        deviceResolution: streamResolution || hardcodedResolution,
-        isCollapsed: panelState.isCollapsed,
+        deviceResolution: deviceResolution,
+        isCollapsed: isCollapsed,
       };
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
       return info;
-    }, [streamPosition, streamSize, streamResolution, panelState]);
+    }, [isCollapsed, panelWidth, panelHeight, deviceResolution]);
 
     // Use remote configs for panel tap functionality
     // Create temporary adapter for compatibility with useRemoteConfigs
@@ -561,17 +553,16 @@ export const AndroidMobileRemote = React.memo(
             <br />
             ShowOverlay: {showOverlay.toString()}
             <br />
-            StreamPosition:{' '}
-            {streamPosition ? `${streamPosition.x},${streamPosition.y}` : 'undefined'}
+            StreamPosition: undefined
             <br />
-            StreamSize: {streamSize ? `${streamSize.width}x${streamSize.height}` : 'undefined'}
+            StreamSize: undefined
             <br />
             StreamResolution:{' '}
-            {streamResolution
-              ? `${streamResolution.width}x${streamResolution.height}`
+            {deviceResolution
+              ? `${deviceResolution.width}x${deviceResolution.height}`
               : 'undefined'}
             <br />
-            PanelState: {panelState ? 'defined' : 'undefined'}
+            PanelState: {isCollapsed ? 'collapsed' : 'expanded'}
           </div>
         )}
       </Box>
@@ -585,11 +576,10 @@ export const AndroidMobileRemote = React.memo(
       prevProps.host?.device_ip === nextProps.host?.device_ip &&
       prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
       JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
-      JSON.stringify(prevProps.streamPosition) === JSON.stringify(nextProps.streamPosition) &&
-      JSON.stringify(prevProps.streamSize) === JSON.stringify(nextProps.streamSize) &&
-      JSON.stringify(prevProps.streamResolution) === JSON.stringify(nextProps.streamResolution) &&
-      prevProps.videoElement === nextProps.videoElement &&
-      JSON.stringify(prevProps.panelState) === JSON.stringify(nextProps.panelState)
+      prevProps.isCollapsed === nextProps.isCollapsed &&
+      prevProps.panelWidth === nextProps.panelWidth &&
+      prevProps.panelHeight === nextProps.panelHeight &&
+      JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution)
     );
   },
 );
