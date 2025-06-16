@@ -5,16 +5,16 @@ export const androidMobileRemoteConfig = {
   },
   panel_layout: {
     collapsed: {
-      width: '220px',
-      height: '320px',
+      width: '240px',
+      height: '380px',
       position: {
         bottom: '20px',
         right: '20px',
       },
     },
     expanded: {
-      width: '420px',
-      height: 'calc(100vh - 140px)',
+      width: '280px',
+      height: '420',
       position: {
         top: '100px',
         right: '20px',

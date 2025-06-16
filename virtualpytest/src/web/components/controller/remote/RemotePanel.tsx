@@ -31,8 +31,11 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
   // Get configurable layout from device config
   const panelLayout = getConfigurableRemotePanelLayout(host.device_model, remoteConfig);
 
-  // Determine current layout based on collapsed state
-  const currentLayout = isCollapsed ? panelLayout.collapsed : panelLayout.expanded;
+  // Use dimensions directly from the loaded config
+  const collapsedWidth = panelLayout.collapsed.width;
+  const collapsedHeight = panelLayout.collapsed.height;
+  const expandedWidth = panelLayout.expanded.width;
+  const expandedHeight = panelLayout.expanded.height;
 
   const toggleCollapsed = () => {
     setIsCollapsed(!isCollapsed);
@@ -41,26 +44,14 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
     );
   };
 
-  // Build position styles from config
+  // Build position styles - simple container without scaling
   const positionStyles: any = {
     position: 'fixed',
     zIndex: panelLayout.zIndex,
-    width: currentLayout.width,
-    height: currentLayout.height,
-    backgroundColor: 'background.paper',
-    border: '1px solid',
-    borderColor: 'divider',
-    borderRadius: 1,
-    boxShadow: 3,
-    overflow: 'hidden',
-    transition: 'all 0.3s ease-in-out',
+    // Always anchor at bottom-right (collapsed position)
+    bottom: panelLayout.collapsed.position.bottom || '20px',
+    right: panelLayout.collapsed.position.right || '20px',
   };
-
-  // Add positioning based on config
-  if (currentLayout.position.top) positionStyles.top = currentLayout.position.top;
-  if (currentLayout.position.bottom) positionStyles.bottom = currentLayout.position.bottom;
-  if (currentLayout.position.left) positionStyles.left = currentLayout.position.left;
-  if (currentLayout.position.right) positionStyles.right = currentLayout.position.right;
 
   // Simple device model detection - no loading, no fallback, no validation
   const renderRemoteComponent = () => {
@@ -147,31 +138,51 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
 
   return (
     <Box sx={positionStyles}>
-      {/* Header with toggle button */}
+      {/* Inner content container - uses appropriate size for state */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          p: 1,
-          borderBottom: '1px solid',
+          width: isCollapsed ? collapsedWidth : expandedWidth,
+          height: isCollapsed ? collapsedHeight : expandedHeight,
+          position: 'absolute',
+          // Simple positioning - bottom and right anchored
+          bottom: 0,
+          right: 0,
+          backgroundColor: 'background.paper',
+          border: '1px solid',
           borderColor: 'divider',
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
+          borderRadius: 1,
+          boxShadow: 3,
+          overflow: 'hidden',
+          transition: 'width 0.3s ease-in-out, height 0.3s ease-in-out',
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-          {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
-        </Typography>
-        <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
-          <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>
-            {isCollapsed ? <OpenInFull fontSize="small" /> : <CloseFullscreen fontSize="small" />}
-          </IconButton>
-        </Tooltip>
-      </Box>
+        {/* Header with toggle button */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            p: 1,
+            borderBottom: '1px solid #333',
+            bgcolor: '#1E1E1E',
+            color: '#ffffff',
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
+          </Typography>
+          <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
+            <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'inherit' }}>
+              {isCollapsed ? <OpenInFull fontSize="small" /> : <CloseFullscreen fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-      {/* Remote Content */}
-      <Box sx={{ height: 'calc(100% - 48px)', overflow: 'hidden' }}>{renderRemoteComponent()}</Box>
+        {/* Remote Content */}
+        <Box sx={{ height: 'calc(100% - 48px)', overflow: 'hidden' }}>
+          {renderRemoteComponent()}
+        </Box>
+      </Box>
     </Box>
   );
 }
