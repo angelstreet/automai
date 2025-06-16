@@ -198,6 +198,8 @@ class HDMIStreamController(AVControllerInterface):
                 
         except Exception as e:
             print(f'[@controller:HDMIStream] Error taking screenshot: {e}')
+            import traceback
+            print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
             return None
         
     def take_control(self) -> Dict[str, Any]:

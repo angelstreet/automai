@@ -536,6 +536,8 @@ const NavigationEditorContent: React.FC = () => {
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
                     onUpdateNode={handleUpdateNode}
+                    isControlActive={isControlActive}
+                    selectedDevice={selectedHost?.host_name || null}
                   />
                 )}
 
@@ -549,6 +551,9 @@ const NavigationEditorContent: React.FC = () => {
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
+                    isControlActive={isControlActive}
+                    selectedDevice={selectedHost?.host_name || null}
+                    selectedHostDevice={selectedHost}
                   />
                 )}
               </>
@@ -582,6 +587,9 @@ const NavigationEditorContent: React.FC = () => {
         onClose={cancelNodeChanges}
         onResetNode={resetNode}
         model={userInterface?.models?.[0] || 'android_mobile'}
+        isControlActive={isControlActive}
+        selectedDevice={selectedHost?.host_name || null}
+        selectedHostDevice={selectedHost}
       />
 
       {/* Edge Edit Dialog */}
@@ -593,6 +601,9 @@ const NavigationEditorContent: React.FC = () => {
         onClose={() => setIsEdgeDialogOpen(false)}
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
+        isControlActive={isControlActive}
+        selectedDevice={selectedHost?.host_name || null}
+        selectedHostDevice={selectedHost}
       />
 
       {/* Discard Changes Confirmation Dialog */}
