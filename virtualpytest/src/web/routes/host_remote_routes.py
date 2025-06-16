@@ -101,6 +101,8 @@ def screenshot_and_dump():
                     'id': element.id,
                     'text': element.text,
                     'className': element.class_name,
+                    'contentDesc': element.content_desc,
+                    'package': element.resource_id,
                     'bounds': element.bounds,
                     'clickable': element.clickable,
                     'enabled': element.enabled
