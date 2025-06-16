@@ -39,8 +39,7 @@ interface EdgeEditDialogProps {
   controllerTypes?: string[];
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
-  selectedDevice?: string | null;
-  selectedHostDevice?: any; // Add host device prop for controller proxy access
+  selectedHost?: any; // Full host object for API calls
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -52,8 +51,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   controllerTypes = [],
   selectedEdge,
   isControlActive = false,
-  selectedDevice = null,
-  selectedHostDevice,
+  selectedHost,
 }) => {
   // Early return if edgeForm is null or undefined - MUST be before any hooks
   if (!edgeForm) {
@@ -67,7 +65,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [actionResult, setActionResult] = useState<string | null>(null);
 
   const canRunActions =
-    isControlActive && selectedDevice && edgeForm?.actions?.length > 0 && !isRunningActions;
+    isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
 
   useEffect(() => {
     if (!isOpen) {
@@ -79,7 +77,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     // Only log when dialog is actually opened, not when closed
     if (isOpen) {
       console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
-      if (controllerTypes.length > 0 && selectedHostDevice) {
+      if (controllerTypes.length > 0 && selectedHost) {
         console.log(
           `[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`,
         );
@@ -89,10 +87,10 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         setActionsError('No controller types available or host device not selected');
       }
     }
-  }, [isOpen, controllerTypes, selectedHostDevice]);
+  }, [isOpen, controllerTypes, selectedHost]);
 
   const fetchControllerActions = async (controllerType: string) => {
-    if (!selectedHostDevice) {
+    if (!selectedHost) {
       setActionsError('No host device selected');
       return;
     }
@@ -110,7 +108,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHostDevice.host_name,
+          host_name: selectedHost.host_name,
           controller_type: controllerType,
         }),
       });
@@ -165,7 +163,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
-        selectedHostDevice, // Pass selectedHostDevice instead of buildServerUrl
+        selectedHost, // Pass selectedHost instead of selectedHostDevice
         undefined,
         edgeForm?.finalWaitTime,
         edgeForm?.retryActions,

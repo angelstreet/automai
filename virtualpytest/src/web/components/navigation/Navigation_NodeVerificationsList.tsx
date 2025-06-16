@@ -55,8 +55,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   });
 
   // Use extracted hooks
-  const { availableReferences, referencesLoading, getModelReferences } =
-    useVerificationReferences(reloadTrigger);
+  const { referencesLoading, getModelReferences } = useVerificationReferences(reloadTrigger);
 
   // Debug logging for testResults changes - keep this for troubleshooting
   useEffect(() => {

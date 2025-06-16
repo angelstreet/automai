@@ -25,7 +25,7 @@ export const NavigationEditorHeader: React.FC<{
   error: string | null;
   isLocked: boolean;
   treeId: string;
-  selectedDevice: string;
+  selectedHost: any; // Full host object
   isControlActive: boolean;
   isRemotePanelOpen: boolean;
   onAddNewNode: () => void;
@@ -37,7 +37,7 @@ export const NavigationEditorHeader: React.FC<{
   onResetFocus: () => void;
   onToggleRemotePanel: () => void;
   onControlStateChange: (active: boolean) => void;
-  onDeviceSelect: (device: string | null) => void;
+  onDeviceSelect: (host: any) => void;
   onUpdateNode: (nodeId: string, updatedData: any) => void;
   onUpdateEdge: (edgeId: string, updatedData: any) => void;
 }> = ({
@@ -51,7 +51,7 @@ export const NavigationEditorHeader: React.FC<{
   error,
   isLocked,
   treeId,
-  selectedDevice,
+  selectedHost,
   isControlActive,
   isRemotePanelOpen,
   onAddNewNode,
@@ -87,27 +87,27 @@ export const NavigationEditorHeader: React.FC<{
 
   // Handle take control using hook's business logic
   const handleTakeControl = useCallback(async () => {
-    if (!selectedDevice) {
+    if (!selectedHost) {
       console.warn('[@component:NavigationEditorHeader] No device selected for take control');
       showWarning('Please select a device first');
       return;
     }
 
     console.log(
-      `[@component:NavigationEditorHeader] ${isControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedDevice}`,
+      `[@component:NavigationEditorHeader] ${isControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedHost.host_name}`,
     );
     setIsControlLoading(true);
 
     try {
       if (isControlActive) {
         // Release control using hook
-        const result = await releaseControl(selectedDevice, 'navigation-editor-session');
+        const result = await releaseControl(selectedHost.host_name, 'navigation-editor-session');
 
         if (result.success) {
           console.log(
-            `[@component:NavigationEditorHeader] Successfully released control of device: ${selectedDevice}`,
+            `[@component:NavigationEditorHeader] Successfully released control of device: ${selectedHost.host_name}`,
           );
-          showSuccess(`Successfully released control of ${selectedDevice}`);
+          showSuccess(`Successfully released control of ${selectedHost.host_name}`);
           onControlStateChange(false);
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to release control:`, result);
@@ -116,13 +116,13 @@ export const NavigationEditorHeader: React.FC<{
         }
       } else {
         // Take control using hook
-        const result = await takeControl(selectedDevice, 'navigation-editor-session');
+        const result = await takeControl(selectedHost.host_name, 'navigation-editor-session');
 
         if (result.success) {
           console.log(
-            `[@component:NavigationEditorHeader] Successfully took control of device: ${selectedDevice}`,
+            `[@component:NavigationEditorHeader] Successfully took control of device: ${selectedHost.host_name}`,
           );
-          showSuccess(`Successfully took control of ${selectedDevice}`);
+          showSuccess(`Successfully took control of ${selectedHost.host_name}`);
           onControlStateChange(true);
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to take control:`, result);
@@ -151,7 +151,7 @@ export const NavigationEditorHeader: React.FC<{
       setIsControlLoading(false);
     }
   }, [
-    selectedDevice,
+    selectedHost,
     isControlActive,
     takeControl,
     releaseControl,
@@ -216,7 +216,7 @@ export const NavigationEditorHeader: React.FC<{
               hasUnsavedChanges={hasUnsavedChanges}
               isLoading={isLoading}
               error={error}
-              selectedDevice={selectedDevice}
+              selectedHost={selectedHost}
               isControlActive={isControlActive}
               onAddNewNode={onAddNewNode}
               onFitView={onFitView}
@@ -226,7 +226,7 @@ export const NavigationEditorHeader: React.FC<{
 
             {/* Section 4: Device Controls */}
             <NavigationEditorDeviceControls
-              selectedDevice={selectedDevice}
+              selectedHost={selectedHost}
               isControlActive={isControlActive}
               isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}

@@ -1,4 +1,4 @@
-import { OpenInFull, CloseFullscreen } from '@mui/icons-material';
+import { OpenInFull, CloseFullscreen, Minimize, KeyboardArrowUp } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState, useEffect } from 'react';
 
@@ -14,8 +14,9 @@ interface RemotePanelProps {
 }
 
 export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }: RemotePanelProps) {
-  // Panel state
+  // Panel state - three states: expanded, collapsed, minimized
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [remoteConfig, setRemoteConfig] = useState<any>(null);
 
   // Load remote config for the device type
@@ -36,12 +37,39 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
   const collapsedHeight = panelLayout.collapsed.height;
   const expandedWidth = panelLayout.expanded.width;
   const expandedHeight = panelLayout.expanded.height;
+  const headerHeight = remoteConfig?.panel_layout?.header?.height || '48px';
 
-  const toggleCollapsed = () => {
-    setIsCollapsed(!isCollapsed);
-    console.log(
-      `[@component:RemotePanel] Toggling panel state to ${!isCollapsed ? 'collapsed' : 'expanded'} for ${host.device_model}`,
-    );
+  // Smart toggle handlers with minimized state logic
+  const handleMinimizeToggle = () => {
+    if (isMinimized) {
+      // Restore from minimized to collapsed state
+      setIsMinimized(false);
+      setIsCollapsed(true);
+      console.log(
+        `[@component:RemotePanel] Restored from minimized to collapsed for ${host.device_model}`,
+      );
+    } else {
+      // Minimize the panel
+      setIsMinimized(true);
+      console.log(`[@component:RemotePanel] Minimized panel for ${host.device_model}`);
+    }
+  };
+
+  const handleExpandCollapseToggle = () => {
+    if (isMinimized) {
+      // First restore from minimized to collapsed, then user can click again to expand
+      setIsMinimized(false);
+      setIsCollapsed(true);
+      console.log(
+        `[@component:RemotePanel] Restored from minimized to collapsed for ${host.device_model}`,
+      );
+    } else {
+      // Normal expand/collapse logic
+      setIsCollapsed(!isCollapsed);
+      console.log(
+        `[@component:RemotePanel] Toggling panel state to ${!isCollapsed ? 'collapsed' : 'expanded'} for ${host.device_model}`,
+      );
+    }
   };
 
   // Build position styles - simple container without scaling
@@ -51,6 +79,17 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
     // Always anchor at bottom-right (collapsed position)
     bottom: panelLayout.collapsed.position.bottom || '20px',
     right: panelLayout.collapsed.position.right || '20px',
+  };
+
+  // Calculate panel dimensions based on state
+  const getPanelWidth = () => {
+    if (isMinimized) return collapsedWidth; // Use collapsed width when minimized
+    return isCollapsed ? collapsedWidth : expandedWidth;
+  };
+
+  const getPanelHeight = () => {
+    if (isMinimized) return headerHeight; // Only header height when minimized
+    return isCollapsed ? collapsedHeight : expandedHeight;
   };
 
   // Simple device model detection - no loading, no fallback, no validation
@@ -141,8 +180,8 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
       {/* Inner content container - uses appropriate size for state */}
       <Box
         sx={{
-          width: isCollapsed ? collapsedWidth : expandedWidth,
-          height: isCollapsed ? collapsedHeight : expandedHeight,
+          width: getPanelWidth(),
+          height: getPanelHeight(),
           position: 'absolute',
           // Simple positioning - bottom and right anchored
           bottom: 0,
@@ -156,32 +195,58 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
           transition: 'width 0.3s ease-in-out, height 0.3s ease-in-out',
         }}
       >
-        {/* Header with toggle button */}
+        {/* Header with minimize and expand/collapse buttons */}
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             p: parseInt(remoteConfig?.panel_layout?.header?.padding || '8px') / 8,
-            height: remoteConfig?.panel_layout?.header?.height || '48px',
-            borderBottom: `1px solid ${remoteConfig?.panel_layout?.header?.borderColor || '#333'}`,
+            height: headerHeight,
+            borderBottom: isMinimized
+              ? 'none'
+              : `1px solid ${remoteConfig?.panel_layout?.header?.borderColor || '#333'}`,
             bgcolor: remoteConfig?.panel_layout?.header?.backgroundColor || '#1E1E1E',
             color: remoteConfig?.panel_layout?.header?.textColor || '#ffffff',
           }}
         >
+          {/* Left side: Minimize/Restore button */}
+          <Tooltip title={isMinimized ? 'Restore Panel' : 'Minimize Panel'}>
+            <IconButton
+              size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+              onClick={handleMinimizeToggle}
+              sx={{ color: 'inherit' }}
+            >
+              {isMinimized ? (
+                <KeyboardArrowUp
+                  fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
+                />
+              ) : (
+                <Minimize fontSize={remoteConfig?.panel_layout?.header?.iconSize || 'small'} />
+              )}
+            </IconButton>
+          </Tooltip>
+
+          {/* Center: Title */}
           <Typography
             variant="subtitle2"
             sx={{
               fontSize: remoteConfig?.panel_layout?.header?.fontSize || '0.875rem',
               fontWeight: remoteConfig?.panel_layout?.header?.fontWeight || 'bold',
+              flex: 1,
+              textAlign: 'center',
             }}
           >
             {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
           </Typography>
-          <Tooltip title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}>
+
+          {/* Right side: Expand/Collapse button */}
+          <Tooltip
+            title={isMinimized ? 'Restore Panel' : isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
+          >
             <IconButton
               size={remoteConfig?.panel_layout?.header?.iconSize || 'small'}
-              onClick={toggleCollapsed}
+              onClick={handleExpandCollapseToggle}
               sx={{ color: 'inherit' }}
             >
               {isCollapsed ? (
@@ -195,15 +260,17 @@ export function RemotePanel({ host, onReleaseControl, initialCollapsed = true }:
           </Tooltip>
         </Box>
 
-        {/* Remote Content */}
-        <Box
-          sx={{
-            height: `calc(100% - ${remoteConfig?.panel_layout?.header?.height || '48px'})`,
-            overflow: 'hidden',
-          }}
-        >
-          {renderRemoteComponent()}
-        </Box>
+        {/* Remote Content - hidden when minimized */}
+        {!isMinimized && (
+          <Box
+            sx={{
+              height: `calc(100% - ${headerHeight})`,
+              overflow: 'hidden',
+            }}
+          >
+            {renderRemoteComponent()}
+          </Box>
+        )}
       </Box>
     </Box>
   );

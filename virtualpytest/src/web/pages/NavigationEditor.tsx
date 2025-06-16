@@ -366,7 +366,7 @@ const NavigationEditorContent: React.FC = () => {
         devicesLoading={false}
         treeId={currentTreeId}
         // Device control props - now provided by hook
-        selectedDevice={selectedHost?.host_name || ''}
+        selectedHost={selectedHost}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
         onNavigateToParent={navigateToParent}
@@ -537,7 +537,7 @@ const NavigationEditorContent: React.FC = () => {
                     currentNodeId={focusNodeId || undefined}
                     onUpdateNode={handleUpdateNode}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.host_name || null}
+                    selectedHost={selectedHost}
                   />
                 )}
 
@@ -552,8 +552,7 @@ const NavigationEditorContent: React.FC = () => {
                     controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                     isControlActive={isControlActive}
-                    selectedDevice={selectedHost?.host_name || null}
-                    selectedHostDevice={selectedHost}
+                    selectedHost={selectedHost}
                   />
                 )}
               </>
@@ -588,8 +587,7 @@ const NavigationEditorContent: React.FC = () => {
         onResetNode={resetNode}
         model={userInterface?.models?.[0] || 'android_mobile'}
         isControlActive={isControlActive}
-        selectedDevice={selectedHost?.host_name || null}
-        selectedHostDevice={selectedHost}
+        selectedHost={selectedHost}
       />
 
       {/* Edge Edit Dialog */}
@@ -602,8 +600,7 @@ const NavigationEditorContent: React.FC = () => {
         controllerTypes={userInterface?.models || []}
         selectedEdge={selectedEdge}
         isControlActive={isControlActive}
-        selectedDevice={selectedHost?.host_name || null}
-        selectedHostDevice={selectedHost}
+        selectedHost={selectedHost}
       />
 
       {/* Discard Changes Confirmation Dialog */}

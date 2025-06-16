@@ -2,7 +2,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { UINavigationEdge, EdgeAction } from '../../types/pages/Navigation_Types';
+import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
@@ -16,9 +16,8 @@ interface EdgeSelectionPanelProps {
   onUpdateEdge?: (edgeId: string, updatedData: any) => void; // Add callback for updating edge data
   // Device control props
   isControlActive?: boolean;
-  selectedDevice?: string | null;
+  selectedHost?: any; // Full host object for API calls
   controllerTypes?: string[]; // e.g., ["android_mobile"]
-  selectedHostDevice?: any; // Add selectedHostDevice prop
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
@@ -30,9 +29,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   setIsEdgeDialogOpen,
   onUpdateEdge,
   isControlActive = false,
-  selectedDevice = null,
+  selectedHost,
   controllerTypes = [],
-  selectedHostDevice, // Add selectedHostDevice parameter
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
@@ -77,7 +75,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const actions = getActions();
   const retryActions = getRetryActions();
   const hasActions = actions.length > 0;
-  const canRunActions = isControlActive && selectedDevice && hasActions && !isRunning;
+  const canRunActions = isControlActive && selectedHost && hasActions && !isRunning;
 
   // Clear run results and local updates when edge selection changes
   useEffect(() => {
@@ -146,18 +144,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     setIsEdgeDialogOpen(true);
   };
 
-  const updateActionResults = (actionIndex: number, success: boolean) => {
+  const updateActionResults = (actionIndex: number, newResults: boolean[]) => {
     if (!onUpdateEdge) return;
 
     const updatedActions = [...actions];
-    const action = updatedActions[actionIndex];
-
-    // Update the last_run_result array
-    const currentResults = action.last_run_result || [];
-    const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
-
     updatedActions[actionIndex] = {
-      ...action,
+      ...updatedActions[actionIndex],
       last_run_result: newResults,
     };
 
@@ -177,18 +169,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
     }));
   };
 
-  const updateRetryActionResults = (actionIndex: number, success: boolean) => {
+  const updateRetryActionResults = (actionIndex: number, newResults: boolean[]) => {
     if (!onUpdateEdge) return;
 
     const updatedRetryActions = [...retryActions];
-    const action = updatedRetryActions[actionIndex];
-
-    // Update the last_run_result array
-    const currentResults = action.last_run_result || [];
-    const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
-
     updatedRetryActions[actionIndex] = {
-      ...action,
+      ...updatedRetryActions[actionIndex],
       last_run_result: newResults,
     };
 
@@ -224,7 +210,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       const result = await executeEdgeActions(
         actions,
         controllerTypes,
-        selectedHostDevice, // Pass selectedHostDevice as third parameter
+        selectedHost, // Pass selectedHost as third parameter
         updateActionResults, // Pass the callback to update edge data
         finalWaitTime,
         retryActions,
@@ -407,7 +393,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
               onClick={handleRunActions}
               disabled={!canRunActions}
               title={
-                !isControlActive || !selectedDevice ? 'Device control required to test actions' : ''
+                !isControlActive || !selectedHost ? 'Device control required to test actions' : ''
               }
             >
               {isRunning ? 'Running...' : 'Run'}

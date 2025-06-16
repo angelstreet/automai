@@ -16,7 +16,7 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
   hasUnsavedChanges,
   isLoading,
   error,
-  selectedDevice,
+  selectedHost,
   isControlActive,
   onAddNewNode,
   onFitView,
@@ -36,7 +36,7 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
       {/* Validation Button */}
       <ValidationButtonClient
         treeId={treeId}
-        disabled={isLoading || !!error || !selectedDevice || !isControlActive}
+        disabled={isLoading || !!error || !selectedHost || !isControlActive}
       />
 
       {/* Add Node Button */}

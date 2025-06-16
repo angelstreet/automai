@@ -40,7 +40,7 @@ interface NodeSelectionPanelProps {
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
   // Device control props
   isControlActive?: boolean;
-  selectedDevice?: string | null;
+  selectedHost?: any; // Full host object for API calls
   onSaveScreenshot?: () => void;
   // Navigation props
   treeId?: string;
@@ -66,7 +66,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   onReset,
   onUpdateNode,
   isControlActive = false,
-  selectedDevice = null,
+  selectedHost,
   onSaveScreenshot,
   treeId = '',
   currentNodeId,
@@ -145,9 +145,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   };
 
   const handleScreenshotConfirm = async () => {
-    if (!isControlActive || !selectedDevice) {
+    if (!isControlActive || !selectedHost) {
       console.warn(
-        '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active',
+        '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active or host not available',
       );
       setShowScreenshotConfirm(false);
       return;
@@ -162,7 +162,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // The server route will handle host selection automatically
+          host: selectedHost,
         }),
       });
 
@@ -337,11 +337,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   };
 
   // Check if screenshot button should be displayed
-  const showSaveScreenshotButton = isControlActive && selectedDevice;
+  const showSaveScreenshotButton = isControlActive && selectedHost;
 
   // Check if Go To button should be displayed
   // Show for all nodes when device is under control
-  const showGoToButton = isControlActive && selectedDevice && treeId;
+  const showGoToButton = isControlActive && selectedHost && treeId;
 
   // Check if verification button should be displayed
   const hasNodeVerifications =
@@ -354,7 +354,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
 
   // Can run verifications if we have control and device (same logic as NodeEditDialog)
   const canRunVerifications =
-    isControlActive && selectedDevice && hasNodeVerifications && !isRunningVerifications;
+    isControlActive && selectedHost && hasNodeVerifications && !isRunningVerifications;
 
   // Check if node can be deleted (protect entry points and home nodes)
   const isProtectedNode =
@@ -554,7 +554,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
                 disabled={!canRunVerifications}
                 startIcon={<VerifiedIcon fontSize="small" />}
                 title={
-                  !isControlActive || !selectedDevice
+                  !isControlActive || !selectedHost
                     ? 'Device control required to run verifications'
                     : ''
                 }

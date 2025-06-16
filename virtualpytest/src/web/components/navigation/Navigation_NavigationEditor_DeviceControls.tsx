@@ -14,7 +14,7 @@ import React from 'react';
 import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigation_Header_Types';
 
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({
-  selectedDevice,
+  selectedHost,
   isControlActive,
   isControlLoading,
   availableHosts,
@@ -22,10 +22,10 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
   onDeviceSelect,
   onTakeControl,
 }) => {
-  // Find the selected device data
-  const selectedDeviceHost = availableHosts.find((device) => device.host_name === selectedDevice);
+  // Find the selected device data - now we have the full object
+  const selectedDeviceHost = selectedHost;
 
-  const isSelectedDeviceLocked = selectedDevice ? isDeviceLocked(selectedDevice) : false;
+  const isSelectedDeviceLocked = selectedHost ? isDeviceLocked(selectedHost.host_name) : false;
 
   return (
     <Box
@@ -42,8 +42,12 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         <InputLabel id="device-select-label">Device</InputLabel>
         <Select
           labelId="device-select-label"
-          value={selectedDevice || ''}
-          onChange={(e) => onDeviceSelect(e.target.value || null)}
+          value={selectedHost?.host_name || ''}
+          onChange={(e) => {
+            const hostName = e.target.value || null;
+            const host = hostName ? availableHosts.find((h) => h.host_name === hostName) : null;
+            onDeviceSelect(host);
+          }}
           label="Device"
           disabled={isControlLoading}
           sx={{ height: 32, fontSize: '0.75rem' }}
@@ -90,7 +94,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         variant={isControlActive ? 'contained' : 'outlined'}
         size="small"
         onClick={onTakeControl}
-        disabled={!selectedDevice || isControlLoading || isSelectedDeviceLocked}
+        disabled={!selectedHost || isControlLoading || isSelectedDeviceLocked}
         startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
         sx={{
