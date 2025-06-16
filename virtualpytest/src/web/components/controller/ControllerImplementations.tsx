@@ -31,17 +31,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-// Temporary types until we fix the type imports
-interface ControllerItem {
-  id: string;
-  name: string;
-  description: string;
-  status: 'available' | 'placeholder';
-}
-
-interface ControllerTypesResponse {
-  [key: string]: ControllerItem[];
-}
+import { ControllerItem, ControllerTypesResponse } from '../../types/controller/Remote_Types';
 
 // TODO: Fix these imports when modal components are available
 // import { RemoteModal } from '../../modals/remote/RemoteModal';

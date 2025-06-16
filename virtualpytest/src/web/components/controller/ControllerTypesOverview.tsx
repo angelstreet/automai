@@ -9,17 +9,7 @@ import {
 import { Grid, Card, CardContent, Typography, Chip, Box, Paper } from '@mui/material';
 import React from 'react';
 
-// Temporary types until we fix the type imports
-interface ControllerItem {
-  id: string;
-  name: string;
-  description: string;
-  status: 'available' | 'placeholder';
-}
-
-interface ControllerTypesResponse {
-  [key: string]: ControllerItem[];
-}
+import { ControllerItem, ControllerTypesResponse } from '../../types/controller/Remote_Types';
 
 interface ControllerTypesOverviewProps {
   controllerTypes: ControllerTypesResponse | null;

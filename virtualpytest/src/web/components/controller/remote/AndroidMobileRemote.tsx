@@ -1,11 +1,18 @@
-import { Box } from '@mui/material';
-import { useState, useRef } from 'react';
+import {
+  Box,
+  Button,
+  Typography,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from '@mui/material';
 
+import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
 import { Host } from '../../../types/common/Host_Types';
-import { AndroidElement, AndroidApp } from '../../../types/controller/Remote_Types';
-import { buildServerUrl } from '../../../utils/frontendUtils';
+import { AndroidElement } from '../../../types/controller/Remote_Types';
 
-import { AndroidMobileCore } from './AndroidMobileControls';
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
 interface AndroidMobileRemoteProps {
@@ -19,146 +26,340 @@ export function AndroidMobileRemote({
   onDisconnectComplete,
   sx = {},
 }: AndroidMobileRemoteProps) {
-  // Simple state - no complex loading states
-  const [isConnected, setIsConnected] = useState(true); // Always connected when shown
-  const [_androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
-  const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
-  const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [selectedElement, setSelectedElement] = useState('');
-  const [selectedApp, setSelectedApp] = useState('');
+  const {
+    // State
+    androidElements,
+    androidApps,
+    showOverlay,
+    selectedElement,
+    selectedApp,
+    isDumpingUI,
+    isDisconnecting,
+    screenshotRef,
 
-  const screenshotRef = useRef<HTMLImageElement>(null);
+    // Actions
+    handleDisconnect,
+    handleOverlayElementClick,
+    handleRemoteCommand,
+    clearElements,
+    handleGetApps,
+    handleDumpUIWithLoading,
 
-  // Direct server route calls - no hooks, no abstractions
-  const _takeScreenshot = async () => {
-    const response = await fetch(buildServerUrl('/server/remote/take-screenshot'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host: host }),
-    });
-    return response.json();
-  };
+    // Setters
+    setSelectedElement,
+    setSelectedApp,
 
-  const screenshotAndDump = async () => {
-    const response = await fetch(buildServerUrl('/server/remote/screenshot-and-dump'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host: host }),
-    });
-    const result = await response.json();
+    // Configuration
+    layoutConfig,
 
-    if (result.success) {
-      if (result.screenshot) {
-        setAndroidScreenshot(result.screenshot);
-      }
-      if (result.elements) {
-        setAndroidElements(result.elements);
-      }
-      setShowOverlay(true);
-    }
+    // Session info
+    session,
+  } = useAndroidMobile(host);
 
-    return result;
-  };
-
-  const getApps = async () => {
-    const response = await fetch(buildServerUrl('/server/remote/get-apps'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host: host }),
-    });
-    const result = await response.json();
-
-    if (result.success && result.apps) {
-      setAndroidApps(result.apps);
-    }
-
-    return result;
-  };
-
-  const clickElement = async (element: AndroidElement) => {
-    const response = await fetch(buildServerUrl('/server/remote/click-element'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host: host,
-        elementId: element.id.toString(),
-      }),
-    });
-    return response.json();
-  };
-
-  const executeCommand = async (command: string, params?: any) => {
-    const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host: host,
-        command,
-        params,
-      }),
-    });
-    return response.json();
-  };
-
-  const handleDisconnect = async () => {
-    setIsConnected(false);
-    setShowOverlay(false);
-    setAndroidScreenshot(null);
-    setAndroidElements([]);
-    setAndroidApps([]);
-
+  const handleDisconnectWithCallback = async () => {
+    await handleDisconnect();
     if (onDisconnectComplete) {
       onDisconnectComplete();
     }
   };
 
-  const handleOverlayElementClick = async (element: AndroidElement) => {
-    await clickElement(element);
-    setSelectedElement(element.id.toString());
-    // Auto-refresh after click
-    setTimeout(() => screenshotAndDump(), 1200);
-  };
+  const getElementDisplayName = (el: AndroidElement) => {
+    let displayName = '';
 
-  const handleRemoteCommand = async (command: string, params?: any) => {
-    if (command === 'LAUNCH_APP') {
-      await executeCommand('launch_app', { package: params.package });
+    // Priority: ContentDesc → Text → Class Name (same as UIElementsOverlay)
+    if (el.contentDesc && el.contentDesc !== '<no content-desc>' && el.contentDesc.trim() !== '') {
+      displayName = `${el.contentDesc}`;
+    } else if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
+      displayName = `"${el.text}"`;
     } else {
-      await executeCommand('press_key', { key: command });
+      displayName = `${el.className?.split('.').pop() || 'Unknown'} #${el.id}`;
     }
+
+    // Limit display name length
+    if (displayName.length > 30) {
+      return displayName.substring(0, 27) + '...';
+    }
+    return displayName;
   };
 
   return (
     <Box sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box
-        sx={{ p: 2, flex: 1, overflow: 'auto', maxWidth: '300px', margin: '0 auto', width: '100%' }}
+        sx={{
+          p: 2,
+          flex: 1,
+          overflow: 'auto',
+          maxWidth: `${layoutConfig.containerWidth}px`,
+          margin: '0 auto',
+          width: '100%',
+        }}
       >
-        <AndroidMobileCore
-          session={{
-            connected: isConnected,
-            device_ip: host.host_name,
-            connectionInfo: `Connected to ${host.device_name}`,
+        <Box
+          sx={{
+            maxWidth: '250px',
+            margin: '0 auto',
+            width: '100%',
           }}
-          connectionLoading={false}
-          connectionError={null}
-          dumpError={null}
-          androidApps={androidApps}
-          androidElements={androidElements}
-          isDumpingUI={false}
-          selectedApp={selectedApp}
-          selectedElement={selectedElement}
-          setSelectedApp={setSelectedApp}
-          setSelectedElement={setSelectedElement}
-          handleGetApps={getApps}
-          handleDumpUIWithLoading={screenshotAndDump}
-          clearElements={async () => {
-            setShowOverlay(false);
-          }}
-          handleRemoteCommand={handleRemoteCommand}
-          handleOverlayElementClick={handleOverlayElementClick}
-          onDisconnect={handleDisconnect}
-          handleReleaseControl={handleDisconnect}
-        />
+        >
+          {/* App Launcher Section */}
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              App Launcher ({androidApps.length} apps)
+            </Typography>
+
+            <Box sx={{ mb: 1, mt: 1 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Select an app...</InputLabel>
+                <Select
+                  value={selectedApp}
+                  label="Select an app..."
+                  disabled={androidApps.length === 0}
+                  onChange={(e) => {
+                    const appPackage = e.target.value;
+                    if (appPackage) {
+                      setSelectedApp(appPackage);
+                      handleRemoteCommand('LAUNCH_APP', { package: appPackage });
+                    }
+                  }}
+                >
+                  {androidApps.map((app) => (
+                    <MenuItem key={app.packageName} value={app.packageName}>
+                      {app.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleGetApps}
+              disabled={!session.connected}
+              fullWidth
+            >
+              Refresh Apps
+            </Button>
+          </Box>
+
+          {/* UI Elements Section */}
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              UI Elements ({androidElements.length})
+            </Typography>
+
+            <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleDumpUIWithLoading}
+                disabled={!session.connected || isDumpingUI}
+                sx={{ flex: 1 }}
+              >
+                {isDumpingUI ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="caption">Capturing...</Typography>
+                  </Box>
+                ) : (
+                  'Dump UI'
+                )}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={clearElements}
+                disabled={androidElements.length === 0}
+                sx={{ flex: 1 }}
+              >
+                Clear
+              </Button>
+            </Box>
+
+            {/* Element selection dropdown */}
+            <FormControl
+              fullWidth
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  fontSize: '0.75rem',
+                },
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                  transform: 'translate(14px, 9px) scale(1)',
+                  '&.MuiInputLabel-shrink': {
+                    transform: 'translate(14px, -6px) scale(0.75)',
+                  },
+                },
+                maxWidth: '100%',
+                mb: 1,
+              }}
+            >
+              <InputLabel>Select element...</InputLabel>
+              <Select
+                value={selectedElement}
+                label="Select element..."
+                disabled={!session.connected || androidElements.length === 0}
+                sx={{
+                  '& .MuiSelect-select': {
+                    py: 0.75,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  },
+                }}
+                onChange={(e) => {
+                  const elementId = e.target.value as string;
+                  const element = androidElements.find((el) => el.id === elementId);
+                  if (element) {
+                    setSelectedElement(element.id);
+                    handleOverlayElementClick(element);
+                  }
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 200,
+                      width: 'auto',
+                      maxWidth: '100%',
+                    },
+                  },
+                }}
+              >
+                {androidElements.map((element) => (
+                  <MenuItem
+                    key={element.id}
+                    value={element.id}
+                    sx={{
+                      fontSize: '0.75rem',
+                      py: 0.5,
+                      px: 1,
+                      minHeight: 'auto',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {getElementDisplayName(element)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Device Controls */}
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Device Controls
+            </Typography>
+
+            {/* System buttons */}
+            <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('BACK')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Back
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('HOME')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Home
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('MENU')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Menu
+              </Button>
+            </Box>
+
+            {/* Volume controls */}
+            <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('VOLUME_UP')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Vol+
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('VOLUME_DOWN')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Vol-
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('POWER')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Power
+              </Button>
+            </Box>
+
+            {/* Phone specific buttons */}
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('CAMERA')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Camera
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('CALL')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                Call
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleRemoteCommand('ENDCALL')}
+                disabled={!session.connected}
+                sx={{ flex: 1 }}
+              >
+                End
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Disconnect Button */}
+          <Box sx={{ pt: 1, borderTop: '1px solid #e0e0e0' }}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDisconnectWithCallback}
+              disabled={isDisconnecting}
+              fullWidth
+            >
+              Disconnect
+            </Button>
+          </Box>
+        </Box>
       </Box>
 
       {/* AndroidMobileOverlay - positioned outside */}
@@ -166,20 +367,20 @@ export function AndroidMobileRemote({
         <div
           style={{
             position: 'fixed',
-            left: '74px',
-            top: '186px',
+            left: layoutConfig.overlayConfig.defaultPosition.left,
+            top: layoutConfig.overlayConfig.defaultPosition.top,
             zIndex: 99999999,
             pointerEvents: 'all',
             transformOrigin: 'top left',
-            transform: 'scale(0.198, 0.195)',
+            transform: `scale(${layoutConfig.overlayConfig.defaultScale.x}, ${layoutConfig.overlayConfig.defaultScale.y})`,
             background: 'rgba(0,0,0,0.01)',
           }}
         >
           <AndroidMobileOverlay
             elements={androidElements}
             screenshotElement={screenshotRef.current}
-            deviceWidth={1080}
-            deviceHeight={2340}
+            deviceWidth={layoutConfig.deviceResolution.width}
+            deviceHeight={layoutConfig.deviceResolution.height}
             isVisible={showOverlay}
             selectedElementId={selectedElement ? selectedElement : undefined}
             onElementClick={handleOverlayElementClick}

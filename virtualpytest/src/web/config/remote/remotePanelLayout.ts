@@ -3,6 +3,12 @@
  * Handles all remote panel positioning, sizing, and layout logic
  */
 
+// Import configurations
+import { androidMobileRemoteConfig } from './androidMobileRemote';
+import { androidTvRemoteConfig } from './androidTvRemote';
+import { bluetoothRemoteConfig } from './bluetoothRemote';
+import { infraredRemoteConfig } from './infraredRemote';
+
 // Remote panel layout configuration from device config
 export interface ConfigurableRemotePanelLayout {
   collapsed: {
@@ -280,25 +286,25 @@ export const getConfigurableRemoteLayout = (remoteConfig?: any): ConfigurableRem
 };
 
 /**
- * Load remote configuration from JSON file
+ * Load remote configuration from TypeScript config
  * @param deviceModel The device model (e.g., 'android_mobile', 'android_tv')
- * @returns Promise<any> The loaded configuration or null if failed
+ * @returns The loaded configuration or null if failed
  */
-export const loadRemoteConfig = async (deviceModel: string): Promise<any> => {
+export const loadRemoteConfig = (deviceModel: string): any => {
   try {
-    let configPath = '';
+    let config = null;
     switch (deviceModel) {
       case 'android_mobile':
-        configPath = '/src/web/config/remote/android_mobile_remote.json';
+        config = androidMobileRemoteConfig;
         break;
       case 'android_tv':
-        configPath = '/src/web/config/remote/android_tv_remote.json';
+        config = androidTvRemoteConfig;
         break;
       case 'ir_remote':
-        configPath = '/src/web/config/remote/infrared_remote.json';
+        config = infraredRemoteConfig;
         break;
       case 'bluetooth_remote':
-        configPath = '/src/web/config/remote/bluetooth_remote.json';
+        config = bluetoothRemoteConfig;
         break;
       default:
         console.warn(
@@ -307,17 +313,8 @@ export const loadRemoteConfig = async (deviceModel: string): Promise<any> => {
         return null;
     }
 
-    const response = await fetch(configPath);
-    if (response.ok) {
-      const config = await response.json();
-      console.log(`[@config:remotePanelLayout] Loaded config for ${deviceModel}:`, config);
-      return config;
-    } else {
-      console.error(
-        `[@config:remotePanelLayout] Failed to fetch config for ${deviceModel}: ${response.status}`,
-      );
-      return null;
-    }
+    console.log(`[@config:remotePanelLayout] Loaded config for ${deviceModel}:`, config);
+    return config;
   } catch (error) {
     console.error(`[@config:remotePanelLayout] Failed to load config for ${deviceModel}:`, error);
     return null;

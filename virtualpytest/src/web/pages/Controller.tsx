@@ -1,10 +1,7 @@
 import { Box, Typography, Grid, Alert, CircularProgress, Container } from '@mui/material';
 import React from 'react';
 
-import {
-  ControllerTypesOverview,
-  ControllerImplementations,
-} from '../components/controller/remote';
+import { ControllerTypesOverview, ControllerImplementations } from '../components/controller';
 import { useControllers } from '../hooks/controller';
 
 const ControllerPage: React.FC = () => {
