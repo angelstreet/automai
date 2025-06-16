@@ -8,6 +8,7 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
+import React from 'react';
 
 import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
 import { Host } from '../../../types/common/Host_Types';
@@ -21,7 +22,7 @@ interface AndroidMobileRemoteProps {
   sx?: any;
 }
 
-export function AndroidMobileRemote({
+export const AndroidMobileRemote = React.memo(function AndroidMobileRemote({
   host,
   onDisconnectComplete,
   sx = {},
@@ -427,4 +428,4 @@ export function AndroidMobileRemote({
       )}
     </Box>
   );
-}
+});
