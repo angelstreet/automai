@@ -266,7 +266,11 @@ export function StreamViewer({
     );
 
     setTimeout(() => {
-      setRetryCount((prev) => prev + 1);
+      setRetryCount((prev) => {
+        const newCount = prev + 1;
+        console.log(`[@component:StreamViewer] Incrementing retry count: ${prev} -> ${newCount}`);
+        return newCount;
+      });
       initializeStream();
     }, retryDelay);
   }, [retryCount, maxRetries, retryDelay, initializeStream, tryNativePlayback, setUseNativePlayer]);
@@ -279,7 +283,14 @@ export function StreamViewer({
 
   useEffect(() => {
     if (streamError && retryCount < maxRetries) {
+      console.log(
+        `[@component:StreamViewer] Stream error detected, current retry count: ${retryCount}/${maxRetries}`,
+      );
       handleStreamError();
+    } else if (streamError && retryCount >= maxRetries) {
+      console.warn(
+        `[@component:StreamViewer] Max retries (${maxRetries}) reached, stopping retry attempts`,
+      );
     }
   }, [streamError, retryCount, maxRetries, handleStreamError]);
 
@@ -304,7 +315,10 @@ export function StreamViewer({
     if (streamUrl && isStreamActive && videoRef.current) {
       console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
       setUseNativePlayer(false);
-      setRetryCount(0);
+      // Only reset retry count if the stream URL actually changed, not on every render
+      if (currentStreamUrl !== streamUrl) {
+        setRetryCount(0);
+      }
       setStreamLoaded(false);
       setStreamError(null);
 
@@ -318,7 +332,7 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream]);
+  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl]);
 
   useEffect(() => {
     const checkVideoReady = () => {
