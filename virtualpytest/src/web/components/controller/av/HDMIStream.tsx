@@ -22,22 +22,12 @@ import { VideoCapture } from './VideoCapture';
 
 interface HDMIStreamProps {
   host: Host;
-  onDisconnectComplete?: () => void;
   onCollapsedChange?: (isCollapsed: boolean) => void;
-  deviceResolution?: { width: number; height: number };
   sx?: any;
 }
 
-export function HDMIStream({
-  host,
-  onDisconnectComplete: _onDisconnectComplete,
-  onCollapsedChange,
-  deviceResolution: _deviceResolution,
-  sx = {},
-}: HDMIStreamProps) {
+export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
-
-  console.log(`[@component:HDMIStream] Using hardcoded resolution: 1920x1080`);
 
   // Stream URL fetching state
   const [streamUrl, setStreamUrl] = useState<string>('');
@@ -168,15 +158,13 @@ export function HDMIStream({
     }
   }, [setCaptureMode]);
 
-  // Restart stream
-  const restartStream = useCallback(() => {
-    console.log(`[@component:HDMIStream] Restarting stream`);
-    setStreamUrl('');
-    setIsStreamActive(false);
-    setTimeout(() => {
-      fetchStreamUrl();
-    }, 1000);
-  }, [fetchStreamUrl]);
+  // Return to stream view (remove overlays, keep stream playing)
+  const returnToStream = useCallback(() => {
+    console.log(`[@component:HDMIStream] Returning to stream view - removing capture overlays`);
+    // Reset capture mode to stream (removes screenshot/video capture components)
+    // Stream continues playing in background
+    setCaptureMode('stream');
+  }, [setCaptureMode]);
 
   // Smart toggle handlers with minimized state logic
   const handleMinimizeToggle = () => {
@@ -334,10 +322,10 @@ export function HDMIStream({
                 </Tooltip>
               )}
 
-              <Tooltip title="Restart Stream">
+              <Tooltip title="Return to Stream">
                 <IconButton
                   size="small"
-                  onClick={restartStream}
+                  onClick={returnToStream}
                   sx={{
                     color: '#ffffff',
                     '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
