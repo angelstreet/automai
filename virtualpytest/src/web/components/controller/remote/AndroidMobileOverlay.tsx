@@ -150,13 +150,21 @@ export const AndroidMobileOverlay = React.memo(
             return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
           };
 
-          // Scale elements to fit the stream/panel size
-          const scaleX = panelInfo.size.width / deviceWidth;
+          // Calculate actual content width based on height and device aspect ratio
+          // The stream maintains aspect ratio, so there may be black strips on sides
+          const deviceAspectRatio = deviceWidth / deviceHeight;
+          const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
+
+          // Scale elements to fit the actual stream content size (not panel size)
+          const scaleX = actualContentWidth / deviceWidth;
           const scaleY = panelInfo.size.height / deviceHeight;
+
+          // Calculate horizontal offset to center content within panel
+          const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
 
           const scaledElement = {
             id: element.id,
-            x: bounds.x * scaleX,
+            x: bounds.x * scaleX + horizontalOffset, // Add offset to center horizontally
             y: bounds.y * scaleY,
             width: bounds.width * scaleX,
             height: bounds.height * scaleY,
