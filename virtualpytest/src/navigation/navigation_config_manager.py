@@ -63,10 +63,11 @@ def create_empty_navigation_config(userinterface_name: str, userinterface_data: 
         
         config_file = get_config_file_path(userinterface_name)
         
-        # Check if file already exists
+        # Check if file already exists (but we'll overwrite it to ensure git commit works)
         if config_file.exists():
-            print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Config file already exists: {config_file}")
-            return True  # Consider it success if file already exists
+            print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Config file already exists, will overwrite: {config_file}")
+        else:
+            print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Creating new config file: {config_file}")
         
         # Generate unique IDs for nodes and edges
         entry_node_id = str(uuid.uuid4())
