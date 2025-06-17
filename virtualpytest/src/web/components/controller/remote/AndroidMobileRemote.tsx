@@ -522,7 +522,7 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - Only visible when in stream mode and not minimized */}
+        {/* AndroidMobileOverlay - Only visible when in stream mode (not during screenshot/video capture) and not minimized */}
         {panelInfo &&
           typeof document !== 'undefined' &&
           captureMode === 'stream' &&
@@ -532,7 +532,7 @@ export const AndroidMobileRemote = React.memo(
               elements={androidElements} // Can be empty array when no UI dumped yet
               deviceWidth={1080} // Use actual Android device resolution from ADB
               deviceHeight={2340} // Use actual Android device resolution from ADB
-              isVisible={true} // Visible when in stream mode and not minimized
+              isVisible={captureMode === 'stream' && !streamMinimized} // Only visible in stream mode, not during screenshot/video capture
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
               host={host}
