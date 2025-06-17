@@ -109,8 +109,8 @@ export const AndroidMobileOverlay = React.memo(
         return { actualContentWidth: 0, horizontalOffset: 0 };
       }
 
-      // For mobile: height is reference, calculate width based on device aspect ratio
-      const deviceAspectRatio = deviceWidth / deviceHeight;
+      // For mobile: height is reference, calculate width based on hardcoded 1920x1080 aspect ratio
+      const deviceAspectRatio = 1920 / 1080; // Use hardcoded aspect ratio consistently
       const actualWidth = panelInfo.size.height * deviceAspectRatio;
       const hOffset = (panelInfo.size.width - actualWidth) / 2;
 
@@ -125,7 +125,7 @@ export const AndroidMobileOverlay = React.memo(
         actualContentWidth: actualWidth,
         horizontalOffset: hOffset,
       };
-    }, [panelInfo, deviceWidth, deviceHeight]);
+    }, [panelInfo]); // Removed deviceWidth, deviceHeight from dependencies
 
     // Calculate scaled coordinates for panel positioning
     useEffect(() => {
@@ -180,8 +180,9 @@ export const AndroidMobileOverlay = React.memo(
           };
 
           // Scale elements to fit the actual stream content size (not panel size)
-          const scaleX = actualContentWidth / deviceWidth;
-          const scaleY = panelInfo.size.height / deviceHeight;
+          // Use hardcoded 1920x1080 device resolution for consistency
+          const scaleX = actualContentWidth / 1920;
+          const scaleY = panelInfo.size.height / 1080;
 
           const scaledElement = {
             id: element.id,
@@ -196,7 +197,7 @@ export const AndroidMobileOverlay = React.memo(
           // Debug first few elements
           if (index < 3) {
             console.log(
-              `[@component:AndroidMobileOverlay] Element ${index + 1}: device(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${scaledElement.x.toFixed(1)},${scaledElement.y.toFixed(1)},${scaledElement.width.toFixed(1)},${scaledElement.height.toFixed(1)})`,
+              `[@component:AndroidMobileOverlay] Element ${index + 1}: device(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${scaledElement.x.toFixed(1)},${scaledElement.y.toFixed(1)},${scaledElement.width.toFixed(1)},${scaledElement.height.toFixed(1)}) [scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}]`,
             );
           }
 
@@ -206,10 +207,13 @@ export const AndroidMobileOverlay = React.memo(
 
       console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements`);
       setScaledElements(scaled);
-    }, [elements, deviceWidth, deviceHeight, panelInfo, actualContentWidth, horizontalOffset]);
+    }, [elements, panelInfo, actualContentWidth, horizontalOffset]);
 
     // Handle element click (higher priority)
-    const handleElementClick = async (scaledElement: ScaledElement) => {
+    const handleElementClick = async (scaledElement: ScaledElement, event: React.MouseEvent) => {
+      // Prevent event bubbling to base layer
+      event.stopPropagation();
+
       // Show click animation at element center
       const animationX = scaledElement.x + scaledElement.width / 2;
       const animationY = scaledElement.y + scaledElement.height / 2;
@@ -224,17 +228,16 @@ export const AndroidMobileOverlay = React.memo(
       if (!originalElement) return;
 
       if (onPanelTap) {
-        // Convert overlay coordinates back to device coordinates
-        const deviceX = Math.round(
-          ((scaledElement.x - horizontalOffset) * panelInfo.deviceResolution.width) /
-            actualContentWidth,
-        );
-        const deviceY = Math.round(
-          (scaledElement.y * panelInfo.deviceResolution.height) / panelInfo.size.height,
-        );
+        // Convert element center coordinates back to device coordinates
+        const elementCenterX = scaledElement.x + scaledElement.width / 2 - horizontalOffset;
+        const elementCenterY = scaledElement.y + scaledElement.height / 2;
+
+        // Scale back to device coordinates using hardcoded 1920x1080
+        const deviceX = Math.round((elementCenterX * 1920) / actualContentWidth);
+        const deviceY = Math.round((elementCenterY * 1080) / panelInfo.size.height);
 
         console.log(
-          `[@component:AndroidMobileOverlay] Element tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
+          `[@component:AndroidMobileOverlay] Element tap - element ${scaledElement.id} at overlay(${elementCenterX.toFixed(1)}, ${elementCenterY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
         );
 
         await onPanelTap(deviceX, deviceY);
@@ -255,20 +258,16 @@ export const AndroidMobileOverlay = React.memo(
       const contentX = event.clientX - rect.left; // Already relative to content area
       const contentY = event.clientY - rect.top; // Already relative to content area
 
-      // Show click animation at tap location (relative to full panel for positioning)
+      // Show click animation at tap location (add horizontalOffset for positioning consistency with elements)
       const animationId = `base-tap-${Date.now()}`;
-      setClickAnimation({ x: contentX, y: contentY, id: animationId });
+      setClickAnimation({ x: contentX + horizontalOffset, y: contentY, id: animationId });
 
       // Clear animation after 300ms
       setTimeout(() => setClickAnimation(null), 300);
 
-      // Convert content coordinates directly to device coordinates
-      const deviceX = Math.round(
-        (contentX * panelInfo.deviceResolution.width) / actualContentWidth,
-      );
-      const deviceY = Math.round(
-        (contentY * panelInfo.deviceResolution.height) / panelInfo.size.height,
-      );
+      // Convert content coordinates directly to device coordinates using hardcoded 1920x1080
+      const deviceX = Math.round((contentX * 1920) / actualContentWidth);
+      const deviceY = Math.round((contentY * 1080) / panelInfo.size.height);
 
       console.log(
         `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
@@ -340,7 +339,7 @@ export const AndroidMobileOverlay = React.memo(
                   overflow: 'hidden',
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                 }}
-                onClick={() => handleElementClick(scaledElement)}
+                onClick={(event) => handleElementClick(scaledElement, event)}
                 title={`${scaledElement.id}.${scaledElement.label}`}
               >
                 {/* Number positioned at bottom right corner */}
@@ -368,7 +367,7 @@ export const AndroidMobileOverlay = React.memo(
             key={clickAnimation.id}
             style={{
               position: 'fixed',
-              left: `${panelInfo.position.x + horizontalOffset + clickAnimation.x - 15}px`, // Center the 30px circle, account for content offset
+              left: `${panelInfo.position.x + clickAnimation.x - 15}px`, // For elements: includes horizontalOffset, for base taps: relative to content area + horizontalOffset
               top: `${panelInfo.position.y + clickAnimation.y - 15}px`,
               width: '30px',
               height: '30px',
@@ -388,8 +387,6 @@ export const AndroidMobileOverlay = React.memo(
     // Only re-render if props have actually changed
     return (
       prevProps.elements === nextProps.elements &&
-      prevProps.deviceWidth === nextProps.deviceWidth &&
-      prevProps.deviceHeight === nextProps.deviceHeight &&
       prevProps.isVisible === nextProps.isVisible &&
       prevProps.onElementClick === nextProps.onElementClick &&
       JSON.stringify(prevProps.panelInfo) === JSON.stringify(nextProps.panelInfo) &&
