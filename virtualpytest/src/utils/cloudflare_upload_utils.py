@@ -41,7 +41,7 @@ class CloudflareUploader:
     _instance = None
     _initialized = False
     
-    def __new__(cls):
+    def __new__(cls, bucket_name: str = 'virtualpytest'):
         """Singleton pattern implementation - only create one instance."""
         if cls._instance is None:
             logger.info("Creating new CloudflareUploader singleton instance")
@@ -50,17 +50,18 @@ class CloudflareUploader:
             logger.debug("Returning existing CloudflareUploader singleton instance")
         return cls._instance
     
-    def __init__(self):
-        """Initialize the uploader (only once due to singleton)."""
+    def __init__(self, bucket_name: str = 'virtualpytest'):
+        """Initialize the uploader with bucket name (only once due to singleton)."""
         # Prevent re-initialization of the singleton instance
         if self._initialized:
             return
             
-        logger.info("Initializing CloudflareUploader singleton")
+        logger.info(f"Initializing CloudflareUploader singleton with bucket: {bucket_name}")
         
         # Load environment variables from .env.host file
         self._load_environment()
         
+        self.bucket_name = bucket_name
         self.s3_client = self._init_s3_client()
         # No bucket existence check needed - endpoint is provided directly
         self._initialized = True
@@ -74,9 +75,7 @@ class CloudflareUploader:
             # Try to find .env.host file - check multiple locations
             possible_paths = [
                 '.env.host',  # Current directory
-                '../.env.host',  # Parent directory
-                '../../.env.host',  # Two levels up
-                '/home/sunri-pi1/automai/virtualpytest/src/web/.env.host',  # Absolute path
+
             ]
             
             env_loaded = False
@@ -124,7 +123,25 @@ class CloudflareUploader:
             logger.error(f"Failed to initialize Cloudflare R2 client: {str(e)}")
             raise
     
-
+    def _ensure_bucket_exists(self):
+        """Make sure the bucket exists, create if it doesn't."""
+        try:
+            logger.info(f"Checking if bucket exists: {self.bucket_name}")
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+            logger.info(f"Bucket exists: {self.bucket_name}")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                logger.info(f"Creating bucket: {self.bucket_name}")
+                self.s3_client.create_bucket(Bucket=self.bucket_name)
+            elif error_code == '403':
+                # 403 Forbidden - API token doesn't have bucket-level permissions
+                # This is common with object-only API tokens. Assume bucket exists.
+                logger.warning(f"Cannot check bucket existence due to permissions (403). Assuming bucket exists: {self.bucket_name}")
+                logger.info("Note: Your API token may only have object-level permissions, which is fine for uploads")
+            else:
+                logger.error(f"Unexpected error checking bucket: {error_code} - {e}")
+                raise
     
     def upload_file(self, local_path: str, remote_path: str) -> Dict:
         """
@@ -146,11 +163,11 @@ class CloudflareUploader:
             if not content_type:
                 content_type = 'application/octet-stream'
             
-            # Upload file with public access - endpoint URL contains bucket info
+            # Upload file with public access
             with open(local_path, 'rb') as f:
                 self.s3_client.upload_fileobj(
                     f,
-                    '',  # Empty bucket name since endpoint contains full path
+                    self.bucket_name,
                     remote_path,
                     ExtraArgs={
                         'ContentType': content_type,
@@ -196,7 +213,7 @@ class CloudflareUploader:
     def delete_file(self, remote_path: str) -> bool:
         """Delete a file from R2."""
         try:
-            self.s3_client.delete_object(Bucket='', Key=remote_path)
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=remote_path)
             logger.info(f"Deleted: {remote_path}")
             return True
         except Exception as e:
@@ -206,7 +223,7 @@ class CloudflareUploader:
     def file_exists(self, remote_path: str) -> bool:
         """Check if a file exists in R2."""
         try:
-            self.s3_client.head_object(Bucket='', Key=remote_path)
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=remote_path)
             return True
         except ClientError:
             return False
