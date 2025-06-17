@@ -83,7 +83,7 @@ export const AndroidMobileRemote = React.memo(
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
-      // Use hardcoded device resolution for consistency
+      // Hardcode device resolution for now
       const hardcodedResolution = { width: 1920, height: 1080 };
 
       // Skip unnecessary recalculations if missing required props
@@ -100,7 +100,6 @@ export const AndroidMobileRemote = React.memo(
         panelHeight,
         deviceResolution,
         streamCollapsed,
-        hardcodedResolution,
       });
 
       // Get HDMI stream dimensions from config based on stream collapsed state (not panel state)
@@ -119,10 +118,10 @@ export const AndroidMobileRemote = React.memo(
       const headerHeight = parsePixels(HDMI_STREAM_HEADER_HEIGHT);
       const streamContentHeight = streamPanelHeight - headerHeight; // Stream panel height minus header
 
-      // Calculate stream width based on hardcoded 1920x1080 aspect ratio (16:9)
-      // For mobile: height is reference, calculate width based on 16:9 aspect ratio
-      const deviceAspectRatio = hardcodedResolution.width / hardcodedResolution.height; // 1920/1080 = 1.777...
-      const streamContentWidth = streamContentHeight * deviceAspectRatio;
+      // Calculate stream width based on 1920x1080 aspect ratio (16:9)
+      // For mobile: height is reference, divide by ratio to get width
+      const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
+      const streamContentWidth = streamContentHeight / deviceAspectRatio;
 
       // Debug logging for width calculation
       console.log(`[@component:AndroidMobileRemote] Width calculation debug:`, {
@@ -133,7 +132,6 @@ export const AndroidMobileRemote = React.memo(
         headerHeight,
         streamContentHeight,
         deviceAspectRatio,
-        hardcodedResolution,
         calculatedWidth: streamContentWidth,
         roundedWidth: Math.round(streamContentWidth),
       });
@@ -162,7 +160,7 @@ export const AndroidMobileRemote = React.memo(
       const info = {
         position: streamActualPosition, // Use calculated stream position
         size: streamActualSize, // Use calculated stream size with proper aspect ratio
-        deviceResolution: hardcodedResolution, // Use hardcoded 1920x1080 everywhere
+        deviceResolution: deviceResolution,
         isCollapsed: streamCollapsed ?? true, // Use stream collapsed state directly, default to collapsed
       };
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
@@ -552,8 +550,8 @@ export const AndroidMobileRemote = React.memo(
           createPortal(
             <AndroidMobileOverlay
               elements={androidElements} // Can be empty array when no UI dumped yet
-              deviceWidth={1920} // Use hardcoded 1920x1080 consistently
-              deviceHeight={1080} // Use hardcoded 1920x1080 consistently
+              deviceWidth={layoutConfig.deviceResolution.width}
+              deviceHeight={layoutConfig.deviceResolution.height}
               isVisible={true} // Visible when in stream mode and not minimized
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
