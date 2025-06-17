@@ -38,6 +38,8 @@ import {
   UserInterface as UserInterfaceType,
   UserInterfaceCreatePayload,
 } from '../types/pages/UserInterface_Types';
+import { Model } from '../types/pages/Models_Types';
+import { buildServerUrl } from '../utils/frontendUtils';
 
 const UserInterface: React.FC = () => {
   // Get navigation hook
@@ -66,23 +68,35 @@ const UserInterface: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Common device models - can be expanded as needed
-  const commonModels = [
-    'iPhone 12',
-    'iPhone 13',
-    'iPhone 14',
-    'iPhone 15',
-    'Samsung Galaxy S21',
-    'Samsung Galaxy S22',
-    'Samsung Galaxy S23',
-    'Samsung Galaxy S24',
-    'Google Pixel 6',
-    'Google Pixel 7',
-    'Google Pixel 8',
-    'iPad Air',
-    'iPad Pro',
-    'Samsung Galaxy Tab',
-  ].sort();
+  // State for real models from database
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+
+  // Load models from database (same API as Models page)
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        setModelsLoading(true);
+        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
+        if (!response.ok) {
+          throw new Error(`Failed to fetch models: ${response.status}`);
+        }
+        const modelsData: Model[] = await response.json();
+        // Extract model names for the dropdown
+        const modelNames = modelsData.map((model) => model.name).sort();
+        setAvailableModels(modelNames);
+        console.log('[@component:UserInterface] Loaded models:', modelNames.length);
+      } catch (err) {
+        console.error('[@component:UserInterface] Error loading models:', err);
+        // Fallback to empty array if models can't be loaded
+        setAvailableModels([]);
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+
+    loadModels();
+  }, []);
 
   // Load data on component mount only
   useEffect(() => {
@@ -403,7 +417,7 @@ const UserInterface: React.FC = () => {
                           <Autocomplete
                             multiple
                             size="small"
-                            options={commonModels}
+                            options={availableModels}
                             freeSolo
                             value={editForm.models}
                             onChange={(_, newValue) => {
@@ -566,7 +580,7 @@ const UserInterface: React.FC = () => {
             <Autocomplete
               multiple
               size="small"
-              options={commonModels}
+              options={availableModels}
               freeSolo
               value={newInterface.models}
               onChange={(_, newValue) => {

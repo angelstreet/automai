@@ -219,11 +219,20 @@ const NavigationEditorContent: React.FC = () => {
 
   // Track AV panel collapsed state
   const [isAVPanelCollapsed, setIsAVPanelCollapsed] = useState(true);
+  const [isAVPanelMinimized, setIsAVPanelMinimized] = useState(false);
   const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
 
   // Memoize the AV panel collapsed change handler to prevent infinite loops
   const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
     setIsAVPanelCollapsed(isCollapsed);
+  }, []);
+
+  // Handle minimized state changes from HDMIStream
+  const handleAVPanelMinimizedChange = useCallback((isMinimized: boolean) => {
+    console.log(
+      `[@component:NavigationEditor] AV panel minimized state changed to: ${isMinimized}`,
+    );
+    setIsAVPanelMinimized(isMinimized);
   }, []);
 
   // Handle capture mode changes from HDMIStream
@@ -239,6 +248,7 @@ const NavigationEditorContent: React.FC = () => {
         '[@component:NavigationEditor] Control activated - resetting AV panel to collapsed state',
       );
       setIsAVPanelCollapsed(true);
+      setIsAVPanelMinimized(false); // Also reset minimized state
       setCaptureMode('stream'); // Also reset capture mode
     }
   }, [isControlActive]);
@@ -595,6 +605,7 @@ const NavigationEditorContent: React.FC = () => {
           host={selectedHost}
           onReleaseControl={handleDisconnectComplete}
           streamCollapsed={isAVPanelCollapsed}
+          streamMinimized={isAVPanelMinimized}
           captureMode={captureMode}
         />
       )}
@@ -603,6 +614,7 @@ const NavigationEditorContent: React.FC = () => {
         <HDMIStream
           host={selectedHost}
           onCollapsedChange={handleAVPanelCollapsedChange}
+          onMinimizedChange={handleAVPanelMinimizedChange}
           onCaptureModeChange={handleCaptureModeChange}
         />
       )}

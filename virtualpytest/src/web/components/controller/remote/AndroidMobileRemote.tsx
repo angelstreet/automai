@@ -31,6 +31,8 @@ interface AndroidMobileRemoteProps {
   deviceResolution: { width: number; height: number };
   // Stream collapsed state for overlay coordination
   streamCollapsed?: boolean;
+  // Stream minimized state for overlay coordination
+  streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
 }
@@ -45,6 +47,7 @@ export const AndroidMobileRemote = React.memo(
     panelHeight,
     deviceResolution,
     streamCollapsed,
+    streamMinimized = false,
     captureMode = 'stream',
   }: AndroidMobileRemoteProps) {
     const {
@@ -539,16 +542,17 @@ export const AndroidMobileRemote = React.memo(
           </Box>
         </Box>
 
-        {/* AndroidMobileOverlay - Only visible when in stream mode */}
+        {/* AndroidMobileOverlay - Only visible when in stream mode and not minimized */}
         {panelInfo &&
           typeof document !== 'undefined' &&
           captureMode === 'stream' &&
+          !streamMinimized &&
           createPortal(
             <AndroidMobileOverlay
               elements={androidElements} // Can be empty array when no UI dumped yet
               deviceWidth={layoutConfig.deviceResolution.width}
               deviceHeight={layoutConfig.deviceResolution.height}
-              isVisible={true} // Visible when in stream mode
+              isVisible={true} // Visible when in stream mode and not minimized
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
               onPanelTap={panelInfo ? handleStreamTap : undefined}
@@ -606,6 +610,7 @@ export const AndroidMobileRemote = React.memo(
       prevProps.panelHeight === nextProps.panelHeight &&
       JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
       prevProps.streamCollapsed === nextProps.streamCollapsed &&
+      prevProps.streamMinimized === nextProps.streamMinimized &&
       prevProps.captureMode === nextProps.captureMode
     );
   },

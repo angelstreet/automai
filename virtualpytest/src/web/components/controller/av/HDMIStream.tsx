@@ -24,6 +24,7 @@ import { VideoCapture } from './VideoCapture';
 interface HDMIStreamProps {
   host: Host;
   onCollapsedChange?: (isCollapsed: boolean) => void;
+  onMinimizedChange?: (isMinimized: boolean) => void;
   onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
   sx?: any;
 }
@@ -31,6 +32,7 @@ interface HDMIStreamProps {
 export function HDMIStream({
   host,
   onCollapsedChange,
+  onMinimizedChange,
   onCaptureModeChange,
   sx = {},
 }: HDMIStreamProps) {
@@ -204,12 +206,14 @@ export function HDMIStream({
       // Restore from minimized to collapsed state
       setIsMinimized(false);
       setIsExpanded(false);
+      onMinimizedChange?.(false);
       console.log(
         `[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`,
       );
     } else {
       // Minimize the panel
       setIsMinimized(true);
+      onMinimizedChange?.(true);
       console.log(`[@component:HDMIStream] Minimized panel for ${host.device_model}`);
     }
   };
@@ -486,7 +490,6 @@ export function HDMIStream({
               {/* Video capture overlay */}
               {captureMode === 'video' && (
                 <VideoCapture
-                  deviceModel={host.device_model}
                   currentFrame={currentFrame}
                   totalFrames={totalFrames}
                   onFrameChange={handleFrameChange}

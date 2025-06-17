@@ -21,6 +21,8 @@ interface RemotePanelProps {
   deviceResolution?: { width: number; height: number };
   // Stream collapsed state for overlay coordination
   streamCollapsed?: boolean;
+  // Stream minimized state for overlay coordination
+  streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
 }
@@ -31,6 +33,7 @@ export function RemotePanel({
   initialCollapsed = true,
   deviceResolution,
   streamCollapsed = true,
+  streamMinimized = false,
   captureMode = 'stream',
 }: RemotePanelProps) {
   console.log(`[@component:RemotePanel] Props debug:`, {
@@ -138,6 +141,7 @@ export function RemotePanel({
             panelHeight={currentHeight}
             deviceResolution={effectiveDeviceResolution}
             streamCollapsed={streamCollapsed}
+            streamMinimized={streamMinimized}
             captureMode={captureMode}
             sx={{
               height: '100%',
