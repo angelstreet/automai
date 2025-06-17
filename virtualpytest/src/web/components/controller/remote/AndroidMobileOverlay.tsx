@@ -48,6 +48,28 @@ export const AndroidMobileOverlay = React.memo(
       id: string;
     } | null>(null);
 
+    // Add CSS animation keyframes to document head if not already present
+    React.useEffect(() => {
+      const styleId = 'click-animation-styles';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          @keyframes clickPulse {
+            0% {
+              transform: scale(0.3);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1.5);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }, []);
+
     const parseBounds = (bounds: { left: number; top: number; right: number; bottom: number }) => {
       // Validate input bounds
       if (
@@ -308,6 +330,26 @@ export const AndroidMobileOverlay = React.memo(
               </div>
             ))}
           </div>
+        )}
+
+        {/* Click animation - Highest z-index */}
+        {clickAnimation && (
+          <div
+            key={clickAnimation.id}
+            style={{
+              position: 'fixed',
+              left: `${panelInfo.position.x + clickAnimation.x - 15}px`, // Center the 30px circle
+              top: `${panelInfo.position.y + clickAnimation.y - 15}px`,
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              border: '2px solid rgba(0, 123, 255, 0.8)',
+              zIndex: 1000000, // Highest z-index
+              pointerEvents: 'none',
+              animation: 'clickPulse 0.3s ease-out forwards',
+            }}
+          />
         )}
       </>
     );
