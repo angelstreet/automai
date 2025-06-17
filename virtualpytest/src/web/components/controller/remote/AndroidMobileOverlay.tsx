@@ -263,12 +263,16 @@ export const AndroidMobileOverlay = React.memo(
       // Clear animation after 300ms
       setTimeout(() => setClickAnimation(null), 300);
 
-      // Convert content coordinates directly to device coordinates
-      const deviceX = Math.round((contentX * deviceWidth) / actualContentWidth);
-      const deviceY = Math.round((contentY * deviceHeight) / panelInfo.size.height);
+      // Use the same scaling factors as overlay, but inverted (Screen → Device)
+      // This matches exactly how overlay scaling works: scaleX = actualContentWidth / deviceWidth
+      const scaleX = actualContentWidth / deviceWidth;
+      const scaleY = panelInfo.size.height / deviceHeight;
+
+      const deviceX = Math.round(contentX / scaleX);
+      const deviceY = Math.round(contentY / scaleY);
 
       console.log(
-        `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
+        `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY}) [scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}]`,
       );
 
       await onPanelTap(deviceX, deviceY);
