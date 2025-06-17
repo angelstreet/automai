@@ -246,15 +246,19 @@ const NavigationEditorContent: React.FC = () => {
     setCaptureMode(mode);
   }, []);
 
-  // Reset AV panel to collapsed state when taking control
+  // Reset AV panel to collapsed state when taking control (only on initial activation)
+  const wasControlActiveRef = useRef(false);
   useEffect(() => {
-    if (isControlActive) {
+    if (isControlActive && !wasControlActiveRef.current) {
       console.log(
         '[@component:NavigationEditor] Control activated - resetting AV panel to collapsed state',
       );
       setIsAVPanelCollapsed(true);
       setIsAVPanelMinimized(false); // Also reset minimized state
       setCaptureMode('stream'); // Also reset capture mode
+      wasControlActiveRef.current = true;
+    } else if (!isControlActive) {
+      wasControlActiveRef.current = false;
     }
   }, [isControlActive]);
 

@@ -84,6 +84,11 @@ const mockHosts: Host[] = [
 export default function RemoteTestPage() {
   const [selectedHost, setSelectedHost] = useState<Host>(mockHosts[0]);
 
+  // State to coordinate between HDMIStream and RemotePanel
+  const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
+  const [streamCollapsed, setStreamCollapsed] = useState<boolean>(true);
+  const [streamMinimized, setStreamMinimized] = useState<boolean>(false);
+
   console.log('[@page:RemoteTestPage] Rendering test page with host:', selectedHost.host_name);
 
   return (
@@ -173,12 +178,21 @@ export default function RemoteTestPage() {
             host={selectedHost}
             initialCollapsed={true}
             deviceResolution={{ width: 1920, height: 1080 }}
+            streamCollapsed={streamCollapsed}
+            streamMinimized={streamMinimized}
+            captureMode={captureMode}
           />
         )}
 
         {/* AV Stream */}
         {selectedHost.controller_configs?.av && (
-          <HDMIStream host={selectedHost} deviceResolution={{ width: 1920, height: 1080 }} />
+          <HDMIStream
+            host={selectedHost}
+            deviceResolution={{ width: 1920, height: 1080 }}
+            onCollapsedChange={setStreamCollapsed}
+            onMinimizedChange={setStreamMinimized}
+            onCaptureModeChange={setCaptureMode}
+          />
         )}
 
         {/* Center message */}
