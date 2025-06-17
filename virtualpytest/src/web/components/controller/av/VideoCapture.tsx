@@ -28,7 +28,6 @@ interface VideoCaptureProps {
   isCapturing?: boolean;
   videoFramePath?: string; // Current frame image path/URL
   model?: string;
-  selectedHostDevice?: any;
   sx?: any;
 }
 
@@ -42,7 +41,6 @@ export function VideoCapture({
   isCapturing = false,
   videoFramePath,
   model,
-  selectedHostDevice,
   sx = {},
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,31 +115,10 @@ export function VideoCapture({
       return videoFramePath;
     }
 
-    // For file paths, use server route for image serving
-    if (!selectedHostDevice) {
-      console.error('[@component:VideoCapture] No host device available for image serving');
-      return '';
-    }
-
-    console.log('[@component:VideoCapture] Using server route for image serving');
-
-    // Extract filename from path
-    const filename = videoFramePath.split('/').pop()?.split('?')[0];
-    if (!filename) {
-      console.error(`[@component:VideoCapture] Failed to extract filename: ${videoFramePath}`);
-      return '';
-    }
-
-    // Use server route to serve images
-    try {
-      const imageUrl = `/server/av/screenshot/${filename}?host_name=${selectedHostDevice.host_name}`;
-      console.log(`[@component:VideoCapture] Generated image URL: ${imageUrl}`);
-      return imageUrl;
-    } catch (error) {
-      console.error('[@component:VideoCapture] Error building image URL:', error);
-      return '';
-    }
-  }, [videoFramePath, selectedHostDevice]);
+    // For file paths, just use the path directly (same as ScreenshotCapture)
+    console.log('[@component:VideoCapture] Using video frame path directly');
+    return videoFramePath;
+  }, [videoFramePath]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection = totalFrames > 0 && onAreaSelected && imageRef.current;

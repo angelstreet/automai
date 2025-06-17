@@ -499,7 +499,6 @@ export function HDMIStream({
                   isCapturing={isCaptureActive}
                   videoFramePath={currentVideoFramePath} // Pass current frame URL
                   model={host.device_model}
-                  selectedHostDevice={host}
                   sx={{
                     position: 'absolute',
                     top: 0,
