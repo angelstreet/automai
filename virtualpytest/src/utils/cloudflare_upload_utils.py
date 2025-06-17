@@ -37,7 +37,10 @@ class CloudflareUploader:
     exists throughout the application lifecycle, avoiding multiple S3 client
     initializations.
     
-    Note: Bucket name is included in the R2 endpoint URL.
+    Configuration:
+    - Endpoint URL should NOT include bucket name (e.g., https://account.r2.cloudflarestorage.com)
+    - Bucket name is passed separately to boto3 operations
+    - This matches the working pattern from upload_and_report.py
     """
     
     _instance = None
@@ -63,8 +66,9 @@ class CloudflareUploader:
         # Load environment variables from .env.host file
         self._load_environment()
         
-        # Use empty bucket name since it's included in the endpoint URL path
-        self.bucket_name = ''
+        # Use 'virtualpytest' as bucket name (boto3 requires valid bucket name)
+        # This matches the working pattern from upload_and_report.py
+        self.bucket_name = 'virtualpytest'
         self.s3_client = self._init_s3_client()
         self._initialized = True
     
@@ -113,6 +117,9 @@ class CloudflareUploader:
                 raise ValueError("Missing required Cloudflare R2 environment variables")
             
             logger.info("Initializing S3 client for Cloudflare R2")
+            logger.info(f"Using endpoint: {endpoint_url}")
+            logger.info(f"Using bucket: {self.bucket_name}")
+            
             return boto3.client(
                 's3',
                 endpoint_url=endpoint_url,
@@ -208,6 +215,41 @@ class CloudflareUploader:
             return True
         except ClientError:
             return False
+    
+    def test_connection(self) -> Dict:
+        """Test the R2 connection and return diagnostic information."""
+        try:
+            # Test 1: List buckets
+            response = self.s3_client.list_buckets()
+            bucket_names = [bucket['Name'] for bucket in response['Buckets']]
+            
+            # Test 2: Check if our target bucket exists
+            bucket_exists = self.bucket_name in bucket_names
+            
+            # Test 3: Try to access the bucket
+            can_access_bucket = False
+            try:
+                self.s3_client.head_bucket(Bucket=self.bucket_name)
+                can_access_bucket = True
+            except Exception as e:
+                logger.error(f"Cannot access bucket: {e}")
+            
+            return {
+                'success': True,
+                'buckets_found': len(bucket_names),
+                'bucket_names': bucket_names,
+                'target_bucket_exists': bucket_exists,
+                'can_access_bucket': can_access_bucket,
+                'endpoint': os.environ.get('CLOUDFLARE_R2_ENDPOINT', 'NOT_SET'),
+                'bucket_name': self.bucket_name
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'endpoint': os.environ.get('CLOUDFLARE_R2_ENDPOINT', 'NOT_SET'),
+                'bucket_name': self.bucket_name
+            }
 
 
 # Singleton getter function for consistent access
