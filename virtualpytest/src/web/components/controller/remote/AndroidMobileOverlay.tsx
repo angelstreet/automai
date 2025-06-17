@@ -204,8 +204,15 @@ export const AndroidMobileOverlay = React.memo(
 
       if (onPanelTap) {
         // Convert overlay coordinates back to device coordinates
+        // Account for horizontal centering offset
+        const deviceAspectRatio =
+          panelInfo.deviceResolution.width / panelInfo.deviceResolution.height;
+        const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
+        const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
+
         const deviceX = Math.round(
-          (scaledElement.x * panelInfo.deviceResolution.width) / panelInfo.size.width,
+          ((scaledElement.x - horizontalOffset) * panelInfo.deviceResolution.width) /
+            actualContentWidth,
         );
         const deviceY = Math.round(
           (scaledElement.y * panelInfo.deviceResolution.height) / panelInfo.size.height,
@@ -240,9 +247,14 @@ export const AndroidMobileOverlay = React.memo(
       // Clear animation after 300ms
       setTimeout(() => setClickAnimation(null), 300);
 
-      // Convert to device coordinates
+      // Convert to device coordinates, accounting for horizontal centering
+      const deviceAspectRatio =
+        panelInfo.deviceResolution.width / panelInfo.deviceResolution.height;
+      const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
+      const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
+
       const deviceX = Math.round(
-        (overlayX * panelInfo.deviceResolution.width) / panelInfo.size.width,
+        ((overlayX - horizontalOffset) * panelInfo.deviceResolution.width) / actualContentWidth,
       );
       const deviceY = Math.round(
         (overlayY * panelInfo.deviceResolution.height) / panelInfo.size.height,
@@ -319,7 +331,7 @@ export const AndroidMobileOverlay = React.memo(
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                 }}
                 onClick={() => handleElementClick(scaledElement)}
-                title={`Element ${scaledElement.id}: ${scaledElement.label}`}
+                title={`${scaledElement.id}.${scaledElement.label}`}
               >
                 {/* Number positioned at bottom right corner */}
                 <div

@@ -209,14 +209,17 @@ export const AndroidMobileRemote = React.memo(
       } else if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
         displayName = `"${el.text}"`;
       } else {
-        displayName = `${el.className?.split('.').pop() || 'Unknown'} #${el.id}`;
+        displayName = `${el.className?.split('.').pop() || 'Unknown'}`;
       }
 
+      // Prepend element ID with compact format
+      const fullDisplayName = `${el.id}.${displayName}`;
+
       // Limit display name length
-      if (displayName.length > 30) {
-        return displayName.substring(0, 27) + '...';
+      if (fullDisplayName.length > 30) {
+        return fullDisplayName.substring(0, 27) + '...';
       }
-      return displayName;
+      return fullDisplayName;
     };
 
     return (
