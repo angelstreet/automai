@@ -45,7 +45,7 @@ export const hdmiStreamConfig = {
 // Mobile-specific HDMI Stream configuration (portrait orientation)
 export const hdmiStreamMobileConfig = {
   stream_info: {
-    name: 'HDMI Stream Mobile',
+    name: 'HDMI',
     type: 'hdmi_stream' as const,
     default_quality: 'high' as const,
     supported_resolutions: ['1920x1080', '1280x720', '640x480'] as const,
