@@ -8,11 +8,33 @@ import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
   data,
   selected,
+  id,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+  const [imageKey, setImageKey] = useState(0); // Key to force image refresh
 
   // Build the screenshot URL using Cloudflare R2
-  const screenshotUrl = buildScreenshotUrl(data.screenshot);
+  // Add cache-busting parameter if screenshot was recently updated
+  const screenshotUrl = data.screenshot
+    ? `${buildScreenshotUrl(data.screenshot)}?v=${data.screenshot_timestamp || imageKey}`
+    : null;
+
+  // Listen for screenshot update events
+  React.useEffect(() => {
+    const handleScreenshotUpdate = (event: CustomEvent) => {
+      if (event.detail.nodeId === id) {
+        console.log(
+          `[@component:UINavigationNode] Screenshot updated for node ${id}, refreshing image`,
+        );
+        setImageKey((prev) => prev + 1); // Force image refresh
+      }
+    };
+
+    window.addEventListener('nodeScreenshotUpdated', handleScreenshotUpdate as EventListener);
+    return () => {
+      window.removeEventListener('nodeScreenshotUpdated', handleScreenshotUpdate as EventListener);
+    };
+  }, [id]);
 
   // Check if this node is a root node (should only be true for actual root nodes)
   const isRootNode = data.is_root === true;

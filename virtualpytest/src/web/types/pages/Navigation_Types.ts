@@ -24,6 +24,7 @@ export interface UINavigationNodeData {
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   screenshot?: string;
+  screenshot_timestamp?: number; // Timestamp for forcing image refresh after screenshot updates
   description?: string;
   is_root?: boolean; // True only for the first entry node
   tree_id?: string; // For menu nodes, references the associated tree

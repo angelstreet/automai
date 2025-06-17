@@ -188,10 +188,18 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
           const updatedNodeData = {
             ...selectedNode.data,
             screenshot: result.screenshot_url, // Store just the filename
+            screenshot_timestamp: Date.now(), // Add timestamp to force image refresh
           };
           onUpdateNode(selectedNode.id, updatedNodeData);
           console.log(
             `[@component:NodeSelectionPanel] Updated node ${selectedNode.id} with screenshot filename: ${result.screenshot_url}`,
+          );
+
+          // Force a refresh of the node display by dispatching a custom event
+          window.dispatchEvent(
+            new CustomEvent('nodeScreenshotUpdated', {
+              detail: { nodeId: selectedNode.id, screenshot: result.screenshot_url },
+            }),
           );
         } else {
           console.warn(

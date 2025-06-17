@@ -12,6 +12,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   id,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+  const [imageKey, setImageKey] = useState(0); // Key to force image refresh
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
   const { getNodeColors, getHandleColors } = useValidationColors(
@@ -20,7 +21,25 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   );
 
   // Build the screenshot URL using Cloudflare R2
-  const screenshotUrl = buildScreenshotUrl(data.screenshot);
+  // Add cache-busting parameter if screenshot was recently updated
+  const screenshotUrl = data.screenshot
+    ? `${buildScreenshotUrl(data.screenshot)}?v=${data.screenshot_timestamp || imageKey}`
+    : null;
+
+  // Listen for screenshot update events
+  React.useEffect(() => {
+    const handleScreenshotUpdate = (event: CustomEvent) => {
+      if (event.detail.nodeId === id) {
+        console.log(`[@component:UIMenuNode] Screenshot updated for node ${id}, refreshing image`);
+        setImageKey((prev) => prev + 1); // Force image refresh
+      }
+    };
+
+    window.addEventListener('nodeScreenshotUpdated', handleScreenshotUpdate as EventListener);
+    return () => {
+      window.removeEventListener('nodeScreenshotUpdated', handleScreenshotUpdate as EventListener);
+    };
+  }, [id]);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);
