@@ -154,9 +154,11 @@ export function ScreenshotCapture({
           src={imageUrl}
           alt="Screenshot"
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain', // Maintain aspect ratio while fitting within container
+            maxWidth: layoutConfig.isMobileModel ? 'auto' : '100%',
+            maxHeight: '100%',
+            width: layoutConfig.isMobileModel ? 'auto' : '100%',
+            height: 'auto',
+            objectFit: layoutConfig.objectFit,
             backgroundColor: 'transparent',
           }}
           draggable={false}

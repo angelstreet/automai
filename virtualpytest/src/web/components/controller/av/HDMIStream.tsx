@@ -392,7 +392,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
               position: 'relative',
             }}
           >
-            {/* Stream viewer - always rendered */}
+            {/* Stream viewer - always rendered in background */}
             <StreamViewer
               key="stream-viewer"
               streamUrl={streamUrl}
@@ -405,6 +405,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                 left: 0,
                 width: '100%',
                 height: '100%',
+                zIndex: 1, // Background layer
               }}
             />
 
@@ -425,7 +426,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  zIndex: 5,
+                  zIndex: 10, // On top of stream
                 }}
               />
             )}
@@ -454,7 +455,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  zIndex: 5,
+                  zIndex: 10, // On top of stream
                 }}
               />
             )}
