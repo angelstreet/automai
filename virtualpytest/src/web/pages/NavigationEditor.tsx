@@ -217,12 +217,12 @@ const NavigationEditorContent: React.FC = () => {
   // Track the last loaded tree ID to prevent unnecessary reloads
   const lastLoadedTreeId = useRef<string | null>(null);
 
-  // Track AV panel expanded state
-  const [isAVPanelExpanded, setIsAVPanelExpanded] = useState(false);
+  // Track AV panel collapsed state
+  const [isAVPanelCollapsed, setIsAVPanelCollapsed] = useState(true);
 
-  // Memoize the AV panel expanded change handler to prevent infinite loops
-  const handleAVPanelExpandedChange = useCallback((isExpanded: boolean) => {
-    setIsAVPanelExpanded(isExpanded);
+  // Memoize the AV panel collapsed change handler to prevent infinite loops
+  const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
+    setIsAVPanelCollapsed(isCollapsed);
   }, []);
 
   // ========================================
@@ -576,7 +576,7 @@ const NavigationEditorContent: React.FC = () => {
         <RemotePanel
           host={selectedHost}
           onReleaseControl={handleDisconnectComplete}
-          streamExpanded={isAVPanelExpanded}
+          streamCollapsed={isAVPanelCollapsed}
         />
       )}
 
@@ -584,7 +584,7 @@ const NavigationEditorContent: React.FC = () => {
         <HDMIStream
           host={selectedHost}
           onDisconnectComplete={handleDisconnectComplete}
-          onExpandedChange={handleAVPanelExpandedChange}
+          onCollapsedChange={handleAVPanelCollapsedChange}
         />
       )}
 

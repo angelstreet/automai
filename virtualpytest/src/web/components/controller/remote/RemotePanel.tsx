@@ -19,8 +19,8 @@ interface RemotePanelProps {
   initialCollapsed?: boolean;
   // Device resolution for overlay scaling
   deviceResolution?: { width: number; height: number };
-  // Stream expanded state for overlay coordination
-  streamExpanded?: boolean;
+  // Stream collapsed state for overlay coordination
+  streamCollapsed?: boolean;
 }
 
 export function RemotePanel({
@@ -28,13 +28,13 @@ export function RemotePanel({
   onReleaseControl,
   initialCollapsed = true,
   deviceResolution,
-  streamExpanded = false,
+  streamCollapsed = true,
 }: RemotePanelProps) {
   console.log(`[@component:RemotePanel] Props debug:`, {
     hostDeviceModel: host.device_model,
     deviceResolution,
     initialCollapsed,
-    streamExpanded,
+    streamCollapsed,
   });
 
   // Panel state - three states: expanded, collapsed, minimized
@@ -134,7 +134,7 @@ export function RemotePanel({
             panelWidth={currentWidth}
             panelHeight={currentHeight}
             deviceResolution={effectiveDeviceResolution}
-            streamExpanded={streamExpanded}
+            streamCollapsed={streamCollapsed}
             sx={{
               height: '100%',
               '& .MuiButton-root': {
@@ -216,7 +216,7 @@ export function RemotePanel({
     currentWidth,
     currentHeight,
     effectiveDeviceResolution,
-    streamExpanded,
+    streamCollapsed,
   ]);
 
   return (

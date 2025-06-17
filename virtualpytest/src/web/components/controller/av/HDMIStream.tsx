@@ -2,8 +2,6 @@ import {
   PhotoCamera,
   VideoCall,
   StopCircle,
-  Fullscreen,
-  FullscreenExit,
   Refresh,
   OpenInFull,
   CloseFullscreen,
@@ -25,7 +23,7 @@ import { VideoCapture } from './VideoCapture';
 interface HDMIStreamProps {
   host: Host;
   onDisconnectComplete?: () => void;
-  onExpandedChange?: (isExpanded: boolean) => void;
+  onCollapsedChange?: (isCollapsed: boolean) => void;
   deviceResolution?: { width: number; height: number };
   sx?: any;
 }
@@ -33,7 +31,7 @@ interface HDMIStreamProps {
 export function HDMIStream({
   host,
   onDisconnectComplete: _onDisconnectComplete,
-  onExpandedChange,
+  onCollapsedChange,
   deviceResolution,
   sx = {},
 }: HDMIStreamProps) {
@@ -223,7 +221,7 @@ export function HDMIStream({
       // Normal expand/collapse logic
       const newExpanded = !isExpanded;
       setIsExpanded(newExpanded);
-      onExpandedChange?.(newExpanded);
+      onCollapsedChange?.(!newExpanded);
       console.log(
         `[@component:HDMIStream] Toggling panel state to ${newExpanded ? 'expanded' : 'collapsed'} for ${host.device_model}`,
       );
