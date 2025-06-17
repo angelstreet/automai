@@ -271,52 +271,9 @@ export const AndroidMobileOverlay = React.memo(
       const deviceX = Math.round(contentX / scaleX);
       const deviceY = Math.round(contentY / scaleY);
 
-      // 🔍 COMPREHENSIVE DEBUG LOGGING
-      console.group('🔍 [@component:AndroidMobileOverlay] TAP COORDINATE DEBUG');
-      console.log('📱 Device Info:', {
-        deviceWidth,
-        deviceHeight,
-        deviceAspectRatio: (deviceWidth / deviceHeight).toFixed(3),
-      });
-      console.log('📺 Panel Info:', {
-        panelPosition: panelInfo.position,
-        panelSize: panelInfo.size,
-        panelDeviceResolution: panelInfo.deviceResolution,
-        panelAspectRatio: (
-          panelInfo.deviceResolution.width / panelInfo.deviceResolution.height
-        ).toFixed(3),
-      });
-      console.log('📐 Overlay Calculations:', {
-        actualContentWidth: actualContentWidth.toFixed(2),
-        horizontalOffset: horizontalOffset.toFixed(2),
-        scaleX: scaleX.toFixed(6),
-        scaleY: scaleY.toFixed(6),
-      });
-      console.log('🖱️ Mouse Event:', {
-        clientX: event.clientX,
-        clientY: event.clientY,
-        rectLeft: rect.left.toFixed(2),
-        rectTop: rect.top.toFixed(2),
-        rectWidth: rect.width.toFixed(2),
-        rectHeight: rect.height.toFixed(2),
-      });
-      console.log('📍 Content Coordinates:', {
-        contentX: contentX.toFixed(2),
-        contentY: contentY.toFixed(2),
-      });
-      console.log('🎯 Final Device Coordinates:', {
-        deviceX,
-        deviceY,
-        calculation: `deviceX = ${contentX.toFixed(2)} / ${scaleX.toFixed(6)} = ${deviceX}`,
-        calculationY: `deviceY = ${contentY.toFixed(2)} / ${scaleY.toFixed(6)} = ${deviceY}`,
-      });
-      console.log('✅ Validation:', {
-        deviceXValid: deviceX >= 0 && deviceX <= deviceWidth,
-        deviceYValid: deviceY >= 0 && deviceY <= deviceHeight,
-        deviceXRange: `0-${deviceWidth}`,
-        deviceYRange: `0-${deviceHeight}`,
-      });
-      console.groupEnd();
+      console.log(
+        `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY}) [scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}]`,
+      );
 
       await onPanelTap(deviceX, deviceY);
     };
