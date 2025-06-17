@@ -40,8 +40,10 @@ export function useHdmiStream({
 
   // Video state
   const [videoFramesPath, _setVideoFramesPath] = useState<string>('');
-  const [totalFrames, _setTotalFrames] = useState<number>(0);
+  const [totalFrames, setTotalFrames] = useState<number>(0);
   const [currentFrame, setCurrentFrame] = useState<number>(0);
+  const [captureStartTime, setCaptureStartTime] = useState<Date | null>(null);
+  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
 
   // UI state
   const [referenceName, setReferenceName] = useState<string>('hdmi_capture');
@@ -414,6 +416,8 @@ export function useHdmiStream({
     videoFramesPath,
     totalFrames,
     currentFrame,
+    captureStartTime,
+    recordingStartTime,
     referenceName,
     capturedReferenceImage,
     hasCaptured,
@@ -434,6 +438,9 @@ export function useHdmiStream({
     setCaptureMode,
     setIsCaptureActive,
     setCurrentFrame,
+    setTotalFrames,
+    setCaptureStartTime,
+    setRecordingStartTime,
     setReferenceName,
     setCaptureCollapsed,
     setReferenceText,

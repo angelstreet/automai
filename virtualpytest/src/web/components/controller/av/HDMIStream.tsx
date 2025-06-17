@@ -64,10 +64,16 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
     videoFramesPath,
     totalFrames,
     currentFrame,
+    captureStartTime,
+    recordingStartTime,
 
     // Actions from hook
     setCaptureMode,
     setCurrentFrame,
+    setIsCaptureActive,
+    setTotalFrames,
+    setCaptureStartTime,
+    setRecordingStartTime,
     handleAreaSelected,
     handleImageLoad,
     handleTakeScreenshot: hookTakeScreenshot,
@@ -140,23 +146,43 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
   const handleStartCapture = useCallback(async () => {
     try {
       console.log(`[@component:HDMIStream] Starting video capture`);
+      const startTime = new Date();
+      setIsCaptureActive(true);
+      setRecordingStartTime(startTime);
       setCaptureMode('video');
-      // Add actual capture start logic here if needed
+      console.log(`[@component:HDMIStream] Recording started at:`, startTime);
     } catch (error) {
       console.error(`[@component:HDMIStream] Error starting capture:`, error);
     }
-  }, [setCaptureMode]);
+  }, [setIsCaptureActive, setRecordingStartTime, setCaptureMode]);
 
   // Stop video capture
   const handleStopCapture = useCallback(async () => {
     try {
       console.log(`[@component:HDMIStream] Stopping video capture`);
-      setCaptureMode('stream');
-      // Add actual capture stop logic here if needed
+      const endTime = new Date();
+      setIsCaptureActive(false);
+
+      // Calculate how many frames we captured (1 per second)
+      if (recordingStartTime) {
+        const recordingDuration = endTime.getTime() - recordingStartTime.getTime();
+        const frameCount = Math.floor(recordingDuration / 1000); // 1 frame per second
+
+        console.log(
+          `[@component:HDMIStream] Recording duration: ${recordingDuration}ms, frames: ${frameCount}`,
+        );
+
+        setTotalFrames(frameCount);
+        setCaptureStartTime(recordingStartTime); // VideoCapture needs this for URL generation
+        setCaptureMode('video'); // Keep showing video component with frames
+      } else {
+        console.warn(`[@component:HDMIStream] No recording start time found`);
+        setCaptureMode('stream');
+      }
     } catch (error) {
       console.error(`[@component:HDMIStream] Error stopping capture:`, error);
     }
-  }, [setCaptureMode]);
+  }, [setIsCaptureActive, setTotalFrames, setCaptureStartTime, setCaptureMode, recordingStartTime]);
 
   // Return to stream view (remove overlays, keep stream playing)
   const returnToStream = useCallback(() => {
@@ -440,6 +466,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                 videoFramesPath={videoFramesPath}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
+                captureStartTime={captureStartTime}
                 onFrameChange={handleFrameChange}
                 onBackToStream={handleBackToStream}
                 isSaving={false}

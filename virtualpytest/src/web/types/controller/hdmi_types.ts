@@ -26,6 +26,8 @@ export interface HdmiStreamState {
   videoFramesPath: string;
   totalFrames: number;
   currentFrame: number;
+  captureStartTime: Date | null;
+  recordingStartTime: Date | null;
 
   // UI state
   referenceName: string;
@@ -69,6 +71,9 @@ export interface HdmiStreamActions {
   setCaptureMode: (mode: 'stream' | 'screenshot' | 'video') => void;
   setIsCaptureActive: (active: boolean) => void;
   setCurrentFrame: (frame: number) => void;
+  setTotalFrames: (frames: number) => void;
+  setCaptureStartTime: (time: Date | null) => void;
+  setRecordingStartTime: (time: Date | null) => void;
   setReferenceName: (name: string) => void;
   setCaptureCollapsed: (collapsed: boolean) => void;
   setReferenceText: (text: string) => void;
