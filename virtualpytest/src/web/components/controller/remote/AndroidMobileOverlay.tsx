@@ -103,6 +103,57 @@ export const AndroidMobileOverlay = React.memo(
       };
     };
 
+    // Calculate actual content dimensions and offset
+    const { actualContentWidth, actualContentHeight, horizontalOffset, verticalOffset } =
+      React.useMemo(() => {
+        if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
+          return {
+            actualContentWidth: 0,
+            actualContentHeight: 0,
+            horizontalOffset: 0,
+            verticalOffset: 0,
+          };
+        }
+
+        const deviceAspectRatio = deviceWidth / deviceHeight;
+        const panelAspectRatio = panelInfo.size.width / panelInfo.size.height;
+
+        let actualWidth,
+          actualHeight,
+          hOffset = 0,
+          vOffset = 0;
+
+        if (deviceAspectRatio > panelAspectRatio) {
+          // Device is wider than panel - use height as reference (mobile case)
+          actualHeight = panelInfo.size.height;
+          actualWidth = actualHeight * deviceAspectRatio;
+          hOffset = (panelInfo.size.width - actualWidth) / 2;
+        } else {
+          // Device is taller than panel - use width as reference (desktop case)
+          actualWidth = panelInfo.size.width;
+          actualHeight = actualWidth / deviceAspectRatio;
+          vOffset = (panelInfo.size.height - actualHeight) / 2;
+        }
+
+        console.log(`[@component:AndroidMobileOverlay] Content dimensions calculated:`, {
+          deviceAspectRatio,
+          panelAspectRatio,
+          actualWidth,
+          actualHeight,
+          hOffset,
+          vOffset,
+          mode:
+            deviceAspectRatio > panelAspectRatio ? 'mobile (height-ref)' : 'desktop (width-ref)',
+        });
+
+        return {
+          actualContentWidth: actualWidth,
+          actualContentHeight: actualHeight,
+          horizontalOffset: hOffset,
+          verticalOffset: vOffset,
+        };
+      }, [panelInfo, deviceWidth, deviceHeight]);
+
     // Calculate scaled coordinates for panel positioning
     useEffect(() => {
       if (elements.length === 0) {
@@ -150,22 +201,14 @@ export const AndroidMobileOverlay = React.memo(
             return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
           };
 
-          // Calculate actual content width based on height and device aspect ratio
-          // The stream maintains aspect ratio, so there may be black strips on sides
-          const deviceAspectRatio = deviceWidth / deviceHeight;
-          const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
-
           // Scale elements to fit the actual stream content size (not panel size)
           const scaleX = actualContentWidth / deviceWidth;
-          const scaleY = panelInfo.size.height / deviceHeight;
-
-          // Calculate horizontal offset to center content within panel
-          const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
+          const scaleY = actualContentHeight / deviceHeight;
 
           const scaledElement = {
             id: element.id,
-            x: bounds.x * scaleX + horizontalOffset, // Add offset to center horizontally
-            y: bounds.y * scaleY,
+            x: bounds.x * scaleX + horizontalOffset, // Add offset to center content
+            y: bounds.y * scaleY + verticalOffset, // Add offset to center content
             width: bounds.width * scaleX,
             height: bounds.height * scaleY,
             color: COLORS[index % COLORS.length],
@@ -185,7 +228,16 @@ export const AndroidMobileOverlay = React.memo(
 
       console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements`);
       setScaledElements(scaled);
-    }, [elements, deviceWidth, deviceHeight, panelInfo]);
+    }, [
+      elements,
+      deviceWidth,
+      deviceHeight,
+      panelInfo,
+      actualContentWidth,
+      actualContentHeight,
+      horizontalOffset,
+      verticalOffset,
+    ]);
 
     // Handle element click (higher priority)
     const handleElementClick = async (scaledElement: ScaledElement) => {
@@ -204,18 +256,13 @@ export const AndroidMobileOverlay = React.memo(
 
       if (onPanelTap) {
         // Convert overlay coordinates back to device coordinates
-        // Account for horizontal centering offset
-        const deviceAspectRatio =
-          panelInfo.deviceResolution.width / panelInfo.deviceResolution.height;
-        const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
-        const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
-
         const deviceX = Math.round(
           ((scaledElement.x - horizontalOffset) * panelInfo.deviceResolution.width) /
             actualContentWidth,
         );
         const deviceY = Math.round(
-          (scaledElement.y * panelInfo.deviceResolution.height) / panelInfo.size.height,
+          ((scaledElement.y - verticalOffset) * panelInfo.deviceResolution.height) /
+            actualContentHeight,
         );
 
         console.log(
@@ -235,33 +282,28 @@ export const AndroidMobileOverlay = React.memo(
     const handleBaseTap = async (event: React.MouseEvent) => {
       if (!onPanelTap) return;
 
-      // Get click coordinates relative to the overlay container
+      // Get click coordinates relative to the actual content area (not full panel)
       const rect = event.currentTarget.getBoundingClientRect();
-      const overlayX = event.clientX - rect.left;
-      const overlayY = event.clientY - rect.top;
+      const contentX = event.clientX - rect.left; // Already relative to content area
+      const contentY = event.clientY - rect.top; // Already relative to content area
 
-      // Show click animation at tap location
+      // Show click animation at tap location (relative to full panel for positioning)
       const animationId = `base-tap-${Date.now()}`;
-      setClickAnimation({ x: overlayX, y: overlayY, id: animationId });
+      setClickAnimation({ x: contentX, y: contentY, id: animationId });
 
       // Clear animation after 300ms
       setTimeout(() => setClickAnimation(null), 300);
 
-      // Convert to device coordinates, accounting for horizontal centering
-      const deviceAspectRatio =
-        panelInfo.deviceResolution.width / panelInfo.deviceResolution.height;
-      const actualContentWidth = panelInfo.size.height * deviceAspectRatio;
-      const horizontalOffset = (panelInfo.size.width - actualContentWidth) / 2;
-
+      // Convert content coordinates directly to device coordinates
       const deviceX = Math.round(
-        ((overlayX - horizontalOffset) * panelInfo.deviceResolution.width) / actualContentWidth,
+        (contentX * panelInfo.deviceResolution.width) / actualContentWidth,
       );
       const deviceY = Math.round(
-        (overlayY * panelInfo.deviceResolution.height) / panelInfo.size.height,
+        (contentY * panelInfo.deviceResolution.height) / actualContentHeight,
       );
 
       console.log(
-        `[@component:AndroidMobileOverlay] Base tap at overlay(${overlayX.toFixed(1)}, ${overlayY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
+        `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
       );
 
       await onPanelTap(deviceX, deviceY);
@@ -284,10 +326,10 @@ export const AndroidMobileOverlay = React.memo(
         <div
           style={{
             position: 'fixed',
-            left: `${panelInfo.position.x}px`,
-            top: `${panelInfo.position.y}px`,
-            width: `${panelInfo.size.width}px`,
-            height: `${panelInfo.size.height}px`,
+            left: `${panelInfo.position.x + horizontalOffset}px`,
+            top: `${panelInfo.position.y + verticalOffset}px`,
+            width: `${actualContentWidth}px`,
+            height: `${actualContentHeight}px`,
             zIndex: 999998, // Lower z-index than elements
             contain: 'layout style size',
             willChange: 'transform',
@@ -358,8 +400,8 @@ export const AndroidMobileOverlay = React.memo(
             key={clickAnimation.id}
             style={{
               position: 'fixed',
-              left: `${panelInfo.position.x + clickAnimation.x - 15}px`, // Center the 30px circle
-              top: `${panelInfo.position.y + clickAnimation.y - 15}px`,
+              left: `${panelInfo.position.x + horizontalOffset + clickAnimation.x - 15}px`, // Center the 30px circle, account for content offset
+              top: `${panelInfo.position.y + verticalOffset + clickAnimation.y - 15}px`,
               width: '30px',
               height: '30px',
               borderRadius: '50%',
