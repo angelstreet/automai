@@ -19,7 +19,7 @@ export interface NavigationEditorActionButtonsProps {
   error: string | null;
   selectedDevice: string | null;
   isControlActive: boolean;
-  onAddNewNode: () => void;
+  onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
   onFitView: () => void;
   onSaveToConfig: () => void;
   onDiscardChanges: () => void;

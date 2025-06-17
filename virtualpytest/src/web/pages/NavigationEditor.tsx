@@ -212,6 +212,11 @@ const NavigationEditorContent: React.FC = () => {
     handleControlStateChange,
     handleToggleRemotePanel,
     handleDisconnectComplete,
+
+    // Host data (filtered by interface models)
+    availableHosts,
+    getHostByName,
+    fetchHosts,
   } = useNavigationEditor();
 
   // Track the last loaded tree ID to prevent unnecessary reloads
@@ -349,6 +354,18 @@ const NavigationEditorContent: React.FC = () => {
     [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode],
   );
 
+  // Wrapper for node form submission to handle the form data
+  const handleNodeFormSubmitWrapper = useCallback(() => {
+    if (nodeForm) {
+      handleNodeFormSubmit(nodeForm);
+    }
+  }, [nodeForm, handleNodeFormSubmit]);
+
+  // Wrapper for add new node to provide default parameters
+  const handleAddNewNodeWrapper = useCallback(() => {
+    addNewNode('screen', { x: 250, y: 250 });
+  }, [addNewNode]);
+
   const handleUpdateEdge = useCallback(
     (edgeId: string, updatedData: any) => {
       setEdges((edges) =>
@@ -405,10 +422,14 @@ const NavigationEditorContent: React.FC = () => {
         selectedHost={selectedHost}
         isControlActive={isControlActive}
         isRemotePanelOpen={isRemotePanelOpen}
+        // Pass filtered hosts instead of letting header get all hosts
+        availableHosts={availableHosts}
+        getHostByName={getHostByName}
+        fetchHosts={fetchHosts}
         onNavigateToParent={navigateToParent}
         onNavigateToTreeLevel={navigateToTreeLevel}
         onNavigateToParentView={navigateToParentView}
-        onAddNewNode={addNewNode}
+        onAddNewNode={handleAddNewNodeWrapper}
         onFitView={fitView}
         // onUndo/onRedo removed - using page reload for cancel changes
 
@@ -625,9 +646,9 @@ const NavigationEditorContent: React.FC = () => {
         nodeForm={nodeForm}
         nodes={nodes}
         setNodeForm={setNodeForm}
-        onSubmit={handleNodeFormSubmit}
+        onSubmit={handleNodeFormSubmitWrapper}
         onClose={cancelNodeChanges}
-        onResetNode={resetNode}
+        onResetNode={() => selectedNode && resetNode(selectedNode.id)}
         model={userInterface?.models?.[0] || 'android_mobile'}
         isControlActive={isControlActive}
         selectedHost={selectedHost}

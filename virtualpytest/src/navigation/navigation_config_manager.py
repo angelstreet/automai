@@ -7,6 +7,7 @@ Simple mapping: userinterface name -> {userinterface_name}.json
 
 import os
 import json
+import uuid
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
@@ -40,6 +41,108 @@ def get_config_file_path(userinterface_name: str) -> Path:
         Path: Full path to the config file
     """
     return CONFIG_DIR / f"{userinterface_name}.json"
+
+
+def create_empty_navigation_config(userinterface_name: str, userinterface_data: Dict[str, Any]) -> bool:
+    """
+    Create an empty navigation config file with basic ENTRY -> home structure
+    
+    Args:
+        userinterface_name: The userinterface name (e.g., 'horizon_mobile_android')
+        userinterface_data: UserInterface data with name, models, min_version, max_version
+        
+    Returns:
+        bool: True if created successfully, False otherwise
+    """
+    try:
+        print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Creating empty config for userinterface: {userinterface_name}")
+        
+        # Ensure config directory exists
+        if not ensure_config_directory():
+            return False
+        
+        config_file = get_config_file_path(userinterface_name)
+        
+        # Check if file already exists
+        if config_file.exists():
+            print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Config file already exists: {config_file}")
+            return True  # Consider it success if file already exists
+        
+        # Generate unique IDs for nodes and edges
+        entry_node_id = str(uuid.uuid4())
+        home_node_id = str(uuid.uuid4())
+        edge_id = str(uuid.uuid4())
+        
+        # Create empty config template based on horizon_android_tv.json structure
+        empty_config = {
+            "userInterface": {
+                "name": userinterface_data.get("name", userinterface_name),
+                "models": userinterface_data.get("models", []),
+                "min_version": userinterface_data.get("min_version", ""),
+                "max_version": userinterface_data.get("max_version", "")
+            },
+            "edges": [
+                {
+                    "id": edge_id,
+                    "data": {
+                        "to": "home",
+                        "from": "ENTRY",
+                        "action": "",
+                        "edgeType": "vertical",
+                        "description": ""
+                    },
+                    "type": "smoothstep",
+                    "source": entry_node_id,
+                    "target": home_node_id,
+                    "sourceHandle": "entry-source",
+                    "targetHandle": "left-top-target"
+                }
+            ],
+            "nodes": [
+                {
+                    "id": entry_node_id,
+                    "data": {
+                        "type": "entry",
+                        "depth": -1,
+                        "label": "ENTRY",
+                        "parent": [],
+                        "description": "System entry point"
+                    },
+                    "type": "uiScreen",
+                    "position": {
+                        "x": 150,
+                        "y": 50
+                    }
+                },
+                {
+                    "id": home_node_id,
+                    "data": {
+                        "type": "screen",
+                        "depth": 0,
+                        "label": "home",
+                        "parent": [],
+                        "is_root": True,
+                        "description": "Home"
+                    },
+                    "type": "uiScreen",
+                    "position": {
+                        "x": 225,
+                        "y": 15
+                    }
+                }
+            ]
+        }
+        
+        # Write to file with proper formatting
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(empty_config, f, indent=2, ensure_ascii=False)
+        
+        print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Successfully created empty config for {userinterface_name} at {config_file}")
+        return True
+        
+    except Exception as e:
+        print(f"[@utils:navigationConfigManager:create_empty_navigation_config] Error creating empty config for {userinterface_name}: {str(e)}")
+        return False
 
 
 def load_navigation_tree_from_config(userinterface_name: str) -> Optional[Dict[str, Any]]:

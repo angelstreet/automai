@@ -269,11 +269,71 @@ export const useUserInterface = () => {
     [],
   );
 
+  /**
+   * Create empty navigation config for a user interface
+   */
+  const createEmptyNavigationConfig = useMemo(
+    () =>
+      async (userInterface: UserInterface): Promise<void> => {
+        try {
+          console.log(
+            `[@hook:useUserInterface:createEmptyNavigationConfig] Creating empty navigation config for: ${userInterface.name}`,
+          );
+
+          const response = await fetch(
+            buildServerUrl(
+              `/server/navigation/config/createEmpty/${encodeURIComponent(userInterface.name)}`,
+            ),
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userinterface_data: {
+                  name: userInterface.name,
+                  models: userInterface.models,
+                  min_version: userInterface.min_version,
+                  max_version: userInterface.max_version,
+                },
+                commit_message: `Create empty navigation config: ${userInterface.name}`,
+              }),
+            },
+          );
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              result.error ||
+                `Failed to create navigation config: ${response.status} ${response.statusText}`,
+            );
+          }
+
+          if (result.success) {
+            console.log(
+              `[@hook:useUserInterface:createEmptyNavigationConfig] Successfully created navigation config for: ${userInterface.name}`,
+            );
+          } else {
+            throw new Error(result.error || 'Failed to create navigation config');
+          }
+        } catch (error) {
+          console.error(
+            `[@hook:useUserInterface:createEmptyNavigationConfig] Error creating navigation config for ${userInterface.name}:`,
+            error,
+          );
+          throw error;
+        }
+      },
+    [],
+  );
+
   return {
     getAllUserInterfaces,
     getUserInterface,
     createUserInterface,
     updateUserInterface,
     deleteUserInterface,
+    createEmptyNavigationConfig,
   };
 };

@@ -16,7 +16,7 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
   hasUnsavedChanges,
   isLoading,
   error,
-  selectedHost,
+  selectedDevice,
   isControlActive,
   onAddNewNode,
   onFitView,
@@ -36,13 +36,13 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
       {/* Validation Button */}
       <ValidationButtonClient
         treeId={treeId}
-        disabled={isLoading || !!error || !selectedHost || !isControlActive}
+        disabled={isLoading || !!error || !selectedDevice || !isControlActive}
       />
 
       {/* Add Node Button */}
       <Button
         startIcon={<AddIcon />}
-        onClick={onAddNewNode}
+        onClick={() => onAddNewNode('screen', { x: 250, y: 250 })}
         size="small"
         disabled={isLoading || !!error || !isLocked}
         variant="outlined"

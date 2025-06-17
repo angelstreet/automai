@@ -28,6 +28,10 @@ export const NavigationEditorHeader: React.FC<{
   selectedHost: any; // Full host object
   isControlActive: boolean;
   isRemotePanelOpen: boolean;
+  // Host data (filtered by interface models)
+  availableHosts: any[];
+  getHostByName: (hostName: string) => any;
+  fetchHosts: () => void;
   onAddNewNode: () => void;
   onFitView: () => void;
   onSaveToConfig: () => void;
@@ -54,6 +58,10 @@ export const NavigationEditorHeader: React.FC<{
   selectedHost,
   isControlActive,
   isRemotePanelOpen,
+  // Host data (filtered by interface models)
+  availableHosts,
+  getHostByName,
+  fetchHosts,
   onAddNewNode,
   onFitView,
   onSaveToConfig,
@@ -67,8 +75,7 @@ export const NavigationEditorHeader: React.FC<{
   onUpdateNode,
   onUpdateEdge,
 }) => {
-  // Get host data from RegistrationContext
-  const { availableHosts, fetchHosts } = useRegistration();
+  // Note: Now using filtered hosts passed as props instead of calling useRegistration directly
 
   // Get device control functions
   const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
@@ -245,7 +252,7 @@ export const NavigationEditorHeader: React.FC<{
               hasUnsavedChanges={hasUnsavedChanges}
               isLoading={isLoading}
               error={error}
-              selectedHost={selectedHost}
+              selectedDevice={selectedHost?.host_name || null}
               isControlActive={isControlActive}
               onAddNewNode={onAddNewNode}
               onFitView={onFitView}
@@ -255,13 +262,16 @@ export const NavigationEditorHeader: React.FC<{
 
             {/* Section 4: Device Controls */}
             <NavigationEditorDeviceControls
-              selectedHost={selectedHost}
+              selectedDevice={selectedHost?.host_name || null}
               isControlActive={isControlActive}
               isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}
               availableHosts={availableHosts}
               isDeviceLocked={isDeviceLocked}
-              onDeviceSelect={onDeviceSelect}
+              onDeviceSelect={(hostName: string | null) => {
+                const host = hostName ? availableHosts.find((h) => h.host_name === hostName) : null;
+                onDeviceSelect(host);
+              }}
               onTakeControl={handleTakeControl}
               onToggleRemotePanel={onToggleRemotePanel}
             />

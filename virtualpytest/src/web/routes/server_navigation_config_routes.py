@@ -11,7 +11,8 @@ from src.navigation.navigation_config_manager import (
     list_available_navigation_trees,
     load_navigation_tree_from_config,
     save_navigation_tree_to_config,
-    validate_navigation_tree_structure
+    validate_navigation_tree_structure,
+    create_empty_navigation_config
 )
 from src.navigation.navigation_git_manager import (
     pull_latest_navigation_config,
@@ -301,6 +302,68 @@ def save_navigation_tree(userinterface_name):
         
     except Exception as e:
         print(f"[@route:navigation_config:save_navigation_tree] Error saving tree {userinterface_name}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@navigation_config_bp.route('/createEmpty/<userinterface_name>', methods=['POST'])
+def create_empty_navigation_config_route(userinterface_name):
+    """
+    Create an empty navigation config file for a new user interface
+    
+    Args:
+        userinterface_name: The userinterface name for the new config
+        
+    Returns:
+        JSON response with creation status
+    """
+    try:
+        print(f"[@route:navigation_config:create_empty_navigation_config_route] Creating empty config for: {userinterface_name}")
+        
+        # Get request data
+        if not request.json:
+            return jsonify({
+                'success': False,
+                'error': 'Request body with userinterface data is required'
+            }), 400
+        
+        userinterface_data = request.json.get('userinterface_data')
+        commit_message = request.json.get('commit_message', f'Create empty navigation config: {userinterface_name}')
+        
+        if not userinterface_data:
+            return jsonify({
+                'success': False,
+                'error': 'UserInterface data is required'
+            }), 400
+        
+        # Create the empty config file
+        success = create_empty_navigation_config(userinterface_name, userinterface_data)
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to create empty navigation config file'
+            }), 500
+        
+        # Commit and push to git
+        git_success = commit_and_push_navigation_config(commit_message)
+        
+        if not git_success:
+            print(f"[@route:navigation_config:create_empty_navigation_config_route] Warning: Git commit/push failed for config {userinterface_name}")
+            # Don't fail the creation operation, just warn
+        
+        print(f"[@route:navigation_config:create_empty_navigation_config_route] Successfully created empty config: {userinterface_name}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Empty navigation config created successfully: {userinterface_name}',
+            'git_committed': git_success
+        })
+        
+    except Exception as e:
+        print(f"[@route:navigation_config:create_empty_navigation_config_route] Error creating empty config {userinterface_name}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

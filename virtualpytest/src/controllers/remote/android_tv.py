@@ -417,24 +417,100 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             return False, "", error_msg
         
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status information."""
-        return {
-            'controller_type': self.controller_type,
-            'device_type': self.device_type,
-            'device_name': self.device_name,
-            # ADB device info
-            'device_ip': self.device_ip,
-            'device_port': self.device_port,
-            'adb_device': self.adb_device,
-            'connected': self.is_connected,
-            'connection_timeout': self.connection_timeout,
-            'device_resolution': self.device_resolution,
-            'supported_keys': list(ADBUtils.ADB_KEYS.keys()) if self.adb_utils else [],
-            'capabilities': [
-                'adb_control', 'navigation', 'text_input', 
-                'app_launch', 'app_close', 'coordinate_tap', 'media_control', 'volume_control', 'power_control'
-            ]
-        }
+        """Get controller status information with ADB device verification."""
+        try:
+            # Basic status info
+            base_status = {
+                'success': True,
+                'controller_type': self.controller_type,
+                'device_type': self.device_type,
+                'device_name': self.device_name,
+                'device_ip': self.device_ip,
+                'device_port': self.device_port,
+                'adb_device': self.adb_device,
+                'connected': self.is_connected,
+                'connection_timeout': self.connection_timeout,
+                'device_resolution': self.device_resolution,
+                'supported_keys': list(ADBUtils.ADB_KEYS.keys()) if self.adb_utils else [],
+                'capabilities': [
+                    'adb_control', 'navigation', 'text_input', 
+                    'app_launch', 'app_close', 'coordinate_tap', 'media_control', 'volume_control', 'power_control'
+                ]
+            }
+            
+            # Check ADB device connectivity if we have device IP and are connected
+            if self.device_ip and self.is_connected:
+                import subprocess
+                
+                # Run adb devices to check connectivity
+                adb_result = subprocess.run(
+                    ['adb', 'devices'], 
+                    capture_output=True, 
+                    text=True
+                )
+                
+                if adb_result.returncode != 0:
+                    base_status.update({
+                        'adb_status': 'command_failed',
+                        'adb_connected': False,
+                        'message': 'ADB command failed'
+                    })
+                    return base_status
+                
+                # Parse adb devices output
+                device_lines = [line.strip() for line in adb_result.stdout.split('\n') 
+                              if line.strip() and not line.startswith('List of devices')]
+                
+                device_found = None
+                device_status = None
+                
+                for line in device_lines:
+                    if self.adb_device in line:
+                        device_found = line
+                        parts = line.split('\t')
+                        if len(parts) >= 2:
+                            device_status = parts[1].strip()
+                        break
+                
+                if not device_found:
+                    base_status.update({
+                        'adb_status': 'device_not_found',
+                        'adb_connected': False,
+                        'message': f'Device {self.adb_device} not found in ADB devices list',
+                        'available_devices': device_lines
+                    })
+                elif device_status != 'device':
+                    base_status.update({
+                        'adb_status': f'device_{device_status}',
+                        'adb_connected': False,
+                        'message': f'Device {self.adb_device} status is {device_status}, expected "device"',
+                        'device_found': device_found
+                    })
+                else:
+                    base_status.update({
+                        'adb_status': 'device_connected',
+                        'adb_connected': True,
+                        'message': f'Device {self.adb_device} is connected and ready',
+                        'device_status': device_status
+                    })
+            else:
+                base_status.update({
+                    'adb_status': 'not_applicable',
+                    'adb_connected': False,
+                    'message': 'No device IP provided or not connected'
+                })
+            
+            return base_status
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'controller_type': self.controller_type,
+                'device_name': self.device_name,
+                'adb_status': 'error',
+                'adb_connected': False,
+                'error': f'Failed to check ADB device status: {str(e)}'
+            }
 
 
 # Backward compatibility alias

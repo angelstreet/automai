@@ -46,8 +46,13 @@ const UserInterface: React.FC = () => {
   const navigate = useNavigate();
 
   // Get the hook functions
-  const { getAllUserInterfaces, updateUserInterface, deleteUserInterface, createUserInterface } =
-    useUserInterface();
+  const {
+    getAllUserInterfaces,
+    updateUserInterface,
+    deleteUserInterface,
+    createUserInterface,
+    createEmptyNavigationConfig,
+  } = useUserInterface();
 
   const [userInterfaces, setUserInterfaces] = useState<UserInterfaceType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,6 +248,22 @@ const UserInterface: React.FC = () => {
         '[@component:UserInterface] Successfully created user interface:',
         createdInterface.name,
       );
+
+      // Create empty navigation config file
+      try {
+        await createEmptyNavigationConfig(createdInterface);
+        console.log(
+          '[@component:UserInterface] Successfully created navigation config for:',
+          createdInterface.name,
+        );
+      } catch (configError) {
+        console.error('[@component:UserInterface] Error creating navigation config:', configError);
+        // Don't fail the entire operation if config creation fails
+        // The user interface was created successfully, config can be created later
+        setError(
+          'User interface created successfully, but failed to create navigation config. You can still use the navigation editor.',
+        );
+      }
     } catch (err) {
       console.error('[@component:UserInterface] Error creating user interface:', err);
       setError(err instanceof Error ? err.message : 'Failed to create user interface');

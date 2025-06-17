@@ -14,7 +14,7 @@ import React from 'react';
 import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigation_Header_Types';
 
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({
-  selectedHost,
+  selectedDevice,
   isControlActive,
   isControlLoading,
   availableHosts,
@@ -22,10 +22,12 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
   onDeviceSelect,
   onTakeControl,
 }) => {
-  // Find the selected device data - now we have the full object
-  const selectedDeviceHost = selectedHost;
+  // Find the selected device data from host name
+  const selectedDeviceHost = selectedDevice
+    ? availableHosts.find((h) => h.host_name === selectedDevice)
+    : null;
 
-  const isSelectedDeviceLocked = selectedHost ? isDeviceLocked(selectedHost.host_name) : false;
+  const isSelectedDeviceLocked = selectedDevice ? isDeviceLocked(selectedDevice) : false;
 
   return (
     <Box
@@ -42,11 +44,10 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         <InputLabel id="device-select-label">Device</InputLabel>
         <Select
           labelId="device-select-label"
-          value={selectedHost?.host_name || ''}
+          value={selectedDevice || ''}
           onChange={(e) => {
             const hostName = e.target.value || null;
-            const host = hostName ? availableHosts.find((h) => h.host_name === hostName) : null;
-            onDeviceSelect(host);
+            onDeviceSelect(hostName);
           }}
           label="Device"
           disabled={isControlLoading}
@@ -94,7 +95,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
         variant={isControlActive ? 'contained' : 'outlined'}
         size="small"
         onClick={onTakeControl}
-        disabled={!selectedHost || isControlLoading || isSelectedDeviceLocked}
+        disabled={!selectedDevice || isControlLoading || isSelectedDeviceLocked}
         startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
         color={isControlActive ? 'success' : 'primary'}
         sx={{
