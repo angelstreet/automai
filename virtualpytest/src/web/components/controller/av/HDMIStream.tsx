@@ -287,66 +287,68 @@ export function HDMIStream({
             color: '#ffffff',
           }}
         >
-          {/* Left side: Action buttons (always visible) */}
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Take Screenshot">
-              <IconButton
-                size="small"
-                onClick={handleTakeScreenshot}
-                sx={{
-                  color:
-                    captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
-                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-                }}
-                disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
-              >
-                <PhotoCamera sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-
-            {isCaptureActive ? (
-              <Tooltip title="Stop Capture">
+          {/* Left side: Action buttons (only visible when expanded) */}
+          {isExpanded && (
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Tooltip title="Take Screenshot">
                 <IconButton
                   size="small"
-                  onClick={handleStopCapture}
+                  onClick={handleTakeScreenshot}
                   sx={{
-                    color: '#ff4444',
+                    color:
+                      captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
                     '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
                   }}
+                  disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
                 >
-                  <StopCircle sx={{ fontSize: 16 }} />
+                  <PhotoCamera sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
-            ) : (
-              <Tooltip title="Start Capture">
+
+              {isCaptureActive ? (
+                <Tooltip title="Stop Capture">
+                  <IconButton
+                    size="small"
+                    onClick={handleStopCapture}
+                    sx={{
+                      color: '#ff4444',
+                      '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                    }}
+                  >
+                    <StopCircle sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Tooltip title="Start Capture">
+                  <IconButton
+                    size="small"
+                    onClick={handleStartCapture}
+                    sx={{
+                      color: captureMode === 'video' ? '#ff4444' : '#ffffff',
+                      '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                    }}
+                    disabled={!isStreamActive}
+                  >
+                    <VideoCall sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              <Tooltip title="Restart Stream">
                 <IconButton
                   size="small"
-                  onClick={handleStartCapture}
+                  onClick={restartStream}
                   sx={{
-                    color: captureMode === 'video' ? '#ff4444' : '#ffffff',
+                    color: '#ffffff',
                     '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
                   }}
-                  disabled={!isStreamActive}
+                  disabled={!isStreamActive || isCaptureActive}
                 >
-                  <VideoCall sx={{ fontSize: 16 }} />
+                  <Refresh sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
-            )}
-
-            <Tooltip title="Restart Stream">
-              <IconButton
-                size="small"
-                onClick={restartStream}
-                sx={{
-                  color: '#ffffff',
-                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-                }}
-                disabled={!isStreamActive || isCaptureActive}
-              >
-                <Refresh sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
+            </Box>
+          )}
 
           {/* Center: Title */}
           <Typography
