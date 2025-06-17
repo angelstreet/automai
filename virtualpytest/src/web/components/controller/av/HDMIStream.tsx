@@ -396,7 +396,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
             <StreamViewer
               key="stream-viewer"
               streamUrl={streamUrl}
-              isStreamActive={isStreamActive && !isScreenshotLoading}
+              isStreamActive={isStreamActive}
               isCapturing={isCaptureActive}
               model={host.device_model}
               sx={{
@@ -426,7 +426,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  zIndex: 10, // On top of stream
+                  zIndex: 1000001, // Above AndroidMobileOverlay (1000000)
                 }}
               />
             )}
@@ -455,7 +455,7 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  zIndex: 10, // On top of stream
+                  zIndex: 1000001, // Above AndroidMobileOverlay (1000000)
                 }}
               />
             )}
