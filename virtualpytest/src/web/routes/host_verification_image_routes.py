@@ -29,9 +29,9 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE IMAGE CROPPING AND PROCESSING ENDPOINTS
 # =====================================================
 
-@verification_image_host_bp.route('/crop-area', methods=['POST'])
+@verification_image_host_bp.route('/crop-image', methods=['POST'])
 def crop_area():
-    """Crop area from current screen"""
+    """Crop image from current screen"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -124,9 +124,9 @@ def crop_area():
             'error': f'Host cropping error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/process-area', methods=['POST'])
+@verification_image_host_bp.route('/process-image', methods=['POST'])
 def process_area():
-    """Process area for verification"""
+    """Process image for verification"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -236,9 +236,9 @@ def process_area():
 # HOST-SIDE IMAGE RESOURCE SAVE ENDPOINT
 # =====================================================
 
-@verification_image_host_bp.route('/save-resource', methods=['POST'])
+@verification_image_host_bp.route('/save-image-reference', methods=['POST'])
 def save_resource():
-    """Save image verification resource"""
+    """Save image verification reference"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -403,80 +403,7 @@ def save_resource():
             'error': f'R2 save error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/ensure-reference-availability', methods=['POST'])
-def ensure_reference_availability():
-    """Ensure reference image is available for verification"""
-    try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
-        
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
-        
-        print(f"[@route:host_ensure_reference_availability] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
-        data = request.get_json()
-        reference_name = data.get('reference_name')
-        model = data.get('model')
-        
-        print(f"[@route:host_ensure_reference_availability] Ensuring availability for: {reference_name} (model: {model})")
-        
-        # Validate required parameters
-        if not reference_name or not model:
-            return jsonify({
-                'success': False,
-                'error': 'reference_name and model are required'
-            }), 400
-        
-        # Build paths
-        resource_path = f'../resources/{model}/{reference_name}.jpg'
-        stream_path = f'/var/www/html/stream/resources/{model}/{reference_name}.jpg'
-        
-        # Ensure stream directory exists
-        stream_dir = os.path.dirname(stream_path)
-        os.makedirs(stream_dir, exist_ok=True)
-        
-        # Check if resource exists
-        if not os.path.exists(resource_path):
-            print(f"[@route:host_ensure_reference_availability] Resource not found: {resource_path}")
-            return jsonify({
-                'success': False,
-                'error': f'Reference not found: {reference_name}'
-            }), 404
-        
-        # Copy to stream directory if not already there or if outdated
-        try:
-            if not os.path.exists(stream_path) or os.path.getmtime(resource_path) > os.path.getmtime(stream_path):
-                import shutil
-                shutil.copy2(resource_path, stream_path)
-                print(f"[@route:host_ensure_reference_availability] Reference copied to stream directory")
-            else:
-                print(f"[@route:host_ensure_reference_availability] Reference already available in stream directory")
-            
-            # Return success with stream URL
-            stream_url = f'/stream/resources/{model}/{reference_name}.jpg'
-            return jsonify({
-                'success': True,
-                'stream_url': stream_url,
-                'message': f'Reference available: {reference_name}'
-            })
-            
-        except Exception as copy_error:
-            print(f"[@route:host_ensure_reference_availability] Copy failed: {copy_error}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to copy reference: {str(copy_error)}'
-            }), 500
-            
-    except Exception as e:
-        print(f"[@route:host_ensure_reference_availability] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Reference availability error: {str(e)}'
-        }), 500
+
 
 # =====================================================
 # HOST-SIDE IMAGE VERIFICATION EXECUTION

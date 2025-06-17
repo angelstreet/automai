@@ -261,10 +261,10 @@ export function useHdmiStream({
       });
 
       const result = await response.json();
-      if (result.success && result.screenshot_path) {
-        setScreenshotPath(result.screenshot_path);
+      if (result.success && result.screenshot_url) {
+        setScreenshotPath(result.screenshot_url);
         setCaptureMode('screenshot');
-        console.log('[@hook:useHdmiStream] Screenshot taken:', result.screenshot_path);
+        console.log('[@hook:useHdmiStream] Screenshot taken:', result.screenshot_url);
       }
     } catch (error) {
       console.error('[@hook:useHdmiStream] Screenshot failed:', error);

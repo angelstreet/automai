@@ -15,7 +15,7 @@ from datetime import datetime
 # Import execution functions from separated modules
 from .host_verification_image_routes import execute_image_verification_host
 from .host_verification_text_routes import execute_text_verification_host
-from .host_verification_adb_routes import execute_adb_verification_host
+# ADB verification removed - use remote controller instead
 
 # Create blueprint
 verification_execution_host_bp = Blueprint('verification_execution_host', __name__, url_prefix='/host/verification/execution')
@@ -87,7 +87,10 @@ def execute_verification():
         elif verification_type == 'text':
             result = execute_text_verification_host(verification, source_path, model, verification_index, results_dir)
         elif verification_type == 'adb':
-            result = execute_adb_verification_host(verification, source_path, model, verification_index, results_dir)
+            return jsonify({
+                'success': False,
+                'error': 'ADB verification has been removed. Please use remote controller UI element detection instead via /host/remote/dump-ui'
+            }), 400
         else:
             return jsonify({
                 'success': False,
@@ -179,7 +182,11 @@ def execute_batch_verification():
             elif verification_type == 'text':
                 result = execute_text_verification_host(verification, source_path, model, i, results_dir)
             elif verification_type == 'adb':
-                result = execute_adb_verification_host(verification, source_path, model, i, results_dir)
+                result = {
+                    'success': False,
+                    'error': 'ADB verification has been removed. Please use remote controller UI element detection instead via /host/remote/dump-ui',
+                    'verification_type': verification_type
+                }
             else:
                 result = {
                     'success': False,

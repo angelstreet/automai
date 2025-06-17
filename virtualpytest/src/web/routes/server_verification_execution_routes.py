@@ -140,7 +140,7 @@ def execute_verification():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/av/execute', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/execution/execute-verification', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

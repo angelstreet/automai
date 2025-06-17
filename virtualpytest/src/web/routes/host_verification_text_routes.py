@@ -25,7 +25,7 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE TEXT AUTO-DETECTION ENDPOINT
 # =====================================================
 
-@verification_text_host_bp.route('/auto-detect', methods=['POST'])
+@verification_text_host_bp.route('/auto-detect-text', methods=['POST'])
 def text_auto_detect():
     """Auto-detect text elements in the current screen"""
     try:
@@ -236,9 +236,9 @@ def text_auto_detect():
 # HOST-SIDE TEXT REFERENCE SAVE ENDPOINT
 # =====================================================
 
-@verification_text_host_bp.route('/save-resource', methods=['POST'])
+@verification_text_host_bp.route('/save-text-reference', methods=['POST'])
 def save_text_resource():
-    """Save text verification resource"""
+    """Save text verification reference"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)

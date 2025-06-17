@@ -445,19 +445,23 @@ const UserInterface: React.FC = () => {
                               setEditForm({ ...editForm, models: newValue });
                             }}
                             renderTags={(value, getTagProps) =>
-                              value.map((option, index) => (
-                                <Chip
-                                  variant="outlined"
-                                  label={option}
-                                  size="small"
-                                  {...getTagProps({ index })}
-                                  sx={{
-                                    height: 20,
-                                    '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                                    '& .MuiChip-deleteIcon': { width: 14, height: 14 },
-                                  }}
-                                />
-                              ))
+                              value.map((option, index) => {
+                                const { key, ...chipProps } = getTagProps({ index });
+                                return (
+                                  <Chip
+                                    key={key}
+                                    variant="outlined"
+                                    label={option}
+                                    size="small"
+                                    {...chipProps}
+                                    sx={{
+                                      height: 20,
+                                      '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                                      '& .MuiChip-deleteIcon': { width: 14, height: 14 },
+                                    }}
+                                  />
+                                );
+                              })
                             }
                             renderInput={(params) => (
                               <TextField
@@ -608,19 +612,23 @@ const UserInterface: React.FC = () => {
                 setNewInterface({ ...newInterface, models: newValue });
               }}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    variant="outlined"
-                    label={option}
-                    size="small"
-                    {...getTagProps({ index })}
-                    sx={{
-                      height: 20,
-                      '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
-                      '& .MuiChip-deleteIcon': { width: 14, height: 14 },
-                    }}
-                  />
-                ))
+                value.map((option, index) => {
+                  const { key, ...chipProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      variant="outlined"
+                      label={option}
+                      size="small"
+                      {...chipProps}
+                      sx={{
+                        height: 20,
+                        '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' },
+                        '& .MuiChip-deleteIcon': { width: 14, height: 14 },
+                      }}
+                    />
+                  );
+                })
               }
               renderInput={(params) => (
                 <TextField

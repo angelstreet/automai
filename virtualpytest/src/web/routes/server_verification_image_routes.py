@@ -130,9 +130,9 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # SERVER-SIDE IMAGE VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_av_image_bp.route('/crop-area', methods=['POST'])
+@verification_av_image_bp.route('/crop-image', methods=['POST'])
 def capture_reference():
-    """Proxy reference capture request to selected host"""
+    """Proxy image crop request to selected host"""
     try:
         print("[@route:server_verification_av_image:capture_reference] Proxying reference capture request")
         
@@ -140,7 +140,7 @@ def capture_reference():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/image/crop-area', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/crop-image', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -150,17 +150,17 @@ def capture_reference():
             'error': str(e)
         }), 500
 
-@verification_av_image_bp.route('/process-area', methods=['POST'])
+@verification_av_image_bp.route('/process-image', methods=['POST'])
 def process_area():
-    """Proxy area processing request to selected host"""
+    """Proxy image processing request to selected host"""
     try:
-        print("[@route:server_verification_av_image:process_area] Proxying area processing request")
+        print("[@route:server_verification_av_image:process_image] Proxying image processing request")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/image/process-area', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/process-image', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -170,17 +170,17 @@ def process_area():
             'error': str(e)
         }), 500
 
-@verification_av_image_bp.route('/save-reference', methods=['POST'])
+@verification_av_image_bp.route('/save-image-reference', methods=['POST'])
 def save_reference():
-    """Proxy reference save request to selected host"""
+    """Proxy image reference save request to selected host"""
     try:
-        print("[@route:server_verification_av_image:save_reference] Proxying reference save request")
+        print("[@route:server_verification_av_image:save_image_reference] Proxying image reference save request")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/image/save-resource', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -190,22 +190,4 @@ def save_reference():
             'error': str(e)
         }), 500
 
-@verification_av_image_bp.route('/ensure-reference-availability', methods=['POST'])
-def ensure_reference_availability():
-    """Proxy reference availability check to selected host"""
-    try:
-        print("[@route:server_verification_av_image:ensure_reference_availability] Proxying reference availability check request")
-        
-        # Get request data
-        request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/image/ensure-reference-availability', 'POST', request_data)
-        
-        return jsonify(response_data), status_code
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500 
+ 

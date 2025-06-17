@@ -315,7 +315,7 @@ def take_screenshot():
                 # It's already a URL, return it directly
                 return jsonify({
                     'success': True,
-                    'screenshot_path': screenshot_result
+                    'screenshot_url': screenshot_result
                 })
             else:
                 # It's a file path, we need to copy it to nginx folder
@@ -339,7 +339,7 @@ def take_screenshot():
                 
                 return jsonify({
                     'success': True,
-                    'screenshot_path': nginx_url
+                    'screenshot_url': nginx_url
                 })
         else:
             return jsonify({
@@ -397,7 +397,7 @@ def save_screenshot():
         if screenshot_result:
             return jsonify({
                 'success': True,
-                'screenshot_path': screenshot_result  # R2 URL for permanent storage
+                'screenshot_url': screenshot_result  # R2 URL for permanent storage
             })
         else:
             return jsonify({

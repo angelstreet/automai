@@ -130,9 +130,9 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # SERVER-SIDE TEXT VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_av_text_bp.route('/auto-detect', methods=['POST'])
+@verification_av_text_bp.route('/auto-detect-text', methods=['POST'])
 def ocr_detection():
-    """Proxy OCR detection request to selected host"""
+    """Proxy text auto-detection request to selected host"""
     try:
         print("[@route:server_verification_av_text:ocr_detection] Proxying OCR detection request")
         
@@ -140,7 +140,7 @@ def ocr_detection():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/text/auto-detect', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/text/auto-detect-text', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -150,7 +150,7 @@ def ocr_detection():
             'error': str(e)
         }), 500
 
-@verification_av_text_bp.route('/save-resource', methods=['POST'])
+@verification_av_text_bp.route('/save-text-reference', methods=['POST'])
 def save_text_reference():
     """Proxy text reference save request to selected host"""
     try:
@@ -160,7 +160,7 @@ def save_text_reference():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/text/save-resource', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/text/save-text-reference', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

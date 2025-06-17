@@ -130,7 +130,7 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # COMMON VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_common_bp.route('/actions', methods=['GET', 'POST'])
+@verification_common_bp.route('/getAllActions', methods=['GET', 'POST'])
 def get_verification_actions():
     """Get available verification actions for all verification controllers."""
     try:
@@ -199,32 +199,6 @@ def get_verification_actions():
                     'inputLabel': 'Text',
                     'inputPlaceholder': 'Loading...'
                 }
-            ],
-            'adb': [
-                {
-                    'id': 'wait_for_element_appear',
-                    'label': 'Wait for Element to Appear',
-                    'command': 'adb_element_appear',
-                    'params': {
-                        'timeout': 10.0
-                    },
-                    'description': 'Wait for UI element to appear using ADB (case-insensitive search across all attributes)',
-                    'requiresInput': True,
-                    'inputLabel': 'Search Term',
-                    'inputPlaceholder': 'HOME'
-                },
-                {
-                    'id': 'wait_for_element_disappear',
-                    'label': 'Wait for Element to Disappear',
-                    'command': 'adb_element_disappear',
-                    'params': {
-                        'timeout': 10.0
-                    },
-                    'description': 'Wait for UI element to disappear using ADB (case-insensitive search across all attributes)',
-                    'requiresInput': True,
-                    'inputLabel': 'Search Term',
-                    'inputPlaceholder': 'loading'
-                }
             ]
         }
         
@@ -240,31 +214,14 @@ def get_verification_actions():
             'error': f'Error getting verification actions: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/reference/list', methods=['GET'])
-def list_references_v2():
-    """Proxy reference list request to selected host (new endpoint structure)"""
-    try:
-        print("[@route:server_verification:reference/list] Proxying reference list request")
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/references', 'GET')
-        
-        return jsonify(response_data), status_code
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@verification_common_bp.route('/reference-list', methods=['GET'])
+@verification_common_bp.route('/getAllReferences', methods=['GET'])
 def list_references():
     """Proxy reference list request to selected host"""
     try:
-        print("[@route:server_verification:reference_list] Proxying reference list request")
+        print("[@route:server_verification:getAllReferences] Proxying reference list request")
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/references', 'GET')
+        response_data, status_code = proxy_to_host('/host/verification/getAllReferences', 'GET')
         
         return jsonify(response_data), status_code
         
@@ -274,34 +231,14 @@ def list_references():
             'error': str(e)
         }), 500
 
-@verification_common_bp.route('/reference-actions', methods=['POST'])
-def reference_actions():
-    """Proxy reference actions request to selected host"""
-    try:
-        print("[@route:server_verification:reference_actions] Proxying reference actions request")
-        
-        # Get request data
-        request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/reference-actions', 'POST', request_data)
-        
-        return jsonify(response_data), status_code
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@verification_common_bp.route('/status', methods=['GET'])
+@verification_common_bp.route('/getStatus', methods=['GET'])
 def verification_status():
     """Proxy verification status request to selected host"""
     try:
-        print("[@route:server_verification:status] Proxying verification status request")
+        print("[@route:server_verification:getStatus] Proxying verification status request")
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/status', 'GET')
+        response_data, status_code = proxy_to_host('/host/verification/getStatus', 'GET')
         
         return jsonify(response_data), status_code
         
