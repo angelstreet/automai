@@ -288,9 +288,9 @@ def save_resource():
             
             uploader = CloudflareUploader()
             
-            # Upload to R2 with organized path and public access
+            # Upload to R2 with organized path (public access configured at bucket level)
             r2_path = f'reference-images/{model}/{reference_name}.jpg'
-            upload_result = uploader.upload_file(cropped_source_path, r2_path, public=True)
+            upload_result = uploader.upload_file(cropped_source_path, r2_path)
             
             if not upload_result.get('success'):
                 error_msg = upload_result.get('error', 'Unknown upload error')
