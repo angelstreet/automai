@@ -11,7 +11,6 @@ import {
 import React from 'react';
 
 import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
-import { useRemoteConfigs } from '../../../hooks/controller/useRemoteConfigs';
 import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
@@ -166,25 +165,6 @@ export const AndroidMobileRemote = React.memo(
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
       return info;
     }, [isCollapsed, panelWidth, panelHeight, deviceResolution, streamCollapsed]);
-
-    // Use remote configs for panel tap functionality
-    // Create temporary adapter for compatibility with useRemoteConfigs
-    const streamInfoAdapter = React.useMemo(() => {
-      if (panelInfo) {
-        return {
-          videoElement: null as any, // Not needed for panel tap
-          position: panelInfo.position,
-          size: panelInfo.size,
-          deviceResolution: panelInfo.deviceResolution,
-        };
-      }
-      return undefined;
-    }, [panelInfo]);
-
-    const { handleStreamTap } = useRemoteConfigs({
-      host,
-      streamInfo: streamInfoAdapter,
-    });
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
@@ -555,7 +535,7 @@ export const AndroidMobileRemote = React.memo(
               isVisible={true} // Visible when in stream mode and not minimized
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
-              onPanelTap={panelInfo ? handleStreamTap : undefined}
+              host={host}
             />,
             document.body,
           )}
