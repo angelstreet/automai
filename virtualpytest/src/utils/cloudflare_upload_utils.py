@@ -37,7 +37,7 @@ class CloudflareUploader:
     exists throughout the application lifecycle, avoiding multiple S3 client
     initializations.
     
-    Note: Bucket name is included in the R2 endpoint URL, not as a separate parameter.
+    Note: Bucket name is included in the R2 endpoint URL.
     """
     
     _instance = None
@@ -63,6 +63,8 @@ class CloudflareUploader:
         # Load environment variables from .env.host file
         self._load_environment()
         
+        # Use 'virtualpytest' as bucket name for S3 operations (required by boto3)
+        self.bucket_name = 'virtualpytest'
         self.s3_client = self._init_s3_client()
         self._initialized = True
     
@@ -143,11 +145,11 @@ class CloudflareUploader:
             if not content_type:
                 content_type = 'application/octet-stream'
             
-            # Upload file - bucket name is included in endpoint URL
+            # Upload file using bucket name (required by boto3)
             with open(local_path, 'rb') as f:
                 self.s3_client.upload_fileobj(
                     f,
-                    '',  # Empty bucket name since it's in the endpoint URL
+                    self.bucket_name,
                     remote_path,
                     ExtraArgs={
                         'ContentType': content_type
@@ -192,7 +194,7 @@ class CloudflareUploader:
     def delete_file(self, remote_path: str) -> bool:
         """Delete a file from R2."""
         try:
-            self.s3_client.delete_object(Bucket='', Key=remote_path)  # Empty bucket name
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=remote_path)
             logger.info(f"Deleted: {remote_path}")
             return True
         except Exception as e:
@@ -202,7 +204,7 @@ class CloudflareUploader:
     def file_exists(self, remote_path: str) -> bool:
         """Check if a file exists in R2."""
         try:
-            self.s3_client.head_object(Bucket='', Key=remote_path)  # Empty bucket name
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=remote_path)
             return True
         except ClientError:
             return False
