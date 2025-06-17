@@ -14,17 +14,10 @@ interface DragArea {
 }
 
 interface VideoCaptureProps {
-  deviceModel?: string;
-  videoDevice?: string;
-  hostIp?: string;
-  hostPort?: string;
-  videoFramesPath?: string;
+  // Core functionality props
   currentFrame?: number;
   totalFrames?: number;
   onFrameChange?: (frame: number) => void;
-  onBackToStream?: () => void;
-  isSaving?: boolean;
-  savedFrameCount?: number;
   onImageLoad?: (
     ref: React.RefObject<HTMLImageElement>,
     dimensions: { width: number; height: number },
@@ -32,143 +25,59 @@ interface VideoCaptureProps {
   ) => void;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
-  captureStartTime?: Date | null;
-  captureEndTime?: Date | null;
   isCapturing?: boolean;
-  sx?: any;
+  videoFramePath?: string; // Current frame image path/URL
+  model?: string;
   selectedHostDevice?: any;
+  sx?: any;
 }
 
 export function VideoCapture({
-  deviceModel = 'android_mobile',
-  videoDevice = '/dev/video0',
-  hostIp,
-  hostPort,
-  videoFramesPath,
   currentFrame = 0,
   totalFrames = 0,
   onFrameChange,
-  onBackToStream,
-  isSaving = false,
-  savedFrameCount = 0,
   onImageLoad,
   selectedArea,
   onAreaSelected,
-  captureStartTime,
-  captureEndTime,
   isCapturing = false,
-  sx = {},
+  videoFramePath,
+  model,
   selectedHostDevice,
+  sx = {},
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentValue, setCurrentValue] = useState(currentFrame);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // State for timestamped capture images
-  const [capturedImages, setCapturedImages] = useState<string[]>([]);
-
   // Get layout configuration based on device model
-  const layoutConfig = getStreamViewerLayout(deviceModel);
-
-  // Generate timestamped frame URLs based on capture duration (1 frame per second)
-  const generateCaptureFrameUrls = (startTime: Date, frameCount: number) => {
-    console.log(
-      `[@component:VideoCapture] Generating ${frameCount} frame URLs starting from:`,
-      startTime,
-    );
-
-    const imageUrls: string[] = [];
-
-    for (let i = 0; i < frameCount; i++) {
-      // Calculate timestamp for each frame (1 second intervals)
-      const frameTime = new Date(startTime.getTime() + i * 1000); // Add i seconds
-
-      // Format timestamp in Zurich timezone: YYYYMMDDHHMMSS
-      const zurichTime = new Date(frameTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }));
-      const year = zurichTime.getFullYear();
-      const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
-      const day = String(zurichTime.getDate()).padStart(2, '0');
-      const hours = String(zurichTime.getHours()).padStart(2, '0');
-      const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
-      const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
-
-      const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      // Always use port 444, matching ScreenDefinitionEditor's URL construction
-      const imageUrl = `https://${hostIp}:444/stream/captures/capture_${frameTimestamp}.jpg`;
-      imageUrls.push(imageUrl);
-
-      console.log(`[@component:VideoCapture] Frame ${i + 1}: ${frameTimestamp} -> ${imageUrl}`);
-    }
-
-    return imageUrls;
-  };
-
-  // Generate frame URLs when we have the required data
-  useEffect(() => {
-    if (totalFrames === 0 || !hostIp || !hostPort) {
-      console.log('[@component:VideoCapture] No frames to load or missing host info', {
-        totalFrames,
-        hostIp,
-        hostPort,
-      });
-      setCapturedImages([]);
-      return;
-    }
-
-    console.log(
-      `[@component:VideoCapture] Generating ${totalFrames} frame URLs with host: ${hostIp}:444 (using fixed port 444)`,
-    );
-
-    // Use the passed-in capture start time if available
-    if (captureStartTime) {
-      console.log('[@component:VideoCapture] Using passed capture start time:', captureStartTime);
-      const frameUrls = generateCaptureFrameUrls(captureStartTime, totalFrames);
-      setCapturedImages(frameUrls);
-      console.log(
-        `[@component:VideoCapture] Generated ${frameUrls.length} frame URLs:`,
-        frameUrls.slice(0, 3),
-      ); // Log first 3 URLs
-    } else {
-      console.warn(
-        '[@component:VideoCapture] No capture start time provided, using current time as fallback',
-      );
-      // Fallback: use current time minus totalFrames seconds as start time
-      const fallbackStartTime = new Date(Date.now() - totalFrames * 1000);
-      const frameUrls = generateCaptureFrameUrls(fallbackStartTime, totalFrames);
-      setCapturedImages(frameUrls);
-      console.log(
-        `[@component:VideoCapture] Generated ${frameUrls.length} fallback frame URLs:`,
-        frameUrls.slice(0, 3),
-      ); // Log first 3 URLs
-    }
-  }, [totalFrames, hostIp, hostPort, captureStartTime]);
+  const layoutConfig = getStreamViewerLayout(model);
 
   // Handle frame playback for captured images
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && capturedImages.length > 0) {
+    if (isPlaying && totalFrames > 0) {
       interval = setInterval(() => {
         setCurrentValue((prev) => {
           const next = prev + 1;
-          if (next >= capturedImages.length) {
+          if (next >= totalFrames) {
             // Stop playing when reaching the last frame
             console.log('[@component:VideoCapture] Reached last frame, stopping playback');
             setIsPlaying(false);
-            return capturedImages.length - 1; // Stay on last frame
+            return totalFrames - 1; // Stay on last frame
           }
           return next;
         });
       }, 1000); // 1 second per frame (adjustable)
     }
     return () => clearInterval(interval);
-  }, [isPlaying, capturedImages.length]);
+  }, [isPlaying, totalFrames]);
 
   // Sync with external frame changes
   useEffect(() => {
     setCurrentValue(currentFrame);
   }, [currentFrame]);
 
-  const handleSliderChange = (event: Event, newValue: number | number[]) => {
+  const handleSliderChange = (_event: Event, newValue: number | number[]) => {
     const frame = newValue as number;
     setCurrentValue(frame);
     onFrameChange?.(frame);
@@ -180,34 +89,32 @@ export function VideoCapture({
 
   // Handle image load to pass ref and dimensions to parent
   const handleImageLoad = () => {
-    if (imageRef.current && onImageLoad) {
+    if (imageRef.current && onImageLoad && videoFramePath) {
       const img = imageRef.current;
       const dimensions = {
         width: img.naturalWidth,
         height: img.naturalHeight,
       };
-      const sourcePath = capturedImages[currentValue] || '';
-      onImageLoad(imageRef, dimensions, sourcePath);
+      onImageLoad(imageRef, dimensions, videoFramePath);
     }
   };
 
-  // Get image URL using server route instead of AV controller proxy
+  // Get image URL using same pattern as ScreenshotCapture
   const imageUrl = useMemo(() => {
-    const screenshotPath = capturedImages[currentValue] || capturedImages[0];
-    if (!screenshotPath) return '';
+    if (!videoFramePath) return '';
 
-    console.log(`[@component:VideoCapture] Processing image path: ${screenshotPath}`);
+    console.log(`[@component:VideoCapture] Processing video frame path: ${videoFramePath}`);
 
     // Handle data URLs (base64) - return as is
-    if (screenshotPath.startsWith('data:')) {
+    if (videoFramePath.startsWith('data:')) {
       console.log('[@component:VideoCapture] Using data URL');
-      return screenshotPath;
+      return videoFramePath;
     }
 
     // Handle full URLs - return as is
-    if (screenshotPath.startsWith('http')) {
+    if (videoFramePath.startsWith('http')) {
       console.log('[@component:VideoCapture] Using complete URL');
-      return screenshotPath;
+      return videoFramePath;
     }
 
     // For file paths, use server route for image serving
@@ -219,9 +126,9 @@ export function VideoCapture({
     console.log('[@component:VideoCapture] Using server route for image serving');
 
     // Extract filename from path
-    const filename = screenshotPath.split('/').pop()?.split('?')[0];
+    const filename = videoFramePath.split('/').pop()?.split('?')[0];
     if (!filename) {
-      console.error(`[@component:VideoCapture] Failed to extract filename: ${screenshotPath}`);
+      console.error(`[@component:VideoCapture] Failed to extract filename: ${videoFramePath}`);
       return '';
     }
 
@@ -234,10 +141,10 @@ export function VideoCapture({
       console.error('[@component:VideoCapture] Error building image URL:', error);
       return '';
     }
-  }, [capturedImages, currentValue, selectedHostDevice]);
+  }, [videoFramePath, selectedHostDevice]);
 
   // Determine if drag selection should be enabled
-  const allowDragSelection = capturedImages.length > 0 && onAreaSelected && imageRef.current;
+  const allowDragSelection = totalFrames > 0 && onAreaSelected && imageRef.current;
 
   return (
     <Box
@@ -254,8 +161,8 @@ export function VideoCapture({
         ...sx,
       }}
     >
-      {/* Simplified header - only show when we have captured frames (not while recording) */}
-      {capturedImages.length > 0 && !isCapturing && (
+      {/* Header - only show when we have captured frames (not while recording) */}
+      {totalFrames > 0 && !isCapturing && (
         <Box
           sx={{
             display: 'flex',
@@ -283,7 +190,7 @@ export function VideoCapture({
 
           {/* Frame count */}
           <Typography variant="caption" sx={{ color: '#cccccc', fontSize: '10px' }}>
-            {capturedImages.length} frames
+            {totalFrames} frames
           </Typography>
         </Box>
       )}
@@ -311,7 +218,7 @@ export function VideoCapture({
         )}
 
         {/* Captured images display - same logic as ScreenshotCapture */}
-        {capturedImages.length > 0 && imageUrl && !isCapturing && (
+        {totalFrames > 0 && imageUrl && !isCapturing && (
           <img
             ref={imageRef}
             src={imageUrl}
@@ -348,7 +255,7 @@ export function VideoCapture({
           />
         )}
 
-        {/* Simple recording state - just a subtle overlay */}
+        {/* Recording state overlay */}
         {isCapturing && (
           <Box
             sx={{
@@ -362,7 +269,7 @@ export function VideoCapture({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(0,0,0,0.3)', // Lighter overlay
+              backgroundColor: 'rgba(0,0,0,0.3)',
               zIndex: 10,
             }}
           >
@@ -376,7 +283,7 @@ export function VideoCapture({
         )}
 
         {/* Placeholder when no frames available and not recording */}
-        {capturedImages.length === 0 && !isCapturing && (
+        {totalFrames === 0 && !isCapturing && (
           <Box
             sx={{
               width: '100%',
@@ -395,8 +302,8 @@ export function VideoCapture({
         )}
       </Box>
 
-      {/* Playback controls - only show when we have captured frames - higher z-index */}
-      {capturedImages.length > 0 && (
+      {/* Playback controls - only show when we have captured frames */}
+      {totalFrames > 0 && (
         <Box
           sx={{
             position: 'absolute',
@@ -406,7 +313,7 @@ export function VideoCapture({
             background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
             p: 1,
             backgroundColor: 'transparent',
-            zIndex: 15, // Higher than drag overlay
+            zIndex: 15,
           }}
         >
           {/* Play/Pause button - bottom left */}
@@ -415,7 +322,7 @@ export function VideoCapture({
               position: 'absolute',
               bottom: 8,
               left: 8,
-              zIndex: 20, // Even higher to ensure clickability
+              zIndex: 20,
             }}
           >
             <IconButton
@@ -427,7 +334,7 @@ export function VideoCapture({
                 '&:hover': {
                   backgroundColor: 'rgba(255,255,255,0.2)',
                 },
-                zIndex: 20, // Ensure button is clickable
+                zIndex: 20,
               }}
             >
               {isPlaying ? <Pause /> : <PlayArrow />}
@@ -451,7 +358,7 @@ export function VideoCapture({
                 textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
               }}
             >
-              {currentValue + 1} / {capturedImages.length}
+              {currentValue + 1} / {totalFrames}
             </Typography>
           </Box>
 
@@ -468,7 +375,7 @@ export function VideoCapture({
             <Slider
               value={currentValue}
               min={0}
-              max={Math.max(0, capturedImages.length - 1)}
+              max={Math.max(0, totalFrames - 1)}
               onChange={handleSliderChange}
               sx={{
                 color: '#ffffff',

@@ -10,3 +10,4 @@ opencv-python
 psutil
 GitPython
 pytesseract
+pytz
