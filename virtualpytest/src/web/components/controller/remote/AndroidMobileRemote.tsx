@@ -83,8 +83,8 @@ export const AndroidMobileRemote = React.memo(
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
-      // Hardcode device resolution for now
-      const hardcodedResolution = { width: 1920, height: 1080 };
+      // Keep HDMI stream resolution for overlay positioning (visual alignment)
+      const hdmiStreamResolution = { width: 1920, height: 1080 };
 
       // Skip unnecessary recalculations if missing required props
       if (!panelWidth || !panelHeight || !deviceResolution) {
@@ -160,7 +160,7 @@ export const AndroidMobileRemote = React.memo(
       const info = {
         position: streamActualPosition, // Use calculated stream position
         size: streamActualSize, // Use calculated stream size with proper aspect ratio
-        deviceResolution: deviceResolution,
+        deviceResolution: hdmiStreamResolution, // Keep HDMI resolution for overlay positioning
         isCollapsed: streamCollapsed ?? true, // Use stream collapsed state directly, default to collapsed
       };
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
