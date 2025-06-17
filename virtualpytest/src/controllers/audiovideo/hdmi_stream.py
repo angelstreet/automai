@@ -207,7 +207,7 @@ class HDMIStreamController(AVControllerInterface):
             filename: The filename to use for the screenshot (e.g., node name)
             
         Returns:
-            R2 URL for the uploaded screenshot or None if failed
+            Just the filename (frontend will use buildScreenshotUrl to construct the full URL)
         """
         try:
             print(f'[@controller:HDMIStream] Saving screenshot with filename: {filename}')
@@ -233,18 +233,51 @@ class HDMIStreamController(AVControllerInterface):
             r2_path = f"navigation/{device_model}/{filename}.jpg"
             print(f'[@controller:HDMIStream] Target R2 path: {r2_path}')
             
-            # TODO: Implement R2 upload logic here
-            # For now, return a mock R2 URL to test the flow
-            from src.utils.app_utils import buildHostUrl
-            
-            # Build the R2 URL that would be returned after upload
-            r2_base_url = "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev"
-            r2_url = f"{r2_base_url}/{r2_path}"
-            
-            print(f'[@controller:HDMIStream] Would upload to R2 URL: {r2_url}')
-            print(f'[@controller:HDMIStream] Screenshot saved successfully')
-            
-            return r2_url
+            # Extract timestamp from temp screenshot URL to get the actual image file
+            # temp_screenshot_url format: https://virtualpytest.com/host/stream/captures/capture_20250617134657.jpg
+            try:
+                import re
+                timestamp_match = re.search(r'capture_(\d{14})\.jpg', temp_screenshot_url)
+                if not timestamp_match:
+                    print(f'[@controller:HDMIStream] Could not extract timestamp from temp URL: {temp_screenshot_url}')
+                    return None
+                
+                timestamp = timestamp_match.group(1)
+                print(f'[@controller:HDMIStream] Extracted timestamp: {timestamp}')
+                
+                # Build local file path to the captured screenshot
+                local_screenshot_path = f'/var/www/html/stream/captures/capture_{timestamp}.jpg'
+                print(f'[@controller:HDMIStream] Local screenshot path: {local_screenshot_path}')
+                
+                # Check if local file exists
+                import os
+                if not os.path.exists(local_screenshot_path):
+                    print(f'[@controller:HDMIStream] Local screenshot file not found: {local_screenshot_path}')
+                    return None
+                
+                # Upload to R2 using CloudflareUploader
+                from src.utils.cloudflare_upload_utils import CloudflareUploader
+                
+                uploader = CloudflareUploader()
+                upload_result = uploader.upload_file(local_screenshot_path, r2_path, public=True)
+                
+                if upload_result.get('success'):
+                    print(f'[@controller:HDMIStream] Successfully uploaded to R2: {r2_path}')
+                    # Return just the filename - frontend will use buildScreenshotUrl to construct the full URL
+                    return f"{filename}.jpg"
+                else:
+                    error_msg = upload_result.get('error', 'Unknown upload error')
+                    print(f'[@controller:HDMIStream] R2 upload failed: {error_msg}')
+                    return None
+                
+            except ImportError as ie:
+                print(f'[@controller:HDMIStream] CloudflareUploader not available: {ie}')
+                return None
+            except Exception as extract_error:
+                print(f'[@controller:HDMIStream] Error processing screenshot for upload: {extract_error}')
+                import traceback
+                print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
+                return None
                 
         except Exception as e:
             print(f'[@controller:HDMIStream] Error saving screenshot: {e}')

@@ -112,7 +112,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       console.log(`[@component:NodeEditDialog] Fetching verification actions using server route`);
 
       // Use server route instead of controller proxy
-      const response = await fetch(`/server/verification/actions`, {
+      const response = await fetch(`/server/verification/getAllActions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +269,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             verificationSuccess = false;
           } else {
             // Use server route instead of controller proxy
-            const response = await fetch(`/server/verification/execute-batch`, {
+            const response = await fetch(`/server/verification/execution/execute-batch`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -447,7 +447,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               individualVerificationSuccess = false;
             } else {
               // Use server route instead of controller proxy
-              const response = await fetch(`/server/verification/execute-batch`, {
+              const response = await fetch(`/server/verification/execution/execute-batch`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

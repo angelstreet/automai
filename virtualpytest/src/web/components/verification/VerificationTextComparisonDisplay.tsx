@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material';
 import React from 'react';
 
 import { useRegistration } from '../../hooks/useRegistration';
+import { buildHostUrl } from '../../utils/frontendUtils';
 
 interface VerificationTextComparisonDisplayProps {
   searchedText: string;
@@ -24,8 +25,8 @@ export const VerificationTextComparisonDisplay: React.FC<
   languageConfidence,
   onSourceImageClick,
 }) => {
-  // Use registration context to get buildHostUrl and selected host
-  const { selectedHost, buildHostUrl } = useRegistration();
+  // Use registration context to get selected host
+  const { selectedHost } = useRegistration();
 
   const buildImageUrl = (url: string): string => {
     if (!url) return '';
@@ -35,10 +36,10 @@ export const VerificationTextComparisonDisplay: React.FC<
       return url;
     }
 
-    // Use buildHostUrl from registration context
+    // Use buildHostUrl from frontendUtils
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostUrl(selectedHost.host_name, cleanUrl);
+      return buildHostUrl(selectedHost, cleanUrl);
     }
 
     // Fallback if no host selected
