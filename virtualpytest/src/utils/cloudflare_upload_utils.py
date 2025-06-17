@@ -57,10 +57,50 @@ class CloudflareUploader:
             return
             
         logger.info(f"Initializing CloudflareUploader singleton with bucket: {bucket_name}")
+        
+        # Load environment variables from .env.host file
+        self._load_environment()
+        
         self.bucket_name = bucket_name
         self.s3_client = self._init_s3_client()
         self._ensure_bucket_exists()
         self._initialized = True
+    
+    def _load_environment(self):
+        """Load environment variables from .env.host file"""
+        try:
+            from dotenv import load_dotenv
+            import os
+            
+            # Try to find .env.host file - check multiple locations
+            possible_paths = [
+                '.env.host',  # Current directory
+                '../.env.host',  # Parent directory
+                '../../.env.host',  # Two levels up
+                '/home/sunri-pi1/automai/virtualpytest/src/web/.env.host',  # Absolute path
+            ]
+            
+            env_loaded = False
+            for env_path in possible_paths:
+                if os.path.exists(env_path):
+                    logger.info(f"Loading environment from: {env_path}")
+                    load_dotenv(env_path)
+                    env_loaded = True
+                    break
+            
+            if not env_loaded:
+                logger.warning("No .env.host file found in expected locations")
+            
+            # Log what we found (without showing sensitive values)
+            logger.info(f"CLOUDFLARE_R2_ENDPOINT: {'SET' if os.environ.get('CLOUDFLARE_R2_ENDPOINT') else 'NOT_SET'}")
+            logger.info(f"CLOUDFLARE_R2_ACCESS_KEY_ID: {'SET' if os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID') else 'NOT_SET'}")
+            logger.info(f"CLOUDFLARE_R2_SECRET_ACCESS_KEY: {'SET' if os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY') else 'NOT_SET'}")
+            logger.info(f"CLOUDFLARE_R2_PUBLIC_URL: {'SET' if os.environ.get('CLOUDFLARE_R2_PUBLIC_URL') else 'NOT_SET'}")
+            
+        except ImportError:
+            logger.warning("python-dotenv not available, relying on system environment variables")
+        except Exception as e:
+            logger.error(f"Error loading environment: {e}")
     
     def _init_s3_client(self):
         """Initialize S3 client for Cloudflare R2."""
