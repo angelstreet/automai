@@ -63,8 +63,8 @@ class CloudflareUploader:
         # Load environment variables from .env.host file
         self._load_environment()
         
-        # Use 'virtualpytest' as bucket name for S3 operations (required by boto3)
-        self.bucket_name = 'virtualpytest'
+        # Use empty bucket name since it's included in the endpoint URL path
+        self.bucket_name = ''
         self.s3_client = self._init_s3_client()
         self._initialized = True
     
