@@ -67,32 +67,8 @@ export function VideoCapture({
   // State for timestamped capture images
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
 
-  // State for recording timer
-  const [recordingTime, setRecordingTime] = useState(0);
-
   // Get layout configuration based on device model
   const layoutConfig = getStreamViewerLayout(deviceModel);
-
-  // Recording timer effect - increments every second when capturing
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (isCapturing) {
-      console.log('[@component:VideoCapture] Starting recording timer');
-      interval = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000); // Increment every second
-    } else {
-      console.log('[@component:VideoCapture] Stopping recording timer, resetting to 0');
-      setRecordingTime(0); // Reset timer when not capturing
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isCapturing]);
 
   // Generate timestamped frame URLs based on capture duration (1 frame per second)
   const generateCaptureFrameUrls = (startTime: Date, frameCount: number) => {
@@ -263,13 +239,6 @@ export function VideoCapture({
   // Determine if drag selection should be enabled
   const allowDragSelection = capturedImages.length > 0 && onAreaSelected && imageRef.current;
 
-  // Format recording time as MM:SS
-  const formatRecordingTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <Box
       sx={{
@@ -285,8 +254,8 @@ export function VideoCapture({
         ...sx,
       }}
     >
-      {/* Header with capture info - show when recording or when we have frames */}
-      {(isCapturing || capturedImages.length > 0) && (
+      {/* Simplified header - only show when we have captured frames (not while recording) */}
+      {capturedImages.length > 0 && !isCapturing && (
         <Box
           sx={{
             display: 'flex',
@@ -297,32 +266,24 @@ export function VideoCapture({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {/* Status indicator - blinking red when recording, green when showing captured frames */}
+            {/* Green indicator for captured frames */}
             <Box
               sx={{
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: isCapturing ? '#ff4444' : '#4caf50',
+                backgroundColor: '#4caf50',
                 marginRight: 1,
-                // Add blinking animation when recording
-                ...(isCapturing && {
-                  animation: 'blink 1s infinite',
-                  '@keyframes blink': {
-                    '0%, 50%': { opacity: 1 },
-                    '51%, 100%': { opacity: 0.3 },
-                  },
-                }),
               }}
             />
             <Typography variant="caption" sx={{ color: '#ffffff', fontSize: '10px' }}>
-              {isCapturing ? 'RECORDING' : 'CAPTURED FRAMES'}
+              CAPTURED FRAMES
             </Typography>
           </Box>
 
-          {/* Timer when recording, frame count when showing captured frames */}
+          {/* Frame count */}
           <Typography variant="caption" sx={{ color: '#cccccc', fontSize: '10px' }}>
-            {isCapturing ? formatRecordingTime(recordingTime) : `${capturedImages.length} frames`}
+            {capturedImages.length} frames
           </Typography>
         </Box>
       )}
@@ -387,7 +348,7 @@ export function VideoCapture({
           />
         )}
 
-        {/* Loading state when recording */}
+        {/* Simple recording state - just a subtle overlay */}
         {isCapturing && (
           <Box
             sx={{
@@ -399,60 +360,16 @@ export function VideoCapture({
               width: '100%',
               height: '100%',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(0,0,0,0.7)',
+              backgroundColor: 'rgba(0,0,0,0.3)', // Lighter overlay
               zIndex: 10,
             }}
           >
-            {/* Large recording timer display */}
             <Typography
-              variant="h4"
-              sx={{
-                color: '#ff4444',
-                fontWeight: 'bold',
-                mb: 2,
-                fontFamily: 'monospace',
-              }}
+              variant="body1"
+              sx={{ color: '#ffffff', textAlign: 'center', opacity: 0.8 }}
             >
-              {formatRecordingTime(recordingTime)}
-            </Typography>
-
-            {/* Simple carousel-style loading */}
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 1,
-                alignItems: 'center',
-                mb: 2,
-              }}
-            >
-              {[0, 1, 2].map((index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: '#ff4444',
-                    animation: 'pulse 1.4s ease-in-out infinite both',
-                    animationDelay: `${index * 0.16}s`,
-                    '@keyframes pulse': {
-                      '0%, 80%, 100%': {
-                        transform: 'scale(0)',
-                        opacity: 0.5,
-                      },
-                      '40%': {
-                        transform: 'scale(1)',
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                />
-              ))}
-            </Box>
-            <Typography variant="caption" sx={{ color: '#ffffff', textAlign: 'center' }}>
               Recording in progress...
             </Typography>
           </Box>
