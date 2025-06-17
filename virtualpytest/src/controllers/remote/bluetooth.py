@@ -349,6 +349,11 @@ class BluetoothRemoteController(RemoteControllerInterface):
                 'wireless_connection', 'device_pairing'
             ]
         }
+    
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available remote actions for Bluetooth controller."""
+        from ..controller_actions import BLUETOOTH_REMOTE_ACTIONS
+        return BLUETOOTH_REMOTE_ACTIONS
 
 
 # Backward compatibility alias

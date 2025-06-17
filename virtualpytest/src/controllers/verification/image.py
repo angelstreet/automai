@@ -400,6 +400,11 @@ class ImageVerificationController(VerificationControllerInterface):
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "image"
         }
+    
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verification actions for image controller."""
+        from ..controller_verifications import IMAGE_VERIFICATIONS
+        return IMAGE_VERIFICATIONS
 
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
         """

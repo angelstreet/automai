@@ -12,7 +12,7 @@ import time
 import os
 import wave
 import numpy as np
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from pathlib import Path
 from ..base_controller import VerificationControllerInterface
 
@@ -496,6 +496,11 @@ class AudioVerificationController(VerificationControllerInterface):
                 'audio_playback_verification', 'performance_metrics'
             ]
         }
+    
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verification actions for audio controller."""
+        from ..controller_verifications import AUDIO_VERIFICATIONS
+        return AUDIO_VERIFICATIONS
 
 
 # Backward compatibility alias

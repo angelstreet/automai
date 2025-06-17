@@ -1,3 +1,43 @@
+/**
+ * Controller Types - Definitions for device controllers and their capabilities
+ *
+ * This file defines:
+ * 1. Device model to controller mapping
+ * 2. Verification controller types and their available operations
+ * 3. Remote controller actions
+ */
+
+/**
+ * Device Model to Controller Mapping
+ * Maps device models to their supported verification controllers
+ */
+export const DEVICE_MODEL_CONTROLLER_MAPPING = {
+  android_mobile: ['image', 'audio', 'text', 'video', 'adb'],
+  android_tv: ['image', 'audio', 'text', 'video'],
+  stb: ['image', 'audio', 'text', 'video'],
+} as const;
+
+export type DeviceModel = keyof typeof DEVICE_MODEL_CONTROLLER_MAPPING;
+export type VerificationControllerType = 'image' | 'audio' | 'text' | 'video' | 'adb';
+
+/**
+ * Get verification controller types for a device model
+ */
+export function getVerificationControllersForModel(model: string): VerificationControllerType[] {
+  return [...(DEVICE_MODEL_CONTROLLER_MAPPING[model as DeviceModel] || [])];
+}
+
+/**
+ * Check if a device model supports a specific verification controller
+ */
+export function supportsVerificationController(
+  model: string,
+  controllerType: VerificationControllerType,
+): boolean {
+  const supportedControllers = getVerificationControllersForModel(model);
+  return supportedControllers.includes(controllerType);
+}
+
 // Controller interfaces for device control management
 export interface Controller {
   id: string;

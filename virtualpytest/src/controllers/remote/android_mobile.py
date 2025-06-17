@@ -594,6 +594,11 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
             return False
+    
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available remote actions for Android Mobile controller."""
+        from ..controller_actions import ANDROID_MOBILE_ACTIONS
+        return ANDROID_MOBILE_ACTIONS
 
 
 # Backward compatibility alias

@@ -214,6 +214,16 @@ class RemoteControllerInterface(BaseController):
             package_name: App package name (e.g., "com.example.app")
         """
         return self.close_app(package_name)
+    
+    def get_available_actions(self) -> Dict[str, Any]:
+        """
+        Get available remote actions for this controller.
+        Should be overridden by subclasses.
+        
+        Returns:
+            Dictionary of action name to parameters mapping
+        """
+        return {}
 
 
 class AVControllerInterface(BaseController):
@@ -364,6 +374,16 @@ class VerificationControllerInterface(BaseController):
                 'controller_type': 'verification',
                 'device_name': self.device_name
             }
+    
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """
+        Get available verification actions for this controller.
+        Should be overridden by subclasses.
+        
+        Returns:
+            Dictionary of verification name to parameters mapping
+        """
+        return {}
 
 
 class PowerControllerInterface(BaseController):

@@ -14,6 +14,45 @@
 import { SystemStats } from '../pages/Dashboard_Types';
 
 /**
+ * Controller object interfaces
+ */
+export interface ControllerObject {
+  type: string;
+  implementation: string;
+  status?: any;
+}
+
+export interface VerificationAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  description: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+}
+
+export interface RemoteAction {
+  id: string;
+  label: string;
+  command: string;
+  params: any;
+  description: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+}
+
+export interface VerificationTypes {
+  [category: string]: VerificationAction[];
+}
+
+export interface RemoteActions {
+  [category: string]: RemoteAction[];
+}
+
+/**
  * Canonical Host Type - Used consistently across all layers
  *
  * This represents a host machine (Flask server) that manages a device.
@@ -45,6 +84,14 @@ export interface Host {
   capabilities: string[]; // Available capabilities (av, remote, verification, power)
   controller_configs?: any; // Controller-specific configurations
   controller_types?: string[]; // Available controller types
+
+  // === ACTUAL CONTROLLER OBJECTS (reflects real host_device structure) ===
+  controller_objects?: { [key: string]: ControllerObject }; // Server-side controller registry
+  local_controller_objects?: { [key: string]: ControllerObject }; // Host-side controller instances
+
+  // === VERIFICATION AND REMOTE ACTIONS DATA ===
+  available_verification_types?: VerificationTypes; // Available verification types from controllers
+  available_remote_actions?: RemoteActions; // Available remote actions from controllers
 
   // === DEVICE LOCK MANAGEMENT ===
   isLocked: boolean; // Device lock status

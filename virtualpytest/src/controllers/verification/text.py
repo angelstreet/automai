@@ -817,6 +817,11 @@ class TextVerificationController(VerificationControllerInterface):
                 'area_based_ocr', 'case_sensitive_matching'
             ]
         }
+    
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verification actions for text controller."""
+        from ..controller_verifications import TEXT_VERIFICATIONS
+        return TEXT_VERIFICATIONS
 
     def _capture_screenshot_for_ocr(self, area: dict = None) -> str:
         """

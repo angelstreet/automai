@@ -130,88 +130,30 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # COMMON VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_common_bp.route('/getAllActions', methods=['GET', 'POST'])
-def get_verification_actions():
-    """Get available verification actions for all verification controllers."""
+@verification_common_bp.route('/getAllVerifications', methods=['GET', 'POST'])
+def get_verification_types():
+    """Get available verification types from host's stored verification data."""
     try:
-        # Define available verifications following the same pattern as remote actions
-        verifications = {
-            'image': [
-                {
-                    'id': 'wait_for_image_appear',
-                    'label': 'Wait for Image to Appear',
-                    'command': 'waitForImageToAppear',
-                    'params': {
-                        'image_path': '',
-                        'timeout': 10.0,
-                        'threshold': 0.8,
-                        'area': None
-                    },
-                    'description': 'Wait for specific image to appear on screen',
-                    'requiresInput': True,
-                    'inputLabel': 'Image Path',
-                    'inputPlaceholder': 'button.png'
-                },
-                {
-                    'id': 'wait_for_image_disappear',
-                    'label': 'Wait for Image to Disappear',
-                    'command': 'waitForImageToDisappear',
-                    'params': {
-                        'image_path': '',
-                        'timeout': 10.0,
-                        'threshold': 0.8,
-                        'area': None
-                    },
-                    'description': 'Wait for specific image to disappear from screen',
-                    'requiresInput': True,
-                    'inputLabel': 'Image Path',
-                    'inputPlaceholder': 'loading.png'
-                }
-            ],
-            'text': [
-                {
-                    'id': 'wait_for_text_appear',
-                    'label': 'Wait for Text to Appear',
-                    'command': 'waitForTextToAppear',
-                    'params': {
-                        'text': '',
-                        'timeout': 10.0,
-                        'case_sensitive': False,
-                        'area': None
-                    },
-                    'description': 'Wait for specific text to appear on screen',
-                    'requiresInput': True,
-                    'inputLabel': 'Text',
-                    'inputPlaceholder': 'Welcome'
-                },
-                {
-                    'id': 'wait_for_text_disappear',
-                    'label': 'Wait for Text to Disappear',
-                    'command': 'waitForTextToDisappear',
-                    'params': {
-                        'text': '',
-                        'timeout': 10.0,
-                        'case_sensitive': False,
-                        'area': None
-                    },
-                    'description': 'Wait for specific text to disappear from screen',
-                    'requiresInput': True,
-                    'inputLabel': 'Text',
-                    'inputPlaceholder': 'Loading...'
-                }
-            ]
-        }
+        # Get host information from request
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required'
+            }), 400
         
+        # For now, return error indicating this route should not be used
+        # Verification types should be retrieved from host's stored data during registration
         return jsonify({
-            'success': True,
-            'controller_type': 'verification',
-            'verifications': verifications
-        })
+            'success': False,
+            'error': 'This route is deprecated. Verification types should be retrieved from host registration data.',
+            'message': 'Use host.available_verification_types from the host object instead'
+        }), 400
         
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Error getting verification actions: {str(e)}'
+            'error': f'Error getting verification types: {str(e)}'
         }), 500
 
 @verification_common_bp.route('/getAllReferences', methods=['GET'])

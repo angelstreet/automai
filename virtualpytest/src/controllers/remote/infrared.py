@@ -424,6 +424,11 @@ class IRRemoteController(RemoteControllerInterface):
                 'stb_controls'
             ]
         }
+    
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available remote actions for IR controller."""
+        from ..controller_actions import IR_REMOTE_ACTIONS
+        return IR_REMOTE_ACTIONS
 
 
 # Backward compatibility alias

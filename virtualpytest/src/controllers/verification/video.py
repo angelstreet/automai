@@ -12,7 +12,7 @@ import time
 import os
 import cv2
 import numpy as np
-from typing import Dict, Any, Optional, Union, Tuple
+from typing import Dict, Any, Optional, Union, Tuple, List
 from pathlib import Path
 from ..base_controller import VerificationControllerInterface
 
@@ -624,6 +624,11 @@ class VideoVerificationController(VerificationControllerInterface):
                 'video_change_detection', 'performance_metrics'
             ]
         }
+    
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verification actions for video controller."""
+        from ..controller_verifications import VIDEO_VERIFICATIONS
+        return VIDEO_VERIFICATIONS
 
     def waitForVideoToAppear(self, motion_threshold: float = 5.0, duration: float = 3.0, timeout: float = 10.0) -> bool:
         """

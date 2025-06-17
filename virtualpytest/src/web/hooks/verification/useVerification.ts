@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
+import { Host } from '../../types/common/Host_Types';
+
 // Define interfaces for verification data structures
 interface DragArea {
   x: number;
@@ -107,29 +109,29 @@ interface SelectedReferenceInfo {
 
 interface UseVerificationProps {
   isVisible: boolean;
-  model: string;
+  selectedHostDevice: Host;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   _onAreaSelected?: (area: DragArea) => void;
   _onClearSelection?: () => void;
   screenshotPath?: string;
-  selectedHostDevice?: any;
   isCaptureActive?: boolean;
 }
 
 export const useVerification = ({
   isVisible,
-  model,
+  selectedHostDevice,
   captureSourcePath,
   selectedArea,
   _onAreaSelected,
   _onClearSelection,
   screenshotPath,
-  selectedHostDevice,
   isCaptureActive,
 }: UseVerificationProps) => {
-  // State for verification actions and verifications
-  const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
+  // State for verification types and verifications
+  const [availableVerificationTypes, setAvailableVerificationTypes] = useState<VerificationActions>(
+    {},
+  );
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,9 +164,7 @@ export const useVerification = ({
     removeBackground: false,
   });
 
-  // Collapsible sections state
-  const [captureCollapsed, setCaptureCollapsed] = useState<boolean>(false);
-  const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
+  // Remove collapsible sections state - not needed when editor only shows when expanded
 
   // Get verification proxy using server route
   const getVerificationProxy = useCallback(() => {
@@ -185,19 +185,7 @@ export const useVerification = ({
           });
           return response.json();
         },
-        // Add additional methods that were missing in the original implementation
-        getVerificationActions: async () => {
-          const response = await fetch(`/server/verification/getAllActions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host_name: selectedHostDevice.host_name,
-            }),
-          });
-          return response.json();
-        },
+        // Note: getVerificationTypes removed - verification types should come from host data
         saveReference: async (referenceData: any) => {
           // Determine the correct endpoint based on reference type
           const endpoint =
@@ -248,44 +236,30 @@ export const useVerification = ({
     return null;
   }, [selectedHostDevice]);
 
-  // Fetch verification actions when visible
-  const fetchVerificationActions = useCallback(async () => {
-    try {
-      const verificationController = getVerificationProxy();
-
-      if (verificationController) {
-        console.log(`[@hook:useVerification] Using verification controller proxy for actions`);
-        const result = await verificationController.getVerificationActions();
-
-        if (result.success && result.data) {
-          setVerificationActions(result.data);
-        } else {
-          console.error(`[@hook:useVerification] Controller failed to get actions:`, result.error);
-        }
-      } else {
-        console.error(`[@hook:useVerification] No verification controller proxy available`);
-      }
-    } catch (error) {
-      console.error('[@hook:useVerification] Error fetching verification actions:', error);
-    }
-  }, [getVerificationProxy]);
-
-  // Effect to fetch verification actions when visible
+  // Load verification types from host data when visible
   useEffect(() => {
-    if (isVisible) {
-      fetchVerificationActions();
+    if (isVisible && selectedHostDevice?.available_verification_types) {
+      console.log('[@hook:useVerification] Loading verification types from host data');
+      setAvailableVerificationTypes(selectedHostDevice.available_verification_types);
+    } else if (isVisible) {
+      console.log('[@hook:useVerification] No verification types available in host data');
+      setError('No verification types available. Host may need to re-register.');
     }
-  }, [isVisible, fetchVerificationActions]);
+  }, [isVisible, selectedHostDevice?.available_verification_types]);
 
-  // Effect to check if model is provided
+  // Effect to check if selectedHostDevice is provided
   useEffect(() => {
-    if (!model || model.trim() === '') {
-      console.error('[@hook:useVerification] Model prop is required but not provided');
-      setError('Model is required for verification editor');
+    if (
+      !selectedHostDevice ||
+      !selectedHostDevice.device_model ||
+      selectedHostDevice.device_model.trim() === ''
+    ) {
+      console.error('[@hook:useVerification] Host device with model is required but not provided');
+      setError('Host device with model is required for verification editor');
     } else {
-      console.log(`[@hook:useVerification] Using model: ${model}`);
+      console.log(`[@hook:useVerification] Using model: ${selectedHostDevice.device_model}`);
     }
-  }, [model]);
+  }, [selectedHostDevice]);
 
   // Effect to clear success message after delay
   useEffect(() => {
@@ -341,7 +315,7 @@ export const useVerification = ({
     try {
       console.log('[@hook:useVerification] Saving reference with data:', {
         name: referenceName,
-        model: model,
+        model: selectedHostDevice.device_model,
         area: selectedArea,
         screenshot_path: screenshotPath,
       });
@@ -352,7 +326,7 @@ export const useVerification = ({
         console.log(`[@hook:useVerification] Using verification controller proxy for save`);
         const result = await verificationController.saveReference({
           name: referenceName,
-          model: model,
+          model: selectedHostDevice.device_model,
           area: selectedArea,
           screenshot_path: screenshotPath,
           referenceType: referenceType,
@@ -376,7 +350,14 @@ export const useVerification = ({
     } finally {
       setPendingSave(false);
     }
-  }, [selectedArea, screenshotPath, referenceName, model, referenceType, getVerificationProxy]);
+  }, [
+    selectedArea,
+    screenshotPath,
+    referenceName,
+    selectedHostDevice.device_model,
+    referenceType,
+    getVerificationProxy,
+  ]);
 
   // Handle test execution
   const handleTest = useCallback(
@@ -493,7 +474,7 @@ export const useVerification = ({
 
         const batchPayload = {
           verifications: validVerifications, // Use filtered verifications
-          model: model,
+          model: selectedHostDevice.device_model,
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
           capture_filename: capture_filename, // Send specific capture filename
@@ -512,7 +493,7 @@ export const useVerification = ({
         );
         const batchResult = await verificationController.executeVerificationBatch({
           verifications: validVerifications,
-          model: model,
+          model: selectedHostDevice.device_model,
           node_id: 'verification-editor',
         });
 
@@ -619,12 +600,12 @@ export const useVerification = ({
         setLoading(false);
       }
     },
-    [verifications, model, captureSourcePath, getVerificationProxy],
+    [verifications, selectedHostDevice.device_model, captureSourcePath, getVerificationProxy],
   );
 
   // Handle auto-detect text
   const handleAutoDetectText = useCallback(async () => {
-    if (!selectedArea || !model) {
+    if (!selectedArea || !selectedHostDevice.device_model) {
       console.log('[@hook:useVerification] Cannot auto-detect: missing area or model');
       return;
     }
@@ -648,7 +629,7 @@ export const useVerification = ({
         `[@hook:useVerification] Using verification controller proxy for auto-detect text`,
       );
       const result = await verificationController.autoDetectText({
-        model,
+        model: selectedHostDevice.device_model,
         area: selectedArea,
         source_path: captureSourcePath,
         image_filter: textImageFilter,
@@ -677,7 +658,13 @@ export const useVerification = ({
     } catch (error) {
       console.error('[@hook:useVerification] Error during text auto-detection:', error);
     }
-  }, [selectedArea, model, captureSourcePath, textImageFilter, getVerificationProxy]);
+  }, [
+    selectedArea,
+    selectedHostDevice.device_model,
+    captureSourcePath,
+    textImageFilter,
+    getVerificationProxy,
+  ]);
 
   // Validate regex
   const validateRegex = useCallback((text: string): boolean => {
@@ -707,7 +694,12 @@ export const useVerification = ({
 
   // Calculate if save is possible
   const canSave = (() => {
-    if (!referenceName.trim() || !selectedArea || !model || model.trim() === '') {
+    if (
+      !referenceName.trim() ||
+      !selectedArea ||
+      !selectedHostDevice.device_model ||
+      selectedHostDevice.device_model.trim() === ''
+    ) {
       return false;
     }
 
@@ -740,7 +732,7 @@ export const useVerification = ({
 
   return {
     // State
-    verificationActions,
+    availableVerificationTypes,
     verifications,
     loading,
     error,
@@ -751,8 +743,6 @@ export const useVerification = ({
     showConfirmDialog,
     pendingSave,
     testResults,
-    captureCollapsed,
-    verificationsCollapsed,
     referenceText,
     referenceType,
     detectedTextData,
@@ -772,8 +762,6 @@ export const useVerification = ({
     setSuccessMessage,
     setShowConfirmDialog,
     setPendingSave,
-    setCaptureCollapsed,
-    setVerificationsCollapsed,
     setReferenceText,
     setTextImageFilter,
     setImageProcessingOptions,

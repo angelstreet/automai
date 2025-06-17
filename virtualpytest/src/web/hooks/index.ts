@@ -20,3 +20,4 @@ export { useUserSession } from './useUserSession';
 export { useToast } from './useToast';
 export { useRegistration } from './useRegistration';
 export { useVerification } from './verification/useVerification';
+export { useStreamCoordinates } from './useStreamCoordinates';

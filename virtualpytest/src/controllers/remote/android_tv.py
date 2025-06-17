@@ -511,6 +511,11 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 'adb_connected': False,
                 'error': f'Failed to check ADB device status: {str(e)}'
             }
+    
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available remote actions for Android TV controller."""
+        from ..controller_actions import ANDROID_TV_ACTIONS
+        return ANDROID_TV_ACTIONS
 
 
 # Backward compatibility alias

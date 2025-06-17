@@ -505,3 +505,8 @@ class ADBVerificationController:
             
             return False, error_msg, result_data
     
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verification actions for ADB controller."""
+        from ..controller_verifications import ADB_VERIFICATIONS
+        return ADB_VERIFICATIONS
+    
