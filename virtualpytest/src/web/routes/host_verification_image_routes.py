@@ -18,7 +18,7 @@ from datetime import datetime
 import time
 
 # Create blueprint
-verification_image_host_bp = Blueprint('verification_image_host', __name__)
+verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
 
 # Host configuration
 HOST_IP = "77.56.53.130"
@@ -29,7 +29,7 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE IMAGE CROPPING AND PROCESSING ENDPOINTS
 # =====================================================
 
-@verification_image_host_bp.route('/image/crop-area', methods=['POST'])
+@verification_image_host_bp.route('/crop-area', methods=['POST'])
 def crop_area():
     """Crop area from current screen"""
     try:
@@ -124,7 +124,7 @@ def crop_area():
             'error': f'Host cropping error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/image/process-area', methods=['POST'])
+@verification_image_host_bp.route('/process-area', methods=['POST'])
 def process_area():
     """Process area for verification"""
     try:
@@ -236,7 +236,7 @@ def process_area():
 # HOST-SIDE IMAGE RESOURCE SAVE ENDPOINT
 # =====================================================
 
-@verification_image_host_bp.route('/image/save-resource', methods=['POST'])
+@verification_image_host_bp.route('/save-resource', methods=['POST'])
 def save_resource():
     """Save image verification resource"""
     try:
@@ -403,7 +403,7 @@ def save_resource():
             'error': f'R2 save error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/image/ensure-reference-availability', methods=['POST'])
+@verification_image_host_bp.route('/ensure-reference-availability', methods=['POST'])
 def ensure_reference_availability():
     """Ensure reference image is available for verification"""
     try:

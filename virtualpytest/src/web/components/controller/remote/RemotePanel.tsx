@@ -6,12 +6,12 @@ import {
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState, useEffect, useMemo } from 'react';
-import React from 'react';
 
 import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
 import { Host } from '../../../types/common/Host_Types';
 
 import { AndroidMobileRemote } from './AndroidMobileRemote';
+import { AndroidTvRemote } from './AndroidTvRemote';
 
 interface RemotePanelProps {
   host: Host;
@@ -153,19 +153,19 @@ export function RemotePanel({
         );
       case 'android_tv':
         return (
-          <Box
+          <AndroidTvRemote
+            host={host}
+            onDisconnectComplete={onReleaseControl}
+            isCollapsed={isCollapsed}
+            panelWidth={currentWidth}
+            panelHeight={currentHeight}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               height: '100%',
-              p: 2,
+              '& .MuiButton-root': {
+                fontSize: isCollapsed ? '0.6rem' : '0.7rem',
+              },
             }}
-          >
-            <Typography variant="body2" color="textSecondary" textAlign="center">
-              Android TV Remote (TODO)
-            </Typography>
-          </Box>
+          />
         );
       case 'ir_remote':
         return (

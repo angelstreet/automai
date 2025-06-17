@@ -12,7 +12,7 @@ import requests
 import json
 
 # Create blueprint - using av since image verification uses AV controller
-verification_av_image_bp = Blueprint('verification_av_image', __name__, url_prefix='/server/verification/av')
+verification_av_image_bp = Blueprint('verification_av_image', __name__, url_prefix='/server/verification/image')
 
 def get_host_from_request():
     """
@@ -130,7 +130,7 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # SERVER-SIDE IMAGE VERIFICATION ENDPOINTS (FORWARDS TO HOST)
 # =====================================================
 
-@verification_av_image_bp.route('/capture-reference', methods=['POST'])
+@verification_av_image_bp.route('/crop-area', methods=['POST'])
 def capture_reference():
     """Proxy reference capture request to selected host"""
     try:
@@ -140,7 +140,7 @@ def capture_reference():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/av/capture-reference', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/crop-area', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -160,7 +160,7 @@ def process_area():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/av/process-area', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/process-area', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -180,7 +180,7 @@ def save_reference():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/av/save-reference', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/save-resource', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -200,7 +200,7 @@ def ensure_reference_availability():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/av/ensure-reference-availability', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/ensure-reference-availability', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

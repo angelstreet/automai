@@ -18,7 +18,7 @@ from .host_verification_text_routes import execute_text_verification_host
 from .host_verification_adb_routes import execute_adb_verification_host
 
 # Create blueprint
-verification_execution_host_bp = Blueprint('verification_execution_host', __name__)
+verification_execution_host_bp = Blueprint('verification_execution_host', __name__, url_prefix='/host/verification/execution')
 
 # Host configuration
 HOST_IP = "77.56.53.130"
@@ -29,7 +29,7 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 # HOST-SIDE VERIFICATION EXECUTION ENDPOINTS
 # =====================================================
 
-@verification_execution_host_bp.route('/stream/execute-verification', methods=['POST'])
+@verification_execution_host_bp.route('/execute-verification', methods=['POST'])
 def execute_verification():
     """Execute verification test on host using existing controllers and return results with comparison images."""
     try:
@@ -118,7 +118,7 @@ def execute_verification():
             'error': f'Verification execution error: {str(e)}'
         }), 500
 
-@verification_execution_host_bp.route('/stream/execute-batch-verification', methods=['POST'])
+@verification_execution_host_bp.route('/execute-batch-verification', methods=['POST'])
 def execute_batch_verification():
     """Execute batch verification tests on host and return consolidated results."""
     try:

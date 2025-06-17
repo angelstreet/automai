@@ -130,7 +130,7 @@ def proxy_to_host(endpoint, method='GET', data=None):
 # COMMON VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_common_bp.route('/actions', methods=['GET'])
+@verification_common_bp.route('/actions', methods=['GET', 'POST'])
 def get_verification_actions():
     """Get available verification actions for all verification controllers."""
     try:
@@ -238,6 +238,23 @@ def get_verification_actions():
         return jsonify({
             'success': False,
             'error': f'Error getting verification actions: {str(e)}'
+        }), 500
+
+@verification_common_bp.route('/reference/list', methods=['GET'])
+def list_references_v2():
+    """Proxy reference list request to selected host (new endpoint structure)"""
+    try:
+        print("[@route:server_verification:reference/list] Proxying reference list request")
+        
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/references', 'GET')
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 @verification_common_bp.route('/reference-list', methods=['GET'])

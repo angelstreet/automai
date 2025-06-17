@@ -12,7 +12,7 @@ import requests
 import json
 
 # Create blueprint
-verification_av_execution_bp = Blueprint('verification_av_execution', __name__, url_prefix='/server/verification/av')
+verification_av_execution_bp = Blueprint('verification_av_execution', __name__, url_prefix='/server/verification/execution')
 
 def get_host_from_request():
     """
