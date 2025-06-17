@@ -165,13 +165,18 @@ export const AndroidMobileOverlay = React.memo(
           }
 
           const getElementLabel = (el: AndroidElement) => {
-            if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-              return el.text.substring(0, 20);
+            // Priority: ContentDesc → Text → Class Name (same as AndroidMobileRemote)
+            if (
+              el.contentDesc &&
+              el.contentDesc !== '<no content-desc>' &&
+              el.contentDesc.trim() !== ''
+            ) {
+              return el.contentDesc.substring(0, 20);
+            } else if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
+              return `"${el.text}"`.substring(0, 20);
+            } else {
+              return el.className?.split('.').pop()?.substring(0, 20) || 'Unknown';
             }
-            if (el.package && el.package !== '<no package>' && el.package.trim() !== '') {
-              return el.package.split('.').pop()?.substring(0, 20) || '';
-            }
-            return el.className?.split('.').pop()?.substring(0, 20) || 'Element';
           };
 
           // Scale elements to fit the actual stream content size (not panel size)
