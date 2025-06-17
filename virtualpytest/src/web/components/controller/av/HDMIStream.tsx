@@ -258,7 +258,7 @@ export function HDMIStream({
     ...sx,
   };
 
-  const headerHeight = '48px';
+  const headerHeight = panelLayout.header?.height || '40px';
 
   // Calculate panel dimensions based on state
   const getPanelWidth = () => {

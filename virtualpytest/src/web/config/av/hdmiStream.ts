@@ -1,3 +1,6 @@
+// Shared constants for HDMI Stream configuration
+export const HDMI_STREAM_HEADER_HEIGHT = '40px';
+
 export const hdmiStreamConfig = {
   stream_info: {
     name: 'HDMI Stream',
@@ -27,7 +30,7 @@ export const hdmiStreamConfig = {
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
     header: {
-      height: '48px',
+      height: HDMI_STREAM_HEADER_HEIGHT,
       fontSize: '0.875rem',
       fontWeight: 'bold',
       iconSize: 'small',
@@ -62,7 +65,7 @@ export const hdmiStreamMobileConfig = {
       },
     },
     expanded: {
-      width: '300px',
+      width: '340px',
       height: '600px', // Portrait - taller than wide
       position: {
         bottom: '20px',
@@ -73,7 +76,7 @@ export const hdmiStreamMobileConfig = {
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
     header: {
-      height: '40px',
+      height: HDMI_STREAM_HEADER_HEIGHT,
       fontSize: '0.875rem',
       fontWeight: 'bold',
       iconSize: 'small',

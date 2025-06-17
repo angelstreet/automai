@@ -42,6 +42,11 @@ export const AndroidMobileOverlay = React.memo(
     console.log(`[@component:AndroidMobileOverlay] PanelInfo:`, panelInfo);
 
     const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
+    const [clickAnimation, setClickAnimation] = useState<{
+      x: number;
+      y: number;
+      id: string;
+    } | null>(null);
 
     const parseBounds = (bounds: { left: number; top: number; right: number; bottom: number }) => {
       // Validate input bounds
@@ -154,6 +159,16 @@ export const AndroidMobileOverlay = React.memo(
 
     // Handle element click (higher priority)
     const handleElementClick = async (scaledElement: ScaledElement) => {
+      // Show click animation at element center
+      const animationX = scaledElement.x + scaledElement.width / 2;
+      const animationY = scaledElement.y + scaledElement.height / 2;
+      const animationId = `element-${scaledElement.id}-${Date.now()}`;
+
+      setClickAnimation({ x: animationX, y: animationY, id: animationId });
+
+      // Clear animation after 300ms
+      setTimeout(() => setClickAnimation(null), 300);
+
       const originalElement = elements.find((el) => el.id === scaledElement.id);
       if (!originalElement) return;
 
@@ -187,6 +202,13 @@ export const AndroidMobileOverlay = React.memo(
       const rect = event.currentTarget.getBoundingClientRect();
       const overlayX = event.clientX - rect.left;
       const overlayY = event.clientY - rect.top;
+
+      // Show click animation at tap location
+      const animationId = `base-tap-${Date.now()}`;
+      setClickAnimation({ x: overlayX, y: overlayY, id: animationId });
+
+      // Clear animation after 300ms
+      setTimeout(() => setClickAnimation(null), 300);
 
       // Convert to device coordinates
       const deviceX = Math.round(
@@ -228,66 +250,10 @@ export const AndroidMobileOverlay = React.memo(
             contain: 'layout style size',
             willChange: 'transform',
             pointerEvents: 'auto', // Allow tapping on base layer
-            border: '3px solid blue', // Blue border for debugging
-            backgroundColor: 'rgba(0, 0, 255, 0.2)', // Blue background with 20% transparency
             cursor: 'crosshair',
           }}
           onClick={handleBaseTap}
-        >
-          {/* Debug info overlay */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '5px',
-              left: '5px',
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              color: 'white',
-              padding: '5px',
-              fontSize: '12px',
-              borderRadius: '3px',
-              pointerEvents: 'none',
-            }}
-          >
-            <div>Elements: {elements.length}</div>
-            <div>
-              Position: {panelInfo.position.x},{panelInfo.position.y}
-            </div>
-            <div>
-              Size: {panelInfo.size.width}x{panelInfo.size.height}
-            </div>
-            <div>
-              Device: {panelInfo.deviceResolution.width}x{panelInfo.deviceResolution.height}
-            </div>
-            <div style={{ color: 'cyan', marginTop: '5px' }}>
-              {elements.length === 0
-                ? 'Tap anywhere • Dump UI for elements'
-                : 'Elements have priority'}
-            </div>
-          </div>
-
-          {/* Show message when no elements are available */}
-          {elements.length === 0 && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                color: 'white',
-                padding: '10px',
-                borderRadius: '5px',
-                fontSize: '14px',
-                textAlign: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              Stream Tap Layer Active
-              <br />
-              <small>Tap anywhere to interact • Dump UI for precise elements</small>
-            </div>
-          )}
-        </div>
+        ></div>
 
         {/* Elements layer - Higher z-index, only visible when elements exist */}
         {scaledElements.length > 0 && (
@@ -314,23 +280,31 @@ export const AndroidMobileOverlay = React.memo(
                   top: `${scaledElement.y}px`,
                   width: `${scaledElement.width}px`,
                   height: `${scaledElement.height}px`,
-                  backgroundColor: scaledElement.color,
-                  border: '2px solid rgba(255, 255, 255, 0.8)',
+                  backgroundColor: `${scaledElement.color}1A`, // 10% transparency (1A in hex = 26/255 ≈ 10%)
+                  border: `2px solid ${scaledElement.color}`, // Colored border instead of white
                   pointerEvents: 'auto', // Allow clicks on elements (higher priority)
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  color: 'white',
-                  textShadow: '1px 1px 1px rgba(0, 0, 0, 0.8)',
                   overflow: 'hidden',
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                 }}
                 onClick={() => handleElementClick(scaledElement)}
                 title={`Element ${scaledElement.id}: ${scaledElement.label}`}
               >
-                {scaledElement.id}
+                {/* Number positioned at bottom right corner */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '2px',
+                    right: '2px',
+                    fontSize: '10px',
+                    color: scaledElement.color, // Colored text instead of white
+                    fontWeight: 'bold',
+                    textShadow: '1px 1px 1px rgba(255, 255, 255, 0.8)', // White text shadow for contrast
+                    lineHeight: '1',
+                  }}
+                >
+                  {scaledElement.id}
+                </div>
               </div>
             ))}
           </div>

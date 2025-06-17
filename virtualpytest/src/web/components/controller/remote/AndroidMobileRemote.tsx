@@ -16,7 +16,7 @@ import { Host } from '../../../types/common/Host_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
 import { createPortal } from 'react-dom';
-import { hdmiStreamMobileConfig } from '../../../config/av/hdmiStream';
+import { hdmiStreamMobileConfig, HDMI_STREAM_HEADER_HEIGHT } from '../../../config/av/hdmiStream';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
@@ -108,14 +108,27 @@ export const AndroidMobileRemote = React.memo(
       const streamPanelHeight = parsePixels(currentStreamConfig.height);
 
       // Calculate actual stream content area
-      // Use the same header height as HDMIStream component (hardcoded to 48px)
-      const headerHeight = 48; // HDMIStream uses hardcoded 48px, not config value
+      // Use shared header height constant for consistency
+      const headerHeight = parsePixels(HDMI_STREAM_HEADER_HEIGHT);
       const streamContentHeight = streamPanelHeight - headerHeight; // Stream panel height minus header
 
       // Calculate stream width based on 1920x1080 aspect ratio (16:9)
       // For mobile: height is reference, divide by ratio to get width
       const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
       const streamContentWidth = streamContentHeight / deviceAspectRatio;
+
+      // Debug logging for width calculation
+      console.log(`[@component:AndroidMobileRemote] Width calculation debug:`, {
+        streamCollapsed,
+        configState: streamCollapsed ? 'collapsed' : 'expanded',
+        streamPanelWidth,
+        streamPanelHeight,
+        headerHeight,
+        streamContentHeight,
+        deviceAspectRatio,
+        calculatedWidth: streamContentWidth,
+        roundedWidth: Math.round(streamContentWidth),
+      });
 
       // Calculate stream position - centered in panel
       const panelX =
