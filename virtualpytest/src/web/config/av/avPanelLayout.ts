@@ -30,6 +30,16 @@ export interface ConfigurableAVPanelLayout {
   zIndex: number;
   showControlsInCollapsed: boolean;
   showControlsInExpanded: boolean;
+  header?: {
+    height?: string;
+    fontSize?: string;
+    fontWeight?: string;
+    iconSize?: string;
+    padding?: string;
+    backgroundColor?: string;
+    borderColor?: string;
+    textColor?: string;
+  };
 }
 
 /**
@@ -106,6 +116,7 @@ export const getConfigurableAVPanelLayout = (
       panelLayout.showControlsInCollapsed ?? defaultLayout.showControlsInCollapsed,
     showControlsInExpanded:
       panelLayout.showControlsInExpanded ?? defaultLayout.showControlsInExpanded,
+    header: panelLayout.header || undefined,
   };
 };
 

@@ -32,22 +32,16 @@ export function HDMIStream({
   host,
   onDisconnectComplete: _onDisconnectComplete,
   onCollapsedChange,
-  deviceResolution,
+  deviceResolution: _deviceResolution,
   sx = {},
 }: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
 
-  // Hardcode device resolution to break circular dependency
-  const hardcodedResolution = { width: 1920, height: 1080 };
-  console.log(`[@component:HDMIStream] Using resolution:`, hardcodedResolution);
-
-  // Pass hardcoded resolution to any components that need it
-  const effectiveResolution = deviceResolution || hardcodedResolution;
+  console.log(`[@component:HDMIStream] Using hardcoded resolution: 1920x1080`);
 
   // Stream URL fetching state
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
-  const [isLoadingStream, setIsLoadingStream] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState<boolean>(false);
@@ -75,22 +69,16 @@ export function HDMIStream({
     // State from hook
     captureMode,
     isCaptureActive,
-    captureImageRef: _captureImageRef,
-    captureImageDimensions: _captureImageDimensions,
-    originalImageDimensions: _originalImageDimensions,
-    captureSourcePath: _captureSourcePath,
     selectedArea,
     screenshotPath,
     videoFramesPath,
     totalFrames,
     currentFrame,
-    layoutConfig: _layoutConfig,
 
     // Actions from hook
     setCaptureMode,
     setCurrentFrame,
     handleAreaSelected,
-    handleClearSelection: _handleClearSelection,
     handleImageLoad,
     handleTakeScreenshot: hookTakeScreenshot,
   } = useHdmiStream({
@@ -103,7 +91,6 @@ export function HDMIStream({
   const fetchStreamUrl = useCallback(async () => {
     if (!host) return;
 
-    setIsLoadingStream(true);
     try {
       console.log(`[@component:HDMIStream] Fetching stream URL for host: ${host.host_name}`);
 
@@ -137,10 +124,8 @@ export function HDMIStream({
       console.error(`[@component:HDMIStream] Error getting stream URL:`, error);
       setStreamUrl('');
       setIsStreamActive(false);
-    } finally {
-      setIsLoadingStream(false);
     }
-  }, [host]); // Remove streamUrl and isStreamActive to prevent infinite loops
+  }, [host, streamUrl, isStreamActive]); // Include all dependencies
 
   // Initialize stream URL on mount and when host changes
   useEffect(() => {
@@ -302,6 +287,67 @@ export function HDMIStream({
             color: '#ffffff',
           }}
         >
+          {/* Left side: Action buttons (always visible) */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title="Take Screenshot">
+              <IconButton
+                size="small"
+                onClick={handleTakeScreenshot}
+                sx={{
+                  color:
+                    captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                }}
+                disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
+              >
+                <PhotoCamera sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+
+            {isCaptureActive ? (
+              <Tooltip title="Stop Capture">
+                <IconButton
+                  size="small"
+                  onClick={handleStopCapture}
+                  sx={{
+                    color: '#ff4444',
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                  }}
+                >
+                  <StopCircle sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Start Capture">
+                <IconButton
+                  size="small"
+                  onClick={handleStartCapture}
+                  sx={{
+                    color: captureMode === 'video' ? '#ff4444' : '#ffffff',
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                  }}
+                  disabled={!isStreamActive}
+                >
+                  <VideoCall sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Restart Stream">
+              <IconButton
+                size="small"
+                onClick={restartStream}
+                sx={{
+                  color: '#ffffff',
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                }}
+                disabled={!isStreamActive || isCaptureActive}
+              >
+                <Refresh sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
           {/* Center: Title */}
           <Typography
             variant="subtitle2"
@@ -429,95 +475,6 @@ export function HDMIStream({
 
             {/* Mode indicator dot for collapsed view */}
             {!isExpanded && <ModeIndicatorDot viewMode={captureMode} />}
-
-            {/* Action buttons for expanded view */}
-            {isExpanded && panelLayout.showControlsInExpanded && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  display: 'flex',
-                  gap: 1,
-                  zIndex: 10,
-                }}
-              >
-                <Tooltip title="Take Screenshot">
-                  <IconButton
-                    size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
-                    onClick={handleTakeScreenshot}
-                    sx={{
-                      backgroundColor: '#000000',
-                      color:
-                        captureMode === 'screenshot' || isScreenshotLoading ? '#ff4444' : '#ffffff',
-                      '&:hover': { backgroundColor: '#333333' },
-                      border: '1px solid #333333',
-                    }}
-                    disabled={!isStreamActive || isCaptureActive || isScreenshotLoading}
-                  >
-                    <PhotoCamera
-                      sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
-                    />
-                  </IconButton>
-                </Tooltip>
-
-                {isCaptureActive ? (
-                  <Tooltip title="Stop Capture">
-                    <IconButton
-                      size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
-                      onClick={handleStopCapture}
-                      sx={{
-                        backgroundColor: '#000000',
-                        color: '#ff4444',
-                        '&:hover': { backgroundColor: '#333333' },
-                        border: '1px solid #333333',
-                      }}
-                    >
-                      <StopCircle
-                        sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
-                      />
-                    </IconButton>
-                  </Tooltip>
-                ) : (
-                  <Tooltip title="Start Capture">
-                    <IconButton
-                      size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
-                      onClick={handleStartCapture}
-                      sx={{
-                        backgroundColor: '#000000',
-                        color: captureMode === 'video' ? '#ff4444' : '#ffffff',
-                        '&:hover': { backgroundColor: '#333333' },
-                        border: '1px solid #333333',
-                      }}
-                      disabled={!isStreamActive}
-                    >
-                      <VideoCall
-                        sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
-                      />
-                    </IconButton>
-                  </Tooltip>
-                )}
-
-                <Tooltip title="Restart Stream">
-                  <IconButton
-                    size={avConfig?.panel_layout?.actionButtons?.buttonSize || 'small'}
-                    onClick={restartStream}
-                    sx={{
-                      backgroundColor: '#000000',
-                      color: '#ffffff',
-                      '&:hover': { backgroundColor: '#333333' },
-                      border: '1px solid #333333',
-                    }}
-                    disabled={!isStreamActive || isCaptureActive}
-                  >
-                    <Refresh
-                      sx={{ fontSize: avConfig?.panel_layout?.actionButtons?.iconSize || 16 }}
-                    />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            )}
           </Box>
         )}
       </Box>

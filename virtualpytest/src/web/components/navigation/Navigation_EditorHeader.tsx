@@ -68,7 +68,7 @@ export const NavigationEditorHeader: React.FC<{
   onUpdateEdge,
 }) => {
   // Get host data from RegistrationContext
-  const { availableHosts } = useRegistration();
+  const { availableHosts, fetchHosts } = useRegistration();
 
   // Get device control functions
   const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
@@ -109,6 +109,20 @@ export const NavigationEditorHeader: React.FC<{
           );
           showSuccess(`Successfully released control of ${selectedHost.host_name}`);
           onControlStateChange(false);
+
+          // Refresh host data to update lock status using event-based pattern
+          console.log(
+            `[@component:NavigationEditorHeader] Dispatching host refresh event after control release`,
+          );
+          try {
+            await fetchHosts();
+            console.log(`[@component:NavigationEditorHeader] Host data refreshed successfully`);
+          } catch (refreshError: any) {
+            console.warn(
+              `[@component:NavigationEditorHeader] Failed to refresh host data:`,
+              refreshError,
+            );
+          }
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to release control:`, result);
           showError(result.error || 'Failed to release control of device');
@@ -124,6 +138,20 @@ export const NavigationEditorHeader: React.FC<{
           );
           showSuccess(`Successfully took control of ${selectedHost.host_name}`);
           onControlStateChange(true);
+
+          // Refresh host data to update lock status using event-based pattern
+          console.log(
+            `[@component:NavigationEditorHeader] Dispatching host refresh event after taking control`,
+          );
+          try {
+            await fetchHosts();
+            console.log(`[@component:NavigationEditorHeader] Host data refreshed successfully`);
+          } catch (refreshError: any) {
+            console.warn(
+              `[@component:NavigationEditorHeader] Failed to refresh host data:`,
+              refreshError,
+            );
+          }
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to take control:`, result);
 
@@ -159,6 +187,7 @@ export const NavigationEditorHeader: React.FC<{
     showError,
     showSuccess,
     showWarning,
+    fetchHosts,
   ]);
 
   return (

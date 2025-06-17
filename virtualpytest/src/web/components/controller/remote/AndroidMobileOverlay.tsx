@@ -272,6 +272,7 @@ export const AndroidMobileOverlay = React.memo(
             contain: 'layout style size',
             willChange: 'transform',
             pointerEvents: 'auto', // Allow tapping on base layer
+            border: '1px solid rgba(0, 123, 255, 0.3)', // Subtle blue border for tap area
             cursor: 'crosshair',
           }}
           onClick={handleBaseTap}
@@ -321,7 +322,6 @@ export const AndroidMobileOverlay = React.memo(
                     fontSize: '10px',
                     color: scaledElement.color, // Colored text instead of white
                     fontWeight: 'bold',
-                    textShadow: '1px 1px 1px rgba(255, 255, 255, 0.8)', // White text shadow for contrast
                     lineHeight: '1',
                   }}
                 >

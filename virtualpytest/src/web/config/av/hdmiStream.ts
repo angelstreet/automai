@@ -39,10 +39,6 @@ export const hdmiStreamConfig = {
       borderColor: '#333',
       textColor: '#ffffff',
     },
-    actionButtons: {
-      iconSize: 24, // Size in pixels for camera, video, restart icons
-      buttonSize: 'medium', // MUI IconButton size
-    },
   },
 } as const;
 
@@ -84,10 +80,6 @@ export const hdmiStreamMobileConfig = {
       backgroundColor: '#1E1E1E',
       borderColor: '#333',
       textColor: '#ffffff',
-    },
-    actionButtons: {
-      iconSize: 24, // Smaller for mobile
-      buttonSize: 'small', // MUI IconButton size
     },
   },
 } as const;
