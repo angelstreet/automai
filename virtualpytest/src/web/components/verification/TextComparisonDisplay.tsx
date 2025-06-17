@@ -34,10 +34,10 @@ export const TextComparisonDisplay: React.FC<TextComparisonDisplayProps> = ({
       return url;
     }
 
-    // Use buildHostUrl from registration context
+    // Use buildHostUrl from frontendUtils
     if (selectedHost?.host_name) {
       const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostUrl(selectedHost.host_name, cleanUrl);
+      return buildHostUrl(selectedHost, cleanUrl);
     }
 
     // Fallback if no host selected

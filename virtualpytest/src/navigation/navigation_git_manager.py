@@ -39,7 +39,29 @@ def commit_and_push_navigation_config(commit_message: str = "Update navigation c
         # Git push with authentication
         github_token = os.getenv('GITHUB_TOKEN')
         if github_token:
-            push_result = subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+            # Set up environment for git push with token authentication
+            env = os.environ.copy()
+            env['GIT_ASKPASS'] = 'echo'  # Prevent interactive prompts
+            env['GIT_USERNAME'] = github_token  # Use token as username
+            env['GIT_PASSWORD'] = ''  # Empty password when using token
+            
+            # Alternative approach: Use token in the push URL
+            # Get the current remote URL
+            remote_result = subprocess.run(['git', 'remote', 'get-url', 'origin'], 
+                                         check=True, capture_output=True, text=True)
+            remote_url = remote_result.stdout.strip()
+            
+            # If it's an HTTPS URL, inject the token
+            if remote_url.startswith('https://github.com/'):
+                # Format: https://token@github.com/user/repo.git
+                authenticated_url = remote_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+                push_result = subprocess.run(['git', 'push', authenticated_url, 'HEAD'], 
+                                           check=True, capture_output=True, text=True, env=env)
+            else:
+                # Fallback to regular push
+                push_result = subprocess.run(['git', 'push'], 
+                                           check=True, capture_output=True, text=True, env=env)
+            
             print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Git push completed successfully")
         else:
             print(f"[@utils:navigationGitManager:commit_and_push_navigation_config] Warning: GITHUB_TOKEN not set, skipping push")
@@ -115,7 +137,29 @@ def perform_navigation_git_operations(tree_name: str, operation_type: str = "sav
         # Git push with authentication (same pattern as host routes)
         github_token = os.getenv('GITHUB_TOKEN')
         if github_token:
-            push_result = subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+            # Set up environment for git push with token authentication
+            env = os.environ.copy()
+            env['GIT_ASKPASS'] = 'echo'  # Prevent interactive prompts
+            env['GIT_USERNAME'] = github_token  # Use token as username
+            env['GIT_PASSWORD'] = ''  # Empty password when using token
+            
+            # Alternative approach: Use token in the push URL
+            # Get the current remote URL
+            remote_result = subprocess.run(['git', 'remote', 'get-url', 'origin'], 
+                                         check=True, capture_output=True, text=True)
+            remote_url = remote_result.stdout.strip()
+            
+            # If it's an HTTPS URL, inject the token
+            if remote_url.startswith('https://github.com/'):
+                # Format: https://token@github.com/user/repo.git
+                authenticated_url = remote_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+                push_result = subprocess.run(['git', 'push', authenticated_url, 'HEAD'], 
+                                           check=True, capture_output=True, text=True, env=env)
+            else:
+                # Fallback to regular push
+                push_result = subprocess.run(['git', 'push'], 
+                                           check=True, capture_output=True, text=True, env=env)
+            
             print(f"[@utils:navigationGitManager:perform_navigation_git_operations] Git push completed successfully")
             push_success = True
         else:
