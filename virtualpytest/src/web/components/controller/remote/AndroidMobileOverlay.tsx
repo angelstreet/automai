@@ -290,7 +290,7 @@ export const AndroidMobileOverlay = React.memo(
 
     return (
       <>
-        {/* Base transparent tap layer - Always visible, lower z-index */}
+        {/* Base transparent tap layer - Only covers actual stream content area */}
         <div
           style={{
             position: 'fixed',
@@ -303,7 +303,7 @@ export const AndroidMobileOverlay = React.memo(
             willChange: 'transform',
             pointerEvents: 'auto', // Allow tapping on base layer
             border: '1px solid rgba(0, 123, 255, 0.3)', // Subtle blue border for tap area
-            cursor: 'crosshair',
+            cursor: 'crosshair', // Only shows crosshair cursor within actual content area
           }}
           onClick={handleBaseTap}
         ></div>

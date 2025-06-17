@@ -219,11 +219,29 @@ const NavigationEditorContent: React.FC = () => {
 
   // Track AV panel collapsed state
   const [isAVPanelCollapsed, setIsAVPanelCollapsed] = useState(true);
+  const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
 
   // Memoize the AV panel collapsed change handler to prevent infinite loops
   const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
     setIsAVPanelCollapsed(isCollapsed);
   }, []);
+
+  // Handle capture mode changes from HDMIStream
+  const handleCaptureModeChange = useCallback((mode: 'stream' | 'screenshot' | 'video') => {
+    console.log(`[@component:NavigationEditor] Capture mode changed to: ${mode}`);
+    setCaptureMode(mode);
+  }, []);
+
+  // Reset AV panel to collapsed state when taking control
+  useEffect(() => {
+    if (isControlActive) {
+      console.log(
+        '[@component:NavigationEditor] Control activated - resetting AV panel to collapsed state',
+      );
+      setIsAVPanelCollapsed(true);
+      setCaptureMode('stream'); // Also reset capture mode
+    }
+  }, [isControlActive]);
 
   // ========================================
   // 2. TREE LOADING & LOCK MANAGEMENT
@@ -577,14 +595,15 @@ const NavigationEditorContent: React.FC = () => {
           host={selectedHost}
           onReleaseControl={handleDisconnectComplete}
           streamCollapsed={isAVPanelCollapsed}
+          captureMode={captureMode}
         />
       )}
 
       {showAVPanel && selectedHost && (
         <HDMIStream
           host={selectedHost}
-          onDisconnectComplete={handleDisconnectComplete}
           onCollapsedChange={handleAVPanelCollapsedChange}
+          onCaptureModeChange={handleCaptureModeChange}
         />
       )}
 

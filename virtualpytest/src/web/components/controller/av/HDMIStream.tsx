@@ -23,10 +23,16 @@ import { VideoCapture } from './VideoCapture';
 interface HDMIStreamProps {
   host: Host;
   onCollapsedChange?: (isCollapsed: boolean) => void;
+  onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
   sx?: any;
 }
 
-export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps) {
+export function HDMIStream({
+  host,
+  onCollapsedChange,
+  onCaptureModeChange,
+  sx = {},
+}: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
 
   // Stream URL fetching state
@@ -137,10 +143,11 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
     try {
       await hookTakeScreenshot();
       setCaptureMode('screenshot');
+      onCaptureModeChange?.('screenshot');
     } finally {
       setIsScreenshotLoading(false);
     }
-  }, [hookTakeScreenshot, setCaptureMode]);
+  }, [hookTakeScreenshot, setCaptureMode, onCaptureModeChange]);
 
   // Start video capture
   const handleStartCapture = useCallback(async () => {
@@ -150,11 +157,12 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
       setIsCaptureActive(true);
       setRecordingStartTime(startTime);
       setCaptureMode('video');
+      onCaptureModeChange?.('video');
       console.log(`[@component:HDMIStream] Recording started at:`, startTime);
     } catch (error) {
       console.error(`[@component:HDMIStream] Error starting capture:`, error);
     }
-  }, [setIsCaptureActive, setRecordingStartTime, setCaptureMode]);
+  }, [setIsCaptureActive, setRecordingStartTime, setCaptureMode, onCaptureModeChange]);
 
   // Stop video capture
   const handleStopCapture = useCallback(async () => {
@@ -190,7 +198,8 @@ export function HDMIStream({ host, onCollapsedChange, sx = {} }: HDMIStreamProps
     // Reset capture mode to stream (removes screenshot/video capture components)
     // Stream continues playing in background
     setCaptureMode('stream');
-  }, [setCaptureMode]);
+    onCaptureModeChange?.('stream');
+  }, [setCaptureMode, onCaptureModeChange]);
 
   // Smart toggle handlers with minimized state logic
   const handleMinimizeToggle = () => {
