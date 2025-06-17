@@ -3,7 +3,7 @@
 """
 Simplified Cloudflare R2 Upload Utilities for VirtualPyTest Resources
 
-Simple utilities for uploading files to Cloudflare R2 and getting signed URLs.
+Simple utilities for uploading files to Cloudflare R2 with public access.
 
 Folder Structure:
 - reference/{model}/{image_name}     # Reference images (public access)
@@ -98,17 +98,16 @@ class CloudflareUploader:
             else:
                 raise
     
-    def upload_file(self, local_path: str, remote_path: str, public: bool = False) -> Dict:
+    def upload_file(self, local_path: str, remote_path: str) -> Dict:
         """
-        Upload a file to R2.
+        Upload a file to R2 with public access.
         
         Args:
             local_path: Path to local file
             remote_path: Path in R2 bucket (e.g., 'images/screenshot.jpg')
-            public: If True, make file publicly accessible
             
         Returns:
-            Dict with success status and URL (public or signed)
+            Dict with success status and public URL
         """
         try:
             if not os.path.exists(local_path):
@@ -119,65 +118,37 @@ class CloudflareUploader:
             if not content_type:
                 content_type = 'application/octet-stream'
             
-            # Prepare upload arguments
-            extra_args = {'ContentType': content_type}
-            if public:
-                extra_args['ACL'] = 'public-read'
-            
-            # Upload file
+            # Upload file with public access
             with open(local_path, 'rb') as f:
                 self.s3_client.upload_fileobj(
                     f,
                     self.bucket_name,
                     remote_path,
-                    ExtraArgs=extra_args
+                    ExtraArgs={
+                        'ContentType': content_type,
+                        'ACL': 'public-read'
+                    }
                 )
             
-            # Get appropriate URL
-            if public:
-                file_url = self.get_public_url(remote_path)
-            else:
-                file_url = self.get_signed_url(remote_path)
+            # Get public URL
+            file_url = self.get_public_url(remote_path)
             
-            logger.info(f"Uploaded: {local_path} -> {remote_path} (public: {public})")
+            logger.info(f"Uploaded: {local_path} -> {remote_path}")
             
             return {
                 'success': True,
                 'remote_path': remote_path,
                 'url': file_url,
-                'signed_url': file_url,  # For backward compatibility
-                'size': os.path.getsize(local_path),
-                'public': public
+                'size': os.path.getsize(local_path)
             }
             
         except Exception as e:
             logger.error(f"Upload failed: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def get_signed_url(self, remote_path: str, expires_in: int = 604800) -> str:
-        """
-        Get a signed URL for a file in R2.
-        
-        Args:
-            remote_path: Path in R2 bucket
-            expires_in: URL expiration in seconds (default: 7 days)
-            
-        Returns:
-            Signed URL string
-        """
-        try:
-            return self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': remote_path},
-                ExpiresIn=expires_in
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate signed URL: {str(e)}")
-            return ""
-    
     def get_public_url(self, remote_path: str) -> str:
         """
-        Get a public URL for a file in R2 (no expiration).
+        Get a public URL for a file in R2.
         
         Args:
             remote_path: Path in R2 bucket
@@ -185,19 +156,14 @@ class CloudflareUploader:
         Returns:
             Public URL string
         """
-        try:
-            # Extract account ID from endpoint URL
-            endpoint_url = os.environ.get('CLOUDFLARE_R2_ENDPOINT', '')
-            if '.r2.cloudflarestorage.com' in endpoint_url:
-                account_id = endpoint_url.split('//')[1].split('.')[0]
-                return f"https://pub-{account_id}.r2.dev/{remote_path}"
-            else:
-                # Fallback to signed URL with very long expiration
-                return self.get_signed_url(remote_path, expires_in=31536000)  # 1 year
-        except Exception as e:
-            logger.error(f"Failed to generate public URL: {str(e)}")
-            # Fallback to signed URL
-            return self.get_signed_url(remote_path, expires_in=31536000)
+        public_url_base = os.environ.get('CLOUDFLARE_R2_PUBLIC_URL', '')
+        if not public_url_base:
+            logger.error("CLOUDFLARE_R2_PUBLIC_URL environment variable not set")
+            return ""
+        
+        # Remove trailing slash if present and add the remote path
+        base_url = public_url_base.rstrip('/')
+        return f"{base_url}/{remote_path}"
     
     def delete_file(self, remote_path: str) -> bool:
         """Delete a file from R2."""
@@ -234,41 +200,28 @@ def get_cloudflare_uploader() -> CloudflareUploader:
 
 # Convenience functions for common use cases (now using singleton)
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
-    """Upload a reference image with public access (no expiration)."""
+    """Upload a reference image with public access."""
     uploader = get_cloudflare_uploader()
     remote_path = f"reference/{model}/{image_name}"
-    return uploader.upload_file(local_path, remote_path, public=True)
+    return uploader.upload_file(local_path, remote_path)
 
 
 def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:
     """Upload a navigation screenshot with public access."""
     uploader = get_cloudflare_uploader()
     remote_path = f"navigation/{model}/{screenshot_name}"
-    return uploader.upload_file(local_path, remote_path, public=True)
+    return uploader.upload_file(local_path, remote_path)
 
 
 def upload_verification_result(local_path: str, job_id: str, filename: str) -> Dict:
-    """Upload a verification result."""
+    """Upload a verification result with public access."""
     uploader = get_cloudflare_uploader()
     remote_path = f"verification-results/{job_id}/{filename}"
     return uploader.upload_file(local_path, remote_path)
 
 
 def upload_temp_file(local_path: str, session_id: str, filename: str) -> Dict:
-    """Upload a temporary file."""
+    """Upload a temporary file with public access."""
     uploader = get_cloudflare_uploader()
     remote_path = f"temp/{session_id}/{filename}"
     return uploader.upload_file(local_path, remote_path)
-
-
-if __name__ == '__main__':
-    # Simple test - demonstrate singleton behavior
-    uploader1 = CloudflareUploader()
-    uploader2 = CloudflareUploader()
-    uploader3 = get_cloudflare_uploader()
-    
-    print(f"uploader1 id: {id(uploader1)}")
-    print(f"uploader2 id: {id(uploader2)}")
-    print(f"uploader3 id: {id(uploader3)}")
-    print(f"All instances are the same: {uploader1 is uploader2 is uploader3}")
-    print("Cloudflare uploader singleton initialized successfully!") 

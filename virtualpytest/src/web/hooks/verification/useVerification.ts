@@ -110,8 +110,8 @@ interface UseVerificationProps {
   model: string;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
-  onAreaSelected?: (area: DragArea) => void;
-  onClearSelection?: () => void;
+  _onAreaSelected?: (area: DragArea) => void;
+  _onClearSelection?: () => void;
   screenshotPath?: string;
   selectedHostDevice?: any;
   isCaptureActive?: boolean;
@@ -122,8 +122,8 @@ export const useVerification = ({
   model,
   captureSourcePath,
   selectedArea,
-  onAreaSelected,
-  onClearSelection,
+  _onAreaSelected,
+  _onClearSelection,
   screenshotPath,
   selectedHostDevice,
   isCaptureActive,
@@ -173,7 +173,7 @@ export const useVerification = ({
       return {
         // Return a simplified interface that uses server routes
         executeVerification: async (verification: any) => {
-          const response = await fetch(`/server/verification/execute`, {
+          const response = await fetch(`/server/verification/execution/execute`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ export const useVerification = ({
         },
         // Add additional methods that were missing in the original implementation
         getVerificationActions: async () => {
-          const response = await fetch(`/server/verification/actions`, {
+          const response = await fetch(`/server/verification/getAllActions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -199,7 +199,13 @@ export const useVerification = ({
           return response.json();
         },
         saveReference: async (referenceData: any) => {
-          const response = await fetch(`/server/verification/save-reference`, {
+          // Determine the correct endpoint based on reference type
+          const endpoint =
+            referenceData.referenceType === 'text'
+              ? '/server/verification/text/save-text-reference'
+              : '/server/verification/image/save-image-reference';
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -212,7 +218,7 @@ export const useVerification = ({
           return response.json();
         },
         executeVerificationBatch: async (batchData: any) => {
-          const response = await fetch(`/server/verification/execute-batch`, {
+          const response = await fetch(`/server/verification/execution/execute-batch`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -225,7 +231,7 @@ export const useVerification = ({
           return response.json();
         },
         autoDetectText: async (textData: any) => {
-          const response = await fetch(`/server/verification/auto-detect-text`, {
+          const response = await fetch(`/server/verification/text/auto-detect-text`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -349,6 +355,7 @@ export const useVerification = ({
           model: model,
           area: selectedArea,
           screenshot_path: screenshotPath,
+          referenceType: referenceType,
         });
 
         if (result.success) {
@@ -369,7 +376,7 @@ export const useVerification = ({
     } finally {
       setPendingSave(false);
     }
-  }, [selectedArea, screenshotPath, referenceName, model, getVerificationProxy]);
+  }, [selectedArea, screenshotPath, referenceName, model, referenceType, getVerificationProxy]);
 
   // Handle test execution
   const handleTest = useCallback(
@@ -679,7 +686,7 @@ export const useVerification = ({
     try {
       new RegExp(text);
       return true;
-    } catch (_error) {
+    } catch {
       return false;
     }
   }, []);
