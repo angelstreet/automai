@@ -132,10 +132,17 @@ class CloudflareUploader:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
             logger.info(f"Bucket exists: {self.bucket_name}")
         except ClientError as e:
-            if e.response['Error']['Code'] == '404':
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
                 logger.info(f"Creating bucket: {self.bucket_name}")
                 self.s3_client.create_bucket(Bucket=self.bucket_name)
+            elif error_code == '403':
+                # 403 Forbidden - API token doesn't have bucket-level permissions
+                # This is common with object-only API tokens. Assume bucket exists.
+                logger.warning(f"Cannot check bucket existence due to permissions (403). Assuming bucket exists: {self.bucket_name}")
+                logger.info("Note: Your API token may only have object-level permissions, which is fine for uploads")
             else:
+                logger.error(f"Unexpected error checking bucket: {error_code} - {e}")
                 raise
     
     def upload_file(self, local_path: str, remote_path: str) -> Dict:

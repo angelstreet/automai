@@ -259,7 +259,7 @@ class HDMIStreamController(AVControllerInterface):
                 from src.utils.cloudflare_upload_utils import CloudflareUploader
                 
                 uploader = CloudflareUploader()
-                upload_result = uploader.upload_file(local_screenshot_path, r2_path, public=True)
+                upload_result = uploader.upload_file(local_screenshot_path, r2_path)
                 
                 if upload_result.get('success'):
                     print(f'[@controller:HDMIStream] Successfully uploaded to R2: {r2_path}')
