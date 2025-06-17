@@ -209,7 +209,10 @@ export const AndroidMobileOverlay = React.memo(
     }, [elements, deviceWidth, deviceHeight, panelInfo, actualContentWidth, horizontalOffset]);
 
     // Handle element click (higher priority)
-    const handleElementClick = async (scaledElement: ScaledElement) => {
+    const handleElementClick = async (scaledElement: ScaledElement, event: React.MouseEvent) => {
+      // Prevent event propagation to base layer
+      event.stopPropagation();
+
       // Show click animation at element center
       const animationX = scaledElement.x + scaledElement.width / 2;
       const animationY = scaledElement.y + scaledElement.height / 2;
@@ -223,26 +226,24 @@ export const AndroidMobileOverlay = React.memo(
       const originalElement = elements.find((el) => el.id === scaledElement.id);
       if (!originalElement) return;
 
-      if (onPanelTap) {
+      // Prioritize onElementClick over onPanelTap for element clicks
+      if (onElementClick) {
+        console.log(
+          `[@component:AndroidMobileOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
+        );
+        onElementClick(originalElement);
+      } else if (onPanelTap) {
         // Convert overlay coordinates back to device coordinates
         const deviceX = Math.round(
-          ((scaledElement.x - horizontalOffset) * panelInfo.deviceResolution.width) /
-            actualContentWidth,
+          ((scaledElement.x - horizontalOffset) * deviceWidth) / actualContentWidth,
         );
-        const deviceY = Math.round(
-          (scaledElement.y * panelInfo.deviceResolution.height) / panelInfo.size.height,
-        );
+        const deviceY = Math.round((scaledElement.y * deviceHeight) / panelInfo.size.height);
 
         console.log(
           `[@component:AndroidMobileOverlay] Element tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
         );
 
         await onPanelTap(deviceX, deviceY);
-      } else if (onElementClick) {
-        console.log(
-          `[@component:AndroidMobileOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
-        );
-        onElementClick(originalElement);
       }
     };
 
@@ -263,12 +264,8 @@ export const AndroidMobileOverlay = React.memo(
       setTimeout(() => setClickAnimation(null), 300);
 
       // Convert content coordinates directly to device coordinates
-      const deviceX = Math.round(
-        (contentX * panelInfo.deviceResolution.width) / actualContentWidth,
-      );
-      const deviceY = Math.round(
-        (contentY * panelInfo.deviceResolution.height) / panelInfo.size.height,
-      );
+      const deviceX = Math.round((contentX * deviceWidth) / actualContentWidth);
+      const deviceY = Math.round((contentY * deviceHeight) / panelInfo.size.height);
 
       console.log(
         `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY})`,
@@ -340,7 +337,7 @@ export const AndroidMobileOverlay = React.memo(
                   overflow: 'hidden',
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                 }}
-                onClick={() => handleElementClick(scaledElement)}
+                onClick={(event) => handleElementClick(scaledElement, event)}
                 title={`${scaledElement.id}.${scaledElement.label}`}
               >
                 {/* Number positioned at bottom right corner */}
