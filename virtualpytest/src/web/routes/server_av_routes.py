@@ -260,6 +260,46 @@ def stop_video_capture():
             'error': str(e)
         }), 500
 
+@av_bp.route('/capture-area', methods=['POST'])
+def capture_area():
+    """Proxy capture area request to selected host for reference image cropping"""
+    try:
+        print("[@route:server_av:capture_area] Proxying capture area request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host verification image crop endpoint
+        response_data, status_code = proxy_to_host('/host/verification/image/crop-image', 'POST', request_data)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@av_bp.route('/capture-area-process', methods=['POST'])
+def capture_area_process():
+    """Proxy capture area with processing request to selected host for reference image processing"""
+    try:
+        print("[@route:server_av:capture_area_process] Proxying capture area with processing request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host verification image process endpoint
+        response_data, status_code = proxy_to_host('/host/verification/image/process-image', 'POST', request_data)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @av_bp.route('/take-control', methods=['POST'])
 def take_control():
     """Proxy take control request to selected host"""

@@ -46,20 +46,40 @@ def crop_area():
         
         data = request.get_json()
         source_filename = data.get('source_filename')
+        source_path = data.get('source_path')
         area = data.get('area')
         reference_name = data.get('reference_name', 'cropped')
         
-        print(f"[@route:host_crop_area] Host cropping request: {source_filename} with area: {area}")
+        print(f"[@route:host_crop_area] Host cropping request with area: {area}")
+        print(f"[@route:host_crop_area] Source filename: {source_filename}, Source path: {source_path}")
         
-        # Validate required parameters
-        if not source_filename or not area:
+        # Validate required parameters - need either source_filename or source_path
+        if not area:
             return jsonify({
                 'success': False,
-                'error': 'source_filename and area are required'
+                'error': 'area is required'
             }), 400
         
-        # Build source path - assume images are in /var/www/html/stream/captures/
-        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        # Determine source path
+        if source_path:
+            # Extract filename from URL if it's a full URL
+            if source_path.startswith('http'):
+                # Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
+                from urllib.parse import urlparse
+                parsed_url = urlparse(source_path)
+                source_filename = parsed_url.path.split('/')[-1].split('?')[0]
+                final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+            else:
+                # Use source_path directly if it's a file path
+                final_source_path = source_path
+        elif source_filename:
+            # Build source path from filename - assume images are in /var/www/html/stream/captures/
+            final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Either source_filename or source_path is required'
+            }), 400
         
         # Build target path for cropped image in dedicated cropped folder
         cropped_dir = '/var/www/html/stream/captures/cropped'
@@ -76,14 +96,14 @@ def crop_area():
             
         target_path = f'{cropped_dir}/{target_filename}'
         
-        print(f"[@route:host_crop_area] Cropping from {source_path} to {target_path}")
+        print(f"[@route:host_crop_area] Cropping from {final_source_path} to {target_path}")
         
         # Check if source file exists
-        if not os.path.exists(source_path):
-            print(f"[@route:host_crop_area] Source file not found: {source_path}")
+        if not os.path.exists(final_source_path):
+            print(f"[@route:host_crop_area] Source file not found: {final_source_path}")
             return jsonify({
                 'success': False,
-                'error': f'Source file not found: {source_filename}'
+                'error': f'Source file not found: {final_source_path}'
             }), 404
         
         # Import and use existing cropping function
@@ -91,7 +111,7 @@ def crop_area():
             from controllers.verification.image import crop_reference_image
             
             # Crop the image
-            success = crop_reference_image(source_path, target_path, area)
+            success = crop_reference_image(final_source_path, target_path, area)
             
             if success:
                 # Return URL path for the cropped image
@@ -100,6 +120,8 @@ def crop_area():
                 
                 return jsonify({
                     'success': True,
+                    'image_url': cropped_url,
+                    'filename': target_filename,
                     'cropped_path': cropped_url,
                     'message': f'Image cropped successfully: {reference_name}'
                 })
@@ -141,23 +163,43 @@ def process_area():
         
         data = request.get_json()
         source_filename = data.get('source_filename')
+        source_path = data.get('source_path')
         area = data.get('area')
         reference_name = data.get('reference_name', 'processed')
         autocrop = data.get('autocrop', False)
         remove_background = data.get('remove_background', False)
         
-        print(f"[@route:host_process_area] Host processing request: {source_filename} with area: {area}")
+        print(f"[@route:host_process_area] Host processing request with area: {area}")
+        print(f"[@route:host_process_area] Source filename: {source_filename}, Source path: {source_path}")
         print(f"[@route:host_process_area] Processing options: autocrop={autocrop}, remove_background={remove_background}")
         
-        # Validate required parameters
-        if not source_filename or not area:
+        # Validate required parameters - need either source_filename or source_path
+        if not area:
             return jsonify({
                 'success': False,
-                'error': 'source_filename and area are required'
+                'error': 'area is required'
             }), 400
         
-        # Build source path - assume images are in /var/www/html/stream/captures/
-        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        # Determine source path
+        if source_path:
+            # Extract filename from URL if it's a full URL
+            if source_path.startswith('http'):
+                # Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
+                from urllib.parse import urlparse
+                parsed_url = urlparse(source_path)
+                source_filename = parsed_url.path.split('/')[-1].split('?')[0]
+                final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+            else:
+                # Use source_path directly if it's a file path
+                final_source_path = source_path
+        elif source_filename:
+            # Build source path from filename - assume images are in /var/www/html/stream/captures/
+            final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Either source_filename or source_path is required'
+            }), 400
         
         # Build target path for processed image in dedicated cropped folder
         cropped_dir = '/var/www/html/stream/captures/cropped'
@@ -174,14 +216,14 @@ def process_area():
             
         target_path = f'{cropped_dir}/{target_filename}'
         
-        print(f"[@route:host_process_area] Processing from {source_path} to {target_path}")
+        print(f"[@route:host_process_area] Processing from {final_source_path} to {target_path}")
         
         # Check if source file exists
-        if not os.path.exists(source_path):
-            print(f"[@route:host_process_area] Source file not found: {source_path}")
+        if not os.path.exists(final_source_path):
+            print(f"[@route:host_process_area] Source file not found: {final_source_path}")
             return jsonify({
                 'success': False,
-                'error': f'Source file not found: {source_filename}'
+                'error': f'Source file not found: {final_source_path}'
             }), 404
         
         # Import and use existing processing functions
@@ -189,7 +231,7 @@ def process_area():
             from controllers.verification.image import crop_reference_image, process_reference_image
             
             # First crop the image
-            success = crop_reference_image(source_path, target_path, area)
+            success = crop_reference_image(final_source_path, target_path, area)
             
             if not success:
                 print(f"[@route:host_process_area] Initial cropping failed")
@@ -213,6 +255,8 @@ def process_area():
             
             return jsonify({
                 'success': True,
+                'image_url': processed_url,
+                'filename': target_filename,
                 'cropped_path': processed_url,
                 'processed_area': processed_area,
                 'message': f'Image processed successfully: {reference_name}'
@@ -253,19 +297,27 @@ def save_resource():
         
         data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
-        reference_name = data.get('reference_name')
+        reference_name = data.get('reference_name') or data.get('name')  # Handle both parameter names
         model = data.get('model')
         area = data.get('area')
         reference_type = data.get('reference_type', 'reference_image')
         
         print(f"[@route:host_save_resource] Uploading reference to R2: {reference_name} for model: {model}")
         print(f"[@route:host_save_resource] Source cropped file: {cropped_filename}")
+        print(f"[@route:host_save_resource] Request data keys: {list(data.keys())}")
         
         # Validate required parameters
-        if not cropped_filename or not reference_name or not model:
+        if not reference_name or not model:
             return jsonify({
                 'success': False,
-                'error': 'cropped_filename, reference_name, and model are required'
+                'error': 'reference_name (or name), and model are required'
+            }), 400
+        
+        # If no cropped_filename provided, we need to capture first
+        if not cropped_filename:
+            return jsonify({
+                'success': False,
+                'error': 'cropped_filename is required - must capture area first'
             }), 400
         
         # Build source path for cropped file

@@ -74,7 +74,7 @@ export const extractR2Path = (cloudflareUrl: string): string | null => {
     const url = new URL(cloudflareUrl);
     // Remove leading slash from pathname
     return url.pathname.substring(1);
-  } catch (error) {
+  } catch {
     console.error('[@utils:cloudflareUtils:extractR2Path] Invalid URL:', cloudflareUrl);
     return null;
   }

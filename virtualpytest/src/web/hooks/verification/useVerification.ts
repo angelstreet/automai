@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
+import { NodeVerification } from '../../types/pages/Navigation_Types';
+import { Verification, Verifications } from '../../types/verification/VerificationTypes';
+import { buildServerUrl } from '../../utils/frontendUtils';
+import { buildReferenceUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 // Define interfaces for verification data structures
 interface DragArea {
@@ -9,9 +13,6 @@ interface DragArea {
   width: number;
   height: number;
 }
-
-// Import unified types
-import { Verification, Verifications } from '../../types/verification/VerificationTypes';
 
 interface NodeVerification {
   id: string;
@@ -196,27 +197,155 @@ export const useVerification = ({
   }, []);
 
   // Handle reference selection
-  const handleReferenceSelected = useCallback(async (referenceName: string, referenceData: any) => {
-    console.log('[@hook:useVerification] Reference selected:', referenceName, referenceData);
-    // TODO: Implement with verification controller proxy
-    // For now, just clear preview
-    setSelectedReferenceImage(null);
-    setSelectedReferenceInfo(null);
-    setCapturedReferenceImage(null);
-    setHasCaptured(false);
-  }, []);
+  const handleReferenceSelected = useCallback(
+    async (referenceName: string, referenceData: any) => {
+      console.log('[@hook:useVerification] Reference selected:', referenceName, referenceData);
+
+      // If it's an image reference, display it in the preview area
+      if (referenceData && referenceData.type === 'image') {
+        const deviceModel = selectedHost.device_model;
+        const cloudflareUrl = buildReferenceUrl(referenceName, deviceModel);
+
+        console.log('[@hook:useVerification] Setting reference image preview:', {
+          referenceName,
+          deviceModel,
+          cloudflareUrl,
+          referenceData,
+        });
+
+        setSelectedReferenceImage(cloudflareUrl);
+        setSelectedReferenceInfo({
+          name: referenceName,
+          type: 'image',
+        });
+      } else if (referenceData && referenceData.type === 'text') {
+        // For text references, clear the image preview
+        console.log('[@hook:useVerification] Text reference selected, clearing image preview');
+        setSelectedReferenceImage(null);
+        setSelectedReferenceInfo({
+          name: referenceName,
+          type: 'text',
+        });
+      } else {
+        // Clear preview for unknown or null references
+        setSelectedReferenceImage(null);
+        setSelectedReferenceInfo(null);
+      }
+
+      // Clear captured reference when selecting a new reference
+      setCapturedReferenceImage(null);
+      setHasCaptured(false);
+    },
+    [selectedHost.device_model],
+  );
 
   // Handle capture reference
   const handleCaptureReference = useCallback(async () => {
-    console.log('[@hook:useVerification] Capture reference requested');
-    // TODO: Implement with verification controller proxy
-    // For now, just mark as captured
-    setHasCaptured(true);
-  }, []);
+    if (!selectedArea || !captureSourcePath) {
+      setError('Please select an area on the screenshot first');
+      return;
+    }
+
+    console.log('[@hook:useVerification] Capture reference requested:', {
+      selectedArea,
+      captureSourcePath,
+      referenceName,
+      referenceType,
+      imageProcessingOptions,
+    });
+
+    try {
+      let captureResponse;
+
+      if (
+        referenceType === 'image' &&
+        (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
+      ) {
+        console.log('[@hook:useVerification] Using process-area endpoint with processing options');
+        captureResponse = await fetch(`/server/av/capture-area-process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost, // Send full host object
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: referenceName || 'temp_capture',
+            model: selectedHost.device_model,
+            autocrop: imageProcessingOptions.autocrop,
+            remove_background: imageProcessingOptions.removeBackground,
+          }),
+        });
+      } else {
+        console.log('[@hook:useVerification] Using standard capture endpoint');
+        captureResponse = await fetch(`/server/av/capture-area`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost, // Send full host object
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: referenceName || 'temp_capture',
+            model: selectedHost.device_model,
+          }),
+        });
+      }
+
+      const result = await captureResponse.json();
+      console.log('[@hook:useVerification] Capture response result:', result);
+
+      if (result.success) {
+        const timestamp = new Date().getTime();
+        const imageUrl = `${result.image_url}?t=${timestamp}`;
+        console.log(
+          '[@hook:useVerification] Temporary capture created successfully, setting image URL:',
+          imageUrl,
+        );
+
+        setCapturedReferenceImage(imageUrl);
+        setHasCaptured(true);
+
+        // If autocrop was applied and new area dimensions are provided, update the selected area
+        if (imageProcessingOptions.autocrop && result.processed_area) {
+          console.log('[@hook:useVerification] === AUTOCROP AREA UPDATE ===');
+          console.log('[@hook:useVerification] Original area:', selectedArea);
+          console.log('[@hook:useVerification] Processed area from server:', result.processed_area);
+
+          // Update selected area if onAreaSelected callback is available
+          if (_onAreaSelected) {
+            _onAreaSelected({
+              x: result.processed_area.x,
+              y: result.processed_area.y,
+              width: result.processed_area.width,
+              height: result.processed_area.height,
+            });
+          }
+          console.log('[@hook:useVerification] Area updated after autocrop');
+        }
+      } else {
+        console.error('[@hook:useVerification] Failed to capture reference:', result.error);
+        setError(result.error || 'Failed to capture reference');
+      }
+    } catch (error) {
+      console.error('[@hook:useVerification] Error capturing reference:', error);
+      setError('Error capturing reference');
+    }
+  }, [
+    selectedArea,
+    captureSourcePath,
+    referenceName,
+    selectedHost,
+    referenceType,
+    imageProcessingOptions,
+    _onAreaSelected,
+  ]);
 
   // Handle save reference
   const handleSaveReference = useCallback(async () => {
-    if (!selectedArea || !screenshotPath) {
+    if (!selectedArea || !captureSourcePath) {
       setError('Please select an area on the screenshot first');
       return;
     }
@@ -234,40 +363,100 @@ export const useVerification = ({
         name: referenceName,
         model: selectedHost.device_model,
         area: selectedArea,
-        screenshot_path: screenshotPath,
+        captureSourcePath: captureSourcePath,
+        referenceType: referenceType,
+        imageProcessingOptions: imageProcessingOptions,
       });
 
-      // Determine the correct endpoint based on reference type
+      // Step 1: Capture the area (with processing if needed)
+      let captureResponse;
+
+      if (
+        referenceType === 'image' &&
+        (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
+      ) {
+        console.log('[@hook:useVerification] Capturing with processing options for save');
+        captureResponse = await fetch(`/server/av/capture-area-process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: referenceName,
+            model: selectedHost.device_model,
+            autocrop: imageProcessingOptions.autocrop,
+            remove_background: imageProcessingOptions.removeBackground,
+          }),
+        });
+      } else {
+        console.log('[@hook:useVerification] Capturing without processing for save');
+        captureResponse = await fetch(`/server/av/capture-area`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            area: selectedArea,
+            source_path: captureSourcePath,
+            reference_name: referenceName,
+            model: selectedHost.device_model,
+          }),
+        });
+      }
+
+      const captureResult = await captureResponse.json();
+
+      if (!captureResult.success) {
+        throw new Error(captureResult.error || 'Failed to capture area');
+      }
+
+      // Step 2: Save the captured area as a reference to Cloudflare R2
       const endpoint =
         referenceType === 'text'
           ? '/server/verification/text/save-text-reference'
           : '/server/verification/image/save-image-reference';
 
-      const response = await fetch(endpoint, {
+      const saveResponse = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host: selectedHost, // Send full host object
+          host: selectedHost,
           name: referenceName,
           model: selectedHost.device_model,
-          area: selectedArea,
-          screenshot_path: screenshotPath,
+          area: captureResult.processed_area || selectedArea, // Use processed area if available
+          screenshot_path: captureSourcePath,
           referenceType: referenceType,
+          text: referenceType === 'text' ? referenceText : undefined,
+          cropped_filename: captureResult.filename, // Pass the captured filename for R2 upload
         }),
       });
 
-      const result = await response.json();
+      const saveResult = await saveResponse.json();
 
-      if (result.success) {
-        console.log('[@hook:useVerification] Reference saved successfully');
+      if (saveResult.success) {
+        console.log(
+          '[@hook:useVerification] Reference saved successfully to Cloudflare R2:',
+          saveResult,
+        );
+
+        // Show success message with R2 URL
+        setSuccessMessage(`Reference "${referenceName}" saved to Cloudflare R2 successfully`);
+
+        // Clear form and captured image
         setReferenceName('');
+        setCapturedReferenceImage(null);
+        setHasCaptured(false);
 
         // Trigger reload of available references
         setReferenceSaveCounter((prev) => prev + 1);
       } else {
-        setError(result.error || 'Failed to save reference');
+        setError(saveResult.error || 'Failed to save reference to Cloudflare R2');
       }
     } catch (err: any) {
       console.error('[@hook:useVerification] Error saving reference:', err);
@@ -275,7 +464,15 @@ export const useVerification = ({
     } finally {
       setPendingSave(false);
     }
-  }, [selectedArea, screenshotPath, referenceName, selectedHost, referenceType]);
+  }, [
+    selectedArea,
+    captureSourcePath,
+    referenceName,
+    selectedHost,
+    referenceType,
+    referenceText,
+    imageProcessingOptions,
+  ]);
 
   // Handle test execution
   const handleTest = useCallback(
