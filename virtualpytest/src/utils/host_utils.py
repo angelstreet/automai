@@ -62,66 +62,7 @@ def register_host_with_server():
         print(f"   Device IP: {device_ip}")
         print(f"   Device Port: {device_port}")
         
-        # Pre-create controllers to extract capabilities before sending to server
-        print(f"\n🎮 [HOST] Pre-creating controllers to extract capabilities...")
-        created_controllers = create_local_controllers_from_model(
-            device_model, 
-            device_name, 
-            device_ip, 
-            device_port,
-            os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce')  # Use team_id from env
-        )
-        print(f"   Pre-created controllers: {list(created_controllers.keys())}")
-        
-        # Extract verification types and actions from pre-created controllers
-        print(f"\n🔍 [HOST] Extracting capabilities for server registration...")
-        available_verification_types = {}
-        available_actions = {}
-
-        for controller_type, controller_obj in created_controllers.items():
-            try:
-                # Extract verification types if controller has the method
-                if hasattr(controller_obj, 'get_available_verifications'):
-                    verifications = controller_obj.get_available_verifications()
-                    if verifications:
-                        # Handle both old dict format and new list format for backward compatibility
-                        if isinstance(verifications, list):
-                            # New format: flat array of verifications
-                            available_verification_types[controller_type] = verifications
-                            print(f"   ✅ {controller_type}: {len(verifications)} verifications")
-                        elif isinstance(verifications, dict):
-                            # Old format: convert dict structure to flat array
-                            verification_list = []
-                            for category, category_verifications in verifications.items():
-                                if isinstance(category_verifications, dict):
-                                    # Convert nested dict to verification objects
-                                    for ver_id, ver_data in category_verifications.items():
-                                        verification_obj = {
-                                            'command': ver_id,
-                                            'params': ver_data.get('parameters', ver_data.get('params', {}))
-                                        }
-                                        verification_list.append(verification_obj)
-                                elif isinstance(category_verifications, list):
-                                    # Already in correct format
-                                    verification_list.extend(category_verifications)
-                            
-                            available_verification_types[controller_type] = verification_list
-                            print(f"   ✅ {controller_type}: {len(verification_list)} verifications (converted from old format)")
-                
-                # Extract available actions if controller has the method  
-                if hasattr(controller_obj, 'get_available_actions'):
-                    actions = controller_obj.get_available_actions()
-                    if actions:
-                        available_actions[controller_type] = actions
-                        print(f"   ✅ {controller_type}: {len(actions)} action categories")
-                        
-            except Exception as e:
-                print(f"   ⚠️ {controller_type}: Error extracting capabilities - {e}")
-
-        print(f"   Total verification types: {sum(len(v) for v in available_verification_types.values())}")
-        print(f"   Total action categories: {sum(len(a) for a in available_actions.values())}")
-
-        # Create registration payload with complete device information and capabilities
+        # Create registration payload with complete device information
         host_info = {
             'host_name': host_name,
             'host_url': host_url,
@@ -130,9 +71,7 @@ def register_host_with_server():
             'device_model': device_model,         # Dynamic device model detection
             'device_ip': device_ip,               # Send actual device IP
             'device_port': device_port,           # Send actual device port
-            'system_stats': get_host_system_stats(),
-            'available_verification_types': available_verification_types,  # Send extracted verification types
-            'available_actions': available_actions,  # Send extracted actions
+            'system_stats': get_host_system_stats()
         }
         
         # Build server URLs using standardized host URL builder system
@@ -174,22 +113,81 @@ def register_host_with_server():
                 client_registration_state['urls'] = urls
                 
                 # Store global host object from server response (includes all server-added data)
+                global global_host_object
                 global_host_object = response_data.get('host_data', {})
                 
                 print(f"\n✅ [HOST] Registration successful!")
                 print(f"   Host Name: {host_name}")
                 print(f"   Server returned host object with keys: {list(global_host_object.keys())}")
                 
-                # Store the pre-created controllers and capabilities in global host object
-                print(f"\n🎮 [HOST] Storing controllers and capabilities in global host object...")
-                
-                # Add extracted capabilities to global host object (from server response)
-                global_host_object['available_verification_types'] = response_data.get('available_verification_types', {})
-                global_host_object['available_actions'] = response_data.get('available_actions', {})
+                # Create local controllers using the device model and add them to the host object
+                print(f"\n🎮 [HOST] Creating local controllers for device model: {device_model}")
+                created_controllers = create_local_controllers_from_model(
+                    device_model, 
+                    device_name, 
+                    device_ip, 
+                    device_port,
+                    os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce')  # Use team_id from env
+                )
+                print(f"   Created controllers: {list(created_controllers.keys())}")
                 
                 # Add controller objects to the global host object (local host management)
+                global global_host_object
                 global_host_object['local_controller_objects'] = created_controllers
-                print(f"   Added controller objects and capabilities to host object")
+                print(f"   Added controller objects to host object")
+                
+                # Extract verification types and actions from created controllers
+                print(f"\n🔍 [HOST] Extracting verification types and actions from controllers...")
+                available_verification_types = {}
+                available_actions = {}
+
+                for controller_type, controller_obj in created_controllers.items():
+                    try:
+                        # Extract verification types if controller has the method
+                        if hasattr(controller_obj, 'get_available_verifications'):
+                            verifications = controller_obj.get_available_verifications()
+                            if verifications:
+                                # Handle both old dict format and new list format for backward compatibility
+                                if isinstance(verifications, list):
+                                    # New format: flat array of verifications
+                                    available_verification_types[controller_type] = verifications
+                                    print(f"   ✅ {controller_type}: {len(verifications)} verifications")
+                                elif isinstance(verifications, dict):
+                                    # Old format: convert dict structure to flat array
+                                    verification_list = []
+                                    for category, category_verifications in verifications.items():
+                                        if isinstance(category_verifications, dict):
+                                            # Convert nested dict to verification objects
+                                            for ver_id, ver_data in category_verifications.items():
+                                                verification_obj = {
+                                                    'command': ver_id,
+                                                    'params': ver_data.get('parameters', ver_data.get('params', {}))
+                                                }
+                                                verification_list.append(verification_obj)
+                                        elif isinstance(category_verifications, list):
+                                            # Already in correct format
+                                            verification_list.extend(category_verifications)
+                                    
+                                    available_verification_types[controller_type] = verification_list
+                                    print(f"   ✅ {controller_type}: {len(verification_list)} verifications (converted from old format)")
+                        
+                        # Extract available actions if controller has the method  
+                        if hasattr(controller_obj, 'get_available_actions'):
+                            actions = controller_obj.get_available_actions()
+                            if actions:
+                                available_actions[controller_type] = actions
+                                print(f"   ✅ {controller_type}: {len(actions)} actions")
+                                
+                    except Exception as e:
+                        print(f"   ⚠️ {controller_type}: Error extracting capabilities - {e}")
+
+                print(f"   Total verification types: {sum(len(v) for v in available_verification_types.values())}")
+                print(f"   Total actions: {sum(len(a) for a in available_actions.values())}")
+                
+                # Store verification types and actions in global host object for frontend access
+                global_host_object['available_verification_types'] = available_verification_types
+                global_host_object['available_actions'] = available_actions
+                print(f"   Added verification types and actions to host object")
                 
                 # Start periodic ping thread
                 start_ping_thread()
