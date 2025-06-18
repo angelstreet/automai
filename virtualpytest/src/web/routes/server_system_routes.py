@@ -137,6 +137,10 @@ def register_host():
             'controller_configs': controller_configs,
             'controller_types': controller_types,
             
+            # === VERIFICATION AND REMOTE ACTIONS DATA ===
+            'available_verification_types': host_info.get('available_verification_types', {}),
+            'available_remote_actions': host_info.get('available_actions', {}),
+            
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
             'lockedBy': None,
