@@ -30,7 +30,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
     const handleScreenshotUpdate = (event: CustomEvent) => {
       if (event.detail.nodeId === id) {
         console.log(`[@component:UIMenuNode] Screenshot updated for node ${id}, refreshing image`);
-        setImageKey((prev) => prev + 1); // Force image refresh
+        console.log(`[@component:UIMenuNode] Event detail:`, event.detail);
+
+        // Use timestamp from event if available, otherwise increment imageKey
+        if (event.detail.timestamp) {
+          setImageKey(event.detail.timestamp);
+        } else {
+          setImageKey((prev) => prev + 1);
+        }
       }
     };
 
