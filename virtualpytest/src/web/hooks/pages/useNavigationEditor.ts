@@ -3,21 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
 import {
+  useDeviceControl,
+  useNavigationState,
+  useNavigationConfig,
+  useNodeEdgeManagement,
+} from '../../contexts';
+import {
   UINavigationNode,
   UINavigationEdge,
   ConnectionResult,
 } from '../../types/pages/Navigation_Types';
 import { useConnectionRules } from '../navigation/useConnectionRules';
-import { useNavigationConfig } from '../navigation/useNavigationConfig';
-import { useNavigationPanels } from '../navigation/useNavigationPanels';
-import { useNavigationState } from '../navigation/useNavigationState';
-import { useNodeEdgeManagement } from '../navigation/useNodeEdgeManagement';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
 
-  // Use the modular state hook
+  // Use context hooks directly
   const navigationState = useNavigationState();
+  const configHook = useNavigationConfig();
+  const nodeEdgeHook = useNodeEdgeManagement();
+  const deviceControl = useDeviceControl();
 
   // Connection rules hook
   const { validateConnection, getRulesSummary } = useConnectionRules();
@@ -34,53 +39,58 @@ export const useNavigationEditor = () => {
     [validateConnection],
   );
 
-  // Navigation config operations hook
-  const configHook = useNavigationConfig({
-    currentTreeName: navigationState.currentTreeName,
-    setCurrentTreeName: navigationState.setCurrentTreeName,
-    setNodes: navigationState.setNodes,
-    setEdges: navigationState.setEdges,
-    setInitialState: navigationState.setInitialState,
-    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-    setIsLoading: navigationState.setIsLoading,
-    setError: navigationState.setError,
-    setSaveError: navigationState.setSaveError,
-    setSaveSuccess: navigationState.setSaveSuccess,
-    setIsSaving: navigationState.setIsSaving,
-    setUserInterface: navigationState.setUserInterface,
-    nodes: navigationState.nodes,
-    edges: navigationState.edges,
-    isSaving: navigationState.isSaving,
-  });
-
-  // Node/Edge management hook
-  const nodeEdgeHook = useNodeEdgeManagement({
-    nodes: navigationState.nodes,
-    edges: navigationState.edges,
-    selectedNode: navigationState.selectedNode,
-    selectedEdge: navigationState.selectedEdge,
-    nodeForm: navigationState.nodeForm,
-    edgeForm: navigationState.edgeForm,
-    isNewNode: navigationState.isNewNode,
-    setNodes: navigationState.setNodes,
-    setEdges: navigationState.setEdges,
-    setSelectedNode: navigationState.setSelectedNode,
-    setSelectedEdge: navigationState.setSelectedEdge,
-    setNodeForm: navigationState.setNodeForm,
-    setEdgeForm: navigationState.setEdgeForm,
-    setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
-    setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
-    setIsNewNode: navigationState.setIsNewNode,
-    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-  });
-
   // Additional state that might need local management
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
 
-  // Use navigation panels hook for panel management
-  const deviceControl = useNavigationPanels({
-    userInterface: navigationState.userInterface,
-  });
+  // Create config state object for context operations
+  const configState = useMemo(
+    () => ({
+      nodes: navigationState.nodes,
+      edges: navigationState.edges,
+      userInterface: navigationState.userInterface,
+      setNodes: navigationState.setNodes,
+      setEdges: navigationState.setEdges,
+      setUserInterface: navigationState.setUserInterface,
+      setInitialState: navigationState.setInitialState,
+      setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+      setIsLoading: navigationState.setIsLoading,
+      setError: navigationState.setError,
+    }),
+    [
+      navigationState.nodes,
+      navigationState.edges,
+      navigationState.userInterface,
+      navigationState.setNodes,
+      navigationState.setEdges,
+      navigationState.setUserInterface,
+      navigationState.setInitialState,
+      navigationState.setHasUnsavedChanges,
+      navigationState.setIsLoading,
+      navigationState.setError,
+    ],
+  );
+
+  // Create wrapper functions for config operations that pass the navigation state
+  const loadFromConfig = useCallback(
+    (treeName: string) => {
+      return configHook.loadFromConfig(treeName, configState);
+    },
+    [configHook, configState],
+  );
+
+  const saveToConfig = useCallback(
+    (treeName: string) => {
+      return configHook.saveToConfig(treeName, configState);
+    },
+    [configHook, configState],
+  );
+
+  const createEmptyTreeConfig = useCallback(
+    (treeName: string) => {
+      return configHook.createEmptyTree(treeName, configState);
+    },
+    [configHook, configState],
+  );
 
   // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback(
@@ -97,7 +107,7 @@ export const useNavigationEditor = () => {
         navigationState.setHasUnsavedChanges(true);
       }
     },
-    [navigationState],
+    [navigationState.onNodesChange, navigationState.setHasUnsavedChanges],
   );
 
   // Handle edge changes and track modifications
@@ -112,7 +122,7 @@ export const useNavigationEditor = () => {
         navigationState.setHasUnsavedChanges(true);
       }
     },
-    [navigationState],
+    [navigationState.onEdgesChange, navigationState.setHasUnsavedChanges],
   );
 
   // Handle new connections
@@ -226,7 +236,13 @@ export const useNavigationEditor = () => {
       // Mark as having unsaved changes
       navigationState.setHasUnsavedChanges(true);
     },
-    [navigationState, typedValidateConnection],
+    [
+      navigationState.nodes,
+      navigationState.setNodes,
+      navigationState.setEdges,
+      navigationState.setHasUnsavedChanges,
+      typedValidateConnection,
+    ],
   );
 
   // Set user interface from props (passed from UserInterface.tsx via navigation state)
@@ -237,23 +253,24 @@ export const useNavigationEditor = () => {
         navigationState.setIsLoadingInterface(false);
       }
     },
-    [navigationState],
+    [navigationState.setUserInterface, navigationState.setIsLoadingInterface],
   );
 
   // Handle clicking on the background/pane to deselect
   const onPaneClick = useCallback(() => {
     navigationState.setSelectedNode(null);
     navigationState.setSelectedEdge(null);
-  }, [navigationState]);
+  }, [navigationState.setSelectedNode, navigationState.setSelectedEdge]);
 
   // Handle node selection
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: UINavigationNode) => {
+      console.log(`[@hook:useNavigationEditor:onNodeClick] Node clicked: ${node.id}`);
       event.stopPropagation(); // Prevent pane click from firing
       navigationState.setSelectedNode(node as UINavigationNode);
       navigationState.setSelectedEdge(null);
     },
-    [navigationState],
+    [navigationState.setSelectedNode, navigationState.setSelectedEdge],
   );
 
   // Handle edge selection
@@ -263,7 +280,7 @@ export const useNavigationEditor = () => {
       navigationState.setSelectedEdge(edge as UINavigationEdge);
       navigationState.setSelectedNode(null);
     },
-    [navigationState],
+    [navigationState.setSelectedEdge, navigationState.setSelectedNode],
   );
 
   // Handle double-click on node for navigation
@@ -290,7 +307,11 @@ export const useNavigationEditor = () => {
         }
       }
     },
-    [navigationState],
+    [
+      navigationState.focusNodeId,
+      navigationState.setFocusNodeId,
+      navigationState.setMaxDisplayDepth,
+    ],
   );
 
   // Navigate back in breadcrumb
@@ -313,9 +334,20 @@ export const useNavigationEditor = () => {
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
 
       // Load tree data for that level from config (nodes/edges only, not interface metadata)
-      configHook.loadFromConfig(targetTreeName);
+      loadFromConfig(targetTreeName);
     },
-    [navigationState, configHook, navigate],
+    [
+      navigationState.navigationPath,
+      navigationState.navigationNamePath,
+      navigationState.currentTreeId,
+      navigationState.setNavigationPath,
+      navigationState.setNavigationNamePath,
+      navigationState.setCurrentTreeId,
+      navigationState.setCurrentTreeName,
+      configHook,
+      navigate,
+      loadFromConfig,
+    ],
   );
 
   // Go back to parent tree
@@ -333,9 +365,19 @@ export const useNavigationEditor = () => {
       navigate(`/navigation-editor/${encodeURIComponent(targetTreeName)}/${targetTreeId}`);
 
       // Load parent tree data from config (nodes/edges only, not interface metadata)
-      configHook.loadFromConfig(targetTreeName);
+      loadFromConfig(targetTreeName);
     }
-  }, [navigationState, configHook, navigate]);
+  }, [
+    navigationState.navigationPath,
+    navigationState.navigationNamePath,
+    navigationState.setNavigationPath,
+    navigationState.setNavigationNamePath,
+    navigationState.setCurrentTreeId,
+    navigationState.setCurrentTreeName,
+    configHook,
+    navigate,
+    loadFromConfig,
+  ]);
 
   // Actually perform the discard operation
   const performDiscardChanges = useCallback(() => {
@@ -347,7 +389,15 @@ export const useNavigationEditor = () => {
       navigationState.setSaveSuccess(false);
       navigationState.setIsDiscardDialogOpen(false);
     }
-  }, [navigationState]);
+  }, [
+    navigationState.initialState,
+    navigationState.setNodes,
+    navigationState.setEdges,
+    navigationState.setHasUnsavedChanges,
+    navigationState.setSaveError,
+    navigationState.setSaveSuccess,
+    navigationState.setIsDiscardDialogOpen,
+  ]);
 
   // Discard changes function with confirmation
   const discardChanges = useCallback(() => {
@@ -356,7 +406,11 @@ export const useNavigationEditor = () => {
     } else {
       performDiscardChanges();
     }
-  }, [navigationState, performDiscardChanges]);
+  }, [
+    navigationState.hasUnsavedChanges,
+    navigationState.setIsDiscardDialogOpen,
+    performDiscardChanges,
+  ]);
 
   // Fit view
   const fitView = useCallback(() => {
@@ -376,18 +430,21 @@ export const useNavigationEditor = () => {
         navigationState.reactFlowInstance.fitView();
       }
     }
-  }, [navigationState]);
+  }, [navigationState.reactFlowInstance, navigationState.nodes]);
 
   // Navigate back to parent
   const navigateToParent = useCallback(() => {
     navigate('/configuration/interface');
   }, [navigate]);
 
-  // Default edge options
-  const defaultEdgeOptions = {
-    type: 'smoothstep',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#b1b1b7' },
-  };
+  // Default edge options - memoized to prevent re-renders
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      type: 'smoothstep',
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#b1b1b7' },
+    }),
+    [],
+  );
 
   // Helper function to check if a node is descendant of another
   const isNodeDescendantOf = useCallback(
@@ -469,7 +526,7 @@ export const useNavigationEditor = () => {
       navigationState.setCurrentViewRootId(targetView.id);
       navigationState.setViewPath((prev) => prev.slice(0, targetIndex + 1));
     },
-    [navigationState],
+    [navigationState.viewPath, navigationState.setCurrentViewRootId, navigationState.setViewPath],
   );
 
   // Update available focus nodes when nodes change
@@ -584,25 +641,23 @@ export const useNavigationEditor = () => {
     onNodeDoubleClick: onNodeDoubleClickUpdated,
     onPaneClick,
 
-    // Config operations (single source of truth)
-    loadFromConfig: configHook.loadFromConfig,
-    saveToConfig: configHook.saveToConfig,
+    // Config operations (single source of truth) - memoized to prevent re-renders
+    loadFromConfig,
+    saveToConfig,
     listAvailableTrees: configHook.listAvailableTrees,
-    createEmptyTreeConfig: configHook.createEmptyTree,
+    createEmptyTreeConfig,
 
     // Lock management from Config hook
     isLocked: configHook.isLocked,
     lockInfo: configHook.lockInfo,
-    isCheckingLock: configHook.isCheckingLock,
     showReadOnlyOverlay: configHook.showReadOnlyOverlay,
     setCheckingLockState: configHook.setCheckingLockState,
     sessionId: configHook.sessionId,
     lockNavigationTree: configHook.lockNavigationTree,
     unlockNavigationTree: configHook.unlockNavigationTree,
-    checkTreeLockStatus: configHook.checkTreeLockStatus,
     setupAutoUnlock: configHook.setupAutoUnlock,
 
-    // Actions from Node/Edge management hook
+    // Actions from Node/Edge management hook - memoized to prevent re-renders
     handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,
     handleEdgeFormSubmit: nodeEdgeHook.saveEdgeChanges,
     handleDeleteNode: nodeEdgeHook.deleteSelected,

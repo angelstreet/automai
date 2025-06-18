@@ -1,15 +1,55 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 
-import { Host } from '../../types/common/Host_Types';
-import { useRegistration } from '../useRegistration';
+import { Host } from '../types/common/Host_Types';
+import { useRegistration } from '../hooks/useRegistration';
 
-interface UseNavigationPanelsProps {
-  userInterface: any;
+// ========================================
+// TYPES
+// ========================================
+
+interface DeviceControlContextType {
+  // Panel and UI state
+  selectedHost: Host | null;
+  isControlActive: boolean;
+  isRemotePanelOpen: boolean;
+  showRemotePanel: boolean;
+  showAVPanel: boolean;
+  isVerificationActive: boolean;
+
+  // Host data (filtered by interface models)
+  availableHosts: Host[];
+  getHostByName: (name: string) => Host | undefined;
+  fetchHosts: () => void;
+
+  // Panel and UI handlers
+  handleDeviceSelect: (host: Host | null) => void;
+  handleControlStateChange: (active: boolean) => void;
+  handleToggleRemotePanel: () => void;
+  handleConnectionChange: (connected: boolean) => void;
+  handleDisconnectComplete: () => void;
 }
 
-export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps) => {
+interface DeviceControlProviderProps {
+  children: React.ReactNode;
+  userInterface?: {
+    models?: string[];
+  };
+}
+
+// ========================================
+// CONTEXT
+// ========================================
+
+const DeviceControlContext = createContext<DeviceControlContextType | null>(null);
+
+export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
+  children,
+  userInterface,
+}) => {
+  console.log('[@context:DeviceControlProvider] Initializing device control context');
+
   // ========================================
-  // NAVIGATION PANEL STATE
+  // STATE
   // ========================================
 
   // Panel and UI state
@@ -27,12 +67,12 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
   const { availableHosts, getHostByName, fetchHosts } = useRegistration();
 
   // ========================================
-  // NAVIGATION PANEL HANDLERS
+  // HANDLERS
   // ========================================
 
   // Handle device selection
   const handleDeviceSelect = useCallback((host: Host | null) => {
-    console.log(`[@hook:useNavigationPanels] Device selected:`, host?.host_name || 'null');
+    console.log(`[@context:DeviceControlProvider] Device selected:`, host?.host_name || 'null');
 
     if (!host) {
       setSelectedHost(null);
@@ -41,13 +81,13 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
 
     setSelectedHost(host);
     console.log(
-      `[@hook:useNavigationPanels] Host selected: ${host.host_name} (device: ${host.device_name})`,
+      `[@context:DeviceControlProvider] Host selected: ${host.host_name} (device: ${host.device_name})`,
     );
   }, []);
 
   // Handle control state changes (called from header after successful device control)
   const handleControlStateChange = useCallback((active: boolean) => {
-    console.log(`[@hook:useNavigationPanels] Control state changed to: ${active}`);
+    console.log(`[@context:DeviceControlProvider] Control state changed to: ${active}`);
     setIsControlActive(active);
 
     if (active) {
@@ -55,13 +95,13 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
       setShowRemotePanel(true);
       setShowAVPanel(true);
       setIsRemotePanelOpen(true);
-      console.log(`[@hook:useNavigationPanels] Panels shown after control activation`);
+      console.log(`[@context:DeviceControlProvider] Panels shown after control activation`);
     } else {
       // Hide panels when control is inactive
       setShowRemotePanel(false);
       setShowAVPanel(false);
       setIsRemotePanelOpen(false);
-      console.log(`[@hook:useNavigationPanels] Panels hidden after control deactivation`);
+      console.log(`[@context:DeviceControlProvider] Panels hidden after control deactivation`);
     }
   }, []);
 
@@ -70,19 +110,19 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
     const newState = !isRemotePanelOpen;
     setIsRemotePanelOpen(newState);
     console.log(
-      `[@hook:useNavigationPanels] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
+      `[@context:DeviceControlProvider] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
     );
   }, [isRemotePanelOpen]);
 
   // Handle connection change (for panels)
   const handleConnectionChange = useCallback((connected: boolean) => {
-    console.log(`[@hook:useNavigationPanels] Connection state changed: ${connected}`);
+    console.log(`[@context:DeviceControlProvider] Connection state changed: ${connected}`);
     // Could update UI state based on connection status
   }, []);
 
   // Handle disconnect complete (for panels)
   const handleDisconnectComplete = useCallback(() => {
-    console.log(`[@hook:useNavigationPanels] Disconnect complete`);
+    console.log(`[@context:DeviceControlProvider] Disconnect complete`);
     setIsControlActive(false);
     setShowRemotePanel(false);
     setShowAVPanel(false);
@@ -90,50 +130,54 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
   }, []);
 
   // ========================================
-  // HOST FILTERING EFFECTS
+  // EFFECTS
   // ========================================
 
   // Ensure hosts are fetched when component mounts
   useEffect(() => {
     console.log(
-      `[@hook:useNavigationPanels] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
+      `[@context:DeviceControlProvider] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
     );
     if (availableHosts.length === 0) {
-      console.log(`[@hook:useNavigationPanels] No hosts available, triggering fetch...`);
+      console.log(`[@context:DeviceControlProvider] No hosts available, triggering fetch...`);
       fetchHosts();
     }
-  }, [availableHosts.length, fetchHosts]); // Fixed dependencies
+  }, [availableHosts.length, fetchHosts]);
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
     console.log(
-      `[@hook:useNavigationPanels] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
+      `[@context:DeviceControlProvider] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
       userInterface?.models,
     );
 
     if (userInterface?.models && availableHosts.length > 0) {
       console.log(
-        `[@hook:useNavigationPanels] Available hosts for filtering:`,
+        `[@context:DeviceControlProvider] Available hosts for filtering:`,
         availableHosts.map((h) => ({ host_name: h.host_name, device_model: h.device_model })),
       );
 
       const compatibleHosts = availableHosts.filter((host) =>
-        userInterface.models.includes(host.device_model),
+        userInterface.models!.includes(host.device_model),
       );
 
       console.log(
-        `[@hook:useNavigationPanels] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
+        `[@context:DeviceControlProvider] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
       );
       setFilteredAvailableHosts(compatibleHosts);
     } else {
       console.log(
-        `[@hook:useNavigationPanels] No filtering - showing all ${availableHosts.length} hosts`,
+        `[@context:DeviceControlProvider] No filtering - showing all ${availableHosts.length} hosts`,
       );
       setFilteredAvailableHosts(availableHosts);
     }
   }, [availableHosts, userInterface?.models]);
 
-  return useMemo(
+  // ========================================
+  // CONTEXT VALUE
+  // ========================================
+
+  const contextValue = useMemo(
     () => ({
       // Panel and UI state
       selectedHost,
@@ -143,20 +187,19 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
       showAVPanel,
       isVerificationActive,
 
+      // Host data (filtered by interface models)
+      availableHosts: filteredAvailableHosts,
+      getHostByName,
+      fetchHosts,
+
       // Panel and UI handlers
       handleDeviceSelect,
       handleControlStateChange,
       handleToggleRemotePanel,
       handleConnectionChange,
       handleDisconnectComplete,
-
-      // Host data (filtered by interface models)
-      availableHosts: filteredAvailableHosts,
-      getHostByName,
-      fetchHosts,
     }),
     [
-      // State values
       selectedHost,
       isControlActive,
       isRemotePanelOpen,
@@ -164,15 +207,29 @@ export const useNavigationPanels = ({ userInterface }: UseNavigationPanelsProps)
       showAVPanel,
       isVerificationActive,
       filteredAvailableHosts,
-      // Handlers (these are stable due to useCallback)
+      getHostByName,
+      fetchHosts,
       handleDeviceSelect,
       handleControlStateChange,
       handleToggleRemotePanel,
       handleConnectionChange,
       handleDisconnectComplete,
-      // External functions (these should be stable from useRegistration)
-      getHostByName,
-      fetchHosts,
     ],
   );
+
+  return (
+    <DeviceControlContext.Provider value={contextValue}>{children}</DeviceControlContext.Provider>
+  );
+};
+
+// ========================================
+// HOOK
+// ========================================
+
+export const useDeviceControl = (): DeviceControlContextType => {
+  const context = useContext(DeviceControlContext);
+  if (!context) {
+    throw new Error('useDeviceControl must be used within a DeviceControlProvider');
+  }
+  return context;
 };

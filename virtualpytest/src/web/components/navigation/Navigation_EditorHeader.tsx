@@ -2,7 +2,6 @@ import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React, { useState, useCallback } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
-import { useRegistration } from '../../hooks/useRegistration';
 import { useToast } from '../../hooks/useToast';
 import {
   ValidationPreviewClient,

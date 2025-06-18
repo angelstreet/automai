@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Dialog,
   DialogTitle,
@@ -7,6 +8,7 @@ import {
   Button,
   Box,
   Typography,
+  IconButton,
 } from '@mui/material';
 import React, { useState, useEffect, useMemo } from 'react';
 
@@ -39,7 +41,7 @@ interface EdgeEditDialogProps {
   onClose: () => void;
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
-  selectedHost: Host; // Use proper Host type and make required
+  selectedHost?: Host; // Make optional so dialog can be rendered without host
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -159,7 +161,14 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Navigation Actions</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Edit Navigation Actions
+          <IconButton size="small" onClick={onClose} sx={{ p: 0.25 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -227,7 +236,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
         <Button onClick={() => onSubmit(edgeForm)} variant="contained" disabled={!isFormValid()}>
           Save
         </Button>

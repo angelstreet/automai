@@ -1,3 +1,4 @@
+import { Close as CloseIcon } from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -11,6 +12,7 @@ import {
   Button,
   Box,
   Typography,
+  IconButton,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
@@ -515,7 +517,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Node</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Edit Node
+          <IconButton size="small" onClick={onClose} sx={{ p: 0.25 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Node Name and Type in columns */}
@@ -641,7 +650,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
         {onResetNode && (
           <Button onClick={() => onResetNode()} variant="outlined" color="warning">
             Reset Node

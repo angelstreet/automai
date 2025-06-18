@@ -32,6 +32,10 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { DeviceControlProvider, useDeviceControl } from '../contexts/DeviceControlContext';
+import { NavigationConfigProvider } from '../contexts/NavigationConfigContext';
+import { NavigationStateProvider, useNavigationState } from '../contexts/NavigationStateContext';
+import { NodeEdgeManagementProvider } from '../contexts/NodeEdgeManagementContext';
 import { useNavigationEditor } from '../hooks';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -201,8 +205,10 @@ const NavigationEditorContent: React.FC = () => {
     setHasUnsavedChanges,
     setEdges,
     setSelectedEdge,
+  } = useNavigationEditor();
 
-    // Device control state & handlers
+  // Get device control from context
+  const {
     selectedHost,
     isControlActive,
     isRemotePanelOpen,
@@ -212,12 +218,10 @@ const NavigationEditorContent: React.FC = () => {
     handleControlStateChange,
     handleToggleRemotePanel,
     handleDisconnectComplete,
-
-    // Host data (filtered by interface models)
     availableHosts,
     getHostByName,
     fetchHosts,
-  } = useNavigationEditor();
+  } = useDeviceControl();
 
   // Track the last loaded tree ID to prevent unnecessary reloads
   const lastLoadedTreeId = useRef<string | null>(null);
@@ -708,8 +712,46 @@ const NavigationEditorContent: React.FC = () => {
 const NavigationEditor: React.FC = () => {
   return (
     <ReactFlowProvider>
-      <NavigationEditorContent />
+      <NavigationStateProvider>
+        <NavigationConfigProvider>
+          <NavigationEditorWithAllProviders />
+        </NavigationConfigProvider>
+      </NavigationStateProvider>
     </ReactFlowProvider>
+  );
+};
+
+const NavigationEditorWithAllProviders: React.FC = () => {
+  // Get navigation state to pass to both device control and node edge management providers
+  const navigationState = useNavigationState();
+
+  // Create state objects for providers
+  const nodeEdgeState = {
+    nodes: navigationState.nodes,
+    edges: navigationState.edges,
+    selectedNode: navigationState.selectedNode,
+    selectedEdge: navigationState.selectedEdge,
+    nodeForm: navigationState.nodeForm,
+    edgeForm: navigationState.edgeForm,
+    isNewNode: navigationState.isNewNode,
+    setNodes: navigationState.setNodes,
+    setEdges: navigationState.setEdges,
+    setSelectedNode: navigationState.setSelectedNode,
+    setSelectedEdge: navigationState.setSelectedEdge,
+    setNodeForm: navigationState.setNodeForm,
+    setEdgeForm: navigationState.setEdgeForm,
+    setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
+    setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
+    setIsNewNode: navigationState.setIsNewNode,
+    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+  };
+
+  return (
+    <NodeEdgeManagementProvider state={nodeEdgeState}>
+      <DeviceControlProvider userInterface={navigationState.userInterface}>
+        <NavigationEditorContent />
+      </DeviceControlProvider>
+    </NodeEdgeManagementProvider>
   );
 };
 
