@@ -499,8 +499,58 @@ class AudioVerificationController(VerificationControllerInterface):
     
     def get_available_verifications(self) -> Dict[str, Any]:
         """Get available verification actions for audio controller."""
-        from ..controller_verifications import AUDIO_VERIFICATIONS
-        return AUDIO_VERIFICATIONS
+        return {
+            'audio_analysis': {
+                'analyze_audio_level': {
+                    'description': 'Analyze current audio level as percentage',
+                    'parameters': {
+                        'audio_file': {'type': 'string', 'required': False, 'description': 'Path to audio file (if None, captures new sample)'},
+                        'duration': {'type': 'float', 'required': False, 'description': 'Duration for live capture'}
+                    }
+                },
+                'analyze_audio_frequency': {
+                    'description': 'Analyze audio frequency content',
+                    'parameters': {
+                        'audio_file': {'type': 'string', 'required': False, 'description': 'Path to audio file (if None, captures new sample)'},
+                        'duration': {'type': 'float', 'required': False, 'description': 'Duration for live capture'}
+                    }
+                }
+            },
+            'audio_detection': {
+                'detect_silence': {
+                    'description': 'Detect if audio is silent below threshold',
+                    'parameters': {
+                        'threshold': {'type': 'float', 'required': False, 'description': 'Silence threshold (default from config)'},
+                        'duration': {'type': 'float', 'required': False, 'description': 'Duration to analyze'},
+                        'audio_file': {'type': 'string', 'required': False, 'description': 'Path to audio file'}
+                    }
+                },
+                'verify_audio_playing': {
+                    'description': 'Verify that audio is playing above minimum level',
+                    'parameters': {
+                        'min_level': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Minimum audio level percentage'},
+                        'duration': {'type': 'float', 'required': False, 'default': 2.0, 'description': 'Duration to analyze'}
+                    }
+                },
+                'verify_audio_contains_frequency': {
+                    'description': 'Verify that audio contains a specific frequency',
+                    'parameters': {
+                        'target_freq': {'type': 'float', 'required': True, 'description': 'Target frequency in Hz'},
+                        'tolerance': {'type': 'float', 'required': False, 'default': 50.0, 'description': 'Frequency tolerance in Hz'},
+                        'duration': {'type': 'float', 'required': False, 'description': 'Duration to analyze'}
+                    }
+                }
+            },
+            'audio_capture': {
+                'capture_audio_sample': {
+                    'description': 'Capture an audio sample for analysis',
+                    'parameters': {
+                        'duration': {'type': 'float', 'required': False, 'description': 'Duration to capture'},
+                        'source': {'type': 'string', 'required': False, 'default': 'av_controller', 'description': 'Audio source'}
+                    }
+                }
+            }
+        }
 
 
 # Backward compatibility alias

@@ -426,9 +426,59 @@ class IRRemoteController(RemoteControllerInterface):
         }
     
     def get_available_actions(self) -> Dict[str, Any]:
-        """Get available remote actions for IR controller."""
-        from ..controller_actions import IR_REMOTE_ACTIONS
-        return IR_REMOTE_ACTIONS
+        """Get available actions for this IR controller."""
+        return {
+            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
+            'control': ['select', 'back', 'home', 'menu'],
+            'power': ['power'],
+            'volume': ['volume_up', 'volume_down', 'mute'],
+            'media': ['play_pause', 'fast_forward', 'rewind'],
+            'text_input': ['input_text'],
+            'sequences': ['execute_sequence'],
+            'ir_specific': {
+                'power_control': ['power_on', 'power_off'],
+                'channel_control': ['change_channel'],
+                'volume_control': ['set_volume'],
+                'numeric_input': ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                'color_buttons': ['RED', 'GREEN', 'YELLOW', 'BLUE'],
+                'function_buttons': ['F1', 'F2', 'F3', 'F4'],
+                'tv_controls': ['CHANNEL_UP', 'CHANNEL_DOWN', 'LAST', 'GUIDE', 'INFO'],
+                'supported_keys': list(self.IR_KEYCODES.keys())
+            }
+        }
+
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verifications for this IR controller."""
+        return {
+            'device_control': {
+                'power_on': {
+                    'description': 'Turn device on using IR power command',
+                    'parameters': {}
+                },
+                'power_off': {
+                    'description': 'Turn device off using IR power command',
+                    'parameters': {}
+                },
+                'change_channel': {
+                    'description': 'Change to specific channel number',
+                    'parameters': {
+                        'channel': {'type': 'integer', 'required': True, 'description': 'Channel number to tune to'}
+                    }
+                },
+                'set_volume': {
+                    'description': 'Set volume to specific level',
+                    'parameters': {
+                        'level': {'type': 'integer', 'required': True, 'description': 'Volume level (0-100)'}
+                    }
+                }
+            },
+            'connection_status': {
+                'get_status': {
+                    'description': 'Get current IR device status',
+                    'parameters': {}
+                }
+            }
+        }
 
 
 # Backward compatibility alias

@@ -351,9 +351,40 @@ class BluetoothRemoteController(RemoteControllerInterface):
         }
     
     def get_available_actions(self) -> Dict[str, Any]:
-        """Get available remote actions for Bluetooth controller."""
-        from ..controller_actions import BLUETOOTH_REMOTE_ACTIONS
-        return BLUETOOTH_REMOTE_ACTIONS
+        """Get available actions for this Bluetooth controller."""
+        return {
+            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
+            'control': ['select', 'back', 'home', 'menu'],
+            'power': ['power'],
+            'volume': ['volume_up', 'volume_down', 'mute'],
+            'media': ['play_pause', 'fast_forward', 'rewind'],
+            'text_input': ['input_text'],
+            'sequences': ['execute_sequence'],
+            'bluetooth_specific': {
+                'pairing': ['pair_device'],
+                'supported_keys': list(self.BT_KEYCODES.keys()),
+                'hid_features': ['alphanumeric_input', 'media_control', 'system_control']
+            }
+        }
+
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verifications for this Bluetooth controller."""
+        return {
+            'connection_status': {
+                'get_status': {
+                    'description': 'Get current Bluetooth connection status',
+                    'parameters': {}
+                }
+            },
+            'pairing_status': {
+                'pair_device': {
+                    'description': 'Verify Bluetooth device pairing',
+                    'parameters': {
+                        'pin': {'type': 'string', 'required': False, 'description': 'Pairing PIN (uses default if not provided)'}
+                    }
+                }
+            }
+        }
 
 
 # Backward compatibility alias

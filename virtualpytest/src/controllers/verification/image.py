@@ -403,8 +403,46 @@ class ImageVerificationController(VerificationControllerInterface):
     
     def get_available_verifications(self) -> Dict[str, Any]:
         """Get available verification actions for image controller."""
-        from ..controller_verifications import IMAGE_VERIFICATIONS
-        return IMAGE_VERIFICATIONS
+        return {
+            'image_verification': {
+                'waitForImageToAppear': {
+                    'description': 'Wait for specified image to appear on screen',
+                    'parameters': {
+                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to reference image'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 1.0, 'description': 'Maximum time to wait in seconds'},
+                        'threshold': {'type': 'float', 'required': False, 'default': 0.8, 'description': 'Match threshold (0.0 to 1.0)'},
+                        'area': {'type': 'tuple', 'required': False, 'description': 'Optional area to search (x, y, width, height)'},
+                        'image_list': {'type': 'list', 'required': False, 'description': 'Optional list of source image paths to search'},
+                        'model': {'type': 'string', 'required': False, 'description': 'Model name for organizing output images'},
+                        'verification_index': {'type': 'integer', 'required': False, 'default': 0, 'description': 'Index of verification for naming'},
+                        'image_filter': {'type': 'string', 'required': False, 'default': 'none', 'description': 'Filter to apply (none, greyscale, binary)'}
+                    }
+                },
+                'waitForImageToDisappear': {
+                    'description': 'Wait for specified image to disappear from screen',
+                    'parameters': {
+                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to reference image'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 1.0, 'description': 'Maximum time to wait in seconds'},
+                        'threshold': {'type': 'float', 'required': False, 'default': 0.8, 'description': 'Match threshold (0.0 to 1.0)'},
+                        'area': {'type': 'tuple', 'required': False, 'description': 'Optional area to search (x, y, width, height)'},
+                        'image_list': {'type': 'list', 'required': False, 'description': 'Optional list of source image paths to search'},
+                        'model': {'type': 'string', 'required': False, 'description': 'Model name for organizing output images'},
+                        'verification_index': {'type': 'integer', 'required': False, 'default': 0, 'description': 'Index of verification for naming'},
+                        'image_filter': {'type': 'string', 'required': False, 'default': 'none', 'description': 'Filter to apply (none, greyscale, binary)'}
+                    }
+                }
+            },
+            'image_processing': {
+                '_match_template': {
+                    'description': 'Match template image against source image',
+                    'parameters': {
+                        'ref_img': {'type': 'numpy.ndarray', 'required': True, 'description': 'Reference image array'},
+                        'source_img': {'type': 'numpy.ndarray', 'required': True, 'description': 'Source image array'},
+                        'area': {'type': 'tuple', 'required': False, 'description': 'Optional area to search (x, y, width, height)'}
+                    }
+                }
+            }
+        }
 
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
         """

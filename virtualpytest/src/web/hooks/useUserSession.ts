@@ -6,33 +6,38 @@ import { useState, useCallback } from 'react';
  * Provides unified user identification for device control and tree locking systems.
  */
 export const useUserSession = () => {
-  // Get user ID from browser storage - this is our primary identifier
-  const [userId] = useState(() => {
+  // Create a single stable session object that includes both userId and sessionId
+  const [sessionData] = useState(() => {
+    let userId = 'browser-user'; // Default fallback
+
+    // Try to get user ID from browser storage
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('cached_user');
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
-          const id = user.id || 'browser-user';
-          console.log(`[@hook:useUserSession] Using user ID: ${id}`);
-          return id;
+          userId = user.id || 'browser-user';
+          console.log(`[@hook:useUserSession] Using user ID: ${userId}`);
         } catch (e) {
           console.log(`[@hook:useUserSession] Error parsing cached user, using fallback`);
         }
+      } else {
+        console.log(`[@hook:useUserSession] Using fallback user ID: ${userId}`);
       }
     }
-    const fallbackId = 'browser-user';
-    console.log(`[@hook:useUserSession] Using fallback user ID: ${fallbackId}`);
-    return fallbackId;
-  });
 
-  // Generate a unique session ID for this browser session
-  const [sessionId] = useState(() => {
+    // Generate a stable session ID using the resolved userId
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
-    const id = `${userId}-${timestamp}-${random}`;
-    console.log(`[@hook:useUserSession] Generated session ID: ${id}`);
-    return id;
+    const sessionId = `${userId}-${timestamp}-${random}`;
+
+    console.log(`[@hook:useUserSession] Generated session ID: ${sessionId}`);
+
+    // Return a single stable object containing both values
+    return {
+      userId,
+      sessionId,
+    };
   });
 
   // Check if a lock belongs to our user
@@ -44,24 +49,24 @@ export const useUserSession = () => {
       const lockOwner =
         lockInfo.lockedBy || lockInfo.locked_by || lockInfo.session_id || lockInfo.user_id;
 
-      const isOurs = lockOwner === userId;
+      const isOurs = lockOwner === sessionData.userId;
 
       if (isOurs) {
-        console.log(`[@hook:useUserSession] Lock belongs to current user: ${userId}`);
+        console.log(`[@hook:useUserSession] Lock belongs to current user: ${sessionData.userId}`);
       } else {
         console.log(
-          `[@hook:useUserSession] Lock belongs to different user: ${lockOwner} (current: ${userId})`,
+          `[@hook:useUserSession] Lock belongs to different user: ${lockOwner} (current: ${sessionData.userId})`,
         );
       }
 
       return isOurs;
     },
-    [userId],
+    [sessionData.userId],
   );
 
   return {
-    userId,
-    sessionId,
+    userId: sessionData.userId,
+    sessionId: sessionData.sessionId,
     isOurLock,
   };
 };

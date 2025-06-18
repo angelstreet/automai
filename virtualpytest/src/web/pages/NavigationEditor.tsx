@@ -9,7 +9,7 @@ import {
   Typography,
   Button,
 } from '@mui/material';
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactFlow, {
   Background,
@@ -725,26 +725,38 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   // Get navigation state to pass to both device control and node edge management providers
   const navigationState = useNavigationState();
 
-  // Create state objects for providers
-  const nodeEdgeState = {
-    nodes: navigationState.nodes,
-    edges: navigationState.edges,
-    selectedNode: navigationState.selectedNode,
-    selectedEdge: navigationState.selectedEdge,
-    nodeForm: navigationState.nodeForm,
-    edgeForm: navigationState.edgeForm,
-    isNewNode: navigationState.isNewNode,
-    setNodes: navigationState.setNodes,
-    setEdges: navigationState.setEdges,
-    setSelectedNode: navigationState.setSelectedNode,
-    setSelectedEdge: navigationState.setSelectedEdge,
-    setNodeForm: navigationState.setNodeForm,
-    setEdgeForm: navigationState.setEdgeForm,
-    setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
-    setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
-    setIsNewNode: navigationState.setIsNewNode,
-    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-  };
+  // Create memoized state objects for providers to prevent unnecessary re-renders
+  const nodeEdgeState = useMemo(() => {
+    return {
+      nodes: navigationState.nodes,
+      edges: navigationState.edges,
+      selectedNode: navigationState.selectedNode,
+      selectedEdge: navigationState.selectedEdge,
+      nodeForm: navigationState.nodeForm,
+      edgeForm: navigationState.edgeForm,
+      isNewNode: navigationState.isNewNode,
+      setNodes: navigationState.setNodes,
+      setEdges: navigationState.setEdges,
+      setSelectedNode: navigationState.setSelectedNode,
+      setSelectedEdge: navigationState.setSelectedEdge,
+      setNodeForm: navigationState.setNodeForm,
+      setEdgeForm: navigationState.setEdgeForm,
+      setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
+      setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
+      setIsNewNode: navigationState.setIsNewNode,
+      setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+    };
+  }, [
+    // Only include state values that actually change, not setter functions
+    // Setter functions from useState are stable and don't need to be in dependencies
+    navigationState.nodes,
+    navigationState.edges,
+    navigationState.selectedNode,
+    navigationState.selectedEdge,
+    navigationState.nodeForm,
+    navigationState.edgeForm,
+    navigationState.isNewNode,
+  ]);
 
   return (
     <NodeEdgeManagementProvider state={nodeEdgeState}>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -310,15 +310,26 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
   // CONTEXT VALUE
   // ========================================
 
-  const contextValue: NodeEdgeManagementContextType = {
-    saveNodeChanges,
-    saveEdgeChanges,
-    deleteSelected,
-    addNewNode,
-    cancelNodeChanges,
-    closeSelectionPanel,
-    resetNode,
-  };
+  const contextValue: NodeEdgeManagementContextType = useMemo(
+    () => ({
+      saveNodeChanges,
+      saveEdgeChanges,
+      deleteSelected,
+      addNewNode,
+      cancelNodeChanges,
+      closeSelectionPanel,
+      resetNode,
+    }),
+    [
+      saveNodeChanges,
+      saveEdgeChanges,
+      deleteSelected,
+      addNewNode,
+      cancelNodeChanges,
+      closeSelectionPanel,
+      resetNode,
+    ],
+  );
 
   return (
     <NodeEdgeManagementContext.Provider value={contextValue}>

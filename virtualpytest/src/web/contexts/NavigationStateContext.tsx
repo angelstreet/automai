@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 import {
@@ -115,6 +115,11 @@ const NavigationStateContext = createContext<NavigationStateContextType | null>(
 export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   console.log('[@context:NavigationStateProvider] Initializing navigation state context');
 
+  // DEBUG: Track what's causing re-renders
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  console.log(`[@context:NavigationStateProvider] Render count: ${renderCount.current}`);
+
   // ========================================
   // ROUTE PARAMS
   // ========================================
@@ -124,6 +129,13 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     treeName: string;
     interfaceId?: string;
   }>();
+
+  // DEBUG: Track route parameter changes
+  console.log(`[@context:NavigationStateProvider] Route params:`, {
+    treeId,
+    treeName,
+    interfaceId,
+  });
 
   // ========================================
   // STATE
@@ -198,95 +210,136 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
   // CONTEXT VALUE
   // ========================================
 
-  const contextValue: NavigationStateContextType = {
-    // Route params
+  const contextValue: NavigationStateContextType = useMemo(() => {
+    console.log(`[@context:NavigationStateProvider] Creating new context value`);
+    return {
+      // Route params
+      treeId,
+      treeName,
+      interfaceId,
+
+      // Navigation state
+      currentTreeId,
+      setCurrentTreeId,
+      currentTreeName,
+      setCurrentTreeName,
+      navigationPath,
+      setNavigationPath,
+      navigationNamePath,
+      setNavigationNamePath,
+
+      // Save state
+      isSaving,
+      setIsSaving,
+      saveError,
+      setSaveError,
+      saveSuccess,
+      setSaveSuccess,
+      hasUnsavedChanges,
+      setHasUnsavedChanges,
+      isDiscardDialogOpen,
+      setIsDiscardDialogOpen,
+
+      // Interface state
+      userInterface,
+      setUserInterface,
+      rootTree,
+      setRootTree,
+      isLoadingInterface,
+      setIsLoadingInterface,
+
+      // React Flow state
+      nodes,
+      setNodes,
+      onNodesChange,
+      edges,
+      setEdges,
+      onEdgesChange,
+
+      // History state
+      initialState,
+      setInitialState,
+
+      // View state
+      currentViewRootId,
+      setCurrentViewRootId,
+      viewPath,
+      setViewPath,
+
+      // UI state
+      selectedNode,
+      setSelectedNode,
+      selectedEdge,
+      setSelectedEdge,
+      isNodeDialogOpen,
+      setIsNodeDialogOpen,
+      isEdgeDialogOpen,
+      setIsEdgeDialogOpen,
+      isNewNode,
+      setIsNewNode,
+      nodeForm,
+      setNodeForm,
+      edgeForm,
+      setEdgeForm,
+      isLoading,
+      setIsLoading,
+      error,
+      setError,
+      success,
+      setSuccess,
+
+      // Filtering state
+      focusNodeId,
+      setFocusNodeId,
+      maxDisplayDepth,
+      setMaxDisplayDepth,
+      availableFocusNodes,
+      setAvailableFocusNodes,
+
+      // React Flow refs
+      reactFlowWrapper,
+      reactFlowInstance,
+      setReactFlowInstance,
+    };
+  }, [
+    // Only include values that actually change, not setter functions
     treeId,
     treeName,
     interfaceId,
-
-    // Navigation state
     currentTreeId,
-    setCurrentTreeId,
     currentTreeName,
-    setCurrentTreeName,
     navigationPath,
-    setNavigationPath,
     navigationNamePath,
-    setNavigationNamePath,
-
-    // Save state
     isSaving,
-    setIsSaving,
     saveError,
-    setSaveError,
     saveSuccess,
-    setSaveSuccess,
     hasUnsavedChanges,
-    setHasUnsavedChanges,
     isDiscardDialogOpen,
-    setIsDiscardDialogOpen,
-
-    // Interface state
     userInterface,
-    setUserInterface,
     rootTree,
-    setRootTree,
     isLoadingInterface,
-    setIsLoadingInterface,
-
-    // React Flow state
     nodes,
-    setNodes,
-    onNodesChange,
     edges,
-    setEdges,
-    onEdgesChange,
-
-    // History state
     initialState,
-    setInitialState,
-
-    // View state
     currentViewRootId,
-    setCurrentViewRootId,
     viewPath,
-    setViewPath,
-
-    // UI state
     selectedNode,
-    setSelectedNode,
     selectedEdge,
-    setSelectedEdge,
     isNodeDialogOpen,
-    setIsNodeDialogOpen,
     isEdgeDialogOpen,
-    setIsEdgeDialogOpen,
     isNewNode,
-    setIsNewNode,
     nodeForm,
-    setNodeForm,
     edgeForm,
-    setEdgeForm,
     isLoading,
-    setIsLoading,
     error,
-    setError,
     success,
-    setSuccess,
-
-    // Filtering state
     focusNodeId,
-    setFocusNodeId,
     maxDisplayDepth,
-    setMaxDisplayDepth,
     availableFocusNodes,
-    setAvailableFocusNodes,
-
-    // React Flow refs
     reactFlowWrapper,
     reactFlowInstance,
-    setReactFlowInstance,
-  };
+    // Setter functions are stable from useState, no need to include them
+  ]);
 
   return (
     <NavigationStateContext.Provider value={contextValue}>

@@ -39,7 +39,7 @@ export const useVerificationReferences = (
     try {
       console.log('[@hook:useVerificationReferences] Fetching available references...');
 
-      const response = await fetch(buildServerUrl('/server/verification/reference/list'));
+      const response = await fetch(buildServerUrl('/server/verification/getAllReferences'));
 
       if (response.ok) {
         const result = await response.json();

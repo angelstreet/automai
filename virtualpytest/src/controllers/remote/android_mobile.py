@@ -596,9 +596,55 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             return False
     
     def get_available_actions(self) -> Dict[str, Any]:
-        """Get available remote actions for Android Mobile controller."""
-        from ..controller_actions import ANDROID_MOBILE_ACTIONS
-        return ANDROID_MOBILE_ACTIONS
+        """Get available actions for this Android mobile controller."""
+        return {
+            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
+            'control': ['select', 'back', 'home', 'menu'],
+            'power': ['power'],
+            'volume': ['volume_up', 'volume_down', 'mute'],
+            'media': ['play_pause', 'fast_forward', 'rewind'],
+            'text_input': ['input_text'],
+            'sequences': ['execute_sequence'],
+            'android_specific': {
+                'app_management': ['launch_app', 'close_app', 'get_installed_apps'],
+                'ui_interaction': ['dump_ui_elements', 'click_element', 'tap_coordinates'],
+                'element_finding': ['find_element_by_text', 'find_element_by_resource_id', 'find_element_by_content_desc'],
+                'verification': ['verify_element_exists'],
+                'screenshot': ['take_screenshot'],
+                'device_info': ['get_device_resolution']
+            }
+        }
+
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verifications for this Android mobile controller."""
+        return {
+            'ui_elements': {
+                'verify_element_exists': {
+                    'description': 'Verify that a UI element exists on screen',
+                    'parameters': {
+                        'text': {'type': 'string', 'required': False, 'description': 'Text content to find'},
+                        'resource_id': {'type': 'string', 'required': False, 'description': 'Resource ID to find'},
+                        'content_desc': {'type': 'string', 'required': False, 'description': 'Content description to find'}
+                    }
+                }
+            },
+            'screenshots': {
+                'take_screenshot': {
+                    'description': 'Take a screenshot of the device screen',
+                    'parameters': {}
+                }
+            },
+            'device_status': {
+                'get_device_resolution': {
+                    'description': 'Get the device screen resolution',
+                    'parameters': {}
+                },
+                'get_installed_apps': {
+                    'description': 'Get list of installed applications',
+                    'parameters': {}
+                }
+            }
+        }
 
 
 # Backward compatibility alias

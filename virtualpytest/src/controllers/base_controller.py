@@ -217,13 +217,23 @@ class RemoteControllerInterface(BaseController):
     
     def get_available_actions(self) -> Dict[str, Any]:
         """
-        Get available remote actions for this controller.
-        Should be overridden by subclasses.
-        
-        Returns:
-            Dictionary of action name to parameters mapping
+        Get list of available remote actions for this controller.
+        Default implementation - should be overridden by subclasses.
         """
-        return {}
+        return {
+            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
+            'control': ['select', 'back', 'home', 'menu'],
+            'power': ['power'],
+            'volume': ['volume_up', 'volume_down', 'mute'],
+            'media': ['play_pause', 'fast_forward', 'rewind'],
+            'text_input': ['input_text'],
+            'sequences': ['execute_sequence']
+        }
+
+    @abstractmethod
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available actions for this remote controller. Must be implemented by subclasses."""
+        pass
 
 
 class AVControllerInterface(BaseController):
@@ -375,6 +385,11 @@ class VerificationControllerInterface(BaseController):
                 'device_name': self.device_name
             }
     
+    @abstractmethod
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verifications for this controller. Must be implemented by subclasses."""
+        pass
+
     def get_available_verifications(self) -> Dict[str, Any]:
         """
         Get available verification actions for this controller.

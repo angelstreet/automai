@@ -627,8 +627,83 @@ class VideoVerificationController(VerificationControllerInterface):
     
     def get_available_verifications(self) -> Dict[str, Any]:
         """Get available verification actions for video controller."""
-        from ..controller_verifications import VIDEO_VERIFICATIONS
-        return VIDEO_VERIFICATIONS
+        return {
+            'motion_detection': {
+                'detect_motion': {
+                    'description': 'Detect motion in video by comparing frames',
+                    'parameters': {
+                        'duration': {'type': 'float', 'required': False, 'default': 3.0, 'description': 'Duration to analyze for motion in seconds'},
+                        'threshold': {'type': 'float', 'required': False, 'description': 'Motion threshold percentage (uses default if not specified)'}
+                    }
+                },
+                'verify_video_playing': {
+                    'description': 'Verify that video is playing by detecting motion',
+                    'parameters': {
+                        'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0, 'description': 'Minimum motion percentage to consider as playing'},
+                        'duration': {'type': 'float', 'required': False, 'default': 3.0, 'description': 'Duration to check for motion in seconds'}
+                    }
+                }
+            },
+            'video_change_detection': {
+                'wait_for_video_change': {
+                    'description': 'Wait for video content to change',
+                    'parameters': {
+                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait for change'},
+                        'threshold': {'type': 'float', 'required': False, 'description': 'Change threshold (uses default if not specified)'}
+                    }
+                },
+                'waitForVideoToAppear': {
+                    'description': 'Wait for video content to appear (motion detected)',
+                    'parameters': {
+                        'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0, 'description': 'Minimum motion percentage to consider as playing'},
+                        'duration': {'type': 'float', 'required': False, 'default': 3.0, 'description': 'Duration to check for motion in seconds'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait for video to appear'}
+                    }
+                },
+                'waitForVideoToDisappear': {
+                    'description': 'Wait for video content to disappear (no motion detected)',
+                    'parameters': {
+                        'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0, 'description': 'Minimum motion percentage to consider as playing'},
+                        'duration': {'type': 'float', 'required': False, 'default': 3.0, 'description': 'Duration to check for lack of motion in seconds'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait for video to disappear'}
+                    }
+                }
+            },
+            'color_verification': {
+                'verify_color_present': {
+                    'description': 'Verify that a specific color is present in the video',
+                    'parameters': {
+                        'color': {'type': 'string', 'required': True, 'description': 'Color to verify (e.g., "red", "blue", "green")'},
+                        'tolerance': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Color tolerance percentage'}
+                    }
+                }
+            },
+            'screen_state': {
+                'verify_screen_state': {
+                    'description': 'Verify the current screen state',
+                    'parameters': {
+                        'expected_state': {'type': 'string', 'required': True, 'description': 'Expected screen state'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 5.0, 'description': 'Maximum time to wait for state verification'}
+                    }
+                }
+            },
+            'image_analysis': {
+                'capture_screenshot': {
+                    'description': 'Capture a screenshot for analysis',
+                    'parameters': {
+                        'filename': {'type': 'string', 'required': False, 'description': 'Optional filename for the screenshot'},
+                        'source': {'type': 'string', 'required': False, 'default': 'av_controller', 'description': 'Source for screenshot capture'}
+                    }
+                },
+                'analyze_image_content': {
+                    'description': 'Analyze image content for various properties',
+                    'parameters': {
+                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to the image to analyze'},
+                        'analysis_type': {'type': 'string', 'required': False, 'default': 'basic', 'description': 'Type of analysis to perform'}
+                    }
+                }
+            }
+        }
 
     def waitForVideoToAppear(self, motion_threshold: float = 5.0, duration: float = 3.0, timeout: float = 10.0) -> bool:
         """

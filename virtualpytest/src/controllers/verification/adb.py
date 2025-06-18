@@ -507,6 +507,36 @@ class ADBVerificationController:
     
     def get_available_verifications(self) -> Dict[str, Any]:
         """Get available verification actions for ADB controller."""
-        from ..controller_verifications import ADB_VERIFICATIONS
-        return ADB_VERIFICATIONS
+        return {
+            'element_listing': {
+                'getElementLists': {
+                    'description': 'Get list of all UI elements from ADB UI dump',
+                    'parameters': {}
+                },
+                'getElementListsWithSmartSearch': {
+                    'description': 'Get enhanced element listing with optional smart search capabilities',
+                    'parameters': {
+                        'search_term': {'type': 'string', 'required': False, 'description': 'Optional search term for filtering elements (supports pipe-separated terms)'}
+                    }
+                }
+            },
+            'element_waiting': {
+                'waitForElementToAppear': {
+                    'description': 'Wait for an element matching search term to appear',
+                    'parameters': {
+                        'search_term': {'type': 'string', 'required': True, 'description': 'Search term (supports pipe-separated terms)'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait in seconds'},
+                        'check_interval': {'type': 'float', 'required': False, 'default': 1.0, 'description': 'Time between checks in seconds'}
+                    }
+                },
+                'waitForElementToDisappear': {
+                    'description': 'Wait for an element matching search term to disappear',
+                    'parameters': {
+                        'search_term': {'type': 'string', 'required': True, 'description': 'Search term (supports pipe-separated terms)'},
+                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait in seconds'},
+                        'check_interval': {'type': 'float', 'required': False, 'default': 1.0, 'description': 'Time between checks in seconds'}
+                    }
+                }
+            }
+        }
     

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 
 import { UINavigationNode, UINavigationEdge } from '../types/pages/Navigation_Types';
 import { buildServerUrl } from '../utils/frontendUtils';
@@ -57,8 +57,12 @@ const NavigationConfigContext = createContext<NavigationConfigContextType | null
 export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> = ({ children }) => {
   console.log('[@context:NavigationConfigProvider] Initializing navigation config context');
 
-  // Use shared user session for consistent identification
-  const { userId, sessionId, isOurLock } = useUserSession();
+  // ========================================
+  // USER SESSION
+  // ========================================
+
+  // Get user session info (session ID and user ID)
+  const { sessionId, userId, isOurLock } = useUserSession();
 
   // ========================================
   // STATE
@@ -468,28 +472,50 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // CONTEXT VALUE
   // ========================================
 
-  const contextValue: NavigationConfigContextType = {
-    // Lock management
-    isLocked,
-    lockInfo,
-    isCheckingLock,
-    showReadOnlyOverlay,
-    setCheckingLockState,
-    lockNavigationTree,
-    unlockNavigationTree,
-    checkTreeLockStatus,
-    setupAutoUnlock,
+  const contextValue: NavigationConfigContextType = useMemo(
+    () => ({
+      // Lock management
+      isLocked,
+      lockInfo,
+      isCheckingLock,
+      showReadOnlyOverlay,
+      setCheckingLockState,
+      lockNavigationTree,
+      unlockNavigationTree,
+      checkTreeLockStatus,
+      setupAutoUnlock,
 
-    // Config operations
-    loadFromConfig,
-    saveToConfig,
-    listAvailableTrees,
-    createEmptyTree,
+      // Config operations
+      loadFromConfig,
+      saveToConfig,
+      listAvailableTrees,
+      createEmptyTree,
 
-    // User identification
-    sessionId,
-    userId,
-  };
+      // User identification
+      sessionId,
+      userId,
+    }),
+    [
+      // Lock management
+      isLocked,
+      lockInfo,
+      isCheckingLock,
+      showReadOnlyOverlay,
+      setCheckingLockState,
+      lockNavigationTree,
+      unlockNavigationTree,
+      checkTreeLockStatus,
+      setupAutoUnlock,
+      // Config operations
+      loadFromConfig,
+      saveToConfig,
+      listAvailableTrees,
+      createEmptyTree,
+      // User identification
+      sessionId,
+      userId,
+    ],
+  );
 
   return (
     <NavigationConfigContext.Provider value={contextValue}>

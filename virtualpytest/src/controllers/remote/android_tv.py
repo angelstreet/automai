@@ -513,9 +513,38 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             }
     
     def get_available_actions(self) -> Dict[str, Any]:
-        """Get available remote actions for Android TV controller."""
-        from ..controller_actions import ANDROID_TV_ACTIONS
-        return ANDROID_TV_ACTIONS
+        """Get available actions for this Android TV controller."""
+        return {
+            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
+            'control': ['select', 'back', 'home', 'menu'],
+            'power': ['power'],
+            'volume': ['volume_up', 'volume_down', 'mute'],
+            'media': ['play_pause', 'fast_forward', 'rewind'],
+            'text_input': ['input_text'],
+            'sequences': ['execute_sequence'],
+            'android_tv_specific': {
+                'app_management': ['launch_app', 'close_app', 'kill_app', 'get_installed_apps'],
+                'coordinate_input': ['tap_coordinates'],
+                'screenshot': ['take_screenshot']
+            }
+        }
+
+    def get_available_verifications(self) -> Dict[str, Any]:
+        """Get available verifications for this Android TV controller."""
+        return {
+            'screenshots': {
+                'take_screenshot': {
+                    'description': 'Take a screenshot of the Android TV screen',
+                    'parameters': {}
+                }
+            },
+            'device_status': {
+                'get_installed_apps': {
+                    'description': 'Get list of installed applications',
+                    'parameters': {}
+                }
+            }
+        }
 
 
 # Backward compatibility alias
