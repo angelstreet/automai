@@ -1105,23 +1105,21 @@ class ImageVerificationController(VerificationControllerInterface):
             resource_json_path = RESOURCE_JSON_PATH
             os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
             
-            # Load existing resource data or create new
+            # Simple: Load existing or create new
             resource_data = {'resources': []}
             if os.path.exists(resource_json_path):
                 try:
                     with open(resource_json_path, 'r') as f:
                         resource_data = json.load(f)
-                except json.JSONDecodeError:
+                except:
                     print(f"[@controller:ImageVerification] Warning: Invalid JSON, creating new")
                     resource_data = {'resources': []}
             
-            # Remove existing resource with same name and model
-            resource_data['resources'] = [
-                r for r in resource_data['resources'] 
-                if not (r.get('name') == reference_name and r.get('model') == model)
-            ]
+            # Ensure resources exists
+            if 'resources' not in resource_data:
+                resource_data['resources'] = []
             
-            # Add new resource
+            # Simple: Just append new entry
             new_resource = {
                 'name': reference_name,
                 'model': model,
