@@ -113,7 +113,6 @@ def register_host_with_server():
                 client_registration_state['urls'] = urls
                 
                 # Store global host object from server response (includes all server-added data)
-                global global_host_object
                 global_host_object = response_data.get('host_data', {})
                 
                 print(f"\n✅ [HOST] Registration successful!")
@@ -132,7 +131,6 @@ def register_host_with_server():
                 print(f"   Created controllers: {list(created_controllers.keys())}")
                 
                 # Add controller objects to the global host object (local host management)
-                global global_host_object
                 global_host_object['local_controller_objects'] = created_controllers
                 print(f"   Added controller objects to host object")
                 
