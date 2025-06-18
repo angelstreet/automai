@@ -1,21 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { ReferenceImage } from '../../types/verification/VerificationTypes';
+import { ModelReferences } from '../../types/verification/VerificationTypes';
 import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface UseVerificationReferencesReturn {
-  availableReferences: ReferenceImage[];
+  availableReferences: { [deviceModel: string]: ModelReferences };
   referencesLoading: boolean;
   fetchAvailableReferences: () => void;
-  getModelReferences: (model?: string) => ReferenceImage[];
+  getModelReferences: (model?: string) => ModelReferences;
 }
 
 export const useVerificationReferences = (
   reloadTrigger: number = 0,
   selectedHost: Host | null,
 ): UseVerificationReferencesReturn => {
-  const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
+  const [availableReferences, setAvailableReferences] = useState<{
+    [deviceModel: string]: ModelReferences;
+  }>({});
   const [referencesLoading, setReferencesLoading] = useState(false);
 
   const fetchAvailableReferences = useCallback(async () => {
@@ -26,7 +28,7 @@ export const useVerificationReferences = (
       // Check if we have a selected host
       if (!selectedHost) {
         console.warn('[@hook:useVerificationReferences] No host selected, cannot fetch references');
-        setAvailableReferences([]);
+        setAvailableReferences({});
         setReferencesLoading(false);
         return;
       }
@@ -51,77 +53,82 @@ export const useVerificationReferences = (
         console.log('[@hook:useVerificationReferences] Raw response:', result);
 
         if (result.success && result.references) {
-          // Process references from grouped structure (image/text arrays)
-          const allReferences: ReferenceImage[] = [];
+          // Server returns references grouped by type: { image: [...], text: [...] }
+          // We need to convert this to our dictionary format: { model: { filename: ref } }
+          const deviceModel = result.model || selectedHost.device_model;
+          const modelRefs: ModelReferences = {};
 
           // Process image references
-          if (result.references.image) {
+          if (result.references.image && Array.isArray(result.references.image)) {
             result.references.image.forEach((ref: any) => {
-              allReferences.push({
-                name: ref.name,
-                model: ref.model,
+              const filename = ref.filename || ref.name || 'unknown.png';
+              modelRefs[filename] = {
+                type: 'image',
                 url: ref.url,
-                filename: ref.filename,
+                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 created_at: ref.created_at,
                 updated_at: ref.updated_at,
-                type: 'image',
-                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
-              });
+              };
             });
           }
 
           // Process text references
-          if (result.references.text) {
+          if (result.references.text && Array.isArray(result.references.text)) {
             result.references.text.forEach((ref: any) => {
-              allReferences.push({
-                name: ref.name,
-                model: ref.model,
+              const filename = ref.filename || ref.name || 'unknown.json';
+              modelRefs[filename] = {
+                type: 'text',
                 url: ref.url,
-                filename: ref.filename,
+                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 created_at: ref.created_at,
                 updated_at: ref.updated_at,
-                type: 'text',
-                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 text: ref.text,
                 font_size: ref.font_size,
                 confidence: ref.confidence,
-              });
+              };
             });
           }
 
-          console.log(`[@hook:useVerificationReferences] Found ${allReferences.length} references`);
+          const allReferences = { [deviceModel]: modelRefs };
 
+          console.log(
+            `[@hook:useVerificationReferences] Processed ${Object.keys(modelRefs).length} references for model '${deviceModel}':`,
+            Object.keys(modelRefs),
+          );
           setAvailableReferences(allReferences);
-          console.log('[@hook:useVerificationReferences] Processed references:', allReferences);
         } else {
           console.log('[@hook:useVerificationReferences] No references found or request failed');
-          setAvailableReferences([]);
+          setAvailableReferences({});
         }
       } else {
         console.error(
           '[@hook:useVerificationReferences] Failed to fetch references:',
           response.status,
         );
-        setAvailableReferences([]);
+        setAvailableReferences({});
       }
     } catch (error) {
       console.error('[@hook:useVerificationReferences] Error fetching references:', error);
-      setAvailableReferences([]);
+      setAvailableReferences({});
     } finally {
       setReferencesLoading(false);
     }
   }, [selectedHost]);
 
-  // Filter references by current model
+  // Get references for a specific model (returns dictionary)
   const getModelReferences = useCallback(
-    (model?: string) => {
-      if (!model) return availableReferences;
-      const filtered = availableReferences.filter((ref) => ref.model === model);
+    (model?: string): ModelReferences => {
+      if (!model || !availableReferences[model]) {
+        console.log(`[@hook:useVerificationReferences] No references found for model '${model}'`);
+        return {};
+      }
+
+      const modelRefs = availableReferences[model];
       console.log(
-        `[@component:useVerificationReferences] Filtered references for model '${model}':`,
-        filtered,
+        `[@hook:useVerificationReferences] Found ${Object.keys(modelRefs).length} references for model '${model}':`,
+        Object.keys(modelRefs),
       );
-      return filtered;
+      return modelRefs;
     },
     [availableReferences],
   );

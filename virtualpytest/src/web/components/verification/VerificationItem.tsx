@@ -78,29 +78,17 @@ interface VerificationTestResult {
 }
 
 // Import unified types
-import { Verification, Verifications } from '../../types/verification/VerificationTypes';
-
-interface ModelReference {
-  name: string;
-  type: 'image' | 'text';
-  model: string;
-  path?: string;
-  full_path?: string;
-  text?: string;
-  font_size?: number;
-  area: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
+import {
+  Verification,
+  Verifications,
+  ModelReferences,
+} from '../../types/verification/VerificationTypes';
 
 interface VerificationItemProps {
   verification: NodeVerification;
   index: number;
   availableActions: Verifications;
-  modelReferences: ModelReference[];
+  modelReferences: ModelReferences;
   referencesLoading: boolean;
   testResult?: VerificationTestResult;
   onVerificationSelect: (index: number, actionId: string) => void;
@@ -268,7 +256,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {/* First Row: Reference selection and test result status */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {verification.id && modelReferences.length > 0 ? (
+              {verification.id && Object.keys(modelReferences).length > 0 ? (
                 <>
                   {/* Reference Dropdown - shows both image and text references */}
                   <FormControl size="small" sx={{ width: 250 }}>
@@ -291,8 +279,8 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                       <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
                         <em>Select reference...</em>
                       </MenuItem>
-                      {modelReferences
-                        .filter((ref) => {
+                      {Object.entries(modelReferences)
+                        .filter(([filename, ref]) => {
                           // Filter references based on verification type
                           if (verification.controller_type === 'image') {
                             return ref.type === 'image';
@@ -301,11 +289,11 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                           }
                           return true; // Show all if type is not determined
                         })
-                        .map((ref) => (
-                          <MenuItem key={ref.name} value={ref.name} sx={{ fontSize: '0.75rem' }}>
+                        .map(([filename, ref]) => (
+                          <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               {ref.type === 'image' ? '🖼️' : '📝'}
-                              <span>{ref.name}</span>
+                              <span>{filename}</span>
                               {ref.type === 'text' && ref.text && (
                                 <Typography
                                   variant="caption"

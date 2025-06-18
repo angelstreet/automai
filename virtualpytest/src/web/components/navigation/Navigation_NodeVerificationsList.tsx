@@ -152,14 +152,21 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   };
 
   const handleReferenceSelect = (index: number, referenceName: string) => {
-    const selectedRef = getModelReferences(model).find((ref) => ref.name === referenceName);
+    console.log('[@component:NodeVerificationsList] Reference selected:', {
+      index,
+      referenceName,
+      model,
+    });
+
+    const modelReferences = getModelReferences(model);
+    const selectedRef = modelReferences[referenceName]; // Access by key instead of find()
+
     if (selectedRef) {
       console.log('[@component:NodeVerificationsList] Selected reference details:', {
-        name: selectedRef.name,
-        model: selectedRef.model,
+        name: referenceName,
+        model: model,
         type: selectedRef.type,
-        path: selectedRef.path,
-        full_path: selectedRef.full_path,
+        url: selectedRef.url,
         area: selectedRef.area,
       });
 
@@ -176,30 +183,28 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       if (selectedRef.type === 'image') {
         // Image reference parameters
         updateVerification(index, {
-          inputValue: selectedRef.name,
+          inputValue: referenceName,
           params: {
             ...baseParams,
-            reference_image: selectedRef.name,
-            reference_path: selectedRef.path,
-            full_path: selectedRef.full_path,
+            reference_image: referenceName,
+            reference_url: selectedRef.url,
           },
         });
         console.log(
           '[@component:NodeVerificationsList] Updated verification with image reference:',
           {
-            reference_image: selectedRef.name,
-            reference_path: selectedRef.path,
-            full_path: selectedRef.full_path,
+            reference_image: referenceName,
+            reference_url: selectedRef.url,
           },
         );
       } else if (selectedRef.type === 'text') {
         // Text reference parameters
         updateVerification(index, {
-          inputValue: selectedRef.text || selectedRef.name,
+          inputValue: selectedRef.text || referenceName,
           params: {
             ...baseParams,
             reference_text: selectedRef.text,
-            reference_name: selectedRef.name,
+            reference_name: referenceName,
             font_size: selectedRef.font_size,
           },
         });
@@ -207,7 +212,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
           '[@component:NodeVerificationsList] Updated verification with text reference:',
           {
             reference_text: selectedRef.text,
-            reference_name: selectedRef.name,
+            reference_name: referenceName,
             font_size: selectedRef.font_size,
           },
         );
@@ -280,10 +285,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
       if (verification.controller_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath =
-          verification.params?.full_path ||
-          verification.params?.reference_path ||
-          verification.inputValue;
+        const hasImagePath = verification.params?.reference_url || verification.inputValue;
         return Boolean(hasImagePath);
       } else if (verification.controller_type === 'text') {
         // Text verifications need text to search for
@@ -325,10 +327,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-          Verifications
-        </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
         <Button
           size="small"
           variant="outlined"
