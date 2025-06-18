@@ -194,48 +194,17 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               `[@component:NodeSelectionPanel] Added cache-busting timestamp: ${timestamp}`,
             );
 
-            // Force a refresh of the node display by dispatching a custom event with timestamp
+            // Simple but effective cache-busting: dispatch event with unique cache-buster
+            const cacheBuster = `${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
             window.dispatchEvent(
               new CustomEvent('nodeScreenshotUpdated', {
                 detail: {
                   nodeId: selectedNode.id,
                   screenshot: result.screenshot_url,
-                  timestamp: timestamp,
+                  cacheBuster: cacheBuster,
                 },
               }),
             );
-
-            // Additional cache-busting: force browser to clear any cached images
-            // by temporarily setting a different src and then back
-            setTimeout(() => {
-              // Find all images that might be showing this screenshot
-              const baseUrl = result.screenshot_url.split('?')[0]; // Remove any existing query params
-              const images = document.querySelectorAll(`img[src*="${baseUrl}"]`);
-
-              console.log(
-                `[@component:NodeSelectionPanel] Found ${images.length} images to refresh for cache-busting`,
-              );
-
-              images.forEach((img: any, index: number) => {
-                console.log(
-                  `[@component:NodeSelectionPanel] Refreshing image ${index + 1}: ${img.src}`,
-                );
-
-                // Force reload by changing src to transparent gif, then back with new timestamp
-                img.src =
-                  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-                setTimeout(
-                  () => {
-                    img.src = `${baseUrl}?v=${timestamp}&cb=${Date.now()}`;
-                    console.log(
-                      `[@component:NodeSelectionPanel] Updated image ${index + 1} src to: ${img.src}`,
-                    );
-                  },
-                  10 + index * 5,
-                ); // Stagger updates slightly
-              });
-            }, 100); // Increased delay to ensure DOM is updated
           } else {
             console.warn(
               '[@component:NodeSelectionPanel] onUpdateNode callback not provided - screenshot URL not saved to node',

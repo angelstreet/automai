@@ -10,28 +10,33 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   id,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
-  const [imageKey, setImageKey] = useState(0); // Key to force image refresh
+  const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
 
-  // Use screenshot URL directly from backend (complete URL)
-  // Add cache-busting parameter if screenshot was recently updated
-  const screenshotUrl = data.screenshot
-    ? `${data.screenshot}?v=${data.screenshot_timestamp || imageKey}`
-    : null;
+  // Use screenshot URL with aggressive cache-busting
+  const screenshotUrl = React.useMemo(() => {
+    if (!data.screenshot) return null;
 
-  // Listen for screenshot update events
+    // Use multiple cache-busting parameters to ensure fresh load
+    const baseUrl = data.screenshot.split('?')[0]; // Remove existing params
+    const timestamp = data.screenshot_timestamp || Date.now();
+    const randomKey = imageKey || Math.random().toString(36).substr(2, 9);
+
+    return `${baseUrl}?v=${timestamp}&key=${randomKey}&cb=${Date.now()}`;
+  }, [data.screenshot, data.screenshot_timestamp, imageKey]);
+
+  // Listen for screenshot update events and force immediate refresh
   React.useEffect(() => {
     const handleScreenshotUpdate = (event: CustomEvent) => {
       if (event.detail.nodeId === id) {
         console.log(
-          `[@component:UINavigationNode] Screenshot updated for node ${id}, refreshing image`,
+          `[@component:UINavigationNode] Screenshot updated for node ${id}, forcing refresh`,
         );
-        console.log(`[@component:UINavigationNode] Event detail:`, event.detail);
 
-        // Use timestamp from event if available, otherwise increment imageKey
-        if (event.detail.timestamp) {
-          setImageKey(event.detail.timestamp);
+        // Use cache-buster from event for immediate refresh
+        if (event.detail.cacheBuster) {
+          setImageKey(event.detail.cacheBuster);
         } else {
-          setImageKey((prev) => prev + 1);
+          setImageKey(Date.now().toString() + Math.random().toString(36).substr(2, 9));
         }
       }
     };

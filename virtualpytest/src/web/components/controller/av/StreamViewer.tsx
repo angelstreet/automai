@@ -31,7 +31,7 @@ export function StreamViewer({
   const [retryCount, setRetryCount] = useState(0);
   const [requiresUserInteraction, setRequiresUserInteraction] = useState(false);
   const [useNativePlayer, setUseNativePlayer] = useState(false);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+
   const maxRetries = 3;
   const retryDelay = 2000;
   const lastInitTime = useRef<number>(0);
@@ -318,45 +318,6 @@ export function StreamViewer({
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isStreamActive, streamUrl, initializeStream]);
-
-  useEffect(() => {
-    if (streamUrl && isStreamActive && videoRef.current) {
-      console.log('[@component:StreamViewer] Stream URL changed, initializing:', streamUrl);
-      setUseNativePlayer(false);
-      // Only reset retry count if the stream URL actually changed, not on every render
-      if (currentStreamUrl !== streamUrl) {
-        setRetryCount(0);
-      }
-      setStreamLoaded(false);
-      setStreamError(null);
-
-      setTimeout(() => {
-        initializeStream();
-      }, 100);
-    } else if (!isStreamActive && videoRef.current) {
-      cleanupStream();
-    }
-
-    return () => {
-      cleanupStream();
-    };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl]);
-
-  useEffect(() => {
-    const checkVideoReady = () => {
-      const ready = !!videoRef.current;
-      if (ready !== isVideoReady) {
-        setIsVideoReady(ready);
-        console.log('[@component:StreamViewer] Video ready state changed:', ready);
-      }
-    };
-
-    checkVideoReady();
-
-    const interval = setInterval(checkVideoReady, 100);
-
-    return () => clearInterval(interval);
-  }, [streamLoaded, isVideoReady]);
 
   return (
     <Box
