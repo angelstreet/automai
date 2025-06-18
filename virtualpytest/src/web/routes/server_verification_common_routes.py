@@ -157,17 +157,57 @@ def get_verification_types():
         }), 500
 
 @verification_common_bp.route('/getAllReferences', methods=['GET'])
-def list_references():
-    """Proxy reference list request to selected host"""
+def getAllReferences():
+    """Get available references from resource.json config - NO host proxy needed"""
     try:
-        print("[@route:server_verification:getAllReferences] Proxying reference list request")
+        print("[@route:server_verification:getAllReferences] Getting references from config")
         
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/getAllReferences', 'GET')
+        # Get host info for model filtering
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required'
+            }), 400
         
-        return jsonify(response_data), status_code
+        # Read from resource.json directly (no host proxy)
+        try:
+            with open('src/config/resource/resource.json', 'r') as f:
+                config = json.load(f)
+            
+            # Filter by device model and return Cloudflare URLs
+            device_model = host_info.get('device_model', 'default')
+            model_references = [
+                ref for ref in config.get('resources', [])
+                if ref.get('model') == device_model
+            ]
+            
+            # Group by type for backward compatibility
+            references = {
+                'image': [ref for ref in model_references if ref.get('type') == 'image'],
+                'text': [ref for ref in model_references if ref.get('type') == 'text']
+            }
+            
+            print(f"[@route:server_verification:getAllReferences] Found {len(model_references)} references for model {device_model}")
+            
+            return jsonify({
+                'success': True,
+                'references': references,
+                'model': device_model,
+                'source': 'cloudflare'
+            })
+            
+        except FileNotFoundError:
+            print(f"[@route:server_verification:getAllReferences] resource.json not found")
+            return jsonify({
+                'success': True,
+                'references': {'image': [], 'text': []},
+                'model': device_model,
+                'source': 'cloudflare'
+            })
         
     except Exception as e:
+        print(f"[@route:server_verification:getAllReferences] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

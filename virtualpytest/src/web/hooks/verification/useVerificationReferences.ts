@@ -6,8 +6,8 @@ import { Host } from '../../types/common/Host_Types';
 interface ReferenceImage {
   name: string;
   model: string;
-  path: string;
-  full_path: string;
+  cloudflare_url: string;
+  filename: string;
   created_at: string;
   type: 'image' | 'text';
   area: {
@@ -62,30 +62,46 @@ export const useVerificationReferences = (
         console.log('[@hook:useVerificationReferences] Raw response:', result);
 
         if (result.success && result.references) {
-          console.log(
-            `[@hook:useVerificationReferences] Found ${result.references.length} references`,
-          );
+          // Process references from grouped structure (image/text arrays)
+          const allReferences: ReferenceImage[] = [];
 
-          // Process references to ensure consistent structure
-          const processedReferences = result.references.map((ref: any) => ({
-            name: ref.name,
-            model: ref.model,
-            path: ref.path,
-            full_path: ref.full_path,
-            created_at: ref.created_at,
-            type: ref.type || 'image', // Default to 'image' if type is missing
-            area: ref.area || { x: 0, y: 0, width: 0, height: 0 }, // Default area if missing
-            // Text reference specific fields
-            text: ref.text,
-            font_size: ref.font_size,
-            confidence: ref.confidence,
-          }));
+          // Process image references
+          if (result.references.image) {
+            result.references.image.forEach((ref: any) => {
+              allReferences.push({
+                name: ref.name,
+                model: ref.model,
+                cloudflare_url: ref.cloudflare_url,
+                filename: ref.filename,
+                created_at: ref.created_at,
+                type: 'image',
+                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
+              });
+            });
+          }
 
-          setAvailableReferences(processedReferences);
-          console.log(
-            '[@hook:useVerificationReferences] Processed references:',
-            processedReferences,
-          );
+          // Process text references
+          if (result.references.text) {
+            result.references.text.forEach((ref: any) => {
+              allReferences.push({
+                name: ref.name,
+                model: ref.model,
+                cloudflare_url: ref.cloudflare_url,
+                filename: ref.filename,
+                created_at: ref.created_at,
+                type: 'text',
+                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
+                text: ref.text,
+                font_size: ref.font_size,
+                confidence: ref.confidence,
+              });
+            });
+          }
+
+          console.log(`[@hook:useVerificationReferences] Found ${allReferences.length} references`);
+
+          setAvailableReferences(allReferences);
+          console.log('[@hook:useVerificationReferences] Processed references:', allReferences);
         } else {
           console.log('[@hook:useVerificationReferences] No references found or request failed');
           setAvailableReferences([]);

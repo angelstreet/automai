@@ -79,3 +79,13 @@ export const extractR2Path = (cloudflareUrl: string): string | null => {
     return null;
   }
 };
+
+/**
+ * Builds the full Cloudflare R2 public URL for a reference file
+ * @param filename - The reference filename (e.g., "login_button.png")
+ * @param deviceModel - Device model (e.g., 'android_mobile')
+ * @returns Full Cloudflare R2 public URL for reference
+ */
+export const buildReferenceUrl = (filename: string, deviceModel: string): string => {
+  return `${CLOUDFLARE_R2_PUBLIC_URL}/references/${deviceModel}/${filename}`;
+};

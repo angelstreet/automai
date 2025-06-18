@@ -18,66 +18,8 @@ verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/hos
 # HOST-SIDE VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_host_bp.route('/getAllReferences', methods=['GET'])
-def list_references():
-    """Get list of available references from local storage."""
-    try:
-        print(f"[@route:list_references] Getting available references")
-        
-        # Get host device info
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized'
-            }), 404
-        
-        print(f"[@route:list_references] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
-        # Get device model to build resource path
-        model = host_device.get('device_model', 'default')
-        resource_dir = f'../resources/{model}'
-        
-        references = {
-            'image': [],
-            'text': []
-        }
-        
-        # Scan for image references
-        if os.path.exists(resource_dir):
-            for filename in os.listdir(resource_dir):
-                if filename.endswith(('.png', '.jpg', '.jpeg')):
-                    name = os.path.splitext(filename)[0]
-                    references['image'].append({
-                        'name': name,
-                        'filename': filename,
-                        'type': 'image',
-                        'path': f'{resource_dir}/{filename}'
-                    })
-                elif filename.endswith('.txt'):
-                    name = os.path.splitext(filename)[0]
-                    references['text'].append({
-                        'name': name,
-                        'filename': filename,
-                        'type': 'text',
-                        'path': f'{resource_dir}/{filename}'
-                    })
-        
-        print(f"[@route:list_references] Found {len(references['image'])} image and {len(references['text'])} text references")
-        
-        return jsonify({
-            'success': True,
-            'references': references,
-            'model': model,
-            'resource_directory': resource_dir
-        })
-        
-    except Exception as e:
-        print(f"[@route:list_references] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Reference listing error: {str(e)}'
-        }), 500
+# REMOVED: getAllReferences route - not needed on host side
+# Host doesn't need to list references, it receives them for processing
 
 @verification_host_bp.route('/getStatus', methods=['GET'])
 def verification_status():

@@ -1,3 +1,32 @@
 {
-  "resources": []
+  "resources": [
+    {
+      "name": "login_button",
+      "model": "android_mobile",
+      "type": "image",
+      "cloudflare_url": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/references/android_mobile/login_button.png",
+      "filename": "login_button.png",
+      "area": {
+        "x": 100,
+        "y": 200,
+        "width": 150,
+        "height": 50
+      },
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "home_screen",
+      "model": "android_mobile",
+      "type": "image",
+      "cloudflare_url": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/references/android_mobile/home_screen.png",
+      "filename": "home_screen.png",
+      "area": {
+        "x": 0,
+        "y": 0,
+        "width": 360,
+        "height": 640
+      },
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
 }
