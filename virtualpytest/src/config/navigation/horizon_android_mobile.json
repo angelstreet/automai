@@ -71,11 +71,11 @@
       "data": {
         "depth": 2,
         "description": "",
-        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_tvguide",
+        "label": "home_tvguide",
         "last_validation_timestamp": "2025-06-06T09:25:41.770Z",
         "menu_type": "main",
         "parent": ["", "node-1"],
-        "screenshot": "home_tvguide.jpg",
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_tvguide.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -115,11 +115,11 @@
         "depth": 3,
         "description": "",
         "is_root": false,
-        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/tvguide_livetv",
+        "label": "tvguide_livetv",
         "last_validation_timestamp": "2025-06-06T09:25:34.028Z",
         "menu_type": "main",
         "parent": ["", "node-1", "node-1748723779677"],
-        "screenshot": "tvguide_livetv.jpg",
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/tvguide_livetv.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -159,11 +159,11 @@
         "depth": 2,
         "description": "",
         "is_root": false,
-        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_replay",
+        "label": "home_replay",
         "last_validation_timestamp": "2025-06-06T09:24:17.304Z",
         "menu_type": "main",
         "parent": ["", "node-1"],
-        "screenshot": "home_replay.jpg",
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_replay.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -203,7 +203,7 @@
         "depth": 2,
         "description": "",
         "is_root": false,
-        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_movies_series",
+        "label": "home_movies_series",
         "last_validation_timestamp": "2025-06-06T09:24:33.991Z",
         "menu_type": "main",
         "parent": ["", "node-1"],
