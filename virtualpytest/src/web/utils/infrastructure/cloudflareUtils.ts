@@ -1,56 +1,4 @@
-// Cloudflare R2 configuration from environment variables
-const CLOUDFLARE_R2_PUBLIC_URL =
-  (import.meta as any).env.VITE_CLOUDFLARE_R2_PUBLIC_URL ||
-  'https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev';
-
-/**
- * Builds the full Cloudflare R2 public URL for a screenshot
- * @param screenshotPath - The screenshot path (e.g., "virtualpytest/navigation/android_mobile/home.jpg" or just "home.jpg")
- * @param deviceModel - Optional device model to use if screenshotPath is just a filename (defaults to 'android_mobile')
- * @returns Full Cloudflare R2 public URL or undefined if no screenshot path provided
- */
-export const buildScreenshotUrl = (
-  screenshotPath: string | undefined,
-  deviceModel: string = 'android_mobile',
-): string | undefined => {
-  if (!screenshotPath) return undefined;
-  // If it's already a full URL (local or Cloudflare), return as-is
-  if (screenshotPath.startsWith('http://') || screenshotPath.startsWith('https://')) {
-    return screenshotPath;
-  }
-
-  // Handle local API URLs - extract filename from path parameter
-  if (screenshotPath.includes('/server/virtualpytest/screen-definition/images?path=')) {
-    try {
-      const url = new URL(screenshotPath, 'http://localhost:5009');
-      const pathParam = url.searchParams.get('path');
-      if (pathParam) {
-        const decodedPath = decodeURIComponent(pathParam);
-
-        // Extract just the filename from the full path
-        const filename = decodedPath.split('/').pop();
-        if (filename) {
-          const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/navigation/${deviceModel}/${filename}`;
-          return cloudflareUrl;
-        }
-      }
-    } catch (error) {
-      console.error(
-        `[@utils:cloudflareUtils:buildScreenshotUrl] Error parsing local URL: ${error}`,
-      );
-    }
-  }
-
-  // If it's a relative path starting with virtualpytest/, use it directly
-  if (screenshotPath.startsWith('virtualpytest/')) {
-    const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/${screenshotPath}`;
-    return cloudflareUrl;
-  }
-
-  // If it's just a filename, use the navigation folder structure
-  const cloudflareUrl = `${CLOUDFLARE_R2_PUBLIC_URL}/navigation/${deviceModel}/${screenshotPath}`;
-  return cloudflareUrl;
-};
+// Cloudflare R2 utility functions for URL handling
 
 /**
  * Checks if a URL is a Cloudflare R2 URL
@@ -78,14 +26,4 @@ export const extractR2Path = (cloudflareUrl: string): string | null => {
     console.error('[@utils:cloudflareUtils:extractR2Path] Invalid URL:', cloudflareUrl);
     return null;
   }
-};
-
-/**
- * Builds the full Cloudflare R2 public URL for a reference file
- * @param filename - The reference filename (e.g., "login_button.png")
- * @param deviceModel - Device model (e.g., 'android_mobile')
- * @returns Full Cloudflare R2 public URL for reference
- */
-export const buildReferenceUrl = (filename: string, deviceModel: string): string => {
-  return `${CLOUDFLARE_R2_PUBLIC_URL}/references/${deviceModel}/${filename}`;
 };

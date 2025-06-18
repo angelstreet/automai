@@ -1,9 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { NodeVerification } from '../../types/pages/Navigation_Types';
 import { Verifications } from '../../types/verification/VerificationTypes';
-import { buildReferenceUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 // Define interfaces for verification data structures
 interface DragArea {
@@ -202,17 +200,16 @@ export const useVerification = ({
 
       // If it's an image reference, display it in the preview area
       if (referenceData && referenceData.type === 'image') {
-        const deviceModel = selectedHost.device_model;
-        const cloudflareUrl = buildReferenceUrl(referenceName, deviceModel);
+        // Use the complete URL directly from reference data
+        const referenceUrl = referenceData.url;
 
         console.log('[@hook:useVerification] Setting reference image preview:', {
           referenceName,
-          deviceModel,
-          cloudflareUrl,
+          referenceUrl,
           referenceData,
         });
 
-        setSelectedReferenceImage(cloudflareUrl);
+        setSelectedReferenceImage(referenceUrl);
         setSelectedReferenceInfo({
           name: referenceName,
           type: 'image',

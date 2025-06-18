@@ -227,7 +227,7 @@ class HDMIStreamController(AVControllerInterface):
             filename: The filename to use for the screenshot (e.g., node name)
             
         Returns:
-            Just the filename (frontend will use buildScreenshotUrl to construct the full URL)
+            Complete Cloudflare R2 URL if successful, None if failed
         """
         try:
             print(f'[@controller:HDMIStream] Saving screenshot with filename: {filename}')
@@ -283,8 +283,10 @@ class HDMIStreamController(AVControllerInterface):
                 
                 if upload_result.get('success'):
                     print(f'[@controller:HDMIStream] Successfully uploaded to R2: {r2_path}')
-                    # Return just the filename - frontend will use buildScreenshotUrl to construct the full URL
-                    return f"{filename}.jpg"
+                    # Return complete Cloudflare R2 URL
+                    complete_url = upload_result.get('url')
+                    print(f'[@controller:HDMIStream] Returning complete R2 URL: {complete_url}')
+                    return complete_url
                 else:
                     error_msg = upload_result.get('error', 'Unknown upload error')
                     print(f'[@controller:HDMIStream] R2 upload failed: {error_msg}')

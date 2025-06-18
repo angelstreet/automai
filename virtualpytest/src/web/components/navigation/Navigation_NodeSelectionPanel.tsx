@@ -24,7 +24,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
+
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
@@ -176,27 +176,19 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
         if (result.success && result.screenshot_url) {
           console.log(
-            `[@component:NodeSelectionPanel] Screenshot filename received: ${result.screenshot_url}`,
+            `[@component:NodeSelectionPanel] Screenshot URL received: ${result.screenshot_url}`,
           );
 
-          // Get device model from selectedHost for URL construction
-          const deviceModel = selectedHost?.device_model || 'android_mobile';
-
-          // Use buildScreenshotUrl to construct the proper Cloudflare R2 URL
-          const cloudflareUrl = buildScreenshotUrl(result.screenshot_url, deviceModel);
-
-          console.log(`[@component:NodeSelectionPanel] Built Cloudflare URL: ${cloudflareUrl}`);
-
-          // Update the node with the filename (not the full URL) - buildScreenshotUrl will construct it when needed
+          // Update the node with the complete URL from backend
           if (onUpdateNode) {
             const updatedNodeData = {
               ...selectedNode.data,
-              screenshot: result.screenshot_url, // Store just the filename
+              screenshot: result.screenshot_url, // Store complete URL from backend
               screenshot_timestamp: Date.now(), // Add timestamp to force image refresh
             };
             onUpdateNode(selectedNode.id, updatedNodeData);
             console.log(
-              `[@component:NodeSelectionPanel] Updated node ${selectedNode.id} with screenshot filename: ${result.screenshot_url}`,
+              `[@component:NodeSelectionPanel] Updated node ${selectedNode.id} with screenshot URL: ${result.screenshot_url}`,
             );
 
             // Force a refresh of the node display by dispatching a custom event

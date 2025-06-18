@@ -943,5 +943,134 @@ class ImageVerificationController(VerificationControllerInterface):
         print(f"[@controller:ImageVerification] Applying {filter_type} filter to: {image_path}")
         return apply_image_filter(image_path, filter_type)
 
+    def save_reference_image(self, cropped_filename: str, reference_name: str, model: str, 
+                           area: dict, reference_type: str = 'reference_image') -> str:
+        """
+        Save reference image to R2 and update resource.json - like av_controller.save_screenshot()
+        
+        Args:
+            cropped_filename: Filename of the cropped image
+            reference_name: Name for the reference
+            model: Device model
+            area: Area coordinates
+            reference_type: Type of reference
+            
+        Returns:
+            str: Complete Cloudflare R2 URL if successful, None if failed
+        """
+        try:
+            import os
+            import json
+            import subprocess
+            from datetime import datetime
+            
+            # Path configuration
+            CROPPED_PATH = '/var/www/html/stream/captures/cropped'
+            RESOURCE_JSON_PATH = '../config/resource/resource.json'
+            
+            print(f"[@controller:ImageVerification] Saving reference to R2: {reference_name} for model: {model}")
+            print(f"[@controller:ImageVerification] Source cropped file: {cropped_filename}")
+            
+            # Build source path for cropped file
+            cropped_source_path = f'{CROPPED_PATH}/{cropped_filename}'
+            
+            # Check if cropped file exists
+            if not os.path.exists(cropped_source_path):
+                print(f"[@controller:ImageVerification] Cropped file not found: {cropped_source_path}")
+                return None
+            
+            # Upload to Cloudflare R2
+            try:
+                from src.utils.cloudflare_upload_utils import CloudflareUploader
+                
+                uploader = CloudflareUploader()
+                r2_path = f'reference-images/{model}/{reference_name}.jpg'
+                upload_result = uploader.upload_file(cropped_source_path, r2_path)
+                
+                if not upload_result.get('success'):
+                    error_msg = upload_result.get('error', 'Unknown upload error')
+                    print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
+                    return None
+                
+                print(f"[@controller:ImageVerification] Successfully uploaded to R2: {r2_path}")
+                
+            except Exception as upload_error:
+                print(f"[@controller:ImageVerification] R2 upload exception: {upload_error}")
+                return None
+            
+            # Update resource.json
+            resource_json_path = RESOURCE_JSON_PATH
+            os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
+            
+            # Load existing resource data or create new
+            resource_data = {'resources': []}
+            if os.path.exists(resource_json_path):
+                try:
+                    with open(resource_json_path, 'r') as f:
+                        resource_data = json.load(f)
+                except json.JSONDecodeError:
+                    print(f"[@controller:ImageVerification] Warning: Invalid JSON, creating new")
+                    resource_data = {'resources': []}
+            
+            # Remove existing resource with same name and model
+            resource_data['resources'] = [
+                r for r in resource_data['resources'] 
+                if not (r.get('name') == reference_name and r.get('model') == model)
+            ]
+            
+            # Add new resource
+            new_resource = {
+                'name': reference_name,
+                'model': model,
+                'type': reference_type,
+                'area': area,
+                'created_at': datetime.now().isoformat(),
+                'path': r2_path
+            }
+            
+            resource_data['resources'].append(new_resource)
+            
+            # Save updated resource data
+            with open(resource_json_path, 'w') as f:
+                json.dump(resource_data, f, indent=2)
+            
+            print(f"[@controller:ImageVerification] Resource JSON updated")
+            
+            # Git operations
+            try:
+                original_cwd = os.getcwd()
+                os.chdir('..')
+                
+                print(f"[@controller:ImageVerification] Performing git operations...")
+                
+                subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
+                subprocess.run(['git', 'add', 'config/resource/resource.json'], check=True, capture_output=True, text=True)
+                
+                commit_message = f'Add R2 reference: {reference_name} for {model}'
+                subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
+                
+                github_token = os.getenv('GITHUB_TOKEN')
+                if github_token:
+                    subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+                    print(f"[@controller:ImageVerification] Git operations completed successfully")
+                else:
+                    print(f"[@controller:ImageVerification] Warning: GITHUB_TOKEN not set, skipping push")
+                
+                os.chdir(original_cwd)
+                
+                # Return complete Cloudflare R2 URL like av_controller.save_screenshot
+                complete_url = upload_result.get('url')
+                print(f"[@controller:ImageVerification] Returning complete R2 URL: {complete_url}")
+                return complete_url
+                
+            except subprocess.CalledProcessError as git_error:
+                os.chdir(original_cwd)
+                print(f"[@controller:ImageVerification] Git operation failed: {git_error}")
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error saving reference: {str(e)}")
+            return None
+
 # Backward compatibility alias
 ImageVerificationController = ImageVerificationController 

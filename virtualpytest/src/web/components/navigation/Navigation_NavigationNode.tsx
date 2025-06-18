@@ -3,7 +3,6 @@ import { Handle, Position, NodeProps } from 'reactflow';
 
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
-import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
   data,
@@ -13,10 +12,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [imageKey, setImageKey] = useState(0); // Key to force image refresh
 
-  // Build the screenshot URL using Cloudflare R2
+  // Use screenshot URL directly from backend (complete URL)
   // Add cache-busting parameter if screenshot was recently updated
   const screenshotUrl = data.screenshot
-    ? `${buildScreenshotUrl(data.screenshot)}?v=${data.screenshot_timestamp || imageKey}`
+    ? `${data.screenshot}?v=${data.screenshot_timestamp || imageKey}`
     : null;
 
   // Listen for screenshot update events

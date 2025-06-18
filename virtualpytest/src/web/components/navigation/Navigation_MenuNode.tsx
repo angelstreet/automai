@@ -4,7 +4,6 @@ import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { UI_BADGE_COLORS } from '../../config/validationColors';
 import { useValidationColors } from '../../hooks/validation';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
-import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   data,
@@ -20,10 +19,10 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
     currentEdges,
   );
 
-  // Build the screenshot URL using Cloudflare R2
+  // Use screenshot URL directly from backend (complete URL)
   // Add cache-busting parameter if screenshot was recently updated
   const screenshotUrl = data.screenshot
-    ? `${buildScreenshotUrl(data.screenshot)}?v=${data.screenshot_timestamp || imageKey}`
+    ? `${data.screenshot}?v=${data.screenshot_timestamp || imageKey}`
     : null;
 
   // Listen for screenshot update events

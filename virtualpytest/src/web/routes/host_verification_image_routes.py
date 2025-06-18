@@ -12,12 +12,8 @@ This module contains the host-side image verification API endpoints that:
 from flask import Blueprint, request, jsonify, current_app
 import os
 import json
-import subprocess
-import shutil
-from datetime import datetime
 import time
 from src.utils.host_utils import get_local_controller
-from src.utils.app_utils import buildHostUrl
 
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
@@ -128,9 +124,16 @@ def crop_area():
             if success:
                 print(f"[@route:host_crop_area] Cropping successful: {target_filename}")
                 
+                # Build complete URL for the cropped image (for temporary preview)
+                from src.utils.app_utils import buildHostUrl
+                host_info = host_device
+                cropped_image_url = buildHostUrl(host_info, f'host/stream/captures/cropped/{target_filename}')
+                print(f"[@route:host_crop_area] Built cropped image URL: {cropped_image_url}")
+                
                 return jsonify({
                     'success': True,
                     'filename': target_filename,
+                    'image_url': cropped_image_url,  # Complete URL for frontend
                     'message': f'Image cropped successfully: {reference_name}'
                 })
             else:
@@ -269,9 +272,16 @@ def process_area():
             
             print(f"[@route:host_process_area] Processing successful: {target_filename}")
             
+            # Build complete URL for the processed image (for temporary preview)
+            from src.utils.app_utils import buildHostUrl
+            host_info = host_device
+            processed_image_url = buildHostUrl(host_info, f'host/stream/captures/cropped/{target_filename}')
+            print(f"[@route:host_process_area] Built processed image URL: {processed_image_url}")
+            
             return jsonify({
                 'success': True,
                 'filename': target_filename,
+                'image_url': processed_image_url,  # Complete URL for frontend
                 'processed_area': processed_area,
                 'message': f'Image processed successfully: {reference_name}'
             })
@@ -345,115 +355,44 @@ def save_resource():
                 'error': f'Cropped file not found: {cropped_filename}'
             }), 404
         
-        # Upload directly to Cloudflare R2
+        # Use verification_image controller like AV uses av_controller
         try:
-            # Lazy import - only load CloudflareUploader when actually needed
-            from src.utils.cloudflare_upload_utils import CloudflareUploader
+            verification_image_controller = get_local_controller('verification_image')
             
-            uploader = CloudflareUploader()
-            
-            # Upload to R2 with organized path (public access configured at bucket level)
-            r2_path = f'reference-images/{model}/{reference_name}.jpg'
-            upload_result = uploader.upload_file(cropped_source_path, r2_path)
-            
-            if not upload_result.get('success'):
-                error_msg = upload_result.get('error', 'Unknown upload error')
-                print(f"[@route:host_save_resource] R2 upload failed: {error_msg}")
+            if not verification_image_controller:
+                print(f"[@route:host_save_resource] Verification image controller not available")
                 return jsonify({
                     'success': False,
-                    'error': f'Failed to upload to Cloudflare R2: {error_msg}'
+                    'error': 'Verification image controller not available'
                 }), 500
             
-            print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_path}")
-            # ✅ Follow AV controller pattern - don't rely on public URL from upload result
+            # ✅ CONTROLLER DOES EVERYTHING - like av_controller.save_screenshot()
+            reference_result = verification_image_controller.save_reference_image(
+                cropped_filename=cropped_filename,
+                reference_name=reference_name,
+                model=model,
+                area=area,
+                reference_type=reference_type
+            )
             
-        except Exception as upload_error:
-            print(f"[@route:host_save_resource] R2 upload exception: {upload_error}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to upload to R2: {str(upload_error)}'
-            }), 500
-        
-        # Update resource.json with R2 URL only
-        resource_json_path = RESOURCE_JSON_PATH
-        os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
-        
-        # Load existing resource data or create new
-        resource_data = {'resources': []}
-        if os.path.exists(resource_json_path):
-            try:
-                with open(resource_json_path, 'r') as f:
-                    resource_data = json.load(f)
-            except json.JSONDecodeError:
-                print(f"[@route:host_save_resource] Warning: Invalid JSON in {resource_json_path}, creating new")
-                resource_data = {'resources': []}
-        
-        # Remove existing resource with same name and model (update case)
-        resource_data['resources'] = [
-            r for r in resource_data['resources'] 
-            if not (r.get('name') == reference_name and r.get('model') == model)
-        ]
-        
-        # Add new resource with R2 path (following AV controller pattern)
-        new_resource = {
-            'name': reference_name,
-            'model': model,
-            'type': reference_type,
-            'area': area,
-            'created_at': datetime.now().isoformat(),
-            'path': r2_path  # Store R2 path, not URL
-        }
-        
-        resource_data['resources'].append(new_resource)
-        
-        # Save updated resource data
-        with open(resource_json_path, 'w') as f:
-            json.dump(resource_data, f, indent=2)
-        
-        print(f"[@route:host_save_resource] Resource JSON updated with R2 URL")
-        
-        # Git operations for resource.json only
-        try:
-            # Change to the parent directory for git operations
-            original_cwd = os.getcwd()
-            os.chdir('..')
-            
-            print(f"[@route:host_save_resource] Performing git operations for resource.json...")
-            
-            # Git pull to get latest changes
-            subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
-            
-            # Git add only the resource.json file
-            subprocess.run(['git', 'add', 'config/resource/resource.json'], check=True, capture_output=True, text=True)
-            
-            # Git commit with descriptive message
-            commit_message = f'Add R2 reference: {reference_name} for {model}'
-            subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
-            
-            # Git push with authentication
-            github_token = os.getenv('GITHUB_TOKEN')
-            if github_token:
-                subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
-                print(f"[@route:host_save_resource] Git operations completed successfully")
+            if reference_result:
+                # Return success following AV controller pattern
+                return jsonify({
+                    'success': True,
+                    'message': f'Reference uploaded to R2: {reference_name}',
+                    'image_url': reference_result  # ✅ Complete R2 URL from controller
+                })
             else:
-                print(f"[@route:host_save_resource] Warning: GITHUB_TOKEN not set, skipping push")
-            
-            # Return to original directory
-            os.chdir(original_cwd)
-            
-            # Return success following AV controller pattern
-            return jsonify({
-                'success': True,
-                'message': f'Reference uploaded to R2: {reference_name}',
-                'r2_path': r2_path
-            })
-            
-        except subprocess.CalledProcessError as git_error:
-            os.chdir(original_cwd)  # Ensure we return to original directory
-            print(f"[@route:host_save_resource] Git operation failed: {git_error}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to save reference image'
+                }), 500
+                
+        except Exception as controller_error:
+            print(f"[@route:host_save_resource] Controller error: {controller_error}")
             return jsonify({
                 'success': False,
-                'error': f'Git operation failed: {str(git_error)}'
+                'error': f'Controller error: {str(controller_error)}'
             }), 500
             
     except Exception as e:
