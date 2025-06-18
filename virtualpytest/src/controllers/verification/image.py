@@ -943,6 +943,99 @@ class ImageVerificationController(VerificationControllerInterface):
         print(f"[@controller:ImageVerification] Applying {filter_type} filter to: {image_path}")
         return apply_image_filter(image_path, filter_type)
 
+    def _perform_git_pull(self) -> bool:
+        """
+        Perform git pull operation safely, returning boolean result.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            import subprocess
+            import os
+            
+            # Store original directory
+            original_cwd = os.getcwd()
+            
+            # Change to parent directory for git operations
+            os.chdir('..')
+            
+            # Perform git pull
+            result = subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
+            
+            # Return to original directory
+            os.chdir(original_cwd)
+            
+            print(f"[@controller:ImageVerification] Git pull completed successfully")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            try:
+                os.chdir(original_cwd)
+            except:
+                pass
+            print(f"[@controller:ImageVerification] Git pull failed: {e}")
+            return False
+        except Exception as e:
+            try:
+                os.chdir(original_cwd)
+            except:
+                pass
+            print(f"[@controller:ImageVerification] Git pull error: {e}")
+            return False
+
+    def _perform_git_commit_and_push(self, commit_message: str) -> bool:
+        """
+        Perform git commit and push operations safely, returning boolean result.
+        
+        Args:
+            commit_message: The commit message to use
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            import subprocess
+            import os
+            
+            # Store original directory
+            original_cwd = os.getcwd()
+            
+            # Change to parent directory for git operations
+            os.chdir('..')
+            
+            # Git commit with message
+            subprocess.run(['git', 'commit', '-am', commit_message], check=True, capture_output=True, text=True)
+            print(f"[@controller:ImageVerification] Git commit completed")
+            
+            # Git push with authentication
+            github_token = os.getenv('GITHUB_TOKEN')
+            if github_token:
+                subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+                print(f"[@controller:ImageVerification] Git push completed")
+            else:
+                print(f"[@controller:ImageVerification] Warning: GITHUB_TOKEN not set, skipping push")
+            
+            # Return to original directory
+            os.chdir(original_cwd)
+            
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            try:
+                os.chdir(original_cwd)
+            except:
+                pass
+            print(f"[@controller:ImageVerification] Git commit/push failed: {e}")
+            return False
+        except Exception as e:
+            try:
+                os.chdir(original_cwd)
+            except:
+                pass
+            print(f"[@controller:ImageVerification] Git commit/push error: {e}")
+            return False
+
     def save_reference_image(self, cropped_filename: str, reference_name: str, model: str, 
                            area: dict, reference_type: str = 'reference_image') -> str:
         """
@@ -961,7 +1054,6 @@ class ImageVerificationController(VerificationControllerInterface):
         try:
             import os
             import json
-            import subprocess
             from datetime import datetime
             
             # Path configuration
@@ -998,16 +1090,14 @@ class ImageVerificationController(VerificationControllerInterface):
             
             # Git pull FIRST before editing resource.json
             try:
-                original_cwd = os.getcwd()
-                os.chdir('..')
-                
                 print(f"[@controller:ImageVerification] Performing git pull before editing resource.json...")
-                subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
+                git_pull_success = self._perform_git_pull()
                 
-                os.chdir(original_cwd)
+                if not git_pull_success:
+                    print(f"[@controller:ImageVerification] Git pull failed")
+                    return None
                 
-            except subprocess.CalledProcessError as git_error:
-                os.chdir(original_cwd)
+            except Exception as git_error:
                 print(f"[@controller:ImageVerification] Git pull failed: {git_error}")
                 return None
             
@@ -1049,33 +1139,28 @@ class ImageVerificationController(VerificationControllerInterface):
             
             print(f"[@controller:ImageVerification] Resource JSON updated")
             
-            # Git commit and push (file should already be tracked)
+            # Git commit and push resource.json
             try:
-                original_cwd = os.getcwd()
-                os.chdir('..')
-                
                 print(f"[@controller:ImageVerification] Performing git commit and push...")
                 
                 commit_message = f'Add R2 reference: {reference_name} for {model}'
-                subprocess.run(['git', 'commit', '-am', commit_message], check=True, capture_output=True, text=True)
+                git_commit_success = self._perform_git_commit_and_push(commit_message)
                 
-                github_token = os.getenv('GITHUB_TOKEN')
-                if github_token:
-                    subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+                if git_commit_success:
                     print(f"[@controller:ImageVerification] Git operations completed successfully")
                 else:
-                    print(f"[@controller:ImageVerification] Warning: GITHUB_TOKEN not set, skipping push")
-                
-                os.chdir(original_cwd)
+                    print(f"[@controller:ImageVerification] Warning: Git operations failed")
+                    # Don't fail the save operation, just warn (same pattern as navigation routes)
                 
                 # Return complete Cloudflare R2 URL that we extracted immediately after upload
                 print(f"[@controller:ImageVerification] Returning complete R2 URL: {complete_url}")
                 return complete_url
                 
-            except subprocess.CalledProcessError as git_error:
-                os.chdir(original_cwd)
+            except Exception as git_error:
                 print(f"[@controller:ImageVerification] Git operation failed: {git_error}")
-                return None
+                # Don't fail the save operation, just warn and return the URL
+                print(f"[@controller:ImageVerification] Returning complete R2 URL despite git error: {complete_url}")
+                return complete_url
                 
         except Exception as e:
             print(f"[@controller:ImageVerification] Error saving reference: {str(e)}")
