@@ -74,14 +74,9 @@ def create_empty_navigation_config(userinterface_name: str, userinterface_data: 
         home_node_id = str(uuid.uuid4())
         edge_id = str(uuid.uuid4())
         
-        # Create empty config template based on horizon_android_tv.json structure
+        # Create empty config template - removed userInterface section
+        # Filtering should be based on database userInterface data, not config files
         empty_config = {
-            "userInterface": {
-                "name": userinterface_data.get("name", userinterface_name),
-                "models": userinterface_data.get("models", []),
-                "min_version": userinterface_data.get("min_version", ""),
-                "max_version": userinterface_data.get("max_version", "")
-            },
             "edges": [
                 {
                     "id": edge_id,
