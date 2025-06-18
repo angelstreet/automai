@@ -27,6 +27,13 @@ HOST_IP = "77.56.53.130"
 HOST_PORT = "5119"
 CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 
+# Path configuration constants
+STREAM_BASE_PATH = '/var/www/html/stream'
+CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
+CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
+RESOURCES_BASE_PATH = '../resources'
+RESOURCE_JSON_PATH = '../config/resource/resource.json'
+
 # =====================================================
 # HOST-SIDE IMAGE CROPPING AND PROCESSING ENDPOINTS
 # =====================================================
@@ -70,13 +77,13 @@ def crop_area():
                 from urllib.parse import urlparse
                 parsed_url = urlparse(source_path)
                 source_filename = parsed_url.path.split('/')[-1].split('?')[0]
-                final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+                final_source_path = f'{CAPTURES_PATH}/{source_filename}'
             else:
                 # Use source_path directly if it's a file path
                 final_source_path = source_path
         elif source_filename:
-            # Build source path from filename - assume images are in /var/www/html/stream/captures/
-            final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+            # Build source path from filename
+            final_source_path = f'{CAPTURES_PATH}/{source_filename}'
         else:
             return jsonify({
                 'success': False,
@@ -84,7 +91,7 @@ def crop_area():
             }), 400
         
         # Build target path for cropped image in dedicated cropped folder
-        cropped_dir = '/var/www/html/stream/captures/cropped'
+        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract timestamp from original screenshot filename (last part after splitting by _)
@@ -200,13 +207,13 @@ def process_area():
                 from urllib.parse import urlparse
                 parsed_url = urlparse(source_path)
                 source_filename = parsed_url.path.split('/')[-1].split('?')[0]
-                final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+                final_source_path = f'{CAPTURES_PATH}/{source_filename}'
             else:
                 # Use source_path directly if it's a file path
                 final_source_path = source_path
         elif source_filename:
-            # Build source path from filename - assume images are in /var/www/html/stream/captures/
-            final_source_path = f'/var/www/html/stream/captures/{source_filename}'
+            # Build source path from filename
+            final_source_path = f'{CAPTURES_PATH}/{source_filename}'
         else:
             return jsonify({
                 'success': False,
@@ -214,7 +221,7 @@ def process_area():
             }), 400
         
         # Build target path for processed image in dedicated cropped folder
-        cropped_dir = '/var/www/html/stream/captures/cropped'
+        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract timestamp from original screenshot filename (last part after splitting by _)
@@ -350,7 +357,7 @@ def save_resource():
             }), 400
         
         # Build source path for cropped file
-        cropped_source_path = f'/var/www/html/stream/captures/cropped/{cropped_filename}'
+        cropped_source_path = f'{CROPPED_PATH}/{cropped_filename}'
         
         print(f"[@route:host_save_resource] Uploading from {cropped_source_path} to Cloudflare R2")
         
@@ -395,7 +402,7 @@ def save_resource():
             }), 500
         
         # Update resource.json with R2 URL only
-        resource_json_path = '../config/resource/resource.json'
+        resource_json_path = RESOURCE_JSON_PATH
         os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
         
         # Load existing resource data or create new
@@ -657,7 +664,7 @@ def resolve_reference_path(reference_name, model, verification_type):
         
     try:
         # Read R2 URL from resource JSON file
-        resource_json_path = '../config/resource/resource.json'
+        resource_json_path = RESOURCE_JSON_PATH
         if not os.path.exists(resource_json_path):
             print(f"[@route:resolve_reference_path] Resource JSON not found: {resource_json_path}")
             return None

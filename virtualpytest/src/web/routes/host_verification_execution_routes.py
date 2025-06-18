@@ -25,6 +25,11 @@ HOST_IP = "77.56.53.130"
 HOST_PORT = "5119"
 CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 
+# Path configuration constants
+STREAM_BASE_PATH = '/var/www/html/stream'
+CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
+VERIFICATION_RESULTS_PATH = f'{STREAM_BASE_PATH}/verification_results'
+
 # =====================================================
 # HOST-SIDE VERIFICATION EXECUTION ENDPOINTS
 # =====================================================
@@ -61,7 +66,7 @@ def execute_verification():
             }), 400
         
         # Build source path
-        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        source_path = f'{CAPTURES_PATH}/{source_filename}'
         
         # Check if source file exists
         if not os.path.exists(source_path):
@@ -73,7 +78,7 @@ def execute_verification():
         
         # Create results directory
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        results_dir = f'/var/www/html/stream/verification_results/{timestamp}'
+        results_dir = f'{VERIFICATION_RESULTS_PATH}/{timestamp}'
         os.makedirs(results_dir, exist_ok=True)
         
         verification_index = 0
@@ -153,7 +158,7 @@ def execute_batch_verification():
             }), 400
         
         # Build source path
-        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        source_path = f'{CAPTURES_PATH}/{source_filename}'
         
         # Check if source file exists
         if not os.path.exists(source_path):
@@ -165,7 +170,7 @@ def execute_batch_verification():
         
         # Create results directory
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        results_dir = f'/var/www/html/stream/verification_results/{timestamp}'
+        results_dir = f'{VERIFICATION_RESULTS_PATH}/{timestamp}'
         os.makedirs(results_dir, exist_ok=True)
         
         results = []

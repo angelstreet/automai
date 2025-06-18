@@ -21,6 +21,13 @@ HOST_IP = "77.56.53.130"
 HOST_PORT = "5119"
 CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 
+# Path configuration constants
+STREAM_BASE_PATH = '/var/www/html/stream'
+CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
+CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
+RESOURCES_BASE_PATH = '../resources'
+RESOURCE_JSON_PATH = '../config/resource/resource.json'
+
 # =====================================================
 # HOST-SIDE TEXT AUTO-DETECTION ENDPOINT
 # =====================================================
@@ -56,11 +63,11 @@ def text_auto_detect():
                 'error': 'source_filename and area are required'
             }), 400
         
-        # Build source path - assume images are in /var/www/html/stream/captures/
-        source_path = f'/var/www/html/stream/captures/{source_filename}'
+        # Build source path
+        source_path = f'{CAPTURES_PATH}/{source_filename}'
         
         # Build target path for cropped preview in dedicated cropped folder
-        cropped_dir = '/var/www/html/stream/captures/cropped'
+        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract base name without extension
@@ -161,7 +168,7 @@ def text_auto_detect():
                     return jsonify({
                         'success': False,
                         'error': str(fallback_error),
-                        'preview_url': f'/stream/captures/cropped/{target_filename}'  # Still provide preview
+                        'preview_url': f'/host/stream/captures/cropped/{target_filename}'  # Still provide preview
                     }), 500
             
             # Attempt language detection
@@ -275,11 +282,11 @@ def save_text_resource():
             }), 400
         
         # Build resource directory path
-        resource_dir = f'../resources/{model}'
+        resource_dir = f'{RESOURCES_BASE_PATH}/{model}'
         os.makedirs(resource_dir, exist_ok=True)
         
         # Build resource JSON path
-        resource_json_path = '../config/resource/resource.json'
+        resource_json_path = RESOURCE_JSON_PATH
         os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
         
         # Load existing resource data or create new
