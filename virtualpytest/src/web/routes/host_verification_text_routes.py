@@ -78,12 +78,21 @@ def text_auto_detect():
                 'error': f'Source file not found: {source_filename}'
             }), 404
         
-        # Import and use existing cropping function
+        # Use image controller for cropping
         try:
-            from controllers.verification.image import crop_reference_image
+            from src.utils.host_utils import get_local_controller
             
-            # Crop the image area
-            success = crop_reference_image(source_path, target_path, area)
+            # Get image verification controller
+            image_controller = get_local_controller('verification_image')
+            if not image_controller:
+                print(f"[@route:host_text_auto_detect] Image controller not available")
+                return jsonify({
+                    'success': False,
+                    'error': 'Image controller not available'
+                }), 500
+            
+            # Crop the image area using controller
+            success = image_controller.crop_image(source_path, target_path, area)
             
             if success:
                 print(f"Reference image saved successfully: {target_path}")
@@ -104,12 +113,8 @@ def text_auto_detect():
         # Apply image filter if specified (can improve OCR accuracy)
         if image_filter and image_filter != 'none':
             print(f"[@route:host_text_auto_detect] Applying {image_filter} filter for better OCR")
-            try:
-                from controllers.verification.image import apply_image_filter
-                if not apply_image_filter(target_path, image_filter):
-                    print(f"[@route:host_text_auto_detect] Warning: Failed to apply {image_filter} filter")
-            except ImportError:
-                print(f"[@route:host_text_auto_detect] Warning: Image filter utilities not available")
+            if not image_controller.apply_filter(target_path, image_filter):
+                print(f"[@route:host_text_auto_detect] Warning: Failed to apply {image_filter} filter")
         
         # Perform OCR with detailed confidence data
         try:
@@ -374,12 +379,20 @@ def save_text_resource():
 # =====================================================
 
 def execute_text_verification_host(verification, source_path, model, verification_index, results_dir):
-    """Execute text verification using existing text utilities."""
+    """Execute text verification using verification controllers."""
     try:
         import cv2
         import pytesseract
         import shutil
-        from controllers.verification.image import crop_reference_image
+        from src.utils.host_utils import get_local_controller
+        
+        # Get image verification controller
+        image_controller = get_local_controller('verification_image')
+        if not image_controller:
+            return {
+                'success': False,
+                'error': 'Image verification controller not available'
+            }
         
         params = verification.get('params', {})
         area = params.get('area')
@@ -407,21 +420,25 @@ def execute_text_verification_host(verification, source_path, model, verificatio
         
         # Crop source image to area if specified
         if area:
-            success = crop_reference_image(source_path, source_result_path, area)
+            success = image_controller.crop_image(source_path, source_result_path, area)
             if not success:
                 return {
                     'success': False,
                     'error': 'Failed to crop source image'
                 }
         else:
-            # Copy full source image
-            shutil.copy2(source_path, source_result_path)
+            # Copy full source image using controller
+            success = image_controller.copy_image(source_path, source_result_path)
+            if not success:
+                return {
+                    'success': False,
+                    'error': 'Failed to copy source image'
+                }
         
         # Apply filter to source image if user selected one (can improve OCR accuracy)
         if image_filter and image_filter != 'none':
             print(f"[@route:execute_text_verification_host] Applying {image_filter} filter to source image for OCR")
-            from controllers.verification.image import apply_image_filter
-            if not apply_image_filter(source_result_path, image_filter):
+            if not image_controller.apply_filter(source_result_path, image_filter):
                 print(f"[@route:execute_text_verification_host] Warning: Failed to apply {image_filter} filter to source")
 
         # Load image for OCR

@@ -108,12 +108,21 @@ def crop_area():
                 'error': f'Source file not found: {final_source_path}'
             }), 404
         
-        # Import and use existing cropping function
+        # Use image controller for cropping
         try:
-            from controllers.verification.image import crop_reference_image
+            from src.utils.host_utils import get_local_controller
             
-            # Crop the image
-            success = crop_reference_image(final_source_path, target_path, area)
+            # Get image verification controller
+            image_controller = get_local_controller('verification_image')
+            if not image_controller:
+                print(f"[@route:host_crop_area] Image controller not available")
+                return jsonify({
+                    'success': False,
+                    'error': 'Image controller not available'
+                }), 500
+            
+            # Crop the image using controller
+            success = image_controller.crop_image(final_source_path, target_path, area)
             
             if success:
                 # Build public URL using buildHostUrl for frontend access
@@ -233,12 +242,21 @@ def process_area():
                 'error': f'Source file not found: {final_source_path}'
             }), 404
         
-        # Import and use existing processing functions
+        # Use image controller for processing
         try:
-            from controllers.verification.image import crop_reference_image, process_reference_image
+            from src.utils.host_utils import get_local_controller
             
-            # First crop the image
-            success = crop_reference_image(final_source_path, target_path, area)
+            # Get image verification controller
+            image_controller = get_local_controller('verification_image')
+            if not image_controller:
+                print(f"[@route:host_process_area] Image controller not available")
+                return jsonify({
+                    'success': False,
+                    'error': 'Image controller not available'
+                }), 500
+            
+            # First crop the image using controller
+            success = image_controller.crop_image(final_source_path, target_path, area)
             
             if not success:
                 print(f"[@route:host_process_area] Initial cropping failed")
@@ -250,11 +268,18 @@ def process_area():
             # Then apply processing if requested
             processed_area = area  # Default to original area
             
-            if autocrop or remove_background:
-                processed_area = process_reference_image(target_path, autocrop, remove_background)
+            if autocrop:
+                print(f"[@route:host_process_area] Applying auto-crop enhancement")
+                processed_area = image_controller.auto_crop_image(target_path)
                 if not processed_area:
-                    print(f"[@route:host_process_area] Processing failed, using original area")
+                    print(f"[@route:host_process_area] Auto-crop failed, using original area")
                     processed_area = area
+            
+            if remove_background:
+                print(f"[@route:host_process_area] Applying background removal")
+                bg_success = image_controller.remove_background(target_path)
+                if not bg_success:
+                    print(f"[@route:host_process_area] Background removal failed")
             
             # Build public URL using buildHostUrl for frontend access
             host_info = {
@@ -474,11 +499,19 @@ def save_resource():
 # =====================================================
 
 def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
-    """Execute image verification using existing image utilities."""
+    """Execute image verification using verification controllers."""
     try:
         import cv2
         import shutil
-        from controllers.verification.image import copy_reference_with_filtered_versions, crop_reference_image
+        from src.utils.host_utils import get_local_controller
+        
+        # Get image verification controller
+        image_controller = get_local_controller('verification_image')
+        if not image_controller:
+            return {
+                'success': False,
+                'error': 'Image verification controller not available'
+            }
         
         params = verification.get('params', {})
         area = params.get('area')
@@ -515,22 +548,26 @@ def execute_image_verification_host(verification, source_path, model, verificati
         # === STEP 1: Handle Source Image ===
         # Crop source image to area if specified (always crop for source)
         if area:
-            # Use the updated function that doesn't create filtered versions automatically
-            success = crop_reference_image(source_path, source_result_path, area, create_filtered_versions=False)
+            # Use controller to crop source image
+            success = image_controller.crop_image(source_path, source_result_path, area, create_filtered_versions=False)
             if not success:
                 return {
                     'success': False,
                     'error': 'Failed to crop source image'
                 }
         else:
-            # Copy full source image
-            shutil.copy2(source_path, source_result_path)
+            # Copy full source image using controller
+            success = image_controller.copy_image(source_path, source_result_path)
+            if not success:
+                return {
+                    'success': False,
+                    'error': 'Failed to copy source image'
+                }
         
         # Apply filter to source image if user selected one
         if image_filter and image_filter != 'none':
             print(f"[@route:execute_image_verification_host] Applying {image_filter} filter to source image")
-            from controllers.verification.image import apply_image_filter
-            if not apply_image_filter(source_result_path, image_filter):
+            if not image_controller.apply_filter(source_result_path, image_filter):
                 print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to source")
         
         # === STEP 2: Handle Reference Image ===
@@ -542,23 +579,22 @@ def execute_image_verification_host(verification, source_path, model, verificati
             
             if os.path.exists(filtered_reference_path):
                 print(f"[@route:execute_image_verification_host] Using existing filtered reference: {filtered_reference_path}")
-                shutil.copy2(filtered_reference_path, reference_result_path)
+                image_controller.copy_image(filtered_reference_path, reference_result_path)
             else:
                 print(f"[@route:execute_image_verification_host] Filtered reference not found, creating dynamically from original: {image_path}")
-                # Copy original reference first
-                shutil.copy2(image_path, reference_result_path)
+                # Copy original reference first using controller
+                image_controller.copy_image(image_path, reference_result_path)
                 # Apply filter dynamically to the copied reference
-                from controllers.verification.image import apply_image_filter
-                if not apply_image_filter(reference_result_path, image_filter):
+                if not image_controller.apply_filter(reference_result_path, image_filter):
                     print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to reference, using original")
                     # If filter fails, copy original again to ensure clean state
-                    shutil.copy2(image_path, reference_result_path)
+                    image_controller.copy_image(image_path, reference_result_path)
                 else:
                     print(f"[@route:execute_image_verification_host] Successfully applied {image_filter} filter to reference image")
         else:
             # User wants original comparison - use original reference
             print(f"[@route:execute_image_verification_host] Using original reference: {image_path}")
-            shutil.copy2(image_path, reference_result_path)
+            image_controller.copy_image(image_path, reference_result_path)
         
         # === STEP 3: Perform Verification ===
         # Load both images for comparison
