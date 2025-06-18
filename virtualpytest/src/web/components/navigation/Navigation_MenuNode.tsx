@@ -8,7 +8,7 @@ import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   data,
-  selected,
+  selected: _selected,
   id,
 }) => {
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);

@@ -602,7 +602,7 @@ const NavigationEditorContent: React.FC = () => {
                   />
                 )}
 
-                {selectedEdge && (
+                {selectedEdge && selectedHost && (
                   <EdgeSelectionPanel
                     selectedEdge={selectedEdge}
                     onClose={closeSelectionPanel}
@@ -610,7 +610,6 @@ const NavigationEditorContent: React.FC = () => {
                     onDelete={deleteSelected}
                     setEdgeForm={setEdgeForm}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                    controllerTypes={userInterface?.models || []}
                     onUpdateEdge={handleUpdateEdge}
                     isControlActive={isControlActive}
                     selectedHost={selectedHost}
@@ -659,17 +658,18 @@ const NavigationEditorContent: React.FC = () => {
       />
 
       {/* Edge Edit Dialog */}
-      <EdgeEditDialog
-        isOpen={isEdgeDialogOpen}
-        edgeForm={edgeForm}
-        setEdgeForm={setEdgeForm}
-        onSubmit={handleEdgeFormSubmit}
-        onClose={() => setIsEdgeDialogOpen(false)}
-        controllerTypes={userInterface?.models || []}
-        selectedEdge={selectedEdge}
-        isControlActive={isControlActive}
-        selectedHost={selectedHost}
-      />
+      {selectedHost && (
+        <EdgeEditDialog
+          isOpen={isEdgeDialogOpen}
+          edgeForm={edgeForm}
+          setEdgeForm={setEdgeForm}
+          onSubmit={handleEdgeFormSubmit}
+          onClose={() => setIsEdgeDialogOpen(false)}
+          selectedEdge={selectedEdge}
+          isControlActive={isControlActive}
+          selectedHost={selectedHost}
+        />
+      )}
 
       {/* Discard Changes Confirmation Dialog */}
       <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>

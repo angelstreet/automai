@@ -3,6 +3,7 @@ import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui
 import React, { useState, useEffect } from 'react';
 
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
+import { Host } from '../../types/common/Host_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
@@ -16,8 +17,7 @@ interface EdgeSelectionPanelProps {
   onUpdateEdge?: (edgeId: string, updatedData: any) => void; // Add callback for updating edge data
   // Device control props
   isControlActive?: boolean;
-  selectedHost?: any; // Full host object for API calls
-  controllerTypes?: string[]; // e.g., ["android_mobile"]
+  selectedHost: Host; // Use proper Host type and make required
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
@@ -30,7 +30,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   onUpdateEdge,
   isControlActive = false,
   selectedHost,
-  controllerTypes = [],
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
@@ -39,6 +38,23 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
   const [localRetryActionUpdates, setLocalRetryActionUpdates] = useState<{
     [index: number]: boolean[];
   }>({});
+
+  // Extract controller types from device model
+  const getControllerTypes = (): string[] => {
+    const deviceModel = selectedHost?.device_model;
+    if (!deviceModel) return [];
+
+    // Map device models to controller types
+    const modelToControllerMap: { [key: string]: string[] } = {
+      android_mobile: ['android_mobile'],
+      android_tv: ['android_tv'],
+      stb: ['stb'],
+    };
+
+    return modelToControllerMap[deviceModel] || [];
+  };
+
+  const controllerTypes = getControllerTypes();
 
   // Get actions in consistent format (handle both new and legacy formats)
   const getActions = (): EdgeAction[] => {
@@ -210,7 +226,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = ({
       const result = await executeEdgeActions(
         actions,
         controllerTypes,
-        selectedHost, // Pass selectedHost as third parameter
+        selectedHost,
         updateActionResults, // Pass the callback to update edge data
         finalWaitTime,
         retryActions,

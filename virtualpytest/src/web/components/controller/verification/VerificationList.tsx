@@ -9,12 +9,11 @@ import { UseVerificationType } from '../../../hooks/verification/useVerification
 
 interface VerificationListProps {
   verification: UseVerificationType;
-  model: string;
 }
 
-export const VerificationList: React.FC<VerificationListProps> = ({ verification, model }) => {
+export const VerificationList: React.FC<VerificationListProps> = ({ verification }) => {
   const {
-    verificationActions,
+    availableVerificationTypes,
     verifications,
     loading,
     error,
@@ -25,7 +24,11 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
     handleTest,
     referenceSaveCounter,
     handleReferenceSelected,
+    selectedHostDevice,
   } = verification;
+
+  // Extract model from the selected host device
+  const model = selectedHostDevice?.device_model || '';
 
   return (
     <Box>
@@ -85,7 +88,7 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
         >
           <NodeVerificationsList
             verifications={verifications}
-            availableActions={verificationActions}
+            availableActions={availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
             loading={loading}
             error={error}

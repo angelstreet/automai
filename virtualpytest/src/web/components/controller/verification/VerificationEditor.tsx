@@ -6,6 +6,7 @@ import {
   getVerificationEditorLayout,
 } from '../../../config/layoutConfig';
 import { useVerification } from '../../../hooks/verification/useVerification';
+import { Host } from '../../../types/common/Host_Types';
 
 import VerificationCapture from './VerificationCapture';
 import VerificationList from './VerificationList';
@@ -20,60 +21,32 @@ interface DragArea {
 
 interface VerificationEditorProps {
   isVisible: boolean;
-  isScreenshotMode: boolean;
-  isCaptureActive: boolean;
-  captureImageRef?: React.RefObject<HTMLImageElement>;
-  captureImageDimensions?: { width: number; height: number };
-  originalImageDimensions?: { width: number; height: number };
+  selectedHostDevice: Host;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
-  model: string;
-  // VideoCapture component state
-  videoFramesPath?: string;
-  totalFrames?: number;
-  currentFrame?: number;
-  // ScreenshotCapture component state
   screenshotPath?: string;
+  isCaptureActive: boolean;
+  layoutConfig?: VerificationEditorLayoutConfig;
   sx?: any;
-  onReferenceSaved?: (referenceName: string) => void;
-  layoutConfig?: VerificationEditorLayoutConfig; // Allow direct override if needed
-  // Device connection information
-  deviceConnection?: {
-    flask_url: string; // e.g., "http://192.168.1.67:5119"
-    host_url: string; // e.g., "https://192.168.1.67:444"
-  };
-  // Host device with controller proxies (for new controller architecture)
-  selectedHostDevice?: any;
 }
 
 export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   isVisible,
-  isScreenshotMode,
-  isCaptureActive,
-  captureImageRef,
-  captureImageDimensions,
-  originalImageDimensions,
+  selectedHostDevice,
   captureSourcePath,
   selectedArea,
   onAreaSelected,
   onClearSelection,
-  model,
-  // VideoCapture component state
-  videoFramesPath: _videoFramesPath,
-  totalFrames: _totalFrames,
-  currentFrame: _currentFrame,
-  // ScreenshotCapture component state
   screenshotPath,
-  sx = {},
-  onReferenceSaved: _onReferenceSaved,
+  isCaptureActive,
   layoutConfig,
-  // Device connection information
-  deviceConnection: _deviceConnection,
-  // Host device with controller proxies (for new controller architecture)
-  selectedHostDevice,
+  sx = {},
 }) => {
+  // Extract model from host device
+  const model = selectedHostDevice.device_model;
+
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = React.useMemo(() => {
     const config = layoutConfig || getVerificationEditorLayout(model);
@@ -92,13 +65,12 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // Use the verification hook to handle all verification logic
   const verification = useVerification({
     isVisible,
-    model,
+    selectedHostDevice,
     captureSourcePath,
     selectedArea,
     onAreaSelected,
     onClearSelection,
     screenshotPath,
-    selectedHostDevice,
     isCaptureActive,
   });
 
@@ -107,7 +79,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     console.log('[@component:VerificationEditor] Component mounted with props:', {
       isVisible,
       model,
-      isScreenshotMode,
       isCaptureActive,
       layoutConfig: finalLayoutConfig,
     });
@@ -115,7 +86,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     return () => {
       console.log('[@component:VerificationEditor] Component unmounting');
     };
-  }, [isVisible, model, isScreenshotMode, isCaptureActive, finalLayoutConfig]);
+  }, [isVisible, model, isCaptureActive, finalLayoutConfig]);
 
   if (!isVisible) return null;
 
@@ -138,7 +109,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
           Configuration Error
         </Typography>
         <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
-          Model prop is required for the Verification Editor
+          Device model is required for the Verification Editor
         </Typography>
       </Box>
     );
@@ -194,14 +165,14 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       {/* =================== CAPTURE SECTION =================== */}
       <VerificationCapture
         verification={verification}
-        selectedArea={selectedArea}
+        selectedArea={selectedArea || null}
         onAreaSelected={onAreaSelected}
         captureHeight={finalLayoutConfig.captureHeight}
         isMobileModel={finalLayoutConfig.isMobileModel}
       />
 
       {/* =================== VERIFICATIONS SECTION =================== */}
-      <VerificationList verification={verification} model={model} />
+      <VerificationList verification={verification} />
 
       {/* =================== RESULT MODAL =================== */}
       <VerificationResultModal verification={verification} />

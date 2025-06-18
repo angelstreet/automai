@@ -22,9 +22,10 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 import { buildScreenshotUrl } from '../../utils/infrastructure/cloudflareUtils';
+import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -41,7 +42,7 @@ interface NodeSelectionPanelProps {
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
   // Device control props
   isControlActive?: boolean;
-  selectedHost?: any; // Full host object for API calls
+  selectedHost?: Host; // Full host object for API calls
   onSaveScreenshot?: () => void;
   // Navigation props
   treeId?: string;
@@ -59,16 +60,16 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
   selectedNode,
   nodes,
   onClose,
-  onEdit,
+  onEdit: _onEdit,
   onDelete,
-  onAddChildren,
+  onAddChildren: _onAddChildren,
   setNodeForm,
   setIsNodeDialogOpen,
   onReset,
   onUpdateNode,
   isControlActive = false,
   selectedHost,
-  onSaveScreenshot,
+  onSaveScreenshot: _onSaveScreenshot,
   treeId = '',
   currentNodeId,
   onVerification,
@@ -121,7 +122,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
     } else {
       console.log(`[@component:NodeSelectionPanel] Node has no verifications`);
     }
-  }, [selectedNode.id]);
+  }, [selectedNode.id, selectedNode.data.verifications]);
 
   const handleEdit = () => {
     setNodeForm({
@@ -301,11 +302,35 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = ({
         let verificationSuccess = false;
 
         try {
-          // Use server route for verification (to be implemented)
-          // Note: This component currently shows verification UI but actual execution
-          // should be handled through the NodeEditDialog component
-          results.push(`❌ Verification ${i + 1}: Use NodeEditDialog for verification execution`);
-          verificationSuccess = false;
+          if (!selectedHost) {
+            results.push(`❌ Verification ${i + 1}: No host device selected`);
+            verificationSuccess = false;
+          } else {
+            // Use server route for verification execution
+            const response = await fetch(`/server/verification/execution/execute-batch`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                host_name: selectedHost.host_name,
+                verifications: [verification],
+                model: selectedHost.device_model || 'android_mobile',
+                node_id: selectedNode.id,
+                source_filename: 'verification_screenshot.jpg',
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+              verificationSuccess = true;
+            } else {
+              results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+              verificationSuccess = false;
+            }
+          }
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
           verificationSuccess = false;

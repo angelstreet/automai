@@ -8,8 +8,9 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
+import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 
@@ -36,10 +37,9 @@ interface EdgeEditDialogProps {
   setEdgeForm: React.Dispatch<React.SetStateAction<EdgeForm>>;
   onSubmit: (formData: any) => void;
   onClose: () => void;
-  controllerTypes?: string[];
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
-  selectedHost?: any; // Full host object for API calls
+  selectedHost: Host; // Use proper Host type and make required
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -48,7 +48,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   setEdgeForm,
   onSubmit,
   onClose,
-  controllerTypes = [],
   selectedEdge,
   isControlActive = false,
   selectedHost,
@@ -58,12 +57,30 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     return null;
   }
 
-  const [controllerActions, setControllerActions] = useState<ControllerActions>({});
-  const [loadingActions, setLoadingActions] = useState(false);
-  const [actionsError, setActionsError] = useState<string | null>(null);
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
+  // Extract controller actions from host data
+  const controllerActions: ControllerActions = useMemo(() => {
+    return selectedHost?.available_remote_actions || {};
+  }, [selectedHost?.available_remote_actions]);
+
+  // Extract controller types from device model
+  const getControllerTypes = (): string[] => {
+    const deviceModel = selectedHost?.device_model;
+    if (!deviceModel) return [];
+
+    // Map device models to controller types
+    const modelToControllerMap: { [key: string]: string[] } = {
+      android_mobile: ['android_mobile'],
+      android_tv: ['android_tv'],
+      stb: ['stb'],
+    };
+
+    return modelToControllerMap[deviceModel] || [];
+  };
+
+  const controllerTypes = getControllerTypes();
   const canRunActions =
     isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
 
@@ -74,65 +91,19 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    // Only log when dialog is actually opened, not when closed
     if (isOpen) {
-      console.log(`[@component:EdgeEditDialog] Dialog opened, controllerTypes:`, controllerTypes);
-      if (controllerTypes.length > 0 && selectedHost) {
-        console.log(
-          `[@component:EdgeEditDialog] Fetching actions for controller: ${controllerTypes[0]}`,
-        );
-        fetchControllerActions(controllerTypes[0]);
-      } else {
-        console.log('[@component:EdgeEditDialog] No controller types or host device available');
-        setActionsError('No controller types available or host device not selected');
-      }
-    }
-  }, [isOpen, controllerTypes, selectedHost]);
-
-  const fetchControllerActions = async (controllerType: string) => {
-    if (!selectedHost) {
-      setActionsError('No host device selected');
-      return;
-    }
-
-    setLoadingActions(true);
-    setActionsError(null);
-
-    try {
-      console.log(`[@component:EdgeEditDialog] Fetching actions using server route`);
-
-      // Use server route instead of controller proxy
-      const response = await fetch(`/server/remote/get-actions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedHost.host_name,
-          controller_type: controllerType,
-        }),
+      console.log('[@component:EdgeEditDialog] Dialog opened with host:', {
+        hostName: selectedHost?.host_name,
+        deviceModel: selectedHost?.device_model,
+        controllerTypes,
+        availableActionsCount: Object.keys(controllerActions).length,
       });
 
-      const result = await response.json();
-
-      console.log(`[@component:EdgeEditDialog] Server route response:`, result);
-
-      if (result.success) {
-        setControllerActions(result.actions);
-        console.log(
-          `[@component:EdgeEditDialog] Loaded ${Object.keys(result.actions).length} action categories for remote controller`,
-        );
-      } else {
-        console.error(`[@component:EdgeEditDialog] Server route returned error:`, result.error);
-        setActionsError(result.error || 'Failed to load actions');
+      if (Object.keys(controllerActions).length === 0) {
+        console.log('[@component:EdgeEditDialog] No remote actions available in host data');
       }
-    } catch (err: any) {
-      console.error('[@component:EdgeEditDialog] Error fetching actions:', err);
-      setActionsError('Failed to connect to remote server');
-    } finally {
-      setLoadingActions(false);
     }
-  };
+  }, [isOpen, selectedHost, controllerActions, controllerTypes]);
 
   const isFormValid = () => {
     return (
@@ -163,7 +134,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       const result = await executeEdgeActions(
         edgeForm.actions,
         controllerTypes,
-        selectedHost, // Pass selectedHost instead of selectedHostDevice
+        selectedHost,
         undefined,
         edgeForm?.finalWaitTime,
         edgeForm?.retryActions,

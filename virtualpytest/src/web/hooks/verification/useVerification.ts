@@ -112,8 +112,8 @@ interface UseVerificationProps {
   selectedHostDevice: Host;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
-  _onAreaSelected?: (area: DragArea) => void;
-  _onClearSelection?: () => void;
+  onAreaSelected?: (area: DragArea) => void;
+  onClearSelection?: () => void;
   screenshotPath?: string;
   isCaptureActive?: boolean;
 }
@@ -123,8 +123,8 @@ export const useVerification = ({
   selectedHostDevice,
   captureSourcePath,
   selectedArea,
-  _onAreaSelected,
-  _onClearSelection,
+  onAreaSelected: _onAreaSelected,
+  onClearSelection: _onClearSelection,
   screenshotPath,
   isCaptureActive,
 }: UseVerificationProps) => {
@@ -164,77 +164,8 @@ export const useVerification = ({
     removeBackground: false,
   });
 
-  // Remove collapsible sections state - not needed when editor only shows when expanded
-
-  // Get verification proxy using server route
-  const getVerificationProxy = useCallback(() => {
-    if (selectedHostDevice) {
-      console.log('[@hook:useVerification] Using server route for verification operations');
-      return {
-        // Return a simplified interface that uses server routes
-        executeVerification: async (verification: any) => {
-          const response = await fetch(`/server/verification/execution/execute`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host_name: selectedHostDevice.host_name,
-              verification,
-            }),
-          });
-          return response.json();
-        },
-        // Note: getVerificationTypes removed - verification types should come from host data
-        saveReference: async (referenceData: any) => {
-          // Determine the correct endpoint based on reference type
-          const endpoint =
-            referenceData.referenceType === 'text'
-              ? '/server/verification/text/save-text-reference'
-              : '/server/verification/image/save-image-reference';
-
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host_name: selectedHostDevice.host_name,
-              ...referenceData,
-            }),
-          });
-          return response.json();
-        },
-        executeVerificationBatch: async (batchData: any) => {
-          const response = await fetch(`/server/verification/execution/execute-batch`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host_name: selectedHostDevice.host_name,
-              ...batchData,
-            }),
-          });
-          return response.json();
-        },
-        autoDetectText: async (textData: any) => {
-          const response = await fetch(`/server/verification/text/auto-detect-text`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host_name: selectedHostDevice.host_name,
-              ...textData,
-            }),
-          });
-          return response.json();
-        },
-      };
-    }
-    return null;
-  }, [selectedHostDevice]);
+  // Collapsible sections state
+  const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
 
   // Load verification types from host data when visible
   useEffect(() => {
@@ -320,29 +251,37 @@ export const useVerification = ({
         screenshot_path: screenshotPath,
       });
 
-      const verificationController = getVerificationProxy();
+      // Determine the correct endpoint based on reference type
+      const endpoint =
+        referenceType === 'text'
+          ? '/server/verification/text/save-text-reference'
+          : '/server/verification/image/save-image-reference';
 
-      if (verificationController) {
-        console.log(`[@hook:useVerification] Using verification controller proxy for save`);
-        const result = await verificationController.saveReference({
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name,
           name: referenceName,
           model: selectedHostDevice.device_model,
           area: selectedArea,
           screenshot_path: screenshotPath,
           referenceType: referenceType,
-        });
+        }),
+      });
 
-        if (result.success) {
-          console.log('[@hook:useVerification] Reference saved successfully');
-          setReferenceName('');
+      const result = await response.json();
 
-          // Trigger reload of available references
-          setReferenceSaveCounter((prev) => prev + 1);
-        } else {
-          setError(result.error || 'Failed to save reference');
-        }
+      if (result.success) {
+        console.log('[@hook:useVerification] Reference saved successfully');
+        setReferenceName('');
+
+        // Trigger reload of available references
+        setReferenceSaveCounter((prev) => prev + 1);
       } else {
-        setError('No verification controller proxy available');
+        setError(result.error || 'Failed to save reference');
       }
     } catch (err: any) {
       console.error('[@hook:useVerification] Error saving reference:', err);
@@ -355,8 +294,8 @@ export const useVerification = ({
     screenshotPath,
     referenceName,
     selectedHostDevice.device_model,
+    selectedHostDevice.host_name,
     referenceType,
-    getVerificationProxy,
   ]);
 
   // Handle test execution
@@ -482,20 +421,20 @@ export const useVerification = ({
 
         console.log('[@hook:useVerification] Batch execution payload:', batchPayload);
 
-        const verificationController = getVerificationProxy();
-
-        if (!verificationController) {
-          throw new Error('No verification controller proxy available');
-        }
-
-        console.log(
-          `[@hook:useVerification] Using verification controller proxy for batch execution`,
-        );
-        const batchResult = await verificationController.executeVerificationBatch({
-          verifications: validVerifications,
-          model: selectedHostDevice.device_model,
-          node_id: 'verification-editor',
+        const response = await fetch(`/server/verification/execution/execute-batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: selectedHostDevice.host_name,
+            verifications: validVerifications,
+            model: selectedHostDevice.device_model,
+            node_id: 'verification-editor',
+          }),
         });
+
+        const batchResult = await response.json();
 
         console.log('[@hook:useVerification] Raw batch result:', batchResult);
 
@@ -600,7 +539,12 @@ export const useVerification = ({
         setLoading(false);
       }
     },
-    [verifications, selectedHostDevice.device_model, captureSourcePath, getVerificationProxy],
+    [
+      verifications,
+      selectedHostDevice.device_model,
+      selectedHostDevice.host_name,
+      captureSourcePath,
+    ],
   );
 
   // Handle auto-detect text
@@ -618,22 +562,21 @@ export const useVerification = ({
     try {
       console.log('[@hook:useVerification] Starting text auto-detection in area:', selectedArea);
 
-      const verificationController = getVerificationProxy();
-
-      if (!verificationController) {
-        console.error('[@hook:useVerification] No verification controller proxy available');
-        return;
-      }
-
-      console.log(
-        `[@hook:useVerification] Using verification controller proxy for auto-detect text`,
-      );
-      const result = await verificationController.autoDetectText({
-        model: selectedHostDevice.device_model,
-        area: selectedArea,
-        source_path: captureSourcePath,
-        image_filter: textImageFilter,
+      const response = await fetch(`/server/verification/text/auto-detect-text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host_name: selectedHostDevice.host_name,
+          model: selectedHostDevice.device_model,
+          area: selectedArea,
+          source_path: captureSourcePath,
+          image_filter: textImageFilter,
+        }),
       });
+
+      const result = await response.json();
 
       if (result.success) {
         console.log('[@hook:useVerification] Text auto-detection successful:', result);
@@ -661,9 +604,9 @@ export const useVerification = ({
   }, [
     selectedArea,
     selectedHostDevice.device_model,
+    selectedHostDevice.host_name,
     captureSourcePath,
     textImageFilter,
-    getVerificationProxy,
   ]);
 
   // Validate regex
@@ -754,6 +697,8 @@ export const useVerification = ({
     canCapture,
     canSave,
     allowSelection,
+    selectedHostDevice,
+    verificationsCollapsed,
 
     // Setters
     setReferenceName,
@@ -765,6 +710,7 @@ export const useVerification = ({
     setReferenceText,
     setTextImageFilter,
     setImageProcessingOptions,
+    setVerificationsCollapsed,
 
     // Handlers
     handleVerificationsChange,

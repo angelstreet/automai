@@ -102,6 +102,7 @@ export interface NavigationTreeData {
 // =====================================================
 
 export interface NodeForm {
+  id?: string; // Add id field for node identification
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   description: string;
@@ -425,7 +426,7 @@ export interface NodeEditDialogProps {
   verificationControllerTypes?: string[];
   isVerificationActive?: boolean;
   selectedDevice?: string | null;
-  selectedHostDevice?: any;
+  selectedHostDevice?: any; // Host object for verification/navigation
   isControlActive?: boolean;
   model?: string;
 }
@@ -450,21 +451,24 @@ export interface NodeSelectionPanelProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddChildren: () => void;
-  setNodeForm: (form: NodeForm | null) => void;
+  setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
-  onReset?: () => void;
+  onReset?: (id: string) => void;
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+  // Device control props
   isControlActive?: boolean;
-  selectedDevice?: string | null;
-  onTakeScreenshot?: () => void;
-  treeId: string;
+  selectedHost?: any; // Full host object for API calls
+  onSaveScreenshot?: () => void;
+  // Navigation props
+  treeId?: string;
   currentNodeId?: string;
-  onVerification?: () => void;
+  // Verification props
+  onVerification?: (nodeId: string, verifications: any[]) => void;
   isVerificationActive?: boolean;
   verificationControllerStatus?: {
     image_controller_available: boolean;
     text_controller_available: boolean;
   };
-  onUpdateNode?: (nodeId: string, updatedData: any) => void;
 }
 
 export interface EdgeSelectionPanelProps {
