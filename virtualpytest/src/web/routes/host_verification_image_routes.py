@@ -388,11 +388,8 @@ def save_resource():
                     'error': f'Failed to upload to Cloudflare R2: {error_msg}'
                 }), 500
             
-            # Get public URL from upload result (no expiration)
-            r2_public_url = upload_result.get('url')
-            
             print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_path}")
-            print(f"[@route:host_save_resource] R2 public URL (unlimited): {r2_public_url}")
+            # ✅ Follow AV controller pattern - don't rely on public URL from upload result
             
         except Exception as upload_error:
             print(f"[@route:host_save_resource] R2 upload exception: {upload_error}")
@@ -421,14 +418,14 @@ def save_resource():
             if not (r.get('name') == reference_name and r.get('model') == model)
         ]
         
-        # Add new resource with R2 URL as path
+        # Add new resource with R2 path (following AV controller pattern)
         new_resource = {
             'name': reference_name,
             'model': model,
             'type': reference_type,
             'area': area,
             'created_at': datetime.now().isoformat(),
-            'path': r2_public_url  # R2 URL is the path
+            'path': r2_path  # Store R2 path, not URL
         }
         
         resource_data['resources'].append(new_resource)
@@ -468,11 +465,10 @@ def save_resource():
             # Return to original directory
             os.chdir(original_cwd)
             
-            # Return success with R2 URL
+            # Return success following AV controller pattern
             return jsonify({
                 'success': True,
                 'message': f'Reference uploaded to R2: {reference_name}',
-                'r2_url': r2_public_url,
                 'r2_path': r2_path
             })
             
