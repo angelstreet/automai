@@ -5,6 +5,14 @@ This module creates complete controller configurations from basic device registr
 All communication is via direct device connections (ADB, uhubctl, etc.).
 """
 
+# Device Model to Verification Controllers Mapping
+# This matches the mapping in Controller_Types.ts
+DEVICE_MODEL_VERIFICATION_MAPPING = {
+    'android_mobile': ['image', 'text', 'adb'],
+    'android_tv': ['image', 'text'],
+    'stb': ['image', 'text'],
+}
+
 def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port):
     """
     Create complete controller_configs from basic device registration info.
@@ -76,25 +84,28 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     }
     
-    # Configure verification controller
-    if device_model in ['android_mobile', 'android_tv', 'android_mobile']:
-        # Android devices can use ADB verification
-        controller_configs['verification'] = {
-            'implementation': 'adb',
-            'parameters': {
-                'device_ip': device_ip,
-                'device_port': device_port,
-                'connection_timeout': 10
+    # Configure verification controllers based on device model mapping
+    verification_types = DEVICE_MODEL_VERIFICATION_MAPPING.get(device_model, ['text'])  # Default to text verification
+    
+    for verification_type in verification_types:
+        controller_key = f'verification_{verification_type}'
+        
+        if verification_type == 'adb':
+            # ADB verification needs device connection parameters
+            controller_configs[controller_key] = {
+                'implementation': 'adb',
+                'parameters': {
+                    'device_ip': device_ip,
+                    'device_port': device_port,
+                    'connection_timeout': 10
+                }
             }
-        }
-    else:
-        # Other devices use OCR verification
-        controller_configs['verification'] = {
-            'implementation': 'ocr',
-            'parameters': {
-                # OCR verification works with AV controller, no host connection needed
+        else:
+            # Other verification types (image, audio, text, video) work with AV controller
+            controller_configs[controller_key] = {
+                'implementation': verification_type,
+                'parameters': {}
             }
-        }
     
     # Configure power controller - most use USB hub control
     controller_configs['power'] = {

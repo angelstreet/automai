@@ -481,83 +481,107 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
     
     try:
         from src.controllers import ControllerFactory
+        from src.controllers.controller_config_factory import create_controller_configs_from_device_info
         
-        # STEP 1: Query database for controller configuration using dedicated DB utilities
-        controllers_config = query_device_model_configuration(device_model, team_id)
+        # STEP 1: Use hardcoded controller configuration from controller_config_factory
+        controllers_config = create_controller_configs_from_device_info(
+            device_model=device_model,
+            device_ip=device_ip,
+            device_port=device_port,
+            host_url='http://localhost:6109',  # Not used for controller creation
+            host_port='6109'  # Not used for controller creation
+        )
         
-        if not controllers_config:
-            print(f"[@utils:host_utils:create_local_controllers_from_model] No database configuration found, using defaults")
-            # Fallback to basic configuration
-            controllers_config = {
-                "av": "hdmi_stream",
-                "remote": device_model if device_model in ['android_mobile', 'android_tv'] else "",
-                "verification": "ocr",
-                "power": "usb"
-            }
-        
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Using controller configuration: {controllers_config}")
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Using hardcoded controller configuration: {controllers_config}")
         
         # STEP 2: Create controllers based on database configuration
         av_controller = None
         
         # Create AV controller if configured
         if controllers_config.get('av'):
-            av_type = controllers_config['av']
+            av_config = controllers_config['av']
+            av_type = av_config['implementation']
+            av_params = av_config.get('parameters', {})
             print(f"[@utils:host_utils:create_local_controllers_from_model] Creating AV controller: {av_type}")
             av_controller = ControllerFactory.create_av_controller(
                 capture_type=av_type,
                 device_name=device_name,
-                video_device='/dev/video0',
-                resolution='1920x1080',
-                fps=30,
-                stream_path='/stream/video',
-                service_name='stream'
+                video_device=av_params.get('video_device', '/dev/video0'),
+                resolution=av_params.get('resolution', '1920x1080'),
+                fps=av_params.get('fps', 30),
+                stream_path=av_params.get('stream_path', '/stream/video'),
+                service_name=av_params.get('service_name', 'stream')
             )
             controller_objects['av'] = av_controller
             print(f"[@utils:host_utils:create_local_controllers_from_model] AV controller created: {type(av_controller).__name__}")
         
         # Create remote controller if configured
-        if controllers_config.get('remote') and controllers_config['remote'].strip():
-            remote_type = controllers_config['remote']
+        if controllers_config.get('remote'):
+            remote_config = controllers_config['remote']
+            remote_type = remote_config['implementation']
+            remote_params = remote_config.get('parameters', {})
             print(f"[@utils:host_utils:create_local_controllers_from_model] Creating remote controller: {remote_type}")
             remote_controller = ControllerFactory.create_remote_controller(
                 device_type=remote_type,
                 device_name=device_name,
-                device_ip=device_ip,
-                device_port=device_port,
-                connection_timeout=10
+                device_ip=remote_params.get('device_ip', device_ip),
+                device_port=remote_params.get('device_port', device_port),
+                connection_timeout=remote_params.get('connection_timeout', 10)
             )
             controller_objects['remote'] = remote_controller
             print(f"[@utils:host_utils:create_local_controllers_from_model] Remote controller created: {type(remote_controller).__name__}")
         
-        # Create verification controller if configured
-        if controllers_config.get('verification') and controllers_config['verification'].strip():
-            verification_type = controllers_config['verification']
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: {verification_type}")
-            verification_controller = ControllerFactory.create_verification_controller(
-                verification_type=verification_type,
-                device_name=device_name,
-                av_controller=av_controller
-            )
-            controller_objects['verification'] = verification_controller
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller created: {type(verification_controller).__name__}")
+        # Create verification controllers (multiple types per device model)
+        verification_controllers_created = 0
+        for controller_key, controller_config in controllers_config.items():
+            if controller_key.startswith('verification_'):
+                verification_type = controller_config['implementation']
+                print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: {verification_type}")
+                
+                try:
+                    if verification_type == 'adb':
+                        # ADB verification needs device_id parameter
+                        device_id = f"{device_ip}:{device_port}"
+                        verification_controller = ControllerFactory.create_verification_controller(
+                            verification_type=verification_type,
+                            device_id=device_id,
+                            av_controller=av_controller
+                        )
+                    else:
+                        # Other verification types (image, audio, text, video) only need av_controller
+                        verification_controller = ControllerFactory.create_verification_controller(
+                            verification_type=verification_type,
+                            av_controller=av_controller
+                        )
+                    
+                    controller_objects[controller_key] = verification_controller
+                    verification_controllers_created += 1
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller {verification_type} created: {type(verification_controller).__name__}")
+                    
+                except Exception as e:
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] Failed to create verification controller {verification_type}: {e}")
+        
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Created {verification_controllers_created} verification controllers")
         
         # Create power controller if configured
-        if controllers_config.get('power') and controllers_config['power'].strip():
-            power_type = controllers_config['power']
+        if controllers_config.get('power'):
+            power_config = controllers_config['power']
+            power_type = power_config['implementation']
+            power_params = power_config.get('parameters', {})
             print(f"[@utils:host_utils:create_local_controllers_from_model] Creating power controller: {power_type}")
             power_controller = ControllerFactory.create_power_controller(
                 power_type=power_type,
                 device_name=device_name,
-                hub_location='1-1',
-                port_number='1'
+                hub_location=power_params.get('hub_location', '1-1'),
+                port_number=power_params.get('port_number', 1)
             )
             controller_objects['power'] = power_controller
             print(f"[@utils:host_utils:create_local_controllers_from_model] Power controller created: {type(power_controller).__name__}")
         
         # Create network controller if configured
-        if controllers_config.get('network') and controllers_config['network'].strip():
-            network_type = controllers_config['network']
+        if controllers_config.get('network'):
+            network_config = controllers_config['network']
+            network_type = network_config['implementation']
             print(f"[@utils:host_utils:create_local_controllers_from_model] Creating network controller: {network_type}")
             # Note: Network controller creation would need to be implemented in ControllerFactory
             print(f"[@utils:host_utils:create_local_controllers_from_model] Network controller type {network_type} - implementation needed")
@@ -582,12 +606,24 @@ def get_local_controller(controller_type):
     
     Args:
         controller_type: Type of controller ('remote', 'av', 'verification', 'power')
+                        For verification controllers, can also be specific type like 'verification_adb'
         
     Returns:
         Controller object or None if not found
     """
     global local_controller_objects
-    return local_controller_objects.get(controller_type)
+    
+    # Direct lookup first
+    if controller_type in local_controller_objects:
+        return local_controller_objects.get(controller_type)
+    
+    # For backward compatibility, if looking for 'verification', return the first verification controller
+    if controller_type == 'verification':
+        for key, controller in local_controller_objects.items():
+            if key.startswith('verification_'):
+                return controller
+    
+    return None
 
 def get_all_local_controllers():
     """

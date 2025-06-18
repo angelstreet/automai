@@ -33,6 +33,8 @@ from .power.usb_power import USBPowerController
 from .verification.image import ImageVerificationController
 from .verification.text import TextVerificationController
 from .verification.adb import ADBVerificationController
+from .verification.video import VideoVerificationController
+from .verification.audio import AudioVerificationController
 
 # Controller type registry
 CONTROLLER_REGISTRY = {
@@ -47,7 +49,10 @@ CONTROLLER_REGISTRY = {
     },
     'verification': {
         'ocr': TextVerificationController,   # OCR-based text verification using Tesseract
+        'text': TextVerificationController,  # OCR-based text verification using Tesseract
         'image': ImageVerificationController, # Template matching-based image verification using OpenCV
+        'audio': AudioVerificationController, # Audio analysis and verification
+        'video': VideoVerificationController, # Video analysis and motion detection
         'adb': ADBVerificationController,    # Direct ADB element verification using ADBcommands
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
@@ -116,16 +121,16 @@ class ControllerFactory:
     @staticmethod
     def create_verification_controller(
         verification_type: str = "ocr",
-        device_name: str = "Unknown Device",
         **kwargs
     ) -> VerificationControllerInterface:
         """
         Create a verification controller instance.
         
         Args:
-            verification_type: Type of verification implementation (ocr, image, ai, etc.)
-            device_name: Name of the device for logging
-            **kwargs: Additional parameters for the controller
+            verification_type: Type of verification implementation (ocr, text, image, audio, video, adb, ai)
+            **kwargs: Parameters required by the specific controller (varies by type):
+                - ADB: device_id (required), device_name (optional)
+                - Others: av_controller (required), plus optional params
         
         Returns:
             VerificationControllerInterface: Controller instance
@@ -134,7 +139,8 @@ class ControllerFactory:
         if not controller_class:
             raise ValueError(f"Unknown verification controller type: {verification_type}")
         
-        return controller_class(device_name=device_name, **kwargs)
+        # Call constructor with only the parameters it needs
+        return controller_class(**kwargs)
     
     @staticmethod
     def create_power_controller(
@@ -236,10 +242,13 @@ class DeviceControllerSet:
             **controller_kwargs.get('av', {})
         )
         
+        # Verification controller needs av_controller parameter
+        verification_kwargs = controller_kwargs.get('verification', {})
+        verification_kwargs['av_controller'] = self.av
+        
         self.verification = ControllerFactory.create_verification_controller(
             verification_type=verification_type,
-            device_name=device_name,
-            **controller_kwargs.get('verification', {})
+            **verification_kwargs
         )
         
         self.power = ControllerFactory.create_power_controller(
