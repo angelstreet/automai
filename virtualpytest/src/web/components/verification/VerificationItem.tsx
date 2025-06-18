@@ -343,6 +343,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                       : 'Enter text or regex pattern...')
                   }
                   value={verification.inputValue || ''}
+                  autoComplete="off"
                   onChange={(e) => onUpdateVerification(index, { inputValue: e.target.value })}
                   sx={{ width: 250 }}
                 />

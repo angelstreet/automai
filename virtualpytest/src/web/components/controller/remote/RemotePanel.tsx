@@ -217,7 +217,6 @@ export function RemotePanel({
         );
     }
   }, [
-    host.device_model,
     host,
     onReleaseControl,
     isCollapsed,
@@ -225,6 +224,8 @@ export function RemotePanel({
     currentHeight,
     effectiveDeviceResolution,
     streamCollapsed,
+    streamMinimized,
+    captureMode,
   ]);
 
   return (

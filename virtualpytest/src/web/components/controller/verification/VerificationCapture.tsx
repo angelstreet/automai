@@ -163,10 +163,15 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                       maxHeight: isMobileModel ? 'none' : '100%',
                     }}
                     onLoad={() =>
-                      console.log('[@component:VerificationCapture] Selected reference image loaded successfully')
+                      console.log(
+                        '[@component:VerificationCapture] Selected reference image loaded successfully',
+                      )
                     }
                     onError={(e) =>
-                      console.error('[@component:VerificationCapture] Selected reference image failed to load:', e)
+                      console.error(
+                        '[@component:VerificationCapture] Selected reference image failed to load:',
+                        e,
+                      )
                     }
                   />
                   {/* Reference info overlay */}
@@ -218,6 +223,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                   label="X"
                   type="number"
                   value={Math.round(selectedArea.x)}
+                  autoComplete="off"
                   onChange={(e) => {
                     const newX = parseFloat(e.target.value) || 0;
                     if (onAreaSelected) {
@@ -255,6 +261,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                   label="Y"
                   type="number"
                   value={Math.round(selectedArea.y)}
+                  autoComplete="off"
                   onChange={(e) => {
                     const newY = parseFloat(e.target.value) || 0;
                     if (onAreaSelected) {
@@ -292,6 +299,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                   label="Width"
                   type="number"
                   value={Math.round(selectedArea.width)}
+                  autoComplete="off"
                   onChange={(e) => {
                     const newWidth = parseFloat(e.target.value) || 0;
                     if (onAreaSelected) {
@@ -329,6 +337,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                   label="Height"
                   type="number"
                   value={Math.round(selectedArea.height)}
+                  autoComplete="off"
                   onChange={(e) => {
                     const newHeight = parseFloat(e.target.value) || 0;
                     if (onAreaSelected) {
@@ -455,6 +464,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                 label="Text / Regex Pattern"
                 placeholder="Enter text to find or regex pattern"
                 value={referenceText}
+                autoComplete="off"
                 onChange={(e) => setReferenceText(e.target.value)}
                 error={!!(referenceText && !validateRegex(referenceText))}
                 helperText={
@@ -508,6 +518,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
               size="small"
               placeholder="Reference name"
               value={referenceName}
+              autoComplete="off"
               onChange={(e) => setReferenceName(e.target.value)}
               sx={{
                 flex: 1,
