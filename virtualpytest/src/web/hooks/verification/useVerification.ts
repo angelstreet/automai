@@ -262,7 +262,7 @@ export const useVerification = ({
         (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
       ) {
         console.log('[@hook:useVerification] Using process-area endpoint with processing options');
-        captureResponse = await fetch(`/server/av/capture-area-process`, {
+        captureResponse = await fetch(`/server/verification/image/capture-area-process`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -279,7 +279,7 @@ export const useVerification = ({
         });
       } else {
         console.log('[@hook:useVerification] Using standard capture endpoint');
-        captureResponse = await fetch(`/server/av/capture-area`, {
+        captureResponse = await fetch(`/server/verification/image/capture-area`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -376,7 +376,7 @@ export const useVerification = ({
         (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
       ) {
         console.log('[@hook:useVerification] Capturing with processing options for save');
-        captureResponse = await fetch(`/server/av/capture-area-process`, {
+        captureResponse = await fetch(`/server/verification/image/capture-area-process`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ export const useVerification = ({
         });
       } else {
         console.log('[@hook:useVerification] Capturing without processing for save');
-        captureResponse = await fetch(`/server/av/capture-area`, {
+        captureResponse = await fetch(`/server/verification/image/capture-area`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

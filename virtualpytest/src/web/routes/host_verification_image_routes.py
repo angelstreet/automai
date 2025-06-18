@@ -16,6 +16,8 @@ import subprocess
 import shutil
 from datetime import datetime
 import time
+from src.utils.host_utils import get_local_controller
+from src.utils.app_utils import buildHostUrl
 
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
@@ -31,7 +33,7 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 
 @verification_image_host_bp.route('/crop-image', methods=['POST'])
 def crop_area():
-    """Crop image from current screen"""
+    """Crop area from image for verification"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -114,15 +116,20 @@ def crop_area():
             success = crop_reference_image(final_source_path, target_path, area)
             
             if success:
-                # Return URL path for the cropped image
-                cropped_url = f'/stream/captures/cropped/{target_filename}'
-                print(f"[@route:host_crop_area] Cropping successful: {cropped_url}")
+                # Build public URL using buildHostUrl for frontend access
+                host_info = {
+                    'host_url': host_device.get('host_url'),
+                    'host_name': host_device.get('host_name')
+                }
+                
+                public_url = buildHostUrl(host_info, f'/stream/captures/cropped/{target_filename}')
+                print(f"[@route:host_crop_area] Cropping successful: {public_url}")
                 
                 return jsonify({
                     'success': True,
-                    'image_url': cropped_url,
+                    'image_url': public_url,  # ✅ Public URL for frontend access
                     'filename': target_filename,
-                    'cropped_path': cropped_url,
+                    'cropped_path': public_url,
                     'message': f'Image cropped successfully: {reference_name}'
                 })
             else:
@@ -249,15 +256,20 @@ def process_area():
                     print(f"[@route:host_process_area] Processing failed, using original area")
                     processed_area = area
             
-            # Return URL path for the processed image
-            processed_url = f'/stream/captures/cropped/{target_filename}'
-            print(f"[@route:host_process_area] Processing successful: {processed_url}")
+            # Build public URL using buildHostUrl for frontend access
+            host_info = {
+                'host_url': host_device.get('host_url'),
+                'host_name': host_device.get('host_name')
+            }
+            
+            public_url = buildHostUrl(host_info, f'/stream/captures/cropped/{target_filename}')
+            print(f"[@route:host_process_area] Processing successful: {public_url}")
             
             return jsonify({
                 'success': True,
-                'image_url': processed_url,
+                'image_url': public_url,  # ✅ Public URL for frontend access
                 'filename': target_filename,
-                'cropped_path': processed_url,
+                'cropped_path': public_url,
                 'processed_area': processed_area,
                 'message': f'Image processed successfully: {reference_name}'
             })
