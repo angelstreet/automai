@@ -177,7 +177,67 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-   
+    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
+        """
+        Execute a sequence of commands.
+        
+        Args:
+            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+        """
+        if not self.is_connected:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
+        
+        for i, command in enumerate(commands):
+            action = command.get('action')
+            params = command.get('params', {})
+            delay = command.get('delay', 0.5)
+            
+            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
+            
+            success = False
+            if action == 'press_key':
+                success = self.press_key(params.get('key', 'HOME'))
+            elif action == 'input_text':
+                success = self.input_text(params.get('text', ''))
+            elif action == 'launch_app':
+                success = self.launch_app(params.get('package', ''))
+            elif action == 'close_app':
+                success = self.close_app(params.get('package', ''))
+            elif action == 'click_element':
+                element_id = params.get('element_id')
+                if element_id and self.last_ui_elements:
+                    element = next((el for el in self.last_ui_elements if el.id == element_id), None)
+                    if element:
+                        success = self.click_element(element)
+                    else:
+                        print(f"Remote[{self.device_type.upper()}]: Element with ID {element_id} not found")
+                        return False
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: No element ID provided or no UI elements available")
+                    return False
+            elif action == 'dump_ui':
+                success, elements, error = self.dump_ui_elements()
+                if not success:
+                    print(f"Remote[{self.device_type.upper()}]: UI dump failed: {error}")
+                    return False
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
+                return False
+                
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
+                return False
+                
+            # Add delay between commands (except for the last one)
+            if delay > 0 and i < len(commands) - 1:
+                time.sleep(delay)
+                
+        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
+        return True
+        
     def launch_app(self, package_name: str) -> bool:
         """
         Launch an app by package name.
