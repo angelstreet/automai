@@ -979,24 +979,19 @@ class ImageVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ImageVerification] Cropped file not found: {cropped_source_path}")
                 return None
             
-            # Upload to Cloudflare R2
-            try:
-                from src.utils.cloudflare_upload_utils import CloudflareUploader
-                
-                uploader = CloudflareUploader()
-                r2_path = f'reference-images/{model}/{reference_name}.jpg'
-                upload_result = uploader.upload_file(cropped_source_path, r2_path)
-                
-                if not upload_result.get('success'):
-                    error_msg = upload_result.get('error', 'Unknown upload error')
-                    print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
-                    return None
-                
-                print(f"[@controller:ImageVerification] Successfully uploaded to R2: {r2_path}")
-                
-            except Exception as upload_error:
-                print(f"[@controller:ImageVerification] R2 upload exception: {upload_error}")
+            # Upload to Cloudflare R2 - EXACT SAME PATTERN AS HDMI CONTROLLER
+            from src.utils.cloudflare_upload_utils import CloudflareUploader
+            
+            uploader = CloudflareUploader()
+            r2_path = f'reference-images/{model}/{reference_name}.jpg'
+            upload_result = uploader.upload_file(cropped_source_path, r2_path)
+            
+            if not upload_result.get('success'):
+                error_msg = upload_result.get('error', 'Unknown upload error')
+                print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
                 return None
+            
+            print(f"[@controller:ImageVerification] Successfully uploaded to R2: {r2_path}")
             
             # Update resource.json
             resource_json_path = RESOURCE_JSON_PATH
@@ -1058,7 +1053,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 
                 os.chdir(original_cwd)
                 
-                # Return complete Cloudflare R2 URL like av_controller.save_screenshot
+                # Return complete Cloudflare R2 URL - EXACT SAME PATTERN AS HDMI CONTROLLER
                 complete_url = upload_result.get('url')
                 print(f"[@controller:ImageVerification] Returning complete R2 URL: {complete_url}")
                 return complete_url
