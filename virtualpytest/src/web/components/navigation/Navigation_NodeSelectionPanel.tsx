@@ -24,7 +24,6 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-
 import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
