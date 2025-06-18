@@ -986,12 +986,15 @@ class ImageVerificationController(VerificationControllerInterface):
             r2_path = f'reference-images/{model}/{reference_name}.jpg'
             upload_result = uploader.upload_file(cropped_source_path, r2_path)
             
-            if not upload_result.get('success'):
+            if upload_result.get('success'):
+                print(f"[@controller:ImageVerification] Successfully uploaded to R2: {r2_path}")
+                # Extract URL immediately like HDMI controller does
+                complete_url = upload_result.get('url')
+                print(f"[@controller:ImageVerification] Extracted complete R2 URL: {complete_url}")
+            else:
                 error_msg = upload_result.get('error', 'Unknown upload error')
                 print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
                 return None
-            
-            print(f"[@controller:ImageVerification] Successfully uploaded to R2: {r2_path}")
             
             # Update resource.json
             resource_json_path = RESOURCE_JSON_PATH
@@ -1053,8 +1056,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 
                 os.chdir(original_cwd)
                 
-                # Return complete Cloudflare R2 URL - EXACT SAME PATTERN AS HDMI CONTROLLER
-                complete_url = upload_result.get('url')
+                # Return complete Cloudflare R2 URL that we extracted immediately after upload
                 print(f"[@controller:ImageVerification] Returning complete R2 URL: {complete_url}")
                 return complete_url
                 
