@@ -996,7 +996,22 @@ class ImageVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
                 return None
             
-            # Update resource.json
+            # Git pull FIRST before editing resource.json
+            try:
+                original_cwd = os.getcwd()
+                os.chdir('..')
+                
+                print(f"[@controller:ImageVerification] Performing git pull before editing resource.json...")
+                subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
+                
+                os.chdir(original_cwd)
+                
+            except subprocess.CalledProcessError as git_error:
+                os.chdir(original_cwd)
+                print(f"[@controller:ImageVerification] Git pull failed: {git_error}")
+                return None
+            
+            # Update resource.json AFTER git pull
             resource_json_path = RESOURCE_JSON_PATH
             os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
             
@@ -1034,18 +1049,15 @@ class ImageVerificationController(VerificationControllerInterface):
             
             print(f"[@controller:ImageVerification] Resource JSON updated")
             
-            # Git operations
+            # Git commit and push (file should already be tracked)
             try:
                 original_cwd = os.getcwd()
                 os.chdir('..')
                 
-                print(f"[@controller:ImageVerification] Performing git operations...")
-                
-                subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
-                subprocess.run(['git', 'add', 'config/resource/resource.json'], check=True, capture_output=True, text=True)
+                print(f"[@controller:ImageVerification] Performing git commit and push...")
                 
                 commit_message = f'Add R2 reference: {reference_name} for {model}'
-                subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
+                subprocess.run(['git', 'commit', '-am', commit_message], check=True, capture_output=True, text=True)
                 
                 github_token = os.getenv('GITHUB_TOKEN')
                 if github_token:
