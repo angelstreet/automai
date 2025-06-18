@@ -31,3 +31,47 @@ export interface NodeVerification extends Verification {
   referenceImageUrl?: string;
   lastRunDetails?: string;
 }
+
+// =====================================================
+// REFERENCE TYPES
+// =====================================================
+
+// Area coordinates for image references
+export interface ReferenceArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Individual reference item
+export interface Reference {
+  type: 'image' | 'text';
+  url: string;
+  area: ReferenceArea;
+  created_at: string;
+  updated_at: string;
+  // Text reference specific fields
+  text?: string;
+  font_size?: number;
+  confidence?: number;
+}
+
+// References organized by filename within a model
+export interface ModelReferences {
+  [filename: string]: Reference;
+}
+
+// Complete resource configuration structure
+export interface ResourceConfig {
+  resources: {
+    [deviceModel: string]: ModelReferences;
+  };
+}
+
+// Extended reference with computed fields for frontend use
+export interface ReferenceImage extends Reference {
+  name: string; // Computed from filename
+  model: string; // Computed from context
+  filename: string; // Added for convenience
+}

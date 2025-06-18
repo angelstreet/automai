@@ -1,26 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-import { buildServerUrl } from '../../utils/frontendUtils';
 import { Host } from '../../types/common/Host_Types';
-
-interface ReferenceImage {
-  name: string;
-  model: string;
-  cloudflare_url: string;
-  filename: string;
-  created_at: string;
-  type: 'image' | 'text';
-  area: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  // Text reference specific fields
-  text?: string;
-  font_size?: number;
-  confidence?: number;
-}
+import { ReferenceImage } from '../../types/verification/VerificationTypes';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface UseVerificationReferencesReturn {
   availableReferences: ReferenceImage[];
@@ -36,7 +18,7 @@ export const useVerificationReferences = (
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
-  const fetchAvailableReferences = async () => {
+  const fetchAvailableReferences = useCallback(async () => {
     setReferencesLoading(true);
     try {
       console.log('[@hook:useVerificationReferences] Fetching available references...');
@@ -71,9 +53,10 @@ export const useVerificationReferences = (
               allReferences.push({
                 name: ref.name,
                 model: ref.model,
-                cloudflare_url: ref.cloudflare_url,
+                url: ref.url,
                 filename: ref.filename,
                 created_at: ref.created_at,
+                updated_at: ref.updated_at,
                 type: 'image',
                 area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
               });
@@ -86,9 +69,10 @@ export const useVerificationReferences = (
               allReferences.push({
                 name: ref.name,
                 model: ref.model,
-                cloudflare_url: ref.cloudflare_url,
+                url: ref.url,
                 filename: ref.filename,
                 created_at: ref.created_at,
+                updated_at: ref.updated_at,
                 type: 'text',
                 area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 text: ref.text,
@@ -119,23 +103,26 @@ export const useVerificationReferences = (
     } finally {
       setReferencesLoading(false);
     }
-  };
+  }, [selectedHost]);
 
   // Filter references by current model
-  const getModelReferences = (model?: string) => {
-    if (!model) return availableReferences;
-    const filtered = availableReferences.filter((ref) => ref.model === model);
-    console.log(
-      `[@component:useVerificationReferences] Filtered references for model '${model}':`,
-      filtered,
-    );
-    return filtered;
-  };
+  const getModelReferences = useCallback(
+    (model?: string) => {
+      if (!model) return availableReferences;
+      const filtered = availableReferences.filter((ref) => ref.model === model);
+      console.log(
+        `[@component:useVerificationReferences] Filtered references for model '${model}':`,
+        filtered,
+      );
+      return filtered;
+    },
+    [availableReferences],
+  );
 
   // Fetch references on mount and when reload trigger changes
   useEffect(() => {
     fetchAvailableReferences();
-  }, [reloadTrigger, selectedHost]); // Add selectedHost as dependency
+  }, [reloadTrigger, fetchAvailableReferences]);
 
   return {
     availableReferences,

@@ -175,20 +175,27 @@ def getAllReferences():
             with open('src/config/resource/resource.json', 'r') as f:
                 config = json.load(f)
             
-            # Filter by device model and return Cloudflare URLs
+            # Get references for specific device model
             device_model = host_info.get('device_model', 'default')
-            model_references = [
-                ref for ref in config.get('resources', [])
-                if ref.get('model') == device_model
-            ]
+            resources = config.get('resources', {})
+            model_references_dict = resources.get(device_model, {})
+            
+            # Convert dict to list and add model, name, filename fields for backward compatibility
+            processed_references = []
+            for filename, ref_data in model_references_dict.items():
+                processed_ref = ref_data.copy()
+                processed_ref['model'] = device_model
+                processed_ref['filename'] = filename
+                processed_ref['name'] = filename.split('.')[0]  # Extract name from filename
+                processed_references.append(processed_ref)
             
             # Group by type for backward compatibility
             references = {
-                'image': [ref for ref in model_references if ref.get('type') == 'image'],
-                'text': [ref for ref in model_references if ref.get('type') == 'text']
+                'image': [ref for ref in processed_references if ref.get('type') == 'image'],
+                'text': [ref for ref in processed_references if ref.get('type') == 'text']
             }
             
-            print(f"[@route:server_verification:getAllReferences] Found {len(model_references)} references for model {device_model}")
+            print(f"[@route:server_verification:getAllReferences] Found {len(processed_references)} references for model {device_model}")
             
             return jsonify({
                 'success': True,
