@@ -261,8 +261,8 @@ export const useVerification = ({
         referenceType === 'image' &&
         (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
       ) {
-        console.log('[@hook:useVerification] Using process-area endpoint with processing options');
-        captureResponse = await fetch(`/server/verification/image/capture-area-process`, {
+        console.log('[@hook:useVerification] Using process-image endpoint with processing options');
+        captureResponse = await fetch(`/server/verification/image/process-image`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -278,8 +278,8 @@ export const useVerification = ({
           }),
         });
       } else {
-        console.log('[@hook:useVerification] Using standard capture endpoint');
-        captureResponse = await fetch(`/server/verification/image/capture-area`, {
+        console.log('[@hook:useVerification] Using standard crop-image endpoint');
+        captureResponse = await fetch(`/server/verification/image/crop-image`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -376,7 +376,7 @@ export const useVerification = ({
         (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
       ) {
         console.log('[@hook:useVerification] Capturing with processing options for save');
-        captureResponse = await fetch(`/server/verification/image/capture-area-process`, {
+        captureResponse = await fetch(`/server/verification/image/process-image`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ export const useVerification = ({
         });
       } else {
         console.log('[@hook:useVerification] Capturing without processing for save');
-        captureResponse = await fetch(`/server/verification/image/capture-area`, {
+        captureResponse = await fetch(`/server/verification/image/crop-image`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

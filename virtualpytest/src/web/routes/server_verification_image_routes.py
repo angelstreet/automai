@@ -17,11 +17,11 @@ verification_av_image_bp = Blueprint('verification_av_image', __name__, url_pref
 # VERIFICATION IMAGE CAPTURE ENDPOINTS
 # =====================================================
 
-@verification_av_image_bp.route('/capture-area', methods=['POST'])
-def capture_area():
-    """Proxy capture area request to selected host for reference image cropping"""
+@verification_av_image_bp.route('/crop-image', methods=['POST'])
+def crop_image():
+    """Proxy crop image request to selected host for reference image cropping"""
     try:
-        print("[@route:server_verification_image:capture_area] Proxying capture area request")
+        print("[@route:server_verification_image:crop_image] Proxying crop image request")
         
         # Get request data
         request_data = request.get_json() or {}
@@ -37,11 +37,11 @@ def capture_area():
             'error': str(e)
         }), 500
 
-@verification_av_image_bp.route('/capture-area-process', methods=['POST'])
-def capture_area_process():
-    """Proxy capture area with processing request to selected host for reference image processing"""
+@verification_av_image_bp.route('/process-image', methods=['POST'])
+def process_image():
+    """Proxy process image request to selected host for reference image processing"""
     try:
-        print("[@route:server_verification_image:capture_area_process] Proxying capture area with processing request")
+        print("[@route:server_verification_image:process_image] Proxying process image request")
         
         # Get request data
         request_data = request.get_json() or {}
