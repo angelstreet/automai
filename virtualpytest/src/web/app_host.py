@@ -82,9 +82,23 @@ def register_host_routes(app):
         print(f"[@host:main:register_host_routes] ❌ Failed to register routes: {e}")
         return False
 
+# Global flag to prevent multiple initializations
+_host_object_initialized = False
+
 def initialize_host_object(app):
     """Initialize host object after startup"""
+    global _host_object_initialized
+    
+    if _host_object_initialized:
+        print(f"[@host:main:initialize_host_object] Host object already initialized, skipping...")
+        return
+    
     def delayed_init():
+        global _host_object_initialized
+        
+        if _host_object_initialized:
+            return
+            
         time.sleep(5)  # Give Flask app time to start
         
         try:
@@ -96,6 +110,7 @@ def initialize_host_object(app):
             if hasattr(host_utils, 'global_host_object') and host_utils.global_host_object:
                 with app.app_context():
                     app.my_host_device = host_utils.global_host_object
+                    _host_object_initialized = True
                     print(f"[@host:main:initialize_host_object] Host device initialization completed")
                     print(f"[@host:main:initialize_host_object] Host: {host_utils.global_host_object.get('host_name')}")
                     print(f"[@host:main:initialize_host_object] Device Name: {host_utils.global_host_object.get('device_name')}")
