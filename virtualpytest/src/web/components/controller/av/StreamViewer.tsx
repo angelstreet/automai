@@ -284,12 +284,6 @@ export function StreamViewer({
   }, [retryCount, maxRetries, retryDelay, initializeStream, tryNativePlayback, setUseNativePlayer]);
 
   useEffect(() => {
-    if (retryCount > 0 && retryCount <= maxRetries && streamUrl && isStreamActive) {
-      initializeStream();
-    }
-  }, [retryCount, maxRetries, streamUrl, isStreamActive, initializeStream]);
-
-  useEffect(() => {
     if (streamError && retryCount < maxRetries) {
       console.log(
         `[@component:StreamViewer] Stream error detected, current retry count: ${retryCount}/${maxRetries}`,
