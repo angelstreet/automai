@@ -39,37 +39,3 @@ export const buildHostUrl = (host: any, endpoint: string): string => {
 
   throw new Error('Host must have either host_url or host_name to build URL');
 };
-
-/**
- * Convert HTTP URL to HTTPS for mixed content compatibility
- * Handles the case where HTTPS frontend needs to access HTTP resources
- *
- * @param url The original URL (HTTP or HTTPS)
- * @param httpsPort The HTTPS port to use (default: 444 for nginx proxy)
- * @returns HTTPS version of the URL or original if already HTTPS
- */
-export const convertToHttpsUrl = (url: string, httpsPort: number = 444): string => {
-  if (!url || !url.startsWith('http://')) {
-    // Already HTTPS or not HTTP, return as-is
-    return url;
-  }
-
-  try {
-    // Extract host and path from HTTP URL
-    const match = url.match(/^http:\/\/([^:]+):(\d+)(.*)$/);
-    if (match) {
-      const [, hostName, , path] = match;
-      const httpsUrl = `https://${hostName}:${httpsPort}${path}`;
-      console.log(
-        `[@utils:frontendUtils] Converted HTTP to HTTPS for mixed content compatibility: ${url} -> ${httpsUrl}`,
-      );
-      return httpsUrl;
-    }
-
-    // Fallback: just replace protocol
-    return url.replace('http://', 'https://');
-  } catch (error) {
-    console.warn(`[@utils:frontendUtils] Error converting URL to HTTPS: ${error}`);
-    return url;
-  }
-};

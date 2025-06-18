@@ -131,7 +131,7 @@ class HDMIStreamController(AVControllerInterface):
     def get_stream_url(self) -> Optional[str]:
         """
         Get the stream URL for this HDMI controller.
-        Uses buildHostUrl to construct the proper URL and handles HTTPS/HTTP mixed content.
+        Uses buildHostUrl to construct the proper URL.
         """
         try:
             from src.utils.app_utils import buildHostUrl
@@ -141,29 +141,8 @@ class HDMIStreamController(AVControllerInterface):
                 print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
                 return None
             
-            # Build the base stream URL using buildHostUrl
             stream_url = buildHostUrl(host_info, 'host/stream/output.m3u8')
-            print(f"HDMI[{self.capture_source}]: Base stream URL: {stream_url}")
-            
-            # Handle HTTPS/HTTP mixed content issue
-            # If the original URL is HTTP, try to create an HTTPS version for frontend compatibility
-            if stream_url and stream_url.startswith('http://'):
-                # Extract the host and port from the original URL
-                import re
-                match = re.match(r'http://([^:]+):(\d+)(.*)', stream_url)
-                if match:
-                    host_name = match.group(1)
-                    original_port = match.group(2)
-                    path = match.group(3)
-                    
-                    # Create HTTPS version using port 444 (nginx HTTPS proxy)
-                    https_stream_url = f"https://{host_name}:444{path}"
-                    print(f"HDMI[{self.capture_source}]: Created HTTPS stream URL for mixed content compatibility: {https_stream_url}")
-                    
-                    # Return HTTPS version to avoid mixed content issues
-                    return https_stream_url
-            
-            print(f"HDMI[{self.capture_source}]: Final stream URL: {stream_url}")
+            print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
             return stream_url
                 
         except Exception as e:
@@ -206,21 +185,6 @@ class HDMIStreamController(AVControllerInterface):
             
             screenshot_url = buildHostUrl(host_info, f'host/stream/captures/capture_{timestamp}.jpg')
             print(f'[@controller:HDMIStream] Built screenshot URL using buildHostUrl: {screenshot_url}')
-            
-            # Handle HTTPS/HTTP mixed content issue for screenshots
-            if screenshot_url and screenshot_url.startswith('http://'):
-                # Extract the host and port from the original URL
-                import re
-                match = re.match(r'http://([^:]+):(\d+)(.*)', screenshot_url)
-                if match:
-                    host_name = match.group(1)
-                    original_port = match.group(2)
-                    path = match.group(3)
-                    
-                    # Create HTTPS version using port 444 (nginx HTTPS proxy)
-                    https_screenshot_url = f"https://{host_name}:444{path}"
-                    print(f'[@controller:HDMIStream] Created HTTPS screenshot URL for mixed content compatibility: {https_screenshot_url}')
-                    screenshot_url = https_screenshot_url
             
             # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
             print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
