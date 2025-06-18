@@ -15,6 +15,7 @@ import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 import { VerificationEditor } from '../verification';
+import { convertToHttpsUrl } from '../../../utils/frontendUtils';
 
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot } from './ScreenEditorOverlay';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -112,9 +113,14 @@ export function HDMIStream({
 
       if (result.success && result.stream_url) {
         console.log(`[@component:HDMIStream] Stream URL received: ${result.stream_url}`);
+
+        // Convert HTTP to HTTPS for mixed content compatibility
+        const compatibleStreamUrl = convertToHttpsUrl(result.stream_url);
+        console.log(`[@component:HDMIStream] Using compatible stream URL: ${compatibleStreamUrl}`);
+
         // Set both URL and active state together to prevent double initialization
-        if (result.stream_url !== streamUrl) {
-          setStreamUrl(result.stream_url);
+        if (compatibleStreamUrl !== streamUrl) {
+          setStreamUrl(compatibleStreamUrl);
           setIsStreamActive(true);
         } else if (!isStreamActive) {
           setIsStreamActive(true);
@@ -288,6 +294,8 @@ export function HDMIStream({
       const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
+
+      // Use HTTPS port 444 for mixed content compatibility
       return `https://${host.host_name}:444/stream/captures/capture_${frameTimestamp}.jpg`;
     }
     return undefined;

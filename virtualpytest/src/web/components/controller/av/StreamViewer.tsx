@@ -3,6 +3,7 @@ import { Box, Typography, IconButton } from '@mui/material';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import { StreamViewerLayoutConfig, getStreamViewerLayout } from '../../../config/layoutConfig';
+import { convertToHttpsUrl } from '../../../utils/frontendUtils';
 
 interface StreamViewerProps {
   streamUrl?: string;
@@ -114,6 +115,9 @@ export function StreamViewer({
 
       const video = videoRef.current;
 
+      // Convert HTTP to HTTPS for mixed content compatibility
+      const compatibleStreamUrl = convertToHttpsUrl(streamUrl);
+
       const handleLoadedMetadata = () => {
         console.log('[@component:StreamViewer] Native playback loaded successfully');
         setStreamLoaded(true);
@@ -136,7 +140,8 @@ export function StreamViewer({
       video.addEventListener('error', handleError);
       video.addEventListener('canplay', handleCanPlay);
 
-      video.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+      video.src =
+        compatibleStreamUrl + (compatibleStreamUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
       video.load();
 
       return true;
@@ -162,13 +167,16 @@ export function StreamViewer({
     setStreamLoaded(false);
     setRequiresUserInteraction(false);
 
+    // Convert HTTP to HTTPS for mixed content compatibility
+    const compatibleStreamUrl = convertToHttpsUrl(streamUrl);
+
     if (retryCount >= 2 || useNativePlayer) {
       const nativeSuccess = await tryNativePlayback();
       if (nativeSuccess) return;
     }
 
     try {
-      console.log('[@component:StreamViewer] Initializing HLS stream:', streamUrl);
+      console.log('[@component:StreamViewer] Initializing HLS stream:', compatibleStreamUrl);
 
       if (currentStreamUrl !== streamUrl || hlsRef.current) {
         cleanupStream();
@@ -242,7 +250,7 @@ export function StreamViewer({
         }
       });
 
-      hls.loadSource(streamUrl);
+      hls.loadSource(compatibleStreamUrl);
       hls.attachMedia(videoRef.current);
     } catch (error: any) {
       console.error('[@component:StreamViewer] Stream initialization failed:', error);
