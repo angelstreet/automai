@@ -1,12 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-  useEffect,
-} from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 import {
@@ -123,11 +115,6 @@ const NavigationStateContext = createContext<NavigationStateContextType | null>(
 export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   console.log('[@context:NavigationStateProvider] Initializing navigation state context');
 
-  // DEBUG: Track what's causing re-renders
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-  console.log(`[@context:NavigationStateProvider] Render count: ${renderCount.current}`);
-
   // ========================================
   // ROUTE PARAMS
   // ========================================
@@ -137,13 +124,6 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     treeName: string;
     interfaceId?: string;
   }>();
-
-  // DEBUG: Track route parameter changes
-  console.log(`[@context:NavigationStateProvider] Route params:`, {
-    treeId,
-    treeName,
-    interfaceId,
-  });
 
   // ========================================
   // STATE
@@ -313,18 +293,23 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       edges: stableEdges,
       setEdges,
       onEdgesChange,
+      reactFlowInstance,
+      setReactFlowInstance,
+      reactFlowWrapper,
 
-      // History state
+      // Tree state
       initialState,
       setInitialState,
+      isLoading,
+      setIsLoading,
 
-      // View state
+      // View navigation
       currentViewRootId,
       setCurrentViewRootId,
       viewPath: stableViewPath,
       setViewPath,
 
-      // UI state
+      // Node/Edge selection and editing
       selectedNode,
       setSelectedNode,
       selectedEdge,
@@ -339,46 +324,41 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setNodeForm,
       edgeForm: stableEdgeForm,
       setEdgeForm,
-      isLoading,
-      setIsLoading,
-      error,
-      setError,
-      success,
-      setSuccess,
 
-      // Filtering state
+      // Focus management
+      availableFocusNodes: stableAvailableFocusNodes,
+      setAvailableFocusNodes,
       focusNodeId,
       setFocusNodeId,
       maxDisplayDepth,
       setMaxDisplayDepth,
-      availableFocusNodes: stableAvailableFocusNodes,
-      setAvailableFocusNodes,
 
-      // React Flow refs
-      reactFlowWrapper,
-      reactFlowInstance,
-      setReactFlowInstance,
+      // Callbacks
+      resetToInitialState,
+      validateNavigationPath,
+      updateNavigationPath,
+      resetSelection,
     };
   }, [
-    // Route params - stable
+    // Route params
     treeId,
     treeName,
     interfaceId,
 
-    // Navigation state - use stable versions
+    // Navigation state
     currentTreeId,
     currentTreeName,
     stableNavigationPath,
     stableNavigationNamePath,
 
-    // Save state - primitives only
+    // Save state
     isSaving,
     saveError,
     saveSuccess,
     hasUnsavedChanges,
     isDiscardDialogOpen,
 
-    // Interface state - objects that change less frequently
+    // Interface state
     userInterface,
     rootTree,
     isLoadingInterface,
@@ -386,131 +366,38 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     // React Flow state - use stable versions to prevent unnecessary updates
     stableNodes,
     stableEdges,
+    reactFlowInstance,
 
-    // History state - changes less frequently
+    // Tree state
     initialState,
+    isLoading,
 
-    // View state - use stable versions
+    // View navigation
     currentViewRootId,
     stableViewPath,
 
-    // UI state - only include values that should trigger context updates
-    selectedNode?.id, // Only track ID changes, not full object
-    selectedEdge?.id, // Only track ID changes, not full object
+    // Node/Edge selection and editing - only track IDs to prevent object reference issues
+    selectedNode?.id,
+    selectedEdge?.id,
     isNodeDialogOpen,
     isEdgeDialogOpen,
     isNewNode,
     stableNodeForm,
     stableEdgeForm,
-    isLoading,
-    error,
-    success,
 
-    // Filtering state - use stable versions
+    // Focus management
+    stableAvailableFocusNodes,
     focusNodeId,
     maxDisplayDepth,
-    stableAvailableFocusNodes,
 
-    // React Flow refs - only include instance changes
-    reactFlowInstance,
+    // Callbacks are stable due to useCallback
+    resetToInitialState,
+    validateNavigationPath,
+    updateNavigationPath,
+    resetSelection,
+
     // reactFlowWrapper is a ref and doesn't need to be in dependencies
   ]);
-
-  // DEBUG: Track what's changing in the dependency array
-  const prevDeps = useRef<any[]>([]);
-  useEffect(() => {
-    const currentDeps = [
-      treeId,
-      treeName,
-      interfaceId,
-      currentTreeId,
-      currentTreeName,
-      stableNavigationPath,
-      stableNavigationNamePath,
-      isSaving,
-      saveError,
-      saveSuccess,
-      hasUnsavedChanges,
-      isDiscardDialogOpen,
-      userInterface,
-      rootTree,
-      isLoadingInterface,
-      stableNodes,
-      stableEdges,
-      initialState,
-      currentViewRootId,
-      stableViewPath,
-      selectedNode?.id,
-      selectedEdge?.id,
-      isNodeDialogOpen,
-      isEdgeDialogOpen,
-      isNewNode,
-      stableNodeForm,
-      stableEdgeForm,
-      isLoading,
-      error,
-      success,
-      focusNodeId,
-      maxDisplayDepth,
-      stableAvailableFocusNodes,
-      reactFlowInstance,
-    ];
-
-    if (prevDeps.current.length > 0) {
-      const changedIndices: number[] = [];
-      currentDeps.forEach((dep, index) => {
-        if (dep !== prevDeps.current[index]) {
-          changedIndices.push(index);
-        }
-      });
-
-      if (changedIndices.length > 0) {
-        const depNames = [
-          'treeId',
-          'treeName',
-          'interfaceId',
-          'currentTreeId',
-          'currentTreeName',
-          'stableNavigationPath',
-          'stableNavigationNamePath',
-          'isSaving',
-          'saveError',
-          'saveSuccess',
-          'hasUnsavedChanges',
-          'isDiscardDialogOpen',
-          'userInterface',
-          'rootTree',
-          'isLoadingInterface',
-          'stableNodes',
-          'stableEdges',
-          'initialState',
-          'currentViewRootId',
-          'stableViewPath',
-          'selectedNode.id',
-          'selectedEdge.id',
-          'isNodeDialogOpen',
-          'isEdgeDialogOpen',
-          'isNewNode',
-          'stableNodeForm',
-          'stableEdgeForm',
-          'isLoading',
-          'error',
-          'success',
-          'focusNodeId',
-          'maxDisplayDepth',
-          'stableAvailableFocusNodes',
-          'reactFlowInstance',
-        ];
-
-        console.log(
-          `[@context:NavigationStateProvider] Dependencies changed:`,
-          changedIndices.map((i) => `${depNames[i]}: ${prevDeps.current[i]} -> ${currentDeps[i]}`),
-        );
-      }
-    }
-
-    prevDeps.current = currentDeps;
-  });
 
   return (
     <NavigationStateContext.Provider value={contextValue}>
