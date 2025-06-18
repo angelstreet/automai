@@ -51,6 +51,8 @@ def register_host():
         print(f"   Host name: {host_info.get('host_name', 'Not provided')}")
         print(f"   Host URL: {host_info.get('host_url', 'Not provided')}")
         print(f"   Device model: {host_info.get('device_model', 'Not provided')}")
+        print(f"   Verification types: {len(host_info.get('available_verification_types', {}))} controller types")
+        print(f"   Available actions: {len(host_info.get('available_actions', {}))} controller types")
         
         # Check for required fields
         required_fields = ['host_url', 'device_model', 'host_name']
@@ -136,8 +138,8 @@ def register_host():
             'capabilities': capabilities,
             'controller_configs': controller_configs,
             'controller_types': controller_types,
-            
-
+            'available_verification_types': host_info.get('available_verification_types', {}),  # Store verification types
+            'available_actions': host_info.get('available_actions', {}),  # Store available actions
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -366,6 +368,13 @@ def client_ping():
         if 'system_stats' in ping_data:
             host_to_update['system_stats'] = ping_data['system_stats']
         
+        # Update verification types and actions if provided
+        if 'available_verification_types' in ping_data:
+            host_to_update['available_verification_types'] = ping_data['available_verification_types']
+        
+        if 'available_actions' in ping_data:
+            host_to_update['available_actions'] = ping_data['available_actions']
+        
         # Update any other provided fields
         for field in ['host_ip', 'host_port_external']:
             if field in ping_data:
@@ -529,6 +538,8 @@ class Host(TypedDict):
     capabilities: List[str]
     controller_configs: Optional[Any]
     controller_types: Optional[List[str]]
+    available_verification_types: Any
+    available_actions: Any
     
     # === DEVICE LOCK MANAGEMENT ===
     isLocked: bool

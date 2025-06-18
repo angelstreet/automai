@@ -158,9 +158,13 @@ export const useVerification = ({
     if (isVisible && selectedHost?.available_verification_types) {
       console.log('[@hook:useVerification] Loading verification types from host data');
       setAvailableVerificationTypes(selectedHost.available_verification_types);
-    } else if (isVisible) {
-      console.log('[@hook:useVerification] No verification types available in host data');
-      setError('No verification types available. Host may need to re-register.');
+      setError(null); // Clear any previous errors
+    } else if (isVisible && selectedHost) {
+      console.log(
+        '[@hook:useVerification] No verification types available in host data - using empty object',
+      );
+      setAvailableVerificationTypes({});
+      // Don't show error for missing verification types - they're optional
     }
   }, [isVisible, selectedHost?.available_verification_types]);
 

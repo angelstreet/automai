@@ -10,6 +10,7 @@ This module contains the common verification API endpoints that:
 from flask import Blueprint, request, jsonify
 import requests
 import json
+import os
 
 # Create blueprint
 verification_common_bp = Blueprint('verification_common', __name__, url_prefix='/server/verification')
@@ -176,7 +177,11 @@ def getAllReferences():
         
         # Read from resource.json directly (no host proxy)
         try:
-            with open('src/config/resource/resource.json', 'r') as f:
+            # Use absolute path relative to this file's location
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            resource_path = os.path.join(current_dir, '..', '..', 'config', 'resource', 'resource.json')
+            
+            with open(resource_path, 'r') as f:
                 config = json.load(f)
             
             # Get references for specific device model
