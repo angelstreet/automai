@@ -87,14 +87,10 @@ def crop_area():
         cropped_dir = '/var/www/html/stream/captures/cropped'
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
-        # Extract base name without extension and timestamp
+        # Extract timestamp from original screenshot filename (last part after splitting by _)
         base_name = source_filename.replace('.jpg', '').replace('.png', '')
-        
-        # Avoid double naming if reference_name is already in the filename
-        if reference_name in base_name:
-            target_filename = f'cropped_{base_name}.jpg'
-        else:
-            target_filename = f'cropped_{reference_name}_{base_name}.jpg'
+        timestamp = base_name.split('_')[-1]
+        target_filename = f'cropped_{reference_name}_{timestamp}.jpg'
             
         target_path = f'{cropped_dir}/{target_filename}'
         
@@ -221,14 +217,10 @@ def process_area():
         cropped_dir = '/var/www/html/stream/captures/cropped'
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
-        # Extract base name without extension and timestamp
+        # Extract timestamp from original screenshot filename (last part after splitting by _)
         base_name = source_filename.replace('.jpg', '').replace('.png', '')
-        
-        # Avoid double naming if reference_name is already in the filename
-        if reference_name in base_name:
-            target_filename = f'processed_{base_name}.jpg'
-        else:
-            target_filename = f'processed_{reference_name}_{base_name}.jpg'
+        timestamp = base_name.split('_')[-1]
+        target_filename = f'processed_{reference_name}_{timestamp}.jpg'
             
         target_path = f'{cropped_dir}/{target_filename}'
         
