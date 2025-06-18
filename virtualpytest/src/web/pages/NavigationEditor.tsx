@@ -726,6 +726,10 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   // Get navigation state to pass to both device control and node edge management providers
   const navigationState = useNavigationState();
 
+  // Get userInterface directly from location.state to avoid timing issues
+  const location = useLocation();
+  const userInterfaceFromState = location.state?.userInterface;
+
   // Create memoized state objects for providers to prevent unnecessary re-renders
   const nodeEdgeState = useMemo(() => {
     return {
@@ -761,7 +765,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
 
   return (
     <NodeEdgeManagementProvider state={nodeEdgeState}>
-      <DeviceControlProvider userInterface={navigationState.userInterface}>
+      <DeviceControlProvider userInterface={userInterfaceFromState}>
         <NavigationEditorContent />
       </DeviceControlProvider>
     </NodeEdgeManagementProvider>
