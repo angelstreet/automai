@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+} from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 import {
@@ -163,6 +171,26 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  // Memoize React Flow arrays to prevent unnecessary context recreation
+  // React Flow hooks create new array references even when content is the same
+  const stableNodes = useMemo(
+    () => nodes,
+    [
+      nodes.length,
+      nodes
+        .map((n) => `${n.id}:${n.position.x}:${n.position.y}:${JSON.stringify(n.data)}`)
+        .join(','),
+    ],
+  );
+
+  const stableEdges = useMemo(
+    () => edges,
+    [
+      edges.length,
+      edges.map((e) => `${e.id}:${e.source}:${e.target}:${JSON.stringify(e.data)}`).join(','),
+    ],
+  );
+
   // History state
   const [initialState, setInitialState] = useState<{
     nodes: UINavigationNode[];
@@ -279,10 +307,10 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setIsLoadingInterface,
 
       // React Flow state
-      nodes,
+      nodes: stableNodes,
       setNodes,
       onNodesChange,
-      edges,
+      edges: stableEdges,
       setEdges,
       onEdgesChange,
 
@@ -355,9 +383,9 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     rootTree,
     isLoadingInterface,
 
-    // React Flow state - nodes/edges are managed by React Flow hooks
-    nodes,
-    edges,
+    // React Flow state - use stable versions to prevent unnecessary updates
+    stableNodes,
+    stableEdges,
 
     // History state - changes less frequently
     initialState,
@@ -387,6 +415,102 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     reactFlowInstance,
     // reactFlowWrapper is a ref and doesn't need to be in dependencies
   ]);
+
+  // DEBUG: Track what's changing in the dependency array
+  const prevDeps = useRef<any[]>([]);
+  useEffect(() => {
+    const currentDeps = [
+      treeId,
+      treeName,
+      interfaceId,
+      currentTreeId,
+      currentTreeName,
+      stableNavigationPath,
+      stableNavigationNamePath,
+      isSaving,
+      saveError,
+      saveSuccess,
+      hasUnsavedChanges,
+      isDiscardDialogOpen,
+      userInterface,
+      rootTree,
+      isLoadingInterface,
+      stableNodes,
+      stableEdges,
+      initialState,
+      currentViewRootId,
+      stableViewPath,
+      selectedNode?.id,
+      selectedEdge?.id,
+      isNodeDialogOpen,
+      isEdgeDialogOpen,
+      isNewNode,
+      stableNodeForm,
+      stableEdgeForm,
+      isLoading,
+      error,
+      success,
+      focusNodeId,
+      maxDisplayDepth,
+      stableAvailableFocusNodes,
+      reactFlowInstance,
+    ];
+
+    if (prevDeps.current.length > 0) {
+      const changedIndices: number[] = [];
+      currentDeps.forEach((dep, index) => {
+        if (dep !== prevDeps.current[index]) {
+          changedIndices.push(index);
+        }
+      });
+
+      if (changedIndices.length > 0) {
+        const depNames = [
+          'treeId',
+          'treeName',
+          'interfaceId',
+          'currentTreeId',
+          'currentTreeName',
+          'stableNavigationPath',
+          'stableNavigationNamePath',
+          'isSaving',
+          'saveError',
+          'saveSuccess',
+          'hasUnsavedChanges',
+          'isDiscardDialogOpen',
+          'userInterface',
+          'rootTree',
+          'isLoadingInterface',
+          'stableNodes',
+          'stableEdges',
+          'initialState',
+          'currentViewRootId',
+          'stableViewPath',
+          'selectedNode.id',
+          'selectedEdge.id',
+          'isNodeDialogOpen',
+          'isEdgeDialogOpen',
+          'isNewNode',
+          'stableNodeForm',
+          'stableEdgeForm',
+          'isLoading',
+          'error',
+          'success',
+          'focusNodeId',
+          'maxDisplayDepth',
+          'stableAvailableFocusNodes',
+          'reactFlowInstance',
+        ];
+
+        console.log(
+          `[@context:NavigationStateProvider] Dependencies changed:`,
+          changedIndices.map((i) => `${depNames[i]}: ${prevDeps.current[i]} -> ${currentDeps[i]}`),
+        );
+      }
+    }
+
+    prevDeps.current = currentDeps;
+  });
 
   return (
     <NavigationStateContext.Provider value={contextValue}>
