@@ -210,6 +210,36 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
   // CONTEXT VALUE
   // ========================================
 
+  // Memoize complex objects separately to prevent unnecessary context recreation
+  const stableNodeForm = useMemo(
+    () => nodeForm,
+    [nodeForm.label, nodeForm.type, nodeForm.description, nodeForm.verifications?.length],
+  );
+
+  const stableEdgeForm = useMemo(
+    () => edgeForm,
+    [
+      edgeForm.actions?.length,
+      edgeForm.retryActions?.length,
+      edgeForm.finalWaitTime,
+      edgeForm.description,
+    ],
+  );
+
+  const stableNavigationPath = useMemo(() => navigationPath, [navigationPath.join(',')]);
+  const stableNavigationNamePath = useMemo(
+    () => navigationNamePath,
+    [navigationNamePath.join(',')],
+  );
+  const stableViewPath = useMemo(
+    () => viewPath,
+    [viewPath.map((v) => `${v.id}:${v.name}`).join(',')],
+  );
+  const stableAvailableFocusNodes = useMemo(
+    () => availableFocusNodes,
+    [availableFocusNodes.map((n) => `${n.id}:${n.label}:${n.depth}`).join(',')],
+  );
+
   const contextValue: NavigationStateContextType = useMemo(() => {
     console.log(`[@context:NavigationStateProvider] Creating new context value`);
     return {
@@ -223,9 +253,9 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setCurrentTreeId,
       currentTreeName,
       setCurrentTreeName,
-      navigationPath,
+      navigationPath: stableNavigationPath,
       setNavigationPath,
-      navigationNamePath,
+      navigationNamePath: stableNavigationNamePath,
       setNavigationNamePath,
 
       // Save state
@@ -263,7 +293,7 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       // View state
       currentViewRootId,
       setCurrentViewRootId,
-      viewPath,
+      viewPath: stableViewPath,
       setViewPath,
 
       // UI state
@@ -277,9 +307,9 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setIsEdgeDialogOpen,
       isNewNode,
       setIsNewNode,
-      nodeForm,
+      nodeForm: stableNodeForm,
       setNodeForm,
-      edgeForm,
+      edgeForm: stableEdgeForm,
       setEdgeForm,
       isLoading,
       setIsLoading,
@@ -293,7 +323,7 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setFocusNodeId,
       maxDisplayDepth,
       setMaxDisplayDepth,
-      availableFocusNodes,
+      availableFocusNodes: stableAvailableFocusNodes,
       setAvailableFocusNodes,
 
       // React Flow refs
@@ -302,43 +332,60 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setReactFlowInstance,
     };
   }, [
-    // Only include values that actually change, not setter functions
+    // Route params - stable
     treeId,
     treeName,
     interfaceId,
+
+    // Navigation state - use stable versions
     currentTreeId,
     currentTreeName,
-    navigationPath,
-    navigationNamePath,
+    stableNavigationPath,
+    stableNavigationNamePath,
+
+    // Save state - primitives only
     isSaving,
     saveError,
     saveSuccess,
     hasUnsavedChanges,
     isDiscardDialogOpen,
+
+    // Interface state - objects that change less frequently
     userInterface,
     rootTree,
     isLoadingInterface,
+
+    // React Flow state - nodes/edges are managed by React Flow hooks
     nodes,
     edges,
+
+    // History state - changes less frequently
     initialState,
+
+    // View state - use stable versions
     currentViewRootId,
-    viewPath,
-    selectedNode,
-    selectedEdge,
+    stableViewPath,
+
+    // UI state - only include values that should trigger context updates
+    selectedNode?.id, // Only track ID changes, not full object
+    selectedEdge?.id, // Only track ID changes, not full object
     isNodeDialogOpen,
     isEdgeDialogOpen,
     isNewNode,
-    nodeForm,
-    edgeForm,
+    stableNodeForm,
+    stableEdgeForm,
     isLoading,
     error,
     success,
+
+    // Filtering state - use stable versions
     focusNodeId,
     maxDisplayDepth,
-    availableFocusNodes,
-    reactFlowWrapper,
+    stableAvailableFocusNodes,
+
+    // React Flow refs - only include instance changes
     reactFlowInstance,
-    // Setter functions are stable from useState, no need to include them
+    // reactFlowWrapper is a ref and doesn't need to be in dependencies
   ]);
 
   return (
