@@ -129,7 +129,7 @@ export function HDMIStream({
       setStreamUrl('');
       setIsStreamActive(false);
     }
-  }, [host, streamUrl, isStreamActive]); // Include all dependencies
+  }, [host]); // Only depend on host - streamUrl and isStreamActive are outputs, not inputs
 
   // Initialize stream URL on mount and when host changes
   useEffect(() => {
