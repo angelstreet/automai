@@ -45,8 +45,6 @@ def text_auto_detect():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:host_text_auto_detect] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
         data = request.get_json()
         source_filename = data.get('source_filename')
         area = data.get('area')
@@ -260,8 +258,6 @@ def save_text_resource():
                 'success': False,
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
-        
-        print(f"[@route:host_save_text_resource] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         name = data.get('name')  # Client sends 'name' instead of 'reference_name'

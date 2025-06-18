@@ -47,8 +47,6 @@ def execute_verification():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:execute_verification] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
         data = request.get_json()
         verification = data.get('verification')
         source_filename = data.get('source_filename')
@@ -138,8 +136,6 @@ def execute_batch_verification():
                 'success': False,
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
-        
-        print(f"[@route:execute_batch_verification] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         verifications = data.get('verifications', [])

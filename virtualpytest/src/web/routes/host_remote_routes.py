@@ -36,7 +36,6 @@ def take_screenshot():
             }), 404
         
         print(f"[@route:host_remote:take_screenshot] Using own remote controller: {type(remote_controller).__name__}")
-        print(f"[@route:host_remote:take_screenshot] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
         success, screenshot_data, error = remote_controller.take_screenshot()
         

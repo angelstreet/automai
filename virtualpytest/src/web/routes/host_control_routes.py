@@ -215,6 +215,12 @@ def release_control():
             })
         
         # Extract device info from stored host_device
+        if not isinstance(host_device, dict):
+            return jsonify({
+                'success': False,
+                'error': f'Host device object is invalid type: {type(host_device).__name__}. Expected dict.'
+            }), 500
+            
         device_model = host_device.get('device_model', 'android_mobile')
         device_name = host_device.get('device_name')
         
@@ -257,6 +263,13 @@ def controller_status():
                 'controllers': {}
             })
         
+        if not isinstance(host_device, dict):
+            return jsonify({
+                'success': False,
+                'error': f'Host device object is invalid type: {type(host_device).__name__}. Expected dict.',
+                'controllers': {}
+            }), 500
+            
         controller_status = {}
         controller_objects = host_device.get('controller_objects', {})
         

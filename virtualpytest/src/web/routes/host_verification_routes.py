@@ -35,8 +35,6 @@ def verification_status():
                 'error': 'Host device object not initialized'
             }), 404
         
-        print(f"[@route:verification_status] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
         # Check available controllers
         available_controllers = []
         

@@ -41,7 +41,6 @@ def connect():
             }), 404
         
         print(f"[@route:host_av:connect] Using own AV controller: {type(av_controller).__name__}")
-        print(f"[@route:host_av:connect] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
         # Connect to controller
         connect_result = av_controller.connect()
@@ -90,7 +89,6 @@ def disconnect():
             }), 404
         
         print(f"[@route:host_av:disconnect] Using own AV controller: {type(av_controller).__name__}")
-        print(f"[@route:host_av:disconnect] Host: {host_device.get('host_name')} Device: {host_device.get('device_name')}")
         
         # Disconnect from controller
         disconnect_result = av_controller.disconnect()

@@ -51,8 +51,6 @@ def crop_area():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
-        print(f"[@route:host_crop_area] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
-        
         data = request.get_json()
         source_filename = data.get('source_filename')
         source_path = data.get('source_path')
@@ -128,20 +126,11 @@ def crop_area():
             success = image_controller.crop_image(final_source_path, target_path, area)
             
             if success:
-                # Build public URL using buildHostUrl for frontend access
-                host_info = {
-                    'host_url': host_device.get('host_url'),
-                    'host_name': host_device.get('host_name')
-                }
-                
-                public_url = buildHostUrl(host_info, f'/host/stream/captures/cropped/{target_filename}')
-                print(f"[@route:host_crop_area] Cropping successful: {public_url}")
+                print(f"[@route:host_crop_area] Cropping successful: {target_filename}")
                 
                 return jsonify({
                     'success': True,
-                    'image_url': public_url,  # ✅ Public URL for frontend access
                     'filename': target_filename,
-                    'cropped_path': public_url,
                     'message': f'Image cropped successfully: {reference_name}'
                 })
             else:
@@ -177,8 +166,6 @@ def process_area():
                 'success': False,
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
-        
-        print(f"[@route:host_process_area] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         source_filename = data.get('source_filename')
@@ -280,20 +267,11 @@ def process_area():
                 if not bg_success:
                     print(f"[@route:host_process_area] Background removal failed")
             
-            # Build public URL using buildHostUrl for frontend access
-            host_info = {
-                'host_url': host_device.get('host_url'),
-                'host_name': host_device.get('host_name')
-            }
-            
-            public_url = buildHostUrl(host_info, f'/host/stream/captures/cropped/{target_filename}')
-            print(f"[@route:host_process_area] Processing successful: {public_url}")
+            print(f"[@route:host_process_area] Processing successful: {target_filename}")
             
             return jsonify({
                 'success': True,
-                'image_url': public_url,  # ✅ Public URL for frontend access
                 'filename': target_filename,
-                'cropped_path': public_url,
                 'processed_area': processed_area,
                 'message': f'Image processed successfully: {reference_name}'
             })
@@ -328,8 +306,6 @@ def save_resource():
                 'success': False,
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
-        
-        print(f"[@route:host_save_resource] Using host device: {host_device.get('host_name')} - {host_device.get('device_name')}")
         
         data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
