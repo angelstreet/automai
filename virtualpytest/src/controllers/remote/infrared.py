@@ -447,39 +447,5 @@ class IRRemoteController(RemoteControllerInterface):
             }
         }
 
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verifications for this IR controller."""
-        return {
-            'device_control': {
-                'power_on': {
-                    'description': 'Turn device on using IR power command',
-                    'parameters': {}
-                },
-                'power_off': {
-                    'description': 'Turn device off using IR power command',
-                    'parameters': {}
-                },
-                'change_channel': {
-                    'description': 'Change to specific channel number',
-                    'parameters': {
-                        'channel': {'type': 'integer', 'required': True, 'description': 'Channel number to tune to'}
-                    }
-                },
-                'set_volume': {
-                    'description': 'Set volume to specific level',
-                    'parameters': {
-                        'level': {'type': 'integer', 'required': True, 'description': 'Volume level (0-100)'}
-                    }
-                }
-            },
-            'connection_status': {
-                'get_status': {
-                    'description': 'Get current IR device status',
-                    'parameters': {}
-                }
-            }
-        }
-
-
 # Backward compatibility alias
 IRController = IRRemoteController 

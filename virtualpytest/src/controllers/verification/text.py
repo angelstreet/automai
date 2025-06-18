@@ -818,62 +818,36 @@ class TextVerificationController(VerificationControllerInterface):
             ]
         }
     
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verification actions for text controller."""
-        return {
-            'text_verification': {
-                'waitForTextToAppear': {
-                    'description': 'Wait for specified text to appear on screen',
-                    'parameters': {
-                        'text': {'type': 'string', 'required': True, 'description': 'Text to search for'},
-                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait in seconds'},
-                        'case_sensitive': {'type': 'boolean', 'required': False, 'default': False, 'description': 'Whether to match case exactly'},
-                        'area': {'type': 'dict', 'required': False, 'description': 'Optional area to search in {x, y, width, height}'},
-                        'image_list': {'type': 'list', 'required': False, 'description': 'Optional list of images to analyze'},
-                        'model': {'type': 'string', 'required': False, 'description': 'Model identifier for logging'},
-                        'verification_index': {'type': 'integer', 'required': False, 'default': 0, 'description': 'Verification index for logging'},
-                        'image_filter': {'type': 'string', 'required': False, 'description': 'Image filter to apply before OCR'}
-                    }
-                },
-                'waitForTextToDisappear': {
-                    'description': 'Wait for specified text to disappear from screen',
-                    'parameters': {
-                        'text': {'type': 'string', 'required': True, 'description': 'Text to search for'},
-                        'timeout': {'type': 'float', 'required': False, 'default': 10.0, 'description': 'Maximum time to wait in seconds'},
-                        'case_sensitive': {'type': 'boolean', 'required': False, 'default': False, 'description': 'Whether to match case exactly'},
-                        'area': {'type': 'dict', 'required': False, 'description': 'Optional area to search in {x, y, width, height}'},
-                        'image_list': {'type': 'list', 'required': False, 'description': 'Optional list of images to analyze'},
-                        'model': {'type': 'string', 'required': False, 'description': 'Model identifier for logging'},
-                        'verification_index': {'type': 'integer', 'required': False, 'default': 0, 'description': 'Verification index for logging'},
-                        'image_filter': {'type': 'string', 'required': False, 'description': 'Image filter to apply before OCR'}
-                    }
+    def get_available_verifications(self) -> List[Dict[str, Any]]:
+        """Get available verifications for text controller."""
+        return [
+            {
+                'command': 'waitForTextToAppear',
+                'params': {
+                    'text': {'type': 'string', 'required': True},
+                    'timeout': {'type': 'float', 'required': False, 'default': 10.0},
+                    'case_sensitive': {'type': 'boolean', 'required': False, 'default': False},
+                    'area': {'type': 'dict', 'required': False},
+                    'image_list': {'type': 'list', 'required': False},
+                    'model': {'type': 'string', 'required': False},
+                    'verification_index': {'type': 'integer', 'required': False, 'default': 0},
+                    'image_filter': {'type': 'string', 'required': False}
                 }
             },
-            'text_extraction': {
-                '_extract_text_from_image': {
-                    'description': 'Extract text from an image using OCR',
-                    'parameters': {
-                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to the image file'}
-                    }
-                },
-                '_extract_text_from_area': {
-                    'description': 'Extract text from a specific area of an image',
-                    'parameters': {
-                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to the image file'},
-                        'area': {'type': 'dict', 'required': False, 'description': 'Area to extract text from {x, y, width, height}'},
-                        'image_filter': {'type': 'string', 'required': False, 'description': 'Image filter to apply before OCR'}
-                    }
-                }
-            },
-            'language_detection': {
-                '_detect_text_language': {
-                    'description': 'Detect the language of text in an image',
-                    'parameters': {
-                        'image_path': {'type': 'string', 'required': True, 'description': 'Path to the image file'}
-                    }
+            {
+                'command': 'waitForTextToDisappear',
+                'params': {
+                    'text': {'type': 'string', 'required': True},
+                    'timeout': {'type': 'float', 'required': False, 'default': 10.0},
+                    'case_sensitive': {'type': 'boolean', 'required': False, 'default': False},
+                    'area': {'type': 'dict', 'required': False},
+                    'image_list': {'type': 'list', 'required': False},
+                    'model': {'type': 'string', 'required': False},
+                    'verification_index': {'type': 'integer', 'required': False, 'default': 0},
+                    'image_filter': {'type': 'string', 'required': False}
                 }
             }
-        }
+        ]
 
     def _capture_screenshot_for_ocr(self, area: dict = None) -> str:
         """

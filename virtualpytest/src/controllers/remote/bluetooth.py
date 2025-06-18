@@ -367,25 +367,6 @@ class BluetoothRemoteController(RemoteControllerInterface):
             }
         }
 
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verifications for this Bluetooth controller."""
-        return {
-            'connection_status': {
-                'get_status': {
-                    'description': 'Get current Bluetooth connection status',
-                    'parameters': {}
-                }
-            },
-            'pairing_status': {
-                'pair_device': {
-                    'description': 'Verify Bluetooth device pairing',
-                    'parameters': {
-                        'pin': {'type': 'string', 'required': False, 'description': 'Pairing PIN (uses default if not provided)'}
-                    }
-                }
-            }
-        }
-
 
 # Backward compatibility alias
 BluetoothController = BluetoothRemoteController 

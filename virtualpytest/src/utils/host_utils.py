@@ -84,8 +84,29 @@ def register_host_with_server():
                 if hasattr(controller_obj, 'get_available_verifications'):
                     verifications = controller_obj.get_available_verifications()
                     if verifications:
-                        available_verification_types[controller_type] = verifications
-                        print(f"   ✅ {controller_type}: {len(verifications)} verification types")
+                        # Handle both old dict format and new list format for backward compatibility
+                        if isinstance(verifications, list):
+                            # New format: flat array of verifications
+                            available_verification_types[controller_type] = verifications
+                            print(f"   ✅ {controller_type}: {len(verifications)} verifications")
+                        elif isinstance(verifications, dict):
+                            # Old format: convert dict structure to flat array
+                            verification_list = []
+                            for category, category_verifications in verifications.items():
+                                if isinstance(category_verifications, dict):
+                                    # Convert nested dict to verification objects
+                                    for ver_id, ver_data in category_verifications.items():
+                                        verification_obj = {
+                                            'command': ver_id,
+                                            'params': ver_data.get('parameters', ver_data.get('params', {}))
+                                        }
+                                        verification_list.append(verification_obj)
+                                elif isinstance(category_verifications, list):
+                                    # Already in correct format
+                                    verification_list.extend(category_verifications)
+                            
+                            available_verification_types[controller_type] = verification_list
+                            print(f"   ✅ {controller_type}: {len(verification_list)} verifications (converted from old format)")
                 
                 # Extract available actions if controller has the method  
                 if hasattr(controller_obj, 'get_available_actions'):

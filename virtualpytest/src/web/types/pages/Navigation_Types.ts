@@ -550,7 +550,7 @@ export interface EdgeActionItemProps {
 
 export interface NodeVerificationsListProps {
   verifications: NodeVerification[];
-  availableActions: VerificationActions;
+  availableActions: import('../verification/VerificationTypes').Verifications;
   onVerificationsChange: (verifications: NodeVerification[]) => void;
   loading?: boolean;
   error?: string | null;

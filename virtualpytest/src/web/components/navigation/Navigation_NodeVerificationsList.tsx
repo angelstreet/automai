@@ -15,11 +15,8 @@ import React, { useState, useEffect } from 'react';
 
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-import {
-  NodeVerification,
-  VerificationAction,
-  NodeVerificationsListProps,
-} from '../../types/pages/Navigation_Types';
+import { NodeVerification, NodeVerificationsListProps } from '../../types/pages/Navigation_Types';
+import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 import { VerificationItem } from '../verification/VerificationItem';
 
@@ -106,18 +103,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     onVerificationsChange(newVerifications);
   };
 
-  const handleVerificationSelect = (index: number, actionId: string) => {
-    // Find the selected action from available actions
-    let selectedAction: VerificationAction | undefined = undefined;
+  const handleVerificationSelect = (index: number, command: string) => {
+    // Find the selected verification from available actions
+    let selectedVerification: any = undefined;
     let controllerType: 'text' | 'image' | 'adb' = 'text';
 
-    // Search through all categories to find the action
-    for (const [category, actions] of Object.entries(availableActions)) {
-      const action = actions.find((a) => a.id === actionId);
-      if (action) {
-        selectedAction = action;
-        // Determine controller type from category or action properties
-        if (category.toLowerCase().includes('image') || action.command.includes('image')) {
+    // Search through all controller types to find the verification
+    for (const [category, verifications] of Object.entries(availableActions)) {
+      if (!Array.isArray(verifications)) continue;
+
+      const verification = verifications.find((v) => v.command === command);
+      if (verification) {
+        selectedVerification = verification;
+        // Determine controller type from category
+        if (category.toLowerCase().includes('image')) {
           controllerType = 'image';
         } else if (category.toLowerCase().includes('adb')) {
           controllerType = 'adb';
@@ -128,17 +127,20 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       }
     }
 
-    if (selectedAction) {
+    if (selectedVerification) {
       updateVerification(index, {
-        id: selectedAction.id,
-        label: selectedAction.label,
-        command: selectedAction.command,
+        id: selectedVerification.command, // Use command as id for compatibility
+        label: selectedVerification.command
+          .replace(/_/g, ' ')
+          .replace(/([A-Z])/g, ' $1')
+          .trim(),
+        command: selectedVerification.command,
         controller_type: controllerType,
-        params: { ...selectedAction.params },
-        description: selectedAction.description,
-        requiresInput: selectedAction.requiresInput,
-        inputLabel: selectedAction.inputLabel,
-        inputPlaceholder: selectedAction.inputPlaceholder,
+        params: { ...selectedVerification.params },
+        description: '',
+        requiresInput: Object.keys(selectedVerification.params).length > 0,
+        inputLabel: 'Input',
+        inputPlaceholder: 'Enter value...',
         inputValue: '',
       });
     }

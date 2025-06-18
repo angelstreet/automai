@@ -509,44 +509,6 @@ class HDMIStreamController(AVControllerInterface):
                 'error': f'Failed to check stream service: {str(e)}'
             }
 
-    def get_available_actions(self) -> Dict[str, Any]:
-        """Get available actions for this HDMI Stream controller."""
-        return {
-            'video_capture': ['start_video_capture', 'stop_video_capture'],
-            'screenshot': ['take_screenshot', 'save_screenshot'],
-            'stream_control': ['restart_stream', 'get_stream_url'],
-            'status': ['get_status']
-        }
-
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verifications for this HDMI Stream controller."""
-        return {
-            'screenshots': {
-                'take_screenshot': {
-                    'description': 'Take a screenshot from the HDMI stream',
-                    'parameters': {
-                        'filename': {'type': 'string', 'required': False, 'description': 'Optional filename for the screenshot'}
-                    }
-                },
-                'save_screenshot': {
-                    'description': 'Save a screenshot with a specific filename',
-                    'parameters': {
-                        'filename': {'type': 'string', 'required': True, 'description': 'Filename for the screenshot'}
-                    }
-                }
-            },
-            'stream_status': {
-                'get_stream_url': {
-                    'description': 'Get the current stream URL',
-                    'parameters': {}
-                },
-                'get_status': {
-                    'description': 'Get the current stream service status',
-                    'parameters': {}
-                }
-            }
-        }
-
 
 # Backward compatibility alias
 HDMI_Stream_Controller = HDMIStreamController 

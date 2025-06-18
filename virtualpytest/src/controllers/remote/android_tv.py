@@ -529,23 +529,5 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             }
         }
 
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verifications for this Android TV controller."""
-        return {
-            'screenshots': {
-                'take_screenshot': {
-                    'description': 'Take a screenshot of the Android TV screen',
-                    'parameters': {}
-                }
-            },
-            'device_status': {
-                'get_installed_apps': {
-                    'description': 'Get list of installed applications',
-                    'parameters': {}
-                }
-            }
-        }
-
-
 # Backward compatibility alias
 RealAndroidTVController = AndroidTVRemoteController 

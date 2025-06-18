@@ -10,20 +10,8 @@ interface DragArea {
   height: number;
 }
 
-interface VerificationAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-interface VerificationActions {
-  [category: string]: VerificationAction[];
-}
+// Import unified types
+import { Verification, Verifications } from '../../types/verification/VerificationTypes';
 
 interface NodeVerification {
   id: string;
@@ -129,9 +117,7 @@ export const useVerification = ({
   isCaptureActive,
 }: UseVerificationProps) => {
   // State for verification types and verifications
-  const [availableVerificationTypes, setAvailableVerificationTypes] = useState<VerificationActions>(
-    {},
-  );
+  const [availableVerificationTypes, setAvailableVerificationTypes] = useState<Verifications>({});
   const [verifications, setVerifications] = useState<NodeVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

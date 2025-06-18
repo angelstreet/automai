@@ -4,25 +4,31 @@ import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
 import { useValidationColors } from '../../hooks/validation';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
 
-export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = ({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  data,
-  selected,
-  source,
-  target,
-  sourceHandle,
-  targetHandle,
-}) => {
+export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = (
+  props,
+) => {
+  const {
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    data,
+    selected,
+    source,
+    target,
+  } = props;
+
+  // Access sourceHandle and targetHandle from props directly
+  const sourceHandle = (props as any).sourceHandle;
+  const targetHandle = (props as any).targetHandle;
+
   const { getEdges, getNodes } = useReactFlow();
   const currentEdges = getEdges();
   const currentNodes = getNodes();
-  const { getEdgeColors } = useValidationColors(data?.treeId || 'default', currentEdges);
+  const { getEdgeColors } = useValidationColors((data as any)?.treeId || 'default', currentEdges);
 
   // Validate that both nodes exist
   const sourceNode = currentNodes.find((node) => node.id === source);
@@ -38,7 +44,8 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   // Check if this is an entry edge
   const isSourceEntryNode =
     sourceNode?.data?.type === 'entry' || sourceNode?.data?.node_type === 'entry';
-  const isEntryEdge = data?.isEntryEdge || sourceHandle === 'entry-source' || isSourceEntryNode;
+  const isEntryEdge =
+    (data as any)?.isEntryEdge || sourceHandle === 'entry-source' || isSourceEntryNode;
 
   // Get edge colors based on validation status
   const edgeColors = getEdgeColors(id, isEntryEdge);
@@ -53,7 +60,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   });
 
   return (
-    <g className={edgeColors.className}>
+    <g className={edgeColors.className} data-edge-type={data?.edgeType}>
       {/* Invisible thick overlay for better selectability */}
       <path
         id={`${id}-selectable`}
@@ -99,7 +106,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
       )}
 
       {/* Edge label if provided */}
-      {data?.label && (
+      {(data as any)?.label && (
         <text
           x={(sourceX + targetX) / 2}
           y={(sourceY + targetY) / 2}
@@ -113,7 +120,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
             textShadow: '1px 1px 2px rgba(255,255,255,0.8)',
           }}
         >
-          {data.label}
+          {(data as any).label}
         </text>
       )}
     </g>
