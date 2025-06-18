@@ -34,7 +34,8 @@ import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDial
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { DeviceControlProvider, useDeviceControl } from '../contexts/DeviceControlContext';
 import { NavigationConfigProvider } from '../contexts/NavigationConfigContext';
-import { NavigationStateProvider, useNavigationState } from '../contexts/NavigationStateContext';
+import { NavigationStateProvider } from '../contexts/NavigationStateContext';
+import { useNavigationState } from '../hooks/useNavigationState';
 import { NodeEdgeManagementProvider } from '../contexts/NodeEdgeManagementContext';
 import { useNavigationEditor } from '../hooks';
 

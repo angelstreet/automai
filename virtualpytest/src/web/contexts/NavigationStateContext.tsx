@@ -13,7 +13,7 @@ import {
 // TYPES
 // ========================================
 
-interface NavigationStateContextType {
+export interface NavigationStateContextType {
   // Route params
   treeId?: string;
   treeName?: string;
@@ -117,7 +117,7 @@ interface NavigationStateProviderProps {
 // CONTEXT
 // ========================================
 
-const NavigationStateContext = createContext<NavigationStateContextType | null>(null);
+export const NavigationStateContext = createContext<NavigationStateContextType | null>(null);
 
 export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   console.log('[@context:NavigationStateProvider] Initializing navigation state context');
@@ -160,23 +160,9 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
 
   // Memoize React Flow arrays to prevent unnecessary context recreation
   // React Flow hooks create new array references even when content is the same
-  const stableNodes = useMemo(
-    () => nodes,
-    [
-      nodes.length,
-      nodes
-        .map((n) => `${n.id}:${n.position.x}:${n.position.y}:${JSON.stringify(n.data)}`)
-        .join(','),
-    ],
-  );
+  const stableNodes = useMemo(() => nodes, [nodes]);
 
-  const stableEdges = useMemo(
-    () => edges,
-    [
-      edges.length,
-      edges.map((e) => `${e.id}:${e.source}:${e.target}:${JSON.stringify(e.data)}`).join(','),
-    ],
-  );
+  const stableEdges = useMemo(() => edges, [edges]);
 
   // History state
   const [initialState, setInitialState] = useState<{
@@ -288,34 +274,14 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
   // ========================================
 
   // Memoize complex objects separately to prevent unnecessary context recreation
-  const stableNodeForm = useMemo(
-    () => nodeForm,
-    [nodeForm.label, nodeForm.type, nodeForm.description, nodeForm.verifications?.length],
-  );
+  const stableNodeForm = useMemo(() => nodeForm, [nodeForm]);
 
-  const stableEdgeForm = useMemo(
-    () => edgeForm,
-    [
-      edgeForm.actions?.length,
-      edgeForm.retryActions?.length,
-      edgeForm.finalWaitTime,
-      edgeForm.description,
-    ],
-  );
+  const stableEdgeForm = useMemo(() => edgeForm, [edgeForm]);
 
-  const stableNavigationPath = useMemo(() => navigationPath, [navigationPath.join(',')]);
-  const stableNavigationNamePath = useMemo(
-    () => navigationNamePath,
-    [navigationNamePath.join(',')],
-  );
-  const stableViewPath = useMemo(
-    () => viewPath,
-    [viewPath.map((v) => `${v.id}:${v.name}`).join(',')],
-  );
-  const stableAvailableFocusNodes = useMemo(
-    () => availableFocusNodes,
-    [availableFocusNodes.map((n) => `${n.id}:${n.label}:${n.depth}`).join(',')],
-  );
+  const stableNavigationPath = useMemo(() => navigationPath, [navigationPath]);
+  const stableNavigationNamePath = useMemo(() => navigationNamePath, [navigationNamePath]);
+  const stableViewPath = useMemo(() => viewPath, [viewPath]);
+  const stableAvailableFocusNodes = useMemo(() => availableFocusNodes, [availableFocusNodes]);
 
   const contextValue: NavigationStateContextType = useMemo(() => {
     console.log(`[@context:NavigationStateProvider] Creating new context value`);
@@ -440,6 +406,10 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     stableNodes,
     stableEdges,
     reactFlowInstance,
+    onNodesChange,
+    onEdgesChange,
+    setNodes,
+    setEdges,
 
     // Tree state
     initialState,
@@ -451,9 +421,9 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     currentViewRootId,
     stableViewPath,
 
-    // Node/Edge selection and editing - only track IDs to prevent object reference issues
-    selectedNode?.id,
-    selectedEdge?.id,
+    // Node/Edge selection and editing
+    selectedNode,
+    selectedEdge,
     isNodeDialogOpen,
     isEdgeDialogOpen,
     isNewNode,
