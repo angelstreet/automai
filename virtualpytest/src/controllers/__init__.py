@@ -129,8 +129,8 @@ class ControllerFactory:
         Args:
             verification_type: Type of verification implementation (ocr, text, image, audio, video, adb, ai)
             **kwargs: Parameters required by the specific controller (varies by type):
-                - ADB: device_id (required), device_name (optional)
-                - Others: av_controller (required), plus optional params
+                - ADB: device_ip, device_port (required)
+                - Others: av_controller (required)
         
         Returns:
             VerificationControllerInterface: Controller instance
@@ -139,8 +139,13 @@ class ControllerFactory:
         if not controller_class:
             raise ValueError(f"Unknown verification controller type: {verification_type}")
         
-        # Call constructor with only the parameters it needs
-        return controller_class(**kwargs)
+        # Remove verification_type from kwargs before passing to constructor
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'verification_type'}
+        
+        try:
+            return controller_class(**filtered_kwargs)
+        except Exception as e:
+            raise ValueError(f"Failed to create {verification_type} controller: {e}")
     
     @staticmethod
     def create_power_controller(

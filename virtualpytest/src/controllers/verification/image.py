@@ -363,25 +363,26 @@ def copy_reference_with_filtered_versions(source_path, target_path):
 class ImageVerificationController(VerificationControllerInterface):
     """Image verification controller that uses template matching to detect images on screen."""
     
-    def __init__(self, av_controller):
+    def __init__(self, av_controller, **kwargs):
         """
         Initialize the Image Verification controller.
         
         Args:
             av_controller: Reference to AV controller for screenshot capture
+            **kwargs: Additional parameters (ignored for compatibility)
         """
         if not av_controller:
             raise ValueError("av_controller is required for screenshot capture")
             
-        device_name = f"ImageVerify-{av_controller.device_name}"
-        super().__init__(device_name)
+        # Initialize base controller without device name dependency
+        super().__init__("ImageVerification")
         
         # AV controller reference for screenshot capture only
         self.av_controller = av_controller
         
         # Controller is always ready
         self.is_connected = True
-        print(f"ImageVerify[{self.device_name}]: Ready - Using AV controller: {self.av_controller.device_name}")
+        print(f"[@controller:ImageVerification] Initialized - Using AV controller: {self.av_controller.device_name}")
 
     def connect(self) -> bool:
         """Connect to the image verification controller."""
@@ -758,10 +759,10 @@ class ImageVerificationController(VerificationControllerInterface):
         # Check if image_path is provided
         if not image_path or image_path.strip() == '':
             error_msg = "No reference image specified. Please select a reference image or provide an image path."
-            print(f"[@component:ImageVerification] {error_msg}")
+            print(f"[@controller:ImageVerification] {error_msg}")
             return False, error_msg, {}
             
-        print(f"[@component:ImageVerification] Looking for image to disappear: {image_path}")
+        print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
         
         # Smart reuse: call waitForImageToAppear and invert result
         found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)

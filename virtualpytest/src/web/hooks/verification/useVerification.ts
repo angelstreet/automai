@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { NodeVerification } from '../../types/pages/Navigation_Types';
-import { Verification, Verifications } from '../../types/verification/VerificationTypes';
-import { buildServerUrl } from '../../utils/frontendUtils';
+import { Verifications } from '../../types/verification/VerificationTypes';
 import { buildReferenceUrl } from '../../utils/infrastructure/cloudflareUtils';
 
 // Define interfaces for verification data structures

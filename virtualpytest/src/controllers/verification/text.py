@@ -79,8 +79,8 @@ class TextVerificationController(VerificationControllerInterface):
         if not av_controller:
             raise ValueError("av_controller is required for screenshot capture")
             
-        device_name = f"TextVerify-{av_controller.device_name}"
-        super().__init__(device_name)
+        # Initialize base controller without device name dependency
+        super().__init__("TextVerification")
         
         # AV controller reference for screenshot capture only
         self.av_controller = av_controller
@@ -93,8 +93,8 @@ class TextVerificationController(VerificationControllerInterface):
         # Controller is always ready
         self.is_connected = True
         self.verification_session_id = f"text_verify_{int(time.time())}"
-        print(f"TextVerify[{self.device_name}]: Ready - Using AV controller: {self.av_controller.device_name}")
-        print(f"TextVerify[{self.device_name}]: OCR language: {self.ocr_language}")
+        print(f"[@controller:TextVerification] Initialized - Using AV controller: {self.av_controller.device_name}")
+        print(f"[@controller:TextVerification] OCR language: {self.ocr_language}")
 
     def connect(self) -> bool:
         """Connect to the text verification controller."""

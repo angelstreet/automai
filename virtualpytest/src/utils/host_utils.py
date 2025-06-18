@@ -539,19 +539,22 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         
         # Create verification controllers (multiple types per device model)
         verification_controllers_created = 0
+        expected_verification_types = []
+        failed_verification_types = []
+        
         for controller_key, controller_config in controllers_config.items():
             if controller_key.startswith('verification_'):
                 verification_type = controller_config['implementation']
+                expected_verification_types.append(verification_type)
                 print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: {verification_type}")
                 
                 try:
                     if verification_type == 'adb':
-                        # ADB verification needs device_id parameter
-                        device_id = f"{device_ip}:{device_port}"
+                        # ADB verification only needs device_ip and device_port
                         verification_controller = ControllerFactory.create_verification_controller(
                             verification_type=verification_type,
-                            device_id=device_id,
-                            av_controller=av_controller
+                            device_ip=device_ip,
+                            device_port=device_port
                         )
                     else:
                         # Other verification types (image, audio, text, video) only need av_controller
@@ -562,12 +565,24 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                     
                     controller_objects[controller_key] = verification_controller
                     verification_controllers_created += 1
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] Verification controller {verification_type} created: {type(verification_controller).__name__}")
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] ✅ Verification controller {verification_type} created successfully")
                     
                 except Exception as e:
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] Failed to create verification controller {verification_type}: {e}")
+                    failed_verification_types.append(verification_type)
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] ❌ Failed to create verification controller {verification_type}: {e}")
+                    # Fail early - don't continue with broken controller setup
+                    raise Exception(f"Critical error: Failed to create {verification_type} verification controller: {e}")
         
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Created {verification_controllers_created} verification controllers")
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Verification Controller Summary:")
+        print(f"   Expected: {len(expected_verification_types)} - {expected_verification_types}")
+        print(f"   Created: {verification_controllers_created}")
+        print(f"   Failed: {len(failed_verification_types)} - {failed_verification_types}")
+        
+        if failed_verification_types:
+            raise Exception(f"Controller creation failed for: {failed_verification_types}")
+        
+        if verification_controllers_created == 0:
+            print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ No verification controllers were created")
         
         # Create power controller if configured
         if controllers_config.get('power'):
