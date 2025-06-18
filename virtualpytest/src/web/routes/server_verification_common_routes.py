@@ -156,7 +156,7 @@ def get_verification_types():
             'error': f'Error getting verification types: {str(e)}'
         }), 500
 
-@verification_common_bp.route('/getAllReferences', methods=['GET'])
+@verification_common_bp.route('/getAllReferences', methods=['GET', 'POST'])
 def getAllReferences():
     """Get available references from resource.json config - NO host proxy needed"""
     try:
@@ -170,13 +170,16 @@ def getAllReferences():
                 'error': error or 'Host information required'
             }), 400
         
+        # Get device model with fallback
+        device_model = host_info.get('device_model', 'default')
+        print(f"[@route:server_verification:getAllReferences] Using device model: {device_model}")
+        
         # Read from resource.json directly (no host proxy)
         try:
             with open('src/config/resource/resource.json', 'r') as f:
                 config = json.load(f)
             
             # Get references for specific device model
-            device_model = host_info.get('device_model', 'default')
             resources = config.get('resources', {})
             model_references_dict = resources.get(device_model, {})
             
@@ -209,7 +212,7 @@ def getAllReferences():
             return jsonify({
                 'success': True,
                 'references': {'image': [], 'text': []},
-                'model': device_model,
+                'model': device_model,  # Use the device_model variable from outer scope
                 'source': 'cloudflare'
             })
         

@@ -31,13 +31,20 @@ export const useVerificationReferences = (
         return;
       }
 
-      // Build URL with host_name query parameter as required by the server routes
-      const url = new URL(buildServerUrl('/server/verification/getAllReferences'));
-      url.searchParams.append('host_name', selectedHost.host_name);
+      // Use POST method with full host object (consistent with other hooks)
+      const response = await fetch(buildServerUrl('/server/verification/getAllReferences'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: selectedHost, // Send full host object
+        }),
+      });
 
-      console.log(`[@hook:useVerificationReferences] Fetching from: ${url.toString()}`);
-
-      const response = await fetch(url.toString());
+      console.log(
+        `[@hook:useVerificationReferences] Fetching from: ${buildServerUrl('/server/verification/getAllReferences')} with host: ${selectedHost.host_name}`,
+      );
 
       if (response.ok) {
         const result = await response.json();

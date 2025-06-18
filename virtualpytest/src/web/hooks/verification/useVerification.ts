@@ -245,7 +245,7 @@ export const useVerification = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name,
+          host: selectedHost, // Send full host object
           name: referenceName,
           model: selectedHost.device_model,
           area: selectedArea,
@@ -271,14 +271,7 @@ export const useVerification = ({
     } finally {
       setPendingSave(false);
     }
-  }, [
-    selectedArea,
-    screenshotPath,
-    referenceName,
-    selectedHost.device_model,
-    selectedHost.host_name,
-    referenceType,
-  ]);
+  }, [selectedArea, screenshotPath, referenceName, selectedHost, referenceType]);
 
   // Handle test execution
   const handleTest = useCallback(
@@ -409,7 +402,7 @@ export const useVerification = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host_name: selectedHost.host_name,
+            host: selectedHost, // Send full host object
             verifications: validVerifications,
             model: selectedHost.device_model,
             node_id: 'verification-editor',
@@ -521,7 +514,7 @@ export const useVerification = ({
         setLoading(false);
       }
     },
-    [verifications, selectedHost.device_model, selectedHost.host_name, captureSourcePath],
+    [verifications, selectedHost, captureSourcePath],
   );
 
   // Handle auto-detect text
@@ -545,7 +538,7 @@ export const useVerification = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHost.host_name,
+          host: selectedHost, // Send full host object
           model: selectedHost.device_model,
           area: selectedArea,
           source_path: captureSourcePath,
@@ -578,13 +571,7 @@ export const useVerification = ({
     } catch (error) {
       console.error('[@hook:useVerification] Error during text auto-detection:', error);
     }
-  }, [
-    selectedArea,
-    selectedHost.device_model,
-    selectedHost.host_name,
-    captureSourcePath,
-    textImageFilter,
-  ]);
+  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter]);
 
   // Validate regex
   const validateRegex = useCallback((text: string): boolean => {
