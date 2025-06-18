@@ -849,5 +849,99 @@ class ImageVerificationController(VerificationControllerInterface):
             print(f"[@controller:ImageVerification] Template matching error: {e}")
             return 0.0
 
+    # =====================================================
+    # IMAGE UTILITY METHODS - Clean, modular image operations
+    # =====================================================
+
+    def crop_image(self, source_path: str, target_path: str, area: dict, create_filtered_versions: bool = True) -> bool:
+        """
+        Crop an image to a specific area and save it.
+        
+        Args:
+            source_path: Path to source image
+            target_path: Path to save cropped image
+            area: Dictionary with x, y, width, height coordinates
+            create_filtered_versions: Whether to create greyscale/binary versions
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        print(f"[@controller:ImageVerification] Cropping image: {source_path} -> {target_path}")
+        return crop_reference_image(source_path, target_path, area, create_filtered_versions)
+
+    def auto_crop_image(self, image_path: str) -> dict:
+        """
+        Apply auto-cropping to find main content and crop tighter around it.
+        Modifies the image in-place and returns new coordinates.
+        
+        Args:
+            image_path: Path to the image to auto-crop
+            
+        Returns:
+            dict: New area coordinates after auto-crop
+        """
+        print(f"[@controller:ImageVerification] Auto-cropping image: {image_path}")
+        return process_reference_image(image_path, autocrop=True, remove_background=False)
+
+    def remove_background(self, image_path: str) -> bool:
+        """
+        Remove background from image making it transparent using GrabCut algorithm.
+        Modifies the image in-place.
+        
+        Args:
+            image_path: Path to the image to process
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        print(f"[@controller:ImageVerification] Removing background from: {image_path}")
+        try:
+            process_reference_image(image_path, autocrop=False, remove_background=True)
+            return True
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Background removal failed: {e}")
+            return False
+
+    def copy_image(self, source_path: str, target_path: str) -> bool:
+        """
+        Simple copy of an image file from source to target.
+        
+        Args:
+            source_path: Path to source image
+            target_path: Path to copy image to
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        print(f"[@controller:ImageVerification] Copying image: {source_path} -> {target_path}")
+        try:
+            import shutil
+            import os
+            
+            # Create target directory if it doesn't exist
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            
+            # Copy the image
+            shutil.copy2(source_path, target_path)
+            print(f"[@controller:ImageVerification] Successfully copied image")
+            return True
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error copying image: {e}")
+            return False
+
+    def apply_filter(self, image_path: str, filter_type: str) -> bool:
+        """
+        Apply image filter (greyscale or binary) to an image and overwrite it.
+        
+        Args:
+            image_path: Path to the image file
+            filter_type: Type of filter ('none', 'greyscale', 'binary')
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        print(f"[@controller:ImageVerification] Applying {filter_type} filter to: {image_path}")
+        return apply_image_filter(image_path, filter_type)
+
 # Backward compatibility alias
 ImageVerificationController = ImageVerificationController 
