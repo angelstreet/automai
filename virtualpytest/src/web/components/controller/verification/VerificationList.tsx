@@ -1,11 +1,12 @@
-import React from 'react';
-import { Box, Collapse, IconButton } from '@mui/material';
 import {
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
-import { NodeVerificationsList } from '../../navigation/Navigation_NodeVerificationsList';
+import { Box, Collapse, IconButton, Typography } from '@mui/material';
+import React from 'react';
+
 import { UseVerificationType } from '../../../hooks/verification/useVerification';
+import { NodeVerificationsList } from '../../navigation/Navigation_NodeVerificationsList';
 
 interface VerificationListProps {
   verification: UseVerificationType;
@@ -45,7 +46,9 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
             <ArrowDownIcon sx={{ fontSize: '1rem' }} />
           )}
         </IconButton>
-
+        <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+          Verifications
+        </Typography>
         <Box sx={{ flex: 1 }}>
           <Collapse in={!verificationsCollapsed}>
             <Box

@@ -57,6 +57,7 @@ def _register_server_routes(app):
     server_route_modules = [
         ('server_remote_routes', 'remote_bp'),
         ('server_av_routes', 'av_bp'),  # ✅ AV proxy routes
+        ('server_stream_proxy_routes', 'server_stream_proxy_routes'),  # ✅ HTTP to HTTPS stream proxy
         ('server_navigation_routes', 'navigation_bp'),
         ('server_campaign_routes', 'campaign_bp'),
         ('server_testcase_routes', 'testcase_bp'),

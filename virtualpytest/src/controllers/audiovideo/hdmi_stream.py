@@ -131,19 +131,39 @@ class HDMIStreamController(AVControllerInterface):
     def get_stream_url(self) -> Optional[str]:
         """
         Get the stream URL for this HDMI controller.
-        Uses buildHostUrl to construct the proper URL.
+        Uses buildHostUrl to construct the proper URL, with conditional HTTPS proxy for HTTP URLs.
         """
         try:
-            from src.utils.app_utils import buildHostUrl
+            from src.utils.app_utils import buildHostUrl, buildServerUrl
             
             host_info = self._get_host_info()
             if not host_info:
                 print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
                 return None
             
-            stream_url = buildHostUrl(host_info, 'host/stream/output.m3u8')
-            print(f"HDMI[{self.capture_source}]: Stream URL: {stream_url}")
-            return stream_url
+            # Get the original stream URL
+            original_stream_url = buildHostUrl(host_info, 'host/stream/output.m3u8')
+            print(f"HDMI[{self.capture_source}]: Original stream URL: {original_stream_url}")
+            
+            # If URL is already HTTPS, use it directly
+            if original_stream_url.startswith('https://'):
+                print(f"HDMI[{self.capture_source}]: Using direct HTTPS stream URL")
+                return original_stream_url
+            
+            # If URL is HTTP, use HTTPS proxy to solve mixed content issues
+            if original_stream_url.startswith('http://'):
+                host_name = host_info.get('host_name')
+                if not host_name:
+                    print(f"HDMI[{self.capture_source}]: Cannot create proxy URL - no host_name available")
+                    return original_stream_url  # Fallback to original URL
+                
+                proxy_stream_url = buildServerUrl(f'server/stream-proxy/{host_name}/output.m3u8')
+                print(f"HDMI[{self.capture_source}]: Using HTTPS proxy stream URL: {proxy_stream_url}")
+                return proxy_stream_url
+            
+            # Fallback for other protocols
+            print(f"HDMI[{self.capture_source}]: Using fallback stream URL: {original_stream_url}")
+            return original_stream_url
                 
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Error getting stream URL: {e}")

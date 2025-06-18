@@ -1,4 +1,8 @@
-import React, { useRef } from 'react';
+import {
+  Camera as CameraIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -10,11 +14,8 @@ import {
   RadioGroup,
   Radio,
 } from '@mui/material';
-import {
-  Camera as CameraIcon,
-  KeyboardArrowDown as ArrowDownIcon,
-  KeyboardArrowRight as ArrowRightIcon,
-} from '@mui/icons-material';
+import React, { useRef } from 'react';
+
 import { UseVerificationType } from '../../../hooks/verification/useVerification';
 
 interface DragArea {
