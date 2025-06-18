@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
+
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -100,6 +101,12 @@ interface NavigationStateContextType {
   reactFlowWrapper: React.RefObject<HTMLDivElement>;
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (instance: ReactFlowInstance | null) => void;
+
+  // Callback functions
+  resetToInitialState: () => void;
+  validateNavigationPath: (path: string[]) => boolean;
+  updateNavigationPath: (newPath: string[], newNamePath: string[]) => void;
+  resetSelection: () => void;
 }
 
 interface NavigationStateProviderProps {
@@ -215,6 +222,68 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   // ========================================
+  // CALLBACK FUNCTIONS
+  // ========================================
+
+  const resetToInitialState = useCallback(() => {
+    console.log('[@context:NavigationStateProvider] Resetting to initial state');
+    if (initialState) {
+      setNodes(initialState.nodes);
+      setEdges(initialState.edges);
+      setHasUnsavedChanges(false);
+    }
+  }, [initialState, setNodes, setEdges]);
+
+  const validateNavigationPath = useCallback((path: string[]): boolean => {
+    console.log('[@context:NavigationStateProvider] Validating navigation path:', path);
+    // Basic validation - path should not be empty and contain valid tree IDs
+    return path.length > 0 && path.every((id) => typeof id === 'string' && id.length > 0);
+  }, []);
+
+  const updateNavigationPath = useCallback(
+    (newPath: string[], newNamePath: string[]) => {
+      console.log('[@context:NavigationStateProvider] Updating navigation path:', {
+        newPath,
+        newNamePath,
+      });
+      if (validateNavigationPath(newPath)) {
+        setNavigationPath(newPath);
+        setNavigationNamePath(newNamePath);
+        // Update current tree info if path is not empty
+        if (newPath.length > 0) {
+          const currentId = newPath[newPath.length - 1];
+          const currentName = newNamePath[newNamePath.length - 1] || currentId;
+          setCurrentTreeId(currentId);
+          setCurrentTreeName(currentName);
+        }
+      }
+    },
+    [validateNavigationPath],
+  );
+
+  const resetSelection = useCallback(() => {
+    console.log('[@context:NavigationStateProvider] Resetting selection');
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setIsNodeDialogOpen(false);
+    setIsEdgeDialogOpen(false);
+    setIsNewNode(false);
+    // Reset forms to default values
+    setNodeForm({
+      label: '',
+      type: 'screen',
+      description: '',
+      verifications: [],
+    });
+    setEdgeForm({
+      actions: [],
+      retryActions: [],
+      finalWaitTime: 2000,
+      description: '',
+    });
+  }, []);
+
+  // ========================================
   // CONTEXT VALUE
   // ========================================
 
@@ -302,6 +371,10 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       setInitialState,
       isLoading,
       setIsLoading,
+      error,
+      setError,
+      success,
+      setSuccess,
 
       // View navigation
       currentViewRootId,
@@ -371,6 +444,8 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     // Tree state
     initialState,
     isLoading,
+    error,
+    success,
 
     // View navigation
     currentViewRootId,
