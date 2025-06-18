@@ -127,7 +127,7 @@ def crop_area():
                     'host_name': host_device.get('host_name')
                 }
                 
-                public_url = buildHostUrl(host_info, f'/stream/captures/cropped/{target_filename}')
+                public_url = buildHostUrl(host_info, f'/host/stream/captures/cropped/{target_filename}')
                 print(f"[@route:host_crop_area] Cropping successful: {public_url}")
                 
                 return jsonify({
@@ -279,7 +279,7 @@ def process_area():
                 'host_name': host_device.get('host_name')
             }
             
-            public_url = buildHostUrl(host_info, f'/stream/captures/cropped/{target_filename}')
+            public_url = buildHostUrl(host_info, f'/host/stream/captures/cropped/{target_filename}')
             print(f"[@route:host_process_area] Processing successful: {public_url}")
             
             return jsonify({
