@@ -31,10 +31,8 @@
         "label": "home",
         "last_validation_timestamp": "2025-06-06T09:25:50.474Z",
         "menu_type": "main",
-        "parent": [
-          ""
-        ],
-        "screenshot": "home.jpg",
+        "parent": [""],
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -46,18 +44,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "Home Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true
-            ],
+            "last_run_result": [true, true, true, true, true, true, true, true, true, true],
             "params": {
               "timeout": 10
             },
@@ -84,13 +71,10 @@
       "data": {
         "depth": 2,
         "description": "",
-        "label": "home_tvguide",
+        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_tvguide",
         "last_validation_timestamp": "2025-06-06T09:25:41.770Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1"
-        ],
+        "parent": ["", "node-1"],
         "screenshot": "home_tvguide.jpg",
         "type": "menu",
         "verifications": [
@@ -103,18 +87,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "TV GUIDE Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              true,
-              true,
-              false,
-              false,
-              false,
-              false,
-              true,
-              true
-            ],
+            "last_run_result": [true, true, true, true, false, false, false, false, true, true],
             "params": {
               "timeout": 10
             },
@@ -142,14 +115,10 @@
         "depth": 3,
         "description": "",
         "is_root": false,
-        "label": "tvguide_livetv",
+        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/tvguide_livetv",
         "last_validation_timestamp": "2025-06-06T09:25:34.028Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1",
-          "node-1748723779677"
-        ],
+        "parent": ["", "node-1", "node-1748723779677"],
         "screenshot": "tvguide_livetv.jpg",
         "type": "menu",
         "verifications": [
@@ -162,18 +131,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "LIVE TV Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              true,
-              true,
-              false,
-              false,
-              false,
-              false,
-              true,
-              true
-            ],
+            "last_run_result": [true, true, true, true, false, false, false, false, true, true],
             "params": {
               "timeout": 10
             },
@@ -201,13 +159,10 @@
         "depth": 2,
         "description": "",
         "is_root": false,
-        "label": "home_replay",
+        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_replay",
         "last_validation_timestamp": "2025-06-06T09:24:17.304Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1"
-        ],
+        "parent": ["", "node-1"],
         "screenshot": "home_replay.jpg",
         "type": "menu",
         "verifications": [
@@ -220,18 +175,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "Replay Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              false,
-              false,
-              true,
-              true,
-              true,
-              false,
-              false,
-              false
-            ],
+            "last_run_result": [true, true, false, false, true, true, true, false, false, false],
             "params": {
               "timeout": 10
             },
@@ -259,14 +203,11 @@
         "depth": 2,
         "description": "",
         "is_root": false,
-        "label": "home_movies_series",
+        "label": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_movies_series",
         "last_validation_timestamp": "2025-06-06T09:24:33.991Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1"
-        ],
-        "screenshot": "home_movies_series.jpg",
+        "parent": ["", "node-1"],
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_movies_series.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -278,18 +219,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "Movies &amp; Series Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              false,
-              false,
-              true,
-              true,
-              true,
-              false,
-              false,
-              false
-            ],
+            "last_run_result": [true, true, false, false, true, true, true, false, false, false],
             "params": {
               "timeout": 10
             },
@@ -320,11 +250,8 @@
         "label": "home_saved",
         "last_validation_timestamp": "2025-06-06T09:24:51.102Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1"
-        ],
-        "screenshot": "home_saved.jpg",
+        "parent": ["", "node-1"],
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/home_saved.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -336,18 +263,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "Saved Tab currently selected",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              false,
-              false,
-              true,
-              true,
-              false,
-              false,
-              false,
-              false
-            ],
+            "last_run_result": [true, true, false, false, true, true, false, false, false, false],
             "params": {
               "timeout": 10
             },
@@ -378,13 +294,8 @@
         "label": "live",
         "last_validation_timestamp": "2025-06-06T09:25:28.884Z",
         "menu_type": "main",
-        "parent": [
-          "",
-          "node-1",
-          "node-1748723779677",
-          "node-1748862182738"
-        ],
-        "screenshot": "live.jpg",
+        "parent": ["", "node-1", "node-1748723779677", "node-1748862182738"],
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_mobile/live.jpg",
         "type": "menu",
         "verifications": [
           {
@@ -396,18 +307,7 @@
             "inputPlaceholder": "HOME",
             "inputValue": "NOW",
             "label": "Wait for Element to Appear",
-            "last_run_result": [
-              true,
-              true,
-              false,
-              false,
-              true,
-              true,
-              false,
-              false,
-              false,
-              false
-            ],
+            "last_run_result": [true, true, false, false, true, true, false, false, false, false],
             "params": {
               "timeout": 10
             },
@@ -451,9 +351,7 @@
             "id": "click_element",
             "inputValue": "Home Tab",
             "label": "Click Element",
-            "last_run_result": [
-              true
-            ],
+            "last_run_result": [true],
             "params": {
               "element_id": "Home Tab"
             },
@@ -471,10 +369,7 @@
             "id": "close_app",
             "inputValue": "com.lgi.upcch",
             "label": "Close App",
-            "last_run_result": [
-              false,
-              false
-            ],
+            "last_run_result": [false, false],
             "params": {
               "package": ""
             },
@@ -497,12 +392,7 @@
             "id": "click_element",
             "inputValue": "Home Tab",
             "label": "Click Element",
-            "last_run_result": [
-              false,
-              false,
-              false,
-              false
-            ],
+            "last_run_result": [false, false, false, false],
             "params": {
               "element_id": "Home Tab"
             },
@@ -527,10 +417,7 @@
             "id": "click_element",
             "inputValue": "TV Guide Tab",
             "label": "Click Element",
-            "last_run_result": [
-              true,
-              true
-            ],
+            "last_run_result": [true, true],
             "params": {
               "element_id": "TV Guide Tab"
             },
@@ -561,12 +448,7 @@
             "id": "click_element",
             "inputValue": "Home",
             "label": "Click Element",
-            "last_run_result": [
-              true,
-              false,
-              false,
-              true
-            ],
+            "last_run_result": [true, false, false, true],
             "params": {
               "element_id": "Home"
             },
@@ -597,10 +479,7 @@
             "id": "click_element",
             "inputValue": "LIVE TV Tab",
             "label": "Click Element",
-            "last_run_result": [
-              true,
-              true
-            ],
+            "last_run_result": [true, true],
             "params": {
               "element_id": "LIVE TV Tab"
             },
@@ -631,10 +510,7 @@
             "id": "click_element",
             "inputValue": "TV GUIDE TAB",
             "label": "Click Element",
-            "last_run_result": [
-              true,
-              false
-            ],
+            "last_run_result": [true, false],
             "params": {
               "element_id": "TV GUIDE TAB"
             },
@@ -694,11 +570,7 @@
             "id": "click_element",
             "inputValue": "Home",
             "label": "Click Element",
-            "last_run_result": [
-              true,
-              true,
-              true
-            ],
+            "last_run_result": [true, true, true],
             "params": {
               "element_id": "Home"
             },
@@ -787,9 +659,7 @@
             "id": "click_element",
             "inputValue": "Home",
             "label": "Click Element",
-            "last_run_result": [
-              true
-            ],
+            "last_run_result": [true],
             "params": {
               "element_id": "Home"
             },
@@ -848,9 +718,7 @@
             "id": "click_element",
             "inputValue": "BBC ONE | SRF 1 | RTS 1 | RSI LA 1",
             "label": "Click Element",
-            "last_run_result": [
-              true
-            ],
+            "last_run_result": [true],
             "params": {
               "element_id": "BBC ONE | SRF 1 | RTS 1 | RSI LA 1"
             },
@@ -880,18 +748,7 @@
             "id": "back",
             "inputValue": "",
             "label": "Back",
-            "last_run_result": [
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true,
-              true
-            ],
+            "last_run_result": [true, true, true, true, true, true, true, true, true, true],
             "params": {},
             "waitTime": 500
           }
