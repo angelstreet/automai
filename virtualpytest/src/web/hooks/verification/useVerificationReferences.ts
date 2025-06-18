@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { buildServerUrl } from '../../utils/frontendUtils';
+import { useRegistration } from '../useRegistration';
 
 interface ReferenceImage {
   name: string;
@@ -34,12 +35,29 @@ export const useVerificationReferences = (
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
 
+  // Get selected host from registration context
+  const { selectedHost } = useRegistration();
+
   const fetchAvailableReferences = async () => {
     setReferencesLoading(true);
     try {
       console.log('[@hook:useVerificationReferences] Fetching available references...');
 
-      const response = await fetch(buildServerUrl('/server/verification/getAllReferences'));
+      // Check if we have a selected host
+      if (!selectedHost) {
+        console.warn('[@hook:useVerificationReferences] No host selected, cannot fetch references');
+        setAvailableReferences([]);
+        setReferencesLoading(false);
+        return;
+      }
+
+      // Build URL with host_name query parameter as required by the server routes
+      const url = new URL(buildServerUrl('/server/verification/getAllReferences'));
+      url.searchParams.append('host_name', selectedHost.host_name);
+
+      console.log(`[@hook:useVerificationReferences] Fetching from: ${url.toString()}`);
+
+      const response = await fetch(url.toString());
 
       if (response.ok) {
         const result = await response.json();
@@ -103,7 +121,7 @@ export const useVerificationReferences = (
   // Fetch references on mount and when reload trigger changes
   useEffect(() => {
     fetchAvailableReferences();
-  }, [reloadTrigger]);
+  }, [reloadTrigger, selectedHost]); // Add selectedHost as dependency
 
   return {
     availableReferences,

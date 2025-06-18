@@ -1,6 +1,6 @@
 export interface ScreenDefinitionEditorProps {
   /** Complete host+device object containing all configuration */
-  selectedHostDevice?: any;
+  selectedHost?: any;
   /** Whether to auto-connect when device is selected */
   autoConnect?: boolean;
   /** Callback when disconnection is complete */

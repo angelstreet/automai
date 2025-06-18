@@ -109,7 +109,7 @@ interface SelectedReferenceInfo {
 
 interface UseVerificationProps {
   isVisible: boolean;
-  selectedHostDevice: Host;
+  selectedHost: Host;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
@@ -120,7 +120,7 @@ interface UseVerificationProps {
 
 export const useVerification = ({
   isVisible,
-  selectedHostDevice,
+  selectedHost,
   captureSourcePath,
   selectedArea,
   onAreaSelected: _onAreaSelected,
@@ -169,28 +169,24 @@ export const useVerification = ({
 
   // Load verification types from host data when visible
   useEffect(() => {
-    if (isVisible && selectedHostDevice?.available_verification_types) {
+    if (isVisible && selectedHost?.available_verification_types) {
       console.log('[@hook:useVerification] Loading verification types from host data');
-      setAvailableVerificationTypes(selectedHostDevice.available_verification_types);
+      setAvailableVerificationTypes(selectedHost.available_verification_types);
     } else if (isVisible) {
       console.log('[@hook:useVerification] No verification types available in host data');
       setError('No verification types available. Host may need to re-register.');
     }
-  }, [isVisible, selectedHostDevice?.available_verification_types]);
+  }, [isVisible, selectedHost?.available_verification_types]);
 
-  // Effect to check if selectedHostDevice is provided
+  // Effect to check if selectedHost is provided
   useEffect(() => {
-    if (
-      !selectedHostDevice ||
-      !selectedHostDevice.device_model ||
-      selectedHostDevice.device_model.trim() === ''
-    ) {
+    if (!selectedHost || !selectedHost.device_model || selectedHost.device_model.trim() === '') {
       console.error('[@hook:useVerification] Host device with model is required but not provided');
       setError('Host device with model is required for verification editor');
     } else {
-      console.log(`[@hook:useVerification] Using model: ${selectedHostDevice.device_model}`);
+      console.log(`[@hook:useVerification] Using model: ${selectedHost.device_model}`);
     }
-  }, [selectedHostDevice]);
+  }, [selectedHost]);
 
   // Effect to clear success message after delay
   useEffect(() => {
@@ -246,7 +242,7 @@ export const useVerification = ({
     try {
       console.log('[@hook:useVerification] Saving reference with data:', {
         name: referenceName,
-        model: selectedHostDevice.device_model,
+        model: selectedHost.device_model,
         area: selectedArea,
         screenshot_path: screenshotPath,
       });
@@ -263,9 +259,9 @@ export const useVerification = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHostDevice.host_name,
+          host_name: selectedHost.host_name,
           name: referenceName,
-          model: selectedHostDevice.device_model,
+          model: selectedHost.device_model,
           area: selectedArea,
           screenshot_path: screenshotPath,
           referenceType: referenceType,
@@ -293,8 +289,8 @@ export const useVerification = ({
     selectedArea,
     screenshotPath,
     referenceName,
-    selectedHostDevice.device_model,
-    selectedHostDevice.host_name,
+    selectedHost.device_model,
+    selectedHost.host_name,
     referenceType,
   ]);
 
@@ -413,7 +409,7 @@ export const useVerification = ({
 
         const batchPayload = {
           verifications: validVerifications, // Use filtered verifications
-          model: selectedHostDevice.device_model,
+          model: selectedHost.device_model,
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
           capture_filename: capture_filename, // Send specific capture filename
@@ -427,9 +423,9 @@ export const useVerification = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host_name: selectedHostDevice.host_name,
+            host_name: selectedHost.host_name,
             verifications: validVerifications,
-            model: selectedHostDevice.device_model,
+            model: selectedHost.device_model,
             node_id: 'verification-editor',
           }),
         });
@@ -539,17 +535,12 @@ export const useVerification = ({
         setLoading(false);
       }
     },
-    [
-      verifications,
-      selectedHostDevice.device_model,
-      selectedHostDevice.host_name,
-      captureSourcePath,
-    ],
+    [verifications, selectedHost.device_model, selectedHost.host_name, captureSourcePath],
   );
 
   // Handle auto-detect text
   const handleAutoDetectText = useCallback(async () => {
-    if (!selectedArea || !selectedHostDevice.device_model) {
+    if (!selectedArea || !selectedHost.device_model) {
       console.log('[@hook:useVerification] Cannot auto-detect: missing area or model');
       return;
     }
@@ -568,8 +559,8 @@ export const useVerification = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          host_name: selectedHostDevice.host_name,
-          model: selectedHostDevice.device_model,
+          host_name: selectedHost.host_name,
+          model: selectedHost.device_model,
           area: selectedArea,
           source_path: captureSourcePath,
           image_filter: textImageFilter,
@@ -603,8 +594,8 @@ export const useVerification = ({
     }
   }, [
     selectedArea,
-    selectedHostDevice.device_model,
-    selectedHostDevice.host_name,
+    selectedHost.device_model,
+    selectedHost.host_name,
     captureSourcePath,
     textImageFilter,
   ]);
@@ -640,8 +631,8 @@ export const useVerification = ({
     if (
       !referenceName.trim() ||
       !selectedArea ||
-      !selectedHostDevice.device_model ||
-      selectedHostDevice.device_model.trim() === ''
+      !selectedHost.device_model ||
+      selectedHost.device_model.trim() === ''
     ) {
       return false;
     }
@@ -697,7 +688,7 @@ export const useVerification = ({
     canCapture,
     canSave,
     allowSelection,
-    selectedHostDevice,
+    selectedHost,
     verificationsCollapsed,
 
     // Setters

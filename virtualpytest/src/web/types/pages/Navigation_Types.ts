@@ -426,7 +426,7 @@ export interface NodeEditDialogProps {
   verificationControllerTypes?: string[];
   isVerificationActive?: boolean;
   selectedDevice?: string | null;
-  selectedHostDevice?: any; // Host object for verification/navigation
+  selectedHost?: any; // Host object for verification/navigation
   isControlActive?: boolean;
   model?: string;
 }
@@ -441,7 +441,7 @@ export interface EdgeEditDialogProps {
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
   selectedDevice?: string | null;
-  selectedHostDevice?: any;
+  selectedHost?: any;
 }
 
 export interface NodeSelectionPanelProps {
@@ -535,7 +535,7 @@ export interface EdgeActionsListProps {
   controllerTypes: string[];
   isControlActive?: boolean;
   selectedDevice?: string | null;
-  selectedHostDevice?: any;
+  selectedHost?: any;
 }
 
 export interface EdgeActionItemProps {
@@ -545,7 +545,7 @@ export interface EdgeActionItemProps {
   controllerTypes: string[];
   isControlActive?: boolean;
   selectedDevice?: string | null;
-  selectedHostDevice?: any;
+  selectedHost?: any;
 }
 
 export interface NodeVerificationsListProps {

@@ -30,7 +30,7 @@ interface ScreenshotCaptureProps {
   onAreaSelected?: (area: DragArea) => void;
   model?: string;
   sx?: any;
-  selectedHostDevice?: any;
+  selectedHost?: any;
 }
 
 export function ScreenshotCapture({
@@ -41,7 +41,7 @@ export function ScreenshotCapture({
   onAreaSelected,
   model,
   sx = {},
-  selectedHostDevice,
+  selectedHost,
 }: ScreenshotCaptureProps) {
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -79,7 +79,7 @@ export function ScreenshotCapture({
     }
 
     // For file paths, use server route for image serving
-    if (!selectedHostDevice) {
+    if (!selectedHost) {
       console.error(`[@component:ScreenshotCapture] No host device available for image serving`);
       return '';
     }
@@ -113,7 +113,7 @@ export function ScreenshotCapture({
       );
       return '';
     }
-  }, [screenshotPath, selectedHostDevice]);
+  }, [screenshotPath, selectedHost]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection =

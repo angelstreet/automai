@@ -21,7 +21,7 @@ interface DragArea {
 
 interface VerificationEditorProps {
   isVisible: boolean;
-  selectedHostDevice: Host;
+  selectedHost: Host;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
@@ -34,7 +34,7 @@ interface VerificationEditorProps {
 
 export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   isVisible,
-  selectedHostDevice,
+  selectedHost,
   captureSourcePath,
   selectedArea,
   onAreaSelected,
@@ -45,7 +45,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   sx = {},
 }) => {
   // Extract model from host device
-  const model = selectedHostDevice.device_model;
+  const model = selectedHost.device_model;
 
   // Use the provided layout config or get it from the model type
   const finalLayoutConfig = React.useMemo(() => {
@@ -65,7 +65,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   // Use the verification hook to handle all verification logic
   const verification = useVerification({
     isVisible,
-    selectedHostDevice,
+    selectedHost,
     captureSourcePath,
     selectedArea,
     onAreaSelected,

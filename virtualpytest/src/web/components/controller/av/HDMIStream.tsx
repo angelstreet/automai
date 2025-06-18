@@ -475,7 +475,7 @@ export function HDMIStream({
                   selectedArea={selectedArea}
                   onAreaSelected={handleAreaSelected}
                   model={host.device_model}
-                  selectedHostDevice={host}
+                  selectedHost={host}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -551,7 +551,7 @@ export function HDMIStream({
             onClearSelection={() => handleAreaSelected({ x: 0, y: 0, width: 0, height: 0 })}
             model={host.device_model}
             screenshotPath={screenshotPath}
-            selectedHostDevice={host}
+            selectedHost={host}
             sx={{
               width: '100%',
               height: '100%',

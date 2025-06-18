@@ -32,7 +32,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   onResetNode,
   verificationControllerTypes: _verificationControllerTypes = [],
   isVerificationActive = false,
-  selectedHostDevice: selectedHost,
+  selectedHost,
   isControlActive = false,
   model,
 }) => {
@@ -40,9 +40,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   if (!nodeForm) {
     return null;
   }
-
-  // Type the selectedHost properly
-  const typedSelectedHost = selectedHost as Host | undefined;
 
   const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
@@ -68,14 +65,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   // Use same logic as EdgeEditDialog
   const canRunVerifications =
     isControlActive &&
-    typedSelectedHost &&
+    selectedHost &&
     nodeForm?.verifications &&
     nodeForm.verifications.length > 0 &&
     !isRunningVerifications;
 
   // Can run goto if we have control and device, and not already running goto
-  const canRunGoto =
-    isControlActive && typedSelectedHost && !isRunningGoto && !isRunningVerifications;
+  const canRunGoto = isControlActive && selectedHost && !isRunningGoto && !isRunningVerifications;
 
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -98,18 +94,18 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && typedSelectedHost?.available_verification_types) {
+    if (isOpen && selectedHost?.available_verification_types) {
       console.log(`[@component:NodeEditDialog] Loading verification actions from host data`);
-      setVerificationActions(typedSelectedHost.available_verification_types);
+      setVerificationActions(selectedHost.available_verification_types);
       setLoadingVerifications(false);
       setVerificationError(null);
-    } else if (isOpen && typedSelectedHost && !typedSelectedHost.available_verification_types) {
+    } else if (isOpen && selectedHost && !selectedHost.available_verification_types) {
       console.log(`[@component:NodeEditDialog] No verification types available from host`);
       setVerificationActions({});
       setLoadingVerifications(false);
       setVerificationError('No verification types available from host');
     }
-  }, [isOpen, typedSelectedHost]);
+  }, [isOpen, selectedHost]);
 
   const isFormValid = () => {
     const basicFormValid = nodeForm?.label?.trim();
@@ -234,7 +230,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
 
         try {
-          if (!typedSelectedHost) {
+          if (!selectedHost) {
             results.push(`❌ Verification ${i + 1}: No host device selected`);
             verificationSuccess = false;
           } else {
@@ -245,9 +241,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                host_name: typedSelectedHost.host_name,
+                host: selectedHost,
                 verifications: [verificationToExecute],
-                model: typedSelectedHost.device_model || 'android_mobile',
+                model: selectedHost.device_model || 'android_mobile',
                 node_id: nodeForm?.id || 'unknown',
                 source_filename: 'verification_screenshot.jpg',
               }),
@@ -338,7 +334,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
       try {
         // Execute navigation to this node using server route
-        if (!typedSelectedHost) {
+        if (!selectedHost) {
           gotoResults.push(`❌ Navigation: No host device selected`);
           console.error(`[@component:NodeEditDialog] No host device selected for navigation`);
         } else {
@@ -349,9 +345,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              host_name: typedSelectedHost.host_name,
+              host_name: selectedHost.host_name,
               node_label: nodeForm?.label || '',
-              model: typedSelectedHost.device_model || 'android_mobile',
+              model: selectedHost.device_model || 'android_mobile',
             }),
           });
 
@@ -411,7 +407,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           let individualVerificationSuccess = false;
 
           try {
-            if (!typedSelectedHost) {
+            if (!selectedHost) {
               gotoResults.push(`❌ Verification ${i + 1}: No host device selected`);
               verificationSuccess = false;
               individualVerificationSuccess = false;
@@ -423,9 +419,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  host_name: typedSelectedHost.host_name,
+                  host: selectedHost,
                   verifications: [verificationToExecute],
-                  model: typedSelectedHost.device_model || 'android_mobile',
+                  model: selectedHost.device_model || 'android_mobile',
                   node_id: nodeForm?.id || 'unknown',
                   source_filename: 'verification_screenshot.jpg',
                 }),
@@ -600,7 +596,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               onVerificationsChange={(verifications) => setNodeForm({ ...nodeForm, verifications })}
               loading={loadingVerifications}
               error={verificationError}
-              model={typedSelectedHost?.device_model || model}
+              model={selectedHost?.device_model || model}
             />
           )}
 

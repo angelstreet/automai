@@ -15,10 +15,10 @@ import {
   calculateExpectedFrames,
 } from '../../utils/userinterface/screenEditorUtils';
 
-export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: () => void) => {
-  // Extract everything from selectedHostDevice
-  const deviceModel = selectedHostDevice?.device_model || selectedHostDevice?.model;
-  const deviceConfig = selectedHostDevice?.controller_configs;
+export const useScreenEditor = (selectedHost: any, onDisconnectComplete?: () => void) => {
+  // Extract everything from selectedHost
+  const deviceModel = selectedHost?.device_model || selectedHost?.model;
+  const deviceConfig = selectedHost?.controller_configs;
   const avConfig = deviceConfig?.av?.parameters;
 
   // Memoize layout configs to prevent new object references
@@ -103,8 +103,8 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
 
   // Get stream URL from AV controller - using controller proxy
   const getStreamUrl = useCallback(async () => {
-    if (!selectedHostDevice) {
-      console.log('[@component:ScreenDefinitionEditor] No selectedHostDevice available');
+    if (!selectedHost) {
+      console.log('[@component:ScreenDefinitionEditor] No selectedHost available');
       return undefined;
     }
 
@@ -113,8 +113,8 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
         '[@component:ScreenDefinitionEditor] Getting stream URL from AV controller proxy...',
       );
 
-      // Get the AV controller proxy from selectedHostDevice
-      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
+      // Get the AV controller proxy from selectedHost
+      const avControllerProxy = selectedHost.controllerProxies?.av;
 
       if (!avControllerProxy) {
         console.log('[@component:ScreenDefinitionEditor] AV controller proxy not available');
@@ -142,11 +142,11 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
       );
       return undefined;
     }
-  }, [selectedHostDevice]);
+  }, [selectedHost]);
 
-  // Fetch stream URL when component mounts and selectedHostDevice is available
+  // Fetch stream URL when component mounts and selectedHost is available
   useEffect(() => {
-    if (selectedHostDevice && isConnected) {
+    if (selectedHost && isConnected) {
       console.log('[@component:ScreenDefinitionEditor] Fetching stream URL...');
       getStreamUrl()
         .then((url) => {
@@ -157,7 +157,7 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
           setStreamUrl(undefined);
         });
     }
-  }, [selectedHostDevice, isConnected, getStreamUrl]);
+  }, [selectedHost, isConnected, getStreamUrl]);
 
   // Memoize onTap callback to prevent new function references
   const handleTap = useCallback(
@@ -167,12 +167,12 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
       );
 
       // Try to use remote controller proxy if available
-      if (selectedHostDevice?.controllerProxies?.remote) {
+      if (selectedHost?.controllerProxies?.remote) {
         try {
           console.log(
             `[@component:ScreenDefinitionEditor] Using remote controller proxy to tap at coordinates: (${x}, ${y})`,
           );
-          const result = await selectedHostDevice.controllerProxies.remote.tap(x, y);
+          const result = await selectedHost.controllerProxies.remote.tap(x, y);
 
           if (result.success) {
             console.log(
@@ -190,7 +190,7 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
         );
       }
     },
-    [selectedHostDevice],
+    [selectedHost],
   );
 
   // Restart stream - simplified to just reload the player
@@ -354,7 +354,7 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
 
   // Take screenshot using controller directly - no control logic needed
   const handleTakeScreenshot = useCallback(async () => {
-    if (!isConnected || !selectedHostDevice) return;
+    if (!isConnected || !selectedHost) return;
 
     try {
       setIsScreenshotLoading(true);
@@ -364,8 +364,8 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
         '[@component:ScreenDefinitionEditor] Taking screenshot using AV controller proxy...',
       );
 
-      // Get the AV controller proxy from selectedHostDevice
-      const avControllerProxy = selectedHostDevice.controllerProxies?.av;
+      // Get the AV controller proxy from selectedHost
+      const avControllerProxy = selectedHost.controllerProxies?.av;
 
       if (!avControllerProxy) {
         throw new Error(
@@ -395,7 +395,7 @@ export const useScreenEditor = (selectedHostDevice: any, onDisconnectComplete?: 
     } finally {
       setIsScreenshotLoading(false);
     }
-  }, [isConnected, selectedHostDevice]);
+  }, [isConnected, selectedHost]);
 
   // Disconnect handler
   const handleDisconnect = useCallback(async () => {

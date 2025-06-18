@@ -26,12 +26,12 @@ import { ScreenshotCapture } from './ScreenshotCapture';
 import { StreamViewer } from './StreamViewer';
 import { VideoCapture } from './VideoCapture';
 
-export function ScreenDefinitionEditor({
-  selectedHostDevice,
+export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
+  selectedHost,
   autoConnect = false,
   onDisconnectComplete,
   sx = {},
-}: ScreenDefinitionEditorProps) {
+}) => {
   const {
     state,
     actions,
@@ -41,7 +41,7 @@ export function ScreenDefinitionEditor({
     verificationEditorLayout,
     deviceResolution,
     streamViewerSx,
-  } = useScreenEditor(selectedHostDevice, onDisconnectComplete);
+  } = useScreenEditor(selectedHost, onDisconnectComplete);
 
   const {
     isConnected,
@@ -252,7 +252,7 @@ export function ScreenDefinitionEditor({
                 deviceResolution={deviceResolution}
                 deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
                 onTap={handleTap}
-                selectedHostDevice={selectedHostDevice}
+                selectedHost={selectedHost}
                 sx={streamViewerSx}
               />
 
@@ -267,7 +267,7 @@ export function ScreenDefinitionEditor({
                   selectedArea={selectedArea}
                   onAreaSelected={handleAreaSelected}
                   model={deviceModel}
-                  selectedHostDevice={selectedHostDevice}
+                  selectedHost={selectedHost}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -298,7 +298,7 @@ export function ScreenDefinitionEditor({
                   captureStartTime={captureStartTime}
                   captureEndTime={captureEndTime}
                   isCapturing={isCapturing}
-                  selectedHostDevice={selectedHostDevice}
+                  selectedHost={selectedHost}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -342,7 +342,7 @@ export function ScreenDefinitionEditor({
             deviceResolution={deviceResolution}
             deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
             onTap={handleTap}
-            selectedHostDevice={selectedHostDevice}
+            selectedHost={selectedHost}
             sx={streamViewerSx}
           />
 
@@ -357,7 +357,7 @@ export function ScreenDefinitionEditor({
               selectedArea={selectedArea}
               onAreaSelected={handleAreaSelected}
               model={deviceModel}
-              selectedHostDevice={selectedHostDevice}
+              selectedHost={selectedHost}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -388,7 +388,7 @@ export function ScreenDefinitionEditor({
               captureStartTime={captureStartTime}
               captureEndTime={captureEndTime}
               isCapturing={isCapturing}
-              selectedHostDevice={selectedHostDevice}
+              selectedHost={selectedHost}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -425,4 +425,4 @@ export function ScreenDefinitionEditor({
       )}
     </Box>
   );
-}
+};
