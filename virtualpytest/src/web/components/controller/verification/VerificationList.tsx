@@ -24,11 +24,11 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
     handleTest,
     referenceSaveCounter,
     handleReferenceSelected,
-    selectedHostDevice,
+    selectedHost,
   } = verification;
 
   // Extract model from the selected host device
-  const model = selectedHostDevice?.device_model || '';
+  const model = selectedHost?.device_model || '';
 
   return (
     <Box>
@@ -97,6 +97,7 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
             testResults={testResults}
             reloadTrigger={referenceSaveCounter}
             onReferenceSelected={handleReferenceSelected}
+            selectedHost={selectedHost}
           />
         </Box>
       </Collapse>

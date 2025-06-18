@@ -597,6 +597,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               loading={loadingVerifications}
               error={verificationError}
               model={selectedHost?.device_model || model}
+              selectedHost={selectedHost}
             />
           )}
 

@@ -559,6 +559,7 @@ export interface NodeVerificationsListProps {
   testResults?: VerificationTestResult[];
   reloadTrigger?: number; // Trigger to reload references
   onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
+  selectedHost: import('../common/Host_Types').Host | null; // Make selectedHost required
 }
 
 // Progressive loading interfaces removed - loading all nodes at once

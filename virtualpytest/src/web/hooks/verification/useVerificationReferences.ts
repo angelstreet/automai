@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { buildServerUrl } from '../../utils/frontendUtils';
-import { useRegistration } from '../useRegistration';
+import { Host } from '../../types/common/Host_Types';
 
 interface ReferenceImage {
   name: string;
@@ -30,13 +30,11 @@ interface UseVerificationReferencesReturn {
 }
 
 export const useVerificationReferences = (
-  reloadTrigger?: number,
+  reloadTrigger: number = 0,
+  selectedHost: Host | null,
 ): UseVerificationReferencesReturn => {
   const [availableReferences, setAvailableReferences] = useState<ReferenceImage[]>([]);
   const [referencesLoading, setReferencesLoading] = useState(false);
-
-  // Get selected host from registration context
-  const { selectedHost } = useRegistration();
 
   const fetchAvailableReferences = async () => {
     setReferencesLoading(true);

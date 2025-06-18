@@ -19,6 +19,7 @@ import { NodeVerification, NodeVerificationsListProps } from '../../types/pages/
 import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 import { VerificationItem } from '../verification/VerificationItem';
+import { Host } from '../../types/common/Host_Types';
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   verifications,
@@ -31,6 +32,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   testResults = [],
   reloadTrigger = 0,
   onReferenceSelected,
+  selectedHost, // Required prop
 }) => {
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
   const [imageComparisonDialog, setImageComparisonDialog] = useState<{
@@ -51,8 +53,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     imageFilter: undefined,
   });
 
-  // Use extracted hooks
-  const { referencesLoading, getModelReferences } = useVerificationReferences(reloadTrigger);
+  // Use extracted hooks - pass selectedHost as required parameter
+  const { referencesLoading, getModelReferences } = useVerificationReferences(
+    reloadTrigger,
+    selectedHost,
+  );
 
   // Debug logging for testResults changes - keep this for troubleshooting
   useEffect(() => {

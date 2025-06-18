@@ -541,7 +541,6 @@ export function HDMIStream({
         >
           <VerificationEditor
             isVisible={isVerificationVisible}
-            isScreenshotMode={captureMode === 'screenshot'}
             isCaptureActive={isCaptureActive}
             captureSourcePath={
               captureMode === 'screenshot' ? screenshotPath : currentVideoFramePath
@@ -549,7 +548,6 @@ export function HDMIStream({
             selectedArea={selectedArea}
             onAreaSelected={handleAreaSelected}
             onClearSelection={() => handleAreaSelected({ x: 0, y: 0, width: 0, height: 0 })}
-            model={host.device_model}
             screenshotPath={screenshotPath}
             selectedHost={host}
             sx={{
