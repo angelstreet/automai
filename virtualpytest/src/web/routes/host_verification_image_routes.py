@@ -5,7 +5,6 @@ This module contains the host-side image verification API endpoints that:
 - Handle actual image cropping using existing utilities
 - Process images with autocrop and background removal
 - Serve cropped images from local storage
-- Save image resources to git repository
 - Execute image verification tests
 """
 
@@ -355,47 +354,21 @@ def save_resource():
                 'error': f'Cropped file not found: {cropped_filename}'
             }), 404
         
-        # Use verification_image controller like AV uses av_controller
-        try:
-            verification_image_controller = get_local_controller('verification_image')
-            
-            if not verification_image_controller:
-                print(f"[@route:host_save_resource] Verification image controller not available")
-                return jsonify({
-                    'success': False,
-                    'error': 'Verification image controller not available'
-                }), 500
-            
-            # ✅ ONLY UPLOAD TO R2 - DATABASE SAVE WILL BE DONE ON SERVER
-            r2_url = verification_image_controller.upload_reference_to_r2(
-                cropped_filename=cropped_filename,
-                reference_name=reference_name,
-                model=model
-            )
-            
-            if r2_url:
-                # Return R2 URL so frontend can save to database via server
-                return jsonify({
-                    'success': True,
-                    'message': f'Reference uploaded to R2: {reference_name}',
-                    'r2_url': r2_url,  # ✅ R2 URL for frontend to send to server
-                    'reference_name': reference_name,
-                    'model': model,
-                    'area': area,
-                    'reference_type': reference_type
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to upload reference to R2'
-                }), 500
-                
-        except Exception as controller_error:
-            print(f"[@route:host_save_resource] Controller error: {controller_error}")
-            return jsonify({
-                'success': False,
-                'error': f'Controller error: {str(controller_error)}'
-            }), 500
+        # ✅ Return image data for frontend to save to database via server (same pattern as text)
+        # This follows the same fast pattern as text reference saving
+        return jsonify({
+            'success': True,
+            'message': f'Image reference ready: {reference_name}',
+            'reference_name': reference_name,
+            'cropped_filename': cropped_filename,
+            'area': area,
+            'reference_type': reference_type,
+            # Return image data for local use
+            'image_data': {
+                'cropped_filename': cropped_filename,
+                'area': area
+            }
+        })
             
     except Exception as e:
         print(f"[@route:host_save_resource] Error: {str(e)}")

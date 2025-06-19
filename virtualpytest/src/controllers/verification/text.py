@@ -850,60 +850,28 @@ class TextVerificationController(VerificationControllerInterface):
         ]
 
     def save_text_reference(self, text: str, reference_name: str, model: str, 
-                           area: dict, font_size: float = 12.0, confidence: float = 0.8,
-                           team_id: str = None) -> str:
+                           area: dict, font_size: float = 12.0, confidence: float = 0.8) -> str:
         """
-        Save text reference to database.
+        Save text reference locally (no database operations).
         
         Args:
             text: The reference text to save
             reference_name: Name for the reference
-            model: Device model
+            model: Model name for organization
             area: Area coordinates where text was found
             font_size: Detected font size
             confidence: OCR confidence
-            team_id: Team ID for database
             
         Returns:
             str: Success message if successful, None if failed
         """
         try:
-            from src.lib.supabase.images_db import save_image
-            from src.utils.app_utils import DEFAULT_TEAM_ID
-            
-            print(f"[@controller:TextVerification] Saving text reference: {reference_name} for model: {model}")
+            print(f"[@controller:TextVerification] Saving text reference locally: {reference_name}")
             print(f"[@controller:TextVerification] Text: '{text}', Font size: {font_size}, Confidence: {confidence}")
             
-            # Use team_id from parameter or fallback to default
-            if not team_id:
-                team_id = DEFAULT_TEAM_ID
-            print(f"[@controller:TextVerification] Using team ID: {team_id}")
-            
-            # Store text data in area field along with coordinates
-            extended_area = {
-                **(area or {}),
-                'text': text,
-                'font_size': font_size,
-                'confidence': confidence
-            }
-            
-            # Save to database using images table with type='reference_text'
-            db_result = save_image(
-                name=reference_name,
-                device_model=model,
-                type='reference_text',
-                r2_path=f'text-references/{model}/{reference_name}',  # Placeholder path
-                r2_url='',  # No R2 URL needed for text references
-                team_id=team_id,
-                area=extended_area
-            )
-            
-            if db_result['success']:
-                print(f"[@controller:TextVerification] Successfully saved text reference to database")
-                return f"Text reference saved: {reference_name}"
-            else:
-                print(f"[@controller:TextVerification] Database save failed: {db_result.get('error')}")
-                return None
+            # For local operations, just return success with the text data
+            # No database or file operations needed - text is stored in verification data
+            return f"Text reference ready: {reference_name}"
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Error saving text reference: {str(e)}")

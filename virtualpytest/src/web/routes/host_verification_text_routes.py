@@ -391,7 +391,7 @@ def execute_text_verification_host(verification, source_path, verification_index
         params = verification.get('params', {})
         area = params.get('area')
         
-        # NEW: Get text from multiple possible sources
+        # Get text from verification data directly
         text_to_find = (params.get('reference_text') or 
                        verification.get('inputValue', '') or 
                        params.get('text', ''))
