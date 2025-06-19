@@ -20,7 +20,7 @@ def save_image(name: str, device_model: str, type: str, r2_path: str, r2_url: st
     Args:
         name: Image name/identifier
         device_model: Device model (e.g., 'android_mobile')
-        type: Image type ('screenshot' or 'reference_image')
+        type: Image type ('screenshot', 'reference_image', or 'reference_text') - REQUIRED DATABASE VALUES
         r2_path: Path in R2 storage
         r2_url: Complete R2 URL
         team_id: Team ID for RLS
@@ -80,7 +80,7 @@ def get_images(team_id: str, image_type: str = None, device_model: str = None, n
     
     Args:
         team_id: Team ID for RLS
-        image_type: Filter by type ('screenshot' or 'reference_image')
+        image_type: Filter by type ('screenshot', 'reference_image', or 'reference_text') - DATABASE VALUES ONLY
         device_model: Filter by device model
         name: Filter by name (partial match)
         

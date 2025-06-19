@@ -99,6 +99,10 @@ def save_reference():
         model = data.get('model')
         r2_url = data.get('r2_url')  # The image should already be uploaded to R2
         reference_type = data.get('reference_type', 'reference_image')
+        
+        # Ensure we only use valid database types
+        if reference_type not in ['screenshot', 'reference_image', 'reference_text']:
+            reference_type = 'reference_image'  # Default to reference_image for safety
         area = data.get('area', {})
         
         if not all([name, model, r2_url]):

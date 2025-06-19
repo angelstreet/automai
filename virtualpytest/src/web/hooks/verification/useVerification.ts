@@ -424,7 +424,7 @@ export const useVerification = ({
             model: selectedHost.device_model,
             area: captureResult.processed_area || selectedArea,
             screenshot_path: captureSourcePath,
-            referenceType: referenceType,
+            referenceType: referenceType === 'text' ? 'reference_text' : 'reference_image',
             text: referenceText,
             cropped_filename: captureResult.filename,
           }),
@@ -455,7 +455,7 @@ export const useVerification = ({
             model: selectedHost.device_model,
             area: captureResult.processed_area || selectedArea,
             cropped_filename: captureResult.filename,
-            reference_type: referenceType,
+            reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
           }),
         });
 
@@ -479,7 +479,7 @@ export const useVerification = ({
             model: selectedHost.device_model,
             r2_url: uploadResult.r2_url,
             area: captureResult.processed_area || selectedArea,
-            reference_type: referenceType,
+            reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
           }),
         });
 

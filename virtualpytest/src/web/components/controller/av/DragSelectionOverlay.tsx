@@ -12,6 +12,7 @@ interface DragSelectionOverlayProps {
   imageRef: React.RefObject<HTMLImageElement>;
   onAreaSelected: (area: DragArea) => void;
   selectedArea: DragArea | null;
+  contentBounds?: { actualContentWidth: number; horizontalOffset: number } | null;
   sx?: any;
 }
 
@@ -19,6 +20,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
   imageRef,
   onAreaSelected,
   selectedArea,
+  contentBounds,
   sx = {},
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -58,6 +60,39 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       offsetY = 0;
     }
 
+    // If contentBounds are available, constrain to the actual device content area
+    if (contentBounds) {
+      const { actualContentWidth, horizontalOffset } = contentBounds;
+
+      // Calculate the content area within the displayed image
+      const contentWidthRatio = actualContentWidth / image.naturalWidth;
+      const contentOffsetRatio = horizontalOffset / image.naturalWidth;
+
+      const constrainedWidth = displayedWidth * contentWidthRatio;
+      const constrainedOffsetX = offsetX + displayedWidth * contentOffsetRatio;
+
+      console.log(`[@component:DragSelectionOverlay] Applying content bounds constraint:`, {
+        originalBounds: {
+          left: imageRect.left - overlayRect.left + offsetX,
+          width: displayedWidth,
+        },
+        contentBounds,
+        constrainedBounds: {
+          left: imageRect.left - overlayRect.left + constrainedOffsetX,
+          width: constrainedWidth,
+        },
+      });
+
+      return {
+        left: imageRect.left - overlayRect.left + constrainedOffsetX,
+        top: imageRect.top - overlayRect.top + offsetY,
+        width: constrainedWidth,
+        height: displayedHeight,
+        scaleX: image.naturalWidth / displayedWidth,
+        scaleY: image.naturalHeight / displayedHeight,
+      };
+    }
+
     return {
       left: imageRect.left - overlayRect.left + offsetX,
       top: imageRect.top - overlayRect.top + offsetY,
@@ -66,7 +101,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       scaleX: image.naturalWidth / displayedWidth,
       scaleY: image.naturalHeight / displayedHeight,
     };
-  }, [imageRef]);
+  }, [imageRef, contentBounds]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

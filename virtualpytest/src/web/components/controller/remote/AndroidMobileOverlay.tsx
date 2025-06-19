@@ -21,6 +21,7 @@ interface AndroidMobileOverlayProps {
   onElementClick?: (element: AndroidElement) => void;
   panelInfo: PanelInfo; // Made required - no fallback to screenshot
   host: any; // Add host for direct server calls
+  contentBounds: { actualContentWidth: number; horizontalOffset: number } | null;
   onContentBoundsChange?: (
     bounds: { actualContentWidth: number; horizontalOffset: number } | null,
   ) => void;
@@ -38,6 +39,7 @@ export const AndroidMobileOverlay = React.memo(
     onElementClick,
     panelInfo,
     host,
+    contentBounds,
     onContentBoundsChange,
   }: AndroidMobileOverlayProps) {
     console.log(
@@ -107,36 +109,19 @@ export const AndroidMobileOverlay = React.memo(
       };
     };
 
-    // Calculate actual content width and horizontal offset (mobile case - height is reference)
+    // Use content bounds from props (calculated in AndroidMobileRemote)
     const { actualContentWidth, horizontalOffset } = React.useMemo(() => {
-      if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
-        const bounds = { actualContentWidth: 0, horizontalOffset: 0 };
-        onContentBoundsChange?.(null);
-        return bounds;
+      if (!contentBounds) {
+        return { actualContentWidth: 0, horizontalOffset: 0 };
       }
 
-      // For mobile: height is reference, calculate width based on device aspect ratio
-      const deviceAspectRatio = deviceWidth / deviceHeight;
-      const actualWidth = panelInfo.size.height * deviceAspectRatio;
-      const hOffset = (panelInfo.size.width - actualWidth) / 2;
+      console.log(
+        `[@component:AndroidMobileOverlay] Using content bounds from props:`,
+        contentBounds,
+      );
 
-      console.log(`[@component:AndroidMobileOverlay] Content width calculated:`, {
-        deviceAspectRatio,
-        panelHeight: panelInfo.size.height,
-        actualWidth,
-        hOffset,
-      });
-
-      const bounds = {
-        actualContentWidth: actualWidth,
-        horizontalOffset: hOffset,
-      };
-
-      // Notify parent of content bounds change
-      onContentBoundsChange?.(bounds);
-
-      return bounds;
-    }, [panelInfo, deviceWidth, deviceHeight, onContentBoundsChange]);
+      return contentBounds;
+    }, [contentBounds]);
 
     // Direct server tap function - bypasses useRemoteConfigs double conversion
     const handleDirectTap = async (deviceX: number, deviceY: number) => {
@@ -434,7 +419,8 @@ export const AndroidMobileOverlay = React.memo(
       prevProps.isVisible === nextProps.isVisible &&
       prevProps.onElementClick === nextProps.onElementClick &&
       JSON.stringify(prevProps.panelInfo) === JSON.stringify(nextProps.panelInfo) &&
-      prevProps.host === nextProps.host
+      prevProps.host === nextProps.host &&
+      JSON.stringify(prevProps.contentBounds) === JSON.stringify(nextProps.contentBounds)
     );
   },
 );
