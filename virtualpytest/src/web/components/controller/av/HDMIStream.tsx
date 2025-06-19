@@ -455,6 +455,7 @@ export function HDMIStream({
                 isStreamActive={isStreamActive}
                 isCapturing={isCaptureActive}
                 model={host.device_model}
+                isExpanded={isExpanded}
                 sx={{
                   position: 'absolute',
                   top: 0,

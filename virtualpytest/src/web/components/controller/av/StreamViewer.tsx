@@ -23,6 +23,7 @@ export function StreamViewer({
   videoElementRef,
   model,
   layoutConfig,
+  isExpanded = false,
 }: StreamViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -502,6 +503,7 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
     prevProps.isCapturing === nextProps.isCapturing &&
     prevProps.model === nextProps.model &&
     prevProps.layoutConfig === nextProps.layoutConfig &&
+    prevProps.isExpanded === nextProps.isExpanded &&
     JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx);
 
   if (!isEqual) {
@@ -525,6 +527,10 @@ export default React.memo(StreamViewer, (prevProps, nextProps) => {
       layoutConfig:
         prevProps.layoutConfig !== nextProps.layoutConfig
           ? { prev: prevProps.layoutConfig, next: nextProps.layoutConfig }
+          : 'same',
+      isExpanded:
+        prevProps.isExpanded !== nextProps.isExpanded
+          ? { prev: prevProps.isExpanded, next: nextProps.isExpanded }
           : 'same',
       sx:
         JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx)
