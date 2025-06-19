@@ -369,6 +369,8 @@ export function StreamViewer({
       <video
         ref={videoRef}
         style={{
+          maxWidth: finalLayoutConfig.isMobileModel ? 'auto' : '100%',
+          maxHeight: '100%',
           width: finalLayoutConfig.isMobileModel ? 'auto' : '100%',
           height: finalLayoutConfig.isMobileModel ? '100%' : 'auto',
           objectFit: finalLayoutConfig.objectFit || 'contain',
