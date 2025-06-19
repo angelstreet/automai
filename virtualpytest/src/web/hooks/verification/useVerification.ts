@@ -627,14 +627,9 @@ export const useVerification = ({
           const pathname = url.pathname;
           const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
 
-          // Provide full path based on URL pattern
-          if (pathname.includes('/images/screenshot/')) {
-            // Verification Editor screenshots are stored in /tmp/screenshots/
-            capture_filename = `/tmp/screenshots/${filename}`;
-          } else {
-            // Other captures (like video frames) might be in different locations
-            capture_filename = filename; // Just use filename, let server handle it
-          }
+          // Use just the filename - server will look in captures directory
+          // Original screenshots are stored in /var/www/html/stream/captures/
+          capture_filename = filename;
 
           console.log('[@hook:useVerification] Using specific capture:', capture_filename);
         }
