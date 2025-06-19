@@ -370,7 +370,7 @@ export function StreamViewer({
         ref={videoRef}
         style={{
           width: '100%',
-          height: '100%',
+          height: 'auto',
           objectFit: finalLayoutConfig.objectFit || 'contain',
           backgroundColor: '#000000',
           display: streamLoaded ? 'block' : 'none',
