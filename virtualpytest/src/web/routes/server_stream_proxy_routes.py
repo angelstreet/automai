@@ -62,9 +62,7 @@ def proxy_stream(host_name, stream_path):
                         modified_lines.append(line)
                 
                 modified_content = '\n'.join(modified_lines)
-                
-                print(f"[@route:stream_proxy] Modified HLS playlist with {len([l for l in lines if l.strip() and not l.startswith('#')])} segments")
-                
+                 
                 return Response(
                     modified_content,
                     content_type='application/vnd.apple.mpegurl',
