@@ -369,8 +369,8 @@ export function StreamViewer({
       <video
         ref={videoRef}
         style={{
-          width: '100%',
-          height: 'auto',
+          width: finalLayoutConfig.isMobileModel ? 'auto' : '100%',
+          height: finalLayoutConfig.isMobileModel ? '100%' : 'auto',
           objectFit: finalLayoutConfig.objectFit || 'contain',
           backgroundColor: '#000000',
           display: streamLoaded ? 'block' : 'none',
