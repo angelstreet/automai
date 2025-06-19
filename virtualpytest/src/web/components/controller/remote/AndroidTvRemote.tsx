@@ -65,15 +65,52 @@ export const AndroidTvRemote = React.memo(
       // Base remote dimensions
       const baseHeight = 1800;
 
+      // First calculate the expanded scale (window-based)
+      const availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
+      const expandedScale = availableHeight / baseHeight;
+
       if (isCollapsed) {
-        // For collapsed state, fit to available height with auto width
-        const availableHeight = window.innerHeight - 60; // Small margin
-        return availableHeight / baseHeight;
+        // For collapsed state, apply panel ratio reduction to the expanded scale
+        const collapsedHeight = parseInt(
+          layoutConfig.panel_layout.collapsed.height.replace('px', ''),
+          10,
+        );
+        const expandedHeight = parseInt(
+          layoutConfig.panel_layout.expanded.height.replace('px', ''),
+          10,
+        );
+        const collapsedWidth = parseInt(
+          layoutConfig.panel_layout.collapsed.width.replace('px', ''),
+          10,
+        );
+        const expandedWidth = parseInt(
+          layoutConfig.panel_layout.expanded.width.replace('px', ''),
+          10,
+        );
+
+        // Calculate scale ratio based on panel size difference
+        const heightRatio = collapsedHeight / expandedHeight; // 300/600 = 0.5
+        const widthRatio = collapsedWidth / expandedWidth; // 160/240 = 0.667
+
+        // Use the smaller ratio to ensure remote fits in collapsed panel
+        const panelReductionRatio = Math.min(heightRatio, widthRatio);
+
+        // Apply the reduction ratio to the expanded scale
+        const collapsedScale = expandedScale * panelReductionRatio;
+
+        console.log(`[@component:AndroidTvRemote] Collapsed scale calculation:`, {
+          expandedScale,
+          panelReductionRatio,
+          collapsedScale,
+          collapsedDimensions: { width: collapsedWidth, height: collapsedHeight },
+          expandedDimensions: { width: expandedWidth, height: expandedHeight },
+        });
+
+        return collapsedScale;
       }
 
-      // For expanded state, also fit to available height minus disconnect button space
-      const availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
-      return availableHeight / baseHeight;
+      // For expanded state, use original window-based scaling (unchanged)
+      return expandedScale;
     };
 
     const remoteScale = calculateRemoteScale();
