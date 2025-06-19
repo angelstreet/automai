@@ -40,6 +40,18 @@ export const hdmiStreamConfig = {
       textColor: '#ffffff',
     },
   },
+  content_layout: {
+    collapsed: {
+      objectFit: 'contain' as const,
+      width: '100%',
+      height: 'auto',
+    },
+    expanded: {
+      objectFit: 'fill' as const,
+      width: '100%',
+      height: 'auto',
+    },
+  },
 } as const;
 
 // Mobile-specific HDMI Stream configuration (portrait orientation)
@@ -82,7 +94,32 @@ export const hdmiStreamMobileConfig = {
       textColor: '#ffffff',
     },
   },
+  content_layout: {
+    collapsed: {
+      objectFit: 'cover' as const,
+      width: 'auto',
+      height: '100%',
+    },
+    expanded: {
+      objectFit: 'cover' as const,
+      width: 'auto',
+      height: '100%',
+    },
+  },
 } as const;
 
 export type HdmiStreamConfig = typeof hdmiStreamConfig;
 export type HdmiStreamMobileConfig = typeof hdmiStreamMobileConfig;
+
+/**
+ * Get stream content layout configuration based on device model and panel state
+ * @param deviceModel The device model (e.g., 'android_mobile', 'android_tv')
+ * @param isExpanded Whether the panel is in expanded state
+ * @returns Content layout configuration for the stream
+ */
+export const getStreamContentLayout = (deviceModel?: string, isExpanded: boolean = false) => {
+  const isMobile = deviceModel?.includes('mobile') || deviceModel === 'android_mobile';
+  const config = isMobile ? hdmiStreamMobileConfig : hdmiStreamConfig;
+
+  return isExpanded ? config.content_layout.expanded : config.content_layout.collapsed;
+};
