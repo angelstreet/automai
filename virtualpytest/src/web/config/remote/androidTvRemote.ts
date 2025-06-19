@@ -5,7 +5,7 @@ export const androidTvRemoteConfig = {
   },
   panel_layout: {
     collapsed: {
-      width: '180px',
+      width: '160px',
       height: '300px',
       position: {
         bottom: '20px',
@@ -13,7 +13,7 @@ export const androidTvRemoteConfig = {
       },
     },
     expanded: {
-      width: '260px',
+      width: '240px',
       height: '600px',
       position: {
         top: '100px',
