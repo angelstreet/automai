@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { androidTvRemoteConfig } from '../../config/remote/androidTvRemote';
+import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface AndroidTvSession {
   connected: boolean;
@@ -98,23 +99,28 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
 
         const adbKey = keyMap[command] || command;
 
-        // Execute ADB command via the host
-        const response = await fetch(`/api/adb/key`, {
+        // Use the same routing pattern as Android Mobile remote
+        const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            hostId: host.id,
-            deviceId: host.device_ip + ':5555',
-            key: adbKey,
-            ...params,
+            host: host,
+            command: 'press_key',
+            params: { key: adbKey },
           }),
         });
 
         if (response.ok) {
-          setLastAction(`Sent ${command}`);
-          console.log(`[@hook:useAndroidTv] Successfully sent command: ${command}`);
+          const result = await response.json();
+          if (result.success) {
+            setLastAction(`Sent ${command}`);
+            console.log(`[@hook:useAndroidTv] Successfully sent command: ${command}`);
+          } else {
+            setLastAction(`Error: ${result.error}`);
+            console.error(`[@hook:useAndroidTv] Command failed:`, result.error);
+          }
         } else {
           const error = await response.text();
           setLastAction(`Error: ${error}`);
