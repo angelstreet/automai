@@ -43,7 +43,7 @@ export const AndroidTvRemote = React.memo(
         default_scale: 0.43,
         min_scale: 0.3,
         max_scale: 1.0,
-        button_scale_factor: 6,
+        button_scale_factor: 3,
         global_offset: { x: 0, y: 0 },
         text_style: {
           fontSize: '24px',
@@ -254,7 +254,7 @@ export const AndroidTvRemote = React.memo(
             position: 'relative',
           }}
         >
-show position          {/* Hide/Show Labels Toggle Overlay Button - Panel Top Right */}
+          {/* Hide/Show Labels Toggle Overlay Button - Panel Top Right */}
           {!isCollapsed && (
             <Button
               variant="contained"
