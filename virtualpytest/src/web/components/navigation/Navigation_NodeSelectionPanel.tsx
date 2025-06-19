@@ -310,7 +310,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               verificationSuccess = false;
             } else {
               // Use server route for verification execution
-              const response = await fetch(`/server/verification/execution/execute-batch`, {
+              const response = await fetch(`/server/verification/batch/execute`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

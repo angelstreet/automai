@@ -644,7 +644,7 @@ export const useVerification = ({
 
         console.log('[@hook:useVerification] Batch execution payload:', batchPayload);
 
-        const response = await fetch(`/server/verification/execution/execute-batch`, {
+        const response = await fetch(`/server/verification/batch/execute`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
