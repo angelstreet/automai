@@ -12,6 +12,7 @@ interface StreamViewerProps {
   videoElementRef?: React.RefObject<HTMLVideoElement>;
   model?: string;
   layoutConfig?: StreamViewerLayoutConfig;
+  isExpanded?: boolean;
 }
 
 export function StreamViewer({
@@ -371,7 +372,7 @@ export function StreamViewer({
         style={{
           width: finalLayoutConfig.isMobileModel ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
           height: finalLayoutConfig.isMobileModel ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-          objectFit: finalLayoutConfig.objectFit || 'contain',
+          objectFit: isExpanded ? 'fill' : finalLayoutConfig.objectFit || 'contain',
           backgroundColor: '#000000',
           display: streamLoaded ? 'block' : 'none',
         }}
