@@ -19,13 +19,12 @@ export const AndroidTvRemote = React.memo(
     onDisconnectComplete,
     sx = {},
     isCollapsed,
-    panelWidth,
-    panelHeight,
+    panelWidth: _panelWidth,
+    panelHeight: _panelHeight,
   }: AndroidTvRemoteProps) {
-    const { session, isLoading, lastAction, handleConnect, handleDisconnect, handleRemoteCommand } =
+    const { session, isLoading, handleConnect, handleDisconnect, handleRemoteCommand } =
       useAndroidTv(host);
 
-    const [remoteScale, setRemoteScale] = useState(0.43);
     const [showOverlays, setShowOverlays] = useState(true);
 
     // Auto-connect when component mounts
@@ -177,15 +176,6 @@ export const AndroidTvRemote = React.memo(
       },
     };
 
-    // Adjust scale based on panel state
-    useEffect(() => {
-      if (isCollapsed) {
-        setRemoteScale(0.25);
-      } else {
-        setRemoteScale(localRemoteConfig.remote_info.default_scale);
-      }
-    }, [isCollapsed, localRemoteConfig.remote_info.default_scale]);
-
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
       if (onDisconnectComplete) {
@@ -200,6 +190,38 @@ export const AndroidTvRemote = React.memo(
       console.log(`[@component:AndroidTvRemote] Button pressed: ${buttonKey}`);
       await handleRemoteCommand(buttonKey);
     };
+
+    // Calculate responsive remote scale based on available space
+    const calculateRemoteScale = () => {
+      // Base remote dimensions
+      const baseWidth = 640;
+      const baseHeight = 1800;
+
+      if (isCollapsed) {
+        // For collapsed state, fit to available height with auto width
+        const availableHeight = window.innerHeight - 60; // Small margin
+        return availableHeight / baseHeight;
+      }
+
+      // Available space (leaving room for disconnect button)
+      const availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
+      const availableWidth = window.innerWidth * 0.8; // Use 80% of available width
+
+      // Calculate scale to fit within available space
+      const scaleByWidth = availableWidth / baseWidth;
+      const scaleByHeight = availableHeight / baseHeight;
+
+      // Use the smaller scale to ensure it fits in both dimensions
+      const calculatedScale = Math.min(
+        scaleByWidth,
+        scaleByHeight,
+        localRemoteConfig.remote_info.max_scale,
+      );
+
+      return Math.max(calculatedScale, localRemoteConfig.remote_info.min_scale);
+    };
+
+    const remoteScale = calculateRemoteScale();
 
     // Render remote interface with clickable buttons
     const renderRemoteInterface = () => {
@@ -240,26 +262,47 @@ export const AndroidTvRemote = React.memo(
           sx={{
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center',
+            alignItems: isCollapsed ? 'center' : 'flex-start',
             height: '100%',
             overflow: 'hidden',
             position: 'relative',
+            pt: isCollapsed ? 0 : 1,
           }}
         >
           {/* Remote container with image background */}
           <Box
             sx={{
               position: 'relative',
-              width: `${640 * remoteScale}px`,
-              height: `${1800 * remoteScale}px`,
+              width: isCollapsed ? 'auto' : `${640 * remoteScale}px`,
+              height: isCollapsed ? '100%' : `${1800 * remoteScale}px`,
+              aspectRatio: isCollapsed ? '640/1800' : 'auto',
               backgroundImage: `url(${localRemoteConfig.remote_info.image_url})`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
-              transform: `scale(${isCollapsed ? 0.7 : 1})`,
-              transformOrigin: 'center center',
             }}
           >
+            {/* Hide/Show Labels Toggle Overlay Button */}
+            {!isCollapsed && (
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => setShowOverlays(!showOverlays)}
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  fontSize: '0.6rem',
+                  px: 1,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  zIndex: 10,
+                }}
+              >
+                {showOverlays ? 'Hide' : 'Show'}
+              </Button>
+            )}
+
             {/* Render clickable button overlays */}
             {Object.entries(localRemoteConfig.button_layout).map(([buttonId, button]) => (
               <Box
@@ -313,36 +356,30 @@ export const AndroidTvRemote = React.memo(
 
     return (
       <Box
-        sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+        sx={{
+          ...sx,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
       >
-        {/* Status and controls */}
+        {/* Remote Interface - takes most of the space */}
+        <Box sx={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>{renderRemoteInterface()}</Box>
+
+        {/* Disconnect Button - fixed at bottom */}
         {!isCollapsed && session.connected && (
-          <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0' }}>
-            {/* Status line */}
-            <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
-              {lastAction || 'Ready'}
-            </Typography>
-
-            {/* Controls */}
-            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
-              <Button
-                variant={showOverlays ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setShowOverlays(!showOverlays)}
-                sx={{ flex: 1, fontSize: '0.6rem', py: 0.5 }}
-              >
-                {showOverlays ? 'Hide Labels' : 'Show Labels'}
-              </Button>
-            </Box>
-          </Box>
-        )}
-
-        {/* Remote Interface */}
-        <Box sx={{ flex: 1, overflow: 'hidden' }}>{renderRemoteInterface()}</Box>
-
-        {/* Disconnect Button */}
-        {!isCollapsed && session.connected && (
-          <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0' }}>
+          <Box
+            sx={{
+              p: 1,
+              borderTop: '1px solid #e0e0e0',
+              backgroundColor: 'background.paper',
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 5,
+            }}
+          >
             <Button
               variant="contained"
               color="error"
