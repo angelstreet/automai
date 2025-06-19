@@ -21,10 +21,6 @@ interface AndroidMobileOverlayProps {
   onElementClick?: (element: AndroidElement) => void;
   panelInfo: PanelInfo; // Made required - no fallback to screenshot
   host: any; // Add host for direct server calls
-  contentBounds: { actualContentWidth: number; horizontalOffset: number } | null;
-  onContentBoundsChange?: (
-    bounds: { actualContentWidth: number; horizontalOffset: number } | null,
-  ) => void;
 }
 
 // Same colors as the original UIElementsOverlay
@@ -39,8 +35,6 @@ export const AndroidMobileOverlay = React.memo(
     onElementClick,
     panelInfo,
     host,
-    contentBounds,
-    onContentBoundsChange,
   }: AndroidMobileOverlayProps) {
     console.log(
       `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
@@ -109,19 +103,29 @@ export const AndroidMobileOverlay = React.memo(
       };
     };
 
-    // Use content bounds from props (calculated in AndroidMobileRemote)
+    // Calculate actual content width and horizontal offset (mobile case - height is reference)
     const { actualContentWidth, horizontalOffset } = React.useMemo(() => {
-      if (!contentBounds) {
+      if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
         return { actualContentWidth: 0, horizontalOffset: 0 };
       }
 
-      console.log(
-        `[@component:AndroidMobileOverlay] Using content bounds from props:`,
-        contentBounds,
-      );
+      // For mobile: height is reference, calculate width based on device aspect ratio
+      const deviceAspectRatio = deviceWidth / deviceHeight;
+      const actualWidth = panelInfo.size.height * deviceAspectRatio;
+      const hOffset = (panelInfo.size.width - actualWidth) / 2;
 
-      return contentBounds;
-    }, [contentBounds]);
+      console.log(`[@component:AndroidMobileOverlay] Content width calculated:`, {
+        deviceAspectRatio,
+        panelHeight: panelInfo.size.height,
+        actualWidth,
+        hOffset,
+      });
+
+      return {
+        actualContentWidth: actualWidth,
+        horizontalOffset: hOffset,
+      };
+    }, [panelInfo, deviceWidth, deviceHeight]);
 
     // Direct server tap function - bypasses useRemoteConfigs double conversion
     const handleDirectTap = async (deviceX: number, deviceY: number) => {
@@ -419,8 +423,7 @@ export const AndroidMobileOverlay = React.memo(
       prevProps.isVisible === nextProps.isVisible &&
       prevProps.onElementClick === nextProps.onElementClick &&
       JSON.stringify(prevProps.panelInfo) === JSON.stringify(nextProps.panelInfo) &&
-      prevProps.host === nextProps.host &&
-      JSON.stringify(prevProps.contentBounds) === JSON.stringify(nextProps.contentBounds)
+      prevProps.host === nextProps.host
     );
   },
 );

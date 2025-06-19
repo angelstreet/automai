@@ -9,13 +9,13 @@ import {
   InputLabel,
 } from '@mui/material';
 import React from 'react';
-import { createPortal } from 'react-dom';
 
-import { hdmiStreamMobileConfig, HDMI_STREAM_HEADER_HEIGHT } from '../../../config/av/hdmiStream';
 import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
 import { Host } from '../../../types/common/Host_Types';
-import { PanelInfo } from '../../../types/controller/Panel_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
+import { PanelInfo } from '../../../types/controller/Panel_Types';
+import { createPortal } from 'react-dom';
+import { hdmiStreamMobileConfig, HDMI_STREAM_HEADER_HEIGHT } from '../../../config/av/hdmiStream';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
@@ -34,10 +34,6 @@ interface AndroidMobileRemoteProps {
   streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
-  // Content bounds callback
-  onContentBoundsChange?: (
-    bounds: { actualContentWidth: number; horizontalOffset: number } | null,
-  ) => void;
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -52,7 +48,6 @@ export const AndroidMobileRemote = React.memo(
     streamCollapsed,
     streamMinimized = false,
     captureMode = 'stream',
-    onContentBoundsChange,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -170,35 +165,6 @@ export const AndroidMobileRemote = React.memo(
       console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
       return info;
     }, [isCollapsed, panelWidth, panelHeight, deviceResolution, streamCollapsed]);
-
-    // Calculate content bounds (always run, regardless of captureMode)
-    const contentBounds = React.useMemo(() => {
-      if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
-        return null;
-      }
-
-      // For mobile: height is reference, calculate width based on device aspect ratio
-      const deviceAspectRatio = 1080 / 2340; // Use actual Android device resolution
-      const actualWidth = panelInfo.size.height * deviceAspectRatio;
-      const hOffset = (panelInfo.size.width - actualWidth) / 2;
-
-      console.log(`[@component:AndroidMobileRemote] Content bounds calculated:`, {
-        deviceAspectRatio,
-        panelHeight: panelInfo.size.height,
-        actualWidth,
-        hOffset,
-      });
-
-      return {
-        actualContentWidth: actualWidth,
-        horizontalOffset: hOffset,
-      };
-    }, [panelInfo]);
-
-    // Notify parent of content bounds changes
-    React.useEffect(() => {
-      onContentBoundsChange?.(contentBounds);
-    }, [contentBounds, onContentBoundsChange]);
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
@@ -570,8 +536,6 @@ export const AndroidMobileRemote = React.memo(
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
               host={host}
-              contentBounds={contentBounds}
-              onContentBoundsChange={onContentBoundsChange}
             />,
             document.body,
           )}
@@ -627,8 +591,7 @@ export const AndroidMobileRemote = React.memo(
       JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
       prevProps.streamCollapsed === nextProps.streamCollapsed &&
       prevProps.streamMinimized === nextProps.streamMinimized &&
-      prevProps.captureMode === nextProps.captureMode &&
-      prevProps.onContentBoundsChange === nextProps.onContentBoundsChange
+      prevProps.captureMode === nextProps.captureMode
     );
   },
 );

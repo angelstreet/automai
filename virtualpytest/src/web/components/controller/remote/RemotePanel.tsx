@@ -25,10 +25,6 @@ interface RemotePanelProps {
   streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
-  // Content bounds callback
-  onContentBoundsChange?: (
-    bounds: { actualContentWidth: number; horizontalOffset: number } | null,
-  ) => void;
 }
 
 export function RemotePanel({
@@ -39,7 +35,6 @@ export function RemotePanel({
   streamCollapsed = true,
   streamMinimized = false,
   captureMode = 'stream',
-  onContentBoundsChange,
 }: RemotePanelProps) {
   console.log(`[@component:RemotePanel] Props debug:`, {
     hostDeviceModel: host.device_model,
@@ -148,7 +143,6 @@ export function RemotePanel({
             streamCollapsed={streamCollapsed}
             streamMinimized={streamMinimized}
             captureMode={captureMode}
-            onContentBoundsChange={onContentBoundsChange}
             sx={{
               height: '100%',
               '& .MuiButton-root': {

@@ -232,12 +232,6 @@ const NavigationEditorContent: React.FC = () => {
   const [isAVPanelMinimized, setIsAVPanelMinimized] = useState(false);
   const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
 
-  // Content bounds state - shared between RemotePanel and HDMIStream
-  const [contentBounds, setContentBounds] = useState<{
-    actualContentWidth: number;
-    horizontalOffset: number;
-  } | null>(null);
-
   // Memoize the AV panel collapsed change handler to prevent infinite loops
   const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
     setIsAVPanelCollapsed(isCollapsed);
@@ -646,7 +640,6 @@ const NavigationEditorContent: React.FC = () => {
           streamCollapsed={isAVPanelCollapsed}
           streamMinimized={isAVPanelMinimized}
           captureMode={captureMode}
-          onContentBoundsChange={setContentBounds}
         />
       )}
 
@@ -656,7 +649,6 @@ const NavigationEditorContent: React.FC = () => {
           onCollapsedChange={handleAVPanelCollapsedChange}
           onMinimizedChange={handleAVPanelMinimizedChange}
           onCaptureModeChange={handleCaptureModeChange}
-          contentBounds={contentBounds}
         />
       )}
 

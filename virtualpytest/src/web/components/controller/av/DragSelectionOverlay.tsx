@@ -12,7 +12,6 @@ interface DragSelectionOverlayProps {
   imageRef: React.RefObject<HTMLImageElement>;
   onAreaSelected: (area: DragArea) => void;
   selectedArea: DragArea | null;
-  contentBounds?: { actualContentWidth: number; horizontalOffset: number } | null;
   sx?: any;
 }
 
@@ -108,7 +107,7 @@ export const DragSelectionOverlay: React.FC<DragSelectionOverlayProps> = ({
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      // Simple check if hovering over image area
+      // Check if hovering over image area
       const isOverImage =
         x >= bounds.left &&
         x <= bounds.left + bounds.width &&
