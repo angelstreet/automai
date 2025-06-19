@@ -5,7 +5,7 @@ import {
   VerificationEditorLayoutConfig,
   getVerificationEditorLayout,
 } from '../../../config/layoutConfig';
-import { useVerification } from '../../../hooks/verification/useVerification';
+import { useVerificationEditor } from '../../../hooks/verification/useVerificationEditor';
 import { Host } from '../../../types/common/Host_Types';
 
 import VerificationCapture from './VerificationCapture';
@@ -60,8 +60,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     return config;
   }, [model, layoutConfig]);
 
-  // Use the verification hook to handle all verification logic
-  const verification = useVerification({
+  // Use the verification editor hook to handle all verification logic
+  const verification = useVerificationEditor({
     isVisible,
     selectedHost,
     captureSourcePath,

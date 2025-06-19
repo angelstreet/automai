@@ -8,10 +8,10 @@ import {
   Button,
   Box,
 } from '@mui/material';
-import { UseVerificationType } from '../../../hooks/verification/useVerification';
+import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
 
 interface VerificationResultModalProps {
-  verification: UseVerificationType;
+  verification: UseVerificationEditorType;
 }
 
 export const VerificationResultModal: React.FC<VerificationResultModalProps> = ({

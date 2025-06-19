@@ -5,11 +5,11 @@ import {
 import { Box, Collapse, IconButton, Typography } from '@mui/material';
 import React from 'react';
 
-import { UseVerificationType } from '../../../hooks/verification/useVerification';
+import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
 import { NodeVerificationsList } from '../../navigation/Navigation_NodeVerificationsList';
 
 interface VerificationListProps {
-  verification: UseVerificationType;
+  verification: UseVerificationEditorType;
 }
 
 export const VerificationList: React.FC<VerificationListProps> = ({ verification }) => {

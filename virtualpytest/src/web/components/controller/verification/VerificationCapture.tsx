@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import React, { useRef } from 'react';
 
-import { UseVerificationType } from '../../../hooks/verification/useVerification';
+import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
 
 interface DragArea {
   x: number;
@@ -26,7 +26,7 @@ interface DragArea {
 }
 
 interface VerificationCaptureProps {
-  verification: UseVerificationType;
+  verification: UseVerificationEditorType;
   selectedArea: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   captureHeight: number;
