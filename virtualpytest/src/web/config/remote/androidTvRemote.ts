@@ -60,7 +60,7 @@ export const androidTvRemoteConfig = {
   button_layout: {
     power: {
       key: 'POWER',
-      position: { x: 50, y: 50 },
+      position: { x: 20, y: 20 },
       size: { width: 40, height: 25 },
       shape: 'rectangle' as const,
       comment: 'Power button',
