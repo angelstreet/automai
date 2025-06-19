@@ -389,21 +389,77 @@ def save_screenshot():
         
         print(f"[@route:host_av:save_screenshot] Saving screenshot with filename: {filename}")
         
-        # Save screenshot using controller (handles R2 upload)
-        screenshot_result = av_controller.save_screenshot(filename)
+        # Get device model from host_device
+        device_model = host_device.get('device_model', 'unknown')
+        print(f"[@route:host_av:save_screenshot] Using device model: {device_model}")
         
-        if screenshot_result:
-            return jsonify({
-                'success': True,
-                'screenshot_url': screenshot_result  # R2 URL for permanent storage
-            })
-        else:
+        # Save screenshot using controller (now returns local path)
+        local_screenshot_path = av_controller.save_screenshot(filename)
+        
+        if not local_screenshot_path:
             return jsonify({
                 'success': False,
-                'error': 'Failed to take and save screenshot'
+                'error': 'Failed to take screenshot'
+            }), 500
+        
+        print(f"[@route:host_av:save_screenshot] Screenshot saved locally at: {local_screenshot_path}")
+        
+        # Build R2 path: navigation/{device_model}/{filename}.jpg
+        r2_path = f"navigation/{device_model}/{filename}.jpg"
+        print(f"[@route:host_av:save_screenshot] Target R2 path: {r2_path}")
+        
+        # Upload to R2 using CloudflareUtils
+        from src.utils.cloudflare_utils import CloudflareUtils
+        
+        uploader = CloudflareUtils()
+        upload_result = uploader.upload_file(local_screenshot_path, r2_path)
+        
+        if upload_result.get('success'):
+            print(f"[@route:host_av:save_screenshot] Successfully uploaded to R2: {r2_path}")
+            # Extract complete Cloudflare R2 URL
+            complete_url = upload_result.get('url')
+            print(f"[@route:host_av:save_screenshot] Extracted complete R2 URL: {complete_url}")
+            
+            # Save to database
+            try:
+                from src.lib.supabase.images_db import save_image
+                from src.utils.app_utils import DEFAULT_TEAM_ID
+                
+                team_id = DEFAULT_TEAM_ID
+                print(f"[@route:host_av:save_screenshot] Using team ID: {team_id}")
+                
+                db_result = save_image(
+                    name=filename,
+                    device_model=device_model,
+                    type='screenshot',
+                    r2_path=r2_path,
+                    r2_url=complete_url,
+                    team_id=team_id,
+                    area=None
+                )
+                    
+                if db_result.get('success'):
+                    print(f"[@route:host_av:save_screenshot] Successfully saved to database")
+                else:
+                    print(f"[@route:host_av:save_screenshot] Database save failed: {db_result.get('error')}")
+            except Exception as db_error:
+                print(f"[@route:host_av:save_screenshot] Database save error: {db_error}")
+                # Don't fail the upload, just log the error
+            
+            return jsonify({
+                'success': True,
+                'screenshot_url': complete_url  # R2 URL for permanent storage
+            })
+        else:
+            error_msg = upload_result.get('error', 'Unknown upload error')
+            print(f"[@route:host_av:save_screenshot] R2 upload failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to upload screenshot to R2: {error_msg}'
             }), 500
             
     except Exception as e:
+        print(f"[@route:host_av:save_screenshot] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

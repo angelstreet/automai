@@ -220,14 +220,15 @@ class HDMIStreamController(AVControllerInterface):
     
     def save_screenshot(self, filename: str) -> Optional[str]:
         """
-        Take screenshot and upload to R2 with specific filename.
+        Take screenshot and return local path.
         Used for permanent storage in navigation nodes.
+        The route should handle the R2 upload, not the controller.
         
         Args:
             filename: The filename to use for the screenshot (e.g., node name)
             
         Returns:
-            Complete Cloudflare R2 URL if successful, None if failed
+            Local file path if successful, None if failed
         """
         try:
             print(f'[@controller:HDMIStream] Saving screenshot with filename: {filename}')
@@ -248,10 +249,6 @@ class HDMIStreamController(AVControllerInterface):
             
             device_model = host_info.get('device_model', 'unknown')
             print(f'[@controller:HDMIStream] Using device model: {device_model}')
-            
-            # Build R2 path: navigation/{device_model}/{filename}.jpg
-            r2_path = f"navigation/{device_model}/{filename}.jpg"
-            print(f'[@controller:HDMIStream] Target R2 path: {r2_path}')
             
             # Extract timestamp from temp screenshot URL to get the actual image file
             # temp_screenshot_url format: https://virtualpytest.com/host/stream/captures/capture_20250617134657.jpg
@@ -275,56 +272,11 @@ class HDMIStreamController(AVControllerInterface):
                     print(f'[@controller:HDMIStream] Local screenshot file not found: {local_screenshot_path}')
                     return None
                 
-                # Upload to R2 using CloudflareUploader
-                from src.utils.cloudflare_upload_utils import CloudflareUploader
+                # Return the local file path for the route to handle the upload
+                return local_screenshot_path
                 
-                uploader = CloudflareUploader()
-                upload_result = uploader.upload_file(local_screenshot_path, r2_path)
-                
-                if upload_result.get('success'):
-                    print(f'[@controller:HDMIStream] Successfully uploaded to R2: {r2_path}')
-                    # Extract complete Cloudflare R2 URL
-                    complete_url = upload_result.get('url')
-                    print(f'[@controller:HDMIStream] Extracted complete R2 URL: {complete_url}')
-                    
-                    # Save to database
-                    try:
-                        from src.lib.supabase.images_db import save_image
-                        from src.utils.app_utils import DEFAULT_TEAM_ID
-                        
-                        team_id = DEFAULT_TEAM_ID
-                        print(f'[@controller:HDMIStream] Using team ID: {team_id}')
-                        
-                        db_result = save_image(
-                            name=filename,
-                            device_model=device_model,
-                            type='screenshot',
-                            r2_path=r2_path,
-                            r2_url=complete_url,
-                            team_id=team_id,
-                            area=None
-                        )
-                            
-                        if db_result['success']:
-                            print(f'[@controller:HDMIStream] Successfully saved to database')
-                        else:
-                            print(f'[@controller:HDMIStream] Database save failed: {db_result.get("error")}')
-                    except Exception as db_error:
-                        print(f'[@controller:HDMIStream] Database save error: {db_error}')
-                        # Don't fail the upload, just log the error
-                    
-                    print(f'[@controller:HDMIStream] Returning complete R2 URL: {complete_url}')
-                    return complete_url
-                else:
-                    error_msg = upload_result.get('error', 'Unknown upload error')
-                    print(f'[@controller:HDMIStream] R2 upload failed: {error_msg}')
-                    return None
-                
-            except ImportError as ie:
-                print(f'[@controller:HDMIStream] CloudflareUploader not available: {ie}')
-                return None
             except Exception as extract_error:
-                print(f'[@controller:HDMIStream] Error processing screenshot for upload: {extract_error}')
+                print(f'[@controller:HDMIStream] Error processing screenshot: {extract_error}')
                 import traceback
                 print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
                 return None

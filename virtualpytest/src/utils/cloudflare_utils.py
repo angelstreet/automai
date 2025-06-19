@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Simplified Cloudflare R2 Upload Utilities for VirtualPyTest Resources
+Cloudflare R2 Utilities for VirtualPyTest Resources
 
-Simple utilities for uploading files to Cloudflare R2 with public access.
+Utilities for uploading and downloading files from Cloudflare R2 with public access.
 
 Folder Structure:
 - reference/{model}/{image_name}     # Reference images (public access)
@@ -23,15 +23,15 @@ from botocore.exceptions import ClientError
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="[@cloudflare_upload:%(funcName)s] %(levelname)s: %(message)s"
+    format="[@cloudflare_utils:%(funcName)s] %(levelname)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
-class CloudflareUploader:
+class CloudflareUtils:
     """
-    Singleton Cloudflare R2 uploader for VirtualPyTest resources.
-    Just upload files and get signed URLs - nothing fancy.
+    Singleton Cloudflare R2 utility for VirtualPyTest resources.
+    Upload and download files and get signed URLs.
     
     This class implements the singleton pattern to ensure only one instance
     exists throughout the application lifecycle, avoiding multiple S3 client
@@ -49,19 +49,19 @@ class CloudflareUploader:
     def __new__(cls):
         """Singleton pattern implementation - only create one instance."""
         if cls._instance is None:
-            logger.info("Creating new CloudflareUploader singleton instance")
+            logger.info("Creating new CloudflareUtils singleton instance")
             cls._instance = super().__new__(cls)
         else:
-            logger.debug("Returning existing CloudflareUploader singleton instance")
+            logger.debug("Returning existing CloudflareUtils singleton instance")
         return cls._instance
     
     def __init__(self):
-        """Initialize the uploader (only once due to singleton)."""
+        """Initialize the utility (only once due to singleton)."""
         # Prevent re-initialization of the singleton instance
         if self._initialized:
             return
             
-        logger.info("Initializing CloudflareUploader singleton")
+        logger.info("Initializing CloudflareUtils singleton")
         
         # Load environment variables from .env.host file
         self._load_environment()
@@ -179,6 +179,48 @@ class CloudflareUploader:
             logger.error(f"Upload failed: {str(e)}")
             return {'success': False, 'error': str(e)}
     
+    def download_file(self, remote_path: str, local_path: str) -> Dict:
+        """
+        Download a file from R2.
+        
+        Args:
+            remote_path: Path in R2 (e.g., 'reference/android_mobile/default_capture.png')
+            local_path: Path to save the file locally
+            
+        Returns:
+            Dict with success status and local file path
+        """
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            # Download file using bucket name
+            self.s3_client.download_file(
+                self.bucket_name,
+                remote_path,
+                local_path
+            )
+            
+            logger.info(f"Downloaded: {remote_path} -> {local_path}")
+            
+            return {
+                'success': True,
+                'remote_path': remote_path,
+                'local_path': local_path,
+                'size': os.path.getsize(local_path)
+            }
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                logger.error(f"File not found in R2: {remote_path}")
+                return {'success': False, 'error': f"File not found in R2: {remote_path}"}
+            else:
+                logger.error(f"Download failed: {str(e)}")
+                return {'success': False, 'error': str(e)}
+        except Exception as e:
+            logger.error(f"Download failed: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
     def get_public_url(self, remote_path: str) -> str:
         """
         Get a public URL for a file in R2.
@@ -248,48 +290,29 @@ class CloudflareUploader:
                 'success': False,
                 'error': str(e),
                 'endpoint': os.environ.get('CLOUDFLARE_R2_ENDPOINT', 'NOT_SET'),
-                'bucket_name': self.bucket_name
             }
 
+# Singleton getter function to avoid direct instantiation
+def get_cloudflare_utils() -> CloudflareUtils:
+    """Get the singleton instance of CloudflareUtils."""
+    return CloudflareUtils()
 
-# Singleton getter function for consistent access
-def get_cloudflare_uploader() -> CloudflareUploader:
-    """
-    Get the singleton CloudflareUploader instance.
-    
-    This function provides a clean way to access the singleton instance
-    and makes the singleton pattern explicit in the code.
-    
-    Returns:
-        CloudflareUploader: The singleton instance
-    """
-    return CloudflareUploader()
+# Utility functions for common upload patterns
 
-
-# Convenience functions for common use cases (now using singleton)
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
-    """Upload a reference image with public access."""
-    uploader = get_cloudflare_uploader()
+    """Upload a reference image to R2 in the reference/{model} folder."""
+    uploader = get_cloudflare_utils()
     remote_path = f"reference/{model}/{image_name}"
     return uploader.upload_file(local_path, remote_path)
 
+def download_reference_image(model: str, image_name: str, local_path: str) -> Dict:
+    """Download a reference image from R2 in the reference/{model} folder."""
+    downloader = get_cloudflare_utils()
+    remote_path = f"reference/{model}/{image_name}"
+    return downloader.download_file(remote_path, local_path)
 
 def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:
-    """Upload a navigation screenshot with public access."""
-    uploader = get_cloudflare_uploader()
+    """Upload a navigation screenshot to R2 in the navigation/{model} folder."""
+    uploader = get_cloudflare_utils()
     remote_path = f"navigation/{model}/{screenshot_name}"
-    return uploader.upload_file(local_path, remote_path)
-
-
-def upload_verification_result(local_path: str, job_id: str, filename: str) -> Dict:
-    """Upload a verification result with public access."""
-    uploader = get_cloudflare_uploader()
-    remote_path = f"verification-results/{job_id}/{filename}"
-    return uploader.upload_file(local_path, remote_path)
-
-
-def upload_temp_file(local_path: str, session_id: str, filename: str) -> Dict:
-    """Upload a temporary file with public access."""
-    uploader = get_cloudflare_uploader()
-    remote_path = f"temp/{session_id}/{filename}"
     return uploader.upload_file(local_path, remote_path)
