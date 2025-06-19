@@ -47,7 +47,7 @@ export const hdmiStreamConfig = {
       height: 'auto',
     },
     expanded: {
-      objectFit: 'fill' as const,
+      objectFit: 'contain' as const,
       width: '100%',
       height: 'auto',
     },
