@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify, current_app
 import os
 import json
 import time
+from datetime import datetime
 from src.utils.host_utils import get_local_controller
 
 # Create blueprint
@@ -406,8 +407,80 @@ def save_resource():
 
 
 # =====================================================
-# HOST-SIDE IMAGE VERIFICATION EXECUTION
+# HOST-SIDE IMAGE VERIFICATION EXECUTION ENDPOINTS
 # =====================================================
+
+@verification_image_host_bp.route('/execute', methods=['POST'])
+def execute_image_verification():
+    """Execute single image verification on host"""
+    try:
+        # ✅ USE OWN STORED HOST_DEVICE OBJECT
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized. Host may need to re-register.'
+            }), 404
+        
+        data = request.get_json()
+        verification = data.get('verification')
+        source_filename = data.get('source_filename')
+        model = data.get('model', 'default')
+        
+        print(f"[@route:host_verification_image:execute] Executing image verification on host")
+        print(f"[@route:host_verification_image:execute] Source: {source_filename}, Model: {model}")
+        
+        # Validate required parameters
+        if not verification or not source_filename:
+            return jsonify({
+                'success': False,
+                'error': 'verification and source_filename are required'
+            }), 400
+        
+        # Build source path
+        source_path = f'{CAPTURES_PATH}/{source_filename}'
+        
+        # Check if source file exists
+        if not os.path.exists(source_path):
+            print(f"[@route:host_verification_image:execute] Source file not found: {source_path}")
+            return jsonify({
+                'success': False,
+                'error': f'Source file not found: {source_filename}'
+            }), 404
+        
+        # Create results directory
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        results_dir = f'{STREAM_BASE_PATH}/verification_results/{timestamp}'
+        os.makedirs(results_dir, exist_ok=True)
+        
+        # Execute image verification
+        result = execute_image_verification_host(verification, source_path, model, 0, results_dir)
+        
+        # Convert local paths to public URLs
+        if result.get('source_image_path'):
+            result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
+        if result.get('result_overlay_path'):
+            result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
+        if result.get('reference_image_path'):
+            result['reference_image_url'] = result['reference_image_path'].replace('/var/www/html', '')
+        
+        print(f"[@route:host_verification_image:execute] Verification completed: {result.get('success')}")
+        
+        return jsonify({
+            'success': True,
+            'verification_result': result,
+            'results_directory': results_dir.replace('/var/www/html', ''),
+            'timestamp': timestamp
+        })
+        
+    except Exception as e:
+        print(f"[@route:host_verification_image:execute] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Image verification execution error: {str(e)}'
+        }), 500
 
 def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
     """Execute image verification using verification controllers."""
