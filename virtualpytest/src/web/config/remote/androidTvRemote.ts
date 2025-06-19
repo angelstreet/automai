@@ -13,7 +13,7 @@ export const androidTvRemoteConfig = {
       },
     },
     expanded: {
-      width: '300px',
+      width: '260px',
       height: '600px',
       position: {
         top: '100px',

@@ -25,7 +25,12 @@ export const AndroidTvRemote = React.memo(
     const { session, isLoading, handleConnect, handleDisconnect, handleRemoteCommand } =
       useAndroidTv(host);
 
-    const [showOverlays, setShowOverlays] = useState(true);
+    const [showOverlays, setShowOverlays] = useState(!isCollapsed);
+
+    // Update showOverlays when isCollapsed changes
+    useEffect(() => {
+      setShowOverlays(!isCollapsed);
+    }, [isCollapsed]);
 
     // Auto-connect when component mounts
     useEffect(() => {
@@ -255,7 +260,7 @@ export const AndroidTvRemote = React.memo(
           }}
         >
           {/* Hide/Show Labels Toggle Overlay Button - Panel Top Right */}
-          {!isCollapsed && (
+          {!isCollapsed && session.connected && (
             <Button
               variant="contained"
               size="small"
@@ -299,8 +304,10 @@ export const AndroidTvRemote = React.memo(
                   width: `${button.size.width * localRemoteConfig.remote_info.button_scale_factor * remoteScale}px`,
                   height: `${button.size.height * localRemoteConfig.remote_info.button_scale_factor * remoteScale}px`,
                   borderRadius: button.shape === 'circle' ? '50%' : '4px',
-                  backgroundColor: showOverlays ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                  border: showOverlays ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
+                  backgroundColor:
+                    !isCollapsed && showOverlays ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border:
+                    !isCollapsed && showOverlays ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -318,7 +325,7 @@ export const AndroidTvRemote = React.memo(
                 onClick={() => handleButtonPress(button.key)}
                 title={`${button.label} - ${button.comment}`}
               >
-                {showOverlays && (
+                {!isCollapsed && showOverlays && (
                   <Typography
                     variant="caption"
                     sx={{
