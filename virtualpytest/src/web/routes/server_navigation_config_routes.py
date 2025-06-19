@@ -25,7 +25,7 @@ def get_navigation_trees_redirect():
         'success': True,
         'trees': [],
         'total_count': 0,
-        'message': 'Navigation trees migrated to database. Use /navigation-trees/list instead.'
+                    'message': 'Navigation trees migrated to database. Use /server/navigation-trees/list instead.'
     })
 
 
@@ -64,7 +64,7 @@ def get_navigation_tree_redirect(userinterface_name):
             'userinterface': None,
             'is_locked': False,
             'lock_info': None,
-            'message': 'No tree found. Use /navigation-trees/save to create new tree.'
+            'message': 'No tree found. Use /server/navigation-trees/save to create new tree.'
         })
         
     except Exception as e:
@@ -118,7 +118,7 @@ def save_navigation_tree_redirect(userinterface_name):
     
     return jsonify({
         'success': False,
-        'error': 'Tree saving migrated to database. Use /navigation-trees/save instead.',
+                    'error': 'Tree saving migrated to database. Use /server/navigation-trees/save instead.',
         'migration_note': 'Please update your client to use the new database API endpoints.'
     }), 410  # Gone
 
@@ -132,7 +132,7 @@ def create_empty_navigation_config_redirect(userinterface_name):
     
     return jsonify({
         'success': False,
-        'error': 'Tree creation migrated to database. Use /navigation-trees/save instead.',
+                    'error': 'Tree creation migrated to database. Use /server/navigation-trees/save instead.',
         'migration_note': 'Please update your client to use the new database API endpoints.'
     }), 410  # Gone
 
@@ -145,5 +145,5 @@ def health_check():
         'success': True,
         'service': 'navigation_config_deprecated',
         'status': 'redirecting_to_database',
-        'message': 'This service is deprecated. Use /navigation-trees/ endpoints instead.'
+                    'message': 'This service is deprecated. Use /server/navigation-trees/ endpoints instead.'
     }) 

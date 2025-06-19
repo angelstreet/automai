@@ -10,7 +10,7 @@ from src.lib.supabase.navigation_trees_db import (
 from src.lib.supabase.userinterface_db import get_all_userinterfaces
 from src.utils.app_utils import DEFAULT_TEAM_ID
 
-navigation_trees_bp = Blueprint('navigation_trees', __name__)
+navigation_trees_bp = Blueprint('navigation_trees', __name__, url_prefix='/server')
 
 # UserInterface Endpoints
 # ========================================

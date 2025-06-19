@@ -89,7 +89,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         setIsCheckingLock(true);
 
         const response = await fetch(
-          buildServerUrl(`/navigation-trees/lock/status?userinterface_id=${userInterfaceId}`),
+          buildServerUrl(
+            `/server/navigation-trees/lock/status?userinterface_id=${userInterfaceId}`,
+          ),
           {
             headers: {
               'Content-Type': 'application/json',
@@ -146,7 +148,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(buildServerUrl(`/navigation-trees/lock/acquire`), {
+        const response = await fetch(buildServerUrl(`/server/navigation-trees/lock/acquire`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -193,7 +195,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(buildServerUrl(`/navigation-trees/lock/release`), {
+        const response = await fetch(buildServerUrl(`/server/navigation-trees/lock/release`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -270,7 +272,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         // Get trees for this userInterface directly by ID
         const response = await fetch(
-          buildServerUrl(`/navigation-trees/list?userinterface_id=${userInterfaceId}`),
+          buildServerUrl(`/server/navigation-trees/list?userinterface_id=${userInterfaceId}`),
           {
             headers: {
               'Content-Type': 'application/json',
@@ -346,7 +348,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(buildServerUrl(`/navigation-trees/save`), {
+        const response = await fetch(buildServerUrl(`/server/navigation-trees/save`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -394,7 +396,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // List available user interfaces
   const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
     try {
-      const response = await fetch(buildServerUrl('/userinterfaces/list'));
+      const response = await fetch(buildServerUrl('/server/userinterfaces/list'));
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -423,7 +425,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(buildServerUrl(`/navigation-trees/save`), {
+        const response = await fetch(buildServerUrl(`/server/navigation-trees/save`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
