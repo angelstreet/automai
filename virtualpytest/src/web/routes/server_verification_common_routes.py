@@ -560,7 +560,7 @@ def get_text_references():
             return jsonify({
                 'success': False,
                 'error': error or 'Host information required'
-        }), 400
+            }), 400
         
         # Get device model with fallback
         device_model = host_info.get('device_model', 'default')
@@ -621,30 +621,30 @@ def get_all_references():
         print(f"[@route:server_verification_common:get_all_references] Using device model: {device_model}")
         
         # Get references from database
-            from src.lib.supabase.images_db import get_images
-            from src.utils.app_utils import DEFAULT_TEAM_ID
-            
-            # Get all images for this device model
-            result = get_images(
-                team_id=DEFAULT_TEAM_ID,
-                device_model=device_model
-            )
-            
-            if result['success']:
-                images = result['images']
+        from src.lib.supabase.images_db import get_images
+        from src.utils.app_utils import DEFAULT_TEAM_ID
+        
+        # Get all images for this device model
+        result = get_images(
+            team_id=DEFAULT_TEAM_ID,
+            device_model=device_model
+        )
+        
+        if result['success']:
+            images = result['images']
             print(f"[@route:server_verification_common:get_all_references] Found {len(images)} images from database")
-                
-                return jsonify({
-                    'success': True,
-                    'images': images,
-                    'count': len(images),
-                    'device_model': device_model
-                })
-            else:
+            
+            return jsonify({
+                'success': True,
+                'images': images,
+                'count': len(images),
+                'device_model': device_model
+            })
+        else:
             print(f"[@route:server_verification_common:get_all_references] Database query failed: {result.get('error')}")
-                return jsonify({
-                    'success': False,
-                    'error': result.get('error', 'Database query failed'),
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Database query failed'),
                 'device_model': device_model
             })
         
