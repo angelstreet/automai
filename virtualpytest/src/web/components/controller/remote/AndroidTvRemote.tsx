@@ -22,8 +22,14 @@ export const AndroidTvRemote = React.memo(
     panelWidth: _panelWidth,
     panelHeight: _panelHeight,
   }: AndroidTvRemoteProps) {
-    const { session, isLoading, handleConnect, handleDisconnect, handleRemoteCommand } =
-      useAndroidTv(host);
+    const {
+      session,
+      isLoading,
+      layoutConfig,
+      handleConnect,
+      handleDisconnect,
+      handleRemoteCommand,
+    } = useAndroidTv(host);
 
     const [showOverlays, setShowOverlays] = useState(!isCollapsed);
 
@@ -38,148 +44,6 @@ export const AndroidTvRemote = React.memo(
         handleConnect();
       }
     }, [session.connected, session.connecting, handleConnect]);
-
-    // Local button layout configuration (from AndroidTVModal.tsx)
-    const localRemoteConfig = {
-      remote_info: {
-        name: 'Fire TV Remote',
-        type: 'android_tv',
-        image_url: '/android-tv-remote.png',
-        default_scale: 0.43,
-        min_scale: 0.3,
-        max_scale: 1.0,
-        button_scale_factor: 3,
-        global_offset: { x: 0, y: 0 },
-        text_style: {
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: 'white',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-        },
-      },
-      button_layout: {
-        power: {
-          key: 'POWER',
-          label: 'PWR',
-          position: { x: 150, y: 150 },
-          size: { width: 14, height: 14 },
-          shape: 'circle',
-          comment: 'Power button',
-        },
-        nav_up: {
-          key: 'UP',
-          label: '▲',
-          position: { x: 320, y: 440 },
-          size: { width: 18, height: 10 },
-          shape: 'rectangle',
-          comment: 'Navigation up',
-        },
-        nav_left: {
-          key: 'LEFT',
-          label: '◄',
-          position: { x: 130, y: 610 },
-          size: { width: 10, height: 18 },
-          shape: 'rectangle',
-          comment: 'Navigation left',
-        },
-        nav_center: {
-          key: 'SELECT',
-          label: 'OK',
-          position: { x: 320, y: 610 },
-          size: { width: 40, height: 40 },
-          shape: 'circle',
-          comment: 'Navigation center/select',
-        },
-        nav_right: {
-          key: 'RIGHT',
-          label: '►',
-          position: { x: 500, y: 610 },
-          size: { width: 10, height: 18 },
-          shape: 'rectangle',
-          comment: 'Navigation right',
-        },
-        nav_down: {
-          key: 'DOWN',
-          label: '▼',
-          position: { x: 320, y: 780 },
-          size: { width: 18, height: 10 },
-          shape: 'rectangle',
-          comment: 'Navigation down',
-        },
-        back: {
-          key: 'BACK',
-          label: '←',
-          position: { x: 150, y: 940 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Back button',
-        },
-        home: {
-          key: 'HOME',
-          label: '🏠',
-          position: { x: 490, y: 940 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Home button',
-        },
-        menu: {
-          key: 'MENU',
-          label: '☰',
-          position: { x: 320, y: 940 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Menu button',
-        },
-        rewind: {
-          key: 'REWIND',
-          label: '<<',
-          position: { x: 150, y: 1100 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Rewind button',
-        },
-        play_pause: {
-          key: 'PLAY_PAUSE',
-          label: '⏯',
-          position: { x: 320, y: 1100 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Play/pause button',
-        },
-        fast_forward: {
-          key: 'FAST_FORWARD',
-          label: '>>',
-          position: { x: 490, y: 1100 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Fast forward button',
-        },
-        volume_up: {
-          key: 'VOLUME_UP',
-          label: 'V+',
-          position: { x: 320, y: 1270 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Volume up button',
-        },
-        volume_down: {
-          key: 'VOLUME_DOWN',
-          label: 'V-',
-          position: { x: 320, y: 1430 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Volume down button',
-        },
-        mute: {
-          key: 'VOLUME_MUTE',
-          label: 'MUTE',
-          position: { x: 320, y: 1600 },
-          size: { width: 20, height: 20 },
-          shape: 'circle',
-          comment: 'Mute button',
-        },
-      },
-    };
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
@@ -287,22 +151,22 @@ export const AndroidTvRemote = React.memo(
               width: 'auto',
               height: '100%',
               aspectRatio: '640/1800',
-              backgroundImage: `url(${localRemoteConfig.remote_info.image_url})`,
+              backgroundImage: `url(${layoutConfig.remote_info.image_url})`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
             }}
           >
             {/* Render clickable button overlays */}
-            {Object.entries(localRemoteConfig.button_layout).map(([buttonId, button]) => (
+            {Object.entries(layoutConfig.button_layout).map(([buttonId, button]) => (
               <Box
                 key={buttonId}
                 sx={{
                   position: 'absolute',
                   left: `${button.position.x * remoteScale}px`,
                   top: `${button.position.y * remoteScale}px`,
-                  width: `${button.size.width * localRemoteConfig.remote_info.button_scale_factor * remoteScale}px`,
-                  height: `${button.size.height * localRemoteConfig.remote_info.button_scale_factor * remoteScale}px`,
+                  width: `${button.size.width * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
+                  height: `${button.size.height * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   borderRadius: button.shape === 'circle' ? '50%' : '4px',
                   backgroundColor:
                     !isCollapsed && showOverlays ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
@@ -329,10 +193,10 @@ export const AndroidTvRemote = React.memo(
                   <Typography
                     variant="caption"
                     sx={{
-                      fontSize: `${12 * remoteScale}px`,
-                      fontWeight: 'bold',
-                      color: 'white',
-                      textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                      fontSize: `${parseInt(layoutConfig.remote_info.text_style.fontSize) * remoteScale}px`,
+                      fontWeight: layoutConfig.remote_info.text_style.fontWeight,
+                      color: layoutConfig.remote_info.text_style.color,
+                      textShadow: layoutConfig.remote_info.text_style.textShadow,
                       userSelect: 'none',
                     }}
                   >

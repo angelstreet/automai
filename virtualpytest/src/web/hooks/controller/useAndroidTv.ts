@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Host } from '../../types/common/Host_Types';
+import { androidTvRemoteConfig } from '../../config/remote/androidTvRemote';
 
 interface AndroidTvSession {
   connected: boolean;
@@ -11,6 +12,7 @@ interface UseAndroidTvReturn {
   session: AndroidTvSession;
   isLoading: boolean;
   lastAction: string;
+  layoutConfig: typeof androidTvRemoteConfig;
   handleConnect: () => Promise<void>;
   handleDisconnect: () => Promise<void>;
   handleRemoteCommand: (command: string, params?: any) => Promise<void>;
@@ -132,6 +134,7 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
     session,
     isLoading,
     lastAction,
+    layoutConfig: androidTvRemoteConfig,
     handleConnect,
     handleDisconnect,
     handleRemoteCommand,
