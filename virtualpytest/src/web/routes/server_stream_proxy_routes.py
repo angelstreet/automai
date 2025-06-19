@@ -18,8 +18,6 @@ def proxy_stream(host_name, stream_path):
         stream_path: Path to the stream resource (e.g., 'output.m3u8', 'segment_123.ts')
     """
     try:
-        print(f"[@route:stream_proxy] Proxying stream for host: {host_name}, path: {stream_path}")
-        
         # Get host info from registry
         host_info = get_host_by_name(host_name)
         if not host_info:
@@ -34,7 +32,6 @@ def proxy_stream(host_name, stream_path):
         
         # Construct the target URL
         target_url = f"{host_base_url}/host/stream/{stream_path}"
-        print(f"[@route:stream_proxy] Proxying to: {target_url}")
         
         # Forward query parameters
         if request.query_string:
@@ -44,8 +41,6 @@ def proxy_stream(host_name, stream_path):
         try:
             response = requests.get(target_url, stream=True, timeout=30)
             response.raise_for_status()
-            
-            print(f"[@route:stream_proxy] Successfully fetched from {target_url}")
             
             # Determine content type
             content_type = response.headers.get('Content-Type', 'application/octet-stream')
