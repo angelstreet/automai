@@ -60,7 +60,7 @@ export function ScreenshotCapture({
     }
   };
 
-  // Get image URL using server route instead of AV controller proxy
+  // Get image URL with conditional HTTP to HTTPS proxy
   const imageUrl = useMemo(() => {
     if (!screenshotPath) return '';
 
@@ -72,48 +72,24 @@ export function ScreenshotCapture({
       return screenshotPath;
     }
 
-    // Handle full URLs (already complete) - return as is
-    if (screenshotPath.startsWith('http')) {
-      console.log('[@component:ScreenshotCapture] Using complete URL');
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (screenshotPath.startsWith('https:')) {
+      console.log('[@component:ScreenshotCapture] Using HTTPS URL directly');
       return screenshotPath;
     }
 
-    // For file paths, use server route for image serving
-    if (!selectedHost) {
-      console.error(`[@component:ScreenshotCapture] No host device available for image serving`);
-      return '';
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (screenshotPath.startsWith('http:')) {
+      console.log('[@component:ScreenshotCapture] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
+      console.log(`[@component:ScreenshotCapture] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
     }
 
-    console.log('[@component:ScreenshotCapture] Using server route for image serving');
-
-    // Extract filename from path
-    const filename = screenshotPath.split('/').pop()?.split('?')[0];
-    if (!filename) {
-      console.error(
-        `[@component:ScreenshotCapture] Failed to extract filename from path: ${screenshotPath}`,
-      );
-      return '';
-    }
-
-    // Use server route to serve images
-    try {
-      let imageUrl: string;
-
-      // Screenshots from take-screenshot are already accessible URLs - use directly
-      imageUrl = screenshotPath;
-
-      console.log(
-        `[@component:ScreenshotCapture] Generated image URL via server route: ${imageUrl}`,
-      );
-      return imageUrl;
-    } catch (error) {
-      console.error(
-        `[@component:ScreenshotCapture] Error building image URL via server route:`,
-        error,
-      );
-      return '';
-    }
-  }, [screenshotPath, selectedHost]);
+    // For relative paths or other formats, use directly (assuming they are accessible)
+    console.log('[@component:ScreenshotCapture] Using path directly');
+    return screenshotPath;
+  }, [screenshotPath]);
 
   // Determine if drag selection should be enabled
   const allowDragSelection =

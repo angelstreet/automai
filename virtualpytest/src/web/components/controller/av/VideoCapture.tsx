@@ -97,7 +97,7 @@ export function VideoCapture({
     }
   };
 
-  // Get image URL using same pattern as ScreenshotCapture
+  // Get image URL with conditional HTTP to HTTPS proxy
   const imageUrl = useMemo(() => {
     if (!videoFramePath) return '';
 
@@ -109,13 +109,21 @@ export function VideoCapture({
       return videoFramePath;
     }
 
-    // Handle full URLs - return as is
-    if (videoFramePath.startsWith('http')) {
-      console.log('[@component:VideoCapture] Using complete URL');
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (videoFramePath.startsWith('https:')) {
+      console.log('[@component:VideoCapture] Using HTTPS URL directly');
       return videoFramePath;
     }
 
-    // For file paths, just use the path directly (same as ScreenshotCapture)
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (videoFramePath.startsWith('http:')) {
+      console.log('[@component:VideoCapture] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(videoFramePath)}`;
+      console.log(`[@component:VideoCapture] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // For relative paths or other formats, use directly (assuming they are accessible)
     console.log('[@component:VideoCapture] Using video frame path directly');
     return videoFramePath;
   }, [videoFramePath]);
