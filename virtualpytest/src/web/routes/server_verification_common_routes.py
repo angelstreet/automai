@@ -144,7 +144,7 @@ def execute_batch_verification():
         passed_count = 0
         
         for i, verification in enumerate(verifications):
-            verification_type = verification.get('type', 'unknown')
+            verification_type = verification['controller_type']
             
             print(f"[@route:server_verification_common:execute_batch_verification] Processing verification {i+1}/{len(verifications)}: {verification_type}")
             
