@@ -135,6 +135,7 @@ export const useVerificationReferences = (
 
   // Fetch references on mount and when reload trigger changes
   useEffect(() => {
+    console.log('[@hook:useVerificationReferences] Reload trigger changed:', reloadTrigger);
     fetchAvailableReferences();
   }, [reloadTrigger, fetchAvailableReferences]);
 

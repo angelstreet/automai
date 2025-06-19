@@ -76,11 +76,42 @@ def getAllReferences():
                 images = result['images']
                 print(f"[@route:server_verification:getAllReferences] Found {len(images)} images from database")
                 
+                # Convert to the format expected by the frontend
+                references = {
+                    'image': [],
+                    'text': []
+                }
+                
+                # Process images into the expected format
+                for img in images:
+                    # Determine if it's an image or text reference
+                    if img['type'] == 'reference_image':
+                        references['image'].append({
+                            'name': img['name'],
+                            'filename': img['name'],
+                            'url': img['r2_url'],
+                            'area': img['area'],
+                            'created_at': img['created_at'],
+                            'updated_at': img['updated_at']
+                        })
+                    elif img['type'] == 'reference_text':
+                        references['text'].append({
+                            'name': img['name'],
+                            'filename': img['name'],
+                            'url': img['r2_url'],
+                            'area': img['area'],
+                            'created_at': img['created_at'],
+                            'updated_at': img['updated_at'],
+                            'text': img.get('text', '')
+                        })
+                
+                print(f"[@route:server_verification:getAllReferences] Processed references: {len(references['image'])} images, {len(references['text'])} texts")
+                
                 return jsonify({
                     'success': True,
-                    'images': images,
-                    'count': len(images),
-                    'device_model': device_model
+                    'references': references,
+                    'model': device_model,
+                    'count': len(images)
                 })
             else:
                 print(f"[@route:server_verification:getAllReferences] Database query failed: {result.get('error')}")

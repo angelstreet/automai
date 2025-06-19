@@ -74,6 +74,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     isCaptureActive,
   });
 
+  // The referenceSaveCounter in the verification hook will trigger a refresh in other components
+
   // Debug logging for component mount/unmount
   React.useEffect(() => {
     console.log('[@component:VerificationEditor] Component mounted with props:', {
