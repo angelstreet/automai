@@ -421,14 +421,11 @@ def execute_image_verification():
                 'error': f'Source file not found: {source_filename}'
             }), 404
         
-        # Create results directory - simple path, always overwrite
+        # Create results directory - simple path, just ensure it exists
         results_dir = f'{STREAM_BASE_PATH}/verification_results'
         print(f"[@route:host_verification_image:execute] Using verification results directory: {results_dir}")
         
-        # Always clean and recreate directory to overwrite previous results
-        import shutil
-        if os.path.exists(results_dir):
-            shutil.rmtree(results_dir)
+        # Just ensure directory exists, don't delete it
         os.makedirs(results_dir, exist_ok=True)
         
         # Execute image verification
