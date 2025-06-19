@@ -18,71 +18,15 @@ import {
   KeyboardArrowUp as KeyboardArrowUpIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
-import { VerificationControls } from './VerificationControls';
-import { VerificationTestResults } from './VerificationTestResults';
-
-interface NodeVerification {
-  id: string;
-  label: string;
-  command: string;
-  controller_type: 'text' | 'image' | 'adb';
-  params: any;
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-}
-
-interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  ocrConfidence?: number;
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
-}
-
-// Import unified types
+import { NodeVerification } from '../../types/validation/NodeVerification';
 import {
   Verification,
   Verifications,
   ModelReferences,
+  VerificationTestResult,
 } from '../../types/verification/VerificationTypes';
+import { VerificationControls } from './VerificationControls';
+import { VerificationTestResults } from './VerificationTestResults';
 
 interface VerificationItemProps {
   verification: NodeVerification;

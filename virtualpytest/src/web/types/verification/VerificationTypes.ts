@@ -16,21 +16,8 @@ export interface Verifications {
   [controllerType: string]: Verification[]; // Controller type as category
 }
 
-// Node verification format for UI components (extends Verification with UI-specific fields)
-export interface NodeVerification extends Verification {
-  id: string; // UI compatibility: same as command
-  label: string; // UI display name
-  controller_type: 'text' | 'image' | 'adb';
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-  lastRunResult?: boolean;
-  resultImageUrl?: string;
-  referenceImageUrl?: string;
-  lastRunDetails?: string;
-}
+// NodeVerification is now defined in validation/NodeVerification.ts
+export type { NodeVerification } from '../validation/NodeVerification';
 
 // =====================================================
 // REFERENCE TYPES
@@ -74,4 +61,52 @@ export interface ReferenceImage extends Reference {
   name: string; // Computed from filename
   model: string; // Computed from context
   filename: string; // Added for convenience
+}
+
+// =====================================================
+// VERIFICATION TEST RESULT TYPES
+// =====================================================
+
+export interface VerificationTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  // Language detection for text verifications
+  detectedLanguage?: string;
+  languageConfidence?: number;
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
 }

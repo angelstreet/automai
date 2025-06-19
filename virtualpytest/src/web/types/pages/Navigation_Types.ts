@@ -1,23 +1,10 @@
 import { Node, Edge } from 'reactflow';
 
+import { NodeVerification } from '../validation/NodeVerification';
+
 // =====================================================
 // CORE NAVIGATION TYPES
 // =====================================================
-
-// Verification interface for node verifications
-export interface NodeVerification {
-  id: string;
-  label: string;
-  command: string;
-  controller_type: 'image' | 'text' | 'adb'; // Keep ADB support
-  params: any;
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
-}
 
 // Define the data type for navigation nodes
 export interface UINavigationNodeData {
@@ -202,51 +189,7 @@ export interface ControllerActions {
 // VERIFICATION RESULT TYPES
 // =====================================================
 
-export interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  // Language detection for text verifications
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  // OCR confidence for text verifications
-  ocrConfidence?: number;
-  // ADB-specific result data - keep ADB support
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
-}
+export type { VerificationTestResult } from '../verification/VerificationTypes';
 
 // =====================================================
 // NAVIGATION UI COMPONENT TYPES

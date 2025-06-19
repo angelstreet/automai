@@ -1,59 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { Verifications, NodeVerification } from '../../types/verification/VerificationTypes';
+import { NodeVerification } from '../../types/validation/NodeVerification';
+import { Verifications, VerificationTestResult } from '../../types/verification/VerificationTypes';
 
 // Define interfaces for verification data structures
-interface DragArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  // Language detection for text verifications
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  // ADB-specific result data
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
-}
 
 interface UseVerificationProps {
   selectedHost: Host;
@@ -69,11 +20,42 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
   const [testResults, setTestResults] = useState<VerificationTestResult[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load verification types from host data
+  // Load verification types from host data and clean parameter definitions
   useEffect(() => {
     if (selectedHost?.available_verification_types) {
       console.log('[@hook:useVerification] Loading verification types from host data');
-      setAvailableVerificationTypes(selectedHost.available_verification_types);
+
+      // Clean parameter definitions in available verification types
+      const cleanedVerificationTypes: Verifications = {};
+      Object.entries(selectedHost.available_verification_types).forEach(
+        ([controllerType, verifications]) => {
+          if (Array.isArray(verifications)) {
+            cleanedVerificationTypes[controllerType] = verifications.map((verification) => {
+              if (!verification.params) return verification;
+
+              const cleanParams: any = {};
+              Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
+                if (typeof value === 'object' && value !== null && 'default' in value) {
+                  // Extract default value from parameter definition
+                  cleanParams[key] = value.default;
+                } else {
+                  // Keep actual values as-is
+                  cleanParams[key] = value;
+                }
+              });
+
+              return {
+                ...verification,
+                params: cleanParams,
+              };
+            });
+          } else {
+            cleanedVerificationTypes[controllerType] = verifications;
+          }
+        },
+      );
+
+      setAvailableVerificationTypes(cleanedVerificationTypes);
       setError(null); // Clear any previous errors
     } else if (selectedHost) {
       console.log(
@@ -247,43 +229,30 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
           body: JSON.stringify({
             host: selectedHost, // Send full host object
             verifications: validVerifications.map((verification) => {
-              // Transform parameter definitions into actual values
-              const cleanParams: any = {};
-
-              // Extract actual values from parameter definitions
-              if (verification.params) {
-                Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
-                  if (typeof value === 'object' && value !== null && 'default' in value) {
-                    // Extract default value from parameter definition
-                    cleanParams[key] = value.default;
-                  } else {
-                    // Keep actual values as-is
-                    cleanParams[key] = value;
-                  }
-                });
-              }
+              // Parameters are already cleaned when loading verification types
+              const params = { ...verification.params };
 
               // For image verifications, ensure image_path is set correctly
               if (
                 verification.controller_type === 'image' &&
                 verification.params?.reference_image
               ) {
-                cleanParams.image_path = verification.params.reference_image;
+                params.image_path = verification.params.reference_image;
                 return {
                   ...verification,
-                  params: cleanParams,
+                  params,
                   reference_filename: verification.params.reference_image,
                 };
               }
 
               // For text verifications, ensure text is set from inputValue
               if (verification.controller_type === 'text' && verification.inputValue) {
-                cleanParams.text = verification.inputValue;
+                params.text = verification.inputValue;
               }
 
               return {
                 ...verification,
-                params: cleanParams,
+                params,
               };
             }),
             source_filename: capture_filename, // Include the extracted capture filename

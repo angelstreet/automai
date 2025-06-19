@@ -1,18 +1,15 @@
 import React from 'react';
 import { Box, TextField } from '@mui/material';
 
-interface NodeVerification {
-  id: string;
-  label: string;
-  command: string;
-  controller_type: 'text' | 'image' | 'adb';
-  params: any;
-  description?: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-  inputValue?: string;
-}
+import { NodeVerification } from '../../types/validation/NodeVerification';
+
+// Utility function to extract actual values from parameter definitions
+const getParamValue = (param: any, defaultValue: any) => {
+  if (typeof param === 'object' && param !== null && 'default' in param) {
+    return param.default;
+  }
+  return param !== undefined ? param : defaultValue;
+};
 
 interface VerificationControlsProps {
   verification: NodeVerification;

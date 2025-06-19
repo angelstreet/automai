@@ -1,55 +1,7 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  FormControl,
-  Select,
-  MenuItem,
-} from '@mui/material';
+import { Box, Typography, FormControl, Select, MenuItem } from '@mui/material';
 
-interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  ocrConfidence?: number;
-  // ADB-specific result data
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
-}
+import { VerificationTestResult } from '../../types/verification/VerificationTypes';
 
 interface VerificationResultsDisplayProps {
   testResults: VerificationTestResult[];
@@ -72,91 +24,105 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
     return null;
   }
 
-  const finalPassed = passCondition === 'all'
-    ? testResults.every(result => result.success || result.resultType === 'PASS')
-    : testResults.some(result => result.success || result.resultType === 'PASS');
+  const finalPassed =
+    passCondition === 'all'
+      ? testResults.every((result) => result.success || result.resultType === 'PASS')
+      : testResults.some((result) => result.success || result.resultType === 'PASS');
 
   // Helper function to render detailed ADB element info for PASS results
   const renderADBElementDetails = (result: VerificationTestResult, verificationIndex: number) => {
-    if (verifications[verificationIndex]?.controller_type !== 'adb' || 
-        result.resultType !== 'PASS' || 
-        !result.matches || 
-        result.matches.length === 0) {
+    if (
+      verifications[verificationIndex]?.controller_type !== 'adb' ||
+      result.resultType !== 'PASS' ||
+      !result.matches ||
+      result.matches.length === 0
+    ) {
       return null;
     }
 
     return (
       <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(76, 175, 80, 0.05)', borderRadius: 1 }}>
-        <Typography variant="caption" sx={{ 
-          fontSize: '0.7rem', 
-          fontWeight: 600, 
-          color: '#4caf50',
-          display: 'block',
-          mb: 1
-        }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            color: '#4caf50',
+            display: 'block',
+            mb: 1,
+          }}
+        >
           Found Elements ({result.total_matches || result.matches.length}):
         </Typography>
-        
+
         {result.matches.map((match, matchIndex) => (
-          <Box key={matchIndex} sx={{ 
-            mb: matchIndex < result.matches!.length - 1 ? 1.5 : 0,
-            p: 1,
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            borderRadius: 0.5,
-            border: '1px solid rgba(76, 175, 80, 0.2)'
-          }}>
+          <Box
+            key={matchIndex}
+            sx={{
+              mb: matchIndex < result.matches!.length - 1 ? 1.5 : 0,
+              p: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              borderRadius: 0.5,
+              border: '1px solid rgba(76, 175, 80, 0.2)',
+            }}
+          >
             {/* Match Summary */}
-            <Typography variant="caption" sx={{ 
-              fontSize: '0.7rem', 
-              fontWeight: 600, 
-              color: '#2e7d32',
-              display: 'block',
-              mb: 0.5
-            }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                color: '#2e7d32',
+                display: 'block',
+                mb: 0.5,
+              }}
+            >
               Element #{match.element_id} - {match.match_reason}
             </Typography>
-            
+
             {/* Element Details Grid */}
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'auto 1fr', 
-              gap: 0.5, 
-              fontSize: '0.65rem',
-              '& > *:nth-of-type(odd)': {
-                fontWeight: 600,
-                color: 'text.secondary',
-                pr: 1
-              },
-              '& > *:nth-of-type(even)': {
-                color: 'text.primary',
-                fontFamily: 'monospace',
-                wordBreak: 'break-all'
-              }
-            }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: 0.5,
+                fontSize: '0.65rem',
+                '& > *:nth-of-type(odd)': {
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  pr: 1,
+                },
+                '& > *:nth-of-type(even)': {
+                  color: 'text.primary',
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all',
+                },
+              }}
+            >
               <span>ID:</span>
               <span>{match.full_element.id}</span>
-              
+
               <span>Class:</span>
               <span>{match.full_element.className || '(empty)'}</span>
-              
+
               <span>Text:</span>
               <span>{match.full_element.text || '(empty)'}</span>
-              
+
               <span>Resource-ID:</span>
               <span>{match.full_element.resourceId || '(empty)'}</span>
-              
+
               <span>Content-Desc:</span>
               <span>{match.full_element.contentDesc || '(empty)'}</span>
-              
+
               <span>Bounds:</span>
               <span>{match.full_element.bounds || '(empty)'}</span>
-              
+
               <span>Clickable:</span>
               <span>{match.full_element.clickable ? 'true' : 'false'}</span>
-              
+
               <span>Enabled:</span>
               <span>{match.full_element.enabled ? 'true' : 'false'}</span>
-              
+
               {match.full_element.tag && (
                 <>
                   <span>Tag:</span>
@@ -164,26 +130,33 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                 </>
               )}
             </Box>
-            
+
             {/* Show all matching attributes */}
             {match.all_matches && match.all_matches.length > 1 && (
               <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" sx={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 600, 
-                  color: 'text.secondary',
-                  display: 'block',
-                  mb: 0.5
-                }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    display: 'block',
+                    mb: 0.5,
+                  }}
+                >
                   All Matches:
                 </Typography>
                 {match.all_matches.map((attrMatch, attrIndex) => (
-                  <Typography key={attrIndex} variant="caption" sx={{ 
-                    fontSize: '0.6rem', 
-                    color: 'text.secondary',
-                    display: 'block',
-                    ml: 1
-                  }}>
+                  <Typography
+                    key={attrIndex}
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.6rem',
+                      color: 'text.secondary',
+                      display: 'block',
+                      ml: 1,
+                    }}
+                  >
                     • {attrMatch.attribute}: "{attrMatch.value}"
                   </Typography>
                 ))}
@@ -191,16 +164,20 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
             )}
           </Box>
         ))}
-        
+
         {/* Search Details */}
-        <Typography variant="caption" sx={{ 
-          fontSize: '0.65rem', 
-          color: 'text.secondary',
-          display: 'block',
-          mt: 1,
-          fontStyle: 'italic'
-        }}>
-          Search: "{result.search_term}" (case-insensitive) • Wait time: {result.wait_time?.toFixed(1)}s
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: '0.65rem',
+            color: 'text.secondary',
+            display: 'block',
+            mt: 1,
+            fontStyle: 'italic',
+          }}
+        >
+          Search: "{result.search_term}" (case-insensitive) • Wait time:{' '}
+          {result.wait_time?.toFixed(1)}s
         </Typography>
       </Box>
     );
@@ -212,91 +189,124 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
       {!compact && (
         <Box sx={{ mb: 2 }}>
           {testResults.map((result, index) => (
-            <Box key={index} sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Box
+              key={index}
+              sx={{
+                mb: 1,
+                px: 0.5,
+                py: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+              }}
+            >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 {/* Verification Label */}
                 <Typography variant="body2" sx={{ flex: 1, fontSize: '0.8rem' }}>
-                  {verifications[index]?.label || verifications[index]?.id || `Verification ${index + 1}`}
+                  {verifications[index]?.label ||
+                    verifications[index]?.id ||
+                    `Verification ${index + 1}`}
                 </Typography>
-                
+
                 {/* Result Indicator */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 0.5,
-                  minWidth: 120,
-                  padding: '4px 8px',
-                  borderRadius: 1,
-                  backgroundColor: result.resultType === 'PASS' 
-                    ? 'rgba(76, 175, 80, 0.1)' 
-                    : result.resultType === 'ERROR' 
-                      ? 'rgba(255, 152, 0, 0.1)' 
-                      : 'rgba(244, 67, 54, 0.1)',
-                  border: `1px solid ${
-                    result.resultType === 'PASS' 
-                      ? '#4caf50' 
-                      : result.resultType === 'ERROR' 
-                        ? '#ff9800' 
-                        : '#f44336'
-                  }`
-                }}>
-                  <Box sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: result.resultType === 'PASS' 
-                      ? '#4caf50' 
-                      : result.resultType === 'ERROR' 
-                        ? '#ff9800' 
-                        : '#f44336'
-                  }} />
-                  <Typography variant="caption" sx={{ 
-                    fontSize: '0.7rem',
-                    color: result.resultType === 'PASS' 
-                      ? '#4caf50' 
-                      : result.resultType === 'ERROR' 
-                        ? '#ff9800' 
-                        : '#f44336',
-                    fontWeight: 600
-                  }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    minWidth: 120,
+                    padding: '4px 8px',
+                    borderRadius: 1,
+                    backgroundColor:
+                      result.resultType === 'PASS'
+                        ? 'rgba(76, 175, 80, 0.1)'
+                        : result.resultType === 'ERROR'
+                          ? 'rgba(255, 152, 0, 0.1)'
+                          : 'rgba(244, 67, 54, 0.1)',
+                    border: `1px solid ${
+                      result.resultType === 'PASS'
+                        ? '#4caf50'
+                        : result.resultType === 'ERROR'
+                          ? '#ff9800'
+                          : '#f44336'
+                    }`,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor:
+                        result.resultType === 'PASS'
+                          ? '#4caf50'
+                          : result.resultType === 'ERROR'
+                            ? '#ff9800'
+                            : '#f44336',
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.7rem',
+                      color:
+                        result.resultType === 'PASS'
+                          ? '#4caf50'
+                          : result.resultType === 'ERROR'
+                            ? '#ff9800'
+                            : '#f44336',
+                      fontWeight: 600,
+                    }}
+                  >
                     {result.resultType || (result.success ? 'PASS' : 'FAIL')}
                   </Typography>
-                  
+
                   {/* Show threshold for image verifications */}
-                  {verifications[index]?.controller_type === 'image' && result.threshold !== undefined && (
-                    <Typography variant="caption" sx={{ 
-                      fontSize: '0.65rem',
-                      color: 'text.secondary',
-                      ml: 0.5
-                    }}>
-                      {(result.threshold * 100).toFixed(1)}%
-                    </Typography>
-                  )}
-                  
+                  {verifications[index]?.controller_type === 'image' &&
+                    result.threshold !== undefined && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: '0.65rem',
+                          color: 'text.secondary',
+                          ml: 0.5,
+                        }}
+                      >
+                        {(result.threshold * 100).toFixed(1)}%
+                      </Typography>
+                    )}
+
                   {/* Show OCR confidence for text verifications */}
-                  {verifications[index]?.controller_type === 'text' && result.ocrConfidence !== undefined && (
-                    <Typography variant="caption" sx={{ 
-                      fontSize: '0.65rem',
-                      color: 'text.secondary',
-                      ml: 0.5
-                    }}>
-                      {result.ocrConfidence.toFixed(1)}%
-                    </Typography>
-                  )}
+                  {verifications[index]?.controller_type === 'text' &&
+                    result.ocrConfidence !== undefined && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: '0.65rem',
+                          color: 'text.secondary',
+                          ml: 0.5,
+                        }}
+                      >
+                        {result.ocrConfidence.toFixed(1)}%
+                      </Typography>
+                    )}
                 </Box>
               </Box>
-              
+
               {/* Show message if available */}
               {(result.message || result.error) && (
-                <Typography variant="caption" sx={{ 
-                  fontSize: '0.7rem',
-                  color: 'text.secondary',
-                  display: 'block'
-                }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.7rem',
+                    color: 'text.secondary',
+                    display: 'block',
+                  }}
+                >
                   {result.message || result.error}
                 </Typography>
               )}
-              
+
               {/* Show detailed ADB element info for PASS results */}
               {renderADBElementDetails(result, index)}
             </Box>
@@ -317,44 +327,53 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                 height: '30px',
                 '& .MuiSelect-select': {
                   padding: '5px 10px',
-                }
+                },
               }}
             >
-              <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>All must pass</MenuItem>
-              <MenuItem value="any" sx={{ fontSize: '0.75rem' }}>Any can pass</MenuItem>
+              <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>
+                All must pass
+              </MenuItem>
+              <MenuItem value="any" sx={{ fontSize: '0.75rem' }}>
+                Any can pass
+              </MenuItem>
             </Select>
           </FormControl>
         )}
-        
+
         {/* Final Result indicator */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          p: 1,
-          borderRadius: 1,
-          backgroundColor: finalPassed 
-            ? 'rgba(76, 175, 80, 0.1)' 
-            : 'rgba(244, 67, 54, 0.1)',
-          border: `1px solid ${finalPassed ? '#4caf50' : '#f44336'}`
-        }}>
-          <Typography sx={{ 
-            fontWeight: 'bold',
-            color: finalPassed ? '#4caf50' : '#f44336',
-            fontSize: compact ? '0.8rem' : '1rem'
-          }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            p: 1,
+            borderRadius: 1,
+            backgroundColor: finalPassed ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+            border: `1px solid ${finalPassed ? '#4caf50' : '#f44336'}`,
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 'bold',
+              color: finalPassed ? '#4caf50' : '#f44336',
+              fontSize: compact ? '0.8rem' : '1rem',
+            }}
+          >
             Final Result: {finalPassed ? 'PASS' : 'FAIL'}
           </Typography>
           {!compact && (
-            <Typography sx={{ 
-              ml: 1,
-              color: finalPassed ? '#4caf50' : '#f44336',
-              fontSize: '0.9rem'
-            }}>
-              ({testResults.filter(r => r.success || r.resultType === 'PASS').length}/{testResults.length} passed)
+            <Typography
+              sx={{
+                ml: 1,
+                color: finalPassed ? '#4caf50' : '#f44336',
+                fontSize: '0.9rem',
+              }}
+            >
+              ({testResults.filter((r) => r.success || r.resultType === 'PASS').length}/
+              {testResults.length} passed)
             </Typography>
           )}
         </Box>
       </Box>
     </Box>
   );
-}; 
+};
