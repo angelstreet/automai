@@ -52,19 +52,18 @@ export const useVerificationReferences = (
         const result = await response.json();
         console.log('[@hook:useVerificationReferences] Raw response:', result);
 
-        if (result.success && result.references) {
-          // Server returns references grouped by type: { image: [...], text: [...] }
-          // We need to convert this to our dictionary format: { model: { filename: ref } }
-          const deviceModel = result.model || selectedHost.device_model;
+        if (result.success && (result.references || result.images || result.count > 0)) {
+          // Server can return either { references: { image: [...], text: [...] } } or { images: [...], count: N }
+          const deviceModel = result.device_model || result.model || selectedHost.device_model;
           const modelRefs: ModelReferences = {};
 
-          // Process image references
-          if (result.references.image && Array.isArray(result.references.image)) {
-            result.references.image.forEach((ref: any) => {
-              const filename = ref.filename || ref.name || 'unknown.png';
+          // Handle new format: { images: [...], count: N }
+          if (result.images && Array.isArray(result.images)) {
+            result.images.forEach((ref: any) => {
+              const filename = ref.name || ref.filename || 'unknown.png';
               modelRefs[filename] = {
                 type: 'image',
-                url: ref.url,
+                url: ref.r2_url || ref.url,
                 area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 created_at: ref.created_at,
                 updated_at: ref.updated_at,
@@ -72,21 +71,38 @@ export const useVerificationReferences = (
             });
           }
 
-          // Process text references
-          if (result.references.text && Array.isArray(result.references.text)) {
-            result.references.text.forEach((ref: any) => {
-              const filename = ref.filename || ref.name || 'unknown.json';
-              modelRefs[filename] = {
-                type: 'text',
-                url: ref.url,
-                area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
-                created_at: ref.created_at,
-                updated_at: ref.updated_at,
-                text: ref.text,
-                font_size: ref.font_size,
-                confidence: ref.confidence,
-              };
-            });
+          // Handle old format: { references: { image: [...], text: [...] } }
+          if (result.references) {
+            // Process image references
+            if (result.references.image && Array.isArray(result.references.image)) {
+              result.references.image.forEach((ref: any) => {
+                const filename = ref.filename || ref.name || 'unknown.png';
+                modelRefs[filename] = {
+                  type: 'image',
+                  url: ref.url,
+                  area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
+                  created_at: ref.created_at,
+                  updated_at: ref.updated_at,
+                };
+              });
+            }
+
+            // Process text references
+            if (result.references.text && Array.isArray(result.references.text)) {
+              result.references.text.forEach((ref: any) => {
+                const filename = ref.filename || ref.name || 'unknown.json';
+                modelRefs[filename] = {
+                  type: 'text',
+                  url: ref.url,
+                  area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
+                  created_at: ref.created_at,
+                  updated_at: ref.updated_at,
+                  text: ref.text,
+                  font_size: ref.font_size,
+                  confidence: ref.confidence,
+                };
+              });
+            }
           }
 
           const allReferences = { [deviceModel]: modelRefs };

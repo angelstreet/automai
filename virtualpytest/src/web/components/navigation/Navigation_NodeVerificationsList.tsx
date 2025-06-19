@@ -9,7 +9,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 // Import extracted components
 
@@ -58,6 +58,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     reloadTrigger,
     selectedHost,
   );
+
+  // Memoize model references to prevent multiple calls during render
+  const modelReferences = useMemo(() => getModelReferences(model), [getModelReferences, model]);
 
   // Debug logging for testResults changes - keep this for troubleshooting
   useEffect(() => {
@@ -158,7 +161,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       model,
     });
 
-    const modelReferences = getModelReferences(model);
     const selectedRef = modelReferences[referenceName]; // Access by key instead of find()
 
     if (selectedRef) {
@@ -322,8 +324,6 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
       </Alert>
     );
   }
-
-  const modelReferences = getModelReferences(model);
 
   return (
     <Box>

@@ -422,7 +422,10 @@ export const useVerification = ({
             host: selectedHost,
             name: referenceName,
             model: selectedHost.device_model,
-            area: captureResult.processed_area || selectedArea,
+            area:
+              imageProcessingOptions.autocrop && captureResult.processed_area
+                ? captureResult.processed_area
+                : selectedArea,
             screenshot_path: captureSourcePath,
             referenceType: referenceType === 'text' ? 'reference_text' : 'reference_image',
             text: referenceText,
@@ -453,7 +456,10 @@ export const useVerification = ({
             host: selectedHost,
             reference_name: referenceName,
             model: selectedHost.device_model,
-            area: captureResult.processed_area || selectedArea,
+            area:
+              imageProcessingOptions.autocrop && captureResult.processed_area
+                ? captureResult.processed_area
+                : selectedArea,
             cropped_filename: captureResult.filename,
             reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
           }),
@@ -478,7 +484,10 @@ export const useVerification = ({
             reference_name: referenceName,
             model: selectedHost.device_model,
             r2_url: uploadResult.r2_url,
-            area: captureResult.processed_area || selectedArea,
+            area:
+              imageProcessingOptions.autocrop && captureResult.processed_area
+                ? captureResult.processed_area
+                : selectedArea,
             reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
           }),
         });
@@ -488,9 +497,8 @@ export const useVerification = ({
         if (dbResult.success) {
           console.log('[@hook:useVerification] Reference saved successfully:', dbResult);
           setSuccessMessage(`Reference "${referenceName}" saved successfully`);
-          setReferenceName('');
-          setCapturedReferenceImage(null);
-          setHasCaptured(false);
+          // Don't clear UI state - keep the captured image and name for user reference
+          // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
         } else {
           setError(dbResult.error || 'Failed to save reference to database');
