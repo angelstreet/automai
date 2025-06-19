@@ -312,6 +312,10 @@ def save_resource():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             }), 404
         
+        # ✅ GET TEAM_ID FROM REQUEST HEADERS LIKE OTHER WORKING ROUTES
+        from src.utils.app_utils import get_team_id
+        team_id = get_team_id()
+        
         data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
         reference_name = data.get('reference_name') or data.get('name')  # Handle both parameter names
@@ -367,7 +371,8 @@ def save_resource():
                 reference_name=reference_name,
                 model=model,
                 area=area,
-                reference_type=reference_type
+                reference_type=reference_type,
+                team_id=team_id
             )
             
             if reference_result:

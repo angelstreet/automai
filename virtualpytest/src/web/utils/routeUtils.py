@@ -40,7 +40,7 @@ def get_host_from_request():
         return None, f'Error getting host from request: {str(e)}'
 
 
-def proxy_to_host(endpoint, method='GET', data=None, timeout=30):
+def proxy_to_host(endpoint, method='GET', data=None, timeout=30, headers=None):
     """
     Proxy a request to the specified host's endpoint using buildHostUrl
     
@@ -49,6 +49,7 @@ def proxy_to_host(endpoint, method='GET', data=None, timeout=30):
         method: HTTP method ('GET', 'POST', etc.)
         data: Request data for POST requests (should include host info)
         timeout: Request timeout in seconds (default: 30)
+        headers: Additional headers to include in the request (dict)
     
     Returns:
         Tuple of (response_data, status_code)
@@ -80,9 +81,15 @@ def proxy_to_host(endpoint, method='GET', data=None, timeout=30):
             'verify': False  # For self-signed certificates
         }
         
+        # Prepare headers
+        request_headers = {'Content-Type': 'application/json'}
+        if headers:
+            request_headers.update(headers)
+        
         if data:
             kwargs['json'] = data
-            kwargs['headers'] = {'Content-Type': 'application/json'}
+        
+        kwargs['headers'] = request_headers
         
         # Make the request to the host
         if method.upper() == 'GET':

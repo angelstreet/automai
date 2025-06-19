@@ -87,11 +87,18 @@ def save_reference():
     try:
         print("[@route:server_verification_av_image:save_image_reference] Proxying image reference save request")
         
+        # ✅ GET TEAM_ID FROM REQUEST HEADERS LIKE OTHER WORKING ROUTES
+        from src.utils.app_utils import get_team_id
+        team_id = get_team_id()
+        
         # Get request data
         request_data = request.get_json() or {}
         
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data)
+        # ✅ ADD TEAM_ID TO REQUEST HEADERS FOR HOST
+        headers = {'X-Team-ID': team_id}
+        
+        # Proxy to host with team_id in headers
+        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data, headers=headers)
         
         return jsonify(response_data), status_code
         

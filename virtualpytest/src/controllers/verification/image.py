@@ -946,7 +946,7 @@ class ImageVerificationController(VerificationControllerInterface):
 
 
     def save_reference_image(self, cropped_filename: str, reference_name: str, model: str, 
-                           area: dict, reference_type: str = 'reference_image') -> str:
+                           area: dict, reference_type: str = 'reference_image', team_id: str = None) -> str:
         """
         Save reference image to R2 and database.
         
@@ -996,8 +996,9 @@ class ImageVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
                 return None
             
-            # Use default team ID
-            team_id = DEFAULT_TEAM_ID
+            # Use team_id from request or fallback to default
+            if not team_id:
+                team_id = DEFAULT_TEAM_ID
             print(f"[@controller:ImageVerification] Using team ID: {team_id}")
             
             # Save to database instead of JSON file
