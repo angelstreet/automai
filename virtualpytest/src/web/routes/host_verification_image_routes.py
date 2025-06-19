@@ -426,10 +426,9 @@ def execute_image_verification():
         data = request.get_json()
         verification = data.get('verification')
         source_filename = data.get('source_filename')
-        model = data.get('model', 'default')
         
         print(f"[@route:host_verification_image:execute] Executing image verification on host")
-        print(f"[@route:host_verification_image:execute] Source: {source_filename}, Model: {model}")
+        print(f"[@route:host_verification_image:execute] Source: {source_filename}")
         
         # Validate required parameters
         if not verification or not source_filename:
@@ -456,7 +455,7 @@ def execute_image_verification():
         os.makedirs(results_dir, exist_ok=True)
         
         # Execute image verification
-        result = execute_image_verification_host(verification, source_path, model, 0, results_dir)
+        result = execute_image_verification_host(verification, source_path, 0, results_dir)
         
         # Convert local paths to public URLs
         if result.get('source_image_path'):
@@ -482,7 +481,7 @@ def execute_image_verification():
             'error': f'Image verification execution error: {str(e)}'
         }), 500
 
-def execute_image_verification_host(verification, source_path, model, verification_index, results_dir):
+def execute_image_verification_host(verification, source_path, verification_index, results_dir):
     """Execute image verification using verification controllers."""
     try:
         import cv2
@@ -501,28 +500,32 @@ def execute_image_verification_host(verification, source_path, model, verificati
         area = params.get('area')
         threshold = params.get('threshold', 0.8)
         image_filter = params.get('image_filter', 'none')
-        reference_name = verification.get('inputValue', '')
         
-        print(f"[@route:execute_image_verification_host] Reference name: {reference_name}")
+        # Get reference filename directly from verification data
+        reference_filename = verification.get('reference_filename', '')
+        
+        print(f"[@route:execute_image_verification_host] Reference filename: {reference_filename}")
         print(f"[@route:execute_image_verification_host] Image filter: {image_filter}")
         print(f"[@route:execute_image_verification_host] Area: {area}")
         print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
         
-        if not reference_name:
+        if not reference_filename:
             return {
                 'success': False,
-                'error': 'No reference image specified'
+                'error': 'No reference filename specified'
             }
         
-        # Resolve reference image path
-        image_path = resolve_reference_path(reference_name, model, 'image')
-        if not image_path:
+        # Build reference path from filename (assume it's in captures directory)
+        reference_path = f'{CAPTURES_PATH}/{reference_filename}'
+        
+        # Verify reference image exists
+        if not os.path.exists(reference_path):
             return {
                 'success': False,
-                'error': f'Reference image not found: {reference_name}'
+                'error': f'Reference image not found at: {reference_path}'
             }
         
-        print(f"[@route:execute_image_verification_host] Resolved path: {image_path}")
+        print(f"[@route:execute_image_verification_host] Using reference path: {reference_path}")
         
         # Create result file paths in stream directory
         source_result_path = f'{results_dir}/source_image_{verification_index}.png'
@@ -558,27 +561,27 @@ def execute_image_verification_host(verification, source_path, model, verificati
         # Copy reference image and apply filter if needed
         if image_filter and image_filter != 'none':
             # User wants filtered comparison - check if filtered reference exists
-            base_path, ext = os.path.splitext(image_path)
+            base_path, ext = os.path.splitext(reference_path)
             filtered_reference_path = f"{base_path}_{image_filter}{ext}"
             
             if os.path.exists(filtered_reference_path):
                 print(f"[@route:execute_image_verification_host] Using existing filtered reference: {filtered_reference_path}")
                 image_controller.copy_image(filtered_reference_path, reference_result_path)
             else:
-                print(f"[@route:execute_image_verification_host] Filtered reference not found, creating dynamically from original: {image_path}")
+                print(f"[@route:execute_image_verification_host] Filtered reference not found, creating dynamically from original: {reference_path}")
                 # Copy original reference first using controller
-                image_controller.copy_image(image_path, reference_result_path)
+                image_controller.copy_image(reference_path, reference_result_path)
                 # Apply filter dynamically to the copied reference
                 if not image_controller.apply_filter(reference_result_path, image_filter):
                     print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to reference, using original")
                     # If filter fails, copy original again to ensure clean state
-                    image_controller.copy_image(image_path, reference_result_path)
+                    image_controller.copy_image(reference_path, reference_result_path)
                 else:
                     print(f"[@route:execute_image_verification_host] Successfully applied {image_filter} filter to reference image")
         else:
             # User wants original comparison - use original reference
-            print(f"[@route:execute_image_verification_host] Using original reference: {image_path}")
-            image_controller.copy_image(image_path, reference_result_path)
+            print(f"[@route:execute_image_verification_host] Using original reference: {reference_path}")
+            image_controller.copy_image(reference_path, reference_result_path)
         
         # === STEP 3: Perform Verification ===
         # Load both images for comparison
@@ -640,72 +643,4 @@ def execute_image_verification_host(verification, source_path, model, verificati
         return {
             'success': False,
             'error': f'Image verification error: {str(e)}'
-        }
-
-def resolve_reference_path(reference_name, model, verification_type):
-    """Download reference image from R2 public URL and cache locally for verification."""
-    if not reference_name:
-        return None
-        
-    try:
-        # Read R2 URL from resource JSON file
-        resource_json_path = RESOURCE_JSON_PATH
-        if not os.path.exists(resource_json_path):
-            print(f"[@route:resolve_reference_path] Resource JSON not found: {resource_json_path}")
-            return None
-            
-        with open(resource_json_path, 'r') as f:
-            resource_data = json.load(f)
-        
-        # Find matching resource
-        r2_url = None
-        for resource in resource_data.get('resources', []):
-            if (resource.get('name') == reference_name and 
-                resource.get('model') == model and
-                resource.get('type') == f'reference_{verification_type}'):
-                
-                r2_url = resource.get('path')  # R2 public URL is stored in path field
-                break
-        
-        if not r2_url:
-            print(f"[@route:resolve_reference_path] Reference not found in JSON: {reference_name}")
-            return None
-        
-        print(f"[@route:resolve_reference_path] Found R2 public URL: {r2_url}")
-        
-        # Create cache directory
-        cache_dir = '/tmp/r2_cache'
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # Cache filename
-        cache_filename = f"{model}_{reference_name}.jpg"
-        cache_path = os.path.join(cache_dir, cache_filename)
-        
-        # Check if cached file exists and is recent (avoid re-downloading)
-        if os.path.exists(cache_path):
-            # If file is less than 1 hour old, use cached version
-            if (time.time() - os.path.getmtime(cache_path)) < 3600:
-                print(f"[@route:resolve_reference_path] Using cached R2 image: {cache_path}")
-                return cache_path
-        
-        # Download from R2 public URL to cache
-        try:
-            import requests
-            
-            print(f"[@route:resolve_reference_path] Downloading from R2 public URL to cache: {cache_path}")
-            response = requests.get(r2_url, timeout=30)
-            response.raise_for_status()
-            
-            with open(cache_path, 'wb') as f:
-                f.write(response.content)
-            
-            print(f"[@route:resolve_reference_path] R2 image cached successfully")
-            return cache_path
-            
-        except Exception as download_error:
-            print(f"[@route:resolve_reference_path] Failed to download from R2: {download_error}")
-            return None
-        
-    except Exception as e:
-        print(f"[@route:resolve_reference_path] Error resolving R2 reference: {str(e)}")
-        return None 
+        } 

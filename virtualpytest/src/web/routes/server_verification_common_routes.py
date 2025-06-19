@@ -92,7 +92,16 @@ def execute_batch_verification():
         data = request.get_json() or {}
         verifications = data.get('verifications', [])
         source_filename = data.get('source_filename')
-        model = data.get('model', 'default')
+        host = data.get('host', {})
+        
+        # Extract model from host device (required)
+        model = data.get('model') or host.get('device_model')
+        
+        if not model:
+            return jsonify({
+                'success': False,
+                'error': 'Device model is required. Host device must have device_model specified.'
+            }), 400
         
         print(f"[@route:server_verification_common:execute_batch_verification] Processing {len(verifications)} verifications")
         print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {model}")

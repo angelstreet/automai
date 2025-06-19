@@ -17,7 +17,6 @@ import {
 import React, { useState, useEffect } from 'react';
 
 // Import proper types from navigationTypes
-import { Host } from '../../types/common/Host_Types';
 import { VerificationActions, NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 
 import { NodeVerificationsList } from './Navigation_NodeVerificationsList';
@@ -234,7 +233,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             results.push(`❌ Verification ${i + 1}: No host device selected`);
             verificationSuccess = false;
           } else {
-            // Use server route instead of controller proxy
+            // Use server route for node verification (this is correct for node context)
             const response = await fetch(`/server/verification/batch/execute`, {
               method: 'POST',
               headers: {
@@ -412,7 +411,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               verificationSuccess = false;
               individualVerificationSuccess = false;
             } else {
-              // Use server route instead of controller proxy
+              // Use server route for node verification (this is correct for node context)
               const response = await fetch(`/server/verification/batch/execute`, {
                 method: 'POST',
                 headers: {

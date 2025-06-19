@@ -656,9 +656,19 @@ export const useVerification = ({
           },
           body: JSON.stringify({
             host: selectedHost, // Send full host object
-            verifications: validVerifications,
-            model: selectedHost.device_model,
-            node_id: 'verification-editor',
+            verifications: validVerifications.map((verification) => {
+              // For image verifications, add reference_filename from params
+              if (
+                verification.controller_type === 'image' &&
+                verification.params?.reference_image
+              ) {
+                return {
+                  ...verification,
+                  reference_filename: verification.params.reference_image,
+                };
+              }
+              return verification;
+            }),
             source_filename: capture_filename, // Include the extracted capture filename
           }),
         });

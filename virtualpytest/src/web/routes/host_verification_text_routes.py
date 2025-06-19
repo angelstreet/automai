@@ -44,7 +44,6 @@ def text_auto_detect():
         data = request.get_json()
         source_filename = data.get('source_filename')
         area = data.get('area')
-        model = data.get('model', 'default')
         image_filter = data.get('image_filter', 'none')
         
         print(f"[@route:host_text_auto_detect] Text auto-detection request: {source_filename}")
@@ -257,37 +256,35 @@ def save_text_resource():
         
         data = request.get_json()
         reference_name = data.get('name') or data.get('reference_name')  # Handle both parameter names
-        model = data.get('model')
         text = data.get('text')
         font_size = data.get('font_size', 12.0)
         confidence = data.get('confidence', 0.8)
         area = data.get('area')
         reference_type = data.get('reference_type', 'reference_text')
         
-        print(f"[@route:host_save_text_resource] Saving text reference: {reference_name} for model: {model}")
+        print(f"[@route:host_save_text_resource] Saving text reference: {reference_name}")
         print(f"[@route:host_save_text_resource] Text: '{text}', Font size: {font_size}, Confidence: {confidence}")
         print(f"[@route:host_save_text_resource] Request data keys: {list(data.keys())}")
         
         # Validate required parameters
-        if not reference_name or not model or not text:
+        if not reference_name or not text:
             return jsonify({
                 'success': False,
-                'error': 'reference_name (or name), model, and text are required'
+                'error': 'reference_name (or name) and text are required'
             }), 400
         
         # ✅ NEW: Return immediately with text data for frontend to save to database via server
         # This follows the same fast pattern as image reference saving
         return jsonify({
             'success': True,
-            'message': f'Text reference ready for database save: {reference_name}',
+            'message': f'Text reference ready: {reference_name}',
             'reference_name': reference_name,
-            'model': model,
             'text': text,
             'font_size': font_size,
             'confidence': confidence,
             'area': area,
             'reference_type': reference_type,
-            # Return text data for database save (no R2 URL needed for text)
+            # Return text data for local use
             'text_data': {
                 'text': text,
                 'font_size': font_size,
@@ -322,10 +319,9 @@ def execute_text_verification():
         data = request.get_json()
         verification = data.get('verification')
         source_filename = data.get('source_filename')
-        model = data.get('model', 'default')
         
         print(f"[@route:host_verification_text:execute] Executing text verification on host")
-        print(f"[@route:host_verification_text:execute] Source: {source_filename}, Model: {model}")
+        print(f"[@route:host_verification_text:execute] Source: {source_filename}")
         
         # Validate required parameters
         if not verification or not source_filename:
@@ -352,7 +348,7 @@ def execute_text_verification():
         os.makedirs(results_dir, exist_ok=True)
         
         # Execute text verification
-        result = execute_text_verification_host(verification, source_path, model, 0, results_dir)
+        result = execute_text_verification_host(verification, source_path, 0, results_dir)
         
         # Convert local paths to public URLs
         if result.get('source_image_path'):
@@ -376,7 +372,7 @@ def execute_text_verification():
             'error': f'Text verification execution error: {str(e)}'
         }), 500
 
-def execute_text_verification_host(verification, source_path, model, verification_index, results_dir):
+def execute_text_verification_host(verification, source_path, verification_index, results_dir):
     """Execute text verification using verification controllers."""
     try:
         import cv2
