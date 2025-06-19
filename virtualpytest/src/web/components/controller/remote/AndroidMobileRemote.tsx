@@ -34,6 +34,10 @@ interface AndroidMobileRemoteProps {
   streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
+  // Content bounds callback
+  onContentBoundsChange?: (
+    bounds: { actualContentWidth: number; horizontalOffset: number } | null,
+  ) => void;
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -48,6 +52,7 @@ export const AndroidMobileRemote = React.memo(
     streamCollapsed,
     streamMinimized = false,
     captureMode = 'stream',
+    onContentBoundsChange,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -536,6 +541,7 @@ export const AndroidMobileRemote = React.memo(
               onElementClick={handleOverlayElementClick}
               panelInfo={panelInfo}
               host={host}
+              onContentBoundsChange={onContentBoundsChange}
             />,
             document.body,
           )}
@@ -591,7 +597,8 @@ export const AndroidMobileRemote = React.memo(
       JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
       prevProps.streamCollapsed === nextProps.streamCollapsed &&
       prevProps.streamMinimized === nextProps.streamMinimized &&
-      prevProps.captureMode === nextProps.captureMode
+      prevProps.captureMode === nextProps.captureMode &&
+      prevProps.onContentBoundsChange === nextProps.onContentBoundsChange
     );
   },
 );

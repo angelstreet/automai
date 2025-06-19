@@ -34,11 +34,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useUserInterface } from '../hooks/pages/useUserInterface';
+import { Model } from '../types/pages/Models_Types';
 import {
   UserInterface as UserInterfaceType,
   UserInterfaceCreatePayload,
 } from '../types/pages/UserInterface_Types';
-import { Model } from '../types/pages/Models_Types';
 import { buildServerUrl } from '../utils/frontendUtils';
 
 const UserInterface: React.FC = () => {

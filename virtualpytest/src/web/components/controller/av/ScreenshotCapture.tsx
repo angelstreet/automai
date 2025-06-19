@@ -29,6 +29,7 @@ interface ScreenshotCaptureProps {
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   model?: string;
+  contentBounds?: { actualContentWidth: number; horizontalOffset: number } | null;
   sx?: any;
   selectedHost?: any;
 }
@@ -40,6 +41,7 @@ export function ScreenshotCapture({
   selectedArea,
   onAreaSelected,
   model,
+  contentBounds,
   sx = {},
   selectedHost,
 }: ScreenshotCaptureProps) {
@@ -143,6 +145,7 @@ export function ScreenshotCapture({
           imageRef={imageRef}
           onAreaSelected={onAreaSelected}
           selectedArea={selectedArea || null}
+          contentBounds={contentBounds}
           sx={{ zIndex: 10 }}
         />
       )}

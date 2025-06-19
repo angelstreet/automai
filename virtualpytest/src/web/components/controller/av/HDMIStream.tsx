@@ -26,6 +26,7 @@ interface HDMIStreamProps {
   onCollapsedChange?: (isCollapsed: boolean) => void;
   onMinimizedChange?: (isMinimized: boolean) => void;
   onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
+  contentBounds?: { actualContentWidth: number; horizontalOffset: number } | null;
   sx?: any;
 }
 
@@ -34,6 +35,7 @@ export function HDMIStream({
   onCollapsedChange,
   onMinimizedChange,
   onCaptureModeChange,
+  contentBounds,
   sx = {},
 }: HDMIStreamProps) {
   console.log(`[@component:HDMIStream] Rendering HDMI stream for device: ${host.device_model}`);
@@ -476,6 +478,7 @@ export function HDMIStream({
                   onAreaSelected={handleAreaSelected}
                   model={host.device_model}
                   selectedHost={host}
+                  contentBounds={contentBounds}
                   sx={{
                     position: 'absolute',
                     top: 0,
@@ -499,6 +502,7 @@ export function HDMIStream({
                   isCapturing={isCaptureActive}
                   videoFramePath={currentVideoFramePath} // Pass current frame URL
                   model={host.device_model}
+                  contentBounds={contentBounds}
                   sx={{
                     position: 'absolute',
                     top: 0,

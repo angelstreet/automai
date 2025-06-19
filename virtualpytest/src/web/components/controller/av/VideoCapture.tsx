@@ -28,6 +28,7 @@ interface VideoCaptureProps {
   isCapturing?: boolean;
   videoFramePath?: string; // Current frame image path/URL
   model?: string;
+  contentBounds?: { actualContentWidth: number; horizontalOffset: number } | null;
   sx?: any;
 }
 
@@ -41,6 +42,7 @@ export function VideoCapture({
   isCapturing = false,
   videoFramePath,
   model,
+  contentBounds,
   sx = {},
 }: VideoCaptureProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -190,6 +192,7 @@ export function VideoCapture({
             imageRef={imageRef}
             onAreaSelected={onAreaSelected}
             selectedArea={selectedArea || null}
+            contentBounds={contentBounds}
             sx={{ zIndex: 5 }}
           />
         )}
