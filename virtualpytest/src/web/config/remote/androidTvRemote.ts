@@ -1,12 +1,12 @@
 export const androidTvRemoteConfig = {
   remote_info: {
-    name: 'Android TV Remote',
+    name: 'Android TV',
     type: 'android_tv' as const,
   },
   panel_layout: {
     collapsed: {
-      width: '300px',
-      height: '200px',
+      width: '180px',
+      height: '300px',
       position: {
         bottom: '20px',
         right: '20px',
