@@ -254,6 +254,27 @@ export const AndroidTvRemote = React.memo(
             position: 'relative',
           }}
         >
+show position          {/* Hide/Show Labels Toggle Overlay Button - Panel Top Right */}
+          {!isCollapsed && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => setShowOverlays(!showOverlays)}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                fontSize: '0.6rem',
+                px: 1,
+                py: 0.5,
+                minWidth: 'auto',
+                zIndex: 10,
+              }}
+            >
+              {showOverlays ? 'Hide' : 'Show'}
+            </Button>
+          )}
+
           {/* Remote container with image background */}
           <Box
             sx={{
@@ -267,27 +288,6 @@ export const AndroidTvRemote = React.memo(
               backgroundPosition: 'center',
             }}
           >
-            {/* Hide/Show Labels Toggle Overlay Button */}
-            {!isCollapsed && (
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => setShowOverlays(!showOverlays)}
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  fontSize: '0.6rem',
-                  px: 1,
-                  py: 0.5,
-                  minWidth: 'auto',
-                  zIndex: 10,
-                }}
-              >
-                {showOverlays ? 'Hide' : 'Show'}
-              </Button>
-            )}
-
             {/* Render clickable button overlays */}
             {Object.entries(localRemoteConfig.button_layout).map(([buttonId, button]) => (
               <Box
