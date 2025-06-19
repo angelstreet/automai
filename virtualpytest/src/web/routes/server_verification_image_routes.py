@@ -83,26 +83,68 @@ def execute_verification():
 
 @verification_av_image_bp.route('/save-image-reference', methods=['POST'])
 def save_reference():
-    """Proxy image reference save request to selected host"""
+    """Save image reference directly on server (using exact same pattern as navigation trees)"""
     try:
-        print("[@route:server_verification_av_image:save_image_reference] Proxying image reference save request")
+        print("[@route:server_verification_av_image:save_image_reference] Saving image reference on server")
         
         # ✅ GET TEAM_ID FROM REQUEST HEADERS LIKE OTHER WORKING ROUTES
         from src.utils.app_utils import get_team_id
         team_id = get_team_id()
         
         # Get request data
-        request_data = request.get_json() or {}
+        data = request.get_json() or {}
         
-        # ✅ ADD TEAM_ID TO REQUEST HEADERS FOR HOST
-        headers = {'X-Team-ID': team_id}
+        # Extract required fields
+        name = data.get('reference_name') or data.get('name')
+        model = data.get('model')
+        r2_url = data.get('r2_url')  # The image should already be uploaded to R2
+        reference_type = data.get('reference_type', 'reference_image')
+        area = data.get('area', {})
         
-        # Proxy to host with team_id in headers
-        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data, headers=headers)
+        if not all([name, model, r2_url]):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: name, model, r2_url'
+            }), 400
         
-        return jsonify(response_data), status_code
+        print(f'[@route:server_verification_av_image:save_image_reference] Saving image: {name} for model: {model}')
+        
+        # ✅ USE EXACT SAME PATTERN AS NAVIGATION TREES - DIRECT DB SAVE ON SERVER
+        from src.lib.supabase.images_db import save_image
+        
+        # Extract R2 path from URL for the database
+        r2_path = r2_url.split('/')[-1] if r2_url else ''
+        
+        result = save_image(
+            name=name,
+            device_model=model,
+            type=reference_type,
+            r2_path=r2_path,
+            r2_url=r2_url,
+            team_id=team_id,
+            area=area
+        )
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': 'Image reference saved successfully',
+                'image': result.get('image', {
+                    'name': name,
+                    'model': model,
+                    'team_id': team_id,
+                    'type': reference_type,
+                    'url': r2_url
+                })
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to save image reference')
+            }), 500
         
     except Exception as e:
+        print(f"[@route:server_verification_av_image:save_image_reference] ERROR: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

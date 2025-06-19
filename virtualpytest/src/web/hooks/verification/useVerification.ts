@@ -410,49 +410,91 @@ export const useVerification = ({
         throw new Error(captureResult.error || 'Failed to capture area');
       }
 
-      // Step 2: Save the captured area as a reference to Cloudflare R2
-      const endpoint =
-        referenceType === 'text'
-          ? '/server/verification/text/save-text-reference'
-          : '/server/verification/image/save-image-reference';
+      // Step 2: Upload to R2 (HOST) and then save to database (SERVER)
+      if (referenceType === 'text') {
+        // Text references use the old single-call pattern
+        const response = await fetch('/server/verification/text/save-text-reference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            name: referenceName,
+            model: selectedHost.device_model,
+            area: captureResult.processed_area || selectedArea,
+            screenshot_path: captureSourcePath,
+            referenceType: referenceType,
+            text: referenceText,
+            cropped_filename: captureResult.filename,
+          }),
+        });
 
-      const saveResponse = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: selectedHost,
-          name: referenceName,
-          model: selectedHost.device_model,
-          area: captureResult.processed_area || selectedArea, // Use processed area if available
-          screenshot_path: captureSourcePath,
-          referenceType: referenceType,
-          text: referenceType === 'text' ? referenceText : undefined,
-          cropped_filename: captureResult.filename, // Pass the captured filename for R2 upload
-        }),
-      });
-
-      const saveResult = await saveResponse.json();
-
-      if (saveResult.success) {
-        console.log(
-          '[@hook:useVerification] Reference saved successfully to Cloudflare R2:',
-          saveResult,
-        );
-
-        // Show success message with R2 URL
-        setSuccessMessage(`Reference "${referenceName}" saved to Cloudflare R2 successfully`);
-
-        // Clear form and captured image
-        setReferenceName('');
-        setCapturedReferenceImage(null);
-        setHasCaptured(false);
-
-        // Trigger reload of available references
-        setReferenceSaveCounter((prev) => prev + 1);
+        const result = await response.json();
+        if (result.success) {
+          setSuccessMessage(`Reference "${referenceName}" saved successfully`);
+          setReferenceName('');
+          setCapturedReferenceImage(null);
+          setHasCaptured(false);
+          setReferenceSaveCounter((prev) => prev + 1);
+        } else {
+          setError(result.error || 'Failed to save text reference');
+        }
       } else {
-        setError(saveResult.error || 'Failed to save reference to Cloudflare R2');
+        // Image references use new two-step pattern: HOST upload + SERVER database save
+
+        // Step 2a: Upload to R2 via HOST
+        const uploadResponse = await fetch('/host/verification/image/save-image-reference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            reference_name: referenceName,
+            model: selectedHost.device_model,
+            area: captureResult.processed_area || selectedArea,
+            cropped_filename: captureResult.filename,
+            reference_type: referenceType,
+          }),
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (!uploadResult.success) {
+          setError(uploadResult.error || 'Failed to upload image to R2');
+          return;
+        }
+
+        console.log('[@hook:useVerification] Image uploaded to R2:', uploadResult.r2_url);
+
+        // Step 2b: Save metadata to database via SERVER (using exact same pattern as navigation trees)
+        const dbResponse = await fetch('/server/verification/image/save-image-reference', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reference_name: referenceName,
+            model: selectedHost.device_model,
+            r2_url: uploadResult.r2_url,
+            area: captureResult.processed_area || selectedArea,
+            reference_type: referenceType,
+          }),
+        });
+
+        const dbResult = await dbResponse.json();
+
+        if (dbResult.success) {
+          console.log('[@hook:useVerification] Reference saved successfully:', dbResult);
+          setSuccessMessage(`Reference "${referenceName}" saved successfully`);
+          setReferenceName('');
+          setCapturedReferenceImage(null);
+          setHasCaptured(false);
+          setReferenceSaveCounter((prev) => prev + 1);
+        } else {
+          setError(dbResult.error || 'Failed to save reference to database');
+        }
       }
     } catch (err: any) {
       console.error('[@hook:useVerification] Error saving reference:', err);

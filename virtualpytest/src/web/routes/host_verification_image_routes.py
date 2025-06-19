@@ -365,27 +365,28 @@ def save_resource():
                     'error': 'Verification image controller not available'
                 }), 500
             
-            # ✅ CONTROLLER DOES EVERYTHING - like av_controller.save_screenshot()
-            reference_result = verification_image_controller.save_reference_image(
+            # ✅ ONLY UPLOAD TO R2 - DATABASE SAVE WILL BE DONE ON SERVER
+            r2_url = verification_image_controller.upload_reference_to_r2(
                 cropped_filename=cropped_filename,
                 reference_name=reference_name,
-                model=model,
-                area=area,
-                reference_type=reference_type,
-                team_id=team_id
+                model=model
             )
             
-            if reference_result:
-                # Return success following AV controller pattern
+            if r2_url:
+                # Return R2 URL so frontend can save to database via server
                 return jsonify({
                     'success': True,
                     'message': f'Reference uploaded to R2: {reference_name}',
-                    'image_url': reference_result  # ✅ Complete R2 URL from controller
+                    'r2_url': r2_url,  # ✅ R2 URL for frontend to send to server
+                    'reference_name': reference_name,
+                    'model': model,
+                    'area': area,
+                    'reference_type': reference_type
                 })
             else:
                 return jsonify({
                     'success': False,
-                    'error': 'Failed to save reference image'
+                    'error': 'Failed to upload reference to R2'
                 }), 500
                 
         except Exception as controller_error:
