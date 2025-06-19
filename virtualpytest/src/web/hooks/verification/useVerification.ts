@@ -652,17 +652,44 @@ export const useVerification = ({
           body: JSON.stringify({
             host: selectedHost, // Send full host object
             verifications: validVerifications.map((verification) => {
-              // For image verifications, add reference_filename from params
+              // Transform parameter definitions into actual values
+              const cleanParams: any = {};
+
+              // Extract actual values from parameter definitions
+              if (verification.params) {
+                Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
+                  if (typeof value === 'object' && value !== null && 'default' in value) {
+                    // Extract default value from parameter definition
+                    cleanParams[key] = value.default;
+                  } else {
+                    // Keep actual values as-is
+                    cleanParams[key] = value;
+                  }
+                });
+              }
+
+              // For image verifications, ensure image_path is set correctly
               if (
                 verification.controller_type === 'image' &&
                 verification.params?.reference_image
               ) {
+                cleanParams.image_path = verification.params.reference_image;
                 return {
                   ...verification,
+                  params: cleanParams,
                   reference_filename: verification.params.reference_image,
                 };
               }
-              return verification;
+
+              // For text verifications, ensure text is set from inputValue
+              if (verification.controller_type === 'text' && verification.inputValue) {
+                cleanParams.text = verification.inputValue;
+              }
+
+              return {
+                ...verification,
+                params: cleanParams,
+              };
             }),
             source_filename: capture_filename, // Include the extracted capture filename
           }),
@@ -691,32 +718,40 @@ export const useVerification = ({
                 verification,
               );
 
-              // Determine result type
+              // Extract actual verification result from nested structure
+              const actualResult = result.verification_result || result;
+              const actualSuccess = actualResult.success || false;
+
+              // Determine result type based on actual verification result
               let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
-              if (result.success) {
+              if (actualSuccess) {
                 resultType = 'PASS';
-              } else if (result.error && !result.message) {
+              } else if (actualResult.error && !actualResult.message) {
                 resultType = 'ERROR';
               }
 
               const processedResult: VerificationTestResult = {
-                success: result.success,
-                message: result.message,
-                error: result.error,
-                threshold: result.confidence || result.threshold,
+                success: actualSuccess,
+                message: actualResult.message || result.message,
+                error: actualResult.error || result.error,
+                threshold:
+                  actualResult.confidence ||
+                  actualResult.threshold ||
+                  result.confidence ||
+                  result.threshold,
                 resultType: resultType,
-                sourceImageUrl: result.sourceImageUrl,
-                referenceImageUrl: result.referenceImageUrl,
-                extractedText: result.extracted_text,
-                searchedText: result.searched_text,
-                imageFilter: result.image_filter || verification.params?.image_filter,
-                detectedLanguage: result.detected_language,
-                languageConfidence: result.language_confidence,
+                sourceImageUrl: actualResult.source_image_url || result.sourceImageUrl,
+                referenceImageUrl: actualResult.reference_image_url || result.referenceImageUrl,
+                extractedText: actualResult.extracted_text || result.extracted_text,
+                searchedText: actualResult.searched_text || result.searched_text,
+                imageFilter: actualResult.image_filter || result.image_filter,
+                detectedLanguage: actualResult.detected_language || result.detected_language,
+                languageConfidence: actualResult.language_confidence || result.language_confidence,
                 // Add ADB-specific fields
-                search_term: result.search_term,
-                wait_time: result.wait_time,
-                total_matches: result.total_matches,
-                matches: result.matches,
+                search_term: actualResult.search_term || result.search_term,
+                wait_time: actualResult.wait_time || result.wait_time,
+                total_matches: actualResult.total_matches || result.total_matches,
+                matches: actualResult.matches || result.matches,
               };
 
               console.log(`[@hook:useVerification] Processed result ${index}:`, processedResult);

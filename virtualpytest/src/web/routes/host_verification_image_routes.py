@@ -489,7 +489,16 @@ def execute_image_verification_host(verification, source_path, verification_inde
             }
         
         # Build reference path from filename (assume it's in captures directory)
-        reference_path = f'{CAPTURES_PATH}/{reference_filename}'
+        # Add .jpg extension if not present
+        if not reference_filename.endswith(('.jpg', '.png', '.jpeg')):
+            reference_filename_with_ext = f'{reference_filename}.jpg'
+            print(f"[@route:execute_image_verification_host] Added extension: '{reference_filename_with_ext}'")
+        else:
+            reference_filename_with_ext = reference_filename
+            print(f"[@route:execute_image_verification_host] Extension already present: '{reference_filename_with_ext}'")
+        
+        reference_path = f'{CAPTURES_PATH}/{reference_filename_with_ext}'
+        print(f"[@route:execute_image_verification_host] Final reference path: '{reference_path}'")
         
         # Verify reference image exists
         if not os.path.exists(reference_path):
