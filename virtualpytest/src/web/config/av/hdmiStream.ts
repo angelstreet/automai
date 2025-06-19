@@ -20,7 +20,7 @@ export const hdmiStreamConfig = {
     },
     expanded: {
       width: '700px',
-      height: '600px',
+      height: '500px',
       position: {
         bottom: '20px',
         right: '20px',

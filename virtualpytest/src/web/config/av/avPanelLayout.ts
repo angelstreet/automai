@@ -64,7 +64,7 @@ export const getConfigurableAVPanelLayout = (
     },
     expanded: {
       width: '800px',
-      height: '600px',
+      height: '500px',
       position: {
         top: '100px',
         left: '20px',
