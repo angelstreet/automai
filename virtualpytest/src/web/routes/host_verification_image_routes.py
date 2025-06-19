@@ -421,10 +421,14 @@ def execute_image_verification():
                 'error': f'Source file not found: {source_filename}'
             }), 404
         
-        # Create results directory
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        results_dir = f'{STREAM_BASE_PATH}/verification_results/{timestamp}'
+        # Create results directory - simple path, always overwrite
+        results_dir = f'{STREAM_BASE_PATH}/verification_results'
+        print(f"[@route:host_verification_image:execute] Using verification results directory: {results_dir}")
+        
+        # Always clean and recreate directory to overwrite previous results
+        import shutil
+        if os.path.exists(results_dir):
+            shutil.rmtree(results_dir)
         os.makedirs(results_dir, exist_ok=True)
         
         # Execute image verification
@@ -443,8 +447,7 @@ def execute_image_verification():
         return jsonify({
             'success': True,
             'verification_result': result,
-            'results_directory': results_dir.replace('/var/www/html', ''),
-            'timestamp': timestamp
+            'results_directory': results_dir.replace('/var/www/html', '')
         })
         
     except Exception as e:
