@@ -72,22 +72,22 @@ export const useNavigationEditor = () => {
 
   // Create wrapper functions for config operations that pass the navigation state
   const loadFromConfig = useCallback(
-    (treeName: string) => {
-      return configHook.loadFromConfig(treeName, configState);
+    (userInterfaceId: string) => {
+      return configHook.loadFromConfig(userInterfaceId, configState);
     },
     [configHook, configState],
   );
 
   const saveToConfig = useCallback(
-    (treeName: string) => {
-      return configHook.saveToConfig(treeName, configState);
+    (userInterfaceId: string) => {
+      return configHook.saveToConfig(userInterfaceId, configState);
     },
     [configHook, configState],
   );
 
   const createEmptyTreeConfig = useCallback(
-    (treeName: string) => {
-      return configHook.createEmptyTree(treeName, configState);
+    (userInterfaceId: string) => {
+      return configHook.createEmptyTree(userInterfaceId, configState);
     },
     [configHook, configState],
   );
@@ -565,6 +565,18 @@ export const useNavigationEditor = () => {
     navigationState.setMaxDisplayDepth(5);
   }, [navigationState.setFocusNodeId, navigationState.setMaxDisplayDepth]);
 
+  // Load available trees
+  const loadAvailableTrees = useCallback(async () => {
+    try {
+      // Use the new function name
+      const userInterfaces = await configHook.listAvailableUserInterfaces();
+      return userInterfaces;
+    } catch (error) {
+      console.error('[@hook:useNavigationEditor:loadAvailableTrees] Error:', error);
+      return [];
+    }
+  }, [configHook]);
+
   return {
     // State (filtered views for ReactFlow display)
     nodes: filteredNodes,
@@ -644,7 +656,7 @@ export const useNavigationEditor = () => {
     // Config operations (single source of truth) - memoized to prevent re-renders
     loadFromConfig,
     saveToConfig,
-    listAvailableTrees: configHook.listAvailableTrees,
+    listAvailableTrees: configHook.listAvailableUserInterfaces,
     createEmptyTreeConfig,
 
     // Lock management from Config hook
@@ -713,5 +725,8 @@ export const useNavigationEditor = () => {
     availableHosts: deviceControl.availableHosts,
     getHostByName: deviceControl.getHostByName,
     fetchHosts: deviceControl.fetchHosts,
+
+    // Load available trees
+    loadAvailableTrees,
   };
 };

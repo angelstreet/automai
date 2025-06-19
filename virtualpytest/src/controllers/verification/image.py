@@ -943,103 +943,12 @@ class ImageVerificationController(VerificationControllerInterface):
         print(f"[@controller:ImageVerification] Applying {filter_type} filter to: {image_path}")
         return apply_image_filter(image_path, filter_type)
 
-    def _perform_git_pull(self) -> bool:
-        """
-        Perform git pull operation safely, returning boolean result.
-        
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            import subprocess
-            import os
-            
-            # Store original directory
-            original_cwd = os.getcwd()
-            
-            # Change to parent directory for git operations
-            os.chdir('..')
-            
-            # Perform git pull
-            result = subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
-            
-            # Return to original directory
-            os.chdir(original_cwd)
-            
-            print(f"[@controller:ImageVerification] Git pull completed successfully")
-            return True
-            
-        except subprocess.CalledProcessError as e:
-            try:
-                os.chdir(original_cwd)
-            except:
-                pass
-            print(f"[@controller:ImageVerification] Git pull failed: {e}")
-            return False
-        except Exception as e:
-            try:
-                os.chdir(original_cwd)
-            except:
-                pass
-            print(f"[@controller:ImageVerification] Git pull error: {e}")
-            return False
 
-    def _perform_git_commit_and_push(self, commit_message: str) -> bool:
-        """
-        Perform git commit and push operations safely, returning boolean result.
-        
-        Args:
-            commit_message: The commit message to use
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            import subprocess
-            import os
-            
-            # Store original directory
-            original_cwd = os.getcwd()
-            
-            # Change to parent directory for git operations
-            os.chdir('..')
-            
-            # Git commit with message
-            subprocess.run(['git', 'commit', '-am', commit_message], check=True, capture_output=True, text=True)
-            print(f"[@controller:ImageVerification] Git commit completed")
-            
-            # Git push with authentication
-            github_token = os.getenv('GITHUB_TOKEN')
-            if github_token:
-                subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
-                print(f"[@controller:ImageVerification] Git push completed")
-            else:
-                print(f"[@controller:ImageVerification] Warning: GITHUB_TOKEN not set, skipping push")
-            
-            # Return to original directory
-            os.chdir(original_cwd)
-            
-            return True
-            
-        except subprocess.CalledProcessError as e:
-            try:
-                os.chdir(original_cwd)
-            except:
-                pass
-            print(f"[@controller:ImageVerification] Git commit/push failed: {e}")
-            return False
-        except Exception as e:
-            try:
-                os.chdir(original_cwd)
-            except:
-                pass
-            print(f"[@controller:ImageVerification] Git commit/push error: {e}")
-            return False
 
     def save_reference_image(self, cropped_filename: str, reference_name: str, model: str, 
                            area: dict, reference_type: str = 'reference_image') -> str:
         """
-        Save reference image to R2 and update resource.json - like av_controller.save_screenshot()
+        Save reference image to R2 and database.
         
         Args:
             cropped_filename: Filename of the cropped image
@@ -1053,12 +962,11 @@ class ImageVerificationController(VerificationControllerInterface):
         """
         try:
             import os
-            import json
-            from datetime import datetime
+            from src.lib.supabase.images_db import save_image
+            from src.utils.app_utils import DEFAULT_TEAM_ID
             
             # Path configuration
             CROPPED_PATH = '/var/www/html/stream/captures/cropped'
-            RESOURCE_JSON_PATH = '../config/resource/resource.json'
             
             print(f"[@controller:ImageVerification] Saving reference to R2: {reference_name} for model: {model}")
             print(f"[@controller:ImageVerification] Source cropped file: {cropped_filename}")
@@ -1088,81 +996,31 @@ class ImageVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ImageVerification] R2 upload failed: {error_msg}")
                 return None
             
-            # Git pull FIRST before editing resource.json
-            try:
-                print(f"[@controller:ImageVerification] Performing git pull before editing resource.json...")
-                git_pull_success = self._perform_git_pull()
-                
-                if not git_pull_success:
-                    print(f"[@controller:ImageVerification] Git pull failed")
-                    return None
-                
-            except Exception as git_error:
-                print(f"[@controller:ImageVerification] Git pull failed: {git_error}")
-                return None
+            # Use default team ID
+            team_id = DEFAULT_TEAM_ID
+            print(f"[@controller:ImageVerification] Using team ID: {team_id}")
             
-            # Update resource.json AFTER git pull
-            resource_json_path = RESOURCE_JSON_PATH
-            os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
+            # Save to database instead of JSON file
+            db_result = save_image(
+                name=reference_name,
+                device_model=model,
+                type=reference_type,
+                r2_path=r2_path,
+                r2_url=complete_url,
+                team_id=team_id,
+                area=area
+            )
             
-            # Simple: Load existing or create new
-            resource_data = {'resources': []}
-            if os.path.exists(resource_json_path):
-                try:
-                    with open(resource_json_path, 'r') as f:
-                        resource_data = json.load(f)
-                except:
-                    print(f"[@controller:ImageVerification] Warning: Invalid JSON, creating new")
-                    resource_data = {'resources': []}
-            
-            # Ensure resources exists
-            if 'resources' not in resource_data:
-                resource_data['resources'] = []
-            
-            # Simple: Just append new entry
-            new_resource = {
-                'name': reference_name,
-                'model': model,
-                'type': reference_type,
-                'area': area,
-                'created_at': datetime.now().isoformat(),
-                'path': r2_path
-            }
-            
-            resource_data['resources'].append(new_resource)
-            
-            # Save updated resource data
-            with open(resource_json_path, 'w') as f:
-                json.dump(resource_data, f, indent=2)
-            
-            print(f"[@controller:ImageVerification] Resource JSON updated")
-            
-            # Git commit and push resource.json
-            try:
-                print(f"[@controller:ImageVerification] Performing git commit and push...")
-                
-                commit_message = f'Add R2 reference: {reference_name} for {model}'
-                git_commit_success = self._perform_git_commit_and_push(commit_message)
-                
-                if git_commit_success:
-                    print(f"[@controller:ImageVerification] Git operations completed successfully")
-                else:
-                    print(f"[@controller:ImageVerification] Warning: Git operations failed")
-                    # Don't fail the save operation, just warn (same pattern as navigation routes)
-                
-                # Return complete Cloudflare R2 URL that we extracted immediately after upload
+            if db_result['success']:
+                print(f"[@controller:ImageVerification] Successfully saved to database")
                 print(f"[@controller:ImageVerification] Returning complete R2 URL: {complete_url}")
                 return complete_url
-                
-            except Exception as git_error:
-                print(f"[@controller:ImageVerification] Git operation failed: {git_error}")
-                # Don't fail the save operation, just warn and return the URL
-                print(f"[@controller:ImageVerification] Returning complete R2 URL despite git error: {complete_url}")
-                return complete_url
+            else:
+                print(f"[@controller:ImageVerification] Database save failed: {db_result.get('error')}")
+                return None
                 
         except Exception as e:
             print(f"[@controller:ImageVerification] Error saving reference: {str(e)}")
             return None
 
-# Backward compatibility alias
-ImageVerificationController = ImageVerificationController 
+ 

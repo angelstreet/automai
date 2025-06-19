@@ -283,8 +283,36 @@ class HDMIStreamController(AVControllerInterface):
                 
                 if upload_result.get('success'):
                     print(f'[@controller:HDMIStream] Successfully uploaded to R2: {r2_path}')
-                    # Return complete Cloudflare R2 URL
+                    # Extract complete Cloudflare R2 URL
                     complete_url = upload_result.get('url')
+                    print(f'[@controller:HDMIStream] Extracted complete R2 URL: {complete_url}')
+                    
+                    # Save to database
+                    try:
+                        from src.lib.supabase.images_db import save_image
+                        from src.utils.app_utils import DEFAULT_TEAM_ID
+                        
+                        team_id = DEFAULT_TEAM_ID
+                        print(f'[@controller:HDMIStream] Using team ID: {team_id}')
+                        
+                        db_result = save_image(
+                            name=filename,
+                            device_model=device_model,
+                            type='screenshot',
+                            r2_path=r2_path,
+                            r2_url=complete_url,
+                            team_id=team_id,
+                            area=None
+                        )
+                            
+                        if db_result['success']:
+                            print(f'[@controller:HDMIStream] Successfully saved to database')
+                        else:
+                            print(f'[@controller:HDMIStream] Database save failed: {db_result.get("error")}')
+                    except Exception as db_error:
+                        print(f'[@controller:HDMIStream] Database save error: {db_error}')
+                        # Don't fail the upload, just log the error
+                    
                     print(f'[@controller:HDMIStream] Returning complete R2 URL: {complete_url}')
                     return complete_url
                 else:

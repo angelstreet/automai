@@ -18,17 +18,12 @@ from src.utils.host_utils import get_local_controller
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
 
-# Host configuration
-HOST_IP = "77.56.53.130"
-HOST_PORT = "5119"
-CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 
 # Path configuration constants
 STREAM_BASE_PATH = '/var/www/html/stream'
 CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
 CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
-RESOURCES_BASE_PATH = '../resources'
-RESOURCE_JSON_PATH = '../config/resource/resource.json'
+
 
 # =====================================================
 # HOST-SIDE IMAGE CROPPING AND PROCESSING ENDPOINTS

@@ -15,16 +15,16 @@ interface NavigationConfigContextType {
   isCheckingLock: boolean;
   showReadOnlyOverlay: boolean;
   setCheckingLockState: (checking: boolean) => void;
-  lockNavigationTree: (treeName: string) => Promise<boolean>;
-  unlockNavigationTree: (treeName: string) => Promise<boolean>;
-  checkTreeLockStatus: (treeName: string) => Promise<void>;
-  setupAutoUnlock: (treeName: string) => () => void;
+  lockNavigationTree: (userInterfaceId: string) => Promise<boolean>;
+  unlockNavigationTree: (userInterfaceId: string) => Promise<boolean>;
+  checkTreeLockStatus: (userInterfaceId: string) => Promise<void>;
+  setupAutoUnlock: (userInterfaceId: string) => () => void;
 
   // Config operations
-  loadFromConfig: (treeName: string, state: NavigationConfigState) => Promise<void>;
-  saveToConfig: (treeName: string, state: NavigationConfigState) => Promise<void>;
-  listAvailableTrees: () => Promise<string[]>;
-  createEmptyTree: (treeName: string, state: NavigationConfigState) => Promise<void>;
+  loadFromConfig: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
+  saveToConfig: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
+  listAvailableUserInterfaces: () => Promise<any[]>;
+  createEmptyTree: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
 
   // User identification
   sessionId: string;
@@ -82,41 +82,83 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
     setIsCheckingLock(checking);
   }, []);
 
-  // Lock a navigation tree with simplified user-based locking
-  const lockNavigationTree = useCallback(
-    async (treeName: string): Promise<boolean> => {
+  // Check lock status for a tree
+  const checkTreeLockStatus = useCallback(
+    async (userInterfaceId: string) => {
       try {
         setIsCheckingLock(true);
-        console.log(
-          `[@context:NavigationConfigProvider:lockNavigationTree] Attempting to lock tree: ${treeName} with user ID: ${userId}`,
-        );
+
         const response = await fetch(
-          buildServerUrl(`/server/navigation/config/trees/${treeName}/lock`),
+          buildServerUrl(`/navigation-trees/lock/status?userinterface_id=${userInterfaceId}`),
           {
-            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              session_id: userId,
-            }),
           },
         );
 
         if (!response.ok) {
-          // Handle 409 conflict - check if it's locked by us
-          if (response.status === 409) {
-            const conflictData = await response.json();
-            if (conflictData.existing_lock && isOurLock(conflictData.existing_lock)) {
-              console.log(
-                `[@context:NavigationConfigProvider:lockNavigationTree] Tree locked by same user, reclaiming: ${treeName}`,
-              );
-              setIsLocked(true);
-              setLockInfo(conflictData.existing_lock);
-              setShowReadOnlyOverlay(false);
-              return true;
-            }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          const lockData = data.lock || null;
+
+          if (lockData) {
+            // Tree is locked by someone
+            const isOurLock = lockData.session_id === sessionId;
+
+            setIsLocked(isOurLock);
+            setLockInfo(lockData);
+            setShowReadOnlyOverlay(!isOurLock);
+          } else {
+            // Tree is not locked
+            setIsLocked(false);
+            setLockInfo(null);
+            setShowReadOnlyOverlay(false);
           }
+        } else {
+          console.error(
+            `[@context:NavigationConfigProvider:checkTreeLockStatus] Error:`,
+            data.error,
+          );
+          setIsLocked(false);
+          setLockInfo(null);
+          setShowReadOnlyOverlay(false);
+        }
+      } catch (error) {
+        console.error(`[@context:NavigationConfigProvider:checkTreeLockStatus] Error:`, error);
+        setIsLocked(false);
+        setLockInfo(null);
+        setShowReadOnlyOverlay(false);
+      } finally {
+        setIsCheckingLock(false);
+      }
+    },
+    [sessionId],
+  );
+
+  // Try to lock a tree
+  const lockNavigationTree = useCallback(
+    async (userInterfaceId: string): Promise<boolean> => {
+      try {
+        setIsCheckingLock(true);
+
+        const response = await fetch(buildServerUrl(`/navigation-trees/lock/acquire`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userinterface_id: userInterfaceId,
+            session_id: sessionId,
+            user_id: userId,
+          }),
+        });
+
+        if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -124,59 +166,44 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         if (data.success) {
           setIsLocked(true);
-          setLockInfo({
-            locked_by: userId,
-            locked_at: data.locked_at,
-          });
+          setLockInfo(data.lock);
           setShowReadOnlyOverlay(false);
-          console.log(
-            `[@context:NavigationConfigProvider:lockNavigationTree] Successfully locked tree: ${treeName}`,
-          );
           return true;
         } else {
-          console.log(
-            `[@context:NavigationConfigProvider:lockNavigationTree] Failed to lock tree: ${data.error}`,
-          );
-          setIsLocked(false);
-          setLockInfo(data.current_lock);
-          setShowReadOnlyOverlay(true);
+          // Lock failed, check if it's locked by someone else
+          await checkTreeLockStatus(userInterfaceId);
           return false;
         }
       } catch (error) {
-        console.error(
-          `[@context:NavigationConfigProvider:lockNavigationTree] Error locking tree:`,
-          error,
-        );
+        console.error(`[@context:NavigationConfigProvider:lockNavigationTree] Error:`, error);
         setIsLocked(false);
-        setShowReadOnlyOverlay(true);
+        setLockInfo(null);
+        setShowReadOnlyOverlay(false);
         return false;
       } finally {
         setIsCheckingLock(false);
       }
     },
-    [isOurLock, userId],
+    [sessionId, userId, checkTreeLockStatus],
   );
 
-  // Unlock a navigation tree
+  // Unlock a tree
   const unlockNavigationTree = useCallback(
-    async (treeName: string): Promise<boolean> => {
+    async (userInterfaceId: string): Promise<boolean> => {
       try {
-        console.log(
-          `[@context:NavigationConfigProvider:unlockNavigationTree] Attempting to unlock tree: ${treeName}`,
-        );
+        setIsCheckingLock(true);
 
-        const response = await fetch(
-          buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              session_id: userId,
-            }),
+        const response = await fetch(buildServerUrl(`/navigation-trees/lock/release`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        );
+          body: JSON.stringify({
+            userinterface_id: userInterfaceId,
+            session_id: sessionId,
+            user_id: userId,
+          }),
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -187,95 +214,63 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         if (data.success) {
           setIsLocked(false);
           setLockInfo(null);
-          console.log(
-            `[@context:NavigationConfigProvider:unlockNavigationTree] Successfully unlocked tree: ${treeName}`,
-          );
+          setShowReadOnlyOverlay(false);
           return true;
         } else {
-          console.log(
-            `[@context:NavigationConfigProvider:unlockNavigationTree] Failed to unlock tree: ${data.error}`,
+          console.error(
+            `[@context:NavigationConfigProvider:unlockNavigationTree] Error:`,
+            data.error,
           );
           return false;
         }
       } catch (error) {
-        console.error(
-          `[@context:NavigationConfigProvider:unlockNavigationTree] Error unlocking tree:`,
-          error,
-        );
+        console.error(`[@context:NavigationConfigProvider:unlockNavigationTree] Error:`, error);
         return false;
-      }
-    },
-    [userId],
-  );
-
-  // Check tree lock status using existing tree endpoint
-  const checkTreeLockStatus = useCallback(
-    async (treeName: string) => {
-      try {
-        setIsCheckingLock(true);
-        console.log(
-          `[@context:NavigationConfigProvider:checkTreeLockStatus] Checking lock status for tree: ${treeName}`,
-        );
-
-        const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`));
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setIsLocked(data.is_locked);
-            setLockInfo(data.lock_info);
-            const isLockedByOther = data.is_locked && !isOurLock(data.lock_info);
-            setShowReadOnlyOverlay(isLockedByOther);
-            console.log(
-              `[@context:NavigationConfigProvider:checkTreeLockStatus] Lock status updated for tree: ${treeName}, locked: ${data.is_locked}`,
-            );
-          }
-        }
-      } catch (error) {
-        console.error(`[@context:NavigationConfigProvider:checkTreeLockStatus] Error:`, error);
       } finally {
         setIsCheckingLock(false);
       }
     },
-    [isOurLock],
+    [sessionId, userId],
   );
 
-  // Auto-unlock on page unload
+  // Setup auto-unlock on page unload
   const setupAutoUnlock = useCallback(
-    (treeName: string) => {
-      const handleBeforeUnload = () => {
-        if (isLocked) {
-          // Use sendBeacon for reliable cleanup on page unload
-          const unlockData = JSON.stringify({ session_id: userId });
-          navigator.sendBeacon(
-            buildServerUrl(`/server/navigation/config/trees/${treeName}/unlock`),
-            new Blob([unlockData], { type: 'application/json' }),
-          );
-        }
-      };
+    (userInterfaceId: string) => {
+      console.log(
+        `[@context:NavigationConfigProvider:setupAutoUnlock] Setting up auto-unlock for userInterface: ${userInterfaceId}`,
+      );
 
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
+      // Return cleanup function
       return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
+        console.log(
+          `[@context:NavigationConfigProvider:setupAutoUnlock] Cleaning up and unlocking userInterface: ${userInterfaceId}`,
+        );
+        // Always try to unlock - the server will handle checking if we have the lock
+        unlockNavigationTree(userInterfaceId).catch((error) => {
+          console.error(
+            `[@context:NavigationConfigProvider:setupAutoUnlock] Error during auto-unlock:`,
+            error,
+          );
+        });
       };
     },
-    [isLocked, userId],
+    [unlockNavigationTree],
   );
 
   // ========================================
   // CONFIG OPERATIONS
   // ========================================
 
-  // Load tree from config file
+  // Load tree from database
   const loadFromConfig = useCallback(
-    async (treeName: string, state: NavigationConfigState) => {
+    async (userInterfaceId: string, state: NavigationConfigState) => {
       try {
         state.setIsLoading(true);
         state.setError(null);
 
+        // Get trees for this userInterface directly by ID
         const response = await fetch(
-          buildServerUrl(`/server/navigation/config/trees/${treeName}`),
+          buildServerUrl(`/navigation-trees/list?userinterface_id=${userInterfaceId}`),
           {
             headers: {
               'Content-Type': 'application/json',
@@ -289,8 +284,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         const data = await response.json();
 
-        if (data.success && data.tree_data) {
-          const treeData = data.tree_data;
+        if (data.success && data.trees && data.trees.length > 0) {
+          // Get the first tree (root tree)
+          const tree = data.trees[0];
+          const treeData = tree.metadata || {};
 
           // Update state with loaded data
           const nodes = treeData.nodes || [];
@@ -299,48 +296,35 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setNodes(nodes);
           state.setEdges(edges);
 
-          // Use userInterface data from config file as single source of truth
-          if (data.userinterface) {
-            console.log(
-              `[@context:NavigationConfigProvider:loadFromConfig] Loading userInterface from config file: ${data.userinterface.name} with models: ${data.userinterface.models?.join(', ') || 'none'}`,
-            );
-            state.setUserInterface(data.userinterface);
-          } else {
-            console.log(
-              `[@context:NavigationConfigProvider:loadFromConfig] No userInterface data found in config file for tree: ${treeName}`,
-            );
-            state.setUserInterface(null);
-          }
+          console.log(
+            `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
+          );
 
           // Set initial state for change tracking
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
-
-          // Clear unsaved changes
           state.setHasUnsavedChanges(false);
 
-          // Update lock info
-          setIsLocked(data.is_locked);
-          setLockInfo(data.lock_info);
+          // Enable editing
+          setIsLocked(true);
+          setLockInfo(null);
           setIsCheckingLock(false);
-
-          // Show overlay only if locked by someone else
-          const isLockedByOther = data.is_locked && !isOurLock(data.lock_info);
-          setShowReadOnlyOverlay(isLockedByOther);
-
-          // If locked by us (same user), we can reclaim it
-          if (data.is_locked && isOurLock(data.lock_info)) {
-            console.log(
-              `[@context:NavigationConfigProvider:loadFromConfig] Reclaiming lock during tree load for: ${treeName} (same user)`,
-            );
-            setIsLocked(true);
-            setShowReadOnlyOverlay(false);
-          }
-
-          console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Successfully loaded tree: ${treeName}`,
-          );
+          setShowReadOnlyOverlay(false);
         } else {
-          throw new Error(data.error || 'Failed to load navigation tree from config');
+          console.log(
+            `[@context:NavigationConfigProvider:loadFromConfig] No trees found for userInterface: ${userInterfaceId}, creating empty tree`,
+          );
+
+          // Create empty tree structure
+          state.setNodes([]);
+          state.setEdges([]);
+          state.setInitialState({ nodes: [], edges: [] });
+          state.setHasUnsavedChanges(false);
+
+          // Allow editing for new trees
+          setIsLocked(true);
+          setLockInfo(null);
+          setIsCheckingLock(false);
+          setShowReadOnlyOverlay(false);
         }
       } catch (error) {
         console.error(
@@ -352,57 +336,65 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(false);
       }
     },
-    [isOurLock],
+    [],
   );
 
-  // Save tree to config file
-  const saveToConfig = useCallback(async (treeName: string, state: NavigationConfigState) => {
-    try {
-      state.setIsLoading(true);
-      state.setError(null);
+  // Save tree to database
+  const saveToConfig = useCallback(
+    async (userInterfaceId: string, state: NavigationConfigState) => {
+      try {
+        state.setIsLoading(true);
+        state.setError(null);
 
-      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tree_data: {
-            nodes: state.nodes,
-            edges: state.edges,
+        const response = await fetch(buildServerUrl(`/navigation-trees/save`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          userinterface: state.userInterface,
-        }),
-      });
+          body: JSON.stringify({
+            name: 'root', // Always use 'root' as the name
+            userinterface_id: userInterfaceId,
+            tree_data: {
+              nodes: state.nodes,
+              edges: state.edges,
+            },
+            description: `Navigation tree for userInterface: ${userInterfaceId}`,
+            creator_id: userId,
+            modification_type: 'update',
+            changes_summary: 'Updated navigation tree from editor',
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Update initial state to reflect saved state
+          state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
+          state.setHasUnsavedChanges(false);
+          console.log(
+            `[@context:NavigationConfigProvider:saveToConfig] Successfully saved tree for userInterface: ${userInterfaceId}`,
+          );
+        } else {
+          throw new Error(data.message || 'Failed to save navigation tree to database');
+        }
+      } catch (error) {
+        console.error(`[@context:NavigationConfigProvider:saveToConfig] Error saving tree:`, error);
+        state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      } finally {
+        state.setIsLoading(false);
       }
+    },
+    [userId],
+  );
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Update initial state to reflect saved state
-        state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
-        state.setHasUnsavedChanges(false);
-        console.log(
-          `[@context:NavigationConfigProvider:saveToConfig] Successfully saved tree: ${treeName}`,
-        );
-      } else {
-        throw new Error(data.error || 'Failed to save navigation tree to config');
-      }
-    } catch (error) {
-      console.error(`[@context:NavigationConfigProvider:saveToConfig] Error saving tree:`, error);
-      state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
-    } finally {
-      state.setIsLoading(false);
-    }
-  }, []);
-
-  // List available trees
-  const listAvailableTrees = useCallback(async (): Promise<string[]> => {
+  // List available user interfaces
+  const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
     try {
-      const response = await fetch(buildServerUrl('/server/navigation/config/trees'));
+      const response = await fetch(buildServerUrl('/userinterfaces/list'));
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -411,62 +403,71 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       const data = await response.json();
 
       if (data.success) {
-        return data.trees || [];
+        return data.userinterfaces || [];
       } else {
-        throw new Error(data.error || 'Failed to list available trees');
+        throw new Error(data.message || 'Failed to list available user interfaces');
       }
     } catch (error) {
-      console.error(`[@context:NavigationConfigProvider:listAvailableTrees] Error:`, error);
+      console.error(
+        `[@context:NavigationConfigProvider:listAvailableUserInterfaces] Error:`,
+        error,
+      );
       return [];
     }
   }, []);
 
   // Create empty tree
-  const createEmptyTree = useCallback(async (treeName: string, state: NavigationConfigState) => {
-    try {
-      state.setIsLoading(true);
-      state.setError(null);
+  const createEmptyTree = useCallback(
+    async (userInterfaceId: string, state: NavigationConfigState) => {
+      try {
+        state.setIsLoading(true);
+        state.setError(null);
 
-      const response = await fetch(buildServerUrl(`/server/navigation/config/trees/${treeName}`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tree_data: {
-            nodes: [],
-            edges: [],
+        const response = await fetch(buildServerUrl(`/navigation-trees/save`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          userinterface: null,
-        }),
-      });
+          body: JSON.stringify({
+            name: 'root',
+            userinterface_id: userInterfaceId,
+            tree_data: {
+              nodes: [],
+              edges: [],
+            },
+            description: `New navigation tree for userInterface: ${userInterfaceId}`,
+            creator_id: userId,
+            modification_type: 'create',
+            changes_summary: 'Created new empty navigation tree',
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          state.setNodes([]);
+          state.setEdges([]);
+          state.setInitialState({ nodes: [], edges: [] });
+          state.setHasUnsavedChanges(false);
+          console.log(
+            `[@context:NavigationConfigProvider:createEmptyTree] Created empty tree for userInterface: ${userInterfaceId}`,
+          );
+        } else {
+          throw new Error(data.message || 'Failed to create empty navigation tree');
+        }
+      } catch (error) {
+        console.error(`[@context:NavigationConfigProvider:createEmptyTree] Error:`, error);
+        state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      } finally {
+        state.setIsLoading(false);
       }
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Initialize empty state
-        state.setNodes([]);
-        state.setEdges([]);
-        state.setUserInterface(null);
-        state.setInitialState({ nodes: [], edges: [] });
-        state.setHasUnsavedChanges(false);
-        console.log(
-          `[@context:NavigationConfigProvider:createEmptyTree] Successfully created tree: ${treeName}`,
-        );
-      } else {
-        throw new Error(data.error || 'Failed to create empty navigation tree');
-      }
-    } catch (error) {
-      console.error(`[@context:NavigationConfigProvider:createEmptyTree] Error:`, error);
-      state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
-    } finally {
-      state.setIsLoading(false);
-    }
-  }, []);
+    },
+    [userId],
+  );
 
   // ========================================
   // CONTEXT VALUE
@@ -488,7 +489,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       // Config operations
       loadFromConfig,
       saveToConfig,
-      listAvailableTrees,
+      listAvailableUserInterfaces,
       createEmptyTree,
 
       // User identification
@@ -496,7 +497,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       userId,
     }),
     [
-      // Lock management
       isLocked,
       lockInfo,
       isCheckingLock,
@@ -506,12 +506,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       unlockNavigationTree,
       checkTreeLockStatus,
       setupAutoUnlock,
-      // Config operations
       loadFromConfig,
       saveToConfig,
-      listAvailableTrees,
+      listAvailableUserInterfaces,
       createEmptyTree,
-      // User identification
       sessionId,
       userId,
     ],

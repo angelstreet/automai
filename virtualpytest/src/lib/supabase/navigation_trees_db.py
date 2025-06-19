@@ -1,16 +1,14 @@
 """
-Navigation Trees Database Operations
-
-This module provides functions for managing navigation trees in the database.
-Navigation trees define the UI structure and flow for test automation.
+Navigation Trees Database Operations with History Support
 """
 
 import json
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 from uuid import uuid4
 
 from src.utils.supabase_utils import get_supabase_client
+from src.utils.app_utils import DEFAULT_TEAM_ID
 
 def get_supabase():
     """Get the Supabase client instance."""
@@ -209,4 +207,331 @@ def get_root_tree_for_interface(interface_id: str, team_id: str) -> Optional[Dic
         return None
     except Exception as e:
         print(f"[@db:navigation_trees_db:get_root_tree] Error: {e}")
-        return None 
+        return None
+
+def get_next_version_number(tree_id: str, supabase_client) -> int:
+    """Get the next version number for a navigation tree"""
+    try:
+        result = supabase_client.table('navigation_trees_history')\
+            .select('version_number')\
+            .eq('tree_id', tree_id)\
+            .order('version_number', desc=True)\
+            .limit(1)\
+            .execute()
+        
+        if result.data:
+            return result.data[0]['version_number'] + 1
+        return 1
+    except Exception as e:
+        print(f'[@db:navigation_trees:get_next_version_number] ERROR: {e}')
+        return 1
+
+def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_data: Dict, 
+                        description: str = None, creator_id: str = None, 
+                        modification_type: str = 'update', changes_summary: str = None,
+                        supabase_client=None) -> Tuple[bool, str, Optional[Dict]]:
+    """
+    Save navigation tree and create history record
+    
+    Args:
+        name: Tree name
+        userinterface_id: UI interface ID
+        team_id: Team ID
+        tree_data: Complete navigation tree data (nodes, edges, etc.)
+        description: Optional description
+        creator_id: User who created/modified
+        modification_type: 'create', 'update', 'restore'
+        changes_summary: Description of changes
+        supabase_client: Supabase client instance
+    
+    Returns:
+        Tuple of (success, message, tree_record)
+    """
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:save_navigation_tree] Starting save for tree: {name}')
+        
+        # Check if tree exists
+        existing_result = supabase_client.table('navigation_trees')\
+            .select('*')\
+            .eq('name', name)\
+            .eq('userinterface_id', userinterface_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        tree_record = None
+        is_new = len(existing_result.data) == 0
+        
+        if is_new:
+            # Create new tree
+            print(f'[@db:navigation_trees:save_navigation_tree] Creating new tree: {name}')
+            insert_data = {
+                'name': name,
+                'userinterface_id': userinterface_id,
+                'team_id': team_id,
+                'metadata': tree_data,
+                'description': description,
+                'creator_id': creator_id,
+                'is_root': True,
+                'tree_level': 0
+            }
+            
+            result = supabase_client.table('navigation_trees')\
+                .insert(insert_data)\
+                .execute()
+            
+            if not result.data:
+                return False, "Failed to create navigation tree", None
+                
+            tree_record = result.data[0]
+            actual_modification_type = 'create'
+        else:
+            # Update existing tree
+            tree_record = existing_result.data[0]
+            print(f'[@db:navigation_trees:save_navigation_tree] Updating existing tree: {tree_record["id"]}')
+            
+            update_data = {
+                'metadata': tree_data,
+                'updated_at': 'now()',
+                'description': description
+            }
+            
+            result = supabase_client.table('navigation_trees')\
+                .update(update_data)\
+                .eq('id', tree_record['id'])\
+                .execute()
+            
+            if not result.data:
+                return False, "Failed to update navigation tree", None
+                
+            tree_record = result.data[0]
+            actual_modification_type = modification_type
+        
+        # Create history record
+        version_number = get_next_version_number(tree_record['id'], supabase_client)
+        
+        history_data = {
+            'tree_id': tree_record['id'],
+            'team_id': team_id,
+            'version_number': version_number,
+            'modification_type': actual_modification_type,
+            'modified_by': creator_id,
+            'tree_data': tree_record,  # Complete snapshot
+            'changes_summary': changes_summary or f'{actual_modification_type.title()} navigation tree'
+        }
+        
+        history_result = supabase_client.table('navigation_trees_history')\
+            .insert(history_data)\
+            .execute()
+        
+        if not history_result.data:
+            print(f'[@db:navigation_trees:save_navigation_tree] WARNING: Failed to create history record')
+        else:
+            print(f'[@db:navigation_trees:save_navigation_tree] Created history version {version_number}')
+        
+        print(f'[@db:navigation_trees:save_navigation_tree] Successfully saved tree: {tree_record["id"]}')
+        return True, "Navigation tree saved successfully", tree_record
+        
+    except Exception as e:
+        error_msg = f"Failed to save navigation tree: {str(e)}"
+        print(f'[@db:navigation_trees:save_navigation_tree] ERROR: {error_msg}')
+        return False, error_msg, None
+
+def get_navigation_tree(tree_id: str, team_id: str, supabase_client=None) -> Tuple[bool, str, Optional[Dict]]:
+    """Get a navigation tree by ID"""
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_navigation_tree] Fetching tree: {tree_id}')
+        
+        result = supabase_client.table('navigation_trees')\
+            .select('*')\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        if not result.data:
+            return False, "Navigation tree not found", None
+        
+        tree = result.data[0]
+        print(f'[@db:navigation_trees:get_navigation_tree] Successfully fetched tree: {tree["name"]}')
+        return True, "Success", tree
+        
+    except Exception as e:
+        error_msg = f"Failed to get navigation tree: {str(e)}"
+        print(f'[@db:navigation_trees:get_navigation_tree] ERROR: {error_msg}')
+        return False, error_msg, None
+
+def get_navigation_trees(team_id: str, userinterface_id: str = None, supabase_client=None) -> Tuple[bool, str, List[Dict]]:
+    """Get all navigation trees for a team, optionally filtered by UI interface"""
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_navigation_trees] Fetching trees for team: {team_id}')
+        
+        query = supabase_client.table('navigation_trees')\
+            .select('*')\
+            .eq('team_id', team_id)\
+            .order('updated_at', desc=True)
+        
+        if userinterface_id:
+            query = query.eq('userinterface_id', userinterface_id)
+        
+        result = query.execute()
+        
+        trees = result.data or []
+        print(f'[@db:navigation_trees:get_navigation_trees] Successfully fetched {len(trees)} trees')
+        return True, "Success", trees
+        
+    except Exception as e:
+        error_msg = f"Failed to get navigation trees: {str(e)}"
+        print(f'[@db:navigation_trees:get_navigation_trees] ERROR: {error_msg}')
+        return False, error_msg, []
+
+def get_tree_history(tree_id: str, team_id: str, limit: int = 50, supabase_client=None) -> Tuple[bool, str, List[Dict]]:
+    """Get history for a navigation tree"""
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_tree_history] Fetching history for tree: {tree_id}')
+        
+        result = supabase_client.table('navigation_trees_history')\
+            .select('id, version_number, modification_type, modified_by, changes_summary, created_at, restored_from_version')\
+            .eq('tree_id', tree_id)\
+            .eq('team_id', team_id)\
+            .order('version_number', desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        history = result.data or []
+        print(f'[@db:navigation_trees:get_tree_history] Successfully fetched {len(history)} history records')
+        return True, "Success", history
+        
+    except Exception as e:
+        error_msg = f"Failed to get tree history: {str(e)}"
+        print(f'[@db:navigation_trees:get_tree_history] ERROR: {error_msg}')
+        return False, error_msg, []
+
+def restore_tree_version(tree_id: str, version_number: int, team_id: str, 
+                        restored_by: str = None, supabase_client=None) -> Tuple[bool, str, Optional[Dict]]:
+    """Restore a navigation tree to a specific version"""
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:restore_tree_version] Restoring tree {tree_id} to version {version_number}')
+        
+        # Get the historical version
+        history_result = supabase_client.table('navigation_trees_history')\
+            .select('tree_data')\
+            .eq('tree_id', tree_id)\
+            .eq('team_id', team_id)\
+            .eq('version_number', version_number)\
+            .execute()
+        
+        if not history_result.data:
+            return False, f"Version {version_number} not found", None
+        
+        historical_data = history_result.data[0]['tree_data']
+        
+        # Update current tree with historical data
+        restore_data = {
+            'name': historical_data['name'],
+            'description': historical_data.get('description'),
+            'metadata': historical_data['metadata'],
+            'updated_at': 'now()'
+        }
+        
+        result = supabase_client.table('navigation_trees')\
+            .update(restore_data)\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        if not result.data:
+            return False, "Failed to restore navigation tree", None
+        
+        restored_tree = result.data[0]
+        
+        # Create history record for the restore
+        new_version = get_next_version_number(tree_id, supabase_client)
+        
+        history_data = {
+            'tree_id': tree_id,
+            'team_id': team_id,
+            'version_number': new_version,
+            'modification_type': 'restore',
+            'modified_by': restored_by,
+            'tree_data': restored_tree,
+            'changes_summary': f'Restored from version {version_number}',
+            'restored_from_version': version_number
+        }
+        
+        supabase_client.table('navigation_trees_history')\
+            .insert(history_data)\
+            .execute()
+        
+        print(f'[@db:navigation_trees:restore_tree_version] Successfully restored to version {version_number}')
+        return True, f"Successfully restored to version {version_number}", restored_tree
+        
+    except Exception as e:
+        error_msg = f"Failed to restore tree version: {str(e)}"
+        print(f'[@db:navigation_trees:restore_tree_version] ERROR: {error_msg}')
+        return False, error_msg, None
+
+def delete_navigation_tree(tree_id: str, team_id: str, deleted_by: str = None, supabase_client=None) -> Tuple[bool, str]:
+    """Delete a navigation tree (soft delete by creating history record)"""
+    try:
+        if not supabase_client:
+            supabase_client = get_supabase()
+        
+        print(f'[@db:navigation_trees:delete_navigation_tree] Deleting tree: {tree_id}')
+        
+        # Get current tree data for history
+        tree_result = supabase_client.table('navigation_trees')\
+            .select('*')\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        if not tree_result.data:
+            return False, "Navigation tree not found"
+        
+        tree_data = tree_result.data[0]
+        
+        # Create deletion history record
+        version_number = get_next_version_number(tree_id, supabase_client)
+        
+        history_data = {
+            'tree_id': tree_id,
+            'team_id': team_id,
+            'version_number': version_number,
+            'modification_type': 'delete',
+            'modified_by': deleted_by,
+            'tree_data': tree_data,
+            'changes_summary': 'Navigation tree deleted'
+        }
+        
+        supabase_client.table('navigation_trees_history')\
+            .insert(history_data)\
+            .execute()
+        
+        # Delete the actual tree
+        result = supabase_client.table('navigation_trees')\
+            .delete()\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        print(f'[@db:navigation_trees:delete_navigation_tree] Successfully deleted tree: {tree_id}')
+        return True, "Navigation tree deleted successfully"
+        
+    except Exception as e:
+        error_msg = f"Failed to delete navigation tree: {str(e)}"
+        print(f'[@db:navigation_trees:delete_navigation_tree] ERROR: {error_msg}')
+        return False, error_msg 

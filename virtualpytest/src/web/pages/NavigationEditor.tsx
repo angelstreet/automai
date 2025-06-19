@@ -285,51 +285,55 @@ const NavigationEditorContent: React.FC = () => {
     }
   }, [treeId, interfaceId]);
 
-  // Load tree data when component mounts or treeId changes - LOCK FIRST APPROACH
+  // Effect to load tree when tree name changes
   useEffect(() => {
-    if (currentTreeName && !isLoadingInterface && currentTreeName !== lastLoadedTreeId.current) {
-      lastLoadedTreeId.current = currentTreeName;
+    // Only load if we have a tree name and userInterface is loaded
+    if (userInterface?.id && !isLoadingInterface) {
+      // Check if we already loaded this userInterface to prevent infinite loops
+      if (lastLoadedTreeId.current === userInterface.id) {
+        return;
+      }
+      lastLoadedTreeId.current = userInterface.id;
 
       // Fix race condition: Set checking state immediately
       setCheckingLockState(true);
 
       // STEP 1: First acquire lock (this is the critical requirement)
-      lockNavigationTree(currentTreeName)
+      lockNavigationTree(userInterface.id)
         .then((lockSuccess) => {
           if (lockSuccess) {
             console.log(
-              `[@component:NavigationEditor] Lock acquired successfully for tree: ${currentTreeName}`,
+              `[@component:NavigationEditor] Lock acquired successfully for userInterface: ${userInterface.id}`,
             );
             // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
-            loadFromConfig(currentTreeName);
+            loadFromConfig(userInterface.id);
           } else {
             console.warn(
-              `[@component:NavigationEditor] Failed to acquire lock for tree: ${currentTreeName} - entering read-only mode`,
+              `[@component:NavigationEditor] Failed to acquire lock for userInterface: ${userInterface.id} - entering read-only mode`,
             );
             // STEP 3: If lock failed, still load tree but in read-only mode
-            loadFromConfig(currentTreeName);
+            loadFromConfig(userInterface.id);
             // Note: isLocked state will be false, which will trigger read-only UI
           }
         })
         .catch((error) => {
           console.error(
-            `[@component:NavigationEditor] Error during lock acquisition for tree: ${currentTreeName}`,
+            `[@component:NavigationEditor] Error during lock acquisition for userInterface: ${userInterface.id}`,
             error,
           );
           // Still try to load in read-only mode
-          loadFromConfig(currentTreeName);
+          loadFromConfig(userInterface.id);
         });
 
       // Setup auto-unlock for this tree (cleanup function)
-      const cleanup = setupAutoUnlock(currentTreeName);
+      const cleanup = setupAutoUnlock(userInterface.id);
 
       // Return cleanup function
       return cleanup;
     }
   }, [
-    currentTreeName,
+    userInterface?.id,
     isLoadingInterface,
-    loadFromConfig,
     lockNavigationTree,
     setupAutoUnlock,
     setCheckingLockState,
@@ -442,9 +446,9 @@ const NavigationEditorContent: React.FC = () => {
         onFitView={fitView}
         // onUndo/onRedo removed - using page reload for cancel changes
 
-        onSaveToConfig={() => saveToConfig(currentTreeName)}
-        onLockTree={() => lockNavigationTree(currentTreeName)}
-        onUnlockTree={() => unlockNavigationTree(currentTreeName)}
+        onSaveToConfig={() => saveToConfig(userInterface?.id)}
+        onLockTree={() => lockNavigationTree(userInterface?.id)}
+        onUnlockTree={() => unlockNavigationTree(userInterface?.id)}
         onDiscardChanges={discardChanges}
         onFocusNodeChange={setFocusNode}
         onDepthChange={setDisplayDepth}
