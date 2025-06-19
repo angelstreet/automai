@@ -780,6 +780,10 @@ export const useVerification = ({
     try {
       console.log('[@hook:useVerification] Starting text auto-detection in area:', selectedArea);
 
+      // Extract filename from captureSourcePath for the backend
+      const sourceFilename = captureSourcePath.split('/').pop() || '';
+      console.log('[@hook:useVerification] Extracted source filename:', sourceFilename);
+
       const response = await fetch(`/server/verification/text/auto-detect-text`, {
         method: 'POST',
         headers: {
@@ -789,7 +793,7 @@ export const useVerification = ({
           host: selectedHost, // Send full host object
           model: selectedHost.device_model,
           area: selectedArea,
-          source_path: captureSourcePath,
+          source_filename: sourceFilename,
           image_filter: textImageFilter,
         }),
       });
@@ -800,16 +804,16 @@ export const useVerification = ({
         console.log('[@hook:useVerification] Text auto-detection successful:', result);
 
         setDetectedTextData({
-          text: result.text || '',
-          fontSize: result.fontSize || 0,
+          text: result.detected_text || '',
+          fontSize: result.font_size || 0,
           confidence: result.confidence || 0,
-          detectedLanguage: result.detectedLanguage,
-          detectedLanguageName: result.detectedLanguageName,
-          languageConfidence: result.languageConfidence,
+          detectedLanguage: result.detected_language,
+          detectedLanguageName: result.detected_language_name,
+          languageConfidence: result.language_confidence,
         });
 
         // Pre-fill the text input with detected text
-        setReferenceText(result.text || '');
+        setReferenceText(result.detected_text || '');
 
         // Mark as captured
         setHasCaptured(true);
