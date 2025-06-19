@@ -26,7 +26,6 @@ interface VerificationEditorProps {
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
-  screenshotPath?: string;
   isCaptureActive: boolean;
   layoutConfig?: VerificationEditorLayoutConfig;
   sx?: any;
@@ -39,7 +38,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
   selectedArea,
   onAreaSelected,
   onClearSelection,
-  screenshotPath,
   isCaptureActive,
   layoutConfig,
   sx = {},
@@ -70,7 +68,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
     selectedArea,
     onAreaSelected,
     onClearSelection,
-    screenshotPath,
     isCaptureActive,
   });
 

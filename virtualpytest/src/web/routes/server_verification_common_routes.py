@@ -98,11 +98,47 @@ def execute_batch_verification():
         print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {model}")
         
         # Validate required parameters
-        if not verifications or not source_filename:
+        if not verifications:
             return jsonify({
                 'success': False,
-                'error': 'verifications and source_filename are required'
+                'error': 'verifications are required'
             }), 400
+        
+        # Handle source_filename scenarios:
+        # Scenario 1: Frontend provides source_filename (should be complete path)
+        # Scenario 2: No source_filename provided - use most recent capture from /var/www/html/stream/captures
+        if not source_filename:
+            print("[@route:server_verification_common:execute_batch_verification] No source_filename provided, finding most recent capture")
+            
+            # Find most recent capture in /var/www/html/stream/captures
+            import os
+            import glob
+            
+            captures_dir = '/var/www/html/stream/captures'
+            if os.path.exists(captures_dir):
+                # Get all image files in captures directory
+                image_patterns = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.gif']
+                all_captures = []
+                
+                for pattern in image_patterns:
+                    all_captures.extend(glob.glob(os.path.join(captures_dir, pattern)))
+                
+                if all_captures:
+                    # Sort by modification time (most recent first)
+                    all_captures.sort(key=os.path.getmtime, reverse=True)
+                    most_recent_capture = os.path.basename(all_captures[0])
+                    source_filename = most_recent_capture
+                    print(f"[@route:server_verification_common:execute_batch_verification] Using most recent capture: {source_filename}")
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No source_filename provided and no captures found in /var/www/html/stream/captures'
+                    }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No source_filename provided and captures directory does not exist'
+                }), 400
         
         results = []
         passed_count = 0
@@ -524,7 +560,7 @@ def get_text_references():
             return jsonify({
                 'success': False,
                 'error': error or 'Host information required'
-            }), 400
+        }), 400
         
         # Get device model with fallback
         device_model = host_info.get('device_model', 'default')
@@ -558,7 +594,7 @@ def get_text_references():
                 'error': result.get('error', 'Database query failed'),
                 'device_model': device_model
             })
-            
+        
     except Exception as e:
         print(f"[@route:server_verification_common:get_text_references] Error: {str(e)}")
         return jsonify({
@@ -585,33 +621,33 @@ def get_all_references():
         print(f"[@route:server_verification_common:get_all_references] Using device model: {device_model}")
         
         # Get references from database
-        from src.lib.supabase.images_db import get_images
-        from src.utils.app_utils import DEFAULT_TEAM_ID
-        
-        # Get all images for this device model
-        result = get_images(
-            team_id=DEFAULT_TEAM_ID,
-            device_model=device_model
-        )
-        
-        if result['success']:
-            images = result['images']
-            print(f"[@route:server_verification_common:get_all_references] Found {len(images)} images from database")
+            from src.lib.supabase.images_db import get_images
+            from src.utils.app_utils import DEFAULT_TEAM_ID
             
-            return jsonify({
-                'success': True,
-                'images': images,
-                'count': len(images),
-                'device_model': device_model
-            })
-        else:
-            print(f"[@route:server_verification_common:get_all_references] Database query failed: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Database query failed'),
-                'device_model': device_model
-            })
+            # Get all images for this device model
+            result = get_images(
+                team_id=DEFAULT_TEAM_ID,
+                device_model=device_model
+            )
+            
+            if result['success']:
+                images = result['images']
+            print(f"[@route:server_verification_common:get_all_references] Found {len(images)} images from database")
                 
+                return jsonify({
+                    'success': True,
+                    'images': images,
+                    'count': len(images),
+                    'device_model': device_model
+                })
+            else:
+            print(f"[@route:server_verification_common:get_all_references] Database query failed: {result.get('error')}")
+                return jsonify({
+                    'success': False,
+                    'error': result.get('error', 'Database query failed'),
+                'device_model': device_model
+            })
+        
     except Exception as e:
         print(f"[@route:server_verification_common:get_all_references] Error: {str(e)}")
         return jsonify({

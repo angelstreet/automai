@@ -100,7 +100,6 @@ interface UseVerificationProps {
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
-  screenshotPath?: string;
   isCaptureActive?: boolean;
 }
 
@@ -111,7 +110,6 @@ export const useVerification = ({
   selectedArea,
   onAreaSelected: _onAreaSelected,
   onClearSelection: _onClearSelection,
-  screenshotPath,
   isCaptureActive,
 }: UseVerificationProps) => {
   // State for verification types and verifications
@@ -165,7 +163,7 @@ export const useVerification = ({
       setAvailableVerificationTypes({});
       // Don't show error for missing verification types - they're optional
     }
-  }, [isVisible, selectedHost?.available_verification_types]);
+  }, [isVisible, selectedHost, selectedHost?.available_verification_types]);
 
   // Effect to check if selectedHost is provided
   useEffect(() => {
@@ -195,46 +193,43 @@ export const useVerification = ({
   }, []);
 
   // Handle reference selection
-  const handleReferenceSelected = useCallback(
-    async (referenceName: string, referenceData: any) => {
-      console.log('[@hook:useVerification] Reference selected:', referenceName, referenceData);
+  const handleReferenceSelected = useCallback(async (referenceName: string, referenceData: any) => {
+    console.log('[@hook:useVerification] Reference selected:', referenceName, referenceData);
 
-      // If it's an image reference, display it in the preview area
-      if (referenceData && referenceData.type === 'image') {
-        // Use the complete URL directly from reference data
-        const referenceUrl = referenceData.url;
+    // If it's an image reference, display it in the preview area
+    if (referenceData && referenceData.type === 'image') {
+      // Use the complete URL directly from reference data
+      const referenceUrl = referenceData.url;
 
-        console.log('[@hook:useVerification] Setting reference image preview:', {
-          referenceName,
-          referenceUrl,
-          referenceData,
-        });
+      console.log('[@hook:useVerification] Setting reference image preview:', {
+        referenceName,
+        referenceUrl,
+        referenceData,
+      });
 
-        setSelectedReferenceImage(referenceUrl);
-        setSelectedReferenceInfo({
-          name: referenceName,
-          type: 'image',
-        });
-      } else if (referenceData && referenceData.type === 'text') {
-        // For text references, clear the image preview
-        console.log('[@hook:useVerification] Text reference selected, clearing image preview');
-        setSelectedReferenceImage(null);
-        setSelectedReferenceInfo({
-          name: referenceName,
-          type: 'text',
-        });
-      } else {
-        // Clear preview for unknown or null references
-        setSelectedReferenceImage(null);
-        setSelectedReferenceInfo(null);
-      }
+      setSelectedReferenceImage(referenceUrl);
+      setSelectedReferenceInfo({
+        name: referenceName,
+        type: 'image',
+      });
+    } else if (referenceData && referenceData.type === 'text') {
+      // For text references, clear the image preview
+      console.log('[@hook:useVerification] Text reference selected, clearing image preview');
+      setSelectedReferenceImage(null);
+      setSelectedReferenceInfo({
+        name: referenceName,
+        type: 'text',
+      });
+    } else {
+      // Clear preview for unknown or null references
+      setSelectedReferenceImage(null);
+      setSelectedReferenceInfo(null);
+    }
 
-      // Clear captured reference when selecting a new reference
-      setCapturedReferenceImage(null);
-      setHasCaptured(false);
-    },
-    [selectedHost.device_model],
-  );
+    // Clear captured reference when selecting a new reference
+    setCapturedReferenceImage(null);
+    setHasCaptured(false);
+  }, []);
 
   // Handle capture reference
   const handleCaptureReference = useCallback(async () => {
@@ -630,7 +625,17 @@ export const useVerification = ({
           // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
           const url = new URL(captureSourcePath);
           const pathname = url.pathname;
-          capture_filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
+          const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
+
+          // Provide full path based on URL pattern
+          if (pathname.includes('/images/screenshot/')) {
+            // Verification Editor screenshots are stored in /tmp/screenshots/
+            capture_filename = `/tmp/screenshots/${filename}`;
+          } else {
+            // Other captures (like video frames) might be in different locations
+            capture_filename = filename; // Just use filename, let server handle it
+          }
+
           console.log('[@hook:useVerification] Using specific capture:', capture_filename);
         }
 
@@ -654,6 +659,7 @@ export const useVerification = ({
             verifications: validVerifications,
             model: selectedHost.device_model,
             node_id: 'verification-editor',
+            source_filename: capture_filename, // Include the extracted capture filename
           }),
         });
 
