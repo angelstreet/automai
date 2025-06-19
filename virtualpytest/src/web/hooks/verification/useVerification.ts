@@ -150,6 +150,7 @@ export const useVerification = ({
 
   // Collapsible sections state
   const [verificationsCollapsed, setVerificationsCollapsed] = useState<boolean>(false);
+  const [captureCollapsed, setCaptureCollapsed] = useState<boolean>(false);
 
   // Load verification types from host data when visible
   useEffect(() => {
@@ -910,6 +911,7 @@ export const useVerification = ({
     allowSelection,
     selectedHost,
     verificationsCollapsed,
+    captureCollapsed,
 
     // Setters
     setReferenceName,
@@ -922,6 +924,7 @@ export const useVerification = ({
     setTextImageFilter,
     setImageProcessingOptions,
     setVerificationsCollapsed,
+    setCaptureCollapsed,
 
     // Handlers
     handleVerificationsChange,

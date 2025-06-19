@@ -16,10 +16,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
 import { NodeVerification, NodeVerificationsListProps } from '../../types/pages/Navigation_Types';
-import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 import { VerificationItem } from '../verification/VerificationItem';
-import { Host } from '../../types/common/Host_Types';
 
 export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   verifications,

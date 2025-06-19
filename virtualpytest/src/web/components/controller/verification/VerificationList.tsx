@@ -33,12 +33,12 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
 
   return (
     <Box>
-      {/* Collapsible toggle button and content */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+      {/* Collapsible toggle button and title */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
         <IconButton
           size="small"
           onClick={() => setVerificationsCollapsed(!verificationsCollapsed)}
-          sx={{ p: 0.25, mt: 0.5 }}
+          sx={{ p: 0.25 }}
         >
           {verificationsCollapsed ? (
             <ArrowRightIcon sx={{ fontSize: '1rem' }} />
@@ -49,51 +49,51 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
         <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
           Verifications
         </Typography>
-        <Box sx={{ flex: 1 }}>
-          <Collapse in={!verificationsCollapsed}>
-            <Box
-              sx={{
-                '& .MuiTypography-subtitle2': {
-                  fontSize: '0.75rem',
-                },
-                '& .MuiButton-root': {
-                  fontSize: '0.7rem',
-                },
-                '& .MuiTextField-root': {
-                  '& .MuiInputLabel-root': {
-                    fontSize: '0.75rem',
-                  },
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                  },
-                },
-                '& .MuiSelect-root': {
-                  fontSize: '0.75rem',
-                },
-                '& .MuiFormControl-root': {
-                  '& .MuiInputLabel-root': {
-                    fontSize: '0.75rem',
-                  },
-                },
-              }}
-            >
-              <NodeVerificationsList
-                verifications={verifications}
-                availableActions={availableVerificationTypes}
-                onVerificationsChange={handleVerificationsChange}
-                loading={loading}
-                error={error}
-                model={model}
-                onTest={handleTest}
-                testResults={testResults}
-                reloadTrigger={referenceSaveCounter}
-                onReferenceSelected={handleReferenceSelected}
-                selectedHost={selectedHost}
-              />
-            </Box>
-          </Collapse>
-        </Box>
       </Box>
+
+      {/* Collapsible content */}
+      <Collapse in={!verificationsCollapsed}>
+        <Box
+          sx={{
+            '& .MuiTypography-subtitle2': {
+              fontSize: '0.75rem',
+            },
+            '& .MuiButton-root': {
+              fontSize: '0.7rem',
+            },
+            '& .MuiTextField-root': {
+              '& .MuiInputLabel-root': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiInputBase-input': {
+                fontSize: '0.75rem',
+              },
+            },
+            '& .MuiSelect-root': {
+              fontSize: '0.75rem',
+            },
+            '& .MuiFormControl-root': {
+              '& .MuiInputLabel-root': {
+                fontSize: '0.75rem',
+              },
+            },
+          }}
+        >
+          <NodeVerificationsList
+            verifications={verifications}
+            availableActions={availableVerificationTypes}
+            onVerificationsChange={handleVerificationsChange}
+            loading={loading}
+            error={error}
+            model={model}
+            onTest={handleTest}
+            testResults={testResults}
+            reloadTrigger={referenceSaveCounter}
+            onReferenceSelected={handleReferenceSelected}
+            selectedHost={selectedHost}
+          />
+        </Box>
+      </Collapse>
     </Box>
   );
 };
