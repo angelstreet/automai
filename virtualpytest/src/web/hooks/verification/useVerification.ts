@@ -491,16 +491,7 @@ export const useVerification = ({
           setReferenceName('');
           setCapturedReferenceImage(null);
           setHasCaptured(false);
-
-          // Update the reference save counter to trigger a refresh
           setReferenceSaveCounter((prev) => prev + 1);
-
-          // Set the selected reference image to the newly saved one
-          setSelectedReferenceImage(dbResult.image?.r2_url || null);
-          setSelectedReferenceInfo({
-            name: dbResult.image?.name || referenceName,
-            type: 'image',
-          });
         } else {
           setError(dbResult.error || 'Failed to save reference to database');
         }
