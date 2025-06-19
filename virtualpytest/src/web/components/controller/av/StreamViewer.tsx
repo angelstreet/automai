@@ -354,6 +354,57 @@ export function StreamViewer({
     return () => clearInterval(interval);
   }, [streamLoaded, isVideoReady]);
 
+  // NEW: Diagnostic logs for dimension analysis
+  useEffect(() => {
+    if (videoRef.current && streamLoaded) {
+      const video = videoRef.current;
+      const container = video.parentElement;
+
+      console.log('[@component:StreamViewer] Dimension analysis:', {
+        model,
+        isExpanded,
+        isMobileModel: finalLayoutConfig.isMobileModel,
+        containerSize: container
+          ? {
+              width: container.offsetWidth,
+              height: container.offsetHeight,
+              clientWidth: container.clientWidth,
+              clientHeight: container.clientHeight,
+            }
+          : 'no container',
+        videoSize: {
+          offsetWidth: video.offsetWidth,
+          offsetHeight: video.offsetHeight,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          naturalWidth: video.videoWidth,
+          naturalHeight: video.videoHeight,
+        },
+        computedVideoStyle: {
+          width: getComputedStyle(video).width,
+          height: getComputedStyle(video).height,
+          objectFit: getComputedStyle(video).objectFit,
+        },
+        layoutConfig: finalLayoutConfig,
+      });
+    }
+  }, [streamLoaded, isExpanded, model, finalLayoutConfig]);
+
+  // NEW: Log when objectFit changes
+  useEffect(() => {
+    if (videoRef.current) {
+      const currentObjectFit = isExpanded ? 'fill' : finalLayoutConfig.objectFit || 'contain';
+      console.log('[@component:StreamViewer] ObjectFit analysis:', {
+        model,
+        isExpanded,
+        isMobileModel: finalLayoutConfig.isMobileModel,
+        currentObjectFit,
+        configObjectFit: finalLayoutConfig.objectFit,
+        reason: isExpanded ? 'expanded mode' : 'collapsed mode',
+      });
+    }
+  }, [isExpanded, finalLayoutConfig, model]);
+
   return (
     <Box
       sx={{
