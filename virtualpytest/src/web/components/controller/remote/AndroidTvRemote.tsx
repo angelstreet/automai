@@ -194,7 +194,6 @@ export const AndroidTvRemote = React.memo(
     // Calculate responsive remote scale based on available space
     const calculateRemoteScale = () => {
       // Base remote dimensions
-      const baseWidth = 640;
       const baseHeight = 1800;
 
       if (isCollapsed) {
@@ -203,22 +202,9 @@ export const AndroidTvRemote = React.memo(
         return availableHeight / baseHeight;
       }
 
-      // Available space (leaving room for disconnect button)
+      // For expanded state, also fit to available height minus disconnect button space
       const availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
-      const availableWidth = window.innerWidth * 0.8; // Use 80% of available width
-
-      // Calculate scale to fit within available space
-      const scaleByWidth = availableWidth / baseWidth;
-      const scaleByHeight = availableHeight / baseHeight;
-
-      // Use the smaller scale to ensure it fits in both dimensions
-      const calculatedScale = Math.min(
-        scaleByWidth,
-        scaleByHeight,
-        localRemoteConfig.remote_info.max_scale,
-      );
-
-      return Math.max(calculatedScale, localRemoteConfig.remote_info.min_scale);
+      return availableHeight / baseHeight;
     };
 
     const remoteScale = calculateRemoteScale();
@@ -262,20 +248,19 @@ export const AndroidTvRemote = React.memo(
           sx={{
             display: 'flex',
             justifyContent: 'center',
-            alignItems: isCollapsed ? 'center' : 'flex-start',
+            alignItems: 'center',
             height: '100%',
             overflow: 'hidden',
             position: 'relative',
-            pt: isCollapsed ? 0 : 1,
           }}
         >
           {/* Remote container with image background */}
           <Box
             sx={{
               position: 'relative',
-              width: isCollapsed ? 'auto' : `${640 * remoteScale}px`,
-              height: isCollapsed ? '100%' : `${1800 * remoteScale}px`,
-              aspectRatio: isCollapsed ? '640/1800' : 'auto',
+              width: 'auto',
+              height: '100%',
+              aspectRatio: '640/1800',
               backgroundImage: `url(${localRemoteConfig.remote_info.image_url})`,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
