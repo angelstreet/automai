@@ -32,13 +32,13 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
           size="small"
           type="number"
           label="Timeout"
-          value={verification.params?.timeout || 10}
+          value={verification.params?.timeout || 1}
           autoComplete="off"
           onChange={(e) =>
             onUpdateVerification(index, {
               params: {
                 ...verification.params,
-                timeout: parseFloat(e.target.value) || 10,
+                timeout: parseFloat(e.target.value) || 1,
               },
             })
           }
@@ -77,13 +77,13 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
             size="small"
             type="number"
             label="Threshold"
-            value={verification.params?.threshold || 0.8}
+            value={verification.params?.threshold || 0.9}
             autoComplete="off"
             onChange={(e) =>
               onUpdateVerification(index, {
                 params: {
                   ...verification.params,
-                  threshold: parseFloat(e.target.value) || 0.8,
+                  threshold: parseFloat(e.target.value) || 0.9,
                 },
               })
             }

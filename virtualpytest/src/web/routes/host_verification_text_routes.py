@@ -3,15 +3,12 @@ Verification Text Host Routes
 
 This module contains the host-side text verification API endpoints that:
 - Handle text auto-detection using OCR
-- Save text references to git repository
+- Save text references to database (NEW: no more git operations)
 - Execute text verification tests
 """
 
 from flask import Blueprint, request, jsonify, current_app
 import os
-import json
-import subprocess
-from datetime import datetime
 
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
@@ -25,8 +22,6 @@ CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
 STREAM_BASE_PATH = '/var/www/html/stream'
 CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
 CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
-RESOURCES_BASE_PATH = '../resources'
-RESOURCE_JSON_PATH = '../config/resource/resource.json'
 
 # =====================================================
 # HOST-SIDE TEXT AUTO-DETECTION ENDPOINT
@@ -248,7 +243,7 @@ def text_auto_detect():
 
 @verification_text_host_bp.route('/save-text-reference', methods=['POST'])
 def save_text_resource():
-    """Save text verification reference"""
+    """Save text verification reference - NEW: Fast R2/Database approach like image references"""
     try:
         # ✅ USE OWN STORED HOST_DEVICE OBJECT
         host_device = getattr(current_app, 'my_host_device', None)
@@ -260,115 +255,44 @@ def save_text_resource():
             }), 404
         
         data = request.get_json()
-        name = data.get('name')  # Client sends 'name' instead of 'reference_name'
+        reference_name = data.get('name') or data.get('reference_name')  # Handle both parameter names
         model = data.get('model')
         text = data.get('text')
         font_size = data.get('font_size', 12.0)
         confidence = data.get('confidence', 0.8)
         area = data.get('area')
+        reference_type = data.get('reference_type', 'reference_text')
         
-        print(f"[@route:host_save_text_resource] Saving text reference: {name} for model: {model}")
+        print(f"[@route:host_save_text_resource] Saving text reference: {reference_name} for model: {model}")
         print(f"[@route:host_save_text_resource] Text: '{text}', Font size: {font_size}, Confidence: {confidence}")
+        print(f"[@route:host_save_text_resource] Request data keys: {list(data.keys())}")
         
         # Validate required parameters
-        if not name or not model or not text:
+        if not reference_name or not model or not text:
             return jsonify({
                 'success': False,
-                'error': 'name, model, and text are required'
+                'error': 'reference_name (or name), model, and text are required'
             }), 400
         
-        # Build resource directory path
-        resource_dir = f'{RESOURCES_BASE_PATH}/{model}'
-        os.makedirs(resource_dir, exist_ok=True)
-        
-        # Build resource JSON path
-        resource_json_path = RESOURCE_JSON_PATH
-        os.makedirs(os.path.dirname(resource_json_path), exist_ok=True)
-        
-        # Load existing resource data or create new
-        resource_data = {'resources': []}
-        if os.path.exists(resource_json_path):
-            try:
-                with open(resource_json_path, 'r') as f:
-                    resource_data = json.load(f)
-            except json.JSONDecodeError:
-                print(f"[@route:host_save_text_resource] Warning: Invalid JSON in {resource_json_path}, creating new")
-                resource_data = {'resources': []}
-        
-        # Remove existing resource with same name and model (update case)
-        resource_data['resources'] = [
-            r for r in resource_data['resources'] 
-            if not (r.get('name') == name and r.get('model') == model)
-        ]
-        
-        # Create new text reference entry
-        new_resource = {
-            'name': name,
+        # ✅ NEW: Return immediately with text data for frontend to save to database via server
+        # This follows the same fast pattern as image reference saving
+        return jsonify({
+            'success': True,
+            'message': f'Text reference ready for database save: {reference_name}',
+            'reference_name': reference_name,
             'model': model,
-            'type': 'text_reference',  # Different type for text references
             'text': text,
             'font_size': font_size,
             'confidence': confidence,
             'area': area,
-            'created_at': datetime.now().isoformat(),
-            'path': f'resources/{model}',  # Directory path (no specific file for text)
-            'full_path': f'/var/www/html/stream/resources/{model}'
-        }
-        
-        # Add new resource
-        resource_data['resources'].append(new_resource)
-        
-        # Save updated resource data
-        with open(resource_json_path, 'w') as f:
-            json.dump(resource_data, f, indent=2)
-        
-        print(f"[@route:host_save_text_resource] Text reference saved to JSON: {name}")
-        
-        # Perform git operations
-        try:
-            # Change to the parent directory for git operations
-            original_cwd = os.getcwd()
-            os.chdir('..')
-            
-            print(f"[@route:host_save_text_resource] Performing git operations...")
-            
-            # Git pull to get latest changes
-            subprocess.run(['git', 'pull'], check=True, capture_output=True, text=True)
-            
-            # Git add the resource file
-            subprocess.run(['git', 'add', 'config/resource/resource.json'], check=True, capture_output=True, text=True)
-            
-            # Git commit with descriptive message
-            commit_message = f'Add text reference: {name} for {model}'
-            subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
-            
-            # Git push with authentication
-            github_token = os.getenv('GITHUB_TOKEN')
-            if github_token:
-                # Use token for authentication
-                subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
-                print(f"[@route:host_save_text_resource] Git operations completed successfully")
-            else:
-                print(f"[@route:host_save_text_resource] Warning: GITHUB_TOKEN not set, skipping push")
-            
-            # Return to original directory
-            os.chdir(original_cwd)
-            
-            # Return success with resource path
-            return jsonify({
-                'success': True,
-                'message': f'Text reference saved and committed: {name}',
-                'public_url': f'/resources/{model}',  # Generic path for text references
-                'resource_type': 'text_reference'
-            })
-            
-        except subprocess.CalledProcessError as git_error:
-            os.chdir(original_cwd)  # Ensure we return to original directory
-            print(f"[@route:host_save_text_resource] Git operation failed: {git_error}")
-            return jsonify({
-                'success': False,
-                'error': f'Git operation failed: {str(git_error)}'
-            }), 500
+            'reference_type': reference_type,
+            # Return text data for database save (no R2 URL needed for text)
+            'text_data': {
+                'text': text,
+                'font_size': font_size,
+                'confidence': confidence
+            }
+        })
             
     except Exception as e:
         print(f"[@route:host_save_text_resource] Error: {str(e)}")

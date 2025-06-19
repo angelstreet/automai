@@ -256,7 +256,16 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {/* First Row: Reference selection and test result status */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {verification.id && Object.keys(modelReferences).length > 0 ? (
+              {verification.id &&
+              Object.entries(modelReferences).some(([filename, ref]) => {
+                // Check if there are references matching the verification type
+                if (verification.controller_type === 'image') {
+                  return ref.type === 'image';
+                } else if (verification.controller_type === 'text') {
+                  return ref.type === 'text';
+                }
+                return true;
+              }) ? (
                 <>
                   {/* Reference Dropdown - shows both image and text references */}
                   <FormControl size="small" sx={{ width: 250 }}>
