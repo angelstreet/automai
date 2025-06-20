@@ -10,7 +10,7 @@ All communication is via direct device connections (ADB, uhubctl, etc.).
 DEVICE_MODEL_VERIFICATION_MAPPING = {
     'android_mobile': ['image', 'text', 'adb'],
     'android_tv': ['image', 'text'],
-    'ios_phone': ['image', 'text'],
+    'ios_mobile': ['image', 'text', 'appium'],
     'stb': ['image', 'text'],
 }
 
@@ -27,12 +27,24 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     
     Returns:
         dict: Complete controller_configs structure
+        
+    Raises:
+        ValueError: If device_model is not supported
     """
+    
+    # STEP 1: Validate device model exists in our mapping
+    if device_model not in DEVICE_MODEL_VERIFICATION_MAPPING:
+        supported_models = list(DEVICE_MODEL_VERIFICATION_MAPPING.keys())
+        raise ValueError(f"Unsupported device model '{device_model}'. Supported models: {supported_models}")
+    
+    print(f"[@controller_config_factory:create_controller_configs] Creating configuration for device model: {device_model}")
     
     # Base configuration - all devices get these
     controller_configs = {}
     
-    # Configure remote controller based on device model
+    # STEP 2: Configure remote controller based on device model (REQUIRED)
+    remote_configured = False
+    
     if device_model in ['android_mobile', 'android_mobile']:
         controller_configs['remote'] = {
             'type': 'android_mobile',
@@ -43,6 +55,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'connection_timeout': 10
             }
         }
+        remote_configured = True
     elif device_model == 'android_tv':
         controller_configs['remote'] = {
             'type': 'android_tv',
@@ -53,7 +66,23 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'connection_timeout': 10
             }
         }
+        remote_configured = True
     elif device_model == 'ios_mobile':
+        controller_configs['remote'] = {
+            'type': 'appium_remote',
+            'implementation': 'appium_remote',
+            'parameters': {
+                'device_ip': device_ip,  # Use IP instead of UDID for network connection
+                'device_port': device_port,  # iOS network debugging port
+                'platform_name': 'iOS',
+                'platform_version': '',  # Optional, can be configured later
+                'appium_url': 'http://localhost:4723',
+                'automation_name': 'XCUITest',
+                'connection_timeout': 10
+            }
+        }
+        remote_configured = True
+    elif device_model == 'ios_phone':
         controller_configs['remote'] = {
             'type': 'appium_remote',
             'implementation': 'appium_remote',
@@ -66,6 +95,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'connection_timeout': 10
             }
         }
+        remote_configured = True
     elif device_model == 'ir_remote':
         controller_configs['remote'] = {
             'type': 'ir_remote',
@@ -76,6 +106,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'frequency': 38000
             }
         }
+        remote_configured = True
     elif device_model == 'bluetooth_remote':
         controller_configs['remote'] = {
             'type': 'bluetooth_remote',
@@ -85,8 +116,13 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'connection_timeout': 30
             }
         }
+        remote_configured = True
     
-    # Configure AV controller - most devices use HDMI stream
+    # Validate that remote controller was configured
+    if not remote_configured:
+        raise ValueError(f"No remote controller configuration found for device model '{device_model}'")
+    
+    # STEP 3: Configure AV controller - most devices use HDMI stream
     controller_configs['av'] = {
         'implementation': 'hdmi_stream',
         'parameters': {
@@ -98,8 +134,13 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     }
     
-    # Configure verification controllers based on device model mapping
-    verification_types = DEVICE_MODEL_VERIFICATION_MAPPING.get(device_model, ['text'])  # Default to text verification
+    # STEP 4: Configure verification controllers based on device model mapping (REQUIRED)
+    verification_types = DEVICE_MODEL_VERIFICATION_MAPPING[device_model]  # No fallback - must exist
+    
+    if not verification_types:
+        raise ValueError(f"No verification controllers defined for device model '{device_model}'")
+    
+    print(f"[@controller_config_factory:create_controller_configs] Creating {len(verification_types)} verification controllers: {verification_types}")
     
     for verification_type in verification_types:
         controller_key = f'verification_{verification_type}'
@@ -114,6 +155,19 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'connection_timeout': 10
                 }
             }
+        elif verification_type == 'appium':
+            # Appium verification needs device connection parameters
+            controller_configs[controller_key] = {
+                'implementation': 'appium',
+                'parameters': {
+                    'device_ip': device_ip,  # Use IP for network connection
+                    'device_port': device_port,  # iOS network debugging port
+                    'platform_name': 'iOS' if device_model.startswith('ios_') else 'Android',
+                    'appium_url': 'http://localhost:4723',
+                    'automation_name': 'XCUITest' if device_model.startswith('ios_') else 'UIAutomator2',
+                    'connection_timeout': 10
+                }
+            }
         else:
             # Other verification types (image, audio, text, video) work with AV controller
             controller_configs[controller_key] = {
@@ -121,7 +175,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {}
             }
     
-    # Configure power controller - most use USB hub control
+    # STEP 5: Configure power controller - most use USB hub control
     controller_configs['power'] = {
         'implementation': 'usb',
         'parameters': {
@@ -130,6 +184,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         }
     }
     
+    print(f"[@controller_config_factory:create_controller_configs] Successfully created configuration with {len(controller_configs)} controllers")
     return controller_configs
 
 

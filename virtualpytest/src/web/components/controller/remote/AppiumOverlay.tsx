@@ -10,7 +10,7 @@ interface AppiumOverlayProps {
   maxElements?: number;
 }
 
-const AppiumOverlay: React.FC<AppiumOverlayProps> = ({
+export const AppiumOverlay: React.FC<AppiumOverlayProps> = ({
   elements,
   onElementClick,
   selectedElementId,
@@ -240,5 +240,3 @@ const AppiumOverlay: React.FC<AppiumOverlayProps> = ({
     </Box>
   );
 };
-
-export default AppiumOverlay;

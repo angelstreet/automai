@@ -44,6 +44,30 @@ const mockHosts: Host[] = [
     },
   },
   {
+    id: 'test-ios-mobile',
+    host_name: 'Test iOS Mobile',
+    device_model: 'ios_mobile',
+    status: 'online',
+    controller_configs: {
+      remote: {
+        implementation: 'appium_remote',
+        type: 'appium_remote',
+        parameters: {
+          device_ip: '192.168.8.1',
+          device_port: '5555',
+          platform_name: 'iOS',
+          automation_name: 'XCUITest',
+          appium_url: 'http://localhost:4723',
+        },
+      },
+      av: {
+        implementation: 'hdmi_stream',
+        type: 'hdmi_stream',
+        parameters: {},
+      },
+    },
+  },
+  {
     id: 'test-bluetooth',
     host_name: 'Test Bluetooth Remote',
     device_model: 'bluetooth_remote',

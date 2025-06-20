@@ -12,6 +12,7 @@ import { Host } from '../../../types/common/Host_Types';
 
 import { AndroidMobileRemote } from './AndroidMobileRemote';
 import { AndroidTvRemote } from './AndroidTvRemote';
+import { AppiumRemote } from './AppiumRemote';
 
 interface RemotePanelProps {
   host: Host;
@@ -198,6 +199,26 @@ export function RemotePanel({
               Bluetooth Remote (TODO)
             </Typography>
           </Box>
+        );
+      case 'ios_mobile':
+        return (
+          <AppiumRemote
+            host={host}
+            onDisconnectComplete={onReleaseControl}
+            isCollapsed={isCollapsed}
+            panelWidth={currentWidth}
+            panelHeight={currentHeight}
+            deviceResolution={effectiveDeviceResolution}
+            streamCollapsed={streamCollapsed}
+            streamMinimized={streamMinimized}
+            captureMode={captureMode}
+            sx={{
+              height: '100%',
+              '& .MuiButton-root': {
+                fontSize: isCollapsed ? '0.7rem' : '0.875rem',
+              },
+            }}
+          />
         );
       default:
         return (

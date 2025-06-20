@@ -54,14 +54,33 @@ import {
 import { Host } from '../../../types/common/Host_Types';
 import { AppiumElement, AppiumApp } from '../../../types/controller/Remote_Types';
 import { useAppiumRemote } from '../../../hooks/controller/useAppiumRemote';
-import AppiumOverlay from './AppiumOverlay';
+import { AppiumOverlay } from './AppiumOverlay';
 
 interface AppiumRemoteProps {
   host: Host;
-  onDisconnect?: () => void;
+  onDisconnectComplete?: () => void;
+  isCollapsed?: boolean;
+  panelWidth?: string;
+  panelHeight?: string;
+  deviceResolution?: { width: number; height: number };
+  streamCollapsed?: boolean;
+  streamMinimized?: boolean;
+  captureMode?: 'stream' | 'screenshot' | 'video';
+  sx?: any;
 }
 
-const AppiumRemote: React.FC<AppiumRemoteProps> = ({ host, onDisconnect }) => {
+export const AppiumRemote: React.FC<AppiumRemoteProps> = ({
+  host,
+  onDisconnectComplete,
+  isCollapsed,
+  panelWidth,
+  panelHeight,
+  deviceResolution,
+  streamCollapsed,
+  streamMinimized,
+  captureMode,
+  sx,
+}) => {
   const {
     // State
     appiumElements,
@@ -171,11 +190,11 @@ const AppiumRemote: React.FC<AppiumRemoteProps> = ({ host, onDisconnect }) => {
   // Handle disconnect with callback
   const handleDisconnectWithCallback = useCallback(async () => {
     await handleDisconnect();
-    onDisconnect?.();
-  }, [handleDisconnect, onDisconnect]);
+    onDisconnectComplete?.();
+  }, [handleDisconnect, onDisconnectComplete]);
 
   return (
-    <Box>
+    <Box sx={sx}>
       {/* Connection Status Header */}
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Grid container alignItems="center" spacing={2}>
@@ -478,5 +497,3 @@ const AppiumRemote: React.FC<AppiumRemoteProps> = ({ host, onDisconnect }) => {
     </Box>
   );
 };
-
-export default AppiumRemote;

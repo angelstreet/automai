@@ -71,6 +71,15 @@ def register_host_with_server():
             device_port,
             os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce')  # Use team_id from env
         )
+        
+        # Validate that controllers were created successfully
+        if not created_controllers:
+            error_msg = f"❌ [HOST] Controller creation failed for device model '{device_model}'. Registration aborted."
+            print(error_msg)
+            print(f"   This usually means the device model is not supported.")
+            print(f"   Check controller_config_factory.py for supported device models.")
+            return
+        
         print(f"   Created controllers: {list(created_controllers.keys())}")
         
         # Extract verification types and actions from created controllers
@@ -532,6 +541,9 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                 device_name=device_name,
                 device_ip=remote_params.get('device_ip', device_ip),
                 device_port=remote_params.get('device_port', device_port),
+                platform_name=remote_params.get('platform_name', 'iOS'),
+                automation_name=remote_params.get('automation_name', 'XCUITest'),
+                appium_url=remote_params.get('appium_url', 'http://localhost:4723'),
                 connection_timeout=remote_params.get('connection_timeout', 10)
             )
             controller_objects['remote'] = remote_controller
@@ -555,6 +567,18 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                             verification_type=verification_type,
                             device_ip=device_ip,
                             device_port=device_port
+                        )
+                    elif verification_type == 'appium':
+                        # Appium verification needs device connection parameters from config
+                        verification_params = controller_config.get('parameters', {})
+                        verification_controller = ControllerFactory.create_verification_controller(
+                            verification_type=verification_type,
+                            device_ip=verification_params.get('device_ip', device_ip),
+                            device_port=verification_params.get('device_port', device_port),
+                            platform_name=verification_params.get('platform_name', 'iOS'),
+                            appium_url=verification_params.get('appium_url', 'http://localhost:4723'),
+                            automation_name=verification_params.get('automation_name', 'XCUITest'),
+                            connection_timeout=verification_params.get('connection_timeout', 10)
                         )
                     else:
                         # Other verification types (image, audio, text, video) only need av_controller

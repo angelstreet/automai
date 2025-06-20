@@ -20,6 +20,8 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { ExecutionResultsDb, ExecutionResult } from '../../../lib/db/executionResultsDb';
+import { useVerification } from '../../hooks/verification/useVerification';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -78,10 +80,18 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Add states for verification execution
     const [isRunningVerifications, setIsRunningVerifications] = useState(false);
     const [verificationResult, setVerificationResult] = useState<string | null>(null);
+    const [captureSourcePath, setCaptureSourcePath] = useState<string | null>(null);
+
+    // Use the verification hook for simple verification (no area selection needed)
+    const verification = useVerification({
+      selectedHost: selectedHost!,
+      captureSourcePath: captureSourcePath || undefined,
+    });
 
     // Clear verification results when node selection changes
     useEffect(() => {
       setVerificationResult(null);
+      setCaptureSourcePath(null);
     }, [selectedNode.id, selectedNode.data.verifications]);
 
     const handleEdit = () => {
@@ -169,9 +179,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowScreenshotConfirm(false);
     };
 
-    // ❌ REMOVED: updateVerificationResults - confidence tracking moved to database
-
-    // Execute all node verifications
+    // Execute all node verifications using temporary capture approach
     const handleRunVerifications = async () => {
       if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
         return;
@@ -186,73 +194,88 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setVerificationResult(null);
 
       try {
-        // Step 1: Take screenshot first (capture-first approach)
-        console.log('[@component:NodeSelectionPanel] Taking screenshot before verification...');
-        const screenshotResponse = await fetch('/server/navigation/save-screenshot', {
+        // Step 1: Take temporary screenshot (like VerificationEditor does)
+        console.log(
+          '[@component:NodeSelectionPanel] Taking temporary screenshot for verification...',
+        );
+
+        // Use the server AV route to take temporary screenshot
+        const screenshotResponse = await fetch('/server/av/take-screenshot', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost,
-            filename: `${selectedNode.data.label}_verification`, // Use node name for verification screenshot
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
         });
 
         const screenshotResult = await screenshotResponse.json();
-
-        if (!screenshotResult.success || !screenshotResult.filename) {
-          setVerificationResult('❌ Failed to capture screenshot for verification');
+        if (!screenshotResult.success || !screenshotResult.screenshot_url) {
+          setVerificationResult(
+            `❌ Failed to take temporary screenshot: ${screenshotResult.error || 'No URL returned'}`,
+          );
           return;
         }
 
-        console.log(
-          '[@component:NodeSelectionPanel] Screenshot captured:',
-          screenshotResult.filename,
-        );
+        const screenshotUrl = screenshotResult.screenshot_url;
+        console.log('[@component:NodeSelectionPanel] Temporary screenshot taken:', screenshotUrl);
 
-        // Step 2: Execute verifications using the captured screenshot
-        let results: string[] = [];
-        const verifications = selectedNode.data.verifications;
+        // Set the capture source path for the verification hook
+        setCaptureSourcePath(screenshotUrl);
 
-        for (let i = 0; i < verifications.length; i++) {
-          const verification = verifications[i];
+        // Step 2: Set verifications in the hook and run them
+        verification.handleVerificationsChange(selectedNode.data.verifications);
 
-          try {
-            // Use server route for verification execution with actual screenshot
-            const response = await fetch(`/server/verification/batch/execute`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                host: selectedHost, // Use full host object (like VerificationEditor)
-                verifications: [verification],
-                source_filename: screenshotResult.filename, // Use actual screenshot filename
-              }),
+        // Wait a moment for state to update, then run the test
+        setTimeout(async () => {
+          await verification.handleTest();
+
+          // Get results from the verification hook
+          if (verification.testResults && verification.testResults.length > 0) {
+            const results = verification.testResults.map((result, index) => {
+              if (result.success) {
+                return `✅ Verification ${index + 1}: ${result.message || 'Success'}`;
+              } else {
+                return `❌ Verification ${index + 1}: ${result.error || 'Failed'}`;
+              }
             });
-
-            const result = await response.json();
-
-            if (result.success) {
-              results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-            } else {
-              results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
-            }
-          } catch (err: any) {
-            results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
+            setVerificationResult(results.join('\n'));
+          } else if (verification.error) {
+            setVerificationResult(`❌ ${verification.error}`);
+          } else {
+            setVerificationResult('✅ Verification completed');
           }
 
-          // ❌ REMOVED: Confidence tracking moved to database
-          // TODO: Add database reporting in Step 2
-        }
-
-        setVerificationResult(results.join('\n'));
+          setIsRunningVerifications(false);
+        }, 100);
       } catch (err: any) {
         console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
         setVerificationResult(`❌ ${err.message}`);
-      } finally {
         setIsRunningVerifications(false);
+      }
+
+      // Record all verification executions to database
+      if (verification.verificationExecutions.length > 0) {
+        console.log(
+          '[@component:NodeSelectionPanel] Recording',
+          verification.verificationExecutions.length,
+          'verification executions to database',
+        );
+        const dbResult = await ExecutionResultsDb.recordBatchExecutions(
+          verification.verificationExecutions,
+        );
+
+        if (!dbResult.success) {
+          console.error(
+            '[@component:NodeSelectionPanel] Failed to record verification executions:',
+            dbResult.error,
+          );
+          setVerificationResult(`⚠️ Database recording failed: ${dbResult.error}`);
+        } else {
+          console.log(
+            '[@component:NodeSelectionPanel] Successfully recorded verification executions to database',
+          );
+          setVerificationResult(
+            `📊 Verification results recorded to database (${verification.verificationExecutions.length} executions)`,
+          );
+        }
       }
     };
 

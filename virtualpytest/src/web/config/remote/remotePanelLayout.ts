@@ -6,6 +6,7 @@
 // Import configurations
 import { androidMobileRemoteConfig } from './androidMobileRemote';
 import { androidTvRemoteConfig } from './androidTvRemote';
+import { appiumRemoteConfig } from './appiumRemote';
 import { bluetoothRemoteConfig } from './bluetoothRemote';
 import { infraredRemoteConfig } from './infraredRemote';
 
@@ -197,6 +198,28 @@ export const getConfigurableRemotePanelLayout = (
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: false,
       };
+    case 'ios_mobile':
+      return {
+        collapsed: {
+          width: '200px',
+          height: '350px',
+          position: {
+            bottom: '20px',
+            right: '20px',
+          },
+        },
+        expanded: {
+          width: '400px',
+          height: 'calc(100vh - 140px)',
+          position: {
+            top: '100px',
+            right: '20px',
+          },
+        },
+        zIndex: 1000,
+        showScreenshotInCollapsed: false,
+        showScreenshotInExpanded: true,
+      };
     default:
       return {
         collapsed: {
@@ -305,6 +328,9 @@ export const loadRemoteConfig = (deviceModel: string): any => {
         break;
       case 'bluetooth_remote':
         config = bluetoothRemoteConfig;
+        break;
+      case 'ios_mobile':
+        config = appiumRemoteConfig;
         break;
       default:
         console.warn(

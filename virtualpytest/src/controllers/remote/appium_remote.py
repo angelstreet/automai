@@ -54,7 +54,8 @@ class AppiumRemoteController(RemoteControllerInterface):
             device_name: Name of the device
             device_type: Type identifier for the device
             **kwargs: Additional parameters including:
-                - device_udid: Device UDID (required)
+                - device_ip: Device IP address (required for network connections)
+                - device_port: Device port (required for network connections)
                 - platform_name: Platform name ('iOS', 'Android', etc.) (required)
                 - platform_version: Platform version (optional)
                 - appium_url: Appium server URL (default: http://localhost:4723)
@@ -67,7 +68,8 @@ class AppiumRemoteController(RemoteControllerInterface):
         super().__init__(device_name, device_type)
         
         # Required parameters
-        self.device_udid = kwargs.get('device_udid')
+        self.device_ip = kwargs.get('device_ip')
+        self.device_port = kwargs.get('device_port')
         self.platform_name = kwargs.get('platform_name')
         
         # Optional parameters
@@ -80,12 +82,14 @@ class AppiumRemoteController(RemoteControllerInterface):
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
         # Validate required parameters
-        if not self.device_udid:
-            raise ValueError("device_udid is required for AppiumRemoteController")
+        if not self.device_ip:
+            raise ValueError("device_ip is required for AppiumRemoteController")
+        if not self.device_port:
+            raise ValueError("device_port is required for AppiumRemoteController")
         if not self.platform_name:
             raise ValueError("platform_name is required for AppiumRemoteController")
             
-        self.device_id = f"{self.platform_name.lower()}_{self.device_udid}"
+        self.device_id = f"{self.platform_name.lower()}_{self.device_ip}_{self.device_port}"
         self.appium_utils = None
         self.device_resolution = None
         self.detected_platform = None
@@ -97,21 +101,44 @@ class AppiumRemoteController(RemoteControllerInterface):
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
         try:
-            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device {self.device_udid}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device")
+            print(f"Remote[{self.device_type.upper()}]: Device IP: {self.device_ip}:{self.device_port}")
+            print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_url}")
             
             # Initialize Appium utilities
             self.appium_utils = AppiumUtils()
             
+            # Check if Appium server is running
+            if not self.appium_utils.is_appium_server_running(self.appium_url):
+                print(f"Remote[{self.device_type.upper()}]: ERROR - Appium server is not running at {self.appium_url}")
+                print(f"Remote[{self.device_type.upper()}]: Please start Appium server: appium --address 127.0.0.1 --port 4723")
+                return False
+            
             # Build Appium capabilities
             capabilities = self._build_capabilities()
+            print(f"Remote[{self.device_type.upper()}]: Using capabilities: {capabilities}")
+            
+            # For iOS, provide additional troubleshooting info
+            if self.platform_name.lower() == 'ios':
+                print(f"Remote[{self.device_type.upper()}]: iOS WiFi Debugging Requirements:")
+                print(f"Remote[{self.device_type.upper()}]: 1. Device must be on same network as this machine")
+                print(f"Remote[{self.device_type.upper()}]: 2. WiFi debugging must be enabled in Xcode (Window > Devices and Simulators)")
+                print(f"Remote[{self.device_type.upper()}]: 3. Device must be paired and trusted")
+                print(f"Remote[{self.device_type.upper()}]: 4. WebDriverAgent must be installed on device")
             
             # Connect to device via Appium
             if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_url):
-                print(f"Remote[{self.device_type.upper()}]: Failed to connect to device {self.device_id}")
+                print(f"Remote[{self.device_type.upper()}]: Failed to connect to device")
+                if self.platform_name.lower() == 'ios':
+                    print(f"Remote[{self.device_type.upper()}]: Troubleshooting steps:")
+                    print(f"Remote[{self.device_type.upper()}]: - Verify device IP: {self.device_ip}")
+                    print(f"Remote[{self.device_type.upper()}]: - Check if device is reachable: ping {self.device_ip}")
+                    print(f"Remote[{self.device_type.upper()}]: - Verify WiFi debugging is enabled")
+                    print(f"Remote[{self.device_type.upper()}]: - Try connecting via USB first")
                 self.disconnect()
                 return False
                 
-            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.platform_name} device {self.device_udid}")
+            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.platform_name} device {self.device_id}")
             
             # Get device resolution
             self.device_resolution = self.appium_utils.get_device_resolution(self.device_id)
@@ -133,10 +160,17 @@ class AppiumRemoteController(RemoteControllerInterface):
         """Build Appium capabilities based on platform and parameters."""
         capabilities = {
             'platformName': self.platform_name,
-            'udid': self.device_udid,
             'noReset': True,
             'fullReset': False,
         }
+        
+        # For iOS network connections, use the IP:port format as UDID
+        # For other platforms, use device_id
+        if self.platform_name.lower() == 'ios':
+            # iOS network debugging format: IP:port
+            capabilities['udid'] = f"{self.device_ip}:{self.device_port}"
+        else:
+            capabilities['udid'] = self.device_id
         
         # Add platform version if provided
         if self.platform_version:
@@ -153,8 +187,17 @@ class AppiumRemoteController(RemoteControllerInterface):
         # Add iOS-specific capabilities
         if self.platform_name.lower() == 'ios':
             capabilities['usePrebuiltWDA'] = True
+            capabilities['useNewWDA'] = False
+            capabilities['wdaLocalPort'] = 8100  # Default WDA port
+            capabilities['skipLogCapture'] = True
+            capabilities['shouldTerminateApp'] = False
+            capabilities['shouldUseSingletonTestManager'] = False
+            
             if self.bundle_id:
                 capabilities['bundleId'] = self.bundle_id
+            else:
+                # Don't specify an app - just connect to device for automation
+                capabilities['autoAcceptAlerts'] = True
         
         # Add Android-specific capabilities
         elif self.platform_name.lower() == 'android':
@@ -546,7 +589,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                 'controller_type': self.controller_type,
                 'device_type': self.device_type,
                 'device_name': self.device_name,
-                'device_udid': self.device_udid,
+                'device_id': self.device_id,
                 'platform_name': self.platform_name,
                 'detected_platform': self.detected_platform,
                 'appium_url': self.appium_url,
@@ -568,7 +611,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                         base_status.update({
                             'driver_status': 'active',
                             'session_id': getattr(driver, 'session_id', 'unknown'),
-                            'message': f'{self.platform_name} device {self.device_udid} is connected and ready'
+                            'message': f'{self.platform_name} device {self.device_id} is connected and ready'
                         })
                     else:
                         base_status.update({
@@ -578,7 +621,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                 else:
                     base_status.update({
                         'driver_status': 'disconnected',
-                        'message': f'Device {self.device_udid} is not connected'
+                        'message': f'Device {self.device_id} is not connected'
                     })
             else:
                 base_status.update({
