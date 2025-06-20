@@ -72,17 +72,18 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
               : 'FAIL'}
         </Typography>
 
-        {testResult.message && (
-          <Typography
-            sx={{
-              fontSize: '0.7rem',
-              color: 'text.secondary',
-              ml: 1,
-            }}
-          >
-            {testResult.message}
-          </Typography>
-        )}
+        {testResult.message &&
+          !(verification.verification_type === 'adb' && testResult.success) && (
+            <Typography
+              sx={{
+                fontSize: '0.7rem',
+                color: 'text.secondary',
+                ml: 1,
+              }}
+            >
+              {testResult.message}
+            </Typography>
+          )}
       </Box>
 
       {/* Image comparison thumbnails for image verifications */}
@@ -103,12 +104,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
       {verification.verification_type === 'text' &&
         (testResult.searchedText || testResult.sourceImageUrl) && (
           <VerificationTextComparisonDisplay
-            searchedText={
-              testResult.searchedText ||
-              verification.params?.reference_text ||
-              verification.params?.text ||
-              ''
-            }
+            searchedText={testResult.searchedText || verification.params?.text || ''}
             extractedText={testResult.extractedText || ''}
             sourceUrl={testResult.sourceImageUrl}
             resultType={testResult.resultType || (testResult.success ? 'PASS' : 'FAIL')}
