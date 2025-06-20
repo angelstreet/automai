@@ -1,7 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
+
 import { useVerification } from './useVerification';
+import { useVerificationReferences } from './useVerificationReferences';
 
 // Define interfaces for editor-specific data structures
 interface DragArea {
@@ -41,7 +43,7 @@ interface UseVerificationEditorProps {
 }
 
 export const useVerificationEditor = ({
-  isVisible,
+  isVisible: _isVisible,
   selectedHost,
   captureSourcePath,
   selectedArea,
@@ -62,6 +64,10 @@ export const useVerificationEditor = ({
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
+
+  // Add references management after referenceSaveCounter is declared
+  const { availableReferences, referencesLoading, fetchAvailableReferences, getModelReferences } =
+    useVerificationReferences(referenceSaveCounter, selectedHost);
 
   // State for reference type and details
   const [referenceText, setReferenceText] = useState<string>('');
@@ -552,6 +558,12 @@ export const useVerificationEditor = ({
   return {
     // Include all verification functionality
     ...verification,
+
+    // References functionality
+    availableReferences,
+    referencesLoading,
+    fetchAvailableReferences,
+    getModelReferences,
 
     // Editor-specific state
     referenceName,

@@ -491,6 +491,25 @@ export interface EdgeActionItemProps {
   selectedHost?: any;
 }
 
+export interface VerificationsListProps {
+  verifications: import('../verification/VerificationTypes').EditorVerification[];
+  availableActions: import('../verification/VerificationTypes').Verifications;
+  onVerificationsChange: (
+    verifications: import('../verification/VerificationTypes').EditorVerification[],
+  ) => void;
+  loading?: boolean;
+  error?: string | null;
+  model?: string;
+  onTest?: () => void;
+  testResults?: import('../verification/VerificationTypes').VerificationTestResult[];
+  reloadTrigger?: number; // Trigger to reload references
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
+  selectedHost: import('../common/Host_Types').Host | null; // Make selectedHost required
+  // Optional: Pass references data directly from parent
+  modelReferences?: import('../verification/VerificationTypes').ModelReferences;
+  referencesLoading?: boolean;
+}
+
 export interface NodeVerificationsListProps {
   verifications: NodeVerification[];
   availableActions: import('../verification/VerificationTypes').Verifications;
@@ -499,10 +518,13 @@ export interface NodeVerificationsListProps {
   error?: string | null;
   model?: string;
   onTest?: () => void;
-  testResults?: VerificationTestResult[];
+  testResults?: import('../verification/VerificationTypes').VerificationTestResult[];
   reloadTrigger?: number; // Trigger to reload references
   onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
   selectedHost: import('../common/Host_Types').Host | null; // Make selectedHost required
+  // Optional: Pass references data directly from parent
+  modelReferences?: import('../verification/VerificationTypes').ModelReferences;
+  referencesLoading?: boolean;
 }
 
 // Progressive loading interfaces removed - loading all nodes at once

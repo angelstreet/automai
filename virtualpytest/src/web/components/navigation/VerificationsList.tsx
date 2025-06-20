@@ -15,11 +15,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 // Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-import { NodeVerification, NodeVerificationsListProps } from '../../types/pages/Navigation_Types';
+import { EditorVerification } from '../../types/verification/VerificationTypes';
+import { VerificationsListProps } from '../../types/pages/Navigation_Types';
 import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
 import { VerificationItem } from '../verification/VerificationItem';
 
-export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
+export const VerificationsList: React.FC<VerificationsListProps> = ({
   verifications,
   availableActions = {}, // Default to empty object
   onVerificationsChange,
@@ -31,6 +32,9 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   reloadTrigger = 0,
   onReferenceSelected,
   selectedHost, // Required prop
+  // Optional: passed references data to avoid double loading
+  modelReferences: passedModelReferences,
+  referencesLoading: passedReferencesLoading,
 }) => {
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
   const [imageComparisonDialog, setImageComparisonDialog] = useState<{
@@ -51,22 +55,31 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     imageFilter: undefined,
   });
 
-  // Use extracted hooks - pass selectedHost as required parameter
-  const { referencesLoading, getModelReferences } = useVerificationReferences(
-    reloadTrigger,
-    selectedHost,
-  );
+  // Use passed references data if available, otherwise use hook as fallback
+  const { referencesLoading: hookReferencesLoading, getModelReferences: hookGetModelReferences } =
+    useVerificationReferences(reloadTrigger, selectedHost);
+
+  const referencesLoading =
+    passedReferencesLoading !== undefined ? passedReferencesLoading : hookReferencesLoading;
 
   // Memoize model references to prevent multiple calls during render
-  const modelReferences = useMemo(() => getModelReferences(model), [getModelReferences, model]);
+  const modelReferences = useMemo(() => {
+    if (passedModelReferences !== undefined) {
+      // Use passed references directly
+      return passedModelReferences;
+    } else {
+      // Fallback to hook-based references
+      return hookGetModelReferences(model);
+    }
+  }, [passedModelReferences, hookGetModelReferences, model]);
 
   // Debug logging for testResults changes - keep this for troubleshooting
   useEffect(() => {
-    console.log('[@component:NodeVerificationsList] testResults updated:', testResults);
+    console.log('[@component:VerificationsList] testResults updated:', testResults);
   }, [testResults]);
 
   const addVerification = () => {
-    const newVerification: NodeVerification = {
+    const newVerification: EditorVerification = {
       id: '',
       label: '',
       command: '',
@@ -82,7 +95,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     onVerificationsChange(newVerifications);
   };
 
-  const updateVerification = (index: number, updates: Partial<NodeVerification>) => {
+  const updateVerification = (index: number, updates: Partial<EditorVerification>) => {
     const newVerifications = verifications.map((verification, i) =>
       i === index ? { ...verification, ...updates } : verification,
     );
@@ -153,7 +166,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
   };
 
   const handleReferenceSelect = (index: number, referenceName: string) => {
-    console.log('[@component:NodeVerificationsList] Reference selected:', {
+    console.log('[@component:VerificationsList] Reference selected:', {
       index,
       referenceName,
       model,
@@ -162,7 +175,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
     const selectedRef = modelReferences[referenceName]; // Access by key instead of find()
 
     if (selectedRef) {
-      console.log('[@component:NodeVerificationsList] Selected reference details:', {
+      console.log('[@component:VerificationsList] Selected reference details:', {
         name: referenceName,
         model: model,
         type: selectedRef.type,
@@ -190,13 +203,10 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             reference_url: selectedRef.url,
           },
         });
-        console.log(
-          '[@component:NodeVerificationsList] Updated verification with image reference:',
-          {
-            reference_image: referenceName,
-            reference_url: selectedRef.url,
-          },
-        );
+        console.log('[@component:VerificationsList] Updated verification with image reference:', {
+          reference_image: referenceName,
+          reference_url: selectedRef.url,
+        });
       } else if (selectedRef.type === 'text') {
         // Text reference parameters
         updateVerification(index, {
@@ -208,14 +218,11 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
             font_size: selectedRef.font_size,
           },
         });
-        console.log(
-          '[@component:NodeVerificationsList] Updated verification with text reference:',
-          {
-            reference_text: selectedRef.text,
-            reference_name: referenceName,
-            font_size: selectedRef.font_size,
-          },
-        );
+        console.log('[@component:VerificationsList] Updated verification with text reference:', {
+          reference_text: selectedRef.text,
+          reference_name: referenceName,
+          font_size: selectedRef.font_size,
+        });
       }
 
       if (onReferenceSelected) {
@@ -231,7 +238,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         image_filter: filter,
       },
     });
-    console.log('[@component:NodeVerificationsList] Changed image filter to:', filter);
+    console.log('[@component:VerificationsList] Changed image filter to:', filter);
   };
 
   const handleTextFilterChange = (index: number, filter: 'none' | 'greyscale' | 'binary') => {
@@ -241,7 +248,7 @@ export const NodeVerificationsList: React.FC<NodeVerificationsListProps> = ({
         text_filter: filter,
       },
     });
-    console.log('[@component:NodeVerificationsList] Changed text filter to:', filter);
+    console.log('[@component:VerificationsList] Changed text filter to:', filter);
   };
 
   const handleImageClick = (

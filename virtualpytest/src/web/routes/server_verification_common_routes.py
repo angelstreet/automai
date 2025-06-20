@@ -179,20 +179,45 @@ def execute_batch_verification():
                 }
                 status = 400
             
-            # Handle proxy errors
+            # Handle proxy errors and flatten verification results
             if status != 200 and isinstance(result, dict):
                 result['verification_type'] = verification_type
+                flattened_result = result
             elif status != 200:
-                result = {
+                flattened_result = {
                     'success': False,
                     'error': f'Host request failed with status {status}',
                     'verification_type': verification_type
                 }
+            else:
+                # Flatten the nested verification_result structure
+                verification_result = result.get('verification_result', {})
+                flattened_result = {
+                    'success': verification_result.get('success', False),
+                    'message': verification_result.get('message'),
+                    'error': verification_result.get('error'),
+                    'threshold': verification_result.get('threshold') or verification_result.get('confidence'),
+                    'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
+                    'sourceImageUrl': verification_result.get('source_image_url'),
+                    'referenceImageUrl': verification_result.get('reference_image_url'),
+                    'extractedText': verification_result.get('extracted_text'),
+                    'searchedText': verification_result.get('searched_text'),
+                    'imageFilter': verification_result.get('image_filter'),
+                    'detectedLanguage': verification_result.get('detected_language'),
+                    'languageConfidence': verification_result.get('language_confidence'),
+                    'search_term': verification_result.get('search_term'),
+                    'wait_time': verification_result.get('wait_time'),
+                    'total_matches': verification_result.get('total_matches'),
+                    'matches': verification_result.get('matches'),
+                    'verification_type': verification_result.get('verification_type', verification_type)
+                }
+                
+                print(f"[@route:server_verification_common:execute_batch_verification] Flattened result {i+1}: {flattened_result}")
             
-            results.append(result)
+            results.append(flattened_result)
             
             # Count successful verifications
-            if result.get('success'):
+            if flattened_result.get('success'):
                 passed_count += 1
         
         # Calculate overall batch success

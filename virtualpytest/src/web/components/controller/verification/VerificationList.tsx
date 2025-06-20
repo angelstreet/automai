@@ -6,7 +6,7 @@ import { Box, Collapse, IconButton, Typography } from '@mui/material';
 import React from 'react';
 
 import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
-import { NodeVerificationsList } from '../../navigation/Navigation_NodeVerificationsList';
+import { VerificationsList } from '../../navigation/VerificationsList';
 
 interface VerificationListProps {
   verification: UseVerificationEditorType;
@@ -26,10 +26,20 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
     referenceSaveCounter,
     handleReferenceSelected,
     selectedHost,
+    // References functionality
+    availableReferences,
+    referencesLoading,
+    getModelReferences,
   } = verification;
 
   // Extract model from the selected host device
   const model = selectedHost?.device_model || '';
+
+  // Memoize model references to prevent multiple calls during render
+  const modelReferences = React.useMemo(
+    () => getModelReferences(model),
+    [getModelReferences, model],
+  );
 
   return (
     <Box>
@@ -79,7 +89,7 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
             },
           }}
         >
-          <NodeVerificationsList
+          <VerificationsList
             verifications={verifications}
             availableActions={availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
@@ -91,6 +101,9 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
             reloadTrigger={referenceSaveCounter}
             onReferenceSelected={handleReferenceSelected}
             selectedHost={selectedHost}
+            // Pass references functionality directly
+            modelReferences={modelReferences}
+            referencesLoading={referencesLoading}
           />
         </Box>
       </Collapse>

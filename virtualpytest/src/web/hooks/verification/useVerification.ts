@@ -1,8 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { NodeVerification } from '../../types/validation/NodeVerification';
-import { Verifications, VerificationTestResult } from '../../types/verification/VerificationTypes';
+import {
+  Verifications,
+  VerificationTestResult,
+  EditorVerification,
+} from '../../types/verification/VerificationTypes';
 
 // Define interfaces for verification data structures
 
@@ -14,8 +17,8 @@ interface UseVerificationProps {
 export const useVerification = ({ selectedHost, captureSourcePath }: UseVerificationProps) => {
   // State for verification types and verifications
   const [availableVerificationTypes, setAvailableVerificationTypes] = useState<Verifications>({});
-  const [verifications, setVerifications] = useState<NodeVerification[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [verifications, setVerifications] = useState<EditorVerification[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<VerificationTestResult[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -87,7 +90,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
   }, [successMessage]);
 
   // Handle verifications change
-  const handleVerificationsChange = useCallback((newVerifications: NodeVerification[]) => {
+  const handleVerificationsChange = useCallback((newVerifications: EditorVerification[]) => {
     setVerifications(newVerifications);
     // Clear test results when verifications change
     setTestResults([]);
@@ -282,40 +285,37 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 verification,
               );
 
-              // Extract actual verification result from nested structure
-              const actualResult = result.verification_result || result;
-              const actualSuccess = actualResult.success || false;
+              // Results are now flattened by the server batch coordination route
+              const actualSuccess = result.success || false;
 
-              // Determine result type based on actual verification result
-              let resultType: 'PASS' | 'FAIL' | 'ERROR' = 'FAIL';
-              if (actualSuccess) {
-                resultType = 'PASS';
-              } else if (actualResult.error && !actualResult.message) {
-                resultType = 'ERROR';
+              // Use the resultType from server or determine based on success/error
+              let resultType: 'PASS' | 'FAIL' | 'ERROR' = result.resultType || 'FAIL';
+              if (!result.resultType) {
+                if (actualSuccess) {
+                  resultType = 'PASS';
+                } else if (result.error && !result.message) {
+                  resultType = 'ERROR';
+                }
               }
 
               const processedResult: VerificationTestResult = {
                 success: actualSuccess,
-                message: actualResult.message || result.message,
-                error: actualResult.error || result.error,
-                threshold:
-                  actualResult.confidence ||
-                  actualResult.threshold ||
-                  result.confidence ||
-                  result.threshold,
+                message: result.message,
+                error: result.error,
+                threshold: result.threshold,
                 resultType: resultType,
-                sourceImageUrl: actualResult.source_image_url || result.sourceImageUrl,
-                referenceImageUrl: actualResult.reference_image_url || result.referenceImageUrl,
-                extractedText: actualResult.extracted_text || result.extracted_text,
-                searchedText: actualResult.searched_text || result.searched_text,
-                imageFilter: actualResult.image_filter || result.image_filter,
-                detectedLanguage: actualResult.detected_language || result.detected_language,
-                languageConfidence: actualResult.language_confidence || result.language_confidence,
+                sourceImageUrl: result.sourceImageUrl,
+                referenceImageUrl: result.referenceImageUrl,
+                extractedText: result.extractedText,
+                searchedText: result.searchedText,
+                imageFilter: result.imageFilter,
+                detectedLanguage: result.detectedLanguage,
+                languageConfidence: result.languageConfidence,
                 // Add ADB-specific fields
-                search_term: actualResult.search_term || result.search_term,
-                wait_time: actualResult.wait_time || result.wait_time,
-                total_matches: actualResult.total_matches || result.total_matches,
-                matches: actualResult.matches || result.matches,
+                search_term: result.search_term,
+                wait_time: result.wait_time,
+                total_matches: result.total_matches,
+                matches: result.matches,
               };
 
               console.log(`[@hook:useVerification] Processed result ${index}:`, processedResult);

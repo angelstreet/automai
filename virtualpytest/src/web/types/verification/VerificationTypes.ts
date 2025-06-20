@@ -11,6 +11,22 @@ export interface Verification {
   params: Record<string, any>; // Required: parameters (can be empty {})
 }
 
+// Editor verification format - extends base verification with UI properties
+export interface EditorVerification extends Verification {
+  id: string; // UI compatibility: same as command
+  label: string; // UI display name
+  controller_type: 'text' | 'image' | 'adb';
+  description?: string;
+  requiresInput?: boolean;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+  inputValue?: string;
+  lastRunResult?: boolean;
+  resultImageUrl?: string;
+  referenceImageUrl?: string;
+  lastRunDetails?: string;
+}
+
 // Verifications grouped by controller type
 export interface Verifications {
   [controllerType: string]: Verification[]; // Controller type as category
