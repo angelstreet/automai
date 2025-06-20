@@ -141,7 +141,6 @@ export const NavigationEditorHeader: React.FC<{
           console.log(
             `[@component:NavigationEditorHeader] Successfully took control of device: ${selectedHost.host_name}`,
           );
-          showSuccess(`Successfully took control of ${selectedHost.host_name}`);
           onControlStateChange(true);
 
           // Refresh host data to update lock status using event-based pattern
