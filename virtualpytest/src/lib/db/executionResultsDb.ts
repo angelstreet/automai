@@ -26,7 +26,6 @@ export interface ExecutionResult {
 
   // Execution context
   source_filename?: string;
-  execution_batch_id?: string;
   execution_order?: number;
 
   // Results
@@ -304,7 +303,7 @@ export class ExecutionResultsDb {
   // =====================================================
 
   /**
-   * Record a verification execution (convenience method)
+   * Convenience method for recording verification executions
    */
   static async recordVerification(
     teamId: string,
@@ -326,7 +325,6 @@ export class ExecutionResultsDb {
     message: string,
     errorDetails?: Record<string, any>,
     confidenceScore?: number,
-    batchId?: string,
     executionOrder?: number,
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     const execution: ExecutionResult = {
@@ -341,7 +339,6 @@ export class ExecutionResultsDb {
       command: command,
       parameters: parameters,
       source_filename: sourceFilename,
-      execution_batch_id: batchId,
       execution_order: executionOrder,
       success: success,
       execution_time_ms: executionTimeMs,
@@ -354,7 +351,7 @@ export class ExecutionResultsDb {
   }
 
   /**
-   * Record an action execution (convenience method)
+   * Convenience method for recording action executions
    */
   static async recordAction(
     teamId: string,
@@ -370,7 +367,6 @@ export class ExecutionResultsDb {
     executionTimeMs: number,
     message: string,
     errorDetails?: Record<string, any>,
-    batchId?: string,
     executionOrder?: number,
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     const execution: ExecutionResult = {
@@ -384,7 +380,6 @@ export class ExecutionResultsDb {
       device_model: deviceModel,
       command: command,
       parameters: parameters,
-      execution_batch_id: batchId,
       execution_order: executionOrder,
       success: success,
       execution_time_ms: executionTimeMs,

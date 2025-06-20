@@ -329,8 +329,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       let gotoResults: string[] = [];
       let navigationSuccess = false;
 
-      // Generate batch ID for grouping related executions
-      const batchId = crypto.randomUUID();
       const executionRecords: ExecutionResult[] = [];
       let executionOrder = 1;
 
@@ -380,7 +378,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               node_label: nodeForm?.label,
               model: selectedHost.device_model || 'android_mobile',
             },
-            execution_batch_id: batchId,
             execution_order: executionOrder++,
             success: navigationResult.success,
             execution_time_ms: navigationTime,
@@ -421,7 +418,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             node_label: nodeForm?.label,
             model: selectedHost?.device_model || 'android_mobile',
           },
-          execution_batch_id: batchId,
           execution_order: executionOrder++,
           success: false,
           message: err.message || 'Network error',
@@ -465,7 +461,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               device_model: selectedHost?.device_model,
               command: 'No verification selected',
               parameters: verification.params || {},
-              execution_batch_id: batchId,
               execution_order: executionOrder++,
               success: false,
               message: 'No verification selected',
@@ -527,7 +522,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                 command: verification.command,
                 parameters: verification.params || {},
                 source_filename: 'verification_screenshot.jpg',
-                execution_batch_id: batchId,
                 execution_order: executionOrder++,
                 success: result.success,
                 execution_time_ms: verificationTime,
@@ -567,7 +561,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               device_model: selectedHost?.device_model,
               command: verification.command,
               parameters: verification.params || {},
-              execution_batch_id: batchId,
               execution_order: executionOrder++,
               success: false,
               message: err.message || 'Network error',

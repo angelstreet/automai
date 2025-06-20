@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
+import { ExecutionResultsDb, ExecutionResult } from '../../../lib/db/executionResultsDb';
 // ❌ REMOVED: Confidence utils moved to database
 
 interface EdgeSelectionPanelProps {
@@ -34,10 +35,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
   }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [runResult, setRunResult] = useState<string | null>(null);
-    // Add local state for immediate confidence updates (similar to nodes)
-    const [localActionUpdates, setLocalActionUpdates] = useState<{ [index: number]: boolean[] }>(
-      {},
-    );
+    // ❌ REMOVED: Local action updates for confidence tracking
 
     // Extract controller types from device model
 
@@ -78,10 +76,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     const hasActions = actions.length > 0;
     const canRunActions = isControlActive && selectedHost && hasActions && !isRunning;
 
-    // Clear run results and local updates when edge selection changes
+    // Clear run results when edge selection changes
     useEffect(() => {
       setRunResult(null);
-      setLocalActionUpdates({});
     }, [selectedEdge.id]);
 
     // Check if edge can be deleted (protect edges from entry points and home nodes)
@@ -95,44 +92,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       selectedEdge.source?.toLowerCase().includes('entry') ||
       selectedEdge.source?.toLowerCase().includes('home');
 
-    // Calculate overall confidence for edge actions (updated to use local state)
-    const getEdgeConfidenceInfo = (): {
-      actionCount: number;
-      score: number | null;
-      text: string;
-    } => {
-      if (actions.length === 0) {
-        return { actionCount: 0, score: null, text: 'no actions' };
-      }
-
-      // Get all actions with results (use local updates if available)
-      const actionsWithResults = actions.filter((action, index) => {
-        const localResults = localActionUpdates[index];
-        const results = localResults || action.last_run_result;
-        return results && results.length > 0;
-      });
-
-      if (actionsWithResults.length === 0) {
-        return { actionCount: actions.length, score: null, text: 'unknown' };
-      }
-
-      // Calculate average confidence across all actions (use local updates if available)
-      const confidenceScores = actionsWithResults.map((action, index) => {
-        const localResults = localActionUpdates[index];
-        const results = localResults || action.last_run_result;
-        return calculateConfidenceScore(results);
-      });
-      const averageConfidence =
-        confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
-
-      return {
-        actionCount: actions.length,
-        score: averageConfidence,
-        text: `${(averageConfidence * 100).toFixed(0)}%`,
-      };
-    };
-
-    const confidenceInfo = getEdgeConfidenceInfo();
+    // ❌ REMOVED: Confidence calculation moved to database
 
     const handleEdit = () => {
       console.log('[@component:EdgeSelectionPanel] Opening edit dialog for edge');
@@ -148,51 +108,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       setIsEdgeDialogOpen(true);
     };
 
-    const updateActionResults = (actionIndex: number, newResults: boolean[]) => {
-      if (!onUpdateEdge) return;
-
-      const updatedActions = [...actions];
-      updatedActions[actionIndex] = {
-        ...updatedActions[actionIndex],
-        last_run_result: newResults,
-      };
-
-      // Update the edge data
-      const updatedEdgeData = {
-        ...selectedEdge.data,
-        actions: updatedActions,
-      };
-
-      // Call the parent callback to update the edge
-      onUpdateEdge(selectedEdge.id, updatedEdgeData);
-
-      // Also store locally for immediate confidence display
-      setLocalActionUpdates((prev) => ({
-        ...prev,
-        [actionIndex]: newResults,
-      }));
-    };
-
-    const updateRetryActionResults = (actionIndex: number, newResults: boolean[]) => {
-      if (!onUpdateEdge) return;
-
-      const updatedRetryActions = [...retryActions];
-      updatedRetryActions[actionIndex] = {
-        ...updatedRetryActions[actionIndex],
-        last_run_result: newResults,
-      };
-
-      // Update the edge data
-      const updatedEdgeData = {
-        ...selectedEdge.data,
-        retryActions: updatedRetryActions,
-      };
-
-      // Call the parent callback to update the edge
-      onUpdateEdge(selectedEdge.id, updatedEdgeData);
-
-      // Note: Local retry action updates removed as they were unused
-    };
+    // ❌ REMOVED: Action result updates moved to database
 
     // Execute all edge actions sequentially
     const handleRunActions = async () => {
@@ -204,17 +120,114 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       setIsRunning(true);
       setRunResult(null);
 
+      let executionOrder = 1;
+      const executionRecords: ExecutionResult[] = [];
+
       try {
         const finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
+        const startTime = Date.now();
 
         const result = await executeEdgeActions(
           actions,
           selectedHost,
-          updateActionResults, // Pass the callback to update edge data
+          () => {}, // No longer need to update edge data - using database
           finalWaitTime,
           retryActions,
-          updateRetryActionResults, // Pass the callback to update retry action data
+          () => {}, // No longer need to update retry action data - using database
         );
+
+        const totalExecutionTime = Date.now() - startTime;
+
+        // Record each action execution to database
+        for (let i = 0; i < actions.length; i++) {
+          const action = actions[i];
+          const actionSuccess = result.results[i]?.includes('✅') || false;
+          const actionMessage = result.results[i] || 'No result';
+
+          // Map action command to action type
+          const getActionType = (command: string): string => {
+            if (command.includes('click') || command.includes('tap')) return 'click_action';
+            if (command.includes('scroll') || command.includes('swipe')) return 'swipe_action';
+            if (command.includes('input') || command.includes('type')) return 'input_action';
+            if (command.includes('wait') || command.includes('delay')) return 'wait_action';
+            return 'click_action'; // default
+          };
+
+          const actionRecord: ExecutionResult = {
+            team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+            execution_category: 'action',
+            execution_type: getActionType(action.command),
+            initiator_type: 'edge',
+            initiator_id: selectedEdge.id,
+            initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'}`,
+            host_name: selectedHost?.host_name || 'unknown',
+            device_model: selectedHost?.device_model,
+            command: action.command,
+            parameters: {
+              ...action.params,
+              input_value: action.inputValue,
+              wait_time: action.waitTime,
+            },
+            execution_order: executionOrder++,
+            success: actionSuccess,
+            execution_time_ms: Math.round(totalExecutionTime / actions.length), // Approximate per action
+            message: actionMessage,
+            error_details: actionSuccess ? undefined : { error: actionMessage },
+          };
+
+          executionRecords.push(actionRecord);
+        }
+
+        // Record retry actions if they were executed
+        if (result.executionStopped && retryActions.length > 0) {
+          for (let i = 0; i < retryActions.length; i++) {
+            const retryAction = retryActions[i];
+            const retrySuccess = result.results[actions.length + i]?.includes('✅') || false;
+            const retryMessage = result.results[actions.length + i] || 'No result';
+
+            const retryRecord: ExecutionResult = {
+              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+              execution_category: 'action',
+              execution_type: 'retry_action',
+              initiator_type: 'edge',
+              initiator_id: selectedEdge.id,
+              initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'} (retry)`,
+              host_name: selectedHost?.host_name || 'unknown',
+              device_model: selectedHost?.device_model,
+              command: retryAction.command,
+              parameters: {
+                ...retryAction.params,
+                input_value: retryAction.inputValue,
+                wait_time: retryAction.waitTime,
+              },
+              execution_order: executionOrder++,
+              success: retrySuccess,
+              execution_time_ms: Math.round(
+                totalExecutionTime / (actions.length + retryActions.length),
+              ),
+              message: retryMessage,
+              error_details: retrySuccess ? undefined : { error: retryMessage },
+            };
+
+            executionRecords.push(retryRecord);
+          }
+        }
+
+        // Batch insert all execution records
+        if (executionRecords.length > 0) {
+          console.log(
+            '[@component:EdgeSelectionPanel] Recording',
+            executionRecords.length,
+            'action executions to database',
+          );
+          const dbResult = await ExecutionResultsDb.recordBatchExecutions(executionRecords);
+          if (!dbResult.success) {
+            console.error(
+              '[@component:EdgeSelectionPanel] Failed to record executions:',
+              dbResult.error,
+            );
+          }
+        }
 
         setRunResult(result.results.join('\n'));
         console.log(
@@ -223,6 +236,32 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       } catch (err: any) {
         console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
         setRunResult(`❌ ${err.message}`);
+
+        // Record failed execution
+        const failedRecord: ExecutionResult = {
+          team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+          execution_category: 'action',
+          execution_type: 'failed_action',
+          initiator_type: 'edge',
+          initiator_id: selectedEdge.id,
+          initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'}`,
+          host_name: selectedHost?.host_name || 'unknown',
+          device_model: selectedHost?.device_model,
+          command: 'Edge action execution',
+          parameters: { action_count: actions.length },
+          execution_order: 1,
+          success: false,
+          message: err.message || 'Network error',
+          error_details: { error: err.message },
+        };
+
+        const dbResult = await ExecutionResultsDb.recordExecution(failedRecord);
+        if (!dbResult.success) {
+          console.error(
+            '[@component:EdgeSelectionPanel] Failed to record failed execution:',
+            dbResult.error,
+          );
+        }
       } finally {
         setIsRunning(false);
       }
@@ -290,26 +329,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
               <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                 Edge Selection
               </Typography>
-              {/* Show confidence percentage with color coding if available */}
-              {confidenceInfo.score !== null && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold',
-                    color:
-                      confidenceInfo.score >= 0.7
-                        ? '#4caf50' // Green for 70%+
-                        : confidenceInfo.score >= 0.5
-                          ? '#ff9800' // Orange for 50-70%
-                          : '#f44336', // Red for <50%
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                  }}
-                >
-                  {confidenceInfo.text}
-                </Typography>
-              )}
             </Box>
             <IconButton
               size="small"
