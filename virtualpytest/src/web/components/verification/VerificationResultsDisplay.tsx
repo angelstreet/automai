@@ -293,19 +293,22 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                 </Box>
               </Box>
 
-              {/* Show message if available */}
-              {(result.message || result.error) && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.7rem',
-                    color: 'text.secondary',
-                    display: 'block',
-                  }}
-                >
-                  {result.message || result.error}
-                </Typography>
-              )}
+              {/* Show message if available (skip for successful ADB verifications as they have detailed element info) */}
+              {(result.message || result.error) &&
+                !(
+                  verifications[index]?.controller_type === 'adb' && result.resultType === 'PASS'
+                ) && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.7rem',
+                      color: 'text.secondary',
+                      display: 'block',
+                    }}
+                  >
+                    {result.message || result.error}
+                  </Typography>
+                )}
 
               {/* Show detailed ADB element info for PASS results */}
               {renderADBElementDetails(result, index)}
