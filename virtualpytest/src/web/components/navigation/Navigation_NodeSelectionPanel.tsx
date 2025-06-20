@@ -223,7 +223,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         setCaptureSourcePath(screenshotUrl);
 
         // Step 2: Set verifications in the hook and run them
-        verification.handleVerificationsChange(selectedNode.data.verifications);
+        const verifications = selectedNode.data.verifications.map((verification) => ({
+          ...verification,
+          verification_type: verification.verification_type || 'text',
+        }));
+
+        verification.handleVerificationsChange(verifications);
 
         // Wait a moment for state to update, then run the test
         setTimeout(async () => {
