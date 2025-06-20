@@ -48,7 +48,11 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
           size="small"
           label="Element Criteria"
           placeholder="text=Button"
-          value={verification.params?.search_term || ''}
+          value={
+            typeof verification.params?.search_term === 'string'
+              ? verification.params.search_term
+              : ''
+          }
           autoComplete="off"
           onChange={(e) =>
             onUpdateVerification(index, {
