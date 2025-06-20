@@ -134,10 +134,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
         // Check if verification has required input based on verification type
         if (verification.verification_type === 'image') {
           // Image verifications need a reference image
-          const hasImagePath =
-            verification.params?.full_path ||
-            verification.params?.reference_path ||
-            verification.params?.reference_image;
+          const hasImagePath = verification.params?.image_path;
           if (!hasImagePath) {
             console.log(
               `[@hook:useVerification] Removing verification ${index}: No image reference specified`,

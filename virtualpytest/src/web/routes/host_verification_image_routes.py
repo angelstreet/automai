@@ -546,8 +546,8 @@ def execute_image_verification_host(verification, source_path, verification_inde
         threshold = params.get('threshold', 0.8)
         image_filter = params.get('image_filter', 'none')
         
-        # Get reference filename directly from verification data
-        reference_filename = verification.get('reference_filename', '')
+        # Get reference filename from params.image_path (matches TypeScript interface)
+        reference_filename = params.get('image_path', '')
         
         print(f"[@route:execute_image_verification_host] Reference filename: {reference_filename}")
         print(f"[@route:execute_image_verification_host] Image filter: {image_filter}")
