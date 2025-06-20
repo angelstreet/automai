@@ -206,7 +206,7 @@ class ADBVerificationController:
             print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] ERROR: {error_msg}")
             return False, {}, error_msg
 
-    def waitForElementToAppear(self, search_term: str, timeout: float = 10.0, check_interval: float = 1.0) -> Tuple[bool, str, Dict[str, Any]]:
+    def waitForElementToAppear(self, search_term: str, timeout: float = 10.0, check_interval: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Wait for an element matching search_term to appear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
@@ -214,7 +214,7 @@ class ADBVerificationController:
             search_term: The term to search for (case-insensitive, searches all attributes)
                         Can use pipe-separated terms: "text1|text2|text3"
             timeout: Maximum time to wait in seconds (default: 10.0)
-            check_interval: Time between checks in seconds (default: 1.0)
+            check_interval: Time between checks in seconds (default: 0.0 = check only once, no polling)
         
         Returns:
             Tuple of (success, message, result_data)
