@@ -194,7 +194,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Text Reference</InputLabel>
           <Select
-            value={verification.params?.text || ''}
+            value={typeof verification.params?.text === 'string' ? verification.params.text : ''}
             onChange={(e) => onReferenceSelect(index, e.target.value)}
             label="Text Reference"
             size="small"
@@ -204,9 +204,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               },
             }}
           >
-            <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
-              <em>No reference selected</em>
-            </MenuItem>
             {Object.entries(modelReferences)
               .filter(([_filename, ref]) => ref.type === 'text')
               .map(([filename, ref]) => (
@@ -234,7 +231,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               ))}
             {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'text')
               .length === 0 && (
-              <MenuItem disabled sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+              <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                 No text references available
               </MenuItem>
             )}
@@ -246,7 +243,11 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Image Reference</InputLabel>
           <Select
-            value={verification.params?.image_path || ''}
+            value={
+              typeof verification.params?.image_path === 'string'
+                ? verification.params.image_path
+                : ''
+            }
             onChange={(e) => onReferenceSelect(index, e.target.value)}
             label="Image Reference"
             size="small"
@@ -256,9 +257,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               },
             }}
           >
-            <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
-              <em>No reference selected</em>
-            </MenuItem>
             {Object.entries(modelReferences)
               .filter(([_filename, ref]) => ref.type === 'image')
               .map(([filename, _ref]) => (
@@ -270,7 +268,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               ))}
             {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'image')
               .length === 0 && (
-              <MenuItem disabled sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+              <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                 No image references available
               </MenuItem>
             )}
