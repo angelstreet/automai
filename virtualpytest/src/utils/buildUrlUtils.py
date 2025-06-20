@@ -73,12 +73,13 @@ def buildVerificationResultUrl(host_info: dict, results_path: str) -> str:
         
     Example:
         buildVerificationResultUrl(host_info, '/var/www/html/stream/verification_results/source_image_0.png')
-        -> 'https://host:444/stream/verification_results/source_image_0.png'
+        -> 'https://host:444/host/stream/verification_results/source_image_0.png'
     """
     from .app_utils import buildHostUrl
     # Convert local path to URL path
     url_path = results_path.replace('/var/www/html/', '')
-    return buildHostUrl(host_info, url_path)
+    # Add host/ prefix like other image URLs (cropping, captures, etc.)
+    return buildHostUrl(host_info, f'host/{url_path}')
 
 def buildStreamUrl(host_info: dict) -> str:
     """

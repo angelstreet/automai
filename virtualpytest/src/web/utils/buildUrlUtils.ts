@@ -60,7 +60,8 @@ export const buildReferenceImageUrl = (
 export const buildVerificationResultUrl = (host: any, resultsPath: string): string => {
   // Convert local path to URL path
   const urlPath = resultsPath.replace('/var/www/html/', '');
-  return internalBuildHostUrl(host, urlPath);
+  // Add host/ prefix like other image URLs (cropping, captures, etc.)
+  return internalBuildHostUrl(host, `host/${urlPath}`);
 };
 
 /**
