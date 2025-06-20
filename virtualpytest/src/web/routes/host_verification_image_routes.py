@@ -502,62 +502,36 @@ def execute_image_verification_host(verification, source_path, verification_inde
         # Get device model from verification data
         device_model = verification.get('device_model', 'android_mobile')
         
-        # Build reference path from filename
-        # Add .jpg extension if not present
-        if not reference_filename.endswith(('.jpg', '.png', '.jpeg')):
-            reference_filename_with_ext = f'{reference_filename}.jpg'
-            print(f"[@route:execute_image_verification_host] Added extension: '{reference_filename_with_ext}'")
-        else:
-            reference_filename_with_ext = reference_filename
-            print(f"[@route:execute_image_verification_host] Extension already present: '{reference_filename_with_ext}'")
+        # Always download reference from R2 to ensure we have the latest version
+        # Remove any existing extension from reference filename
+        base_name = reference_filename.split('.')[0]
         
-        # First check if reference image exists in captures directory
-        reference_path = f'{CAPTURES_PATH}/{reference_filename_with_ext}'
+        print(f"[@route:execute_image_verification_host] Always downloading reference from R2 to ensure latest version")
         
-        # If not found in captures, check in resources directory
-        if not os.path.exists(reference_path):
-            print(f"[@route:execute_image_verification_host] Reference not found in captures, checking resources")
+        # Try to download from R2 with different extensions
+        reference_path = None
+        for ext in ['.png', '.jpg', '.jpeg']:
+            r2_filename = f"{base_name}{ext}"
+            local_path = f'{RESOURCES_PATH}/{device_model}/{r2_filename}'
             
-            # Try with different extensions in resources
-            for ext in ['.jpg', '.png', '.jpeg']:
-                # Remove any existing extension
-                base_name = reference_filename.split('.')[0]
-                resources_path = f'{RESOURCES_PATH}/{device_model}/{base_name}{ext}'
-                
-                if os.path.exists(resources_path):
-                    print(f"[@route:execute_image_verification_host] Found reference in resources: {resources_path}")
-                    reference_path = resources_path
-                    break
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
             
-            # If still not found, try to download from R2
-            if not os.path.exists(reference_path):
-                print(f"[@route:execute_image_verification_host] Reference not found locally, trying R2 download")
-                
-                # Try to download from R2 with both jpg and png extensions
-                for ext in ['.png', '.jpg', '.jpeg']:
-                    # Remove any existing extension
-                    base_name = reference_filename.split('.')[0]
-                    r2_filename = f"{base_name}{ext}"
-                    local_path = f'{RESOURCES_PATH}/{device_model}/{r2_filename}'
-                    
-                    # Ensure directory exists
-                    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                    
-                    print(f"[@route:execute_image_verification_host] Attempting to download {r2_filename} from R2")
-                    download_result = download_reference_image(device_model, r2_filename, local_path)
-                    
-                    if download_result.get('success'):
-                        print(f"[@route:execute_image_verification_host] Successfully downloaded reference from R2: {local_path}")
-                        reference_path = local_path
-                        break
-                    else:
-                        print(f"[@route:execute_image_verification_host] Failed to download {r2_filename}: {download_result.get('error')}")
+            print(f"[@route:execute_image_verification_host] Attempting to download {r2_filename} from R2")
+            download_result = download_reference_image(device_model, r2_filename, local_path)
+            
+            if download_result.get('success'):
+                print(f"[@route:execute_image_verification_host] Successfully downloaded reference from R2: {local_path}")
+                reference_path = local_path
+                break
+            else:
+                print(f"[@route:execute_image_verification_host] Failed to download {r2_filename}: {download_result.get('error')}")
         
-        # Verify reference image exists
-        if not os.path.exists(reference_path):
+        # Verify reference image was downloaded successfully
+        if not reference_path or not os.path.exists(reference_path):
             return {
                 'success': False,
-                'error': f'Reference image not found locally or in R2: {reference_filename}'
+                'error': f'Reference image could not be downloaded from R2: {reference_filename}'
             }
         
         print(f"[@route:execute_image_verification_host] Using reference path: {reference_path}")
