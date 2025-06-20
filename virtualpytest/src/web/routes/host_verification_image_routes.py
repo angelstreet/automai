@@ -502,36 +502,72 @@ def execute_image_verification_host(verification, source_path, verification_inde
         # Get device model from verification data
         device_model = verification.get('device_model', 'android_mobile')
         
-        # Always download reference from R2 to ensure we have the latest version
-        # Remove any existing extension from reference filename
-        base_name = reference_filename.split('.')[0]
+        # Always download reference from URL to ensure we have the latest version
+        reference_url = params.get('reference_url', '')
         
-        print(f"[@route:execute_image_verification_host] Always downloading reference from R2 to ensure latest version")
+        print(f"[@route:execute_image_verification_host] Always downloading reference from URL to ensure latest version")
+        print(f"[@route:execute_image_verification_host] Reference URL from params: {reference_url}")
         
-        # Try to download from R2 with different extensions
         reference_path = None
-        for ext in ['.png', '.jpg', '.jpeg']:
-            r2_filename = f"{base_name}{ext}"
-            local_path = f'{RESOURCES_PATH}/{device_model}/{r2_filename}'
+        
+        if reference_url:
+            # Download directly from the provided URL using CloudflareUtils
+            try:
+                from urllib.parse import urlparse
+                from src.utils.cloudflare_utils import get_cloudflare_utils
+                
+                # Extract filename from URL
+                parsed_url = urlparse(reference_url)
+                filename = parsed_url.path.split('/')[-1]
+                # Extract the R2 object key (path without leading slash)
+                r2_object_key = parsed_url.path.lstrip('/')
+                local_path = f'{RESOURCES_PATH}/{device_model}/{filename}'
+                
+                print(f"[@route:execute_image_verification_host] Downloading from URL: {reference_url}")
+                print(f"[@route:execute_image_verification_host] R2 object key: {r2_object_key}")
+                print(f"[@route:execute_image_verification_host] Saving to: {local_path}")
+                
+                # Use CloudflareUtils download_file method
+                cloudflare_utils = get_cloudflare_utils()
+                download_result = cloudflare_utils.download_file(r2_object_key, local_path)
+                
+                if download_result.get('success'):
+                    print(f"[@route:execute_image_verification_host] Successfully downloaded reference from URL: {local_path}")
+                    reference_path = local_path
+                else:
+                    print(f"[@route:execute_image_verification_host] Failed to download from URL: {download_result.get('error')}")
+                    
+            except Exception as e:
+                print(f"[@route:execute_image_verification_host] Error downloading from URL: {str(e)}")
+        
+        # Fallback: try to download using filename reconstruction if URL download failed
+        if not reference_path:
+            print(f"[@route:execute_image_verification_host] Fallback: trying filename reconstruction")
+            base_name = reference_filename.split('.')[0]
             
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            
-            print(f"[@route:execute_image_verification_host] Attempting to download {r2_filename} from R2")
-            download_result = download_reference_image(device_model, r2_filename, local_path)
-            
-            if download_result.get('success'):
-                print(f"[@route:execute_image_verification_host] Successfully downloaded reference from R2: {local_path}")
-                reference_path = local_path
-                break
-            else:
-                print(f"[@route:execute_image_verification_host] Failed to download {r2_filename}: {download_result.get('error')}")
+            # Try to download from R2 with different extensions
+            for ext in ['.png', '.jpg', '.jpeg']:
+                r2_filename = f"{base_name}{ext}"
+                local_path = f'{RESOURCES_PATH}/{device_model}/{r2_filename}'
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                
+                print(f"[@route:execute_image_verification_host] Attempting to download {r2_filename} from R2")
+                download_result = download_reference_image(device_model, r2_filename, local_path)
+                
+                if download_result.get('success'):
+                    print(f"[@route:execute_image_verification_host] Successfully downloaded reference from R2: {local_path}")
+                    reference_path = local_path
+                    break
+                else:
+                    print(f"[@route:execute_image_verification_host] Failed to download {r2_filename}: {download_result.get('error')}")
         
         # Verify reference image was downloaded successfully
         if not reference_path or not os.path.exists(reference_path):
             return {
                 'success': False,
-                'error': f'Reference image could not be downloaded from R2: {reference_filename}'
+                'error': f'Reference image could not be downloaded. URL: {reference_url}, Filename: {reference_filename}'
             }
         
         print(f"[@route:execute_image_verification_host] Using reference path: {reference_path}")
