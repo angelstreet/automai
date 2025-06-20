@@ -329,6 +329,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       let gotoResults: string[] = [];
       let navigationSuccess = false;
 
+      // Generate batch ID for grouping related executions
+      const batchId = crypto.randomUUID();
+      const executionRecords: ExecutionResult[] = [];
+      let executionOrder = 1;
+
       // Step 1: Execute Navigation Steps
       gotoResults.push('🚀 Starting navigation to node...');
       console.log(
@@ -342,6 +347,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           console.error(`[@component:NodeEditDialog] No host device selected for navigation`);
         } else {
           // Use server route instead of navigation controller proxy
+          const startTime = Date.now();
+
           const response = await fetch(`/server/navigation/goto-node`, {
             method: 'POST',
             headers: {
@@ -355,6 +362,35 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           });
 
           const navigationResult = await response.json();
+          const navigationTime = Date.now() - startTime;
+
+          // Record navigation execution to database
+          const navigationRecord: ExecutionResult = {
+            team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+            execution_category: 'navigation',
+            execution_type: 'goto_navigation',
+            initiator_type: 'node',
+            initiator_id: nodeForm?.id || 'unknown',
+            initiator_name: nodeForm?.label || 'Unknown Node',
+            host_name: selectedHost.host_name,
+            device_model: selectedHost.device_model,
+            command: `goto ${nodeForm?.label || 'unknown'}`,
+            parameters: {
+              host_name: selectedHost.host_name,
+              node_label: nodeForm?.label,
+              model: selectedHost.device_model || 'android_mobile',
+            },
+            execution_batch_id: batchId,
+            execution_order: executionOrder++,
+            success: navigationResult.success,
+            execution_time_ms: navigationTime,
+            message: navigationResult.success
+              ? 'Navigation completed'
+              : navigationResult.error || 'Navigation failed',
+            error_details: navigationResult.success ? undefined : { error: navigationResult.error },
+          };
+
+          executionRecords.push(navigationRecord);
 
           if (navigationResult.success) {
             gotoResults.push(`✅ Navigation: Successfully reached ${nodeForm?.label || 'unknown'}`);
@@ -368,6 +404,31 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       } catch (err: any) {
         gotoResults.push(`❌ Navigation: ${err.message || 'Network error'}`);
         console.error('[@component:NodeEditDialog] Navigation error:', err);
+
+        // Record failed navigation
+        const failedNavigationRecord: ExecutionResult = {
+          team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+          execution_category: 'navigation',
+          execution_type: 'goto_navigation',
+          initiator_type: 'node',
+          initiator_id: nodeForm?.id || 'unknown',
+          initiator_name: nodeForm?.label || 'Unknown Node',
+          host_name: selectedHost?.host_name || 'unknown',
+          device_model: selectedHost?.device_model,
+          command: `goto ${nodeForm?.label || 'unknown'}`,
+          parameters: {
+            host_name: selectedHost?.host_name,
+            node_label: nodeForm?.label,
+            model: selectedHost?.device_model || 'android_mobile',
+          },
+          execution_batch_id: batchId,
+          execution_order: executionOrder++,
+          success: false,
+          message: err.message || 'Network error',
+          error_details: { error: err.message },
+        };
+
+        executionRecords.push(failedNavigationRecord);
       }
 
       // Step 2: Execute Verifications (only if navigation succeeded)
@@ -379,8 +440,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           `[@component:NodeEditDialog] Starting verifications after successful navigation`,
         );
 
-        // ❌ REMOVED: No longer updating verification confidence
-
         // Small delay before verifications
         await delay(1500);
 
@@ -390,7 +449,30 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           if (!verification.command) {
             gotoResults.push(`❌ Verification ${i + 1}: No verification selected`);
             verificationSuccess = false;
-            // ❌ REMOVED: Confidence tracking moved to database
+
+            // Record failed verification
+            const failedVerificationRecord: ExecutionResult = {
+              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+              execution_category: 'verification',
+              execution_type:
+                verification.verification_type === 'adb'
+                  ? 'adb_verification'
+                  : `${verification.verification_type || 'image'}_verification`,
+              initiator_type: 'node',
+              initiator_id: nodeForm?.id || 'unknown',
+              initiator_name: nodeForm?.label || 'Unknown Node',
+              host_name: selectedHost?.host_name || 'unknown',
+              device_model: selectedHost?.device_model,
+              command: 'No verification selected',
+              parameters: verification.params || {},
+              execution_batch_id: batchId,
+              execution_order: executionOrder++,
+              success: false,
+              message: 'No verification selected',
+              error_details: { error: 'No verification command configured' },
+            };
+
+            executionRecords.push(failedVerificationRecord);
             continue;
           }
 
@@ -411,6 +493,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               verificationSuccess = false;
               individualVerificationSuccess = false;
             } else {
+              const startTime = Date.now();
+
               // Use server route for node verification (this is correct for node context)
               const response = await fetch(`/server/verification/batch/execute`, {
                 method: 'POST',
@@ -425,6 +509,34 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               });
 
               const result = await response.json();
+              const verificationTime = Date.now() - startTime;
+
+              // Record verification execution to database
+              const verificationRecord: ExecutionResult = {
+                team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+                execution_category: 'verification',
+                execution_type:
+                  verification.verification_type === 'adb'
+                    ? 'adb_verification'
+                    : `${verification.verification_type || 'image'}_verification`,
+                initiator_type: 'node',
+                initiator_id: nodeForm?.id || 'unknown',
+                initiator_name: nodeForm?.label || 'Unknown Node',
+                host_name: selectedHost.host_name,
+                device_model: selectedHost.device_model,
+                command: verification.command,
+                parameters: verification.params || {},
+                source_filename: 'verification_screenshot.jpg',
+                execution_batch_id: batchId,
+                execution_order: executionOrder++,
+                success: result.success,
+                execution_time_ms: verificationTime,
+                message: result.message || result.error,
+                error_details: result.success ? undefined : { error: result.error },
+                confidence_score: result.confidence_score,
+              };
+
+              executionRecords.push(verificationRecord);
 
               if (result.success) {
                 gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
@@ -439,10 +551,31 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             gotoResults.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
             verificationSuccess = false;
             individualVerificationSuccess = false;
-          }
 
-          // ❌ REMOVED: Confidence tracking moved to database
-          // TODO: Add database reporting in Step 2
+            // Record failed verification
+            const failedVerificationRecord: ExecutionResult = {
+              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+              execution_category: 'verification',
+              execution_type:
+                verification.verification_type === 'adb'
+                  ? 'adb_verification'
+                  : `${verification.verification_type || 'image'}_verification`,
+              initiator_type: 'node',
+              initiator_id: nodeForm?.id || 'unknown',
+              initiator_name: nodeForm?.label || 'Unknown Node',
+              host_name: selectedHost?.host_name || 'unknown',
+              device_model: selectedHost?.device_model,
+              command: verification.command,
+              parameters: verification.params || {},
+              execution_batch_id: batchId,
+              execution_order: executionOrder++,
+              success: false,
+              message: err.message || 'Network error',
+              error_details: { error: err.message },
+            };
+
+            executionRecords.push(failedVerificationRecord);
+          }
 
           console.log(
             `[@component:NodeEditDialog] Goto verification ${i + 1} completed. Success: ${individualVerificationSuccess}`,
@@ -451,13 +584,29 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           // Small delay between verifications
           await delay(1000);
         }
-
-        // ❌ REMOVED: No longer updating verification confidence in node form
       } else if (
         navigationSuccess &&
         (!nodeForm?.verifications || nodeForm.verifications.length === 0)
       ) {
         gotoResults.push('ℹ️ No verifications configured for this node');
+      }
+
+      // Record all executions to database
+      if (executionRecords.length > 0) {
+        console.log(
+          '[@component:NodeEditDialog] Recording',
+          executionRecords.length,
+          'executions to database',
+        );
+        const dbResult = await ExecutionResultsDb.recordBatchExecutions(executionRecords);
+
+        if (!dbResult.success) {
+          console.error('[@component:NodeEditDialog] Failed to record executions:', dbResult.error);
+          gotoResults.push(`⚠️ Database recording failed: ${dbResult.error}`);
+        } else {
+          console.log('[@component:NodeEditDialog] Successfully recorded executions to database');
+          gotoResults.push(`📊 Execution results recorded to database`);
+        }
       }
 
       // Step 3: Final Result Summary

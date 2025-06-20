@@ -18,13 +18,9 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import {
-  VerificationResultsDb,
-  VerificationExecution,
-} from '../../../lib/db/verificationResultsDb';
+import { useVerification } from '../../hooks/verification/useVerification';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { useVerification } from '../../hooks/verification/useVerification';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
