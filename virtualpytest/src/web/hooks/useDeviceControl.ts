@@ -1,7 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 
 import { Host } from '../types/common/Host_Types';
-import { buildServerUrl } from '../utils/frontendUtils';
 
 import { useUserSession } from './useUserSession';
 
@@ -23,7 +22,7 @@ export const useDeviceControl = () => {
       console.log(`[@hook:useDeviceControl] Checking for locks to reclaim for user: ${userId}`);
 
       // Get list of all locked devices from server
-      const response = await fetch(buildServerUrl('/server/control/locked-devices'), {
+      const response = await fetch('/server/control/locked-devices', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +99,7 @@ export const useDeviceControl = () => {
         console.log(`[@hook:useDeviceControl] Taking control of device: ${hostName}`);
         console.log(`[@hook:useDeviceControl] Using user ID for lock: ${userId}`);
 
-        const response = await fetch(buildServerUrl('/server/control/take-control'), {
+        const response = await fetch('/server/control/take-control', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -185,7 +184,7 @@ export const useDeviceControl = () => {
         console.log(`[@hook:useDeviceControl] Releasing control of device: ${hostName}`);
         console.log(`[@hook:useDeviceControl] Using user ID for unlock: ${userId}`);
 
-        const response = await fetch(buildServerUrl('/server/control/release-control'), {
+        const response = await fetch('/server/control/release-control', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

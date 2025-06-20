@@ -1,7 +1,5 @@
 import { useState } from 'react';
 
-import { buildServerUrl } from '../../utils/frontendUtils';
-
 interface ImageComparisonDialogData {
   open: boolean;
   sourceUrl: string;
@@ -32,8 +30,8 @@ export const useImageComparisonModal = (): UseImageComparisonModalReturn => {
   const openImageComparisonModal = (data: Partial<ImageComparisonDialogData>) => {
     setImageComparisonDialog({
       open: true,
-      sourceUrl: data.sourceUrl ? buildServerUrl(data.sourceUrl) : '',
-      referenceUrl: data.referenceUrl ? buildServerUrl(data.referenceUrl) : '',
+      sourceUrl: data.sourceUrl || '',
+      referenceUrl: data.referenceUrl || '',
       userThreshold: data.userThreshold,
       matchingResult: data.matchingResult,
       resultType: data.resultType,

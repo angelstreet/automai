@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { AndroidElement, AndroidApp } from '../../types/controller/Remote_Types';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface AndroidMobileLayoutConfig {
   containerWidth: number;
@@ -89,7 +88,7 @@ export function useAndroidMobile(host: Host) {
     setIsDumpingUI(true);
 
     try {
-      const response = await fetch(buildServerUrl('/server/remote/dump-ui'), {
+      const response = await fetch('/server/remote/dump-ui', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host: host }),
@@ -121,7 +120,7 @@ export function useAndroidMobile(host: Host) {
     setIsRefreshingApps(true);
 
     try {
-      const response = await fetch(buildServerUrl('/server/remote/get-apps'), {
+      const response = await fetch('/server/remote/get-apps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host: host }),
@@ -149,7 +148,7 @@ export function useAndroidMobile(host: Host) {
       console.log('[@hook:useAndroidMobile] Clicking element:', element.id);
 
       try {
-        const response = await fetch(buildServerUrl('/server/remote/click-element'), {
+        const response = await fetch('/server/remote/click-element', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -179,7 +178,7 @@ export function useAndroidMobile(host: Host) {
       console.log('[@hook:useAndroidMobile] Executing command:', command, 'with params:', params);
 
       try {
-        const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
+        const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

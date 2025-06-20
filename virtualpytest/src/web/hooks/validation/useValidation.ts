@@ -14,18 +14,15 @@ import {
   ValidationRunResponse,
   ValidationExportResponse,
 } from '../../types/features/Validation_Types';
-import { buildServerUrl } from '../../utils/frontendUtils';
+
+// Simple constant for the API base URL
+const VALIDATION_API_BASE_URL = '/server/validation';
 
 export const useValidation = () => {
   const [progressCallback, setProgressCallback] = useState<
     ((progress: ValidationProgress) => void) | null
   >(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-
-  const getApiBaseUrl = useCallback((): string => {
-    // Use centralized URL building for validation endpoints
-    return buildServerUrl('server/validation');
-  }, []);
 
   const updateProgressCallback = useCallback(
     (callback: ((progress: ValidationProgress) => void) | null) => {
@@ -35,29 +32,26 @@ export const useValidation = () => {
     [],
   );
 
-  const getPreview = useCallback(
-    async (treeId: string): Promise<ValidationPreview> => {
-      console.log(`[@hook:useValidation:getPreview] Getting preview for tree: ${treeId}`);
+  const getPreview = useCallback(async (treeId: string): Promise<ValidationPreview> => {
+    console.log(`[@hook:useValidation:getPreview] Getting preview for tree: ${treeId}`);
 
-      try {
-        const response = await fetch(`${getApiBaseUrl()}/preview/${treeId}`);
-        const data: ValidationPreviewResponse = await response.json();
+    try {
+      const response = await fetch(`${VALIDATION_API_BASE_URL}/preview/${treeId}`);
+      const data: ValidationPreviewResponse = await response.json();
 
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to get validation preview');
-        }
-
-        console.log(
-          `[@hook:useValidation:getPreview] Preview received: ${data.preview.totalNodes} nodes, ${data.preview.estimatedTime}s estimated`,
-        );
-        return data.preview;
-      } catch (error) {
-        console.error(`[@hook:useValidation:getPreview] Error getting preview:`, error);
-        throw error;
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get validation preview');
       }
-    },
-    [getApiBaseUrl],
-  );
+
+      console.log(
+        `[@hook:useValidation:getPreview] Preview received: ${data.preview.totalNodes} nodes, ${data.preview.estimatedTime}s estimated`,
+      );
+      return data.preview;
+    } catch (error) {
+      console.error(`[@hook:useValidation:getPreview] Error getting preview:`, error);
+      throw error;
+    }
+  }, []);
 
   const closeProgressStream = useCallback((): void => {
     if (eventSourceRef.current) {
@@ -74,7 +68,9 @@ export const useValidation = () => {
       );
 
       try {
-        eventSourceRef.current = new EventSource(`${getApiBaseUrl()}/progress/${sessionId}`);
+        eventSourceRef.current = new EventSource(
+          `${VALIDATION_API_BASE_URL}/progress/${sessionId}`,
+        );
 
         eventSourceRef.current.onmessage = (event) => {
           try {
@@ -126,7 +122,7 @@ export const useValidation = () => {
         );
       }
     },
-    [getApiBaseUrl, progressCallback, closeProgressStream],
+    [progressCallback, closeProgressStream],
   );
 
   const runValidation = useCallback(
@@ -157,7 +153,7 @@ export const useValidation = () => {
           requestBody.skipped_edges = skippedEdges;
         }
 
-        const response = await fetch(`${getApiBaseUrl()}/run/${treeId}`, {
+        const response = await fetch(`${VALIDATION_API_BASE_URL}/run/${treeId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -186,7 +182,7 @@ export const useValidation = () => {
         throw error;
       }
     },
-    [getApiBaseUrl, progressCallback, setupProgressStream, closeProgressStream],
+    [progressCallback, setupProgressStream, closeProgressStream],
   );
 
   const exportReport = useCallback(
@@ -196,7 +192,9 @@ export const useValidation = () => {
       );
 
       try {
-        const response = await fetch(`${getApiBaseUrl()}/export/${treeId}?format=${format}`);
+        const response = await fetch(
+          `${VALIDATION_API_BASE_URL}/export/${treeId}?format=${format}`,
+        );
         const data: ValidationExportResponse = await response.json();
 
         if (!data.success) {
@@ -218,7 +216,7 @@ export const useValidation = () => {
         throw error;
       }
     },
-    [getApiBaseUrl],
+    [],
   );
 
   const downloadBlob = useCallback((blob: Blob, filename: string): void => {

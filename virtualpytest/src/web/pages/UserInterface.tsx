@@ -39,7 +39,6 @@ import {
   UserInterface as UserInterfaceType,
   UserInterfaceCreatePayload,
 } from '../types/pages/UserInterface_Types';
-import { buildServerUrl } from '../utils/frontendUtils';
 
 const UserInterface: React.FC = () => {
   // Get navigation hook
@@ -82,7 +81,7 @@ const UserInterface: React.FC = () => {
     const loadModels = async () => {
       try {
         setModelsLoading(true);
-        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
+        const response = await fetch('/server/devicemodel/getAllModels');
         if (!response.ok) {
           throw new Error(`Failed to fetch models: ${response.status}`);
         }

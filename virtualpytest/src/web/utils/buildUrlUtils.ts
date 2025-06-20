@@ -5,20 +5,42 @@
  * Mirrors the Python buildUrlUtils.py for consistency.
  */
 
-import { buildHostUrl } from './frontendUtils';
+/**
+ * Build host URL for direct host communication (Frontend to host)
+ * Core implementation for all host-based URL building
+ */
+const internalBuildHostUrl = (host: any, endpoint: string): string => {
+  if (!host) {
+    throw new Error('Host information is required for buildHostUrl');
+  }
+
+  // Use host_url if available (most efficient)
+  if (host.host_url) {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `${host.host_url}/${cleanEndpoint}`;
+  }
+
+  // Fallback: construct from host_ip and host_port
+  if (host.host_ip && host.host_port) {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `https://${host.host_ip}:${host.host_port}/${cleanEndpoint}`;
+  }
+
+  throw new Error('Host must have either host_url or both host_ip and host_port');
+};
 
 /**
  * Build URL for live screenshot captures
  */
 export const buildCaptureUrl = (host: any, timestamp: string): string => {
-  return buildHostUrl(host, `host/stream/captures/capture_${timestamp}.jpg`);
+  return internalBuildHostUrl(host, `host/stream/captures/capture_${timestamp}.jpg`);
 };
 
 /**
  * Build URL for cropped images
  */
 export const buildCroppedImageUrl = (host: any, filename: string): string => {
-  return buildHostUrl(host, `host/stream/captures/cropped/${filename}`);
+  return internalBuildHostUrl(host, `host/stream/captures/cropped/${filename}`);
 };
 
 /**
@@ -29,7 +51,7 @@ export const buildReferenceImageUrl = (
   deviceModel: string,
   filename: string,
 ): string => {
-  return buildHostUrl(host, `host/stream/resources/${deviceModel}/${filename}`);
+  return internalBuildHostUrl(host, `host/stream/resources/${deviceModel}/${filename}`);
 };
 
 /**
@@ -38,21 +60,21 @@ export const buildReferenceImageUrl = (
 export const buildVerificationResultUrl = (host: any, resultsPath: string): string => {
   // Convert local path to URL path
   const urlPath = resultsPath.replace('/var/www/html/', '');
-  return buildHostUrl(host, urlPath);
+  return internalBuildHostUrl(host, urlPath);
 };
 
 /**
  * Build URL for HLS stream
  */
 export const buildStreamUrl = (host: any): string => {
-  return buildHostUrl(host, 'host/stream/output.m3u8');
+  return internalBuildHostUrl(host, 'host/stream/output.m3u8');
 };
 
 /**
  * Build URL for host API endpoints (Flask routes)
  */
 export const buildHostUrl = (host: any, endpoint: string): string => {
-  return buildHostUrl(host, endpoint);
+  return internalBuildHostUrl(host, endpoint);
 };
 
 /**
@@ -78,7 +100,7 @@ export const buildHostImageUrl = (host: any, imagePath: string): string => {
 
   // Use buildHostUrl for relative URLs
   if (host?.host_name) {
-    return buildHostUrl(host, cleanPath);
+    return internalBuildHostUrl(host, cleanPath);
   }
 
   // Fallback if no host selected

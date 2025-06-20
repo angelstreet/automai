@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { useRegistration } from '../useRegistration';
-import { buildServerUrl } from '../../utils/frontendUtils';
+
 import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
 
 // Server Response interface
@@ -27,10 +27,8 @@ const QUERY_KEYS = {
 
 // Device Model Server Service Class
 class DeviceModelServerService {
-  private buildUrl: (endpoint: string) => string;
-
-  constructor(buildUrl: (endpoint: string) => string) {
-    this.buildUrl = buildUrl;
+  constructor() {
+    // No parameters needed - using direct URLs
   }
 
   /**
@@ -39,7 +37,7 @@ class DeviceModelServerService {
   async getAllDeviceModels(): Promise<Model[]> {
     try {
       console.log('[@hook:useDeviceModels:getAllDeviceModels] Fetching all device models');
-      const response = await fetch(this.buildUrl('/server/devicemodel/getAllModels'), {
+      const response = await fetch('/server/devicemodel/getAllModels', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +68,7 @@ class DeviceModelServerService {
   async getDeviceModel(id: string): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:getDeviceModel] Fetching device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/getDeviceModel/${id}`), {
+      const response = await fetch(`/server/devicemodel/getDeviceModel/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +99,7 @@ class DeviceModelServerService {
   async createDeviceModel(model: Omit<Model, 'id' | 'created_at' | 'updated_at'>): Promise<Model> {
     try {
       console.log('[@hook:useDeviceModels:createDeviceModel] Creating device model:', model);
-      const response = await fetch(this.buildUrl('/server/devicemodel/createDeviceModel'), {
+      const response = await fetch('/server/devicemodel/createDeviceModel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +136,7 @@ class DeviceModelServerService {
   ): Promise<Model> {
     try {
       console.log(`[@hook:useDeviceModels:updateDeviceModel] Updating device model: ${id}`, model);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/updateDeviceModel/${id}`), {
+      const response = await fetch(`/server/devicemodel/updateDeviceModel/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +170,7 @@ class DeviceModelServerService {
   async deleteDeviceModel(id: string): Promise<void> {
     try {
       console.log(`[@hook:useDeviceModels:deleteDeviceModel] Deleting device model: ${id}`);
-      const response = await fetch(this.buildUrl(`/server/devicemodel/deleteDeviceModel/${id}`), {
+      const response = await fetch(`/server/devicemodel/deleteDeviceModel/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -206,8 +204,8 @@ export const useDeviceModels = () => {
 
   // Create stable server service instance
   const serverService = useMemo(() => {
-    return new DeviceModelServerService(buildServerUrl);
-  }, [buildServerUrl]);
+    return new DeviceModelServerService();
+  }, []);
 
   // Get all device models
   const {
@@ -303,8 +301,8 @@ export const useDeviceModels = () => {
 export const useDeviceModel = (id: string) => {
   // Create stable server service instance
   const serverService = useMemo(() => {
-    return new DeviceModelServerService(buildServerUrl);
-  }, [buildServerUrl]);
+    return new DeviceModelServerService();
+  }, []);
 
   return useQuery({
     queryKey: QUERY_KEYS.deviceModel(id),

@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { androidTvRemoteConfig } from '../../config/remote/androidTvRemote';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface AndroidTvSession {
   connected: boolean;
@@ -100,7 +99,7 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
         const adbKey = keyMap[command] || command;
 
         // Use the same routing pattern as Android Mobile remote
-        const response = await fetch(buildServerUrl('/server/remote/execute-command'), {
+        const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

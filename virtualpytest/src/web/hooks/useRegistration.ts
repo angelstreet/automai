@@ -1,6 +1,6 @@
 import { useContext, useCallback } from 'react';
 import { RegistrationContext } from '../contexts/RegistrationContextDefinition';
-import { buildServerUrl } from '../utils/frontendUtils';
+
 import { Host } from '../types/common/Host_Types';
 
 /**
@@ -14,7 +14,7 @@ export const useRegistrationLogic = () => {
     try {
       console.log('[@hook:useRegistration] Starting to fetch hosts from server');
 
-      const fullUrl = buildServerUrl('/server/system/getAllHosts');
+      const fullUrl = '/server/system/getAllHosts';
       const response = await fetch(fullUrl);
 
       if (!response.ok) {

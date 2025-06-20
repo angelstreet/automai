@@ -24,7 +24,6 @@ import React, { useState, useEffect } from 'react';
 
 import { useControllerConfig } from '../../hooks/controller';
 import { Device, DeviceFormData, DeviceModel } from '../../types/common/Common_BaseTypes';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';
@@ -91,7 +90,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
       try {
         console.log('[@component:EditDeviceDialog] Fetching device models');
 
-        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
+        const response = await fetch('/server/devicemodel/getAllModels');
         if (!response.ok) {
           throw new Error(
             `Failed to fetch device models: ${response.status} ${response.statusText}`,
@@ -110,7 +109,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
     if (open) {
       fetchModels();
     }
-  }, [open]); // Removed buildServerUrl from dependencies since it's a stable import
+  }, [open]);
 
   // Initialize form when device or dialog state changes
   useEffect(() => {

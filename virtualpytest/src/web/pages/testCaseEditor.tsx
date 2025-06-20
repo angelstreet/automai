@@ -41,7 +41,6 @@ import React, { useState, useEffect } from 'react';
 
 // Import registration context
 import { TestCase } from '../types';
-import { buildServerUrl } from '../utils/frontendUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -92,7 +91,7 @@ const TestCaseEditor: React.FC = () => {
   const fetchTestCases = async () => {
     try {
       // Use correct testcases endpoint
-      const response = await fetch(buildServerUrl('/server/testcases/getAllTestCases'));
+      const response = await fetch('/server/testcases/getAllTestCases');
       if (response.ok) {
         const data = await response.json();
         setTestCases(data);
@@ -108,8 +107,8 @@ const TestCaseEditor: React.FC = () => {
       const method = isEditing ? 'PUT' : 'POST';
       // Use correct testcases endpoints
       const url = isEditing
-        ? buildServerUrl(`/server/testcases/updateTestCase/${formData.test_id}`)
-        : buildServerUrl('/server/testcases/createTestCase');
+        ? `/server/testcases/updateTestCase/${formData.test_id}`
+        : '/server/testcases/createTestCase';
 
       const response = await fetch(url, {
         method,
@@ -136,7 +135,7 @@ const TestCaseEditor: React.FC = () => {
     try {
       setLoading(true);
       // Use correct testcases endpoint
-      const response = await fetch(buildServerUrl(`/server/testcases/deleteTestCase/${testId}`), {
+      const response = await fetch(`/server/testcases/deleteTestCase/${testId}`, {
         method: 'DELETE',
       });
 

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useRegistration } from '../useRegistration';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 export interface NavigationHookResult {
   // Interface data
@@ -73,7 +72,7 @@ export const useNavigation = (): NavigationHookResult => {
 
       console.log(`[@hook:useNavigation] Fetching interface models for: ${interfaceName}`);
 
-      fetch(buildServerUrl(`/server/userinterface/getUserInterfaceByName/${interfaceName}`))
+      fetch(`/server/userinterface/getUserInterfaceByName/${interfaceName}`)
         .then((response) => response.json())
         .then((data) => {
           if (data && data.models) {
@@ -96,7 +95,7 @@ export const useNavigation = (): NavigationHookResult => {
           setIsLoadingInterface(false);
         });
     }
-  }, [interfaceName, buildServerUrl]);
+  }, [interfaceName]);
 
   // Fetch hosts on mount
   useEffect(() => {
@@ -162,7 +161,7 @@ export const useNavigation = (): NavigationHookResult => {
     );
 
     try {
-      const response = await fetch(buildServerUrl(`/server/control/${controlAction}`), {
+      const response = await fetch(`/server/control/${controlAction}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +195,7 @@ export const useNavigation = (): NavigationHookResult => {
     } catch (error) {
       console.error(`[@hook:useNavigation] Error during control operation:`, error);
     }
-  }, [selectedDevice, isControlActive, buildServerUrl]);
+  }, [selectedDevice, isControlActive]);
 
   // Handle remote panel toggle
   const handleToggleRemotePanel = useCallback(() => {

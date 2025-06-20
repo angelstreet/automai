@@ -7,7 +7,6 @@
 import { useMemo } from 'react';
 
 import { UserInterface, UserInterfaceCreatePayload } from '../../types/pages/UserInterface_Types';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 export const useUserInterface = () => {
   /**
@@ -20,7 +19,7 @@ export const useUserInterface = () => {
           '[@hook:useUserInterface:getAllUserInterfaces] Fetching all user interfaces from server',
         );
 
-        const response = await fetch(buildServerUrl('/server/userinterface/getAllUserInterfaces'));
+        const response = await fetch('/server/userinterface/getAllUserInterfaces');
 
         console.log(
           '[@hook:useUserInterface:getAllUserInterfaces] Response status:',
@@ -96,9 +95,7 @@ export const useUserInterface = () => {
             `[@hook:useUserInterface:getUserInterface] Fetching user interface ${id} from server`,
           );
 
-          const response = await fetch(
-            buildServerUrl(`/server/userinterface/getUserInterface/${id}`),
-          );
+          const response = await fetch(`/server/userinterface/getUserInterface/${id}`);
           if (!response.ok) {
             if (response.status === 404) {
               throw new Error('User interface not found');
@@ -136,16 +133,13 @@ export const useUserInterface = () => {
             payload,
           );
 
-          const response = await fetch(
-            buildServerUrl('/server/userinterface/createUserInterface'),
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(payload),
+          const response = await fetch('/server/userinterface/createUserInterface', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
             },
-          );
+            body: JSON.stringify(payload),
+          });
 
           const result = await response.json();
 
@@ -187,16 +181,13 @@ export const useUserInterface = () => {
             payload,
           );
 
-          const response = await fetch(
-            buildServerUrl(`/server/userinterface/updateUserInterface/${id}`),
-            {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(payload),
+          const response = await fetch(`/server/userinterface/updateUserInterface/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
             },
-          );
+            body: JSON.stringify(payload),
+          });
 
           const result = await response.json();
 
@@ -235,12 +226,9 @@ export const useUserInterface = () => {
         try {
           console.log(`[@hook:useUserInterface:deleteUserInterface] Deleting user interface ${id}`);
 
-          const response = await fetch(
-            buildServerUrl(`/server/userinterface/deleteUserInterface/${id}`),
-            {
-              method: 'DELETE',
-            },
-          );
+          const response = await fetch(`/server/userinterface/deleteUserInterface/${id}`, {
+            method: 'DELETE',
+          });
 
           const result = await response.json();
 
@@ -281,9 +269,7 @@ export const useUserInterface = () => {
           );
 
           const response = await fetch(
-            buildServerUrl(
-              `/server/navigation/config/createEmpty/${encodeURIComponent(userInterface.name)}`,
-            ),
+            `/server/navigation/config/createEmpty/${encodeURIComponent(userInterface.name)}`,
             {
               method: 'POST',
               headers: {

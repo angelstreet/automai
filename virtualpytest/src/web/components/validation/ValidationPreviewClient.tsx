@@ -37,7 +37,6 @@ import React, { useState, useEffect } from 'react';
 
 import { useRegistration } from '../../hooks/useRegistration';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface ValidationPreviewClientProps {
   treeId: string;
@@ -100,7 +99,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
 
       console.log('[@component:ValidationPreviewClient] Host available, fetching optimal path');
 
-      const response = await fetch(buildServerUrl(`server/validation/optimal-path/${treeId}`));
+      const response = await fetch(`/server/validation/optimal-path/${treeId}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch optimal path');

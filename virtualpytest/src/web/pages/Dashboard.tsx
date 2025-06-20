@@ -48,7 +48,6 @@ import { useRegistration } from '../hooks/useRegistration';
 import { TestCase, Campaign, Tree } from '../types';
 import { Host } from '../types/common/Host_Types';
 import { DashboardStats, RecentActivity, ViewMode } from '../types/pages/Dashboard_Types';
-import { buildServerUrl } from '../utils/frontendUtils';
 
 const Dashboard: React.FC = () => {
   const { availableHosts, fetchHosts, isLoading: hostsLoading } = useRegistration();
@@ -66,9 +65,9 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
-        fetch(buildServerUrl('/server/campaigns/getAllCampaigns')),
-        fetch(buildServerUrl('/server/testcases/getAllTestCases')),
-        fetch(buildServerUrl('/server/navigation/getAllTrees')), // Use relative URL for navigation requests
+        fetch('/server/campaigns/getAllCampaigns'),
+        fetch('/server/testcases/getAllTestCases'),
+        fetch('/server/navigation/getAllTrees'), // Use relative URL for navigation requests
       ]);
 
       let testCases: TestCase[] = [];

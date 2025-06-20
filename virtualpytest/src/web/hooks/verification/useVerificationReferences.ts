@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { ModelReferences } from '../../types/verification/VerificationTypes';
-import { buildServerUrl } from '../../utils/frontendUtils';
 
 interface UseVerificationReferencesReturn {
   availableReferences: { [deviceModel: string]: ModelReferences };
@@ -34,7 +33,7 @@ export const useVerificationReferences = (
       }
 
       // Use POST method with full host object (consistent with other hooks)
-      const response = await fetch(buildServerUrl('/server/verification/getAllReferences'), {
+      const response = await fetch('/server/verification/getAllReferences', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +44,7 @@ export const useVerificationReferences = (
       });
 
       console.log(
-        `[@hook:useVerificationReferences] Fetching from: ${buildServerUrl('/server/verification/getAllReferences')} with host: ${selectedHost.host_name}`,
+        `[@hook:useVerificationReferences] Fetching from: /server/verification/getAllReferences with host: ${selectedHost.host_name}`,
       );
 
       if (response.ok) {

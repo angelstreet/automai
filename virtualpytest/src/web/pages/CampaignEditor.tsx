@@ -23,7 +23,6 @@ import React, { useState, useEffect } from 'react';
 
 // Import registration context
 import { Campaign } from '../types';
-import { buildServerUrl } from '../utils/frontendUtils';
 
 const CampaignEditor: React.FC = () => {
   // Use registration context for centralized URL management
@@ -38,7 +37,7 @@ const CampaignEditor: React.FC = () => {
   const fetchCampaigns = async () => {
     try {
       // Use correct campaigns endpoint - same pattern as testcases
-      const response = await fetch(buildServerUrl('/server/campaigns/getAllCampaigns'));
+      const response = await fetch('/server/campaigns/getAllCampaigns');
       if (response.ok) {
         const data = await response.json();
         setCampaigns(data);
@@ -52,12 +51,9 @@ const CampaignEditor: React.FC = () => {
     try {
       setLoading(true);
       // Use correct campaigns endpoint
-      const response = await fetch(
-        buildServerUrl(`/server/campaigns/deleteCampaign/${campaignId}`),
-        {
-          method: 'DELETE',
-        },
-      );
+      const response = await fetch(`/server/campaigns/deleteCampaign/${campaignId}`, {
+        method: 'DELETE',
+      });
 
       if (response.ok) {
         await fetchCampaigns();

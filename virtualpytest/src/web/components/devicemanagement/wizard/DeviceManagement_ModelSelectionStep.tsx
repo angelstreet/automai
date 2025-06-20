@@ -14,7 +14,6 @@ import React, { useState, useEffect } from 'react';
 
 import { useRegistration } from '../../../hooks/useRegistration';
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
-import { buildServerUrl } from '../../../utils/frontendUtils';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;
@@ -43,7 +42,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
       try {
         console.log('[@component:ModelSelectionStep] Fetching device models');
 
-        const response = await fetch(buildServerUrl('/server/devicemodel/getAllModels'));
+        const response = await fetch('/server/devicemodel/getAllModels');
         if (!response.ok) {
           throw new Error(
             `Failed to fetch device models: ${response.status} ${response.statusText}`,
