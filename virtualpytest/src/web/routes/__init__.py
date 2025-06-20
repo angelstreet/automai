@@ -73,6 +73,7 @@ def _register_server_routes(app):
         ('server_system_routes', 'system_bp'),
         ('server_images_routes', 'server_images_bp'),  # ✅ Unified images API
         ('navigation_trees_routes', 'navigation_trees_bp'),  # ✅ Navigation trees with history
+        ('server_execution_results_routes', 'execution_results_bp'),  # ✅ Execution results tracking
     ]
     
     # Import and register each module (FAIL FAST)

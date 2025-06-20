@@ -22,7 +22,7 @@ import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationsList } from '../verification/VerificationsList';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { ExecutionResultsDb, ExecutionResult } from '../../../lib/db/executionResultsDb';
+// ❌ REMOVED: Direct database access - using API endpoints instead
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
@@ -329,7 +329,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       let gotoResults: string[] = [];
       let navigationSuccess = false;
 
-      const executionRecords: ExecutionResult[] = [];
+      const executionRecords: any[] = [];
       let executionOrder = 1;
 
       // Step 1: Execute Navigation Steps
@@ -363,8 +363,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           const navigationTime = Date.now() - startTime;
 
           // Record navigation execution to database
-          const navigationRecord: ExecutionResult = {
-            team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+          const navigationRecord = {
             execution_category: 'navigation',
             execution_type: 'goto_navigation',
             initiator_type: 'node',
@@ -403,8 +402,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         console.error('[@component:NodeEditDialog] Navigation error:', err);
 
         // Record failed navigation
-        const failedNavigationRecord: ExecutionResult = {
-          team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+        const failedNavigationRecord = {
           execution_category: 'navigation',
           execution_type: 'goto_navigation',
           initiator_type: 'node',
@@ -447,8 +445,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             verificationSuccess = false;
 
             // Record failed verification
-            const failedVerificationRecord: ExecutionResult = {
-              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+            const failedVerificationRecord = {
               execution_category: 'verification',
               execution_type:
                 verification.verification_type === 'adb'
@@ -507,8 +504,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               const verificationTime = Date.now() - startTime;
 
               // Record verification execution to database
-              const verificationRecord: ExecutionResult = {
-                team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+              const verificationRecord = {
                 execution_category: 'verification',
                 execution_type:
                   verification.verification_type === 'adb'
@@ -547,8 +543,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             individualVerificationSuccess = false;
 
             // Record failed verification
-            const failedVerificationRecord: ExecutionResult = {
-              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+            const failedVerificationRecord = {
               execution_category: 'verification',
               execution_type:
                 verification.verification_type === 'adb'
@@ -584,21 +579,38 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         gotoResults.push('ℹ️ No verifications configured for this node');
       }
 
-      // Record all executions to database
+      // Record all executions to database via API
       if (executionRecords.length > 0) {
         console.log(
           '[@component:NodeEditDialog] Recording',
           executionRecords.length,
           'executions to database',
         );
-        const dbResult = await ExecutionResultsDb.recordBatchExecutions(executionRecords);
+        try {
+          const response = await fetch('/server/execution-results/record-batch', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              executions: executionRecords,
+            }),
+          });
 
-        if (!dbResult.success) {
-          console.error('[@component:NodeEditDialog] Failed to record executions:', dbResult.error);
-          gotoResults.push(`⚠️ Database recording failed: ${dbResult.error}`);
-        } else {
-          console.log('[@component:NodeEditDialog] Successfully recorded executions to database');
-          gotoResults.push(`📊 Execution results recorded to database`);
+          const dbResult = await response.json();
+          if (!dbResult.success) {
+            console.error(
+              '[@component:NodeEditDialog] Failed to record executions:',
+              dbResult.error,
+            );
+            gotoResults.push(`⚠️ Database recording failed: ${dbResult.error}`);
+          } else {
+            console.log('[@component:NodeEditDialog] Successfully recorded executions to database');
+            gotoResults.push(`📊 Execution results recorded to database`);
+          }
+        } catch (error) {
+          console.error('[@component:NodeEditDialog] Error calling execution results API:', error);
+          gotoResults.push(`⚠️ Database recording failed: ${error}`);
         }
       }
 

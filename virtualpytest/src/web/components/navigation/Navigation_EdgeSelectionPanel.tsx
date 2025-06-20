@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
-import { ExecutionResultsDb, ExecutionResult } from '../../../lib/db/executionResultsDb';
+// ❌ REMOVED: Direct database access - using API endpoints instead
 // ❌ REMOVED: Confidence utils moved to database
 
 interface EdgeSelectionPanelProps {
@@ -121,7 +121,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       setRunResult(null);
 
       let executionOrder = 1;
-      const executionRecords: ExecutionResult[] = [];
+      const executionRecords: any[] = [];
 
       try {
         const finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
@@ -153,8 +153,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             return 'click_action'; // default
           };
 
-          const actionRecord: ExecutionResult = {
-            team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+          const actionRecord = {
             execution_category: 'action',
             execution_type: getActionType(action.command),
             initiator_type: 'edge',
@@ -185,8 +184,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             const retrySuccess = result.results[actions.length + i]?.includes('✅') || false;
             const retryMessage = result.results[actions.length + i] || 'No result';
 
-            const retryRecord: ExecutionResult = {
-              team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+            const retryRecord = {
               execution_category: 'action',
               execution_type: 'retry_action',
               initiator_type: 'edge',
@@ -213,18 +211,39 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           }
         }
 
-        // Batch insert all execution records
+        // Batch insert all execution records via API
         if (executionRecords.length > 0) {
           console.log(
             '[@component:EdgeSelectionPanel] Recording',
             executionRecords.length,
             'action executions to database',
           );
-          const dbResult = await ExecutionResultsDb.recordBatchExecutions(executionRecords);
-          if (!dbResult.success) {
+          try {
+            const response = await fetch('/server/execution-results/record-batch', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                executions: executionRecords,
+              }),
+            });
+
+            const dbResult = await response.json();
+            if (!dbResult.success) {
+              console.error(
+                '[@component:EdgeSelectionPanel] Failed to record executions:',
+                dbResult.error,
+              );
+            } else {
+              console.log(
+                '[@component:EdgeSelectionPanel] Successfully recorded executions to database',
+              );
+            }
+          } catch (error) {
             console.error(
-              '[@component:EdgeSelectionPanel] Failed to record executions:',
-              dbResult.error,
+              '[@component:EdgeSelectionPanel] Error calling execution results API:',
+              error,
             );
           }
         }
@@ -237,9 +256,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
         console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
         setRunResult(`❌ ${err.message}`);
 
-        // Record failed execution
-        const failedRecord: ExecutionResult = {
-          team_id: '2211d930-8f20-4654-a0ca-699084e7917f', // TODO: Get from context
+        // Record failed execution via API
+        const failedRecord = {
           execution_category: 'action',
           execution_type: 'failed_action',
           initiator_type: 'edge',
@@ -255,11 +273,26 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           error_details: { error: err.message },
         };
 
-        const dbResult = await ExecutionResultsDb.recordExecution(failedRecord);
-        if (!dbResult.success) {
+        try {
+          const response = await fetch('/server/execution-results/record', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(failedRecord),
+          });
+
+          const dbResult = await response.json();
+          if (!dbResult.success) {
+            console.error(
+              '[@component:EdgeSelectionPanel] Failed to record failed execution:',
+              dbResult.error,
+            );
+          }
+        } catch (error) {
           console.error(
-            '[@component:EdgeSelectionPanel] Failed to record failed execution:',
-            dbResult.error,
+            '[@component:EdgeSelectionPanel] Error calling execution results API for failed execution:',
+            error,
           );
         }
       } finally {
