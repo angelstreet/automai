@@ -72,18 +72,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
               : 'FAIL'}
         </Typography>
 
-        {testResult.message &&
-          !(verification.verification_type === 'adb' && testResult.success) && (
-            <Typography
-              sx={{
-                fontSize: '0.7rem',
-                color: 'text.secondary',
-                ml: 1,
-              }}
-            >
-              {testResult.message}
-            </Typography>
-          )}
+       
       </Box>
 
       {/* Image comparison thumbnails for image verifications */}
