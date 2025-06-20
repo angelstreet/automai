@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material';
 import React from 'react';
 
 import { useRegistration } from '../../hooks/useRegistration';
-import { buildHostUrl } from '../../utils/frontendUtils';
+import { buildHostImageUrl } from '../../utils/buildUrlUtils';
 
 interface ImageComparisonThumbnailsProps {
   sourceUrl: string;
@@ -23,22 +23,9 @@ export const ImageComparisonThumbnails: React.FC<ImageComparisonThumbnailsProps>
   // Use registration context to get selected host
   const { selectedHost } = useRegistration();
 
+  // Use centralized image URL builder
   const buildImageUrl = (url: string): string => {
-    if (!url) return '';
-
-    // If it's already a complete URL, return as is
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-
-    // Use buildHostUrl from frontendUtils
-    if (selectedHost?.host_name) {
-      const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-      return buildHostUrl(selectedHost, cleanUrl);
-    }
-
-    // Fallback if no host selected
-    return url;
+    return buildHostImageUrl(selectedHost, url);
   };
 
   return (

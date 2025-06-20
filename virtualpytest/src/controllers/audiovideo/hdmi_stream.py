@@ -134,15 +134,16 @@ class HDMIStreamController(AVControllerInterface):
         Uses buildHostUrl to construct the proper URL, with conditional HTTPS proxy for HTTP URLs.
         """
         try:
-            from src.utils.app_utils import buildHostUrl, buildServerUrl
+            from src.utils.app_utils import buildServerUrl
+            from src.utils.buildUrlUtils import buildStreamUrl
             
             host_info = self._get_host_info()
             if not host_info:
                 print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
                 return None
             
-            # Get the original stream URL
-            original_stream_url = buildHostUrl(host_info, 'host/stream/output.m3u8')
+            # Get the original stream URL using centralized stream URL builder
+            original_stream_url = buildStreamUrl(host_info)
             print(f"HDMI[{self.capture_source}]: Original stream URL: {original_stream_url}")
             
             # If URL is already HTTPS, use it directly
@@ -175,7 +176,7 @@ class HDMIStreamController(AVControllerInterface):
         Uses buildHostUrl to reference continuously captured screenshots.
         """
         try:
-            from src.utils.app_utils import buildHostUrl
+            from src.utils.buildUrlUtils import buildCaptureUrl
             
             # EXACT COPY from ScreenDefinitionEditor.tsx handleTakeScreenshot()
             print('[@controller:HDMIStream] Generating Zurich timezone timestamp for screenshot...')
@@ -197,13 +198,13 @@ class HDMIStreamController(AVControllerInterface):
             
             print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
             
-            # Get host info and build screenshot URL
+            # Get host info and build screenshot URL using centralized capture URL builder
             host_info = self._get_host_info()
             if not host_info:
                 print(f'[@controller:HDMIStream] Cannot build screenshot URL - no host info available')
                 return None
             
-            screenshot_url = buildHostUrl(host_info, f'host/stream/captures/capture_{timestamp}.jpg')
+            screenshot_url = buildCaptureUrl(host_info, timestamp)
             print(f'[@controller:HDMIStream] Built screenshot URL using buildHostUrl: {screenshot_url}')
             
             # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
@@ -367,10 +368,10 @@ class HDMIStreamController(AVControllerInterface):
             
             # Get captures URL for logging
             try:
-                from src.utils.app_utils import buildHostUrl
+                from src.utils.buildUrlUtils import buildHostImageUrl
                 host_info = self._get_host_info()
                 if host_info:
-                    captures_url = buildHostUrl(host_info, 'host/stream/captures/')
+                    captures_url = buildHostImageUrl(host_info, 'stream/captures/')
                     print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {captures_url}")
             except Exception:
                 pass  # Logging only, don't fail if URL building fails

@@ -176,8 +176,8 @@ def stream_tap():
 def tap_coordinates_internal(host, x, y):
     """Internal helper for tap coordinate handling"""
     try:
-        # Use the proxy system to forward to host
-        from src.utils.app_utils import buildHostUrl
+        # Use the centralized API URL builder to forward to host
+        from src.utils.buildUrlUtils import buildHostUrl
         full_url = buildHostUrl(host, '/host/remote/tap-coordinates')
         
         if not full_url:

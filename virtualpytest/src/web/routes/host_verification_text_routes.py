@@ -14,11 +14,6 @@ from datetime import datetime
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
 
-# Host configuration
-HOST_IP = "77.56.53.130"
-HOST_PORT = "5119"
-CLIENT_URL = "https://77.56.53.130:444"  # Nginx-exposed URL
-
 # Path configuration constants
 STREAM_BASE_PATH = '/var/www/html/stream'
 CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
@@ -350,18 +345,25 @@ def execute_text_verification():
         # Execute text verification
         result = execute_text_verification_host(verification, source_path, 0, results_dir)
         
-        # Convert local paths to public URLs
+        # Convert local paths to public URLs using centralized URL builder
+        from src.utils.buildUrlUtils import buildVerificationResultUrl
+        
+        # Get host info for URL building
+        host_info = host_device  # Already available in this route
+        
         if result.get('source_image_path'):
-            result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
+            result['source_image_url'] = buildVerificationResultUrl(host_info, result['source_image_path'])
+            print(f"[@route:host_verification_text:execute] Built source URL: {result['source_image_url']}")
         if result.get('result_overlay_path'):
-            result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
+            result['result_overlay_url'] = buildVerificationResultUrl(host_info, result['result_overlay_path'])
+            print(f"[@route:host_verification_text:execute] Built overlay URL: {result['result_overlay_url']}")
         
         print(f"[@route:host_verification_text:execute] Verification completed: {result.get('success')}")
         
         return jsonify({
             'success': True,
             'verification_result': result,
-            'results_directory': results_dir.replace('/var/www/html', ''),
+            'results_directory': buildVerificationResultUrl(host_info, results_dir),
             'timestamp': timestamp
         })
         

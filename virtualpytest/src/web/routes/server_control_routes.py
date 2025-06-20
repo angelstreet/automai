@@ -13,7 +13,8 @@ from flask import Blueprint, request, jsonify
 import requests
 import urllib.parse
 
-from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, buildHostUrl, get_user_id
+from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, get_user_id
+from src.utils.buildUrlUtils import buildHostUrl
 from src.utils.device_lock_manager_utils import (
     lock_device_in_registry,
     unlock_device_in_registry,
@@ -130,7 +131,7 @@ def take_control():
             # Host doesn't need any payload - it uses its own stored host_device object
             print(f"[@route:server_take_control] Forwarding to host using standardized URL building")
             
-            # Build URL using standardized buildHostUrl function
+            # Build URL using centralized API URL builder
             host_url = buildHostUrl(host_info, '/host/take-control')
             
             print(f"[@route:server_take_control] Built URL using buildHostUrl: {host_url}")
@@ -218,7 +219,7 @@ def release_control():
                 try:
                     print(f"[@route:server_release_control] Calling host release control")
                     
-                    # Build URL using standardized buildHostUrl function
+                    # Build URL using centralized API URL builder
                     host_url = buildHostUrl(host_info, '/host/release-control')
                     host_response = requests.post(
                         host_url,
@@ -301,7 +302,7 @@ def navigate():
                 'error': f'No online host found for device: {device_id}'
             }), 404
         
-        # Forward request to host using standardized URL building
+        # Forward request to host using centralized API URL builder
         host_url = buildHostUrl(host_info, f'/host/navigation/execute/{tree_id}/{target_node_id}')
         
         payload = {

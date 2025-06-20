@@ -22,8 +22,7 @@ from src.controllers.controller_config_factory import (
 
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
-    get_host_registry,
-    buildHostUrl
+    get_host_registry
 )
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
@@ -419,8 +418,9 @@ def start_health_check(client_id, client_ip, client_port):
                         break
                     
                     try:
-                        # Always use URL builder from registry data
+                        # Always use centralized API URL builder from registry data
                         host_info = connected_clients[client_id]
+                        from src.utils.buildUrlUtils import buildHostUrl
                         health_url = buildHostUrl(host_info, "/server/system/health")
                         
                         response = requests.get(health_url, timeout=5)

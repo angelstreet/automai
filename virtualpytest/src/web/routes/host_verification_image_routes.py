@@ -122,9 +122,9 @@ def crop_area():
                 print(f"[@route:host_crop_area] Cropping successful: {target_filename}")
                 
                 # Build complete URL for the cropped image (for temporary preview)
-                from src.utils.app_utils import buildHostUrl
+                from src.utils.buildUrlUtils import buildCroppedImageUrl
                 host_info = host_device
-                cropped_image_url = buildHostUrl(host_info, f'host/stream/captures/cropped/{target_filename}')
+                cropped_image_url = buildCroppedImageUrl(host_info, target_filename)
                 print(f"[@route:host_crop_area] Built cropped image URL: {cropped_image_url}")
                 
                 return jsonify({
@@ -270,9 +270,9 @@ def process_area():
             print(f"[@route:host_process_area] Processing successful: {target_filename}")
             
             # Build complete URL for the processed image (for temporary preview)
-            from src.utils.app_utils import buildHostUrl
+            from src.utils.buildUrlUtils import buildCroppedImageUrl
             host_info = host_device
-            processed_image_url = buildHostUrl(host_info, f'host/stream/captures/cropped/{target_filename}')
+            processed_image_url = buildCroppedImageUrl(host_info, target_filename)
             print(f"[@route:host_process_area] Built processed image URL: {processed_image_url}")
             
             return jsonify({
@@ -433,20 +433,29 @@ def execute_image_verification():
         # Execute image verification
         result = execute_image_verification_host(verification, source_path, 0, results_dir)
         
-        # Convert local paths to public URLs
+        # Convert local paths to public URLs using centralized URL builder
+        from src.utils.buildUrlUtils import buildVerificationResultUrl
+        from src.utils.app_utils import get_host_by_name
+        
+        # Get host info for URL building
+        host_info = host_device  # Already available in this route
+        
         if result.get('source_image_path'):
-            result['source_image_url'] = result['source_image_path'].replace('/var/www/html', '')
+            result['source_image_url'] = buildVerificationResultUrl(host_info, result['source_image_path'])
+            print(f"[@route:host_verification_image:execute] Built source URL: {result['source_image_url']}")
         if result.get('result_overlay_path'):
-            result['result_overlay_url'] = result['result_overlay_path'].replace('/var/www/html', '')
+            result['result_overlay_url'] = buildVerificationResultUrl(host_info, result['result_overlay_path'])
+            print(f"[@route:host_verification_image:execute] Built overlay URL: {result['result_overlay_url']}")
         if result.get('reference_image_path'):
-            result['reference_image_url'] = result['reference_image_path'].replace('/var/www/html', '')
+            result['reference_image_url'] = buildVerificationResultUrl(host_info, result['reference_image_path'])
+            print(f"[@route:host_verification_image:execute] Built reference URL: {result['reference_image_url']}")
         
         print(f"[@route:host_verification_image:execute] Verification completed: {result.get('success')}")
         
         return jsonify({
             'success': True,
             'verification_result': result,
-            'results_directory': results_dir.replace('/var/www/html', '')
+            'results_directory': buildVerificationResultUrl(host_info, results_dir)
         })
         
     except Exception as e:

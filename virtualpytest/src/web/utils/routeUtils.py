@@ -63,8 +63,8 @@ def proxy_to_host(endpoint, method='GET', data=None, timeout=30, headers=None):
                 'error': error or 'Host information required'
             }, 400
         
-        # Use buildHostUrl to construct the proper URL
-        from src.utils.app_utils import buildHostUrl
+        # Use centralized API URL builder to construct the proper URL
+        from src.utils.buildUrlUtils import buildHostUrl
         full_url = buildHostUrl(host_info, endpoint)
         
         if not full_url:

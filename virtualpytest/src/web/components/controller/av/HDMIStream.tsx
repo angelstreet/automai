@@ -14,6 +14,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
+import { buildCaptureUrl } from '../../../utils/buildUrlUtils';
 import { VerificationEditor } from '../verification';
 
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot } from './ScreenEditorOverlay';
@@ -288,7 +289,8 @@ export function HDMIStream({
       const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-      return `https://${host.host_name}:444/stream/captures/capture_${frameTimestamp}.jpg`;
+      // Use centralized URL builder for capture URLs
+      return buildCaptureUrl(host, frameTimestamp);
     }
     return undefined;
   }, [captureMode, totalFrames, captureStartTime, currentFrame, host.host_name]);
