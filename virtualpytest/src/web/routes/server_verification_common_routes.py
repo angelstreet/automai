@@ -113,41 +113,12 @@ def execute_batch_verification():
                 'error': 'verifications are required'
             }), 400
         
-        # Handle source_filename scenarios:
-        # Scenario 1: Frontend provides source_filename (should be complete path)
-        # Scenario 2: No source_filename provided - use most recent capture from /var/www/html/stream/captures
+        # Require source_filename - no fallbacks (capture-first approach)
         if not source_filename:
-            print("[@route:server_verification_common:execute_batch_verification] No source_filename provided, finding most recent capture")
-            
-            # Find most recent capture in /var/www/html/stream/captures
-            import os
-            import glob
-            
-            captures_dir = '/var/www/html/stream/captures'
-            if os.path.exists(captures_dir):
-                # Get all image files in captures directory
-                image_patterns = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.gif']
-                all_captures = []
-                
-                for pattern in image_patterns:
-                    all_captures.extend(glob.glob(os.path.join(captures_dir, pattern)))
-                
-                if all_captures:
-                    # Sort by modification time (most recent first)
-                    all_captures.sort(key=os.path.getmtime, reverse=True)
-                    most_recent_capture = os.path.basename(all_captures[0])
-                    source_filename = most_recent_capture
-                    print(f"[@route:server_verification_common:execute_batch_verification] Using most recent capture: {source_filename}")
-                else:
-                    return jsonify({
-                        'success': False,
-                        'error': 'No source_filename provided and no captures found in /var/www/html/stream/captures'
-                    }), 400
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'No source_filename provided and captures directory does not exist'
-                }), 400
+            return jsonify({
+                'success': False,
+                'error': 'source_filename is required - please capture screenshot first'
+            }), 400
         
         results = []
         passed_count = 0

@@ -29,8 +29,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   onSubmit,
   onClose,
   onResetNode,
-  verificationControllerTypes: _verificationControllerTypes = [],
-  isVerificationActive = false,
   selectedHost,
   isControlActive = false,
   model,
@@ -134,6 +132,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const handleRunVerifications = async () => {
     if (!nodeForm?.verifications || nodeForm.verifications.length === 0) return;
 
+    if (!selectedHost) {
+      setVerificationResult('❌ No host device selected');
+      return;
+    }
+
     console.log('[@component:NodeEditDialog] === VERIFICATION TEST DEBUG ===');
     console.log(
       '[@component:NodeEditDialog] Number of verifications before filtering:',
@@ -202,6 +205,29 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     setVerificationResult(null);
 
     try {
+      // Step 1: Take screenshot first (capture-first approach)
+      console.log('[@component:NodeEditDialog] Taking screenshot before verification...');
+      const screenshotResponse = await fetch('/server/navigation/save-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: selectedHost,
+          filename: `${nodeForm?.label || 'node'}_verification`, // Use node name for verification screenshot
+        }),
+      });
+
+      const screenshotResult = await screenshotResponse.json();
+
+      if (!screenshotResult.success || !screenshotResult.filename) {
+        setVerificationResult('❌ Failed to capture screenshot for verification');
+        return;
+      }
+
+      console.log('[@component:NodeEditDialog] Screenshot captured:', screenshotResult.filename);
+
+      // Step 2: Execute verifications using the captured screenshot
       let results: string[] = [];
       const updatedVerifications = [...validVerifications]; // Use filtered verifications
       let executionStopped = false;
@@ -229,34 +255,27 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         let verificationSuccess = false;
 
         try {
-          if (!selectedHost) {
-            results.push(`❌ Verification ${i + 1}: No host device selected`);
-            verificationSuccess = false;
+          // Use server route for verification execution with actual screenshot
+          const response = await fetch(`/server/verification/batch/execute`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host: selectedHost, // Use full host object (like VerificationEditor)
+              verifications: [verificationToExecute],
+              source_filename: screenshotResult.filename, // Use actual screenshot filename
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+            verificationSuccess = true;
           } else {
-            // Use server route for node verification (this is correct for node context)
-            const response = await fetch(`/server/verification/batch/execute`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                host: selectedHost,
-                verifications: [verificationToExecute],
-                model: selectedHost.device_model || 'android_mobile',
-                node_id: nodeForm?.id || 'unknown',
-                source_filename: 'verification_screenshot.jpg',
-              }),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-              results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-              verificationSuccess = true;
-            } else {
-              results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
-              verificationSuccess = false;
-            }
+            results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+            verificationSuccess = false;
           }
         } catch (err: any) {
           results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
@@ -418,11 +437,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  host: selectedHost,
+                  host: selectedHost, // Use full host object (like VerificationEditor)
                   verifications: [verificationToExecute],
-                  model: selectedHost.device_model || 'android_mobile',
-                  node_id: nodeForm?.id || 'unknown',
-                  source_filename: 'verification_screenshot.jpg',
+                  source_filename: 'verification_screenshot.jpg', // TODO: This should also use capture-first but it's in goto flow
                 }),
               });
 
@@ -587,18 +604,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Verification Section - now available for all node types including entry */}
-          {isVerificationActive && (
-            <VerificationsList
-              verifications={nodeForm?.verifications || []}
-              availableVerifications={verifications}
-              onVerificationsChange={(verifications) => setNodeForm({ ...nodeForm, verifications })}
-              loading={loadingVerifications}
-              error={verificationError}
-              model={selectedHost?.device_model || model}
-              selectedHost={selectedHost}
-            />
-          )}
+          {/* Verification Section - always available after capture-first implementation */}
+          <VerificationsList
+            verifications={nodeForm?.verifications || []}
+            availableVerifications={verifications}
+            onVerificationsChange={(verifications) => setNodeForm({ ...nodeForm, verifications })}
+            loading={loadingVerifications}
+            error={verificationError}
+            model={selectedHost?.device_model || model}
+            selectedHost={selectedHost}
+          />
 
           {gotoResult && (
             <Box

@@ -308,40 +308,7 @@ export interface NavigationEditorHeaderProps {
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
 }
 
-export interface NavigationEditorDeviceControlProps {
-  // Device state
-  selectedHost: any;
-  isControlActive: boolean;
-  isRemotePanelOpen: boolean;
-
-  // Verification state
-  isVerificationActive: boolean;
-  verificationControllerStatus: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  };
-  verificationResults: any[];
-  verificationPassCondition: 'all' | 'any';
-  lastVerifiedNodeId: string | null;
-
-  // Node/Edge data for verification
-  nodes: any[];
-  selectedNode: any;
-  selectedEdge: any;
-
-  // UI state
-  userInterface: any;
-
-  // Event handlers
-  onReleaseControl: () => void;
-  onUpdateNode: (nodeId: string, updatedData: any) => void;
-  onSetVerificationResults: (results: any[]) => void;
-  onSetLastVerifiedNodeId: (nodeId: string | null) => void;
-  onSetVerificationPassCondition: (condition: 'all' | 'any') => void;
-  onSetNodes: (updateFunction: (nodes: any[]) => any[]) => void;
-  onSetSelectedNode: (node: any) => void;
-  onSetHasUnsavedChanges: (hasChanges: boolean) => void;
-}
+// ❌ DELETED: NavigationEditorDeviceControlProps - obsolete after cleanup
 
 export interface NodeEditDialogProps {
   isOpen: boolean;
@@ -351,8 +318,7 @@ export interface NodeEditDialogProps {
   onSubmit: () => void;
   onClose: () => void;
   onResetNode?: () => void;
-  verificationControllerTypes?: string[];
-  isVerificationActive?: boolean;
+  // ❌ DELETED: Obsolete verification controller types after capture-first implementation
   selectedDevice?: string | null;
   selectedHost?: any; // Host object for verification/navigation
   isControlActive?: boolean;
@@ -390,13 +356,7 @@ export interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
-  // Verification props
-  onVerification?: (nodeId: string, verifications: any[]) => void;
-  isVerificationActive?: boolean;
-  verificationControllerStatus?: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  };
+  // ❌ DELETED: Obsolete verification props after capture-first implementation
 }
 
 export interface EdgeSelectionPanelProps {

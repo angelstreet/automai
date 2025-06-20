@@ -14,10 +14,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
   LinearProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
@@ -43,13 +39,7 @@ interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
-  // Verification props
-  onVerification?: (nodeId: string, verifications: any[]) => void;
-  isVerificationActive?: boolean;
-  verificationControllerStatus?: {
-    image_controller_available: boolean;
-    text_controller_available: boolean;
-  };
+  // ❌ DELETED: Obsolete verification props after capture-first implementation
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
@@ -66,9 +56,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     selectedHost,
     treeId = '',
     currentNodeId,
-    onVerification,
-    isVerificationActive = false,
-    verificationControllerStatus,
+    // ❌ DELETED: Obsolete verification props removed
   }) => {
     // Don't render the panel for entry nodes - MUST be before any hooks
     if ((selectedNode.data.type as string) === 'entry') {
@@ -87,7 +75,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Add states for confirmation dialogs
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
-    const [showVerificationConfirm, setShowVerificationConfirm] = useState(false);
 
     // Add states for verification execution
     const [isRunningVerifications, setIsRunningVerifications] = useState(false);
@@ -187,13 +174,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowScreenshotConfirm(false);
     };
 
-    const handleVerificationConfirm = () => {
-      if (onVerification && selectedNode.data.verifications) {
-        onVerification(selectedNode.id, selectedNode.data.verifications);
-      }
-      setShowVerificationConfirm(false);
-    };
-
     // Update verification results in the actual node data
     const updateVerificationResults = (verificationIndex: number, success: boolean) => {
       if (!onUpdateNode) {
@@ -236,47 +216,70 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         return;
       }
 
+      if (!selectedHost) {
+        setVerificationResult('❌ No host device selected');
+        return;
+      }
+
       setIsRunningVerifications(true);
       setVerificationResult(null);
 
       try {
+        // Step 1: Take screenshot first (capture-first approach)
+        console.log('[@component:NodeSelectionPanel] Taking screenshot before verification...');
+        const screenshotResponse = await fetch('/server/navigation/save-screenshot', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            filename: `${selectedNode.data.label}_verification`, // Use node name for verification screenshot
+          }),
+        });
+
+        const screenshotResult = await screenshotResponse.json();
+
+        if (!screenshotResult.success || !screenshotResult.filename) {
+          setVerificationResult('❌ Failed to capture screenshot for verification');
+          return;
+        }
+
+        console.log(
+          '[@component:NodeSelectionPanel] Screenshot captured:',
+          screenshotResult.filename,
+        );
+
+        // Step 2: Execute verifications using the captured screenshot
         let results: string[] = [];
         const verifications = selectedNode.data.verifications;
 
         for (let i = 0; i < verifications.length; i++) {
           const verification = verifications[i];
-
           let verificationSuccess = false;
 
           try {
-            if (!selectedHost) {
-              results.push(`❌ Verification ${i + 1}: No host device selected`);
-              verificationSuccess = false;
+            // Use server route for verification execution with actual screenshot
+            const response = await fetch(`/server/verification/batch/execute`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                host: selectedHost, // Use full host object (like VerificationEditor)
+                verifications: [verification],
+                source_filename: screenshotResult.filename, // Use actual screenshot filename
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
+              verificationSuccess = true;
             } else {
-              // Use server route for verification execution
-              const response = await fetch(`/server/verification/batch/execute`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  host_name: selectedHost.host_name,
-                  verifications: [verification],
-                  model: selectedHost.device_model || 'android_mobile',
-                  node_id: selectedNode.id,
-                  source_filename: 'verification_screenshot.jpg',
-                }),
-              });
-
-              const result = await response.json();
-
-              if (result.success) {
-                results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-                verificationSuccess = true;
-              } else {
-                results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
-                verificationSuccess = false;
-              }
+              results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+              verificationSuccess = false;
             }
           } catch (err: any) {
             results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
@@ -332,11 +335,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Check if verification button should be displayed
     const hasNodeVerifications =
       selectedNode.data.verifications && selectedNode.data.verifications.length > 0;
-    const hasAvailableControllers =
-      verificationControllerStatus?.image_controller_available ||
-      verificationControllerStatus?.text_controller_available;
-    const showVerificationButton =
-      isVerificationActive && hasAvailableControllers && hasNodeVerifications && onVerification;
 
     // Can run verifications if we have control and device (same logic as NodeEditDialog)
     const canRunVerifications =
@@ -515,20 +513,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                 </Button>
               )}
 
-              {/* Verification button - only shown when verification controllers are available and node has verifications */}
-              {showVerificationButton && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  sx={{ fontSize: '0.75rem', px: 1 }}
-                  onClick={() => setShowVerificationConfirm(true)}
-                  startIcon={<VerifiedIcon fontSize="small" />}
-                >
-                  Verify ({selectedNode.data.verifications?.length || 0})
-                </Button>
-              )}
-
               {/* Direct Run Verifications button - show when verifications exist */}
               {hasNodeVerifications && (
                 <Button
@@ -631,91 +615,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         </Dialog>
 
         {/* Verification Confirmation Dialog */}
-        <Dialog
-          open={showVerificationConfirm}
-          onClose={() => setShowVerificationConfirm(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Execute Verification</DialogTitle>
-          <DialogContent>
-            <Typography sx={{ mb: 2 }}>
-              Execute {selectedNode.data.verifications?.length || 0} verification(s) for this node?
-            </Typography>
-
-            {/* Show verification list summary */}
-            {selectedNode.data.verifications && selectedNode.data.verifications.length > 0 && (
-              <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Verifications to execute:
-                </Typography>
-                <List dense>
-                  {selectedNode.data.verifications.map((verification: any, index: number) => (
-                    <ListItem key={index} sx={{ py: 0.5 }}>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2">{verification.command}</Typography>
-                            <Chip
-                              label={verification.verification_type || 'unknown'}
-                              size="small"
-                              variant="outlined"
-                              color={
-                                verification.verification_type === 'image' ? 'primary' : 'secondary'
-                              }
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {verification.command} - {verification.verification_type} verification
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-
-            {/* Show controller status */}
-            <Box
-              sx={{ mt: 2, p: 1, borderRadius: 1, border: '1px dashed', borderColor: 'grey.300' }}
-            >
-              <Typography variant="caption" display="block" color="text.secondary">
-                Controller Status:
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                <Chip
-                  label="Image"
-                  size="small"
-                  color={
-                    verificationControllerStatus?.image_controller_available ? 'success' : 'default'
-                  }
-                  variant={
-                    verificationControllerStatus?.image_controller_available ? 'filled' : 'outlined'
-                  }
-                />
-                <Chip
-                  label="Text"
-                  size="small"
-                  color={
-                    verificationControllerStatus?.text_controller_available ? 'success' : 'default'
-                  }
-                  variant={
-                    verificationControllerStatus?.text_controller_available ? 'filled' : 'outlined'
-                  }
-                />
-              </Box>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowVerificationConfirm(false)}>Cancel</Button>
-            <Button onClick={handleVerificationConfirm} color="secondary" variant="contained">
-              Execute Verifications
-            </Button>
-          </DialogActions>
-        </Dialog>
       </>
     );
   },
