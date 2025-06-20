@@ -88,8 +88,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
 
       {/* Image comparison thumbnails for image verifications */}
       {verification.controller_type === 'image' &&
-        testResult.sourceImageUrl &&
-        testResult.referenceImageUrl && (
+        (testResult.sourceImageUrl || testResult.referenceImageUrl) && (
           <VerificationImageComparisonThumbnails
             sourceUrl={testResult.sourceImageUrl}
             referenceUrl={testResult.referenceImageUrl}
