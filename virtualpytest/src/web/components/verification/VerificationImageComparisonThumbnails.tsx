@@ -1,5 +1,5 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
+import React from 'react';
 
 interface VerificationImageComparisonThumbnailsProps {
   sourceUrl: string;
@@ -8,17 +8,26 @@ interface VerificationImageComparisonThumbnailsProps {
   userThreshold?: number;
   matchingResult?: number;
   imageFilter?: 'none' | 'greyscale' | 'binary';
-  onImageClick: (sourceUrl: string, referenceUrl: string, userThreshold?: number, matchingResult?: number, resultType?: 'PASS' | 'FAIL' | 'ERROR', imageFilter?: 'none' | 'greyscale' | 'binary') => void;
+  onImageClick: (
+    sourceUrl: string,
+    referenceUrl: string,
+    userThreshold?: number,
+    matchingResult?: number,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => void;
 }
 
-export const VerificationImageComparisonThumbnails: React.FC<VerificationImageComparisonThumbnailsProps> = ({
+export const VerificationImageComparisonThumbnails: React.FC<
+  VerificationImageComparisonThumbnailsProps
+> = ({
   sourceUrl,
   referenceUrl,
   resultType,
   userThreshold,
   matchingResult,
   imageFilter,
-  onImageClick
+  onImageClick,
 }) => {
   const handleClick = () => {
     onImageClick(sourceUrl, referenceUrl, userThreshold, matchingResult, resultType, imageFilter);
@@ -26,10 +35,14 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
 
   const getResultColor = () => {
     switch (resultType) {
-      case 'PASS': return '#4caf50';
-      case 'FAIL': return '#f44336';
-      case 'ERROR': return '#ff9800';
-      default: return '#757575';
+      case 'PASS':
+        return '#4caf50';
+      case 'FAIL':
+        return '#f44336';
+      case 'ERROR':
+        return '#ff9800';
+      default:
+        return '#757575';
     }
   };
 
@@ -57,31 +70,32 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
   const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
   const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
   const cssFilter = getCSSFilter(imageFilter);
-  
+
   // Debug logging for filters
   if (imageFilter && imageFilter !== 'none') {
-    console.log(`[@component:VerificationImageComparisonThumbnails] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`);
+    console.log(
+      `[@component:VerificationImageComparisonThumbnails] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`,
+    );
   }
 
   return (
-    <Box 
+    <Box
       onClick={handleClick}
-      sx={{ 
+      sx={{
         cursor: 'pointer',
         border: `2px solid ${getResultColor()}`,
         borderRadius: 1,
         padding: 1,
       }}
     >
-      
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         {/* Source Image */}
         <Box sx={{ flex: 1, textAlign: 'center' }}>
           <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
             Source
           </Typography>
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               width: '100%',
               maxWidth: '200px',
               height: 'auto',
@@ -92,7 +106,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '100px'
+              minHeight: '100px',
             }}
           >
             <img
@@ -105,14 +119,19 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
                 height: 'auto',
                 objectFit: 'contain', // Maintain aspect ratio
                 display: 'block',
-                filter: cssFilter // Apply dynamic CSS filter
+                filter: cssFilter, // Apply dynamic CSS filter
               }}
               onLoad={(e) => {
                 const img = e.target as HTMLImageElement;
-                console.log(`[@component:VerificationImageComparisonThumbnails] Source image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`);
+                console.log(
+                  `[@component:VerificationImageComparisonThumbnails] Source image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`,
+                );
               }}
               onError={(e) => {
-                console.error('[@component:VerificationImageComparisonThumbnails] Failed to load source image:', sourceUrl);
+                console.error(
+                  '[@component:VerificationImageComparisonThumbnails] Failed to load source image:',
+                  sourceUrl,
+                );
               }}
             />
           </Box>
@@ -123,8 +142,8 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
           <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
             Reference
           </Typography>
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               width: '100%',
               maxWidth: '200px',
               height: 'auto',
@@ -135,7 +154,7 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '100px'
+              minHeight: '100px',
             }}
           >
             <img
@@ -148,14 +167,19 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
                 height: 'auto',
                 objectFit: 'contain', // Maintain aspect ratio
                 display: 'block',
-                filter: cssFilter // Apply dynamic CSS filter
+                filter: cssFilter, // Apply dynamic CSS filter
               }}
               onLoad={(e) => {
                 const img = e.target as HTMLImageElement;
-                console.log(`[@component:VerificationImageComparisonThumbnails] Reference image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`);
+                console.log(
+                  `[@component:VerificationImageComparisonThumbnails] Reference image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`,
+                );
               }}
               onError={(e) => {
-                console.error('[@component:VerificationImageComparisonThumbnails] Failed to load reference image:', referenceUrl);
+                console.error(
+                  '[@component:VerificationImageComparisonThumbnails] Failed to load reference image:',
+                  referenceUrl,
+                );
               }}
             />
           </Box>
@@ -175,4 +199,4 @@ export const VerificationImageComparisonThumbnails: React.FC<VerificationImageCo
       </Box>
     </Box>
   );
-}; 
+};
