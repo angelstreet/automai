@@ -13,6 +13,9 @@ import uuid
 import requests
 import time
 
+# Import proxy utilities
+from src.web.utils.routeUtils import proxy_to_host
+
 # Import from specific database modules (direct imports)
 from src.lib.supabase.navigation_trees_db import (
     get_all_trees as get_all_navigation_trees_util,
@@ -510,28 +513,6 @@ def get_userinterface_with_root(interface_id):
 def save_navigation_screenshot():
     """Take screenshot and upload to R2 for navigation documentation"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
-        
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
-        
-        # Get controller object directly from own stored host_device
-        from src.utils.host_utils import get_local_controller
-        av_controller = get_local_controller('av')
-        
-        if not av_controller:
-            return jsonify({
-                'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
-            }), 404
-        
-        print(f"[@route:navigation:save_screenshot] Using AV controller: {type(av_controller).__name__}")
-        
         # Get request data for required filename parameter
         request_data = request.get_json() or {}
         filename = request_data.get('filename')
@@ -544,20 +525,28 @@ def save_navigation_screenshot():
         
         print(f"[@route:navigation:save_screenshot] Saving navigation screenshot with filename: {filename}")
         
-        # Get device model from host_device
-        device_model = host_device.get('device_model', 'unknown')
-        print(f"[@route:navigation:save_screenshot] Using device model: {device_model}")
+        # Proxy to host navigation save-screenshot to get the image
+        response_data, status_code = proxy_to_host('/host/navigation/save-screenshot', 'POST', {'filename': filename})
         
-        # Save screenshot using controller (returns local path)
-        local_screenshot_path = av_controller.save_screenshot(filename)
+        if status_code != 200 or not response_data.get('success'):
+            return jsonify({
+                'success': False,
+                'error': f'Failed to save screenshot: {response_data.get("error", "Unknown error")}'
+            }), status_code
         
+        # Get the local screenshot path from the response
+        local_screenshot_path = response_data.get('screenshot_path')
         if not local_screenshot_path:
             return jsonify({
                 'success': False,
-                'error': 'Failed to take screenshot'
+                'error': 'No screenshot path returned from host'
             }), 500
         
-        print(f"[@route:navigation:save_screenshot] Screenshot saved locally at: {local_screenshot_path}")
+        print(f"[@route:navigation:save_screenshot] Screenshot saved at: {local_screenshot_path}")
+        
+        # Get device model from request or use default
+        device_model = request_data.get('device_model', 'android_mobile')
+        print(f"[@route:navigation:save_screenshot] Using device model: {device_model}")
         
         # Build R2 path: navigation/{device_model}/{filename}.jpg
         r2_path = f"navigation/{device_model}/{filename}.jpg"

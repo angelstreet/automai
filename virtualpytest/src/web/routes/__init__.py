@@ -104,6 +104,7 @@ def _register_host_routes(app):
         ('host_control_routes', 'control_bp'),  # ✅ Unified naming
         ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
         ('host_av_routes', 'av_bp'),  # ✅ Unified naming
+        ('host_navigation_routes', 'navigation_bp'),  # ✅ Navigation screenshots
     ]
     
     for module_name, blueprint_name in host_route_modules:
