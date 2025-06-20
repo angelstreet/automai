@@ -19,7 +19,7 @@ import React, { useState, useEffect } from 'react';
 // Import proper types from navigationTypes
 import { VerificationActions, NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 
-import { NodeVerificationsList } from './Navigation_NodeVerificationsList';
+import { NodeVerificationsList } from './NodeVerificationsList';
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
