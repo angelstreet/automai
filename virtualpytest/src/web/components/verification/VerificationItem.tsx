@@ -9,13 +9,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
   Typography,
   IconButton,
-  CircularProgress,
-  FormControlLabel,
-  RadioGroup,
-  Radio,
 } from '@mui/material';
 import React from 'react';
 
@@ -61,12 +56,12 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
   index,
   availableVerifications,
   modelReferences,
-  referencesLoading,
+  referencesLoading: _referencesLoading,
   testResult,
   onVerificationSelect,
   onReferenceSelect,
-  onImageFilterChange,
-  onTextFilterChange,
+  onImageFilterChange: _onImageFilterChange,
+  onTextFilterChange: _onTextFilterChange,
   onUpdateVerification,
   onRemoveVerification,
   onMoveUp,
@@ -194,184 +189,94 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         onUpdateVerification={onUpdateVerification}
       />
 
-      {/* Line 3: Reference Image Selector or Manual Input - exclude ADB verifications */}
-      {verification.command &&
-        (verification.verification_type === 'image' ||
-          verification.verification_type === 'text') && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {/* First Row: Reference selection and test result status */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {verification.command &&
-              Object.entries(modelReferences).some(([_filename, ref]) => {
-                // Check if there are references matching the verification type
-                if (verification.verification_type === 'image') {
-                  return ref.type === 'image';
-                } else if (verification.verification_type === 'text') {
-                  return ref.type === 'text';
-                }
-                return true;
-              }) ? (
-                <>
-                  {/* Reference Dropdown - shows both image and text references */}
-                  <FormControl size="small" sx={{ width: 250 }}>
-                    <InputLabel>Reference</InputLabel>
-                    <Select
-                      value={
-                        verification.params?.reference_image ||
-                        verification.params?.reference_name ||
-                        ''
-                      }
-                      onChange={(e) => onReferenceSelect(index, e.target.value)}
-                      label="Reference"
-                      size="small"
-                      sx={{
-                        '& .MuiSelect-select': {
-                          fontSize: '0.8rem',
-                        },
-                      }}
-                    >
-                      <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
-                        <em>Select reference...</em>
-                      </MenuItem>
-                      {Object.entries(modelReferences)
-                        .filter(([_filename, ref]) => {
-                          // Filter references based on verification type
-                          if (verification.verification_type === 'image') {
-                            return ref.type === 'image';
-                          } else if (verification.verification_type === 'text') {
-                            return ref.type === 'text';
-                          }
-                          return true; // Show all if type is not determined
-                        })
-                        .map(([filename, ref]) => (
-                          <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              {ref.type === 'image' ? '🖼️' : '📝'}
-                              <span>{filename}</span>
-                              {ref.type === 'text' && ref.text && (
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontSize: '0.65rem',
-                                    color: 'text.secondary',
-                                    ml: 0.5,
-                                    maxWidth: 100,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  ({ref.text})
-                                </Typography>
-                              )}
-                            </Box>
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                </>
-              ) : verification.command ? (
-                /* Manual input for text/image when no references available */
-                <TextField
-                  size="small"
-                  label={verification.verification_type === 'image' ? 'Image Path' : 'Text to Find'}
-                  placeholder={
-                    verification.verification_type === 'image'
-                      ? 'Enter image path...'
-                      : 'Enter text or regex pattern...'
-                  }
-                  value={
-                    verification.verification_type === 'image'
-                      ? verification.params?.reference_url || ''
-                      : verification.params?.text || ''
-                  }
-                  autoComplete="off"
-                  onChange={(e) => {
-                    if (verification.verification_type === 'image') {
-                      onUpdateVerification(index, {
-                        params: { ...verification.params, reference_url: e.target.value },
-                      });
-                    } else {
-                      onUpdateVerification(index, {
-                        params: { ...verification.params, text: e.target.value },
-                      });
-                    }
-                  }}
-                  sx={{ width: 250 }}
-                />
-              ) : null}
-
-              {/* Image Filter Selection - only for image verifications */}
-              {verification.verification_type === 'image' && verification.command && (
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
-                  <RadioGroup
-                    value={verification.params?.image_filter || 'none'}
-                    onChange={(e) =>
-                      onImageFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')
-                    }
-                    sx={{
-                      gap: 0,
-                      '& .MuiFormControlLabel-root': {
-                        margin: 0,
-                        '& .MuiFormControlLabel-label': {
+      {/* Line 3: Reference selector for text/image, nothing for ADB */}
+      {verification.command && verification.verification_type === 'text' && (
+        <FormControl size="small" sx={{ width: 250 }}>
+          <InputLabel>Text Reference</InputLabel>
+          <Select
+            value={verification.params?.text || ''}
+            onChange={(e) => onReferenceSelect(index, e.target.value)}
+            label="Text Reference"
+            size="small"
+            sx={{
+              '& .MuiSelect-select': {
+                fontSize: '0.8rem',
+              },
+            }}
+          >
+            <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
+              <em>No reference selected</em>
+            </MenuItem>
+            {Object.entries(modelReferences)
+              .filter(([_filename, ref]) => ref.type === 'text')
+              .map(([filename, ref]) => (
+                <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    📝 <span>{filename}</span>
+                    {ref.text && (
+                      <Typography
+                        variant="caption"
+                        sx={{
                           fontSize: '0.65rem',
-                          paddingLeft: '2px',
-                        },
-                        '& .MuiRadio-root': {
-                          padding: '2px',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: '0.9rem',
-                          },
-                        },
-                      },
-                    }}
-                  >
-                    <FormControlLabel value="none" control={<Radio />} label="None" />
-                    <FormControlLabel value="greyscale" control={<Radio />} label="Greyscale" />
-                    <FormControlLabel value="binary" control={<Radio />} label="Binarization" />
-                  </RadioGroup>
-                </Box>
-              )}
+                          color: 'text.secondary',
+                          ml: 0.5,
+                          maxWidth: 100,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ({ref.text})
+                      </Typography>
+                    )}
+                  </Box>
+                </MenuItem>
+              ))}
+            {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'text')
+              .length === 0 && (
+              <MenuItem disabled sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                No text references available
+              </MenuItem>
+            )}
+          </Select>
+        </FormControl>
+      )}
 
-              {/* Text Filter Selection - only for text verifications */}
-              {verification.verification_type === 'text' && verification.command && (
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
-                  <RadioGroup
-                    value={verification.params?.text_filter || 'none'}
-                    onChange={(e) =>
-                      onTextFilterChange(index, e.target.value as 'none' | 'greyscale' | 'binary')
-                    }
-                    sx={{
-                      gap: 0,
-                      '& .MuiFormControlLabel-root': {
-                        margin: 0,
-                        '& .MuiFormControlLabel-label': {
-                          fontSize: '0.65rem',
-                          paddingLeft: '2px',
-                        },
-                        '& .MuiRadio-root': {
-                          padding: '2px',
-                          '& .MuiSvgIcon-root': {
-                            fontSize: '0.9rem',
-                          },
-                        },
-                      },
-                    }}
-                  >
-                    <FormControlLabel value="none" control={<Radio />} label="None" />
-                    <FormControlLabel value="greyscale" control={<Radio />} label="Greyscale" />
-                    <FormControlLabel value="binary" control={<Radio />} label="Binarization" />
-                  </RadioGroup>
-                </Box>
-              )}
-
-              {/* Show loading indicator for references */}
-              {verification.verification_type === 'image' && referencesLoading && (
-                <CircularProgress size={16} />
-              )}
-            </Box>
-          </Box>
-        )}
+      {verification.command && verification.verification_type === 'image' && (
+        <FormControl size="small" sx={{ width: 250 }}>
+          <InputLabel>Image Reference</InputLabel>
+          <Select
+            value={verification.params?.image_path || ''}
+            onChange={(e) => onReferenceSelect(index, e.target.value)}
+            label="Image Reference"
+            size="small"
+            sx={{
+              '& .MuiSelect-select': {
+                fontSize: '0.8rem',
+              },
+            }}
+          >
+            <MenuItem value="" sx={{ fontSize: '0.75rem' }}>
+              <em>No reference selected</em>
+            </MenuItem>
+            {Object.entries(modelReferences)
+              .filter(([_filename, ref]) => ref.type === 'image')
+              .map(([filename, _ref]) => (
+                <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    🖼️ <span>{filename}</span>
+                  </Box>
+                </MenuItem>
+              ))}
+            {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'image')
+              .length === 0 && (
+              <MenuItem disabled sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                No image references available
+              </MenuItem>
+            )}
+          </Select>
+        </FormControl>
+      )}
 
       {/* Test Results Display using extracted component */}
       {testResult && (
