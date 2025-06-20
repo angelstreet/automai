@@ -142,31 +142,23 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   const handleVerificationSelect = (index: number, command: string) => {
     // Find the selected verification from available verifications
     let selectedVerification: any = undefined;
-    let verificationType: 'text' | 'image' | 'adb' = 'text';
 
     // Search through all controller types to find the verification
-    for (const [category, verifications] of Object.entries(availableVerifications)) {
+    for (const verifications of Object.values(availableVerifications)) {
       if (!Array.isArray(verifications)) continue;
 
       const verification = verifications.find((v) => v.command === command);
       if (verification) {
         selectedVerification = verification;
-        // Determine verification type from category name
-        if (category.toLowerCase().includes('image')) {
-          verificationType = 'image';
-        } else if (category.toLowerCase().includes('adb')) {
-          verificationType = 'adb';
-        } else {
-          verificationType = 'text';
-        }
         break;
       }
     }
 
     if (selectedVerification) {
+      // Use the cleaned params from the selectedVerification (already processed by useVerification hook)
       updateVerification(index, {
         command: selectedVerification.command,
-        verification_type: verificationType,
+        verification_type: selectedVerification.verification_type,
         params: { ...selectedVerification.params },
       });
     }
