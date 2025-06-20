@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -6,8 +5,9 @@ import {
   DialogActions,
   Typography,
   Button,
-  Box,
 } from '@mui/material';
+import React from 'react';
+
 import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
 
 interface VerificationResultModalProps {
@@ -23,7 +23,6 @@ export const VerificationResultModal: React.FC<VerificationResultModalProps> = (
     handleCancelOverwrite,
     referenceName,
     referenceType,
-    model,
   } = verification;
 
   return (
@@ -42,7 +41,7 @@ export const VerificationResultModal: React.FC<VerificationResultModalProps> = (
       </DialogTitle>
       <DialogContent>
         <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
-          A {referenceType} reference named "{referenceName}" already exists for model "{model}".
+          A {referenceType} reference named "{referenceName}" already exists.
           <br />
           Do you want to overwrite it?
         </Typography>

@@ -29,16 +29,17 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
           size="small"
           type="number"
           label="Timeout"
-          value={verification.params?.timeout || 1}
+          value={verification.params?.timeout !== undefined ? verification.params.timeout : 1}
           autoComplete="off"
-          onChange={(e) =>
+          onChange={(e) => {
+            const value = parseFloat(e.target.value);
             onUpdateVerification(index, {
               params: {
                 ...verification.params,
-                timeout: parseFloat(e.target.value) || 1,
+                timeout: isNaN(value) ? 1 : value,
               },
-            })
-          }
+            });
+          }}
           sx={{
             width: 80,
             '& .MuiInputBase-input': {
@@ -46,7 +47,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               fontSize: '0.8rem',
             },
           }}
-          inputProps={{ min: 1, max: 60, step: 0.5 }}
+          inputProps={{ min: 0, max: 60, step: 0.5 }}
         />
       )}
 
