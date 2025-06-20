@@ -70,7 +70,7 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
   }, [host]);
 
   const handleRemoteCommand = useCallback(
-    async (command: string, params?: any) => {
+    async (command: string, _params?: any) => {
       if (!session.connected || isLoading) return;
 
       setIsLoading(true);

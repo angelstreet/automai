@@ -21,14 +21,13 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
     target,
   } = props;
 
-  // Access sourceHandle and targetHandle from props directly
+  // Access sourceHandle from props directly
   const sourceHandle = (props as any).sourceHandle;
-  const targetHandle = (props as any).targetHandle;
 
   const { getEdges, getNodes } = useReactFlow();
   const currentEdges = getEdges();
   const currentNodes = getNodes();
-  const { getEdgeColors } = useValidationColors((data as any)?.treeId || 'default', currentEdges);
+  const { getEdgeColors } = useValidationColors(currentEdges);
 
   // Validate that both nodes exist
   const sourceNode = currentNodes.find((node) => node.id === source);

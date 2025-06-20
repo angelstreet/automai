@@ -19,11 +19,12 @@ import {
 import React, { useState, useEffect } from 'react';
 
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
+// Navigation types moved to Navigation_Types.ts
 import {
   NavigationStep,
   NavigationPreviewResponse,
   NavigationExecuteResponse,
-} from '../../utils/navigation/navigationUtils';
+} from '../../types/pages/Navigation_Types';
 
 interface NodeGotoPanelProps {
   selectedNode: UINavigationNode;
@@ -46,15 +47,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [executionResult, setExecutionResult] = useState<string | null>(null);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
-
-  // Calculate confidence score from last run results (0-1 scale)
-  const calculateConfidenceScore = (results?: boolean[]): number => {
-    if (!results || results.length === 0) return 0.5; // Default confidence for new verifications
-    const successCount = results.filter((result) => result).length;
-    return successCount / results.length;
-  };
 
   // Helper function to get parent names from parent IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -82,7 +75,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   useEffect(() => {
     // Clear any previous execution messages when loading for a new node
     setError(null);
-    setExecutionResult(null);
     setExecutionMessage(null);
 
     loadNavigationPreview();
@@ -133,7 +125,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   const executeNavigation = async () => {
     setIsExecuting(true);
     setError(null);
-    setExecutionResult(null);
 
     try {
       console.log(`[@component:NodeGotoPanel] Executing navigation to node: ${selectedNode.id}`);
@@ -415,7 +406,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             <Box>
               {selectedNode.data.verifications.map((verification, index) => (
                 <Box
-                  key={verification.id || index}
+                  key={verification.command || index}
                   sx={{
                     mb: 0,
                     p: 0.5,
@@ -427,7 +418,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                     variant="subtitle2"
                     sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}
                   >
-                    {index + 1}. {verification.label || 'Unnamed Verification'}
+                    {index + 1}. {verification.command || 'Unnamed Verification'}
                   </Typography>
 
                   <Box sx={{ ml: 1.5 }}>
@@ -439,10 +430,10 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                         mb: 0.25,
                       }}
                     >
-                      <strong>Command:</strong> {verification.command || 'No command'}
+                      <strong>Type:</strong> {verification.verification_type || 'No type'}
                     </Typography>
 
-                    {(verification as any).inputValue && (
+                    {verification.params?.text && (
                       <Typography
                         variant="body2"
                         sx={{
@@ -451,7 +442,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
                           fontWeight: 'bold',
                         }}
                       >
-                        Input: {(verification as any).inputValue}
+                        Text: {verification.params.text}
                       </Typography>
                     )}
                   </Box>

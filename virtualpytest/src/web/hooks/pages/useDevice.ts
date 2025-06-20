@@ -8,7 +8,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useRegistration } from '../useRegistration';
 import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
 
 // Server Response interface

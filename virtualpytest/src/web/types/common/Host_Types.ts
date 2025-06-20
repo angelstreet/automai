@@ -22,17 +22,6 @@ export interface ControllerObject {
   status?: any;
 }
 
-export interface VerificationAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
 export interface RemoteAction {
   id: string;
   label: string;
@@ -42,10 +31,6 @@ export interface RemoteAction {
   requiresInput?: boolean;
   inputLabel?: string;
   inputPlaceholder?: string;
-}
-
-export interface VerificationTypes {
-  [category: string]: VerificationAction[];
 }
 
 export interface RemoteActions {
@@ -90,7 +75,7 @@ export interface Host {
   local_controller_objects?: { [key: string]: ControllerObject }; // Host-side controller instances
 
   // === VERIFICATION AND REMOTE ACTIONS DATA ===
-  available_verification_types?: VerificationTypes; // Available verification types from controllers
+  available_verification_types?: import('../verification/VerificationTypes').Verifications; // Available verification types from controllers
   available_remote_actions?: RemoteActions; // Available remote actions from controllers
 
   // === DEVICE LOCK MANAGEMENT ===

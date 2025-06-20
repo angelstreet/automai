@@ -1,11 +1,11 @@
 import React from 'react';
 import { Box, Typography, FormControl, Select, MenuItem } from '@mui/material';
 
-import { VerificationTestResult } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/VerificationTypes';
 
 interface VerificationResultsDisplayProps {
-  testResults: VerificationTestResult[];
-  verifications: any[];
+  testResults: Verification[];
+  verifications: Verification[];
   passCondition?: 'all' | 'any';
   onPassConditionChange?: (condition: 'all' | 'any') => void;
   showPassConditionSelector?: boolean;
@@ -30,9 +30,9 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
       : testResults.some((result) => result.success || result.resultType === 'PASS');
 
   // Helper function to render detailed ADB element info for PASS results
-  const renderADBElementDetails = (result: VerificationTestResult, verificationIndex: number) => {
+  const renderADBElementDetails = (result: Verification, verificationIndex: number) => {
     if (
-      verifications[verificationIndex]?.controller_type !== 'adb' ||
+      verifications[verificationIndex]?.verification_type !== 'adb' ||
       result.resultType !== 'PASS' ||
       !result.matches ||
       result.matches.length === 0
@@ -203,9 +203,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 {/* Verification Label */}
                 <Typography variant="body2" sx={{ flex: 1, fontSize: '0.8rem' }}>
-                  {verifications[index]?.label ||
-                    verifications[index]?.id ||
-                    `Verification ${index + 1}`}
+                  {verifications[index]?.command || `Verification ${index + 1}`}
                 </Typography>
 
                 {/* Result Indicator */}
@@ -262,7 +260,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                   </Typography>
 
                   {/* Show threshold for image verifications */}
-                  {verifications[index]?.controller_type === 'image' &&
+                  {verifications[index]?.verification_type === 'image' &&
                     result.threshold !== undefined && (
                       <Typography
                         variant="caption"
@@ -277,7 +275,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                     )}
 
                   {/* Show OCR confidence for text verifications */}
-                  {verifications[index]?.controller_type === 'text' &&
+                  {verifications[index]?.verification_type === 'text' &&
                     result.ocrConfidence !== undefined && (
                       <Typography
                         variant="caption"
@@ -296,7 +294,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
               {/* Show message if available (skip for successful ADB verifications as they have detailed element info) */}
               {(result.message || result.error) &&
                 !(
-                  verifications[index]?.controller_type === 'adb' && result.resultType === 'PASS'
+                  verifications[index]?.verification_type === 'adb' && result.resultType === 'PASS'
                 ) && (
                   <Typography
                     variant="caption"

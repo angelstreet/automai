@@ -65,17 +65,15 @@ interface OptimalPathData {
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const validation = useValidationUI(treeId);
-  const { resetForNewValidation } = useValidationColors(treeId);
+  const { resetForNewValidation } = useValidationColors();
   const { selectedHost } = useRegistration();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
-  const [loadingOptimalPath, setLoadingOptimalPath] = useState(false);
+  const [loadingOptimalPath] = useState(false);
   const [selectedEdges, setSelectedEdges] = useState<Set<number>>(new Set());
   const [depthFilter, setDepthFilter] = useState<'all' | '1' | '2'>('all');
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [totalSteps, setTotalSteps] = useState(0);
-  const [estimatedTime, setEstimatedTime] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // Load optimal path when preview opens
@@ -86,7 +84,6 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   }, [validation.showPreview, treeId]);
 
   const fetchOptimalPath = async () => {
-    setIsLoading(true);
     setError(null);
 
     try {
@@ -108,13 +105,9 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       const data = await response.json();
 
       setOptimalPath(data);
-      setTotalSteps(data.sequence.length);
-      setEstimatedTime(data.summary.efficiency_ratio * data.sequence.length);
     } catch (err: any) {
       console.error('[@component:ValidationPreviewClient] Error:', err);
       setError(err.message || 'Failed to fetch validation data');
-    } finally {
-      setIsLoading(false);
     }
   };
 

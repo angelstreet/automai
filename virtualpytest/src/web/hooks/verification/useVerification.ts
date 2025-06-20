@@ -1,11 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import {
-  Verifications,
-  VerificationTestResult,
-  EditorVerification,
-} from '../../types/verification/VerificationTypes';
+import { Verifications, Verification } from '../../types/verification/VerificationTypes';
 
 // Define interfaces for verification data structures
 
@@ -17,10 +13,10 @@ interface UseVerificationProps {
 export const useVerification = ({ selectedHost, captureSourcePath }: UseVerificationProps) => {
   // State for verification types and verifications
   const [availableVerificationTypes, setAvailableVerificationTypes] = useState<Verifications>({});
-  const [verifications, setVerifications] = useState<EditorVerification[]>([]);
+  const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<VerificationTestResult[]>([]);
+  const [testResults, setTestResults] = useState<Verification[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Load verification types from host data and clean parameter definitions
@@ -33,7 +29,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
       Object.entries(selectedHost.available_verification_types).forEach(
         ([controllerType, verifications]) => {
           if (Array.isArray(verifications)) {
-            cleanedVerificationTypes[controllerType] = verifications.map((verification) => {
+            cleanedVerificationTypes[controllerType] = verifications.map((verification: any) => {
               if (!verification.params) return verification;
 
               const cleanParams: any = {};
@@ -47,13 +43,22 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 }
               });
 
+              // Add verification_type based on controller type
+              let verification_type: 'text' | 'image' | 'adb' = 'text';
+              if (controllerType.toLowerCase().includes('image')) {
+                verification_type = 'image';
+              } else if (controllerType.toLowerCase().includes('adb')) {
+                verification_type = 'adb';
+              }
+
               return {
-                ...verification,
+                command: verification.command,
                 params: cleanParams,
-              };
+                verification_type,
+              } as Verification;
             });
           } else {
-            cleanedVerificationTypes[controllerType] = verifications;
+            cleanedVerificationTypes[controllerType] = verifications as Verification[];
           }
         },
       );
@@ -90,7 +95,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
   }, [successMessage]);
 
   // Handle verifications change
-  const handleVerificationsChange = useCallback((newVerifications: EditorVerification[]) => {
+  const handleVerificationsChange = useCallback((newVerifications: Verification[]) => {
     setVerifications(newVerifications);
     // Clear test results when verifications change
     setTestResults([]);
@@ -118,53 +123,43 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
 
       // Filter out empty/invalid verifications before testing
       const validVerifications = verifications.filter((verification, index) => {
-        // Check if verification has an id (is configured)
-        if (!verification.id || verification.id.trim() === '') {
+        // Check if verification has a command (is configured)
+        if (!verification.command || verification.command.trim() === '') {
           console.log(
             `[@hook:useVerification] Removing verification ${index}: No verification type selected`,
           );
           return false;
         }
 
-        // Check if verification has required input based on controller type
-        if (verification.controller_type === 'image') {
+        // Check if verification has required input based on verification type
+        if (verification.verification_type === 'image') {
           // Image verifications need a reference image
           const hasImagePath =
             verification.params?.full_path ||
             verification.params?.reference_path ||
-            verification.inputValue;
+            verification.params?.reference_image;
           if (!hasImagePath) {
             console.log(
               `[@hook:useVerification] Removing verification ${index}: No image reference specified`,
             );
             return false;
           }
-        } else if (verification.controller_type === 'text') {
+        } else if (verification.verification_type === 'text') {
           // Text verifications need text to search for
-          const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+          const hasText = verification.params?.text && verification.params.text.trim() !== '';
           if (!hasText) {
             console.log(
               `[@hook:useVerification] Removing verification ${index}: No text specified`,
             );
             return false;
           }
-        } else if (verification.controller_type === 'adb') {
+        } else if (verification.verification_type === 'adb') {
           // ADB verifications need search criteria
-          const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+          const hasSearchTerm =
+            verification.params?.search_term && verification.params.search_term.trim() !== '';
           if (!hasSearchTerm) {
             console.log(
               `[@hook:useVerification] Removing verification ${index}: No search term specified`,
-            );
-            return false;
-          }
-        }
-
-        // For other types, check if requiresInput is set and if so, validate accordingly
-        if (verification.requiresInput) {
-          const hasInput = verification.inputValue && verification.inputValue.trim() !== '';
-          if (!hasInput) {
-            console.log(
-              `[@hook:useVerification] Removing verification ${index}: Required input missing`,
             );
             return false;
           }
@@ -231,38 +226,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
           },
           body: JSON.stringify({
             host: selectedHost, // Send full host object
-            verifications: validVerifications.map((verification) => {
-              // Parameters are already cleaned when loading verification types
-              const params = { ...verification.params };
-
-              // For image verifications, ensure image_path is set correctly
-              if (
-                verification.controller_type === 'image' &&
-                verification.params?.reference_image
-              ) {
-                params.image_path = verification.params.reference_image;
-                return {
-                  ...verification,
-                  params,
-                  reference_filename: verification.params.reference_image,
-                };
-              }
-
-              // For text verifications, ensure text is set from inputValue
-              if (verification.controller_type === 'text' && verification.inputValue) {
-                params.text = verification.inputValue;
-              }
-
-              // For ADB verifications, ensure search_term is set from inputValue
-              if (verification.controller_type === 'adb' && verification.inputValue) {
-                params.search_term = verification.inputValue;
-              }
-
-              return {
-                ...verification,
-                params,
-              };
-            }),
+            verifications: validVerifications, // Send verifications directly since params are already clean
             source_filename: capture_filename, // Include the extracted capture filename
           }),
         });
@@ -280,7 +244,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
           );
 
           // Process and set test results
-          const processedResults: VerificationTestResult[] = batchResult.results.map(
+          const processedResults: Verification[] = batchResult.results.map(
             (result: any, index: number) => {
               const verification = validVerifications[index];
 
@@ -303,7 +267,13 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 }
               }
 
-              const processedResult: VerificationTestResult = {
+              const processedResult: Verification = {
+                // Core verification data
+                command: verification.command,
+                params: verification.params,
+                verification_type: verification.verification_type,
+
+                // Result data from server response
                 success: actualSuccess,
                 message: result.message,
                 error: result.error,

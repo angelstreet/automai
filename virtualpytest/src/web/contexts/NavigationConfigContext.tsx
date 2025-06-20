@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 import { UINavigationNode, UINavigationEdge } from '../types/pages/Navigation_Types';
 
@@ -62,7 +62,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // ========================================
 
   // Get user session info (session ID and user ID)
-  const { sessionId, userId, isOurLock } = useUserSession();
+  const { sessionId, userId } = useUserSession();
 
   // ========================================
   // STATE

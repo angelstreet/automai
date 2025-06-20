@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
           (c): RecentActivity => ({
             id: c.campaign_id,
             type: 'campaign' as const,
-            name: c.campaign_name,
+            name: c.name,
             status: 'pending' as const,
             timestamp: new Date().toISOString(),
           }),

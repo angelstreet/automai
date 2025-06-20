@@ -14,10 +14,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
-  const { getNodeColors, getHandleColors } = useValidationColors(
-    data.tree_id || 'default',
-    currentEdges,
-  );
+  const { getNodeColors, getHandleColors } = useValidationColors(currentEdges);
 
   // Use screenshot URL with aggressive cache-busting
   const screenshotUrl = React.useMemo(() => {

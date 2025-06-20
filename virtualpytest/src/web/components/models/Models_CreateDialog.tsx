@@ -55,12 +55,7 @@ const MenuProps = {
   },
 };
 
-const CreateModelDialog: React.FC<CreateModelDialogProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  error,
-}) => {
+const CreateModelDialog: React.FC<CreateModelDialogProps> = ({ open, onClose, onSubmit }) => {
   const [formData, setFormData] = useState<ModelCreatePayload>({
     name: '',
     types: [],

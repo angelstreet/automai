@@ -74,7 +74,7 @@ const UserInterface: React.FC = () => {
 
   // State for real models from database
   const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(true);
+  const [, setModelsLoading] = useState(true);
 
   // Load models from database (same API as Models page)
   useEffect(() => {

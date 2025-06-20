@@ -127,7 +127,7 @@ export const VerificationImageComparisonThumbnails: React.FC<
                   `[@component:VerificationImageComparisonThumbnails] Source image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`,
                 );
               }}
-              onError={(e) => {
+              onError={() => {
                 console.error(
                   '[@component:VerificationImageComparisonThumbnails] Failed to load source image:',
                   sourceUrl,
@@ -175,7 +175,7 @@ export const VerificationImageComparisonThumbnails: React.FC<
                   `[@component:VerificationImageComparisonThumbnails] Reference image loaded: ${img.naturalWidth}x${img.naturalHeight}, aspect ratio: ${(img.naturalWidth / img.naturalHeight).toFixed(2)}`,
                 );
               }}
-              onError={(e) => {
+              onError={() => {
                 console.error(
                   '[@component:VerificationImageComparisonThumbnails] Failed to load reference image:',
                   referenceUrl,

@@ -59,7 +59,6 @@ export const NavigationEditorHeader: React.FC<{
   isRemotePanelOpen,
   // Host data (filtered by interface models)
   availableHosts,
-  getHostByName,
   fetchHosts,
   onAddNewNode,
   onFitView,

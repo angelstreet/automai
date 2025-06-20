@@ -138,7 +138,7 @@ const NavigationEditorContent: React.FC = () => {
 
     // Navigation state
     currentTreeId,
-    currentTreeName,
+
     navigationPath,
     navigationNamePath,
     hasUnsavedChanges,

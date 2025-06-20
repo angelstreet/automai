@@ -59,7 +59,6 @@ export const AndroidMobileRemote = React.memo(
       isDumpingUI,
       isDisconnecting,
       isRefreshingApps,
-      screenshotRef,
 
       // Actions
       handleDisconnect,

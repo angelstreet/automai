@@ -1,16 +1,13 @@
-/**
- * Node Verification Types
- *
- * UI-specific verification format for components that need to display
- * and interact with verifications in the interface.
- */
+import { Verification } from '../verification/VerificationTypes';
 
-export interface NodeVerification {
+/**
+ * Node verification extends base verification with UI-specific fields
+ * Used specifically in navigation nodes
+ */
+export interface NodeVerification extends Verification {
   id: string; // UI compatibility: same as command
   label: string; // UI display name
-  command: string; // Required: command to execute
   controller_type: 'text' | 'image' | 'adb';
-  params: Record<string, any>; // Required: parameters (can be empty {})
   description?: string;
   requiresInput?: boolean;
   inputLabel?: string;

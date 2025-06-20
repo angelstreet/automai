@@ -48,7 +48,7 @@ export const useScreenEditor = (selectedHost: any, onDisconnectComplete?: () => 
   const [captureEndTime, setCaptureEndTime] = useState<Date | null>(null);
 
   // Saving state
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving] = useState(false);
   const [savedFrameCount, setSavedFrameCount] = useState(0);
 
   // Capture state
@@ -64,7 +64,7 @@ export const useScreenEditor = (selectedHost: any, onDisconnectComplete?: () => 
   // Screenshot loading state
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
 
-  const [resolutionInfo, setResolutionInfo] = useState<{
+  const [resolutionInfo] = useState<{
     device: { width: number; height: number } | null;
     capture: string | null;
     stream: string | null;

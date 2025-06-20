@@ -41,7 +41,6 @@ export function ScreenshotCapture({
   onAreaSelected,
   model,
   sx = {},
-  selectedHost,
 }: ScreenshotCaptureProps) {
   const imageRef = useRef<HTMLImageElement>(null);
 

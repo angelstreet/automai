@@ -17,9 +17,9 @@ import {
 import React, { useState, useEffect } from 'react';
 
 // Import proper types from navigationTypes
-import { VerificationActions, NodeEditDialogProps } from '../../types/pages/Navigation_Types';
-
-import { NodeVerificationsList } from './NodeVerificationsList';
+import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
+import { Verifications } from '../../types/verification/VerificationTypes';
+import { VerificationsList } from '../verification/VerificationsList';
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
@@ -40,7 +40,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     return null;
   }
 
-  const [verificationActions, setVerificationActions] = useState<VerificationActions>({});
+  const [verifications, setVerifications] = useState<Verifications>({});
   const [loadingVerifications, setLoadingVerifications] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [isRunningVerifications, setIsRunningVerifications] = useState(false);
@@ -94,13 +94,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   useEffect(() => {
     if (isOpen && selectedHost?.available_verification_types) {
-      console.log(`[@component:NodeEditDialog] Loading verification actions from host data`);
-      setVerificationActions(selectedHost.available_verification_types);
+      console.log(`[@component:NodeEditDialog] Loading verifications from host data`);
+      setVerifications(selectedHost.available_verification_types);
       setLoadingVerifications(false);
       setVerificationError(null);
     } else if (isOpen && selectedHost && !selectedHost.available_verification_types) {
       console.log(`[@component:NodeEditDialog] No verification types available from host`);
-      setVerificationActions({});
+      setVerifications({});
       setLoadingVerifications(false);
       setVerificationError('No verification types available from host');
     }
@@ -111,14 +111,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     const verificationsValid =
       !nodeForm?.verifications ||
       nodeForm.verifications.every((verification) => {
-        // Skip verifications that don't have an id (not configured yet)
-        if (!verification.id) return true;
+        // Skip verifications that don't have a command (not configured yet)
+        if (!verification.command) return true;
 
-        if (verification.controller_type === 'image') {
+        if (verification.verification_type === 'image') {
           // Image verifications need a reference image
           const hasImagePath = verification.params?.image_path;
           return Boolean(hasImagePath);
-        } else if (verification.controller_type === 'text') {
+        } else if (verification.verification_type === 'text') {
           // Text verifications need text to search for
           const hasText = verification.params?.text;
           return Boolean(hasText);
@@ -142,16 +142,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
     // Filter out empty/invalid verifications before testing
     const validVerifications = nodeForm.verifications.filter((verification, index) => {
-      // Check if verification has an id (is configured)
-      if (!verification.id || verification.id.trim() === '') {
+      // Check if verification has a command (is configured)
+      if (!verification.command || verification.command.trim() === '') {
         console.log(
           `[@component:NodeEditDialog] Removing verification ${index}: No verification type selected`,
         );
         return false;
       }
 
-      // Check if verification has required input based on controller type
-      if (verification.controller_type === 'image') {
+      // Check if verification has required input based on verification type
+      if (verification.verification_type === 'image') {
         // Image verifications need a reference image
         const hasImagePath = verification.params?.image_path;
         if (!hasImagePath) {
@@ -160,7 +160,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           );
           return false;
         }
-      } else if (verification.controller_type === 'text') {
+      } else if (verification.verification_type === 'text') {
         // Text verifications need text to search for
         const hasText = verification.params?.text;
         if (!hasText) {
@@ -218,7 +218,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         const verification = validVerifications[i];
 
         console.log(
-          `[@component:NodeEditDialog] Executing verification ${i + 1}/${validVerifications.length}: ${verification.label}`,
+          `[@component:NodeEditDialog] Executing verification ${i + 1}/${validVerifications.length}: ${verification.command}`,
         );
 
         const verificationToExecute = {
@@ -383,7 +383,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         for (let i = 0; i < nodeForm.verifications.length; i++) {
           const verification = nodeForm.verifications[i];
 
-          if (!verification.id) {
+          if (!verification.command) {
             gotoResults.push(`❌ Verification ${i + 1}: No verification selected`);
             verificationSuccess = false;
             // Update verification with failed result
@@ -395,7 +395,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           }
 
           console.log(
-            `[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.label}`,
+            `[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.command}`,
           );
 
           const verificationToExecute = {
@@ -589,9 +589,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
           {/* Verification Section - now available for all node types including entry */}
           {isVerificationActive && (
-            <NodeVerificationsList
+            <VerificationsList
               verifications={nodeForm?.verifications || []}
-              availableActions={verificationActions}
+              availableVerifications={verifications}
               onVerificationsChange={(verifications) => setNodeForm({ ...nodeForm, verifications })}
               loading={loadingVerifications}
               error={verificationError}

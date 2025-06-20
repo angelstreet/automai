@@ -11,18 +11,38 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useMemo } from 'react';
 
-// Import extracted components
-
-// Import extracted hooks
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-import { EditorVerification } from '../../types/verification/VerificationTypes';
-import { VerificationsListProps } from '../../types/pages/Navigation_Types';
-import { VerificationImageComparisonDialog } from '../verification/VerificationImageComparisonDialog';
-import { VerificationItem } from '../verification/VerificationItem';
+import { Host } from '../../types/common/Host_Types';
+import {
+  Verification,
+  Verifications,
+  ModelReferences,
+} from '../../types/verification/VerificationTypes';
+
+import { VerificationImageComparisonDialog } from './VerificationImageComparisonDialog';
+import { VerificationItem } from './VerificationItem';
+
+export interface VerificationsListProps {
+  verifications: Verification[];
+  availableVerifications: Verifications;
+  onVerificationsChange: (verifications: Verification[]) => void;
+  loading?: boolean;
+  error?: string | null;
+  model?: string;
+  onTest?: () => void;
+  testResults?: Verification[];
+  reloadTrigger?: number;
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void;
+  selectedHost: Host | null;
+  modelReferences?: ModelReferences;
+  referencesLoading?: boolean;
+  showCollapsible?: boolean; // Optional: show collapsible header
+  title?: string; // Optional: custom title
+}
 
 export const VerificationsList: React.FC<VerificationsListProps> = ({
   verifications,
-  availableActions = {}, // Default to empty object
+  availableVerifications = {},
   onVerificationsChange,
   loading = false,
   error = null,
@@ -31,12 +51,14 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   testResults = [],
   reloadTrigger = 0,
   onReferenceSelected,
-  selectedHost, // Required prop
-  // Optional: passed references data to avoid double loading
+  selectedHost,
   modelReferences: passedModelReferences,
   referencesLoading: passedReferencesLoading,
+  showCollapsible = false,
+  title = 'Verifications',
 }) => {
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
+  const [collapsed, setCollapsed] = useState<boolean>(false);
   const [imageComparisonDialog, setImageComparisonDialog] = useState<{
     open: boolean;
     sourceUrl: string;
@@ -65,27 +87,22 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   // Memoize model references to prevent multiple calls during render
   const modelReferences = useMemo(() => {
     if (passedModelReferences !== undefined) {
-      // Use passed references directly
       return passedModelReferences;
     } else {
-      // Fallback to hook-based references
       return hookGetModelReferences(model);
     }
   }, [passedModelReferences, hookGetModelReferences, model]);
 
-  // Debug logging for testResults changes - keep this for troubleshooting
+  // Debug logging for testResults changes
   useEffect(() => {
     console.log('[@component:VerificationsList] testResults updated:', testResults);
   }, [testResults]);
 
   const addVerification = () => {
-    const newVerification: EditorVerification = {
-      id: '',
-      label: '',
+    const newVerification: Verification = {
       command: '',
-      controller_type: 'text',
       params: {},
-      inputValue: '',
+      verification_type: 'text',
     };
     onVerificationsChange([...verifications, newVerification]);
   };
@@ -95,7 +112,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     onVerificationsChange(newVerifications);
   };
 
-  const updateVerification = (index: number, updates: Partial<EditorVerification>) => {
+  const updateVerification = (index: number, updates: Partial<Verification>) => {
     const newVerifications = verifications.map((verification, i) =>
       i === index ? { ...verification, ...updates } : verification,
     );
@@ -103,7 +120,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   };
 
   const moveVerificationUp = (index: number) => {
-    if (index === 0) return; // Can't move first item up
+    if (index === 0) return;
     const newVerifications = [...verifications];
     [newVerifications[index - 1], newVerifications[index]] = [
       newVerifications[index],
@@ -113,7 +130,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   };
 
   const moveVerificationDown = (index: number) => {
-    if (index === verifications.length - 1) return; // Can't move last item down
+    if (index === verifications.length - 1) return;
     const newVerifications = [...verifications];
     [newVerifications[index], newVerifications[index + 1]] = [
       newVerifications[index + 1],
@@ -123,24 +140,24 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   };
 
   const handleVerificationSelect = (index: number, command: string) => {
-    // Find the selected verification from available actions
+    // Find the selected verification from available verifications
     let selectedVerification: any = undefined;
-    let controllerType: 'text' | 'image' | 'adb' = 'text';
+    let verificationType: 'text' | 'image' | 'adb' = 'text';
 
     // Search through all controller types to find the verification
-    for (const [category, verifications] of Object.entries(availableActions)) {
+    for (const [category, verifications] of Object.entries(availableVerifications)) {
       if (!Array.isArray(verifications)) continue;
 
       const verification = verifications.find((v) => v.command === command);
       if (verification) {
         selectedVerification = verification;
-        // Determine controller type from category
+        // Determine verification type from category name
         if (category.toLowerCase().includes('image')) {
-          controllerType = 'image';
+          verificationType = 'image';
         } else if (category.toLowerCase().includes('adb')) {
-          controllerType = 'adb';
+          verificationType = 'adb';
         } else {
-          controllerType = 'text';
+          verificationType = 'text';
         }
         break;
       }
@@ -148,19 +165,9 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
 
     if (selectedVerification) {
       updateVerification(index, {
-        id: selectedVerification.command, // Use command as id for compatibility
-        label: selectedVerification.command
-          .replace(/_/g, ' ')
-          .replace(/([A-Z])/g, ' $1')
-          .trim(),
         command: selectedVerification.command,
-        controller_type: controllerType,
+        verification_type: verificationType,
         params: { ...selectedVerification.params },
-        description: '',
-        requiresInput: Object.keys(selectedVerification.params).length > 0,
-        inputLabel: 'Input',
-        inputPlaceholder: 'Enter value...',
-        inputValue: '',
       });
     }
   };
@@ -172,7 +179,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
       model,
     });
 
-    const selectedRef = modelReferences[referenceName]; // Access by key instead of find()
+    const selectedRef = modelReferences[referenceName];
 
     if (selectedRef) {
       console.log('[@component:VerificationsList] Selected reference details:', {
@@ -194,9 +201,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
       };
 
       if (selectedRef.type === 'image') {
-        // Image reference parameters
+        // Image reference parameters - store directly in params
         updateVerification(index, {
-          inputValue: referenceName,
           params: {
             ...baseParams,
             reference_image: referenceName,
@@ -208,11 +214,11 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
           reference_url: selectedRef.url,
         });
       } else if (selectedRef.type === 'text') {
-        // Text reference parameters
+        // Text reference parameters - store directly in params
         updateVerification(index, {
-          inputValue: selectedRef.text || referenceName,
           params: {
             ...baseParams,
+            text: selectedRef.text,
             reference_text: selectedRef.text,
             reference_name: referenceName,
             font_size: selectedRef.font_size,
@@ -274,7 +280,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     setImageComparisonDialog({
       open: true,
       sourceUrl,
-      referenceUrl: '', // No reference for text verification
+      referenceUrl: '',
       resultType,
       userThreshold: undefined,
       matchingResult: undefined,
@@ -287,26 +293,23 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     if (verifications.length === 0) return false;
 
     return verifications.every((verification) => {
-      // Skip verifications that don't have an id (not configured yet)
-      if (!verification.id) return true;
+      // Skip verifications that don't have a command (not configured yet)
+      if (!verification.command) return true;
 
-      if (verification.controller_type === 'image') {
+      if (verification.verification_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath = verification.params?.reference_url || verification.inputValue;
+        const hasImagePath =
+          verification.params?.reference_url || verification.params?.reference_image;
         return Boolean(hasImagePath);
-      } else if (verification.controller_type === 'text') {
+      } else if (verification.verification_type === 'text') {
         // Text verifications need text to search for
-        const hasText = verification.inputValue && verification.inputValue.trim() !== '';
+        const hasText = verification.params?.text && verification.params.text.trim() !== '';
         return Boolean(hasText);
-      } else if (verification.controller_type === 'adb') {
+      } else if (verification.verification_type === 'adb') {
         // ADB verifications need search criteria
-        const hasSearchTerm = verification.inputValue && verification.inputValue.trim() !== '';
+        const hasSearchTerm =
+          verification.params?.search_term && verification.params.search_term.trim() !== '';
         return Boolean(hasSearchTerm);
-      }
-
-      // For other types, check if requiresInput is set and if so, validate accordingly
-      if (verification.requiresInput) {
-        return Boolean(verification.inputValue && verification.inputValue.trim() !== '');
       }
 
       return true;
@@ -330,8 +333,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     );
   }
 
-  return (
-    <Box>
+  const content = (
+    <>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
         <Button
           size="small"
@@ -350,7 +353,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
             key={index}
             verification={verification}
             index={index}
-            availableActions={availableActions}
+            availableVerifications={availableVerifications}
             modelReferences={modelReferences}
             referencesLoading={referencesLoading}
             testResult={testResults[index]}
@@ -488,6 +491,62 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
         imageFilter={imageComparisonDialog.imageFilter}
         onClose={() => setImageComparisonDialog((prev) => ({ ...prev, open: false }))}
       />
-    </Box>
+    </>
   );
+
+  // If collapsible is requested, wrap in collapsible container
+  if (showCollapsible) {
+    return (
+      <Box>
+        {/* Collapsible toggle button and title */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+          <Button
+            size="small"
+            onClick={() => setCollapsed(!collapsed)}
+            sx={{ p: 0.25, minWidth: 'auto' }}
+          >
+            {collapsed ? '▶' : '▼'}
+          </Button>
+          <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            {title}
+          </Typography>
+        </Box>
+
+        {/* Collapsible content */}
+        {!collapsed && (
+          <Box
+            sx={{
+              '& .MuiTypography-subtitle2': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiButton-root': {
+                fontSize: '0.7rem',
+              },
+              '& .MuiTextField-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                },
+              },
+              '& .MuiSelect-root': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiFormControl-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
+              },
+            }}
+          >
+            {content}
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  // Otherwise return content directly
+  return <Box>{content}</Box>;
 };

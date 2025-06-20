@@ -66,7 +66,7 @@ export const useDeviceControl = () => {
   useEffect(() => {
     return () => {
       // Clean up any active locks when component unmounts
-      activeLocks.forEach(async (lockUserId, hostName) => {
+      activeLocks.forEach(async (_lockUserId, hostName) => {
         try {
           console.log(`[@hook:useDeviceControl] Cleaning up lock for ${hostName} on unmount`);
           await releaseControl(hostName);

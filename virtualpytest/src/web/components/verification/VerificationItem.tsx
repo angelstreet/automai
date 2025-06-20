@@ -1,4 +1,8 @@
-import React from 'react';
+import {
+  Close as CloseIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+} from '@mui/icons-material';
 import {
   Box,
   FormControl,
@@ -13,33 +17,29 @@ import {
   RadioGroup,
   Radio,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  KeyboardArrowUp as KeyboardArrowUpIcon,
-  KeyboardArrowDown as KeyboardArrowDownIcon,
-} from '@mui/icons-material';
-import { NodeVerification } from '../../types/validation/NodeVerification';
+import React from 'react';
+
 import {
   Verification,
   Verifications,
   ModelReferences,
-  VerificationTestResult,
 } from '../../types/verification/VerificationTypes';
+
 import { VerificationControls } from './VerificationControls';
 import { VerificationTestResults } from './VerificationTestResults';
 
 interface VerificationItemProps {
-  verification: NodeVerification;
+  verification: Verification;
   index: number;
-  availableActions: Verifications;
+  availableVerifications: Verifications;
   modelReferences: ModelReferences;
   referencesLoading: boolean;
-  testResult?: VerificationTestResult;
-  onVerificationSelect: (index: number, actionId: string) => void;
+  testResult?: Verification;
+  onVerificationSelect: (index: number, command: string) => void;
   onReferenceSelect: (index: number, referenceName: string) => void;
   onImageFilterChange: (index: number, filter: 'none' | 'greyscale' | 'binary') => void;
   onTextFilterChange: (index: number, filter: 'none' | 'greyscale' | 'binary') => void;
-  onUpdateVerification: (index: number, updates: Partial<NodeVerification>) => void;
+  onUpdateVerification: (index: number, updates: Partial<Verification>) => void;
   onRemoveVerification: (index: number) => void;
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
@@ -59,7 +59,7 @@ interface VerificationItemProps {
 export const VerificationItem: React.FC<VerificationItemProps> = ({
   verification,
   index,
-  availableActions,
+  availableVerifications,
   modelReferences,
   referencesLoading,
   testResult,
@@ -84,7 +84,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={verification.id}
+            value={verification.command}
             onChange={(e) => onVerificationSelect(index, e.target.value)}
             displayEmpty
             size="small"
@@ -115,11 +115,11 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               }
               // Find the selected verification to display its command as label
               let selectedLabel = '';
-              Object.values(availableActions).forEach((actions) => {
-                if (Array.isArray(actions)) {
-                  const action = actions.find((a) => a.command === selected);
-                  if (action) {
-                    selectedLabel = action.command
+              Object.values(availableVerifications).forEach((verifications) => {
+                if (Array.isArray(verifications)) {
+                  const verification = verifications.find((v) => v.command === selected);
+                  if (verification) {
+                    selectedLabel = verification.command
                       .replace(/_/g, ' ')
                       .replace(/([A-Z])/g, ' $1')
                       .trim();
@@ -129,12 +129,12 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               return selectedLabel || selected;
             }}
           >
-            {Object.entries(availableActions).map(([category, actions]) => {
-              // Ensure actions is an array
-              if (!Array.isArray(actions)) {
+            {Object.entries(availableVerifications).map(([category, verifications]) => {
+              // Ensure verifications is an array
+              if (!Array.isArray(verifications)) {
                 console.warn(
-                  `[@component:VerificationItem] Invalid actions for category ${category}:`,
-                  actions,
+                  `[@component:VerificationItem] Invalid verifications for category ${category}:`,
+                  verifications,
                 );
                 return null;
               }
@@ -147,13 +147,13 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
-                ...actions.map((action) => (
+                ...verifications.map((verification) => (
                   <MenuItem
-                    key={action.command}
-                    value={action.command}
+                    key={verification.command}
+                    value={verification.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
-                    {action.command
+                    {verification.command
                       .replace(/_/g, ' ')
                       .replace(/([A-Z])/g, ' $1')
                       .trim()}
@@ -195,17 +195,18 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       />
 
       {/* Line 3: Reference Image Selector or Manual Input - exclude ADB verifications */}
-      {verification.id &&
-        (verification.controller_type === 'image' || verification.controller_type === 'text') && (
+      {verification.command &&
+        (verification.verification_type === 'image' ||
+          verification.verification_type === 'text') && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {/* First Row: Reference selection and test result status */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {verification.id &&
-              Object.entries(modelReferences).some(([filename, ref]) => {
+              {verification.command &&
+              Object.entries(modelReferences).some(([_filename, ref]) => {
                 // Check if there are references matching the verification type
-                if (verification.controller_type === 'image') {
+                if (verification.verification_type === 'image') {
                   return ref.type === 'image';
-                } else if (verification.controller_type === 'text') {
+                } else if (verification.verification_type === 'text') {
                   return ref.type === 'text';
                 }
                 return true;
@@ -233,11 +234,11 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                         <em>Select reference...</em>
                       </MenuItem>
                       {Object.entries(modelReferences)
-                        .filter(([filename, ref]) => {
+                        .filter(([_filename, ref]) => {
                           // Filter references based on verification type
-                          if (verification.controller_type === 'image') {
+                          if (verification.verification_type === 'image') {
                             return ref.type === 'image';
-                          } else if (verification.controller_type === 'text') {
+                          } else if (verification.verification_type === 'text') {
                             return ref.type === 'text';
                           }
                           return true; // Show all if type is not determined
@@ -269,29 +270,39 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                     </Select>
                   </FormControl>
                 </>
-              ) : verification.id ? (
+              ) : verification.command ? (
                 /* Manual input for text/image when no references available */
                 <TextField
                   size="small"
-                  label={
-                    verification.inputLabel ||
-                    (verification.controller_type === 'image' ? 'Image Path' : 'Text to Find')
-                  }
+                  label={verification.verification_type === 'image' ? 'Image Path' : 'Text to Find'}
                   placeholder={
-                    verification.inputPlaceholder ||
-                    (verification.controller_type === 'image'
+                    verification.verification_type === 'image'
                       ? 'Enter image path...'
-                      : 'Enter text or regex pattern...')
+                      : 'Enter text or regex pattern...'
                   }
-                  value={verification.inputValue || ''}
+                  value={
+                    verification.verification_type === 'image'
+                      ? verification.params?.reference_url || ''
+                      : verification.params?.text || ''
+                  }
                   autoComplete="off"
-                  onChange={(e) => onUpdateVerification(index, { inputValue: e.target.value })}
+                  onChange={(e) => {
+                    if (verification.verification_type === 'image') {
+                      onUpdateVerification(index, {
+                        params: { ...verification.params, reference_url: e.target.value },
+                      });
+                    } else {
+                      onUpdateVerification(index, {
+                        params: { ...verification.params, text: e.target.value },
+                      });
+                    }
+                  }}
                   sx={{ width: 250 }}
                 />
               ) : null}
 
               {/* Image Filter Selection - only for image verifications */}
-              {verification.controller_type === 'image' && verification.id && (
+              {verification.verification_type === 'image' && verification.command && (
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
                   <RadioGroup
                     value={verification.params?.image_filter || 'none'}
@@ -323,7 +334,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               )}
 
               {/* Text Filter Selection - only for text verifications */}
-              {verification.controller_type === 'text' && verification.id && (
+              {verification.verification_type === 'text' && verification.command && (
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 0.5 }}>
                   <RadioGroup
                     value={verification.params?.text_filter || 'none'}
@@ -355,7 +366,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               )}
 
               {/* Show loading indicator for references */}
-              {verification.controller_type === 'image' && referencesLoading && (
+              {verification.verification_type === 'image' && referencesLoading && (
                 <CircularProgress size={16} />
               )}
             </Box>

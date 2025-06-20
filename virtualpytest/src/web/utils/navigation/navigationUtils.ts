@@ -209,7 +209,6 @@ function sanitizeEdge(edge: any): any {
  */
 export async function executeEdgeActions(
   actions: EdgeAction[],
-  controllerTypes: string[],
   selectedHostDevice: any,
   updateActionResults?: (index: number, results: boolean[]) => void,
   finalWaitTime: number = 2000,
@@ -269,7 +268,7 @@ export async function executeEdgeActions(
             try {
               actionToExecute.params.x = parseInt(coords[0].trim());
               actionToExecute.params.y = parseInt(coords[1].trim());
-            } catch (error) {
+            } catch {
               console.warn(
                 `[@utils:navigationUtils:executeEdgeActions] Invalid coordinates: ${inputValue}`,
               );
@@ -340,7 +339,7 @@ export async function executeEdgeActions(
                   try {
                     retryActionToExecute.params.x = parseInt(coords[0].trim());
                     retryActionToExecute.params.y = parseInt(coords[1].trim());
-                  } catch (error) {
+                  } catch {
                     console.warn(
                       `[@utils:navigationUtils:executeEdgeActions] Invalid retry coordinates: ${inputValue}`,
                     );

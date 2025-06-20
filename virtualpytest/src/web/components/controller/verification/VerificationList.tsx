@@ -6,7 +6,7 @@ import { Box, Collapse, IconButton, Typography } from '@mui/material';
 import React from 'react';
 
 import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
-import { VerificationsList } from '../../navigation/VerificationsList';
+import { VerificationsList } from '../../verification/VerificationsList';
 
 interface VerificationListProps {
   verification: UseVerificationEditorType;
@@ -27,7 +27,6 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
     handleReferenceSelected,
     selectedHost,
     // References functionality
-    availableReferences,
     referencesLoading,
     getModelReferences,
   } = verification;
@@ -91,7 +90,7 @@ export const VerificationList: React.FC<VerificationListProps> = ({ verification
         >
           <VerificationsList
             verifications={verifications}
-            availableActions={availableVerificationTypes}
+            availableVerifications={availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
             loading={loading}
             error={error}

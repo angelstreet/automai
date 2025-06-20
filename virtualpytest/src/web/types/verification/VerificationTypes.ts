@@ -5,10 +5,58 @@
  * A verification is a verification - same everywhere it's used.
  */
 
-// Core verification - same everywhere
+// Unified verification - includes data and results in one type
 export interface Verification {
+  // Core verification data
   command: string; // Required: command to execute
   params: Record<string, any>; // Required: parameters (can be empty {})
+  verification_type: 'text' | 'image' | 'adb'; // Required: type of verification
+
+  // Result state (optional, populated after execution)
+  success?: boolean;
+  message?: string;
+  error?: string;
+  threshold?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  sourceImageUrl?: string;
+  referenceImageUrl?: string;
+  extractedText?: string;
+  searchedText?: string;
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+  // Language detection for text verifications
+  detectedLanguage?: string;
+  languageConfidence?: number;
+  // Confidence tracking for node verifications
+  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
+
+  // ADB-specific result data
+  search_term?: string;
+  wait_time?: number;
+  total_matches?: number;
+  matches?: Array<{
+    element_id: number;
+    matched_attribute: string;
+    matched_value: string;
+    match_reason: string;
+    search_term: string;
+    case_match: string;
+    all_matches: Array<{
+      attribute: string;
+      value: string;
+      reason: string;
+    }>;
+    full_element: {
+      id: number;
+      text: string;
+      resourceId: string;
+      contentDesc: string;
+      className: string;
+      bounds: string;
+      clickable: boolean;
+      enabled: boolean;
+      tag?: string;
+    };
+  }>;
 }
 
 // Verifications grouped by controller type
@@ -58,52 +106,4 @@ export interface ReferenceImage extends Reference {
   name: string; // Computed from filename
   model: string; // Computed from context
   filename: string; // Added for convenience
-}
-
-// =====================================================
-// VERIFICATION TEST RESULT TYPES
-// =====================================================
-
-export interface VerificationTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  threshold?: number;
-  resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
-  referenceImageUrl?: string;
-  extractedText?: string;
-  searchedText?: string;
-  imageFilter?: 'none' | 'greyscale' | 'binary';
-  // Language detection for text verifications
-  detectedLanguage?: string;
-  languageConfidence?: number;
-  // ADB-specific result data
-  search_term?: string;
-  wait_time?: number;
-  total_matches?: number;
-  matches?: Array<{
-    element_id: number;
-    matched_attribute: string;
-    matched_value: string;
-    match_reason: string;
-    search_term: string;
-    case_match: string;
-    all_matches: Array<{
-      attribute: string;
-      value: string;
-      reason: string;
-    }>;
-    full_element: {
-      id: number;
-      text: string;
-      resourceId: string;
-      contentDesc: string;
-      className: string;
-      bounds: string;
-      clickable: boolean;
-      enabled: boolean;
-      tag?: string;
-    };
-  }>;
 }

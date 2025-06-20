@@ -1,15 +1,14 @@
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 
-import { NodeVerification } from '../../types/validation/NodeVerification';
-import { VerificationTestResult } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/VerificationTypes';
 
 import { VerificationImageComparisonThumbnails } from './VerificationImageComparisonThumbnails';
 import { VerificationTextComparisonDisplay } from './VerificationTextComparisonDisplay';
 
 interface VerificationTestResultsProps {
-  verification: NodeVerification;
-  testResult: VerificationTestResult;
+  verification: Verification;
+  testResult: Verification;
   onImageClick: (
     sourceUrl: string,
     referenceUrl: string,
@@ -87,11 +86,11 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
       </Box>
 
       {/* Image comparison thumbnails for image verifications */}
-      {verification.controller_type === 'image' &&
+      {verification.verification_type === 'image' &&
         (testResult.sourceImageUrl || testResult.referenceImageUrl) && (
           <VerificationImageComparisonThumbnails
-            sourceUrl={testResult.sourceImageUrl}
-            referenceUrl={testResult.referenceImageUrl}
+            sourceUrl={testResult.sourceImageUrl || ''}
+            referenceUrl={testResult.referenceImageUrl || ''}
             resultType={testResult.resultType || (testResult.success ? 'PASS' : 'FAIL')}
             userThreshold={verification.params?.threshold}
             matchingResult={testResult.threshold}
@@ -101,13 +100,13 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
         )}
 
       {/* Text comparison for text verifications */}
-      {verification.controller_type === 'text' &&
+      {verification.verification_type === 'text' &&
         (testResult.searchedText || testResult.sourceImageUrl) && (
           <VerificationTextComparisonDisplay
             searchedText={
               testResult.searchedText ||
               verification.params?.reference_text ||
-              verification.inputValue ||
+              verification.params?.text ||
               ''
             }
             extractedText={testResult.extractedText || ''}
@@ -120,7 +119,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
         )}
 
       {/* ADB element details for ADB verifications */}
-      {(verification.controller_type as string) === 'adb' && testResult && (
+      {verification.verification_type === 'adb' && testResult && (
         <Box
           sx={{
             mt: 1,

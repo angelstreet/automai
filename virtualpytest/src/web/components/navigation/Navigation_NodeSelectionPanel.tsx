@@ -32,9 +32,7 @@ interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
   nodes: UINavigationNode[];
   onClose: () => void;
-  onEdit: () => void;
   onDelete: () => void;
-  onAddChildren: () => void;
   setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
   setIsNodeDialogOpen: (open: boolean) => void;
   onReset?: (id: string) => void;
@@ -42,7 +40,6 @@ interface NodeSelectionPanelProps {
   // Device control props
   isControlActive?: boolean;
   selectedHost?: Host; // Full host object for API calls
-  onSaveScreenshot?: () => void;
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
@@ -60,16 +57,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     selectedNode,
     nodes,
     onClose,
-    onEdit: _onEdit,
     onDelete,
-    onAddChildren: _onAddChildren,
     setNodeForm,
     setIsNodeDialogOpen,
     onReset,
     onUpdateNode,
     isControlActive = false,
     selectedHost,
-    onSaveScreenshot: _onSaveScreenshot,
     treeId = '',
     currentNodeId,
     onVerification,
@@ -106,22 +100,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     useEffect(() => {
       setVerificationResult(null);
       setLocalVerificationUpdates({});
-
-      // Debug: Log verification data when node changes
-      console.log(`[@component:NodeSelectionPanel] Selected node changed: ${selectedNode.id}`);
-      if (selectedNode.data.verifications) {
-        console.log(
-          `[@component:NodeSelectionPanel] Node has ${selectedNode.data.verifications.length} verifications`,
-        );
-        selectedNode.data.verifications.forEach((v, index) => {
-          console.log(
-            `[@component:NodeSelectionPanel] Verification ${index}: ${v.label}, last_run_result:`,
-            v.last_run_result,
-          );
-        });
-      } else {
-        console.log(`[@component:NodeSelectionPanel] Node has no verifications`);
-      }
     }, [selectedNode.id, selectedNode.data.verifications]);
 
     const handleEdit = () => {
@@ -156,10 +134,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       }
 
       try {
-        console.log(
-          `[@component:NodeSelectionPanel] Taking screenshot for node: ${selectedNode.id}`,
-        );
-
         const response = await fetch('/server/navigation/save-screenshot', {
           method: 'POST',
           headers: {
@@ -174,10 +148,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         const result = await response.json();
 
         if (result.success && result.screenshot_url) {
-          console.log(
-            `[@component:NodeSelectionPanel] Screenshot URL received: ${result.screenshot_url}`,
-          );
-
           // Update the node with the complete URL from backend
           if (onUpdateNode) {
             const timestamp = Date.now();
@@ -187,12 +157,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               screenshot_timestamp: timestamp, // Add timestamp to force image refresh
             };
             onUpdateNode(selectedNode.id, updatedNodeData);
-            console.log(
-              `[@component:NodeSelectionPanel] Updated node ${selectedNode.id} with screenshot URL: ${result.screenshot_url}`,
-            );
-            console.log(
-              `[@component:NodeSelectionPanel] Added cache-busting timestamp: ${timestamp}`,
-            );
 
             // Simple but effective cache-busting: dispatch event with unique cache-buster
             const cacheBuster = `${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
@@ -244,19 +208,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         return;
       }
 
-      console.log(
-        `[@component:NodeSelectionPanel] Updating verification ${verificationIndex} with result: ${success}`,
-      );
-
       const updatedVerifications = [...selectedNode.data.verifications];
       const verification = updatedVerifications[verificationIndex];
 
       // Update the last_run_result array
       const currentResults = verification.last_run_result || [];
       const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
-
-      console.log(`[@component:NodeSelectionPanel] Previous results:`, currentResults);
-      console.log(`[@component:NodeSelectionPanel] New results:`, newResults);
 
       updatedVerifications[verificationIndex] = {
         ...verification,
@@ -269,14 +226,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         verifications: updatedVerifications,
       };
 
-      console.log(
-        `[@component:NodeSelectionPanel] Calling onUpdateNode with updated data for node: ${selectedNode.id}`,
-      );
-      console.log(
-        `[@component:NodeSelectionPanel] Updated verification data:`,
-        updatedVerifications[verificationIndex],
-      );
-
       // Call the parent callback to update the node
       onUpdateNode(selectedNode.id, updatedNodeData);
     };
@@ -284,7 +233,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Execute all node verifications
     const handleRunVerifications = async () => {
       if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
-        console.log('[@component:NodeSelectionPanel] No verifications to run');
         return;
       }
 
@@ -297,10 +245,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
         for (let i = 0; i < verifications.length; i++) {
           const verification = verifications[i];
-
-          console.log(
-            `[@component:NodeSelectionPanel] Executing verification ${i + 1}/${verifications.length}: ${verification.label}`,
-          );
 
           let verificationSuccess = false;
 
@@ -355,13 +299,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           results.push(
             `   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`,
           );
-          console.log(
-            `[@component:NodeSelectionPanel] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${newConfidence.toFixed(3)}`,
-          );
         }
 
         setVerificationResult(results.join('\n'));
-        console.log(`[@component:NodeSelectionPanel] All verifications completed`);
       } catch (err: any) {
         console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
         setVerificationResult(`❌ ${err.message}`);
@@ -715,22 +655,20 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2">
-                              {verification.label || verification.id}
-                            </Typography>
+                            <Typography variant="body2">{verification.command}</Typography>
                             <Chip
-                              label={verification.controller_type || 'unknown'}
+                              label={verification.verification_type || 'unknown'}
                               size="small"
                               variant="outlined"
                               color={
-                                verification.controller_type === 'image' ? 'primary' : 'secondary'
+                                verification.verification_type === 'image' ? 'primary' : 'secondary'
                               }
                             />
                           </Box>
                         }
                         secondary={
                           <Typography variant="caption" color="text.secondary">
-                            {verification.command} - {verification.description || 'No description'}
+                            {verification.command} - {verification.verification_type} verification
                           </Typography>
                         }
                       />

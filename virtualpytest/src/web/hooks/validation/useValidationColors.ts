@@ -36,14 +36,13 @@ interface HandleColorResult {
   className?: string;
 }
 
-export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) => {
+export const useValidationColors = (edges?: UINavigationEdge[]) => {
   const {
     nodeValidationStatus,
     edgeValidationStatus,
     currentTestingNode,
     currentTestingEdge,
     isValidating,
-    progress,
     results,
   } = useValidationStore();
 
@@ -66,7 +65,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
       // Check if we have validation results for this node
       const status = nodeValidationStatus.get(nodeId);
       if (status) {
-        const context = isValidating ? 'during active validation' : 'from persisted results';
         if (!loggedNodesRef.current.has(`${nodeId}-${status.status}`)) {
           loggedNodesRef.current.add(`${nodeId}-${status.status}`);
         }
@@ -93,7 +91,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
       // Check if we have validation results for this edge ID directly
       let status = edgeValidationStatus.get(edgeId);
       if (status) {
-        const context = isValidating ? 'during active validation' : 'from persisted results';
         return status.status;
       }
 
@@ -105,7 +102,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
           const sourceTargetId = `${edgeData.source}-${edgeData.target}`;
           status = edgeValidationStatus.get(sourceTargetId);
           if (status) {
-            const context = isValidating ? 'during active validation' : 'from persisted results';
             return status.status;
           }
         }
@@ -259,7 +255,6 @@ export const useValidationColors = (treeId: string, edges?: UINavigationEdge[]) 
           }
 
           // Check if this edge is an entry edge
-          const sourceNode = edges?.find((e) => e.source === edgeData.source);
           const isEntryEdge =
             edgeData.sourceHandle === 'entry-source' || edgeData.data?.from === 'entry';
 

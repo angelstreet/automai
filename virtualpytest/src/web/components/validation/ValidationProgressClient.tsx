@@ -19,7 +19,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
 }) => {
   const validation = useValidationUI(treeId);
   const { isValidating, progress, showProgress } = validation;
-  const { resetForNewValidation } = useValidationColors(treeId);
+  const { resetForNewValidation } = useValidationColors();
   const {
     setCurrentTestingNode,
     setCurrentTestingEdge,

@@ -29,7 +29,9 @@ export const VerificationTextComparisonDisplay: React.FC<
 
   // Use centralized image URL builder
   const buildImageUrl = (url: string): string => {
-    return buildHostImageUrl(selectedHost, url);
+    if (!selectedHost) return url;
+    // Add host information to URL if needed
+    return url;
   };
 
   const handleSourceImageClick = () => {

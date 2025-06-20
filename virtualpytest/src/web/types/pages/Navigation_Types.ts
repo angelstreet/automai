@@ -1,6 +1,6 @@
 import { Node, Edge } from 'reactflow';
 
-import { NodeVerification } from '../validation/NodeVerification';
+import { Verification } from '../verification/VerificationTypes';
 
 // =====================================================
 // CORE NAVIGATION TYPES
@@ -27,7 +27,7 @@ export interface UINavigationNodeData {
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
 
   // NEW: Verification support
-  verifications?: NodeVerification[]; // Array of verifications for this node
+  verifications?: Verification[]; // Array of verifications for this node
 }
 
 // Define the navigation node type using ReactFlow's Node with our data type
@@ -101,7 +101,7 @@ export interface NodeForm {
   menu_type?: 'main' | 'submenu' | 'leaf';
 
   // Add verifications field to preserve during editing
-  verifications?: NodeVerification[];
+  verifications?: Verification[];
 }
 
 // Updated EdgeForm interface for multiple actions
@@ -166,21 +166,6 @@ export interface ControllerAction {
   inputPlaceholder?: string;
 }
 
-export interface VerificationAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-export interface VerificationActions {
-  [controllerType: string]: VerificationAction[];
-}
-
 export interface ControllerActions {
   [controllerType: string]: ControllerAction[];
 }
@@ -189,7 +174,7 @@ export interface ControllerActions {
 // VERIFICATION RESULT TYPES
 // =====================================================
 
-export type { VerificationTestResult } from '../verification/VerificationTypes';
+// VerificationTestResult is now merged into Verification
 
 // =====================================================
 // NAVIGATION UI COMPONENT TYPES
@@ -492,37 +477,33 @@ export interface EdgeActionItemProps {
 }
 
 export interface VerificationsListProps {
-  verifications: import('../verification/VerificationTypes').EditorVerification[];
-  availableActions: import('../verification/VerificationTypes').Verifications;
-  onVerificationsChange: (
-    verifications: import('../verification/VerificationTypes').EditorVerification[],
-  ) => void;
+  verifications: Verification[];
+  availableVerifications: import('../verification/VerificationTypes').Verifications;
+  onVerificationsChange: (verifications: Verification[]) => void;
   loading?: boolean;
   error?: string | null;
   model?: string;
   onTest?: () => void;
-  testResults?: import('../verification/VerificationTypes').VerificationTestResult[];
-  reloadTrigger?: number; // Trigger to reload references
-  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
-  selectedHost: import('../common/Host_Types').Host | null; // Make selectedHost required
-  // Optional: Pass references data directly from parent
+  testResults?: Verification[];
+  reloadTrigger?: number;
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void;
+  selectedHost: import('../common/Host_Types').Host | null;
   modelReferences?: import('../verification/VerificationTypes').ModelReferences;
   referencesLoading?: boolean;
 }
 
 export interface NodeVerificationsListProps {
-  verifications: NodeVerification[];
-  availableActions: import('../verification/VerificationTypes').Verifications;
-  onVerificationsChange: (verifications: NodeVerification[]) => void;
+  verifications: Verification[];
+  availableVerifications: import('../verification/VerificationTypes').Verifications;
+  onVerificationsChange: (verifications: Verification[]) => void;
   loading?: boolean;
   error?: string | null;
   model?: string;
   onTest?: () => void;
-  testResults?: import('../verification/VerificationTypes').VerificationTestResult[];
-  reloadTrigger?: number; // Trigger to reload references
-  onReferenceSelected?: (referenceName: string, referenceData: any) => void; // NEW: Callback for reference selection
-  selectedHost: import('../common/Host_Types').Host | null; // Make selectedHost required
-  // Optional: Pass references data directly from parent
+  testResults?: Verification[];
+  reloadTrigger?: number;
+  onReferenceSelected?: (referenceName: string, referenceData: any) => void;
+  selectedHost: import('../common/Host_Types').Host | null;
   modelReferences?: import('../verification/VerificationTypes').ModelReferences;
   referencesLoading?: boolean;
 }

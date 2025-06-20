@@ -41,7 +41,7 @@ interface ValidationResultsClientProps {
 
 const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeId }) => {
   const validation = useValidationUI(treeId);
-  const { showResults, results, lastResult, closeResults } = validation;
+  const { showResults, results, closeResults } = validation;
   const {
     setNodeValidationStatus,
     setEdgeValidationStatus,
@@ -50,7 +50,7 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
   } = useValidationStore();
 
   // Import validation colors functions
-  const { resetValidationColors } = useValidationColors(treeId);
+  useValidationColors();
 
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 

@@ -28,9 +28,7 @@ import { VideoCapture } from './VideoCapture';
 
 export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
   selectedHost,
-  autoConnect = false,
   onDisconnectComplete,
-  sx = {},
 }) => {
   const {
     state,
@@ -61,9 +59,7 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
     isSaving,
     savedFrameCount,
     selectedArea,
-    captureImageRef,
-    captureImageDimensions,
-    captureSourcePath,
+
     resolutionInfo,
   } = state;
 
@@ -77,7 +73,7 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
     handleBackToStream,
     handleImageLoad,
     handleAreaSelected,
-    handleClearSelection,
+
     handleTap,
   } = actions;
 

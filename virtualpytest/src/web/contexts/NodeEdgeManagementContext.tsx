@@ -66,8 +66,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
     edges,
     selectedNode,
     selectedEdge,
-    nodeForm,
-    edgeForm,
+
     isNewNode,
     setNodes,
     setEdges,

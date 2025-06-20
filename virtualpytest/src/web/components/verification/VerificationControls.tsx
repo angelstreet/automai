@@ -1,20 +1,12 @@
 import React from 'react';
 import { Box, TextField } from '@mui/material';
 
-import { NodeVerification } from '../../types/validation/NodeVerification';
-
-// Utility function to extract actual values from parameter definitions
-const getParamValue = (param: any, defaultValue: any) => {
-  if (typeof param === 'object' && param !== null && 'default' in param) {
-    return param.default;
-  }
-  return param !== undefined ? param : defaultValue;
-};
+import { Verification } from '../../types/verification/VerificationTypes';
 
 interface VerificationControlsProps {
-  verification: NodeVerification;
+  verification: Verification;
   index: number;
-  onUpdateVerification: (index: number, updates: Partial<NodeVerification>) => void;
+  onUpdateVerification: (index: number, updates: Partial<Verification>) => void;
 }
 
 export const VerificationControls: React.FC<VerificationControlsProps> = ({
@@ -24,7 +16,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
 }) => {
   return (
     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0, px: 0, mx: 0 }}>
-      {verification.id && (
+      {verification.command && (
         <TextField
           size="small"
           type="number"
@@ -51,14 +43,18 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
         />
       )}
 
-      {verification.id && verification.controller_type === 'adb' && verification.requiresInput && (
+      {verification.command && verification.verification_type === 'adb' && (
         <TextField
           size="small"
-          label={verification.inputLabel || 'Element Criteria'}
-          placeholder={verification.inputPlaceholder || 'text=Button'}
-          value={verification.inputValue || ''}
+          label="Element Criteria"
+          placeholder="text=Button"
+          value={verification.params?.search_term || ''}
           autoComplete="off"
-          onChange={(e) => onUpdateVerification(index, { inputValue: e.target.value })}
+          onChange={(e) =>
+            onUpdateVerification(index, {
+              params: { ...verification.params, search_term: e.target.value },
+            })
+          }
           sx={{
             flex: 1,
             '& .MuiInputBase-input': {
@@ -69,8 +65,9 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
         />
       )}
 
-      {verification.id &&
-        (verification.controller_type === 'image' || verification.controller_type === 'text') && (
+      {verification.command &&
+        (verification.verification_type === 'image' ||
+          verification.verification_type === 'text') && (
           <TextField
             size="small"
             type="number"
@@ -96,7 +93,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
           />
         )}
 
-      {verification.id && verification.controller_type === 'text' && (
+      {verification.command && verification.verification_type === 'text' && (
         <TextField
           size="small"
           type="number"
@@ -122,8 +119,9 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
         />
       )}
 
-      {verification.id &&
-        (verification.controller_type === 'image' || verification.controller_type === 'text') && (
+      {verification.command &&
+        (verification.verification_type === 'image' ||
+          verification.verification_type === 'text') && (
           <>
             <TextField
               size="small"

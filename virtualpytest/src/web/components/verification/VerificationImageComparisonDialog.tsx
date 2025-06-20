@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,22 +20,19 @@ interface VerificationImageComparisonDialogProps {
   onClose: () => void;
 }
 
-export const VerificationImageComparisonDialog: React.FC<VerificationImageComparisonDialogProps> = ({
-  open,
-  sourceUrl,
-  referenceUrl,
-  userThreshold,
-  matchingResult,
-  resultType,
-  imageFilter,
-  onClose
-}) => {
+export const VerificationImageComparisonDialog: React.FC<
+  VerificationImageComparisonDialogProps
+> = ({ open, sourceUrl, referenceUrl, resultType, imageFilter, onClose }) => {
   const getResultColor = () => {
     switch (resultType) {
-      case 'PASS': return '#4caf50';
-      case 'FAIL': return '#f44336';
-      case 'ERROR': return '#ff9800';
-      default: return '#757575';
+      case 'PASS':
+        return '#4caf50';
+      case 'FAIL':
+        return '#f44336';
+      case 'ERROR':
+        return '#ff9800';
+      default:
+        return '#757575';
     }
   };
 
@@ -66,50 +63,50 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
 
   // Debug logging for filters
   if (imageFilter && imageFilter !== 'none') {
-    console.log(`[@component:VerificationImageComparisonDialog] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`);
+    console.log(
+      `[@component:VerificationImageComparisonDialog] Applying ${imageFilter} filter dynamically with CSS: ${cssFilter}`,
+    );
   }
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="lg" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
       fullWidth
       PaperProps={{
         sx: {
           minHeight: '80vh',
-          maxHeight: '90vh'
-        }
+          maxHeight: '90vh',
+        },
       }}
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Image Verification Comparison
-          </Typography>
+          <Typography variant="h6">Image Verification Comparison</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {resultType && (
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  color: getResultColor(), 
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  color: getResultColor(),
                   fontWeight: 'bold',
                   padding: '4px 8px',
                   border: `2px solid ${getResultColor()}`,
-                  borderRadius: 1
+                  borderRadius: 1,
                 }}
               >
                 {resultType}
               </Typography>
             )}
             {imageFilter && imageFilter !== 'none' && (
-              <Typography 
-                variant="caption" 
-                sx={{ 
+              <Typography
+                variant="caption"
+                sx={{
                   color: '#666',
                   padding: '2px 6px',
                   backgroundColor: '#f5f5f5',
-                  borderRadius: 1
+                  borderRadius: 1,
                 }}
               >
                 Filter: {imageFilter} (CSS)
@@ -118,7 +115,7 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
           </Box>
         </Box>
       </DialogTitle>
-      
+
       <DialogContent sx={{ padding: 1 }}>
         <Box sx={{ display: 'flex', gap: 0.2, height: '100%', minHeight: '400px' }}>
           {/* Source Image */}
@@ -126,8 +123,8 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
               Source Image
             </Typography>
-            <Box 
-              sx={{ 
+            <Box
+              sx={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -137,7 +134,7 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 backgroundColor: 'transparent',
                 border: 'none',
                 padding: 0,
-                margin: 0
+                margin: 0,
               }}
             >
               <img
@@ -153,10 +150,13 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   border: 'none',
                   padding: 0,
                   margin: 0,
-                  filter: cssFilter // Apply dynamic CSS filter
+                  filter: cssFilter, // Apply dynamic CSS filter
                 }}
-                onError={(e) => {
-                  console.error('[@component:VerificationImageComparisonDialog] Failed to load source image:', sourceUrl);
+                onError={() => {
+                  console.error(
+                    '[@component:VerificationImageComparisonDialog] Failed to load source image:',
+                    sourceUrl,
+                  );
                 }}
               />
             </Box>
@@ -167,8 +167,8 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
               Reference Image
             </Typography>
-            <Box 
-              sx={{ 
+            <Box
+              sx={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -178,7 +178,7 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                 backgroundColor: 'transparent',
                 border: 'none',
                 padding: 0,
-                margin: 0
+                margin: 0,
               }}
             >
               <img
@@ -194,17 +194,20 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
                   border: 'none',
                   padding: 0,
                   margin: 0,
-                  filter: cssFilter // Apply dynamic CSS filter
+                  filter: cssFilter, // Apply dynamic CSS filter
                 }}
-                onError={(e) => {
-                  console.error('[@component:VerificationImageComparisonDialog] Failed to load reference image:', referenceUrl);
+                onError={() => {
+                  console.error(
+                    '[@component:VerificationImageComparisonDialog] Failed to load reference image:',
+                    referenceUrl,
+                  );
                 }}
               />
             </Box>
           </Box>
         </Box>
       </DialogContent>
-      
+
       <DialogActions>
         <Button onClick={onClose} variant="contained">
           Close
@@ -212,4 +215,4 @@ export const VerificationImageComparisonDialog: React.FC<VerificationImageCompar
       </DialogActions>
     </Dialog>
   );
-}; 
+};
