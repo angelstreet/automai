@@ -40,21 +40,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     );
 
     // Extract controller types from device model
-    const getControllerTypes = (): string[] => {
-      const deviceModel = selectedHost?.device_model;
-      if (!deviceModel) return [];
-
-      // Map device models to controller types
-      const modelToControllerMap: { [key: string]: string[] } = {
-        android_mobile: ['android_mobile'],
-        android_tv: ['android_tv'],
-        stb: ['stb'],
-      };
-
-      return modelToControllerMap[deviceModel] || [];
-    };
-
-    const controllerTypes = getControllerTypes();
 
     // Get actions in consistent format (handle both new and legacy formats)
     const getActions = (): EdgeAction[] => {
@@ -224,7 +209,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
         const result = await executeEdgeActions(
           actions,
-          controllerTypes,
           selectedHost,
           updateActionResults, // Pass the callback to update edge data
           finalWaitTime,

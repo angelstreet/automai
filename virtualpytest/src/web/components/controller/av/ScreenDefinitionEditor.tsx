@@ -37,7 +37,7 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
     avConfig,
     compactLayoutConfig,
     verificationEditorLayout,
-    deviceResolution,
+
     streamViewerSx,
   } = useScreenEditor(selectedHost, onDisconnectComplete);
 
@@ -244,9 +244,6 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
                 isCapturing={isCapturing}
                 model={deviceModel}
                 layoutConfig={!isExpanded ? compactLayoutConfig : undefined}
-                enableClick={true}
-                deviceResolution={deviceResolution}
-                deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
                 onTap={handleTap}
                 selectedHost={selectedHost}
                 sx={streamViewerSx}
@@ -334,8 +331,6 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
             isCapturing={isCapturing}
             model={deviceModel}
             layoutConfig={compactLayoutConfig}
-            enableClick={true}
-            deviceResolution={deviceResolution}
             deviceId={avConfig?.host_ip ? `${avConfig.host_ip}:5555` : undefined}
             onTap={handleTap}
             selectedHost={selectedHost}

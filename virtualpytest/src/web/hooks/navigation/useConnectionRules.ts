@@ -103,6 +103,15 @@ const establishConnectionRules = (
             depth: 1,
           },
         };
+      } else {
+        // Neither or both are menus - default behavior for vertical
+        console.log(
+          '[@hook:establishConnectionRules] VERTICAL: Both orphans, no menu priority - default vertical connection',
+        );
+        return {
+          isAllowed: true,
+          edgeType: 'vertical' as const,
+        } as ConnectionResult;
       }
     }
 

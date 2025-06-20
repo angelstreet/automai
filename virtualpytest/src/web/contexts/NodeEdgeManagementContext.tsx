@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
+
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -229,20 +230,17 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
   // Add new node
   const addNewNode = useCallback(
-    (nodeType: string, position: { x: number; y: number }) => {
+    (nodeType: string, _position: { x: number; y: number }) => {
       console.log(`[@context:NodeEdgeManagementProvider] Adding new node of type: ${nodeType}`);
 
       // Create an initial form for the new node
-      const initialForm = {
+      const initialForm: NodeForm = {
         id: `node-${Date.now()}`,
-        data: {
-          label: `New ${nodeType}`,
-          type: nodeType,
-          depth: 0,
-          parent: [],
-        },
-        position: position,
-        type: 'uiNavigation',
+        label: `New ${nodeType}`,
+        type: nodeType as 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry',
+        description: '',
+        depth: 0,
+        parent: [],
       };
 
       // Set form and open dialog
@@ -297,8 +295,17 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       const originalNode = nodes.find((node) => node.id === nodeId);
 
       if (originalNode) {
-        // Update the form with original data
-        setNodeForm({ ...originalNode });
+        // Convert UINavigationNode to NodeForm
+        const nodeForm: NodeForm = {
+          id: originalNode.id,
+          label: originalNode.data.label,
+          type: originalNode.data.type,
+          description: originalNode.data.description || '',
+          depth: originalNode.data.depth,
+          parent: originalNode.data.parent,
+          verifications: originalNode.data.verifications,
+        };
+        setNodeForm(nodeForm);
         console.log('[@context:NodeEdgeManagementProvider] Node form reset to original state');
       }
     },

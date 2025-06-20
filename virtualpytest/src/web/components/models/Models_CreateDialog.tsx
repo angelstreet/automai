@@ -19,12 +19,12 @@ import {
 import React, { useState } from 'react';
 
 // Import the simplified interface from Models.tsx
-import { ModelCreatePayload } from '../../pages/Models';
+import { ModelCreateData } from '../../types/common/Common_BaseTypes';
 
 interface CreateModelDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (model: ModelCreatePayload) => void;
+  onSubmit: (model: ModelCreateData) => void;
   error?: string | null;
 }
 
@@ -56,11 +56,17 @@ const MenuProps = {
 };
 
 const CreateModelDialog: React.FC<CreateModelDialogProps> = ({ open, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<ModelCreatePayload>({
+  const [formData, setFormData] = useState<ModelCreateData>({
     name: '',
     types: [],
     version: '',
     description: '',
+    controllers: {
+      remote: '',
+      av: '',
+      network: '',
+      power: '',
+    },
   });
 
   const handleClose = () => {
@@ -69,6 +75,12 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({ open, onClose, on
       types: [],
       version: '',
       description: '',
+      controllers: {
+        remote: '',
+        av: '',
+        network: '',
+        power: '',
+      },
     });
     onClose();
   };
@@ -86,7 +98,7 @@ const CreateModelDialog: React.FC<CreateModelDialogProps> = ({ open, onClose, on
   };
 
   const handleInputChange =
-    (field: keyof ModelCreatePayload) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof ModelCreateData) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setFormData({
         ...formData,
         [field]: event.target.value,

@@ -67,22 +67,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     return selectedHost?.available_remote_actions || {};
   }, [selectedHost?.available_remote_actions]);
 
-  // Extract controller types from device model
-  const getControllerTypes = (): string[] => {
-    const deviceModel = selectedHost?.device_model;
-    if (!deviceModel) return [];
-
-    // Map device models to controller types
-    const modelToControllerMap: { [key: string]: string[] } = {
-      android_mobile: ['android_mobile'],
-      android_tv: ['android_tv'],
-      stb: ['stb'],
-    };
-
-    return modelToControllerMap[deviceModel] || [];
-  };
-
-  const controllerTypes = getControllerTypes();
   const canRunActions =
     isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
 
@@ -97,7 +81,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       console.log('[@component:EdgeEditDialog] Dialog opened with host:', {
         hostName: selectedHost?.host_name,
         deviceModel: selectedHost?.device_model,
-        controllerTypes,
         availableActionsCount: Object.keys(controllerActions).length,
       });
 
@@ -105,7 +88,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         console.log('[@component:EdgeEditDialog] No remote actions available in host data');
       }
     }
-  }, [isOpen, selectedHost, controllerActions, controllerTypes]);
+  }, [isOpen, selectedHost, controllerActions]);
 
   const isFormValid = () => {
     return (
@@ -135,7 +118,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     try {
       const result = await executeEdgeActions(
         edgeForm.actions,
-        controllerTypes,
         selectedHost,
         undefined,
         edgeForm?.finalWaitTime,

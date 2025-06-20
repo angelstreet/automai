@@ -35,9 +35,9 @@ import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSele
 import { DeviceControlProvider, useDeviceControl } from '../contexts/DeviceControlContext';
 import { NavigationConfigProvider } from '../contexts/NavigationConfigContext';
 import { NavigationStateProvider } from '../contexts/NavigationStateContext';
-import { useNavigationState } from '../hooks/useNavigationState';
 import { NodeEdgeManagementProvider } from '../contexts/NodeEdgeManagementContext';
 import { useNavigationEditor } from '../hooks';
+import { useNavigationState } from '../hooks/useNavigationState';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
@@ -352,15 +352,12 @@ const NavigationEditorContent: React.FC = () => {
   // Simple update handlers - complex validation logic moved to device control component
   const handleUpdateNode = useCallback(
     (nodeId: string, updatedData: any) => {
-      setNodes((nodes) =>
-        nodes.map((node) =>
-          node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node,
-        ),
+      const updatedNodes = nodes.map((node) =>
+        node.id === nodeId ? { ...node, data: { ...node.data, ...updatedData } } : node,
       );
+      setNodes(updatedNodes);
       if (selectedNode?.id === nodeId) {
-        setSelectedNode((node) =>
-          node ? { ...node, data: { ...node.data, ...updatedData } } : node,
-        );
+        setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, ...updatedData } });
       }
       setHasUnsavedChanges(true);
     },
@@ -381,15 +378,12 @@ const NavigationEditorContent: React.FC = () => {
 
   const handleUpdateEdge = useCallback(
     (edgeId: string, updatedData: any) => {
-      setEdges((edges) =>
-        edges.map((edge) =>
-          edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge,
-        ),
+      const updatedEdges = edges.map((edge) =>
+        edge.id === edgeId ? { ...edge, data: { ...edge.data, ...updatedData } } : edge,
       );
+      setEdges(updatedEdges);
       if (selectedEdge?.id === edgeId) {
-        setSelectedEdge((edge) =>
-          edge ? { ...edge, data: { ...edge.data, ...updatedData } } : edge,
-        );
+        setSelectedEdge({ ...selectedEdge, data: { ...selectedEdge.data, ...updatedData } });
       }
       setHasUnsavedChanges(true);
     },
