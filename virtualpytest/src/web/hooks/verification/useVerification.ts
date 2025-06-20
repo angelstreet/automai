@@ -253,6 +253,11 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 params.text = verification.inputValue;
               }
 
+              // For ADB verifications, ensure search_term is set from inputValue
+              if (verification.controller_type === 'adb' && verification.inputValue) {
+                params.search_term = verification.inputValue;
+              }
+
               return {
                 ...verification,
                 params,
