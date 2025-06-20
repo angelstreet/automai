@@ -112,7 +112,6 @@ export const NavigationEditorHeader: React.FC<{
           console.log(
             `[@component:NavigationEditorHeader] Successfully released control of device: ${selectedHost.host_name}`,
           );
-          showSuccess(`Successfully released control of ${selectedHost.host_name}`);
           onControlStateChange(false);
 
           // Refresh host data to update lock status using event-based pattern
