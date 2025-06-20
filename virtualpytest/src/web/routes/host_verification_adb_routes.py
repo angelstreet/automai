@@ -55,7 +55,7 @@ def execute_adb_verification():
         if command == 'waitForElementToAppear':
             search_term = params.get('search_term') or verification.get('inputValue', '')
             timeout = params.get('timeout', 10.0)
-            check_interval = params.get('check_interval', 1.0)
+            check_interval = params.get('check_interval', 0.0)
             
             success, message, result_data = adb_controller.waitForElementToAppear(
                 search_term=search_term,

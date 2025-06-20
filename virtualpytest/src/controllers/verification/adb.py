@@ -236,7 +236,17 @@ class ADBVerificationController:
             consecutive_infrastructure_failures = 0
             max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
-            while time.time() - start_time < timeout:
+            # If check_interval is 0, only check once (no polling)
+            if check_interval <= 0:
+                print(f"[@controller:ADBVerification:waitForElementToAppear] Single check mode (no polling)")
+                max_iterations = 1
+            else:
+                print(f"[@controller:ADBVerification:waitForElementToAppear] Polling mode: check every {check_interval}s")
+                max_iterations = float('inf')
+            
+            iteration = 0
+            while iteration < max_iterations and time.time() - start_time < timeout:
+                iteration += 1
                 # Try each term in sequence until one succeeds
                 found_match = False
                 successful_term = None
@@ -319,7 +329,12 @@ class ADBVerificationController:
                     
                     return True, message, result_data
                 
-                time.sleep(check_interval)
+                # Only sleep if we're in polling mode (check_interval > 0)
+                if check_interval > 0:
+                    time.sleep(check_interval)
+                else:
+                    # In single-check mode, break after first iteration
+                    break
             
             elapsed = time.time() - start_time
             message = f"Element '{search_term}' did not appear within {elapsed:.1f}s"
@@ -353,7 +368,7 @@ class ADBVerificationController:
             
             return False, error_msg, result_data
 
-    def waitForElementToDisappear(self, search_term: str, timeout: float = 10.0, check_interval: float = 1.0) -> Tuple[bool, str, Dict[str, Any]]:
+    def waitForElementToDisappear(self, search_term: str, timeout: float = 10.0, check_interval: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Wait for an element matching search_term to disappear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
@@ -514,7 +529,7 @@ class ADBVerificationController:
                 'params': {
                     'search_term': {'type': 'string', 'required': True},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0},
-                    'check_interval': {'type': 'float', 'required': False, 'default': 1.0}
+                    'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
                 }
             },
             {
@@ -522,7 +537,7 @@ class ADBVerificationController:
                 'params': {
                     'search_term': {'type': 'string', 'required': True},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0},
-                    'check_interval': {'type': 'float', 'required': False, 'default': 1.0}
+                    'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
                 }
             }
         ]
