@@ -356,21 +356,70 @@ def save_resource():
                 'error': f'Cropped file not found: {cropped_filename}'
             }), 404
         
-        # ✅ Return image data for frontend to save to database via server (same pattern as text)
-        # This follows the same fast pattern as text reference saving
-        return jsonify({
-            'success': True,
-            'message': f'Image reference ready: {reference_name}',
-            'reference_name': reference_name,
-            'cropped_filename': cropped_filename,
-            'area': area,
-            'reference_type': reference_type,
-            # Return image data for local use
-            'image_data': {
-                'cropped_filename': cropped_filename,
-                'area': area
+        # Upload to R2 using CloudflareUtils
+        try:
+            from src.utils.cloudflare_utils import upload_reference_image
+            
+            # Create the target filename for R2 (use reference_name with .jpg extension)
+            r2_filename = f"{reference_name}.jpg"
+            
+            print(f"[@route:host_save_resource] Uploading to R2: {r2_filename}")
+            
+            # Upload to R2
+            upload_result = upload_reference_image(cropped_source_path, model, r2_filename)
+            
+            if not upload_result.get('success'):
+                print(f"[@route:host_save_resource] R2 upload failed: {upload_result.get('error')}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to upload to R2: {upload_result.get("error")}'
+                }), 500
+            
+            r2_url = upload_result.get('url')
+            print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_url}")
+            
+            # Now call the server to save to database
+            import requests
+            server_url = f"http://localhost:5000/server/verification/image/save-image-reference"
+            
+            server_payload = {
+                'name': reference_name,
+                'model': model,
+                'r2_url': r2_url,
+                'area': area,
+                'reference_type': reference_type,
+                'team_id': team_id
             }
-        })
+            
+            print(f"[@route:host_save_resource] Calling server to save to database: {server_payload}")
+            
+            server_response = requests.post(server_url, json=server_payload, timeout=30)
+            server_result = server_response.json()
+            
+            if not server_result.get('success'):
+                print(f"[@route:host_save_resource] Server save failed: {server_result.get('error')}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to save to database: {server_result.get("error")}'
+                }), 500
+            
+            print(f"[@route:host_save_resource] Successfully saved to database")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Image reference saved successfully: {reference_name}',
+                'reference_name': reference_name,
+                'r2_url': r2_url,
+                'area': area,
+                'reference_type': reference_type
+            })
+            
+        except Exception as upload_error:
+            print(f"[@route:host_save_resource] Upload error: {str(upload_error)}")
+            return jsonify({
+                'success': False,
+                'error': f'Upload to R2 failed: {str(upload_error)}'
+            }), 500
             
     except Exception as e:
         print(f"[@route:host_save_resource] Error: {str(e)}")
