@@ -356,63 +356,71 @@ def save_resource():
                 'error': f'Cropped file not found: {cropped_filename}'
             }), 404
         
-        # Upload to R2 using CloudflareUtils
+        # Use the existing save_screenshot function from host_av_routes to handle R2 upload + database save
         try:
-            from src.utils.cloudflare_utils import upload_reference_image
+            from src.web.routes.host_av_routes import save_screenshot
+            from flask import Flask
+            import tempfile
+            import json
             
-            # Create the target filename for R2 (use reference_name with .jpg extension)
-            r2_filename = f"{reference_name}.jpg"
+            print(f"[@route:host_save_resource] Using existing save_screenshot function to upload: {reference_name}")
             
-            print(f"[@route:host_save_resource] Uploading to R2: {r2_filename}")
-            
-            # Upload to R2
-            upload_result = upload_reference_image(cropped_source_path, model, r2_filename)
-            
-            if not upload_result.get('success'):
-                print(f"[@route:host_save_resource] R2 upload failed: {upload_result.get('error')}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to upload to R2: {upload_result.get("error")}'
-                }), 500
-            
-            r2_url = upload_result.get('url')
-            print(f"[@route:host_save_resource] Successfully uploaded to R2: {r2_url}")
-            
-            # Now call the server to save to database
-            import requests
-            server_url = f"http://localhost:5000/server/verification/image/save-image-reference"
-            
-            server_payload = {
-                'name': reference_name,
-                'model': model,
-                'r2_url': r2_url,
-                'area': area,
-                'reference_type': reference_type,
-                'team_id': team_id
-            }
-            
-            print(f"[@route:host_save_resource] Calling server to save to database: {server_payload}")
-            
-            server_response = requests.post(server_url, json=server_payload, timeout=30)
-            server_result = server_response.json()
-            
-            if not server_result.get('success'):
-                print(f"[@route:host_save_resource] Server save failed: {server_result.get('error')}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to save to database: {server_result.get("error")}'
-                }), 500
-            
-            print(f"[@route:host_save_resource] Successfully saved to database")
-            
-            return jsonify({
-                'success': True,
-                'message': f'Image reference saved successfully: {reference_name}',
-                'reference_name': reference_name,
-                'r2_url': r2_url,
-                'area': area,
-                'reference_type': reference_type
-            })
+            # Create a temporary request context to call save_screenshot
+            with current_app.test_request_context(
+                '/host/av/save-screenshot',
+                method='POST',
+                json={'filename': reference_name},
+                content_type='application/json'
+            ):
+                # Temporarily replace the av_controller's save_screenshot method to use our cropped file
+                av_controller = get_local_controller('av')
+                if av_controller:
+                    # Store original method
+                    original_save_method = getattr(av_controller, 'save_screenshot', None)
+                    
+                    # Create a mock save_screenshot method that returns our cropped file path
+                    def mock_save_screenshot(filename):
+                        print(f"[@route:host_save_resource] Mock save_screenshot returning: {cropped_source_path}")
+                        return cropped_source_path
+                    
+                    # Temporarily replace the method
+                    av_controller.save_screenshot = mock_save_screenshot
+                    
+                    try:
+                        # Call the existing save_screenshot route function
+                        result = save_screenshot()
+                        result_data = result.get_json() if hasattr(result, 'get_json') else result
+                        
+                        print(f"[@route:host_save_resource] Save screenshot result: {result_data}")
+                        
+                        if result_data and result_data.get('success'):
+                            r2_url = result_data.get('screenshot_url')
+                            print(f"[@route:host_save_resource] Successfully saved reference to R2: {r2_url}")
+                            
+                            return jsonify({
+                                'success': True,
+                                'message': f'Image reference saved successfully: {reference_name}',
+                                'reference_name': reference_name,
+                                'r2_url': r2_url,
+                                'area': area,
+                                'reference_type': reference_type
+                            })
+                        else:
+                            error_msg = result_data.get('error', 'Unknown error') if result_data else 'No result data'
+                            return jsonify({
+                                'success': False,
+                                'error': f'Failed to save to R2: {error_msg}'
+                            }), 500
+                            
+                    finally:
+                        # Restore original method
+                        if original_save_method:
+                            av_controller.save_screenshot = original_save_method
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'AV controller not available for file upload'
+                    }), 500
             
         except Exception as upload_error:
             print(f"[@route:host_save_resource] Upload error: {str(upload_error)}")
