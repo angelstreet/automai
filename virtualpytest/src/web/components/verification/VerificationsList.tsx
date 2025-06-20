@@ -101,7 +101,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   const addVerification = () => {
     const newVerification: Verification = {
       command: '',
-      params: {},
+      params: { text: '' },
       verification_type: 'text',
     };
     onVerificationsChange([...verifications, newVerification]);
@@ -112,11 +112,11 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     onVerificationsChange(newVerifications);
   };
 
-  const updateVerification = (index: number, updates: Partial<Verification>) => {
+  const updateVerification = (index: number, updates: any) => {
     const newVerifications = verifications.map((verification, i) =>
       i === index ? { ...verification, ...updates } : verification,
     );
-    onVerificationsChange(newVerifications);
+    onVerificationsChange(newVerifications as Verification[]);
   };
 
   const moveVerificationUp = (index: number) => {
@@ -205,8 +205,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
         updateVerification(index, {
           params: {
             ...baseParams,
-            reference_image: referenceName,
-            reference_url: selectedRef.url,
+            image_path: referenceName,
           },
         });
         console.log('[@component:VerificationsList] Updated verification with image reference:', {
@@ -218,10 +217,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
         updateVerification(index, {
           params: {
             ...baseParams,
-            text: selectedRef.text,
-            reference_text: selectedRef.text,
-            reference_name: referenceName,
-            font_size: selectedRef.font_size,
+            text: selectedRef.text || '',
           },
         });
         console.log('[@component:VerificationsList] Updated verification with text reference:', {
@@ -298,12 +294,14 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
 
       if (verification.verification_type === 'image') {
         // Image verifications need a reference image
-        const hasImagePath =
-          verification.params?.reference_url || verification.params?.reference_image;
+        const hasImagePath = verification.params?.image_path;
         return Boolean(hasImagePath);
       } else if (verification.verification_type === 'text') {
         // Text verifications need text to search for
-        const hasText = verification.params?.text && verification.params.text.trim() !== '';
+        const hasText =
+          verification.params?.text &&
+          typeof verification.params.text === 'string' &&
+          verification.params.text.trim() !== '';
         return Boolean(hasText);
       } else if (verification.verification_type === 'adb') {
         // ADB verifications need search criteria

@@ -393,10 +393,8 @@ def execute_text_verification_host(verification, source_path, verification_index
         params = verification.get('params', {})
         area = params.get('area')
         
-        # Get text from verification data directly
-        text_to_find = (params.get('reference_text') or 
-                       verification.get('inputValue', '') or 
-                       params.get('text', ''))
+        # Get text from params.text (matches TypeScript interface)
+        text_to_find = params.get('text', '')
         
         confidence = params.get('confidence', 0.8)
         image_filter = params.get('image_filter', 'none')

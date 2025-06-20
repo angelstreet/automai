@@ -53,7 +53,7 @@ def execute_adb_verification():
         
         # Execute based on command type
         if command == 'waitForElementToAppear':
-            search_term = params.get('search_term') or verification.get('inputValue', '')
+            search_term = params.get('search_term', '')
             timeout = params.get('timeout', 10.0)
             check_interval = params.get('check_interval', 0.0)
             
@@ -64,7 +64,7 @@ def execute_adb_verification():
             )
             
         elif command == 'waitForElementToDisappear':
-            search_term = params.get('search_term') or verification.get('inputValue', '')
+            search_term = params.get('search_term', '')
             timeout = params.get('timeout', 10.0)
             check_interval = params.get('check_interval', 1.0)
             
