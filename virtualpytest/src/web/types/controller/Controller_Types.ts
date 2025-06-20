@@ -14,11 +14,13 @@
 export const DEVICE_MODEL_CONTROLLER_MAPPING = {
   android_mobile: ['image', 'audio', 'text', 'video', 'adb'],
   android_tv: ['image', 'audio', 'text', 'video'],
+  ios_phone: ['image', 'text', 'appium'],
+  ios_mobile: ['image', 'text', 'appium'],
   stb: ['image', 'audio', 'text', 'video'],
 } as const;
 
 export type DeviceModel = keyof typeof DEVICE_MODEL_CONTROLLER_MAPPING;
-export type VerificationControllerType = 'image' | 'audio' | 'text' | 'video' | 'adb';
+export type VerificationControllerType = 'image' | 'audio' | 'text' | 'video' | 'adb' | 'appium';
 
 /**
  * Get verification controller types for a device model

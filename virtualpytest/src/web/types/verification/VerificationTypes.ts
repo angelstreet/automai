@@ -71,8 +71,7 @@ interface BaseVerification {
   // Language detection for text verifications
   detectedLanguage?: string;
   languageConfidence?: number;
-  // Confidence tracking for node verifications
-  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
+  // ❌ REMOVED: Confidence tracking moved to database
 
   // ADB-specific result data
   search_term?: string;

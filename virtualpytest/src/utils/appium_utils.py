@@ -940,4 +940,121 @@ class AppiumUtils:
                 
         except Exception as e:
             print(f"[@lib:appiumUtils:_execute_android_key] Android key error: {e}")
-            return False 
+            return False
+
+    def smart_element_search(self, device_id: str, search_term: str) -> Tuple[bool, List[Dict[str, Any]], str]:
+        """
+        Smart element search with fuzzy matching across all element attributes.
+        Searches text, contentDesc, accessibility_id, resource_id, name, label, value, and className.
+        
+        Args:
+            device_id: Device identifier
+            search_term: Search term (case-insensitive)
+            
+        Returns:
+            Tuple of (success, matches, error_message)
+            
+            matches format:
+            [
+                {
+                    'element_id': str,
+                    'element': AppiumElement.to_dict(),
+                    'match_reason': str,
+                    'match_confidence': float
+                }
+            ]
+        """
+        try:
+            print(f"[@lib:appiumUtils:smart_element_search] Searching for '{search_term}' on device {device_id}")
+            
+            # Get all UI elements
+            success, elements, error = self.dump_ui_elements(device_id)
+            
+            if not success:
+                print(f"[@lib:appiumUtils:smart_element_search] Failed to dump UI: {error}")
+                return False, [], error
+            
+            if not elements:
+                print(f"[@lib:appiumUtils:smart_element_search] No elements found")
+                return True, [], ""
+            
+            search_term_lower = search_term.lower().strip()
+            matches = []
+            
+            for i, element in enumerate(elements):
+                element_id = f"element_{i}"
+                match_details = []
+                confidence_score = 0.0
+                
+                # Define searchable attributes based on platform
+                if element.platform == 'ios':
+                    searchable_attrs = [
+                        ('text', element.text),
+                        ('name', element.name),
+                        ('label', element.label),
+                        ('value', element.value),
+                        ('accessibility_id', element.accessibility_id),
+                        ('className', element.className)
+                    ]
+                elif element.platform == 'android':
+                    searchable_attrs = [
+                        ('text', element.text),
+                        ('contentDesc', element.contentDesc),
+                        ('resource_id', element.resource_id),
+                        ('className', element.className)
+                    ]
+                else:
+                    # Generic platform
+                    searchable_attrs = [
+                        ('text', element.text),
+                        ('contentDesc', element.contentDesc),
+                        ('className', element.className)
+                    ]
+                
+                # Search through all attributes
+                for attr_name, attr_value in searchable_attrs:
+                    if not attr_value:
+                        continue
+                        
+                    attr_value_lower = str(attr_value).lower()
+                    
+                    if search_term_lower in attr_value_lower:
+                        if search_term_lower == attr_value_lower:
+                            # Exact match
+                            match_details.append(f"exact match in {attr_name}: '{attr_value}'")
+                            confidence_score = max(confidence_score, 1.0)
+                        elif attr_value_lower.startswith(search_term_lower):
+                            # Starts with
+                            match_details.append(f"starts with in {attr_name}: '{attr_value}'")
+                            confidence_score = max(confidence_score, 0.8)
+                        elif attr_value_lower.endswith(search_term_lower):
+                            # Ends with
+                            match_details.append(f"ends with in {attr_name}: '{attr_value}'")
+                            confidence_score = max(confidence_score, 0.7)
+                        else:
+                            # Contains
+                            match_details.append(f"contains in {attr_name}: '{attr_value}'")
+                            confidence_score = max(confidence_score, 0.6)
+                
+                if match_details:
+                    match_reason = "; ".join(match_details)
+                    matches.append({
+                        'element_id': element_id,
+                        'element': element.to_dict(),
+                        'match_reason': match_reason,
+                        'match_confidence': confidence_score
+                    })
+            
+            # Sort matches by confidence (highest first)
+            matches.sort(key=lambda x: x['match_confidence'], reverse=True)
+            
+            print(f"[@lib:appiumUtils:smart_element_search] Found {len(matches)} matches")
+            for i, match in enumerate(matches[:5]):  # Log top 5 matches
+                print(f"[@lib:appiumUtils:smart_element_search]   {i+1}. {match['match_reason']} (confidence: {match['match_confidence']:.1f})")
+            
+            return True, matches, ""
+            
+        except Exception as e:
+            error_msg = f"Smart element search error: {e}"
+            print(f"[@lib:appiumUtils:smart_element_search] ERROR: {error_msg}")
+            return False, [], error_msg 

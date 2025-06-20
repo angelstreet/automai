@@ -229,7 +229,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
       // Step 2: Execute verifications using the captured screenshot
       let results: string[] = [];
-      const updatedVerifications = [...validVerifications]; // Use filtered verifications
+      // ❌ REMOVED: No longer updating verification confidence // Use filtered verifications
       let executionStopped = false;
 
       // Show message about removed verifications if any
@@ -282,25 +282,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           verificationSuccess = false;
         }
 
-        // Update verification with result and confidence info
-        const updatedLastRunResults = updateLastRunResults(
-          verification.last_run_result || [],
-          verificationSuccess,
-        );
-        const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
-
-        updatedVerifications[i] = {
-          ...verification,
-          last_run_result: updatedLastRunResults,
-        };
-
-        // Add confidence info to results
-        results.push(
-          `   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`,
-        );
+        // ❌ REMOVED: Confidence tracking moved to database
+        // TODO: Add database reporting in Step 2
 
         console.log(
-          `[@component:NodeEditDialog] Verification ${i + 1} completed. Success: ${verificationSuccess}, New confidence: ${confidenceScore.toFixed(3)}`,
+          `[@component:NodeEditDialog] Verification ${i + 1} completed. Success: ${verificationSuccess}`,
         );
 
         // Stop execution if verification failed
@@ -314,11 +300,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         await delay(1000);
       }
 
-      // Update the node form with the updated verifications
-      setNodeForm({
-        ...nodeForm,
-        verifications: updatedVerifications,
-      });
+      // ❌ REMOVED: No longer updating verification confidence in node form
 
       setVerificationResult(results.join('\n'));
 
@@ -394,7 +376,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           `[@component:NodeEditDialog] Starting verifications after successful navigation`,
         );
 
-        const updatedVerifications = [...nodeForm.verifications];
+        // ❌ REMOVED: No longer updating verification confidence
 
         // Small delay before verifications
         await delay(1500);
@@ -405,11 +387,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           if (!verification.command) {
             gotoResults.push(`❌ Verification ${i + 1}: No verification selected`);
             verificationSuccess = false;
-            // Update verification with failed result
-            updatedVerifications[i] = {
-              ...verification,
-              last_run_result: updateLastRunResults(verification.last_run_result || [], false),
-            };
+            // ❌ REMOVED: Confidence tracking moved to database
             continue;
           }
 
@@ -460,36 +438,18 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             individualVerificationSuccess = false;
           }
 
-          // Update verification with result and confidence info
-          const updatedLastRunResults = updateLastRunResults(
-            verification.last_run_result || [],
-            individualVerificationSuccess,
-          );
-          const confidenceScore = calculateConfidenceScore(updatedLastRunResults);
-
-          updatedVerifications[i] = {
-            ...verification,
-            last_run_result: updatedLastRunResults,
-          };
-
-          // Add confidence info to goto results
-          gotoResults.push(
-            `   📊 Confidence: ${(confidenceScore * 100).toFixed(1)}% (${updatedLastRunResults.length} runs)`,
-          );
+          // ❌ REMOVED: Confidence tracking moved to database
+          // TODO: Add database reporting in Step 2
 
           console.log(
-            `[@component:NodeEditDialog] Goto verification ${i + 1} completed. Success: ${individualVerificationSuccess}, New confidence: ${confidenceScore.toFixed(3)}`,
+            `[@component:NodeEditDialog] Goto verification ${i + 1} completed. Success: ${individualVerificationSuccess}`,
           );
 
           // Small delay between verifications
           await delay(1000);
         }
 
-        // Update the node form with the updated verifications after goto
-        setNodeForm({
-          ...nodeForm,
-          verifications: updatedVerifications,
-        });
+        // ❌ REMOVED: No longer updating verification confidence in node form
       } else if (
         navigationSuccess &&
         (!nodeForm?.verifications || nodeForm.verifications.length === 0)

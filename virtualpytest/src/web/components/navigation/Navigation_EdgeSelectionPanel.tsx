@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
-import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
+// ❌ REMOVED: Confidence utils moved to database
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;
@@ -60,7 +60,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             requiresInput: legacyAction.requiresInput,
             inputValue: legacyAction.inputValue,
             waitTime: legacyAction.waitTime || 2000, // Default wait time
-            last_run_result: legacyAction.last_run_result || [], // Initialize empty array
+            // ❌ REMOVED: Confidence tracking moved to database
           },
         ];
       }

@@ -42,7 +42,7 @@ export interface EdgeAction {
   requiresInput?: boolean;
   inputValue?: string;
   waitTime: number;
-  last_run_result?: boolean[]; // Store last 10 execution results (true=success, false=failure)
+  // ❌ REMOVED: Confidence tracking moved to database
 }
 
 // Define the data type for navigation edges

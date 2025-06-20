@@ -23,6 +23,7 @@ from .audiovideo.hdmi_stream import HDMIStreamController
 # Import real implementations
 from .remote.android_tv import AndroidTVRemoteController
 from .remote.android_mobile import AndroidMobileRemoteController
+from .remote.appium_remote import AppiumRemoteController
 from .remote.infrared import IRRemoteController
 from .remote.bluetooth import BluetoothRemoteController
 
@@ -33,6 +34,7 @@ from .power.usb_power import USBPowerController
 from .verification.image import ImageVerificationController
 from .verification.text import TextVerificationController
 from .verification.adb import ADBVerificationController
+from .verification.appium import AppiumVerificationController
 from .verification.video import VideoVerificationController
 from .verification.audio import AudioVerificationController
 
@@ -41,6 +43,7 @@ CONTROLLER_REGISTRY = {
     'remote': {
         'android_tv': AndroidTVRemoteController,  # Real SSH+ADB-based Android TV controller
         'android_mobile': AndroidMobileRemoteController,  # Real SSH+ADB-based Android Mobile controller
+        'appium_remote': AppiumRemoteController,  # Universal Appium WebDriver controller for iOS/Android
         'ir_remote': IRRemoteController,     # IR remote with classic TV/STB buttons
         'bluetooth_remote': BluetoothRemoteController,  # Bluetooth HID remote
     },
@@ -54,6 +57,7 @@ CONTROLLER_REGISTRY = {
         'audio': AudioVerificationController, # Audio analysis and verification
         'video': VideoVerificationController, # Video analysis and motion detection
         'adb': ADBVerificationController,    # Direct ADB element verification using ADBcommands
+        'appium': AppiumVerificationController, # Cross-platform element verification using Appium WebDriver
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {

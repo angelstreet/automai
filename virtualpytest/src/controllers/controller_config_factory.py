@@ -10,6 +10,7 @@ All communication is via direct device connections (ADB, uhubctl, etc.).
 DEVICE_MODEL_VERIFICATION_MAPPING = {
     'android_mobile': ['image', 'text', 'adb'],
     'android_tv': ['image', 'text'],
+    'ios_phone': ['image', 'text', 'appium'],
     'stb': ['image', 'text'],
 }
 
@@ -49,6 +50,19 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_ip': device_ip,
                 'device_port': device_port,
+                'connection_timeout': 10
+            }
+        }
+    elif device_model == 'ios_phone':
+        controller_configs['remote'] = {
+            'type': 'appium_remote',
+            'implementation': 'appium_remote',
+            'parameters': {
+                'device_udid': device_ip,  # For iOS, device_ip should contain the UDID
+                'platform_name': 'iOS',
+                'platform_version': '',  # Optional, can be configured later
+                'appium_url': 'http://localhost:4723',
+                'automation_name': 'XCUITest',
                 'connection_timeout': 10
             }
         }

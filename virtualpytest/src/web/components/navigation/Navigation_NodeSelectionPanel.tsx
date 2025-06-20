@@ -20,7 +20,6 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { calculateConfidenceScore } from '../../utils/validation/confidenceUtils';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -79,14 +78,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Add states for verification execution
     const [isRunningVerifications, setIsRunningVerifications] = useState(false);
     const [verificationResult, setVerificationResult] = useState<string | null>(null);
-    const [localVerificationUpdates, setLocalVerificationUpdates] = useState<{
-      [index: number]: boolean[];
-    }>({});
 
     // Clear verification results when node selection changes
     useEffect(() => {
       setVerificationResult(null);
-      setLocalVerificationUpdates({});
     }, [selectedNode.id, selectedNode.data.verifications]);
 
     const handleEdit = () => {
@@ -174,41 +169,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowScreenshotConfirm(false);
     };
 
-    // Update verification results in the actual node data
-    const updateVerificationResults = (verificationIndex: number, success: boolean) => {
-      if (!onUpdateNode) {
-        console.warn(
-          '[@component:NodeSelectionPanel] onUpdateNode callback not provided - verification results will not be saved!',
-        );
-        return;
-      }
-
-      if (!selectedNode.data.verifications) {
-        console.warn('[@component:NodeSelectionPanel] No verifications found on selectedNode.data');
-        return;
-      }
-
-      const updatedVerifications = [...selectedNode.data.verifications];
-      const verification = updatedVerifications[verificationIndex];
-
-      // Update the last_run_result array
-      const currentResults = verification.last_run_result || [];
-      const newResults = [success, ...currentResults].slice(0, 10); // Keep last 10 results
-
-      updatedVerifications[verificationIndex] = {
-        ...verification,
-        last_run_result: newResults,
-      };
-
-      // Update the node data
-      const updatedNodeData = {
-        ...selectedNode.data,
-        verifications: updatedVerifications,
-      };
-
-      // Call the parent callback to update the node
-      onUpdateNode(selectedNode.id, updatedNodeData);
-    };
+    // ❌ REMOVED: updateVerificationResults - confidence tracking moved to database
 
     // Execute all node verifications
     const handleRunVerifications = async () => {
@@ -256,7 +217,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
         for (let i = 0; i < verifications.length; i++) {
           const verification = verifications[i];
-          let verificationSuccess = false;
 
           try {
             // Use server route for verification execution with actual screenshot
@@ -276,32 +236,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
             if (result.success) {
               results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-              verificationSuccess = true;
             } else {
               results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
-              verificationSuccess = false;
             }
           } catch (err: any) {
             results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
-            verificationSuccess = false;
           }
 
-          // Update verification result in the actual node data
-          updateVerificationResults(i, verificationSuccess);
-
-          // Also store locally for immediate confidence display
-          setLocalVerificationUpdates((prev) => ({
-            ...prev,
-            [i]: [verificationSuccess, ...(verification.last_run_result || [])].slice(0, 10),
-          }));
-
-          // Calculate and display confidence
-          const currentResults = verification.last_run_result || [];
-          const newResults = [verificationSuccess, ...currentResults].slice(0, 10);
-          const newConfidence = calculateConfidenceScore(newResults);
-          results.push(
-            `   📊 Confidence: ${(newConfidence * 100).toFixed(1)}% (${newResults.length} runs)`,
-          );
+          // ❌ REMOVED: Confidence tracking moved to database
+          // TODO: Add database reporting in Step 2
         }
 
         setVerificationResult(results.join('\n'));
@@ -349,39 +292,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       selectedNode.id?.toLowerCase().includes('entry') ||
       selectedNode.id?.toLowerCase().includes('home');
 
-    // Calculate overall confidence for node verifications
-    const getNodeConfidenceInfo = (): { score: number | null; text: string } => {
-      if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
-        return { score: null, text: 'unknown' };
-      }
-
-      // Get all verifications with results (use local updates if available)
-      const verificationsWithResults = selectedNode.data.verifications.filter((v, index) => {
-        const localResults = localVerificationUpdates[index];
-        const results = localResults || v.last_run_result;
-        return results && results.length > 0;
-      });
-
-      if (verificationsWithResults.length === 0) {
-        return { score: null, text: 'unknown' };
-      }
-
-      // Calculate average confidence across all verifications (use local updates if available)
-      const confidenceScores = verificationsWithResults.map((v, index) => {
-        const localResults = localVerificationUpdates[index];
-        const results = localResults || v.last_run_result;
-        return calculateConfidenceScore(results);
-      });
-      const averageConfidence =
-        confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
-
-      return {
-        score: averageConfidence,
-        text: `${(averageConfidence * 100).toFixed(0)}%`,
-      };
-    };
-
-    const confidenceInfo = getNodeConfidenceInfo();
+    // ❌ REMOVED: Confidence calculation moved to database
+    // TODO: Replace with database query in Step 2
+    const confidenceInfo = { score: null, text: 'unknown' };
 
     return (
       <>
