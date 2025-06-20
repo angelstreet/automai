@@ -300,15 +300,15 @@ def get_cloudflare_utils() -> CloudflareUtils:
 # Utility functions for common upload patterns
 
 def upload_reference_image(local_path: str, model: str, image_name: str) -> Dict:
-    """Upload a reference image to R2 in the reference/{model} folder."""
+    """Upload a reference image to R2 in the reference-images/{model} folder."""
     uploader = get_cloudflare_utils()
-    remote_path = f"reference/{model}/{image_name}"
+    remote_path = f"reference-images/{model}/{image_name}"
     return uploader.upload_file(local_path, remote_path)
 
 def download_reference_image(model: str, image_name: str, local_path: str) -> Dict:
-    """Download a reference image from R2 in the reference/{model} folder."""
+    """Download a reference image from R2 in the reference-images/{model} folder."""
     downloader = get_cloudflare_utils()
-    remote_path = f"reference/{model}/{image_name}"
+    remote_path = f"reference-images/{model}/{image_name}"
     return downloader.download_file(remote_path, local_path)
 
 def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: str) -> Dict:

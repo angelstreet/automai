@@ -160,7 +160,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           `[@component:NodeSelectionPanel] Taking screenshot for node: ${selectedNode.id}`,
         );
 
-        const response = await fetch('/server/av/save-screenshot', {
+        const response = await fetch('/server/navigation/save-screenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
