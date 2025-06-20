@@ -605,7 +605,7 @@ const NavigationEditorContent: React.FC = () => {
                   />
                 )}
 
-                {selectedEdge && selectedHost && (
+                {selectedEdge && (
                   <EdgeSelectionPanel
                     selectedEdge={selectedEdge}
                     onClose={closeSelectionPanel}
