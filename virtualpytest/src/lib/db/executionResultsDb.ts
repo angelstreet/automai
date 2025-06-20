@@ -5,37 +5,37 @@ import { cookies } from 'next/headers';
 export interface ExecutionResult {
   id?: string;
   team_id: string;
-  
+
   // Execution categorization
   execution_category: 'verification' | 'action' | 'navigation';
   execution_type: string; // 'image_verification', 'text_verification', 'click_action', 'scroll_action', etc.
-  
+
   // Initiator context (where was this triggered from?)
   initiator_type: 'editor' | 'node' | 'edge' | 'standalone' | 'batch';
   initiator_id?: string; // node_id, edge_id, test_case_id, etc.
   initiator_name?: string; // human-readable name
   tree_id?: string;
-  
+
   // Device information
   host_name: string;
   device_model?: string;
-  
+
   // Execution details
   command: string; // what was executed
   parameters?: Record<string, any>;
-  
+
   // Execution context
   source_filename?: string;
   execution_batch_id?: string;
   execution_order?: number;
-  
+
   // Results
   success: boolean;
   execution_time_ms?: number;
   message?: string;
   error_details?: Record<string, any>;
   confidence_score?: number;
-  
+
   // Metadata
   executed_by?: string;
   executed_at?: string;
@@ -80,7 +80,9 @@ export class ExecutionResultsDb {
   /**
    * Record a single execution result
    */
-  static async recordExecution(execution: ExecutionResult): Promise<{ success: boolean; id?: string; error?: string }> {
+  static async recordExecution(
+    execution: ExecutionResult,
+  ): Promise<{ success: boolean; id?: string; error?: string }> {
     try {
       console.log('[@db:executionResults:recordExecution] Recording execution:', {
         execution_category: execution.execution_category,
@@ -92,7 +94,7 @@ export class ExecutionResultsDb {
       });
 
       const supabase = await this.getClient();
-      
+
       const { data, error } = await supabase
         .from('execution_results')
         .insert([execution])
@@ -104,7 +106,10 @@ export class ExecutionResultsDb {
         return { success: false, error: error.message };
       }
 
-      console.log('[@db:executionResults:recordExecution] Successfully recorded execution:', data.id);
+      console.log(
+        '[@db:executionResults:recordExecution] Successfully recorded execution:',
+        data.id,
+      );
       return { success: true, id: data.id };
     } catch (error: any) {
       console.error('[@db:executionResults:recordExecution] Unexpected error:', error);
@@ -115,24 +120,37 @@ export class ExecutionResultsDb {
   /**
    * Record multiple executions in a batch
    */
-  static async recordBatchExecutions(executions: ExecutionResult[]): Promise<{ success: boolean; ids?: string[]; error?: string }> {
+  static async recordBatchExecutions(
+    executions: ExecutionResult[],
+  ): Promise<{ success: boolean; ids?: string[]; error?: string }> {
     try {
-      console.log('[@db:executionResults:recordBatchExecutions] Recording batch of', executions.length, 'executions');
+      console.log(
+        '[@db:executionResults:recordBatchExecutions] Recording batch of',
+        executions.length,
+        'executions',
+      );
 
       const supabase = await this.getClient();
-      
+
       const { data, error } = await supabase
         .from('execution_results')
         .insert(executions)
         .select('id');
 
       if (error) {
-        console.error('[@db:executionResults:recordBatchExecutions] Error inserting batch executions:', error);
+        console.error(
+          '[@db:executionResults:recordBatchExecutions] Error inserting batch executions:',
+          error,
+        );
         return { success: false, error: error.message };
       }
 
-      const ids = data.map(row => row.id);
-      console.log('[@db:executionResults:recordBatchExecutions] Successfully recorded', ids.length, 'executions');
+      const ids = data.map((row) => row.id);
+      console.log(
+        '[@db:executionResults:recordBatchExecutions] Successfully recorded',
+        ids.length,
+        'executions',
+      );
       return { success: true, ids };
     } catch (error: any) {
       console.error('[@db:executionResults:recordBatchExecutions] Unexpected error:', error);
@@ -149,7 +167,7 @@ export class ExecutionResultsDb {
     initiatorType: 'editor' | 'node' | 'edge' | 'standalone' | 'batch',
     initiatorId: string,
     executionType?: string,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<{ success: boolean; data?: ExecutionConfidence; error?: string }> {
     try {
       console.log('[@db:executionResults:getConfidence] Getting confidence for:', {
@@ -162,16 +180,15 @@ export class ExecutionResultsDb {
       });
 
       const supabase = await this.getClient();
-      
-      const { data, error } = await supabase
-        .rpc('get_execution_confidence', {
-          p_team_id: teamId,
-          p_execution_category: executionCategory,
-          p_initiator_type: initiatorType,
-          p_initiator_id: initiatorId,
-          p_execution_type: executionType || null,
-          p_limit: limit,
-        });
+
+      const { data, error } = await supabase.rpc('get_execution_confidence', {
+        p_team_id: teamId,
+        p_execution_category: executionCategory,
+        p_initiator_type: initiatorType,
+        p_initiator_id: initiatorId,
+        p_execution_type: executionType || null,
+        p_limit: limit,
+      });
 
       if (error) {
         console.error('[@db:executionResults:getConfidence] Error getting confidence:', error);
@@ -185,7 +202,10 @@ export class ExecutionResultsDb {
         last_execution_at: null,
       };
 
-      console.log('[@db:executionResults:getConfidence] Successfully retrieved confidence:', result);
+      console.log(
+        '[@db:executionResults:getConfidence] Successfully retrieved confidence:',
+        result,
+      );
       return { success: true, data: result };
     } catch (error: any) {
       console.error('[@db:executionResults:getConfidence] Unexpected error:', error);
@@ -201,7 +221,7 @@ export class ExecutionResultsDb {
     executionCategory: 'verification' | 'action' | 'navigation',
     initiatorType: 'editor' | 'node' | 'edge' | 'standalone' | 'batch',
     initiatorId: string,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{ success: boolean; data?: ExecutionHistory[]; error?: string }> {
     try {
       console.log('[@db:executionResults:getHistory] Getting history for:', {
@@ -213,22 +233,25 @@ export class ExecutionResultsDb {
       });
 
       const supabase = await this.getClient();
-      
-      const { data, error } = await supabase
-        .rpc('get_execution_history', {
-          p_team_id: teamId,
-          p_execution_category: executionCategory,
-          p_initiator_type: initiatorType,
-          p_initiator_id: initiatorId,
-          p_limit: limit,
-        });
+
+      const { data, error } = await supabase.rpc('get_execution_history', {
+        p_team_id: teamId,
+        p_execution_category: executionCategory,
+        p_initiator_type: initiatorType,
+        p_initiator_id: initiatorId,
+        p_limit: limit,
+      });
 
       if (error) {
         console.error('[@db:executionResults:getHistory] Error getting history:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('[@db:executionResults:getHistory] Successfully retrieved', data?.length || 0, 'history records');
+      console.log(
+        '[@db:executionResults:getHistory] Successfully retrieved',
+        data?.length || 0,
+        'history records',
+      );
       return { success: true, data: data || [] };
     } catch (error: any) {
       console.error('[@db:executionResults:getHistory] Unexpected error:', error);
@@ -241,25 +264,34 @@ export class ExecutionResultsDb {
    */
   static async getTeamStats(
     teamId: string,
-    days: number = 7
+    days: number = 7,
   ): Promise<{ success: boolean; data?: TeamExecutionStats[]; error?: string }> {
     try {
-      console.log('[@db:executionResults:getTeamStats] Getting team stats for:', teamId, 'last', days, 'days');
+      console.log(
+        '[@db:executionResults:getTeamStats] Getting team stats for:',
+        teamId,
+        'last',
+        days,
+        'days',
+      );
 
       const supabase = await this.getClient();
-      
-      const { data, error } = await supabase
-        .rpc('get_team_execution_stats', {
-          p_team_id: teamId,
-          p_days: days,
-        });
+
+      const { data, error } = await supabase.rpc('get_team_execution_stats', {
+        p_team_id: teamId,
+        p_days: days,
+      });
 
       if (error) {
         console.error('[@db:executionResults:getTeamStats] Error getting team stats:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('[@db:executionResults:getTeamStats] Successfully retrieved team stats:', data?.length || 0, 'categories');
+      console.log(
+        '[@db:executionResults:getTeamStats] Successfully retrieved team stats:',
+        data?.length || 0,
+        'categories',
+      );
       return { success: true, data: data || [] };
     } catch (error: any) {
       console.error('[@db:executionResults:getTeamStats] Unexpected error:', error);
@@ -281,7 +313,11 @@ export class ExecutionResultsDb {
     initiatorName: string,
     hostName: string,
     deviceModel: string,
-    verificationType: 'image_verification' | 'text_verification' | 'ocr_verification' | 'adb_verification',
+    verificationType:
+      | 'image_verification'
+      | 'text_verification'
+      | 'ocr_verification'
+      | 'adb_verification',
     command: string,
     parameters: Record<string, any>,
     sourceFilename: string,
@@ -291,9 +327,8 @@ export class ExecutionResultsDb {
     errorDetails?: Record<string, any>,
     confidenceScore?: number,
     batchId?: string,
-    executionOrder?: number
+    executionOrder?: number,
   ): Promise<{ success: boolean; id?: string; error?: string }> {
-    
     const execution: ExecutionResult = {
       team_id: teamId,
       execution_category: 'verification',
@@ -336,9 +371,8 @@ export class ExecutionResultsDb {
     message: string,
     errorDetails?: Record<string, any>,
     batchId?: string,
-    executionOrder?: number
+    executionOrder?: number,
   ): Promise<{ success: boolean; id?: string; error?: string }> {
-    
     const execution: ExecutionResult = {
       team_id: teamId,
       execution_category: 'action',
@@ -360,4 +394,4 @@ export class ExecutionResultsDb {
 
     return this.recordExecution(execution);
   }
-} 
+}

@@ -18,9 +18,12 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+import {
+  VerificationResultsDb,
+  VerificationExecution,
+} from '../../../lib/db/verificationResultsDb';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { ExecutionResultsDb, ExecutionResult } from '../../../lib/db/executionResultsDb';
 import { useVerification } from '../../hooks/verification/useVerification';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
@@ -179,6 +182,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowScreenshotConfirm(false);
     };
 
+    // ❌ REMOVED: updateVerificationResults - confidence tracking moved to database
+
     // Execute all node verifications using temporary capture approach
     const handleRunVerifications = async () => {
       if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
@@ -199,22 +204,23 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           '[@component:NodeSelectionPanel] Taking temporary screenshot for verification...',
         );
 
-        // Use the server AV route to take temporary screenshot
-        const screenshotResponse = await fetch('/server/av/take-screenshot', {
+        // Use the same API call as VerificationEditor
+        const response = await fetch('/server/av/take-screenshot', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ host: selectedHost }),
         });
 
-        const screenshotResult = await screenshotResponse.json();
-        if (!screenshotResult.success || !screenshotResult.screenshot_url) {
-          setVerificationResult(
-            `❌ Failed to take temporary screenshot: ${screenshotResult.error || 'No URL returned'}`,
-          );
+        const result = await response.json();
+
+        if (!result.success || !result.screenshot_url) {
+          setVerificationResult('❌ Failed to capture screenshot for verification');
           return;
         }
 
-        const screenshotUrl = screenshotResult.screenshot_url;
+        const screenshotUrl = result.screenshot_url;
         console.log('[@component:NodeSelectionPanel] Temporary screenshot taken:', screenshotUrl);
 
         // Set the capture source path for the verification hook
@@ -249,33 +255,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
         setVerificationResult(`❌ ${err.message}`);
         setIsRunningVerifications(false);
-      }
-
-      // Record all verification executions to database
-      if (verification.verificationExecutions.length > 0) {
-        console.log(
-          '[@component:NodeSelectionPanel] Recording',
-          verification.verificationExecutions.length,
-          'verification executions to database',
-        );
-        const dbResult = await ExecutionResultsDb.recordBatchExecutions(
-          verification.verificationExecutions,
-        );
-
-        if (!dbResult.success) {
-          console.error(
-            '[@component:NodeSelectionPanel] Failed to record verification executions:',
-            dbResult.error,
-          );
-          setVerificationResult(`⚠️ Database recording failed: ${dbResult.error}`);
-        } else {
-          console.log(
-            '[@component:NodeSelectionPanel] Successfully recorded verification executions to database',
-          );
-          setVerificationResult(
-            `📊 Verification results recorded to database (${verification.verificationExecutions.length} executions)`,
-          );
-        }
       }
     };
 
