@@ -101,7 +101,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   const addVerification = () => {
     const newVerification: Verification = {
       command: '',
-      params: { text: '' },
+      params: {} as any,
       verification_type: 'text',
     };
     onVerificationsChange([...verifications, newVerification]);
@@ -296,9 +296,11 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
           verification.params.text.trim() !== '';
         return Boolean(hasText);
       } else if (verification.verification_type === 'adb') {
-        // ADB verifications need search criteria
+        // ADB verifications need search criteria - ADD TYPE CHECKING
         const hasSearchTerm =
-          verification.params?.search_term && verification.params.search_term.trim() !== '';
+          verification.params?.search_term &&
+          typeof verification.params.search_term === 'string' &&
+          verification.params.search_term.trim() !== '';
         return Boolean(hasSearchTerm);
       }
 

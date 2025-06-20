@@ -1,4 +1,8 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton, Collapse } from '@mui/material';
+import {
+  KeyboardArrowDown as ArrowDownIcon,
+  KeyboardArrowRight as ArrowRightIcon,
+} from '@mui/icons-material';
 import React from 'react';
 
 import {
@@ -7,9 +11,9 @@ import {
 } from '../../../config/layoutConfig';
 import { useVerificationEditor } from '../../../hooks/verification/useVerificationEditor';
 import { Host } from '../../../types/common/Host_Types';
+import { VerificationsList } from '../../verification/VerificationsList';
 
 import VerificationCapture from './VerificationCapture';
-import VerificationList from './VerificationList';
 import VerificationResultModal from './VerificationResultModal';
 
 interface DragArea {
@@ -169,7 +173,77 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
       />
 
       {/* =================== VERIFICATIONS SECTION =================== */}
-      <VerificationList verification={verification} />
+      <Box>
+        {/* Collapsible toggle button and title */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+          <IconButton
+            size="small"
+            onClick={() =>
+              verification.setVerificationsCollapsed(!verification.verificationsCollapsed)
+            }
+            sx={{ p: 0.25 }}
+          >
+            {verification.verificationsCollapsed ? (
+              <ArrowRightIcon sx={{ fontSize: '1rem' }} />
+            ) : (
+              <ArrowDownIcon sx={{ fontSize: '1rem' }} />
+            )}
+          </IconButton>
+          <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            Verifications
+          </Typography>
+        </Box>
+
+        {/* Collapsible content */}
+        <Collapse in={!verification.verificationsCollapsed}>
+          <Box
+            sx={{
+              '& .MuiTypography-subtitle2': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiButton-root': {
+                fontSize: '0.7rem',
+              },
+              '& .MuiTextField-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                },
+              },
+              '& .MuiSelect-root': {
+                fontSize: '0.75rem',
+              },
+              '& .MuiFormControl-root': {
+                '& .MuiInputLabel-root': {
+                  fontSize: '0.75rem',
+                },
+              },
+            }}
+          >
+            <VerificationsList
+              verifications={verification.verifications}
+              availableVerifications={verification.availableVerificationTypes}
+              onVerificationsChange={verification.handleVerificationsChange}
+              loading={verification.loading}
+              error={verification.error}
+              model={verification.selectedHost?.device_model || ''}
+              onTest={verification.handleTest}
+              testResults={verification.testResults}
+              reloadTrigger={verification.referenceSaveCounter}
+              onReferenceSelected={verification.handleReferenceSelected}
+              selectedHost={verification.selectedHost}
+              modelReferences={React.useMemo(
+                () =>
+                  verification.getModelReferences(verification.selectedHost?.device_model || ''),
+                [verification.getModelReferences, verification.selectedHost?.device_model],
+              )}
+              referencesLoading={verification.referencesLoading}
+            />
+          </Box>
+        </Collapse>
+      </Box>
 
       {/* =================== RESULT MODAL =================== */}
       <VerificationResultModal verification={verification} />

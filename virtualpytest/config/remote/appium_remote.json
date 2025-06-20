@@ -1,0 +1,178 @@
+{
+  "remote_info": {
+    "name": "Appium Remote",
+    "description": "Universal remote controller for Appium-compatible devices",
+    "platform_support": ["iOS", "Android", "Windows", "macOS"],
+    "automation_frameworks": ["XCUITest", "UIAutomator2", "WinAppDriver", "Mac2Driver"],
+    "image_url": "/images/remotes/appium_remote.png",
+    "button_scale_factor": 1.0,
+    "text_style": {
+      "fontSize": "12px",
+      "fontWeight": "bold",
+      "color": "#FFFFFF",
+      "textShadow": "1px 1px 2px rgba(0, 0, 0, 0.8)"
+    }
+  },
+  "connection_config": {
+    "required_fields": [
+      {
+        "name": "device_udid",
+        "label": "Device UDID",
+        "type": "text",
+        "placeholder": "e.g., 00008030-000549E23403802E (iOS) or emulator-5554 (Android)",
+        "required": true,
+        "description": "Unique Device Identifier - get via 'idevice_id -l' (iOS) or 'adb devices' (Android)"
+      },
+      {
+        "name": "platform_name",
+        "label": "Platform",
+        "type": "select",
+        "options": [
+          { "value": "iOS", "label": "iOS" },
+          { "value": "Android", "label": "Android" },
+          { "value": "Windows", "label": "Windows" },
+          { "value": "macOS", "label": "macOS" }
+        ],
+        "required": true,
+        "description": "Target platform for automation"
+      }
+    ],
+    "optional_fields": [
+      {
+        "name": "platform_version",
+        "label": "Platform Version",
+        "type": "text",
+        "placeholder": "e.g., 17.0 (iOS) or 13 (Android)",
+        "description": "Platform version (optional but recommended)"
+      },
+      {
+        "name": "appium_url",
+        "label": "Appium Server URL",
+        "type": "text",
+        "placeholder": "http://localhost:4723",
+        "default": "http://localhost:4723",
+        "description": "Appium server endpoint"
+      },
+      {
+        "name": "automation_name",
+        "label": "Automation Framework",
+        "type": "select",
+        "options": [
+          { "value": "", "label": "Auto-detect" },
+          { "value": "XCUITest", "label": "XCUITest (iOS)" },
+          { "value": "UIAutomator2", "label": "UIAutomator2 (Android)" },
+          { "value": "WinAppDriver", "label": "WinAppDriver (Windows)" },
+          { "value": "Mac2Driver", "label": "Mac2Driver (macOS)" }
+        ],
+        "description": "Automation framework (auto-detected if not specified)"
+      },
+      {
+        "name": "app_package",
+        "label": "App Package (Android)",
+        "type": "text",
+        "placeholder": "e.g., com.android.settings",
+        "description": "Android app package name (optional)"
+      },
+      {
+        "name": "app_activity",
+        "label": "App Activity (Android)",
+        "type": "text",
+        "placeholder": "e.g., .Settings",
+        "description": "Android app activity (optional)"
+      },
+      {
+        "name": "bundle_id",
+        "label": "Bundle ID (iOS)",
+        "type": "text",
+        "placeholder": "e.g., com.apple.Preferences",
+        "description": "iOS app bundle identifier (optional)"
+      }
+    ]
+  },
+  "panel_layout": {
+    "expanded": {
+      "width": "280px",
+      "height": "600px",
+      "position": {
+        "right": "20px",
+        "bottom": "20px"
+      }
+    },
+    "collapsed": {
+      "width": "180px",
+      "height": "300px",
+      "position": {
+        "right": "20px",
+        "bottom": "20px"
+      }
+    }
+  },
+  "containerWidth": 250,
+  "device_capabilities": {
+    "ios": {
+      "automation_name": "XCUITest",
+      "use_prebuilt_wda": true,
+      "wda_local_port": 8100,
+      "supports_touch_id": true,
+      "supports_face_id": true,
+      "common_apps": [
+        { "identifier": "com.apple.Preferences", "label": "Settings" },
+        { "identifier": "com.apple.mobilesafari", "label": "Safari" },
+        { "identifier": "com.apple.mobilemail", "label": "Mail" },
+        { "identifier": "com.apple.MobileSMS", "label": "Messages" },
+        { "identifier": "com.apple.mobilephone", "label": "Phone" },
+        { "identifier": "com.apple.camera", "label": "Camera" },
+        { "identifier": "com.apple.mobilecal", "label": "Calendar" },
+        { "identifier": "com.apple.Maps", "label": "Maps" }
+      ],
+      "system_keys": ["HOME", "VOLUME_UP", "VOLUME_DOWN", "POWER", "SCREENSHOT"]
+    },
+    "android": {
+      "automation_name": "UIAutomator2",
+      "system_port": 8200,
+      "supports_fingerprint": true,
+      "common_apps": [
+        { "identifier": "com.android.settings", "label": "Settings" },
+        { "identifier": "com.android.chrome", "label": "Chrome" },
+        { "identifier": "com.android.dialer", "label": "Phone" },
+        { "identifier": "com.android.mms", "label": "Messages" },
+        { "identifier": "com.android.camera2", "label": "Camera" },
+        { "identifier": "com.android.calendar", "label": "Calendar" },
+        { "identifier": "com.google.android.apps.maps", "label": "Maps" }
+      ],
+      "system_keys": [
+        "HOME",
+        "BACK",
+        "MENU",
+        "VOLUME_UP",
+        "VOLUME_DOWN",
+        "POWER",
+        "CAMERA",
+        "CALL",
+        "ENDCALL"
+      ]
+    }
+  },
+  "ui_config": {
+    "show_platform_indicator": true,
+    "show_connection_status": true,
+    "show_device_info": true,
+    "enable_element_overlay": true,
+    "enable_coordinate_tap": true,
+    "enable_app_launcher": true,
+    "max_elements_display": 100,
+    "element_highlight_colors": ["#FF0000", "#0066FF", "#FFD700", "#00CC00", "#9900FF"],
+    "tap_animation_duration": 300
+  },
+  "server_endpoints": {
+    "connect": "/server/control/take-control",
+    "disconnect": "/server/control/release-control",
+    "screenshot": "/server/remote/take-screenshot",
+    "command": "/server/remote/execute-command",
+    "screenshotAndDump": "/server/remote/screenshot-and-dump",
+    "getApps": "/server/remote/get-apps",
+    "clickElement": "/server/remote/click-element",
+    "tapCoordinates": "/server/remote/tap-coordinates",
+    "getStatus": "/server/remote/get-status"
+  }
+}

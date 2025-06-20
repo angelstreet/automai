@@ -36,6 +36,26 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   },
 };
 
+// Appium Remote configuration - uses server route proxying to host
+export const APPIUM_REMOTE_CONFIG: RemoteDeviceConfig = {
+  type: 'appium-remote',
+  name: 'Appium Remote',
+  icon: 'DeviceHub',
+  hasScreenshot: true,
+  hasOverlay: true,
+  serverEndpoints: {
+    connect: '/server/control/take-control',
+    disconnect: '/server/control/release-control',
+    screenshot: '/server/remote/take-screenshot',
+    command: '/server/remote/execute-command',
+    screenshotAndDump: '/server/remote/screenshot-and-dump',
+    getApps: '/server/remote/get-apps',
+    clickElement: '/server/remote/click-element',
+    tapElement: '/server/remote/tap-coordinates',
+    getStatus: '/server/remote/get-status',
+  },
+};
+
 // IR Remote configuration - uses server route proxying to host
 export const IR_CONFIG: RemoteDeviceConfig = {
   type: 'ir',
@@ -68,6 +88,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
 export const REMOTE_CONFIGS = {
   'android-tv': ANDROID_TV_CONFIG,
   'android-mobile': ANDROID_MOBILE_CONFIG,
+  'appium-remote': APPIUM_REMOTE_CONFIG,
   ir: IR_CONFIG,
   bluetooth: BLUETOOTH_CONFIG,
 } as const;

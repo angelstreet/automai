@@ -25,8 +25,42 @@ export interface AndroidApp {
   icon?: string;
 }
 
+// Appium Element interface for universal UI interaction
+export interface AppiumElement {
+  id: string;
+  text?: string;
+  className?: string;
+  package?: string; // Android package or iOS bundle ID
+  contentDesc?: string; // Android content-desc or iOS accessibility label
+  bounds: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
+  clickable: boolean;
+  enabled: boolean;
+  focused: boolean;
+  selected: boolean;
+  // Platform-specific attributes
+  platform: string; // 'ios', 'android', etc.
+  resource_id?: string; // Android resource-id
+  accessibility_id?: string; // iOS accessibility-id
+  name?: string; // iOS name attribute
+  label?: string; // iOS label attribute
+  value?: string; // iOS value attribute
+}
+
+// Appium App interface for universal app representation
+export interface AppiumApp {
+  identifier: string; // Package name (Android) or Bundle ID (iOS)
+  label: string;
+  version?: string;
+  platform?: string; // 'ios', 'android', etc.
+}
+
 // Remote types
-export type RemoteType = 'android-tv' | 'android-mobile' | 'ir' | 'bluetooth';
+export type RemoteType = 'android-tv' | 'android-mobile' | 'appium-remote' | 'ir' | 'bluetooth';
 
 // Base connection configuration interface
 export interface BaseConnectionConfig {
@@ -53,11 +87,24 @@ export interface BluetoothConnectionConfig extends BaseConnectionConfig {
   pairing_pin?: string;
 }
 
+// Appium connection configuration
+export interface AppiumConnectionConfig extends BaseConnectionConfig {
+  device_udid: string;
+  platform_name: string;
+  platform_version?: string;
+  appium_url?: string;
+  automation_name?: string;
+  app_package?: string; // Android
+  app_activity?: string; // Android
+  bundle_id?: string; // iOS
+}
+
 // Union type for all connection configurations
 export type AnyConnectionConfig =
   | AndroidConnectionConfig
   | IRConnectionConfig
   | BluetoothConnectionConfig
+  | AppiumConnectionConfig
   | BaseConnectionConfig;
 
 // Connection form interface for UI forms
@@ -105,6 +152,19 @@ export interface AndroidMobileSession extends RemoteSession {
     androidVersion: string;
   };
   adbConnected?: boolean;
+}
+
+// Appium session interface
+export interface AppiumSession extends RemoteSession {
+  deviceInfo?: {
+    platform: string;
+    platformVersion: string;
+    deviceName: string;
+    udid: string;
+    automationName: string;
+  };
+  appiumConnected?: boolean;
+  sessionId?: string;
 }
 
 // Remote configuration interface

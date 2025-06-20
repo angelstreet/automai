@@ -1,0 +1,653 @@
+"""
+Appium Remote Controller Implementation
+
+This controller provides universal remote control functionality using Appium WebDriver.
+Supports iOS (XCUITest), Android (UIAutomator2), and other Appium-compatible platforms.
+Key difference from ADB controller: uses Appium WebDriver API for cross-platform compatibility.
+Based on the AndroidMobileRemoteController pattern but with universal platform support.
+"""
+
+from typing import Dict, Any, List, Optional
+import subprocess
+import time
+import json
+import os
+from pathlib import Path
+from ..base_controller import RemoteControllerInterface
+
+# Use absolute import to avoid conflicts with local utils directory
+import sys
+src_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'utils')
+if src_utils_path not in sys.path:
+    sys.path.insert(0, src_utils_path)
+
+from src.utils.appium_utils import AppiumUtils, AppiumElement, AppiumApp
+
+
+class AppiumRemoteController(RemoteControllerInterface):
+    """Universal remote controller using Appium WebDriver for cross-platform device automation."""
+    
+    @staticmethod
+    def get_remote_config() -> Dict[str, Any]:
+        """Get the remote configuration including layout, buttons, and image."""
+        # Load configuration from JSON file
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            'config', 'remote', 'appium_remote.json'
+        )
+        
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Appium remote config file not found at: {config_path}")
+            
+        try:
+            print(f"Loading Appium remote config from: {config_path}")
+            with open(config_path, 'r') as config_file:
+                return json.load(config_file)
+        except Exception as e:
+            raise RuntimeError(f"Error loading Appium remote config from file: {e}")
+    
+    def __init__(self, device_name: str = "Appium Device", device_type: str = "appium_remote", **kwargs):
+        """
+        Initialize the Appium remote controller.
+        
+        Args:
+            device_name: Name of the device
+            device_type: Type identifier for the device
+            **kwargs: Additional parameters including:
+                - device_udid: Device UDID (required)
+                - platform_name: Platform name ('iOS', 'Android', etc.) (required)
+                - platform_version: Platform version (optional)
+                - appium_url: Appium server URL (default: http://localhost:4723)
+                - automation_name: Automation name ('XCUITest', 'UIAutomator2', etc.) (optional)
+                - app_package: Android app package (optional)
+                - app_activity: Android app activity (optional)
+                - bundle_id: iOS bundle ID (optional)
+                - connection_timeout: Connection timeout in seconds (default: 10)
+        """
+        super().__init__(device_name, device_type)
+        
+        # Required parameters
+        self.device_udid = kwargs.get('device_udid')
+        self.platform_name = kwargs.get('platform_name')
+        
+        # Optional parameters
+        self.platform_version = kwargs.get('platform_version', '')
+        self.appium_url = kwargs.get('appium_url', 'http://localhost:4723')
+        self.automation_name = kwargs.get('automation_name', '')
+        self.app_package = kwargs.get('app_package', '')
+        self.app_activity = kwargs.get('app_activity', '')
+        self.bundle_id = kwargs.get('bundle_id', '')
+        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        
+        # Validate required parameters
+        if not self.device_udid:
+            raise ValueError("device_udid is required for AppiumRemoteController")
+        if not self.platform_name:
+            raise ValueError("platform_name is required for AppiumRemoteController")
+            
+        self.device_id = f"{self.platform_name.lower()}_{self.device_udid}"
+        self.appium_utils = None
+        self.device_resolution = None
+        self.detected_platform = None
+        
+        # UI elements state
+        self.last_ui_elements = []
+        self.last_dump_time = 0
+        
+    def connect(self) -> bool:
+        """Connect to device via Appium WebDriver."""
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device {self.device_udid}")
+            
+            # Initialize Appium utilities
+            self.appium_utils = AppiumUtils()
+            
+            # Build Appium capabilities
+            capabilities = self._build_capabilities()
+            
+            # Connect to device via Appium
+            if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_url):
+                print(f"Remote[{self.device_type.upper()}]: Failed to connect to device {self.device_id}")
+                self.disconnect()
+                return False
+                
+            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.platform_name} device {self.device_udid}")
+            
+            # Get device resolution
+            self.device_resolution = self.appium_utils.get_device_resolution(self.device_id)
+            if self.device_resolution:
+                print(f"Remote[{self.device_type.upper()}]: Device resolution: {self.device_resolution['width']}x{self.device_resolution['height']}")
+            
+            # Store detected platform
+            self.detected_platform = self.appium_utils.get_platform(self.device_id)
+            
+            self.is_connected = True
+            return True
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Connection error: {e}")
+            self.disconnect()
+            return False
+    
+    def _build_capabilities(self) -> Dict[str, Any]:
+        """Build Appium capabilities based on platform and parameters."""
+        capabilities = {
+            'platformName': self.platform_name,
+            'udid': self.device_udid,
+            'noReset': True,
+            'fullReset': False,
+        }
+        
+        # Add platform version if provided
+        if self.platform_version:
+            capabilities['platformVersion'] = self.platform_version
+        
+        # Add automation name if provided, otherwise use defaults
+        if self.automation_name:
+            capabilities['automationName'] = self.automation_name
+        elif self.platform_name.lower() == 'ios':
+            capabilities['automationName'] = 'XCUITest'
+        elif self.platform_name.lower() == 'android':
+            capabilities['automationName'] = 'UIAutomator2'
+        
+        # Add iOS-specific capabilities
+        if self.platform_name.lower() == 'ios':
+            capabilities['usePrebuiltWDA'] = True
+            if self.bundle_id:
+                capabilities['bundleId'] = self.bundle_id
+        
+        # Add Android-specific capabilities
+        elif self.platform_name.lower() == 'android':
+            if self.app_package:
+                capabilities['appPackage'] = self.app_package
+            if self.app_activity:
+                capabilities['appActivity'] = self.app_activity
+        
+        print(f"Remote[{self.device_type.upper()}]: Built capabilities: {capabilities}")
+        return capabilities
+            
+    def disconnect(self) -> bool:
+        """Disconnect from device."""
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Disconnecting from {self.device_name}")
+            
+            # Clean up Appium connection
+            if self.appium_utils:
+                self.appium_utils.disconnect_device(self.device_id)
+                self.appium_utils = None
+                
+            self.is_connected = False
+            
+            print(f"Remote[{self.device_type.upper()}]: Disconnected successfully")
+            return True
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Disconnect error: {e}")
+            self.is_connected = False
+            return False
+            
+    def press_key(self, key: str) -> bool:
+        """
+        Send a key press to the device.
+        
+        Args:
+            key: Key name (e.g., "HOME", "BACK", "VOLUME_UP")
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Pressing key '{key}'")
+            
+            success = self.appium_utils.execute_key_command(self.device_id, key)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to press key '{key}'")
+                
+            return success
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Key press error: {e}")
+            return False
+            
+    def input_text(self, text: str) -> bool:
+        """
+        Send text input to the device.
+        
+        Args:
+            text: Text to input
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
+            
+            success = self.appium_utils.input_text(self.device_id, text)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Text input failed")
+                return False
+                
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
+            return False
+            
+    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
+        """
+        Execute a sequence of commands on the device.
+        
+        Args:
+            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
+        
+        for i, command in enumerate(commands):
+            action = command.get('action')
+            params = command.get('params', {})
+            delay = command.get('delay', 0.5)
+            
+            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
+            
+            success = False
+            if action == 'press_key':
+                success = self.press_key(params.get('key', 'HOME'))
+            elif action == 'input_text':
+                success = self.input_text(params.get('text', ''))
+            elif action == 'launch_app':
+                success = self.launch_app(params.get('app_identifier', ''))
+            elif action == 'close_app':
+                success = self.close_app(params.get('app_identifier', ''))
+            elif action == 'tap_coordinates':
+                x = params.get('x', 0)
+                y = params.get('y', 0)
+                success = self.tap_coordinates(x, y)
+            elif action == 'click_element':
+                element = params.get('element')
+                if element:
+                    success = self.click_element(element)
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: Missing element parameter for click_element")
+                    return False
+            elif action == 'dump_ui_elements':
+                success, _, _ = self.dump_ui_elements()
+            elif action == 'take_screenshot':
+                success, _, _ = self.take_screenshot()
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
+                return False
+                
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
+                return False
+                
+            # Add delay between commands (except for the last one)
+            if delay > 0 and i < len(commands) - 1:
+                time.sleep(delay)
+                
+        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
+        return True
+        
+    def launch_app(self, app_identifier: str) -> bool:
+        """
+        Launch an app by identifier (package name for Android, bundle ID for iOS).
+        
+        Args:
+            app_identifier: App package name (Android) or bundle ID (iOS)
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Launching app: {app_identifier}")
+            
+            success = self.appium_utils.launch_app(self.device_id, app_identifier)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully launched {app_identifier}")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to launch {app_identifier}")
+                
+            return success
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
+            return False
+            
+    def close_app(self, app_identifier: str) -> bool:
+        """
+        Close/stop an app by identifier.
+        
+        Args:
+            app_identifier: App package name (Android) or bundle ID (iOS)
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Closing app: {app_identifier}")
+            
+            success = self.appium_utils.close_app(self.device_id, app_identifier)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully closed {app_identifier}")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to close {app_identifier}")
+                
+            return success
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: App close error: {e}")
+            return False
+            
+    def get_installed_apps(self) -> List[AppiumApp]:
+        """
+        Get list of installed apps on the device.
+        
+        Returns:
+            List of AppiumApp objects
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return []
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Getting installed apps")
+            
+            apps = self.appium_utils.get_installed_apps(self.device_id)
+            
+            print(f"Remote[{self.device_type.upper()}]: Found {len(apps)} installed apps")
+            return apps
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Error getting apps: {e}")
+            return []
+            
+    def dump_ui_elements(self) -> tuple[bool, List[AppiumElement], str]:
+        """
+        Dump UI elements from the current screen.
+        
+        Returns:
+            Tuple of (success, elements_list, error_message)
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False, [], "Not connected to device"
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Dumping UI elements")
+            
+            success, elements, error = self.appium_utils.dump_ui_elements(self.device_id)
+            
+            if success:
+                self.last_ui_elements = elements
+                self.last_dump_time = time.time()
+                print(f"Remote[{self.device_type.upper()}]: Successfully dumped {len(elements)} UI elements")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: UI dump failed: {error}")
+                
+            return success, elements, error
+            
+        except Exception as e:
+            error_msg = f"Error dumping UI elements: {e}"
+            print(f"Remote[{self.device_type.upper()}]: {error_msg}")
+            return False, [], error_msg
+            
+    def click_element(self, element: AppiumElement) -> bool:
+        """
+        Click on a UI element.
+        
+        Args:
+            element: AppiumElement to click
+            
+        Returns:
+            bool: True if click successful
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Clicking element ID={element.id}, text='{element.text}'")
+            
+            success = self.appium_utils.click_element(self.device_id, element)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully clicked element")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to click element")
+                
+            return success
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Element click error: {e}")
+            return False
+            
+    def find_element_by_text(self, text: str) -> Optional[AppiumElement]:
+        """
+        Find a UI element by its text content.
+        
+        Args:
+            text: Text to search for
+            
+        Returns:
+            AppiumElement if found, None otherwise
+        """
+        for element in self.last_ui_elements:
+            if text.lower() in element.text.lower():
+                return element
+        return None
+        
+    def find_element_by_identifier(self, identifier: str) -> Optional[AppiumElement]:
+        """
+        Find a UI element by its platform-specific identifier.
+        
+        Args:
+            identifier: Resource ID (Android) or accessibility ID (iOS)
+            
+        Returns:
+            AppiumElement if found, None otherwise
+        """
+        for element in self.last_ui_elements:
+            if self.detected_platform == 'android' and identifier in element.resource_id:
+                return element
+            elif self.detected_platform == 'ios' and identifier in element.accessibility_id:
+                return element
+        return None
+        
+    def find_element_by_content_desc(self, content_desc: str) -> Optional[AppiumElement]:
+        """
+        Find a UI element by its content description.
+        
+        Args:
+            content_desc: Content description to search for
+            
+        Returns:
+            AppiumElement if found, None otherwise
+        """
+        for element in self.last_ui_elements:
+            if content_desc.lower() in element.contentDesc.lower():
+                return element
+        return None
+        
+    def verify_element_exists(self, text: str = "", identifier: str = "", content_desc: str = "") -> bool:
+        """
+        Verify that an element exists on the current screen.
+        
+        Args:
+            text: Text to search for
+            identifier: Platform-specific identifier to search for
+            content_desc: Content description to search for
+            
+        Returns:
+            bool: True if element found
+        """
+        if text:
+            return self.find_element_by_text(text) is not None
+        elif identifier:
+            return self.find_element_by_identifier(identifier) is not None
+        elif content_desc:
+            return self.find_element_by_content_desc(content_desc) is not None
+        else:
+            return False
+            
+    def get_device_resolution(self) -> Optional[Dict[str, int]]:
+        """Get the device screen resolution."""
+        if self.device_resolution:
+            return self.device_resolution
+        return None
+        
+    def take_screenshot(self) -> tuple[bool, str, str]:
+        """
+        Take a screenshot of the device.
+        
+        Returns:
+            tuple: (success, base64_screenshot_data, error_message)
+        """
+        if not self.is_connected or not self.appium_utils:
+            return False, "", "Not connected to device"
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Taking screenshot")
+            
+            success, screenshot_data, error = self.appium_utils.take_screenshot(self.device_id)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Screenshot captured successfully")
+                return True, screenshot_data, ""
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Screenshot failed: {error}")
+                return False, "", error
+                
+        except Exception as e:
+            error_msg = f"Screenshot error: {e}"
+            print(f"Remote[{self.device_type.upper()}]: {error_msg}")
+            return False, "", error_msg
+        
+    def get_status(self) -> Dict[str, Any]:
+        """Get controller status - check Appium device connectivity."""
+        try:
+            # Basic status info
+            base_status = {
+                'success': True,
+                'controller_type': self.controller_type,
+                'device_type': self.device_type,
+                'device_name': self.device_name,
+                'device_udid': self.device_udid,
+                'platform_name': self.platform_name,
+                'detected_platform': self.detected_platform,
+                'appium_url': self.appium_url,
+                'connected': self.is_connected
+            }
+            
+            # Check Appium server connectivity
+            if self.appium_utils:
+                server_running = self.appium_utils.is_appium_server_running(self.appium_url)
+                base_status.update({
+                    'appium_server_running': server_running,
+                    'appium_status': 'server_running' if server_running else 'server_not_running',
+                    'message': f'Appium server is {"running" if server_running else "not running"} at {self.appium_url}'
+                })
+                
+                if self.is_connected:
+                    driver = self.appium_utils.get_driver(self.device_id)
+                    if driver:
+                        base_status.update({
+                            'driver_status': 'active',
+                            'session_id': getattr(driver, 'session_id', 'unknown'),
+                            'message': f'{self.platform_name} device {self.device_udid} is connected and ready'
+                        })
+                    else:
+                        base_status.update({
+                            'driver_status': 'missing',
+                            'message': f'Connected but no driver found for device {self.device_id}'
+                        })
+                else:
+                    base_status.update({
+                        'driver_status': 'disconnected',
+                        'message': f'Device {self.device_udid} is not connected'
+                    })
+            else:
+                base_status.update({
+                    'appium_server_running': False,
+                    'appium_status': 'not_initialized',
+                    'driver_status': 'not_initialized',
+                    'message': 'Appium utils not initialized'
+                })
+            
+            return base_status
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'controller_type': self.controller_type,
+                'device_name': self.device_name,
+                'appium_status': 'error',
+                'driver_status': 'error',
+                'error': f'Failed to check Appium device status: {str(e)}'
+            }
+
+    def tap_coordinates(self, x: int, y: int) -> bool:
+        """
+        Tap at specific screen coordinates.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            
+        Returns:
+            bool: True if tap successful
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
+            
+            success = self.appium_utils.tap_coordinates(self.device_id, x, y)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
+                return True
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Tap failed")
+                return False
+                
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
+            return False
+    
+    def get_available_actions(self) -> List[Dict[str, Any]]:
+        """Get available actions for this Appium remote controller."""
+        return [
+            {'command': 'press_key', 'params': {'key': {'type': 'string', 'required': True}}},
+            {'command': 'input_text', 'params': {'text': {'type': 'string', 'required': True}}},
+            {'command': 'launch_app', 'params': {'app_identifier': {'type': 'string', 'required': True}}},
+            {'command': 'close_app', 'params': {'app_identifier': {'type': 'string', 'required': True}}},
+            {'command': 'get_installed_apps', 'params': {}},
+            {'command': 'dump_ui_elements', 'params': {}},
+            {'command': 'click_element', 'params': {'element': {'type': 'object', 'required': True}}},
+            {'command': 'find_element_by_text', 'params': {'text': {'type': 'string', 'required': True}}},
+            {'command': 'find_element_by_identifier', 'params': {'identifier': {'type': 'string', 'required': True}}},
+            {'command': 'find_element_by_content_desc', 'params': {'content_desc': {'type': 'string', 'required': True}}},
+            {'command': 'get_device_resolution', 'params': {}},
+            {'command': 'take_screenshot', 'params': {}},
+            {'command': 'tap_coordinates', 'params': {'x': {'type': 'int', 'required': True}, 'y': {'type': 'int', 'required': True}}}
+        ]
+
+# Backward compatibility alias
+UniversalAppiumController = AppiumRemoteController 
