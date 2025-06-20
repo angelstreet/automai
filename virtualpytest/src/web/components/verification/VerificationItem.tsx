@@ -79,7 +79,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={verification.command}
+            value={typeof verification.command === 'string' ? verification.command : ''}
             onChange={(e) => onVerificationSelect(index, e.target.value)}
             displayEmpty
             size="small"
