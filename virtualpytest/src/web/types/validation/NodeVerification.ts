@@ -7,7 +7,7 @@ import { Verification } from '../verification/VerificationTypes';
 export interface NodeVerification extends Verification {
   id: string; // UI compatibility: same as command
   label: string; // UI display name
-  controller_type: 'text' | 'image' | 'adb';
+  verification_type: 'text' | 'image' | 'adb';
   description?: string;
   requiresInput?: boolean;
   inputLabel?: string;

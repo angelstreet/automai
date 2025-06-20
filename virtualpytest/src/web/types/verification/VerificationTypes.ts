@@ -59,9 +59,9 @@ export interface Verification {
   }>;
 }
 
-// Verifications grouped by controller type
+// Verifications grouped by verification type
 export interface Verifications {
-  [controllerType: string]: Verification[]; // Controller type as category
+  [verificationType: string]: Verification[]; // Verification type as category
 }
 
 // =====================================================
