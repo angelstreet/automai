@@ -3,19 +3,17 @@
 Simple Image Verification Test
 
 Tests waitForImageToAppear using simplified VerificationController method.
+
+Usage:
+    cd virtualpytest
+    PYTHONPATH=. python3 scripts/test_verification_simple.py
 """
 
 import sys
 import os
 
-# Add the src directory to Python path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(script_dir)
-src_path = os.path.join(project_root, 'src')
-sys.path.insert(0, src_path)
-
-from utils.host_utils import global_host_object
-from controllers.verification_controller import execute_image_verification
+from src.utils.host_utils import global_host_object
+from src.controllers.verification_controller import execute_image_verification
 
 
 def test_wait_for_image(reference_name="default_capture"):
