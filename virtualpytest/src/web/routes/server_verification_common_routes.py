@@ -173,12 +173,8 @@ def execute_batch_verification():
                 'error': 'verifications are required'
             }), 400
         
-        # Require source_filename - no fallbacks (capture-first approach)
-        if not source_filename:
-            return jsonify({
-                'success': False,
-                'error': 'source_filename is required - please capture screenshot first'
-            }), 400
+        # Note: source_filename is optional - controllers will take screenshots automatically when needed
+        # ADB verifications don't need screenshots, image/text verifications will capture if no source provided
         
         results = []
         passed_count = 0
