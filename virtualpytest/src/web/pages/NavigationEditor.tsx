@@ -672,18 +672,16 @@ const NavigationEditorContent: React.FC = React.memo(() => {
       />
 
       {/* Edge Edit Dialog */}
-      {selectedHost && (
-        <EdgeEditDialog
-          isOpen={isEdgeDialogOpen}
-          edgeForm={edgeForm}
-          setEdgeForm={setEdgeForm}
-          onSubmit={handleEdgeFormSubmit}
-          onClose={() => setIsEdgeDialogOpen(false)}
-          selectedEdge={selectedEdge}
-          isControlActive={isControlActive}
-          selectedHost={selectedHost}
-        />
-      )}
+      <EdgeEditDialog
+        isOpen={isEdgeDialogOpen}
+        edgeForm={edgeForm}
+        setEdgeForm={setEdgeForm}
+        onSubmit={handleEdgeFormSubmit}
+        onClose={() => setIsEdgeDialogOpen(false)}
+        selectedEdge={selectedEdge}
+        isControlActive={isControlActive}
+        selectedHost={selectedHost}
+      />
 
       {/* Discard Changes Confirmation Dialog */}
       <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>
@@ -778,7 +776,14 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   ]);
 
   // Memoize userInterface to prevent DeviceControlProvider re-renders
-  const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
+  // Use deep comparison to prevent unnecessary re-renders when object reference changes
+  const stableUserInterface = useMemo(() => {
+    console.log(
+      '[@component:NavigationEditorWithAllProviders] Memoizing userInterface:',
+      userInterfaceFromState,
+    );
+    return userInterfaceFromState;
+  }, [JSON.stringify(userInterfaceFromState)]);
 
   return (
     <NodeEdgeManagementProvider state={nodeEdgeState}>

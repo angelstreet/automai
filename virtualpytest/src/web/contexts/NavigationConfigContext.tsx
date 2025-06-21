@@ -634,7 +634,19 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       </NavigationConfigContext.Provider>
     );
   },
+  // Custom comparison function - children should be stable
+  (prevProps, nextProps) => {
+    const areEqual = prevProps.children === nextProps.children;
+
+    if (!areEqual) {
+      console.log('[@context:NavigationConfigProvider] Children changed, re-rendering required');
+    }
+
+    return areEqual;
+  },
 );
+
+NavigationConfigProvider.displayName = 'NavigationConfigProvider';
 
 // ========================================
 // HOOK

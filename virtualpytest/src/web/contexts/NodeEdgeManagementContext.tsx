@@ -408,7 +408,28 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       </NodeEdgeManagementContext.Provider>
     );
   },
+  // Custom comparison function to prevent unnecessary re-renders
+  (prevProps, nextProps) => {
+    // Compare children (usually stable)
+    if (prevProps.children !== nextProps.children) {
+      return false;
+    }
+
+    // Deep compare state object
+    const prevState = JSON.stringify(prevProps.state);
+    const nextState = JSON.stringify(nextProps.state);
+
+    const areEqual = prevState === nextState;
+
+    if (!areEqual) {
+      console.log('[@context:NodeEdgeManagementProvider] State changed, re-rendering required');
+    }
+
+    return areEqual;
+  },
 );
+
+NodeEdgeManagementProvider.displayName = 'NodeEdgeManagementProvider';
 
 // ========================================
 // HOOK

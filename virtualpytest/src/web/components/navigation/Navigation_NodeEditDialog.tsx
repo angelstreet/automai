@@ -41,32 +41,19 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     return null;
   }
 
-  // Early return if selectedHost is invalid - MUST be before verification hook
-  if (!selectedHost || !selectedHost.device_model || selectedHost.device_model.trim() === '') {
-    return (
-      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>Edit Node</DialogTitle>
-        <DialogContent>
-          <Typography color="error">
-            No valid host device selected. Please select a host device first.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
-  }
+  // Check if we have a valid host for verification features
+  const hasValidHost =
+    selectedHost && selectedHost.device_model && selectedHost.device_model.trim() !== '';
 
-  // Use the same verification hooks as VerificationEditor - now safe to call
+  // Use the verification hooks only if we have a valid host
   const verification = useVerification({
-    selectedHost: selectedHost,
+    selectedHost: hasValidHost ? selectedHost : null,
     captureSourcePath: undefined, // NodeEditDialog doesn't capture images
   });
 
   const { getModelReferences, referencesLoading } = useVerificationReferences(
     0, // No save counter needed since we don't create references
-    selectedHost,
+    hasValidHost ? selectedHost : null,
   );
 
   const [isRunningGoto, setIsRunningGoto] = useState(false);
@@ -128,7 +115,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   };
 
   // Can run goto if we have control and device, and not already running goto
-  const canRunGoto = isControlActive && selectedHost && !isRunningGoto && !verification.loading;
+  const canRunGoto = isControlActive && hasValidHost && !isRunningGoto && !verification.loading;
 
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -586,23 +573,33 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           )}
 
           {/* Verification Section - using same hooks as VerificationEditor */}
-          <VerificationsList
-            verifications={verification.verifications}
-            availableVerifications={verification.availableVerificationTypes}
-            onVerificationsChange={verification.handleVerificationsChange}
-            loading={verification.loading}
-            error={verification.error}
-            model={verification.selectedHost?.device_model || model}
-            selectedHost={verification.selectedHost}
-            onTest={verification.handleTest}
-            testResults={verification.testResults}
-            reloadTrigger={0}
-            onReferenceSelected={handleReferenceSelected}
-            modelReferences={getModelReferences(
-              verification.selectedHost?.device_model || model || '',
-            )}
-            referencesLoading={referencesLoading}
-          />
+          {hasValidHost ? (
+            <VerificationsList
+              verifications={verification.verifications}
+              availableVerifications={verification.availableVerificationTypes}
+              onVerificationsChange={verification.handleVerificationsChange}
+              loading={verification.loading}
+              error={verification.error}
+              model={verification.selectedHost?.device_model || model}
+              selectedHost={verification.selectedHost}
+              onTest={verification.handleTest}
+              testResults={verification.testResults}
+              reloadTrigger={0}
+              onReferenceSelected={handleReferenceSelected}
+              modelReferences={getModelReferences(
+                verification.selectedHost?.device_model || model || '',
+              )}
+              referencesLoading={referencesLoading}
+            />
+          ) : (
+            <Box sx={{ p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                ⚠️ No host device selected. Verification features are disabled.
+                <br />
+                Select and connect to a host device to configure and test verifications.
+              </Typography>
+            </Box>
+          )}
 
           {gotoResult && (
             <Box
@@ -643,23 +640,30 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           {saveSuccess ? '✓' : 'Save'}
         </Button>
         <Button
-          onClick={verification.handleTest}
+          onClick={hasValidHost ? verification.handleTest : undefined}
           variant="contained"
           disabled={
+            !hasValidHost ||
             !isControlActive ||
-            !selectedHost ||
             verification.verifications.length === 0 ||
             verification.loading
           }
           sx={{
             opacity:
+              !hasValidHost ||
               !isControlActive ||
-              !selectedHost ||
               verification.verifications.length === 0 ||
               verification.loading
                 ? 0.5
                 : 1,
           }}
+          title={
+            !hasValidHost
+              ? 'Host device required to run verifications'
+              : !isControlActive
+                ? 'Device control required to run verifications'
+                : ''
+          }
         >
           {verification.loading ? 'Running...' : 'Run'}
         </Button>
@@ -675,6 +679,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               bgcolor: 'primary.dark',
             },
           }}
+          title={
+            !hasValidHost
+              ? 'Host device required for navigation'
+              : !isControlActive
+                ? 'Device control required for navigation'
+                : ''
+          }
         >
           {isRunningGoto ? 'Going...' : 'Go To'}
         </Button>

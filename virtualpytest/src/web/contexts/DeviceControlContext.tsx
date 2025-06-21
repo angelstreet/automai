@@ -224,7 +224,30 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = React
       <DeviceControlContext.Provider value={contextValue}>{children}</DeviceControlContext.Provider>
     );
   },
+  // Custom comparison function to prevent unnecessary re-renders
+  (prevProps, nextProps) => {
+    // Compare children (usually stable)
+    if (prevProps.children !== nextProps.children) {
+      return false;
+    }
+
+    // Deep compare userInterface
+    const prevInterface = JSON.stringify(prevProps.userInterface);
+    const nextInterface = JSON.stringify(nextProps.userInterface);
+
+    const areEqual = prevInterface === nextInterface;
+
+    if (!areEqual) {
+      console.log('[@context:DeviceControlProvider] Props changed, re-rendering required');
+      console.log('Previous userInterface:', prevProps.userInterface);
+      console.log('Next userInterface:', nextProps.userInterface);
+    }
+
+    return areEqual;
+  },
 );
+
+DeviceControlProvider.displayName = 'DeviceControlProvider';
 
 // ========================================
 // HOOK

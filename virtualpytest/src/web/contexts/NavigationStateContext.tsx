@@ -458,7 +458,19 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = R
       </NavigationStateContext.Provider>
     );
   },
+  // Custom comparison function - children should be stable
+  (prevProps, nextProps) => {
+    const areEqual = prevProps.children === nextProps.children;
+
+    if (!areEqual) {
+      console.log('[@context:NavigationStateProvider] Children changed, re-rendering required');
+    }
+
+    return areEqual;
+  },
 );
+
+NavigationStateProvider.displayName = 'NavigationStateProvider';
 
 // ========================================
 // HOOK

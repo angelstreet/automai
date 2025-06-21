@@ -62,13 +62,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
+  // Check if we have a valid host for action features
+  const hasValidHost = selectedHost && selectedHost.available_remote_actions;
+
   // Extract controller actions from host data
   const controllerActions: ControllerActions = useMemo(() => {
     return selectedHost?.available_remote_actions || {};
   }, [selectedHost?.available_remote_actions]);
 
   const canRunActions =
-    isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
+    isControlActive && hasValidHost && edgeForm?.actions?.length > 0 && !isRunningActions;
 
   useEffect(() => {
     if (!isOpen) {
@@ -180,17 +183,27 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             size="small"
           />
 
-          <EdgeActionsList
-            actions={edgeForm?.actions || []}
-            retryActions={edgeForm?.retryActions || []}
-            finalWaitTime={edgeForm?.finalWaitTime}
-            availableActions={controllerActions}
-            onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
-            onRetryActionsChange={(newRetryActions) =>
-              setEdgeForm({ ...edgeForm, retryActions: newRetryActions })
-            }
-            onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
-          />
+          {hasValidHost ? (
+            <EdgeActionsList
+              actions={edgeForm?.actions || []}
+              retryActions={edgeForm?.retryActions || []}
+              finalWaitTime={edgeForm?.finalWaitTime}
+              availableActions={controllerActions}
+              onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
+              onRetryActionsChange={(newRetryActions) =>
+                setEdgeForm({ ...edgeForm, retryActions: newRetryActions })
+              }
+              onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
+            />
+          ) : (
+            <Box sx={{ p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                ⚠️ No host device selected. Action configuration is limited.
+                <br />
+                Select and connect to a host device to configure and test edge actions.
+              </Typography>
+            </Box>
+          )}
 
           {actionResult && (
             <Box
@@ -226,6 +239,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           variant="contained"
           disabled={!canRunActions}
           sx={{ opacity: !canRunActions ? 0.5 : 1 }}
+          title={
+            !hasValidHost
+              ? 'Host device required to run actions'
+              : !isControlActive
+                ? 'Device control required to run actions'
+                : edgeForm?.actions?.length === 0
+                  ? 'No actions configured to run'
+                  : ''
+          }
         >
           {isRunningActions ? 'Running...' : 'Run'}
         </Button>
