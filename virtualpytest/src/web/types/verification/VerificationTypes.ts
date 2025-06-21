@@ -24,6 +24,7 @@ export interface ImageVerificationParams {
   timeout?: number; // Optional: timeout in seconds, default 1.0
   area?: ReferenceArea; // Optional: area to search within
   image_filter?: 'none' | 'greyscale' | 'binary'; // Optional: filter to apply, default 'none'
+  reference_name?: string; // Optional: reference name for UI display (same as image_path usually)
 }
 
 // Text verification parameters
@@ -33,6 +34,7 @@ export interface TextVerificationParams {
   case_sensitive?: boolean; // Optional: case sensitive matching, default false
   area?: ReferenceArea; // Optional: area to search within
   image_filter?: 'none' | 'greyscale' | 'binary'; // Optional: filter to apply
+  reference_name?: string; // Optional: reference name for UI display
 }
 
 // ADB verification parameters

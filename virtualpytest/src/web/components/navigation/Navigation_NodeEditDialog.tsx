@@ -110,16 +110,24 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   useEffect(() => {
     if (isOpen && selectedHost?.available_verification_types) {
       console.log(`[@component:NodeEditDialog] Loading verifications from host data`);
+      console.log(
+        `[@component:NodeEditDialog] Node has ${nodeForm?.verifications?.length || 0} existing verifications:`,
+        nodeForm?.verifications,
+      );
       setVerifications(selectedHost.available_verification_types);
       setLoadingVerifications(false);
       setVerificationError(null);
     } else if (isOpen && selectedHost && !selectedHost.available_verification_types) {
       console.log(`[@component:NodeEditDialog] No verification types available from host`);
+      console.log(
+        `[@component:NodeEditDialog] Node has ${nodeForm?.verifications?.length || 0} existing verifications:`,
+        nodeForm?.verifications,
+      );
       setVerifications({});
       setLoadingVerifications(false);
       setVerificationError('No verification types available from host');
     }
-  }, [isOpen, selectedHost]);
+  }, [isOpen, selectedHost, nodeForm?.verifications]);
 
   const isFormValid = () => {
     const basicFormValid = nodeForm?.label?.trim();

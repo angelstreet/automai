@@ -87,9 +87,20 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   // Memoize model references to prevent multiple calls during render
   const modelReferences = useMemo(() => {
     if (passedModelReferences !== undefined) {
+      console.log(
+        `[@component:VerificationsList] Using passed model references for ${model}:`,
+        Object.keys(passedModelReferences).length,
+        'references',
+      );
       return passedModelReferences;
     } else {
-      return hookGetModelReferences(model);
+      const refs = hookGetModelReferences(model);
+      console.log(
+        `[@component:VerificationsList] Using hook model references for ${model}:`,
+        Object.keys(refs).length,
+        'references',
+      );
+      return refs;
     }
   }, [passedModelReferences, hookGetModelReferences, model]);
 
@@ -97,6 +108,14 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   useEffect(() => {
     console.log('[@component:VerificationsList] testResults updated:', testResults);
   }, [testResults]);
+
+  // Debug logging for verifications changes
+  useEffect(() => {
+    console.log(
+      `[@component:VerificationsList] Verifications updated: ${verifications.length} verifications for model ${model}:`,
+      verifications,
+    );
+  }, [verifications, model]);
 
   const addVerification = () => {
     const newVerification: Verification = {
@@ -193,29 +212,41 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
       };
 
       if (selectedRef.type === 'image') {
-        // Image reference parameters - store directly in params
+        // Image reference parameters - store image_path as primary field
         updateVerification(index, {
           params: {
             ...baseParams,
-            image_path: referenceName,
+            image_path: referenceName, // Primary field for image references
+            reference_name: referenceName, // Secondary field for UI display
           },
         });
         console.log('[@component:VerificationsList] Updated verification with image reference:', {
           reference_image: referenceName,
           reference_url: selectedRef.url,
+          updatedParams: {
+            ...baseParams,
+            image_path: referenceName,
+            reference_name: referenceName,
+          },
         });
       } else if (selectedRef.type === 'text') {
-        // Text reference parameters - store directly in params
+        // Text reference parameters - store text and reference_name
         updateVerification(index, {
           params: {
             ...baseParams,
             text: selectedRef.text || '',
+            reference_name: referenceName, // Primary field for text references
           },
         });
         console.log('[@component:VerificationsList] Updated verification with text reference:', {
           reference_text: selectedRef.text,
           reference_name: referenceName,
           font_size: selectedRef.font_size,
+          updatedParams: {
+            ...baseParams,
+            text: selectedRef.text || '',
+            reference_name: referenceName,
+          },
         });
       }
 

@@ -194,7 +194,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Text Reference</InputLabel>
           <Select
-            value={typeof verification.params?.text === 'string' ? verification.params.text : ''}
+            value={verification.params?.reference_name || ''}
             onChange={(e) => onReferenceSelect(index, e.target.value)}
             label="Text Reference"
             size="small"
@@ -243,11 +243,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Image Reference</InputLabel>
           <Select
-            value={
-              typeof verification.params?.image_path === 'string'
-                ? verification.params.image_path
-                : ''
-            }
+            value={verification.params?.image_path || verification.params?.reference_name || ''}
             onChange={(e) => onReferenceSelect(index, e.target.value)}
             label="Image Reference"
             size="small"
