@@ -72,7 +72,24 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
               : 'FAIL'}
         </Typography>
 
-       
+        {/* Display message within the same status box */}
+        {(testResult.message || testResult.error) && (
+          <Typography
+            sx={{
+              fontSize: '0.7rem',
+              fontWeight: 500,
+              color:
+                testResult.resultType === 'PASS' || testResult.success
+                  ? '#4caf50'
+                  : testResult.resultType === 'ERROR'
+                    ? '#ff9800'
+                    : '#f44336',
+              ml: 1,
+            }}
+          >
+            {testResult.message || testResult.error}
+          </Typography>
+        )}
       </Box>
 
       {/* Image comparison thumbnails for image verifications */}
@@ -202,7 +219,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
                 display: 'block',
               }}
             >
-              {testResult.message || testResult.error || 'ADB verification failed'}
+              ADB verification failed
             </Typography>
           )}
         </Box>
