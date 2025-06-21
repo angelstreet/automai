@@ -256,13 +256,12 @@ def get_all_locked_devices() -> Dict[str, Dict[str, Any]]:
         
         for host_name, host_data in connected_clients.items():
             if host_data.get('isLocked', False):
-                device_id = host_data.get('device_id', host_name)
-                locked_devices[device_id] = {
+                locked_devices[host_name] = {
                     'lockedBy': host_data.get('lockedBy'),
                     'lockedAt': host_data.get('lockedAt'),
                     'lockedDuration': time.time() - host_data.get('lockedAt', 0) if host_data.get('lockedAt') else 0,
-                    'deviceName': host_data.get('name', 'Unknown'),
-                    'deviceModel': host_data.get('model', 'Unknown'),
+                    'deviceName': host_data.get('device_name', 'Unknown'),
+                    'deviceModel': host_data.get('device_model', 'Unknown'),
                     'hostName': host_name
                 }
         

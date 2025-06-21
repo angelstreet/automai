@@ -57,7 +57,6 @@ def verification_status():
             'message': 'Verification system is ready',
             'host_connected': True,
             'device_model': host_device.get('device_model', 'unknown'),
-            'host_id': host_device.get('client_id', 'unknown'),
             'host_name': host_device.get('host_name', 'unknown')
         })
         

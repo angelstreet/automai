@@ -212,9 +212,9 @@ def cleanup_server_resources():
     print(f"🧹 Cleaning up server resources...")
     
     # Stop health check threads
-    for client_id, thread in health_check_threads.items():
+    for host_name, thread in health_check_threads.items():
         if thread and thread.is_alive():
-            print(f"🛑 Stopping health check thread for client {client_id[:8]}...")
+            print(f"🛑 Stopping health check thread for host {host_name}...")
     
     # Clear registries
     connected_clients.clear()

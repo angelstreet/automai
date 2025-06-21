@@ -272,34 +272,29 @@ def navigate():
     """Server-side navigation - Forward navigation request to appropriate host"""
     try:
         data = request.get_json() or {}
-        device_id = data.get('device_id')
+        host_name = data.get('host_name')
         tree_id = data.get('tree_id')
         target_node_id = data.get('target_node_id')
         current_node_id = data.get('current_node_id')
         execute_flag = data.get('execute', True)
         
-        print(f"[@route:server_navigate] Navigation request for device: {device_id}")
+        print(f"[@route:server_navigate] Navigation request for host: {host_name}")
         print(f"[@route:server_navigate] Tree: {tree_id}, Target: {target_node_id}")
         
-        if not device_id or not tree_id or not target_node_id:
+        if not host_name or not tree_id or not target_node_id:
             return jsonify({
                 'success': False,
-                'error': 'Missing required fields: device_id, tree_id, target_node_id'
+                'error': 'Missing required fields: host_name, tree_id, target_node_id'
             }), 400
         
-        # Find host that controls this device
+        # Find host by name
         connected_clients = get_host_registry()
-        host_info = None
+        host_info = connected_clients.get(host_name)
         
-        for host_id, host_data in connected_clients.items():
-            if host_data.get('status') == 'online' and host_data.get('device_id') == device_id:
-                host_info = host_data
-                break
-        
-        if not host_info:
+        if not host_info or host_info.get('status') != 'online':
             return jsonify({
                 'success': False,
-                'error': f'No online host found for device: {device_id}'
+                'error': f'Host {host_name} not found or not online'
             }), 404
         
         # Forward request to host using centralized API URL builder
