@@ -182,6 +182,7 @@ export const NavigationUIProvider: React.FC<NavigationUIProviderProps> = ({ chil
       resetDialogs,
     };
   }, [
+    // Only include state values that actually change, not function references
     isNodeDialogOpen,
     isEdgeDialogOpen,
     isDiscardDialogOpen,
@@ -196,8 +197,8 @@ export const NavigationUIProvider: React.FC<NavigationUIProviderProps> = ({ chil
     saveSuccess,
     hasUnsavedChanges,
     isLoadingInterface,
-    resetForms,
-    resetDialogs,
+    // Remove function dependencies to prevent cascade re-renders
+    // resetForms and resetDialogs are stable due to their own useCallback dependencies
   ]);
 
   return (

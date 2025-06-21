@@ -168,6 +168,7 @@ export const NavigationFlowProvider: React.FC<NavigationFlowProviderProps> = ({ 
       updateNavigationPath,
     };
   }, [
+    // Only include state values that actually change, not function references
     treeId,
     treeName,
     interfaceId,
@@ -180,8 +181,8 @@ export const NavigationFlowProvider: React.FC<NavigationFlowProviderProps> = ({ 
     userInterface,
     rootTree,
     reactFlowInstance,
-    validateNavigationPath,
-    updateNavigationPath,
+    // Remove function dependencies to prevent cascade re-renders
+    // validateNavigationPath and updateNavigationPath are stable due to their own useCallback dependencies
   ]);
 
   return (

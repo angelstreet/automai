@@ -163,39 +163,35 @@ export const NavigationActionsProvider: React.FC<NavigationActionsProviderProps>
   // CONTEXT VALUE
   // ========================================
 
-  const contextValue: NavigationActionsContextType = useMemo(() => {
-    console.log(`[@context:NavigationActionsProvider] Creating new context value`);
-    return {
-      // Action coordination
-      resetAll,
-      resetSelectionAndDialogs,
+  const contextValue: NavigationActionsContextType = useMemo(
+    () => {
+      console.log(`[@context:NavigationActionsProvider] Creating new context value`);
+      return {
+        // Action coordination
+        resetAll,
+        resetSelectionAndDialogs,
 
-      // UI coordination
-      openNodeDialog,
-      openEdgeDialog,
-      closeAllDialogs,
+        // UI coordination
+        openNodeDialog,
+        openEdgeDialog,
+        closeAllDialogs,
 
-      // State coordination
-      markUnsavedChanges,
-      clearUnsavedChanges,
+        // State coordination
+        markUnsavedChanges,
+        clearUnsavedChanges,
 
-      // Navigation coordination
-      resetToHome,
+        // Navigation coordination
+        resetToHome,
 
-      // Flow coordination
-      fitViewToNodes,
-    };
-  }, [
-    resetAll,
-    resetSelectionAndDialogs,
-    openNodeDialog,
-    openEdgeDialog,
-    closeAllDialogs,
-    markUnsavedChanges,
-    clearUnsavedChanges,
-    resetToHome,
-    fitViewToNodes,
-  ]);
+        // Flow coordination
+        fitViewToNodes,
+      };
+    },
+    [
+      // Remove all function dependencies to prevent cascade re-renders
+      // Functions are stable due to their own useCallback dependencies
+    ],
+  );
 
   return (
     <NavigationActionsContext.Provider value={contextValue}>

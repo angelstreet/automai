@@ -465,40 +465,26 @@ const NavigationEditorContent: React.FC = React.memo(
           maxDisplayDepth={maxDisplayDepth}
           totalNodes={allNodes.length}
           visibleNodes={nodes.length}
-          isLoading={false} // Tree loading handled separately from device control loading
-          error={null} // Error handling moved to device control component
-          // History props removed - using page reload for cancel changes
+          isLoading={isLoadingInterface}
+          error={null}
           isLocked={isLocked}
-          lockInfo={lockInfo}
-          sessionId={sessionId}
-          userInterface={userInterface}
-          devicesLoading={false}
-          treeId={currentTreeId}
-          // Device control props - now provided by hook
+          treeId={treeId}
           selectedHost={selectedHost}
           isControlActive={isControlActive}
           isRemotePanelOpen={isRemotePanelOpen}
-          // Pass filtered hosts instead of letting header get all hosts
           availableHosts={availableHosts}
           getHostByName={getHostByName}
           fetchHosts={fetchHosts}
-          onNavigateToParent={navigateToParent}
-          onNavigateToTreeLevel={navigateToTreeLevel}
-          onNavigateToParentView={navigateToParentView}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          // onUndo/onRedo removed - using page reload for cancel changes
-
-          onSaveToConfig={() => saveToConfig(userInterface?.id)}
-          onLockTree={() => lockNavigationTree(userInterface?.id)}
-          onUnlockTree={() => unlockNavigationTree(userInterface?.id)}
+          onSaveToConfig={() => saveToConfig(interfaceId)}
           onDiscardChanges={discardChanges}
           onFocusNodeChange={setFocusNode}
           onDepthChange={setDisplayDepth}
           onResetFocus={resetFocus}
           onToggleRemotePanel={handleToggleRemotePanel}
-          onDeviceSelect={handleDeviceSelect}
           onControlStateChange={handleControlStateChange}
+          onDeviceSelect={handleDeviceSelect}
           onUpdateNode={handleUpdateNode}
           onUpdateEdge={handleUpdateEdge}
         />
@@ -564,67 +550,35 @@ const NavigationEditorContent: React.FC = React.memo(
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
-                  onNodesChange={isLocked ? onNodesChange : undefined}
-                  onEdgesChange={isLocked ? onEdgesChange : undefined}
-                  onConnect={isLocked ? onConnect : undefined}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
                   onNodeClick={onNodeClick}
                   onEdgeClick={onEdgeClick}
                   onNodeDoubleClick={onNodeDoubleClick}
                   onPaneClick={onPaneClick}
-                  onInit={(instance) => {
-                    if (instance && !reactFlowInstance) {
-                      setReactFlowInstance(instance);
-                    }
-                  }}
+                  onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   defaultEdgeOptions={defaultEdgeOptions}
+                  connectionLineType={ConnectionLineType.SmoothStep}
                   defaultViewport={defaultViewport}
-                  // Ensure consistent viewport and prevent auto-fitting
                   translateExtent={translateExtent}
                   nodeExtent={nodeExtent}
-                  attributionPosition="bottom-left"
-                  connectionLineType={ConnectionLineType.SmoothStep}
                   snapToGrid={true}
                   snapGrid={snapGrid}
-                  deleteKeyCode={isLocked ? 'Delete' : null}
-                  multiSelectionKeyCode="Shift"
                   style={reactFlowStyle}
-                  fitView={false}
-                  nodesDraggable={isLocked}
-                  nodesConnectable={isLocked}
-                  elementsSelectable={true}
-                  preventScrolling={false}
-                  panOnDrag={true}
-                  panOnScroll={false}
-                  zoomOnScroll={true}
-                  zoomOnPinch={true}
-                  zoomOnDoubleClick={false}
-                  minZoom={0.1}
-                  maxZoom={4}
-                  // Disable React Flow's auto-positioning features
-                  proOptions={proOptions}
-                  // Prevent automatic layout algorithms
                   nodeOrigin={nodeOrigin}
-                  // Additional props to prevent automatic positioning
-                  autoPanOnConnect={false}
-                  autoPanOnNodeDrag={false}
-                  connectOnClick={false}
-                  // Prevent automatic centering or repositioning
-                  onlyRenderVisibleElements={false}
+                  proOptions={proOptions}
                 >
-                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                  <Controls
-                    position="top-left"
-                    showZoom={true}
-                    showFitView={true}
-                    showInteractive={false}
-                  />
+                  <Background variant={BackgroundVariant.Dots} gap={15} size={1} />
+                  <Controls />
                   <MiniMap
-                    position="bottom-right"
                     style={miniMapStyle}
                     nodeColor={miniMapNodeColor}
-                    maskColor="rgba(0, 0, 0, 0.1)"
+                    maskColor="rgba(255, 255, 255, 0.2)"
+                    pannable
+                    zoomable
                   />
                 </ReactFlow>
               </div>
@@ -632,41 +586,43 @@ const NavigationEditorContent: React.FC = React.memo(
               {/* Device Control Component - Simplified without selectedHost */}
               {/* NavigationEditorDeviceControl removed - logic should be in take control action */}
 
-              {/* Selection Info Panel */}
+              {/* Side Panels */}
               {selectedNode || selectedEdge ? (
                 <>
-                  {selectedNode && (
-                    <NodeSelectionPanel
-                      selectedNode={selectedNode}
-                      nodes={nodes}
-                      onClose={closeSelectionPanel}
-                      onEdit={() => {}}
-                      onDelete={deleteSelected}
-                      onAddChildren={() => {}}
-                      setNodeForm={setNodeForm as React.Dispatch<React.SetStateAction<NodeForm>>}
-                      setIsNodeDialogOpen={setIsNodeDialogOpen}
-                      onReset={resetNode}
-                      treeId={currentTreeId || ''}
-                      currentNodeId={focusNodeId || undefined}
-                      onUpdateNode={handleUpdateNode}
-                      isControlActive={isControlActive}
-                      selectedHost={selectedHost || undefined}
-                    />
-                  )}
-
-                  {selectedEdge && (
-                    <EdgeSelectionPanel
-                      selectedEdge={selectedEdge}
-                      onClose={closeSelectionPanel}
-                      onEdit={() => {}}
-                      onDelete={deleteSelected}
-                      setEdgeForm={setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>}
-                      setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                      onUpdateEdge={handleUpdateEdge}
-                      isControlActive={isControlActive}
-                      selectedHost={selectedHost || undefined}
-                    />
-                  )}
+                  {selectedNode && selectedNode.data.type !== 'entry' ? (
+                    <>
+                      {/* Node Selection Panel */}
+                      <NodeSelectionPanel
+                        selectedNode={selectedNode}
+                        nodes={nodes}
+                        onClose={closeSelectionPanel}
+                        onDelete={deleteSelected}
+                        setNodeForm={setNodeForm as React.Dispatch<React.SetStateAction<NodeForm>>}
+                        setIsNodeDialogOpen={setIsNodeDialogOpen}
+                        onReset={resetNode}
+                        onUpdateNode={handleUpdateNode}
+                        isControlActive={isControlActive}
+                        selectedHost={selectedHost || undefined}
+                        treeId={treeId}
+                        currentNodeId={selectedNode.id}
+                      />
+                    </>
+                  ) : selectedEdge ? (
+                    <>
+                      {/* Edge Selection Panel */}
+                      <EdgeSelectionPanel
+                        selectedEdge={selectedEdge}
+                        onClose={closeSelectionPanel}
+                        onEdit={() => {}}
+                        onDelete={deleteSelected}
+                        setEdgeForm={setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>}
+                        setIsEdgeDialogOpen={setIsEdgeDialogOpen}
+                        onUpdateEdge={handleUpdateEdge}
+                        isControlActive={isControlActive}
+                        selectedHost={selectedHost || undefined}
+                      />
+                    </>
+                  ) : null}
                 </>
               ) : null}
             </>
@@ -755,9 +711,7 @@ const NavigationEditor: React.FC = () => {
   return (
     <ReactFlowProvider>
       <NavigationEditorProvider>
-        <NavigationConfigProvider>
-          <NavigationEditorWithAllProviders />
-        </NavigationConfigProvider>
+        <NavigationEditorWithAllProviders />
       </NavigationEditorProvider>
     </ReactFlowProvider>
   );
@@ -843,15 +797,17 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   const { saveToConfig } = useNavigationEditorNew();
 
   return (
-    <NodeEdgeManagementProvider
-      state={nodeEdgeState}
-      saveToConfig={saveToConfig}
-      userInterfaceId={stableUserInterface?.id}
-    >
-      <DeviceControlProvider userInterface={stableUserInterface}>
-        <NavigationEditorContent />
-      </DeviceControlProvider>
-    </NodeEdgeManagementProvider>
+    <NavigationConfigProvider>
+      <NodeEdgeManagementProvider
+        state={nodeEdgeState}
+        saveToConfig={saveToConfig}
+        userInterfaceId={stableUserInterface?.id}
+      >
+        <DeviceControlProvider userInterface={stableUserInterface}>
+          <NavigationEditorContent />
+        </DeviceControlProvider>
+      </NodeEdgeManagementProvider>
+    </NavigationConfigProvider>
   );
 };
 
