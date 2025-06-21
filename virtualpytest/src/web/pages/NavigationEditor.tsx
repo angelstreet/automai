@@ -722,8 +722,41 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
-  // Use the new focused contexts to get the state for the old providers
-  // This is a temporary bridge until we can fully migrate away from the old providers
+  // Memoize userInterface to prevent DeviceControlProvider re-renders
+  const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
+
+  // Ensure we have userInterfaceId before rendering
+  const userInterfaceId = stableUserInterface?.id;
+
+  if (!userInterfaceId) {
+    console.warn(
+      '[@component:NavigationEditorWithAllProviders] Missing userInterfaceId, cannot save verifications',
+    );
+    return (
+      <NavigationConfigProvider>
+        <DeviceControlProvider userInterface={stableUserInterface}>
+          <NavigationEditorContent />
+        </DeviceControlProvider>
+      </NavigationConfigProvider>
+    );
+  }
+
+  return (
+    <NavigationConfigProvider>
+      <NavigationEditorWithNodeEdgeManagement
+        userInterface={stableUserInterface}
+        userInterfaceId={userInterfaceId}
+      />
+    </NavigationConfigProvider>
+  );
+};
+
+// Inner component that has access to NavigationConfig context
+const NavigationEditorWithNodeEdgeManagement: React.FC<{
+  userInterface: any;
+  userInterfaceId: string;
+}> = ({ userInterface, userInterfaceId }) => {
+  // Now we can safely call useNavigationEditorNew inside NavigationConfigProvider
   const {
     nodes,
     edges,
@@ -742,6 +775,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     setIsEdgeDialogOpen,
     setIsNewNode,
     setHasUnsavedChanges,
+    saveToConfig, // This should now be available from NavigationConfig context
   } = useNavigationEditorNew();
 
   // Create memoized state objects for providers to prevent unnecessary re-renders
@@ -790,40 +824,28 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     setHasUnsavedChanges,
   ]);
 
-  // Memoize userInterface to prevent DeviceControlProvider re-renders
-  const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
-
-  // Get saveToConfig function from the hook
-  const { saveToConfig } = useNavigationEditorNew();
-
-  // Ensure we have required dependencies before rendering NodeEdgeManagementProvider
-  const userInterfaceId = stableUserInterface?.id;
-
-  if (!userInterfaceId || !saveToConfig) {
+  // Verify saveToConfig is available before rendering NodeEdgeManagementProvider
+  if (!saveToConfig) {
     console.warn(
-      '[@component:NavigationEditorWithAllProviders] Missing userInterfaceId or saveToConfig, cannot save verifications',
+      '[@component:NavigationEditorWithNodeEdgeManagement] saveToConfig not available, rendering without NodeEdgeManagementProvider',
     );
     return (
-      <NavigationConfigProvider>
-        <DeviceControlProvider userInterface={stableUserInterface}>
-          <NavigationEditorContent />
-        </DeviceControlProvider>
-      </NavigationConfigProvider>
+      <DeviceControlProvider userInterface={userInterface}>
+        <NavigationEditorContent />
+      </DeviceControlProvider>
     );
   }
 
   return (
-    <NavigationConfigProvider>
-      <NodeEdgeManagementProvider
-        state={nodeEdgeState}
-        saveToConfig={saveToConfig}
-        userInterfaceId={userInterfaceId}
-      >
-        <DeviceControlProvider userInterface={stableUserInterface}>
-          <NavigationEditorContent />
-        </DeviceControlProvider>
-      </NodeEdgeManagementProvider>
-    </NavigationConfigProvider>
+    <NodeEdgeManagementProvider
+      state={nodeEdgeState}
+      saveToConfig={saveToConfig}
+      userInterfaceId={userInterfaceId}
+    >
+      <DeviceControlProvider userInterface={userInterface}>
+        <NavigationEditorContent />
+      </DeviceControlProvider>
+    </NodeEdgeManagementProvider>
   );
 };
 
