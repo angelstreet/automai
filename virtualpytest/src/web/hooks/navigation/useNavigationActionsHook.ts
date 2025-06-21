@@ -1,8 +1,11 @@
 import { useCallback, useMemo } from 'react';
 
-import { useDeviceControl, useNavigationConfig } from '../../contexts';
+import { useNavigationConfig } from '../../contexts';
 import { useNavigationActions } from '../../contexts/navigation';
 import { useNavigationNodes, useNavigationUI, useNavigationFlow } from '../../contexts/navigation';
+
+// Optional import for DeviceControl - will be available when wrapped with DeviceControlProvider
+import { useDeviceControl } from '../../contexts/DeviceControlContext';
 
 export const useNavigationActionsHook = () => {
   console.log('[@hook:useNavigationActionsHook] Initializing actions hook');
@@ -15,7 +18,16 @@ export const useNavigationActionsHook = () => {
 
   // Use existing context hooks
   const configHook = useNavigationConfig();
-  const deviceControl = useDeviceControl();
+
+  // Try to get DeviceControl context if available (will be undefined if not wrapped with provider)
+  let deviceControl;
+  try {
+    deviceControl = useDeviceControl();
+  } catch (error) {
+    // DeviceControlProvider not available - this is expected in some contexts
+    console.log('[@hook:useNavigationActionsHook] DeviceControl context not available');
+    deviceControl = null;
+  }
 
   // Create config state object for context operations
   const configState = useMemo(
@@ -219,25 +231,35 @@ export const useNavigationActionsHook = () => {
           '[@hook:useNavigationActionsHook] resetNode not available - use NodeEdgeManagement context',
         ),
 
-      // Device control state
-      selectedHost: deviceControl.selectedHost,
-      isControlActive: deviceControl.isControlActive,
-      isRemotePanelOpen: deviceControl.isRemotePanelOpen,
-      showRemotePanel: deviceControl.showRemotePanel,
-      showAVPanel: deviceControl.showAVPanel,
-      isVerificationActive: deviceControl.isVerificationActive,
+      // Device control state - provide defaults if context not available
+      selectedHost: deviceControl?.selectedHost || null,
+      isControlActive: deviceControl?.isControlActive || false,
+      isRemotePanelOpen: deviceControl?.isRemotePanelOpen || false,
+      showRemotePanel: deviceControl?.showRemotePanel || false,
+      showAVPanel: deviceControl?.showAVPanel || false,
+      isVerificationActive: deviceControl?.isVerificationActive || false,
 
-      // Device control handlers
-      handleDeviceSelect: deviceControl.handleDeviceSelect,
-      handleControlStateChange: deviceControl.handleControlStateChange,
-      handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
-      handleConnectionChange: deviceControl.handleConnectionChange,
-      handleDisconnectComplete: deviceControl.handleDisconnectComplete,
+      // Device control handlers - provide no-op functions if context not available
+      handleDeviceSelect:
+        deviceControl?.handleDeviceSelect ||
+        (() => console.warn('[@hook:useNavigationActionsHook] DeviceControl not available')),
+      handleControlStateChange:
+        deviceControl?.handleControlStateChange ||
+        (() => console.warn('[@hook:useNavigationActionsHook] DeviceControl not available')),
+      handleToggleRemotePanel:
+        deviceControl?.handleToggleRemotePanel ||
+        (() => console.warn('[@hook:useNavigationActionsHook] DeviceControl not available')),
+      handleConnectionChange:
+        deviceControl?.handleConnectionChange ||
+        (() => console.warn('[@hook:useNavigationActionsHook] DeviceControl not available')),
+      handleDisconnectComplete:
+        deviceControl?.handleDisconnectComplete ||
+        (() => console.warn('[@hook:useNavigationActionsHook] DeviceControl not available')),
 
-      // Host data
-      availableHosts: deviceControl.availableHosts,
-      getHostByName: deviceControl.getHostByName,
-      fetchHosts: deviceControl.fetchHosts,
+      // Host data - provide defaults if context not available
+      availableHosts: deviceControl?.availableHosts || [],
+      getHostByName: deviceControl?.getHostByName || (() => null),
+      fetchHosts: deviceControl?.fetchHosts || (() => Promise.resolve([])),
     }),
     [
       actionsContext,
