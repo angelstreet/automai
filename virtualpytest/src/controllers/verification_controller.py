@@ -113,7 +113,7 @@ class VerificationController:
         for i, verification in enumerate(verifications):
             print(f"[@controller:VerificationController] Executing verification {i+1}/{len(verifications)}: {verification.get('verification_type', 'unknown')}")
             
-            result = self.execute_verification_autonomous(verification, source_path)
+            result = self.execute_verification(verification, source_path)
             results.append(result)
             
             if result.get('success'):
@@ -133,7 +133,7 @@ class VerificationController:
             'execution_time_ms': execution_time_ms
         }
     
-    def execute_verification_autonomous(self, verification_config: Dict[str, Any], 
+    def execute_verification(self, verification_config: Dict[str, Any], 
                                       source_path: str = None) -> Dict[str, Any]:
         """
         Execute single verification autonomously.
@@ -588,6 +588,156 @@ class VerificationController:
                 'error': str(e)
             }
 
+    def execute_image_verification(self, reference_name: str, 
+                                 command: str = 'waitForImageToAppear',
+                                 threshold: float = None,
+                                 timeout: float = 5.0,
+                                 area: Dict = None,
+                                 source_path: str = None) -> Dict[str, Any]:
+        """
+        Simplified image verification execution.
+        
+        Args:
+            reference_name: Name of the reference image (with or without extension)
+            command: Verification command ('waitForImageToAppear', 'waitForImageToDisappear', etc.)
+            threshold: Similarity threshold (0.0-1.0). If None, uses reference's stored threshold or 0.8
+            timeout: Timeout in seconds (default: 5.0)
+            area: Area to search in {'x': int, 'y': int, 'width': int, 'height': int} (default: None = full image)
+            source_path: Optional source image path (if None, will take screenshot)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'verification_type': str,
+                'execution_time_ms': int,
+                'details': dict
+            }
+        """
+        start_time = time.time()
+        
+        print(f"[@controller:VerificationController] Executing image verification: {command} with reference '{reference_name}'")
+        
+        try:
+            # Get reference from database
+            references_result = self.get_all_references()
+            if not references_result['success']:
+                return {
+                    'success': False,
+                    'message': f'Failed to get references: {references_result.get("error")}',
+                    'confidence': 0.0,
+                    'verification_type': 'image',
+                    'execution_time_ms': int((time.time() - start_time) * 1000),
+                    'error': 'Database error',
+                    'details': {}
+                }
+            
+            # Find reference (with flexible name matching)
+            target_ref = None
+            for ref in references_result['images']:
+                ref_name = ref['name']
+                if (ref_name == reference_name or 
+                    ref_name == f"{reference_name}.png" or
+                    ref_name.split('.')[0] == reference_name):
+                    target_ref = ref
+                    break
+            
+            if not target_ref:
+                available_refs = [r['name'] for r in references_result['images']]
+                return {
+                    'success': False,
+                    'message': f'Reference "{reference_name}" not found. Available: {available_refs}',
+                    'confidence': 0.0,
+                    'verification_type': 'image',
+                    'execution_time_ms': int((time.time() - start_time) * 1000),
+                    'error': 'Reference not found',
+                    'details': {'available_references': available_refs}
+                }
+            
+            # Use reference's stored threshold if not provided
+            if threshold is None:
+                threshold = target_ref.get('threshold', 0.8)
+            
+            print(f"[@controller:VerificationController] Using reference: {target_ref['name']}, threshold: {threshold}")
+            
+            # Build verification config automatically
+            verification_config = {
+                'verification_type': 'image',
+                'command': command,
+                'params': {
+                    'image_path': target_ref['name'],
+                    'threshold': threshold,
+                    'timeout': timeout,
+                    'area': area
+                }
+            }
+            
+            # Execute verification using the standard method
+            result = self.execute_verification(verification_config, source_path)
+            
+            print(f"[@controller:VerificationController] Image verification completed: {result.get('success')}")
+            return result
+            
+        except Exception as e:
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            error_msg = f'Image verification error: {str(e)}'
+            print(f"[@controller:VerificationController] {error_msg}")
+            
+            return {
+                'success': False,
+                'message': error_msg,
+                'confidence': 0.0,
+                'verification_type': 'image',
+                'execution_time_ms': execution_time_ms,
+                'error': str(e),
+                'details': {}
+            }
+
+    def execute_text_verification(self, text: str,
+                                command: str = 'waitForTextToAppear',
+                                timeout: float = 5.0,
+                                area: Dict = None,
+                                source_path: str = None) -> Dict[str, Any]:
+        """
+        Simplified text verification execution.
+        
+        Args:
+            text: Text to search for
+            command: Verification command ('waitForTextToAppear', 'waitForTextToDisappear', etc.)
+            timeout: Timeout in seconds (default: 5.0)
+            area: Area to search in {'x': int, 'y': int, 'width': int, 'height': int} (default: None = full image)
+            source_path: Optional source image path (if None, will take screenshot)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'verification_type': str,
+                'execution_time_ms': int,
+                'details': dict
+            }
+        """
+        print(f"[@controller:VerificationController] Executing text verification: {command} with text '{text}'")
+        
+        # Build verification config automatically
+        verification_config = {
+            'verification_type': 'text',
+            'command': command,
+            'params': {
+                'text': text,
+                'timeout': timeout,
+                'area': area
+            }
+        }
+        
+        # Execute verification using the standard method
+        result = self.execute_verification(verification_config, source_path)
+        
+        print(f"[@controller:VerificationController] Text verification completed: {result.get('success')}")
+        return result
+
 
 # Global instance for easy access
 _global_verification_controller = None
@@ -654,7 +804,7 @@ def execute_verification(verification_config: Dict[str, Any],
         })
     """
     controller = get_verification_controller(host_device)
-    return controller.execute_verification_autonomous(verification_config, source_path)
+    return controller.execute_verification(verification_config, source_path)
 
 
 # =====================================================
@@ -724,4 +874,74 @@ def validate_reference_exists(reference_name: str, host_device: Dict[str, Any],
             print(f"Reference not found: {result['error']}")
     """
     controller = get_verification_controller(host_device)
-    return controller.validate_reference_exists(reference_name, reference_type, team_id) 
+    return controller.validate_reference_exists(reference_name, reference_type, team_id)
+
+
+# =====================================================
+# SIMPLIFIED VERIFICATION CONVENIENCE FUNCTIONS
+# =====================================================
+
+def execute_image_verification(reference_name: str,
+                              host_device: Dict[str, Any] = None,
+                              command: str = 'waitForImageToAppear',
+                              threshold: float = None,
+                              timeout: float = 5.0,
+                              area: Dict = None,
+                              source_path: str = None) -> Dict[str, Any]:
+    """
+    Convenience function for simple image verification.
+    
+    Usage:
+        from src.controllers.verification_controller import execute_image_verification
+        
+        # Simple usage - just provide reference name
+        result = execute_image_verification('default_capture')
+        
+        # Advanced usage with custom parameters
+        result = execute_image_verification(
+            'default_capture',
+            command='waitForImageToAppear',
+            threshold=0.9,
+            timeout=10.0,
+            area={'x': 100, 'y': 100, 'width': 200, 'height': 200}
+        )
+        
+        if result['success']:
+            print(f"Image found with {result['confidence']:.1%} confidence")
+        else:
+            print(f"Image not found: {result['message']}")
+    """
+    controller = get_verification_controller(host_device)
+    return controller.execute_image_verification(reference_name, command, threshold, timeout, area, source_path)
+
+
+def execute_text_verification(text: str,
+                             host_device: Dict[str, Any] = None,
+                             command: str = 'waitForTextToAppear',
+                             timeout: float = 5.0,
+                             area: Dict = None,
+                             source_path: str = None) -> Dict[str, Any]:
+    """
+    Convenience function for simple text verification.
+    
+    Usage:
+        from src.controllers.verification_controller import execute_text_verification
+        
+        # Simple usage
+        result = execute_text_verification('Hello World')
+        
+        # Advanced usage with custom parameters
+        result = execute_text_verification(
+            'Hello World',
+            command='waitForTextToAppear',
+            timeout=10.0,
+            area={'x': 100, 'y': 100, 'width': 200, 'height': 200}
+        )
+        
+        if result['success']:
+            print(f"Text found with {result['confidence']:.1%} confidence")
+        else:
+            print(f"Text not found: {result['message']}")
+    """
+    controller = get_verification_controller(host_device)
+    return controller.execute_text_verification(text, command, timeout, area, source_path) 
