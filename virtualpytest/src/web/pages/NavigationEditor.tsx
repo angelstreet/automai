@@ -796,12 +796,28 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   // Get saveToConfig function from the hook
   const { saveToConfig } = useNavigationEditorNew();
 
+  // Ensure we have required dependencies before rendering NodeEdgeManagementProvider
+  const userInterfaceId = stableUserInterface?.id;
+
+  if (!userInterfaceId || !saveToConfig) {
+    console.warn(
+      '[@component:NavigationEditorWithAllProviders] Missing userInterfaceId or saveToConfig, cannot save verifications',
+    );
+    return (
+      <NavigationConfigProvider>
+        <DeviceControlProvider userInterface={stableUserInterface}>
+          <NavigationEditorContent />
+        </DeviceControlProvider>
+      </NavigationConfigProvider>
+    );
+  }
+
   return (
     <NavigationConfigProvider>
       <NodeEdgeManagementProvider
         state={nodeEdgeState}
         saveToConfig={saveToConfig}
-        userInterfaceId={stableUserInterface?.id}
+        userInterfaceId={userInterfaceId}
       >
         <DeviceControlProvider userInterface={stableUserInterface}>
           <NavigationEditorContent />

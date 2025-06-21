@@ -48,8 +48,8 @@ interface NodeEdgeManagementState {
 interface NodeEdgeManagementProviderProps {
   children: React.ReactNode;
   state: NodeEdgeManagementState;
-  saveToConfig?: (userInterfaceId: string) => Promise<void>;
-  userInterfaceId?: string;
+  saveToConfig: (userInterfaceId: string) => Promise<void>;
+  userInterfaceId: string;
 }
 
 // ========================================
@@ -95,7 +95,9 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       console.log('[@context:NodeEdgeManagementProvider] Saving node changes:', formData);
 
       try {
-        // Step 1: Save verifications to database using the correct endpoint
+        // Step 1: Save verifications to database and get their IDs
+        const verificationIds: string[] = [];
+
         if (formData.verifications && formData.verifications.length > 0) {
           console.log(
             `[@context:NodeEdgeManagementProvider] Saving ${formData.verifications.length} verifications to database`,
@@ -113,21 +115,20 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                   device_model: verification.device_model || 'android_mobile',
                   verification_type: verification.verification_type || 'image',
                   command: verification.command || '',
-                  parameters: verification.params || {}, // All verification data goes in parameters
+                  parameters: verification.params || {},
                 }),
               });
 
               const result = await response.json();
-              if (result.success) {
+              if (result.success && result.verification_id) {
                 const message = result.reused
                   ? 'Reused existing verification'
                   : 'Saved new verification';
                 console.log(
                   `[@context:NodeEdgeManagementProvider] ${message}: ${result.verification_id}`,
                 );
-                // Store the database ID in the verification for future reference
-                verification._db_id = result.verification_id;
-                verification._db_name = `${formData.label || 'node'}_${verification.verification_type}_${Date.now()}`;
+                // Store the verification ID for tree persistence
+                verificationIds.push(result.verification_id);
               } else {
                 console.error(
                   `[@context:NodeEdgeManagementProvider] Failed to save verification: ${result.error}`,
@@ -142,102 +143,90 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           }
         }
 
-        // Step 2: Update node in memory with verification IDs for tree persistence
-        // We store only verification IDs in the tree, not full verification objects
-
-        // Extract verification IDs from verifications that have been saved to database
-        const verificationIds =
-          formData.verifications?.map((v: any) => v._db_id).filter(Boolean) || [];
-
         console.log(
           `[@context:NodeEdgeManagementProvider] Verification IDs for tree storage:`,
           verificationIds,
         );
-        console.log(
-          `[@context:NodeEdgeManagementProvider] Full verification objects:`,
-          formData.verifications?.map((v: any) => ({
-            type: v.verification_type,
-            _db_id: v._db_id,
-          })),
-        );
 
-        const formDataWithVerificationIds = {
+        // Step 2: Update node in memory with verification IDs (only IDs stored in tree)
+        const nodeDataWithVerificationIds = {
           ...formData,
           data: {
             ...formData.data,
-            // Store only verification IDs in the tree
+            // ✅ Store only verification IDs in the tree (for persistence)
             verification_ids: verificationIds,
-            // Keep full verification objects for UI (will be reloaded from DB when tree loads)
-            verifications: formData.verifications || [],
+            // ❌ Remove full verification objects from tree data (stored separately in DB)
+            verifications: undefined,
           },
         };
 
         if (isNewNode) {
           // Create new node
           const newNode: UINavigationNode = {
-            ...formDataWithVerificationIds,
-            id: formDataWithVerificationIds.id || `node-${Date.now()}`,
-            position: formDataWithVerificationIds.position || { x: 100, y: 100 },
+            ...nodeDataWithVerificationIds,
+            id: nodeDataWithVerificationIds.id || `node-${Date.now()}`,
+            position: nodeDataWithVerificationIds.position || { x: 100, y: 100 },
           };
 
-          // Add node to nodes array (single source of truth)
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
-
-          console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode);
+          console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode.id);
         } else if (selectedNode) {
           // Update existing node
           const updatedNodes = nodes.map((node) => {
             if (node.id === selectedNode.id) {
-              return { ...node, ...formDataWithVerificationIds };
+              return { ...node, ...nodeDataWithVerificationIds };
             }
             return node;
           });
 
-          // Update nodes (single source of truth)
           setNodes(updatedNodes);
-
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
         }
 
-        // Step 3: Trigger tree save to persist changes to database
-        // We need to import the navigation config context to trigger save
-        // For now, just mark as having unsaved changes - the user will need to save the tree
-        setHasUnsavedChanges(true);
-
+        // Step 3: Auto-save tree to persist verification IDs to database
         console.log(
-          '[@context:NodeEdgeManagementProvider] Node saved successfully with verifications',
+          '[@context:NodeEdgeManagementProvider] Auto-saving tree with verification IDs to database',
         );
 
-        // Step 3: Auto-save tree to persist verification IDs
-        if (saveToConfig && userInterfaceId) {
-          console.log(
-            '[@context:NodeEdgeManagementProvider] Auto-saving tree with verification IDs',
-          );
-          await saveToConfig(userInterfaceId);
-          console.log('[@context:NodeEdgeManagementProvider] Tree auto-saved successfully');
-        } else {
-          // Just mark as having unsaved changes if auto-save not available
-          setHasUnsavedChanges(true);
-        }
+        await saveToConfig(userInterfaceId);
+
+        console.log(
+          '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with verification IDs',
+        );
+
+        // ✅ Mark as saved (no unsaved changes) since auto-save succeeded
+        setHasUnsavedChanges(false);
       } catch (error) {
-        console.error('[@context:NodeEdgeManagementProvider] Error saving node:', error);
-        // Still update the node in memory even if database save fails
+        console.error('[@context:NodeEdgeManagementProvider] Error saving node or tree:', error);
+
+        // Still update the node in memory even if database operations fail
+        const fallbackNodeData = {
+          ...formData,
+          data: {
+            ...formData.data,
+            verification_ids: [], // Empty array if verification save failed
+            verifications: undefined,
+          },
+        };
+
         if (isNewNode) {
           const newNode: UINavigationNode = {
-            ...formData,
-            id: formData.id || `node-${Date.now()}`,
-            position: formData.position || { x: 100, y: 100 },
+            ...fallbackNodeData,
+            id: fallbackNodeData.id || `node-${Date.now()}`,
+            position: fallbackNodeData.position || { x: 100, y: 100 },
           };
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
         } else if (selectedNode) {
           const updatedNodes = nodes.map((node) => {
             if (node.id === selectedNode.id) {
-              return { ...node, ...formData };
+              return { ...node, ...fallbackNodeData };
             }
             return node;
           });
           setNodes(updatedNodes);
         }
+
+        // ❌ Mark as having unsaved changes since auto-save failed
         setHasUnsavedChanges(true);
       }
 
