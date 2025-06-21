@@ -461,62 +461,32 @@ def execute_image_verification():
         
         data = request.get_json()
         verification = data.get('verification')
-        source_filename = data.get('source_filename')
+        source_filename = data.get('source_filename')  # Optional - controller will take screenshot if None
         
         print(f"[@route:host_verification_image:execute] Executing image verification on host")
         print(f"[@route:host_verification_image:execute] Source: {source_filename}")
         
-        # Validate required parameters
-        if not verification or not source_filename:
+        # Validate required parameters - only verification is required, source_filename is optional
+        if not verification:
             return jsonify({
                 'success': False,
-                'error': 'verification and source_filename are required'
+                'error': 'verification is required'
             }), 400
         
-        # Build source path
-        source_path = f'{CAPTURES_PATH}/{source_filename}'
+        # Use centralized VerificationController instead of custom logic
+        from src.controllers.verification_controller import get_verification_controller
         
-        # Check if source file exists
-        if not os.path.exists(source_path):
-            print(f"[@route:host_verification_image:execute] Source file not found: {source_path}")
-            return jsonify({
-                'success': False,
-                'error': f'Source file not found: {source_filename}'
-            }), 404
+        verification_controller = get_verification_controller(host_device)
         
-        # Create results directory - simple path, just ensure it exists
-        results_dir = f'{STREAM_BASE_PATH}/verification_results'
-        print(f"[@route:host_verification_image:execute] Using verification results directory: {results_dir}")
-        
-        # Just ensure directory exists, don't delete it
-        os.makedirs(results_dir, exist_ok=True)
-        
-        # Execute image verification
-        result = execute_image_verification_host(verification, source_path, 0, results_dir)
-        
-        # Convert local paths to public URLs using centralized URL builder
-        from src.utils.buildUrlUtils import buildVerificationResultUrl
-        from src.utils.app_utils import get_host_by_name
-        
-        # Get host info for URL building
-        host_info = host_device  # Already available in this route
-        
-        if result.get('source_image_path'):
-            result['source_image_url'] = buildVerificationResultUrl(host_info, result['source_image_path'])
-            print(f"[@route:host_verification_image:execute] Built source URL: {result['source_image_url']}")
-        if result.get('result_overlay_path'):
-            result['result_overlay_url'] = buildVerificationResultUrl(host_info, result['result_overlay_path'])
-            print(f"[@route:host_verification_image:execute] Built overlay URL: {result['result_overlay_url']}")
-        if result.get('reference_image_path'):
-            result['reference_image_url'] = buildVerificationResultUrl(host_info, result['reference_image_path'])
-            print(f"[@route:host_verification_image:execute] Built reference URL: {result['reference_image_url']}")
+        # Execute using controller - it will handle screenshot capture if source_filename is None
+        result = verification_controller.execute_verification(verification, 
+                                                            source_filename=source_filename)
         
         print(f"[@route:host_verification_image:execute] Verification completed: {result.get('success')}")
         
         return jsonify({
             'success': True,
-            'verification_result': result,
-            'results_directory': buildVerificationResultUrl(host_info, results_dir)
+            'verification_result': result
         })
         
     except Exception as e:
@@ -524,229 +494,4 @@ def execute_image_verification():
         return jsonify({
             'success': False,
             'error': f'Image verification execution error: {str(e)}'
-        }), 500
-
-def execute_image_verification_host(verification, source_path, verification_index, results_dir):
-    """Execute image verification using verification controllers."""
-    try:
-        import cv2
-        import shutil
-        from src.utils.host_utils import get_local_controller
-        
-        # Get image verification controller
-        image_controller = get_local_controller('verification_image')
-        if not image_controller:
-            return {
-                'success': False,
-                'error': 'Image verification controller not available'
-            }
-        
-        params = verification.get('params', {})
-        area = params.get('area')
-        threshold = params.get('threshold', 0.8)
-        image_filter = params.get('image_filter', 'none')
-        
-        # Get reference filename from params.image_path (matches TypeScript interface)
-        reference_filename = params.get('image_path', '')
-        
-        print(f"[@route:execute_image_verification_host] Reference filename: {reference_filename}")
-        print(f"[@route:execute_image_verification_host] Image filter: {image_filter}")
-        print(f"[@route:execute_image_verification_host] Area: {area}")
-        print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
-        
-        if not reference_filename:
-            return {
-                'success': False,
-                'error': 'No reference filename specified'
-            }
-        
-        # Get device model from verification data
-        device_model = verification.get('device_model', 'android_mobile')
-        
-        # Always download reference from URL to ensure we have the latest version
-        reference_url = params.get('reference_url', '')
-        
-        print(f"[@route:execute_image_verification_host] Always downloading reference from URL to ensure latest version")
-        print(f"[@route:execute_image_verification_host] Reference URL from params: {reference_url}")
-        
-        reference_path = None
-        
-        if reference_url:
-            # Download directly from the provided URL using CloudflareUtils
-            try:
-                from urllib.parse import urlparse
-                from src.utils.cloudflare_utils import get_cloudflare_utils
-                
-                # Extract filename from URL
-                parsed_url = urlparse(reference_url)
-                filename = parsed_url.path.split('/')[-1]
-                # Extract the R2 object key (path without leading slash)
-                r2_object_key = parsed_url.path.lstrip('/')
-                local_path = f'{RESOURCES_PATH}/{device_model}/{filename}'
-                
-                print(f"[@route:execute_image_verification_host] Downloading from URL: {reference_url}")
-                print(f"[@route:execute_image_verification_host] R2 object key: {r2_object_key}")
-                print(f"[@route:execute_image_verification_host] Saving to: {local_path}")
-                
-                # Use CloudflareUtils download_file method
-                cloudflare_utils = get_cloudflare_utils()
-                download_result = cloudflare_utils.download_file(r2_object_key, local_path)
-                
-                if download_result.get('success'):
-                    print(f"[@route:execute_image_verification_host] Successfully downloaded reference from URL: {local_path}")
-                    reference_path = local_path
-                else:
-                    print(f"[@route:execute_image_verification_host] Failed to download from URL: {download_result.get('error')}")
-                    
-            except Exception as e:
-                print(f"[@route:execute_image_verification_host] Error downloading from URL: {str(e)}")
-        
-        # Fallback: try to download using filename reconstruction if URL download failed
-        if not reference_path:
-            print(f"[@route:execute_image_verification_host] Fallback: trying filename reconstruction")
-            base_name = reference_filename.split('.')[0]
-            
-            # Try to download from R2 with different extensions
-            for ext in ['.png', '.jpg', '.jpeg']:
-                r2_filename = f"{base_name}{ext}"
-                local_path = f'{RESOURCES_PATH}/{device_model}/{r2_filename}'
-                
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                
-                print(f"[@route:execute_image_verification_host] Attempting to download {r2_filename} from R2")
-                download_result = download_reference_image(device_model, r2_filename, local_path)
-                
-                if download_result.get('success'):
-                    print(f"[@route:execute_image_verification_host] Successfully downloaded reference from R2: {local_path}")
-                    reference_path = local_path
-                    break
-                else:
-                    print(f"[@route:execute_image_verification_host] Failed to download {r2_filename}: {download_result.get('error')}")
-        
-        # Verify reference image was downloaded successfully
-        if not reference_path or not os.path.exists(reference_path):
-            return {
-                'success': False,
-                'error': f'Reference image could not be downloaded. URL: {reference_url}, Filename: {reference_filename}'
-            }
-        
-        print(f"[@route:execute_image_verification_host] Using reference path: {reference_path}")
-        
-        # Create result file paths in stream directory
-        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
-        reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
-        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
-        
-        # === STEP 1: Handle Source Image ===
-        # Crop source image to area if specified (always crop for source)
-        if area:
-            # Use controller to crop source image
-            success = image_controller.crop_image(source_path, source_result_path, area, create_filtered_versions=False)
-            if not success:
-                return {
-                    'success': False,
-                    'error': 'Failed to crop source image'
-                }
-        else:
-            # Copy full source image using controller
-            success = image_controller.copy_image(source_path, source_result_path)
-            if not success:
-                return {
-                    'success': False,
-                    'error': 'Failed to copy source image'
-                }
-        
-        # Apply filter to source image if user selected one
-        if image_filter and image_filter != 'none':
-            print(f"[@route:execute_image_verification_host] Applying {image_filter} filter to source image")
-            if not image_controller.apply_filter(source_result_path, image_filter):
-                print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to source")
-        
-        # === STEP 2: Handle Reference Image ===
-        # Copy reference image and apply filter if needed
-        if image_filter and image_filter != 'none':
-            # User wants filtered comparison - check if filtered reference exists
-            base_path, ext = os.path.splitext(reference_path)
-            filtered_reference_path = f"{base_path}_{image_filter}{ext}"
-            
-            if os.path.exists(filtered_reference_path):
-                print(f"[@route:execute_image_verification_host] Using existing filtered reference: {filtered_reference_path}")
-                image_controller.copy_image(filtered_reference_path, reference_result_path)
-            else:
-                print(f"[@route:execute_image_verification_host] Filtered reference not found, creating dynamically from original: {reference_path}")
-                # Copy original reference first using controller
-                image_controller.copy_image(reference_path, reference_result_path)
-                # Apply filter dynamically to the copied reference
-                if not image_controller.apply_filter(reference_result_path, image_filter):
-                    print(f"[@route:execute_image_verification_host] Warning: Failed to apply {image_filter} filter to reference, using original")
-                    # If filter fails, copy original again to ensure clean state
-                    image_controller.copy_image(reference_path, reference_result_path)
-                else:
-                    print(f"[@route:execute_image_verification_host] Successfully applied {image_filter} filter to reference image")
-        else:
-            # User wants original comparison - use original reference
-            print(f"[@route:execute_image_verification_host] Using original reference: {reference_path}")
-            image_controller.copy_image(reference_path, reference_result_path)
-        
-        # === STEP 3: Perform Verification ===
-        # Load both images for comparison
-        source_img = cv2.imread(source_result_path)
-        ref_img = cv2.imread(reference_result_path)
-        
-        if source_img is None or ref_img is None:
-            return {
-                'success': False,
-                'error': 'Failed to load images for comparison'
-            }
-        
-        print(f"[@route:execute_image_verification_host] Source image shape: {source_img.shape}")
-        print(f"[@route:execute_image_verification_host] Reference image shape: {ref_img.shape}")
-        
-        # Perform template matching
-        result_match = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_match)
-        
-        # Check if match exceeds threshold
-        verification_success = max_val >= threshold
-        
-        print(f"[@route:execute_image_verification_host] Template matching confidence: {max_val:.4f}")
-        print(f"[@route:execute_image_verification_host] Threshold: {threshold}")
-        print(f"[@route:execute_image_verification_host] Verification result: {verification_success}")
-        
-        # Create result overlay image
-        overlay_img = source_img.copy()
-        if verification_success:
-            # Draw green rectangle around match
-            h, w = ref_img.shape[:2]
-            top_left = max_loc
-            bottom_right = (top_left[0] + w, top_left[1] + h)
-            cv2.rectangle(overlay_img, top_left, bottom_right, (0, 255, 0), 3)
-            cv2.putText(overlay_img, f'MATCH: {max_val:.3f}', (top_left[0], top_left[1] - 10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        else:
-            # Draw red X or indicator for no match
-            cv2.putText(overlay_img, f'NO MATCH: {max_val:.3f} < {threshold}', (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        
-        cv2.imwrite(overlay_result_path, overlay_img)
-        
-        message = f'Image verification {"passed" if verification_success else "failed"}: confidence {max_val:.3f}'
-        
-        return {
-            'success': verification_success,
-            'message': message,
-            'confidence': max_val,
-            'threshold': threshold,
-            'source_image_path': source_result_path,
-            'reference_image_path': reference_result_path,
-            'result_overlay_path': overlay_result_path,
-            'verification_type': 'image'
-        }
-        
-    except Exception as e:
-        print(f"[@route:execute_image_verification_host] Error: {str(e)}")
-        return {
-            'success': False,
-            'error': f'Image verification error: {str(e)}'
-        } 
+        }), 500 

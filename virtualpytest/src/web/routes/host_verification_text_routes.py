@@ -313,58 +313,32 @@ def execute_text_verification():
         
         data = request.get_json()
         verification = data.get('verification')
-        source_filename = data.get('source_filename')
+        source_filename = data.get('source_filename')  # Optional - controller will take screenshot if None
         
         print(f"[@route:host_verification_text:execute] Executing text verification on host")
         print(f"[@route:host_verification_text:execute] Source: {source_filename}")
         
-        # Validate required parameters
-        if not verification or not source_filename:
+        # Validate required parameters - only verification is required, source_filename is optional
+        if not verification:
             return jsonify({
                 'success': False,
-                'error': 'verification and source_filename are required'
+                'error': 'verification is required'
             }), 400
         
-        # Build source path
-        source_path = f'{CAPTURES_PATH}/{source_filename}'
+        # Use centralized VerificationController instead of custom logic
+        from src.controllers.verification_controller import get_verification_controller
         
-        # Check if source file exists
-        if not os.path.exists(source_path):
-            print(f"[@route:host_verification_text:execute] Source file not found: {source_path}")
-            return jsonify({
-                'success': False,
-                'error': f'Source file not found: {source_filename}'
-            }), 404
+        verification_controller = get_verification_controller(host_device)
         
-        # Create results directory
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        results_dir = f'{STREAM_BASE_PATH}/verification_results/{timestamp}'
-        os.makedirs(results_dir, exist_ok=True)
-        
-        # Execute text verification
-        result = execute_text_verification_host(verification, source_path, 0, results_dir)
-        
-        # Convert local paths to public URLs using centralized URL builder
-        from src.utils.buildUrlUtils import buildVerificationResultUrl
-        
-        # Get host info for URL building
-        host_info = host_device  # Already available in this route
-        
-        if result.get('source_image_path'):
-            result['source_image_url'] = buildVerificationResultUrl(host_info, result['source_image_path'])
-            print(f"[@route:host_verification_text:execute] Built source URL: {result['source_image_url']}")
-        if result.get('result_overlay_path'):
-            result['result_overlay_url'] = buildVerificationResultUrl(host_info, result['result_overlay_path'])
-            print(f"[@route:host_verification_text:execute] Built overlay URL: {result['result_overlay_url']}")
+        # Execute using controller - it will handle screenshot capture if source_filename is None
+        result = verification_controller.execute_verification(verification, 
+                                                            source_filename=source_filename)
         
         print(f"[@route:host_verification_text:execute] Verification completed: {result.get('success')}")
         
         return jsonify({
             'success': True,
-            'verification_result': result,
-            'results_directory': buildVerificationResultUrl(host_info, results_dir),
-            'timestamp': timestamp
+            'verification_result': result
         })
         
     except Exception as e:
@@ -372,120 +346,4 @@ def execute_text_verification():
         return jsonify({
             'success': False,
             'error': f'Text verification execution error: {str(e)}'
-        }), 500
-
-def execute_text_verification_host(verification, source_path, verification_index, results_dir):
-    """Execute text verification using verification controllers."""
-    try:
-        import cv2
-        import pytesseract
-        import shutil
-        from src.utils.host_utils import get_local_controller
-        
-        # Get image verification controller
-        image_controller = get_local_controller('verification_image')
-        if not image_controller:
-            return {
-                'success': False,
-                'error': 'Image verification controller not available'
-            }
-        
-        params = verification.get('params', {})
-        area = params.get('area')
-        
-        # Get text from params.text (matches TypeScript interface)
-        text_to_find = params.get('text', '')
-        
-        confidence = params.get('confidence', 0.8)
-        image_filter = params.get('image_filter', 'none')
-        
-        print(f"[@route:execute_text_verification_host] Text to find: '{text_to_find}'")
-        print(f"[@route:execute_text_verification_host] Area: {area}")
-        
-        if not text_to_find:
-            return {
-                'success': False,
-                'error': 'No text specified for verification'
-            }
-        
-        # Create result file paths
-        source_result_path = f'{results_dir}/source_image_{verification_index}.png'
-        overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
-        
-        # Crop source image to area if specified
-        if area:
-            success = image_controller.crop_image(source_path, source_result_path, area)
-            if not success:
-                return {
-                    'success': False,
-                    'error': 'Failed to crop source image'
-                }
-        else:
-            # Copy full source image using controller
-            success = image_controller.copy_image(source_path, source_result_path)
-            if not success:
-                return {
-                    'success': False,
-                    'error': 'Failed to copy source image'
-                }
-        
-        # Apply filter to source image if user selected one (can improve OCR accuracy)
-        if image_filter and image_filter != 'none':
-            print(f"[@route:execute_text_verification_host] Applying {image_filter} filter to source image for OCR")
-            if not image_controller.apply_filter(source_result_path, image_filter):
-                print(f"[@route:execute_text_verification_host] Warning: Failed to apply {image_filter} filter to source")
-
-        # Load image for OCR
-        img = cv2.imread(source_result_path)
-        if img is None:
-            return {
-                'success': False,
-                'error': 'Failed to load image for OCR'
-            }
-        
-        # Extract text using OCR
-        try:
-            extracted_text = pytesseract.image_to_string(img, lang='eng').strip()
-            print(f"[@route:execute_text_verification_host] Extracted text: '{extracted_text}'")
-        except Exception as ocr_error:
-            return {
-                'success': False,
-                'error': f'OCR failed: {str(ocr_error)}'
-            }
-        
-        # Check if text matches (case-insensitive contains)
-        verification_success = text_to_find.lower() in extracted_text.lower()
-        
-        # Create result overlay image
-        overlay_img = img.copy()
-        if verification_success:
-            cv2.putText(overlay_img, f'TEXT FOUND: "{text_to_find}"', (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.putText(overlay_img, f'Extracted: "{extracted_text[:50]}..."', (10, 60), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-        else:
-            cv2.putText(overlay_img, f'TEXT NOT FOUND: "{text_to_find}"', (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            cv2.putText(overlay_img, f'Extracted: "{extracted_text[:50]}..."', (10, 60), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-        
-        cv2.imwrite(overlay_result_path, overlay_img)
-        
-        message = f'Text verification {"passed" if verification_success else "failed"}: {"found" if verification_success else "not found"} "{text_to_find}"'
-        
-        return {
-            'success': verification_success,
-            'message': message,
-            'extracted_text': extracted_text,
-            'searched_text': text_to_find,
-            'source_image_path': source_result_path,
-            'result_overlay_path': overlay_result_path,
-            'verification_type': 'text'
-        }
-        
-    except Exception as e:
-        print(f"[@route:execute_text_verification_host] Error: {str(e)}")
-        return {
-            'success': False,
-            'error': f'Text verification error: {str(e)}'
-        } 
+        }), 500 
