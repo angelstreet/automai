@@ -12,6 +12,11 @@ Usage:
 import sys
 import os
 
+# Add the project root to Python path so 'src' imports work
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+sys.path.insert(0, project_root)
+
 from src.utils.host_utils import global_host_object
 from src.controllers.verification_controller import execute_image_verification
 
