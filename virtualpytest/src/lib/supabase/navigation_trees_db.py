@@ -273,9 +273,8 @@ def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_da
                 'team_id': team_id,
                 'metadata': tree_data,
                 'description': description,
-                'creator_id': creator_id,
-                'is_root': True,
-                'tree_level': 0
+                # Removed creator_id - column doesn't exist in current schema
+                # Removed is_root and tree_level - columns don't exist in current schema
             }
             
             result = supabase_client.table('navigation_trees')\
@@ -311,6 +310,8 @@ def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_da
         
         # Create history record
         version_number = get_next_version_number(tree_record['id'], supabase_client)
+        
+        print(f'[@db:navigation_trees:save_navigation_tree] Creating history with creator_id: {creator_id} (type: {type(creator_id)})')
         
         history_data = {
             'tree_id': tree_record['id'],

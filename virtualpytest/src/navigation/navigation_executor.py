@@ -43,13 +43,31 @@ def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, 
     print(f"[@navigation:executor:execute_navigation_to_node] Starting navigation to {target_node_id} in tree {tree_id}")
     
     # Get navigation steps
-    from navigation_pathfinding import get_navigation_steps
+    from navigation_pathfinding import get_navigation_transitions
     
-    steps = get_navigation_steps(tree_id, target_node_id, team_id, current_node_id)
+    transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
     
-    if not steps:
+    if not transitions:
         print(f"[@navigation:executor:execute_navigation_to_node] No navigation path found to {target_node_id}")
         return False
+    
+    # Convert transitions to individual steps for execution
+    steps = []
+    step_counter = 1
+    for transition in transitions:
+        for action in transition.get('actions', []):
+            step = {
+                'step_number': step_counter,
+                'from_node_id': transition['from_node_id'],
+                'to_node_id': transition['to_node_id'],
+                'from_node_label': transition.get('from_node_label', ''),
+                'to_node_label': transition.get('to_node_label', ''),
+                'action': action.get('command', ''),
+                'action_info': action,
+                'description': f"Execute {action.get('label', action.get('command', 'Unknown Action'))} to navigate from '{transition.get('from_node_label', '')}' to '{transition.get('to_node_label', '')}'"
+            }
+            steps.append(step)
+            step_counter += 1
     
     print(f"[@navigation:executor:execute_navigation_to_node] Executing {len(steps)} navigation steps")
     

@@ -382,7 +382,7 @@ def save_resource():
             
             # Save to database using the images database function
             try:
-                from src.lib.supabase.verifications_references_db import save_image
+                from src.lib.supabase.verifications_references_db import save_reference
                 from src.utils.app_utils import get_team_id
                 
                 team_id = get_team_id()
@@ -391,10 +391,10 @@ def save_resource():
                 # Extract R2 path from upload result for database storage
                 r2_path = upload_result.get('remote_path', f"reference-images/{model}/{r2_filename}")
                 
-                db_result = save_image(
+                db_result = save_reference(
                     name=reference_name,
                     device_model=model,
-                    type='reference_image',  # Use reference_image type, not screenshot
+                    reference_type='reference_image',  # Use reference_image type, not screenshot
                     r2_path=r2_path,
                     r2_url=r2_url,
                     team_id=team_id,

@@ -63,7 +63,6 @@ def _register_server_routes(app):
         ('server_testcase_routes', 'testcase_bp'),
         ('server_pathfinding_routes', 'pathfinding_bp'),
         ('server_validation_routes', 'validation_bp'),
-        ('server_navigation_config_routes', 'navigation_config_bp'),
         ('server_power_routes', 'power_bp'),
         ('server_device_routes', 'device_bp'),  # ✅ Unified naming
         ('server_userinterface_routes', 'userinterface_bp'),  # ✅ Unified naming

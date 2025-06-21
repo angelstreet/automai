@@ -314,8 +314,10 @@ def get_team_id():
     return request.headers.get('X-Team-ID', default_team_id)
 
 def get_user_id():
-    """Get user_id from request headers or use default for demo"""
-    default_user_id = getattr(current_app, 'default_user_id', 'default-user-id')
-    return request.headers.get('X-User-ID', default_user_id)
+    """Get user_id from request headers - FAIL FAST if not provided"""
+    user_id = request.headers.get('X-User-ID')
+    if not user_id:
+        raise ValueError('X-User-ID header is required but not provided')
+    return user_id
 
 # =====================================================

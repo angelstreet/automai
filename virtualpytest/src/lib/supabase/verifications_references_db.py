@@ -227,28 +227,4 @@ def delete_reference(team_id: str, reference_id: str = None, name: str = None, d
             'error': str(e)
         }
 
-# Alias for backward compatibility with existing code that imports save_image
-def save_image(name: str, device_model: str, verification_type: str, team_id: str, r2_path: str = None, r2_url: str = None, area: Dict = None, **kwargs) -> Dict:
-    """
-    Backward compatibility alias for save_reference.
-    Maps old save_image calls to the new save_reference function.
-    """
-    print(f"[@db:verifications_references:save_image] DEPRECATED: Using save_image alias, please use save_reference instead")
-    
-    # Map verification_type to reference_type
-    if verification_type in ['reference_image', 'reference_text']:
-        reference_type = verification_type
-    elif verification_type == 'screenshot':
-        reference_type = 'reference_image'  # Assume screenshots are image references
-    else:
-        reference_type = 'reference_image'  # Default fallback
-    
-    return save_reference(
-        name=name,
-        device_model=device_model,
-        reference_type=reference_type,
-        team_id=team_id,
-        r2_path=r2_path,
-        r2_url=r2_url,
-        area=area
-    ) 
+# Deprecated save_image alias removed - use save_reference instead 

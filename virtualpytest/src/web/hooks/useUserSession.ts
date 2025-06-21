@@ -16,7 +16,7 @@ export const useUserSession = () => {
       return globalSessionData;
     }
 
-    let userId = 'browser-user'; // Default fallback
+    let userId: string | null = null;
 
     // Try to get user ID from browser storage
     if (typeof window !== 'undefined') {
@@ -24,14 +24,28 @@ export const useUserSession = () => {
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
-          userId = user.id || 'browser-user';
-          console.log(`[@hook:useUserSession] Using user ID: ${userId}`);
+          userId = user.id;
+          if (userId) {
+            console.log(`[@hook:useUserSession] Using user ID: ${userId}`);
+          } else {
+            console.error(`[@hook:useUserSession] ERROR: No user ID found in cached user data`);
+            throw new Error('No user ID available - authentication required');
+          }
         } catch (e) {
-          console.log(`[@hook:useUserSession] Error parsing cached user, using fallback`);
+          console.error(`[@hook:useUserSession] ERROR: Failed to parse cached user data:`, e);
+          throw new Error('Invalid user session data - authentication required');
         }
       } else {
-        console.log(`[@hook:useUserSession] Using fallback user ID: ${userId}`);
+        console.error(`[@hook:useUserSession] ERROR: No cached user found in localStorage`);
+        throw new Error('No user session found - authentication required');
       }
+    } else {
+      console.error(`[@hook:useUserSession] ERROR: Window object not available`);
+      throw new Error('Browser environment not available - authentication required');
+    }
+
+    if (!userId) {
+      throw new Error('User ID is required but not available - authentication required');
     }
 
     // Generate a stable session ID using the resolved userId

@@ -411,7 +411,7 @@ def save_text_reference():
         # Step 2: Save text reference to database
         print("[@route:server_verification_common:save_text_reference] Step 2: Saving text reference to database")
         
-        from src.lib.supabase.verifications_references_db import save_image
+        from src.lib.supabase.verifications_references_db import save_reference
         from src.utils.app_utils import get_team_id
         
         # Get team ID

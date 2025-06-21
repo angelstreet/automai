@@ -299,34 +299,7 @@ def get_navigation_transitions(tree_id: str, target_node_id: str, team_id: str, 
     
     return enhanced_transitions
 
-# Keep the old function name for backward compatibility, but mark as deprecated
-def get_navigation_steps(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> List[Dict]:
-    """
-    DEPRECATED: Use get_navigation_transitions instead.
-    This function now returns transitions but converts them to individual steps for backward compatibility.
-    """
-    transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
-    
-    # Convert transitions back to individual steps for backward compatibility
-    steps = []
-    step_counter = 1
-    
-    for transition in transitions:
-        for action in transition.get('actions', []):
-            step = {
-                'step_number': step_counter,
-                'from_node_id': transition['from_node_id'],
-                'to_node_id': transition['to_node_id'],
-                'from_node_label': transition.get('from_node_label', ''),
-                'to_node_label': transition.get('to_node_label', ''),
-                'action': action.get('command', ''),
-                'action_info': action,
-                'description': f"Execute {action.get('label', action.get('command', 'Unknown Action'))} to navigate from '{transition.get('from_node_label', '')}' to '{transition.get('to_node_label', '')}'"
-            }
-            steps.append(step)
-            step_counter += 1
-    
-    return steps
+# Deprecated function removed - use get_navigation_transitions instead
 
 def find_entry_point(tree_id: str, team_id: str) -> Optional[str]:
     """

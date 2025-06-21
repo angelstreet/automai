@@ -10,6 +10,9 @@ from src.lib.supabase.navigation_trees_db import (
 from src.lib.supabase.userinterface_db import get_all_userinterfaces
 from src.utils.app_utils import DEFAULT_TEAM_ID, DEFAULT_USER_ID
 
+# Debug: Print the DEFAULT_USER_ID value when module loads
+print(f'[@route:navigation_trees] DEFAULT_USER_ID loaded: {DEFAULT_USER_ID}')
+
 navigation_trees_bp = Blueprint('navigation_trees', __name__, url_prefix='/server')
 
 # UserInterface Endpoints
@@ -161,6 +164,10 @@ def save_tree():
         changes_summary = data.get('changes_summary')
         
         print(f'[@route:navigation_trees:save_tree] Saving tree: {name}')
+        print(f'[@route:navigation_trees:save_tree] Parameters:')
+        print(f'  - userinterface_id: {userinterface_id} (type: {type(userinterface_id)})')
+        print(f'  - team_id: {team_id} (type: {type(team_id)})')
+        print(f'  - creator_id: {creator_id} (type: {type(creator_id)})')
         
         success, message, tree_record = save_navigation_tree(
             name=name,
