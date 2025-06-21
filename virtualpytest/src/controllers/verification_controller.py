@@ -319,7 +319,7 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get references from database
-            from src.lib.supabase.images_db import get_images
+            from src.lib.supabase.verifications_db import get_images
             
             result = get_images(
                 team_id=team_id,
@@ -404,7 +404,7 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get image references from database
-            from src.lib.supabase.images_db import get_images
+            from src.lib.supabase.verifications_db import get_images
             
             result = get_images(
                 team_id=team_id,
@@ -478,7 +478,7 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get text references from database
-            from src.lib.supabase.images_db import get_images
+            from src.lib.supabase.verifications_db import get_images
             
             result = get_images(
                 team_id=team_id,
@@ -551,7 +551,7 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get references from database
-            from src.lib.supabase.images_db import get_images
+            from src.lib.supabase.verifications_db import get_images
             
             result = get_images(
                 team_id=team_id,

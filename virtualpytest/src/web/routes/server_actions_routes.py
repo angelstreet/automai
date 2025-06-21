@@ -1,42 +1,43 @@
 """
-Server Images Routes - Unified API for Screenshots and Reference Images
+Server Actions Routes - Unified API for Action Definitions
 
-This module provides unified API endpoints for managing images (screenshots and reference images)
+This module provides unified API endpoints for managing action definitions
 using the database instead of JSON files.
 """
 
 from flask import Blueprint, request, jsonify
-from src.lib.supabase.images_db import (
-    save_image, 
-    get_images, 
-    delete_image, 
-    get_all_images
+from src.lib.supabase.actions_db import (
+    save_action, 
+    get_actions, 
+    delete_action, 
+    get_all_actions
 )
 from src.utils.app_utils import DEFAULT_TEAM_ID
 
 # Create blueprint
-server_images_bp = Blueprint('server_images', __name__)
+server_actions_bp = Blueprint('server_actions', __name__)
 
-@server_images_bp.route('/server/images/save', methods=['POST'])
-def save_image_endpoint():
+@server_actions_bp.route('/server/actions/save', methods=['POST'])
+def save_action_endpoint():
     """
-    Save image (screenshot or reference_image) to database.
+    Save action definition to database.
     
     Expected JSON payload:
     {
-        "name": "image_name",
+        "name": "action_name",
         "device_model": "android_mobile",
-        "type": "screenshot" | "reference_image",
-        "r2_path": "path/in/r2",
-        "r2_url": "https://...",
-        "area": {...} // Optional, for reference images
+        "action_type": "adb" | "ui" | "gesture",
+        "command": "input tap 100 200",
+        "parameters": {...}, // Optional
+        "wait_time": 500, // Optional, defaults to 500
+        "requires_input": false // Optional, defaults to false
     }
     """
     try:
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['name', 'device_model', 'type', 'r2_path', 'r2_url']
+        required_fields = ['name', 'device_model', 'action_type', 'command']
         for field in required_fields:
             if field not in data:
                 return jsonify({
@@ -44,32 +45,34 @@ def save_image_endpoint():
                     'error': f'Missing required field: {field}'
                 }), 400
         
-        # Validate type
-        if data['type'] not in ['screenshot', 'reference_image']:
+        # Validate action_type
+        valid_types = ['adb', 'ui', 'gesture', 'navigation', 'system']
+        if data['action_type'] not in valid_types:
             return jsonify({
                 'success': False,
-                'error': 'Type must be "screenshot" or "reference_image"'
+                'error': f'Action type must be one of: {", ".join(valid_types)}'
             }), 400
         
         # Use default team ID
         team_id = DEFAULT_TEAM_ID
         
         # Save to database
-        result = save_image(
+        result = save_action(
             name=data['name'],
             device_model=data['device_model'],
-            type=data['type'],
-            r2_path=data['r2_path'],
-            r2_url=data['r2_url'],
+            action_type=data['action_type'],
+            command=data['command'],
             team_id=team_id,
-            area=data.get('area')
+            parameters=data.get('parameters'),
+            wait_time=data.get('wait_time', 500),
+            requires_input=data.get('requires_input', False)
         )
         
         if result['success']:
             return jsonify({
                 'success': True,
-                'message': 'Image saved successfully',
-                'image_id': result.get('image_id')
+                'message': 'Action saved successfully',
+                'action_id': result.get('action_id')
             })
         else:
             return jsonify({
@@ -78,35 +81,35 @@ def save_image_endpoint():
             }), 500
             
     except Exception as e:
-        print(f"[@server_images_routes:save_image_endpoint] Error: {e}")
+        print(f"[@server_actions_routes:save_action_endpoint] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_images_bp.route('/server/images/list', methods=['GET'])
-def list_images_endpoint():
+@server_actions_bp.route('/server/actions/list', methods=['GET'])
+def list_actions_endpoint():
     """
-    List images with optional filtering.
+    List actions with optional filtering.
     
     Query parameters:
-    - type: Filter by type (screenshot, reference_image)
+    - action_type: Filter by type (adb, ui, gesture, etc.)
     - device_model: Filter by device model
     - name: Filter by name (partial match)
     """
     try:
         # Get query parameters
-        image_type = request.args.get('type')
+        action_type = request.args.get('action_type')
         device_model = request.args.get('device_model')
         name = request.args.get('name')
         
         # Use default team ID
         team_id = DEFAULT_TEAM_ID
         
-        # Get images from database
-        result = get_images(
+        # Get actions from database
+        result = get_actions(
             team_id=team_id,
-            image_type=image_type,
+            action_type=action_type,
             device_model=device_model,
             name=name
         )
@@ -114,8 +117,8 @@ def list_images_endpoint():
         if result['success']:
             return jsonify({
                 'success': True,
-                'images': result['images'],
-                'count': len(result['images'])
+                'actions': result['actions'],
+                'count': len(result['actions'])
             })
         else:
             return jsonify({
@@ -124,27 +127,27 @@ def list_images_endpoint():
             }), 500
             
     except Exception as e:
-        print(f"[@server_images_routes:list_images_endpoint] Error: {e}")
+        print(f"[@server_actions_routes:list_actions_endpoint] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_images_bp.route('/server/images/delete', methods=['DELETE'])
-def delete_image_endpoint():
+@server_actions_bp.route('/server/actions/delete', methods=['DELETE'])
+def delete_action_endpoint():
     """
-    Delete image by ID or by name/model/type combination.
+    Delete action by ID or by name/model/type combination.
     
     Expected JSON payload (option 1 - by ID):
     {
-        "image_id": "uuid"
+        "action_id": "uuid"
     }
     
     Expected JSON payload (option 2 - by identifiers):
     {
-        "name": "image_name",
+        "name": "action_name",
         "device_model": "android_mobile", 
-        "type": "screenshot" | "reference_image"
+        "action_type": "adb"
     }
     """
     try:
@@ -154,25 +157,25 @@ def delete_image_endpoint():
         team_id = DEFAULT_TEAM_ID
         
         # Delete by ID or by identifiers
-        if 'image_id' in data:
-            result = delete_image(team_id=team_id, image_id=data['image_id'])
-        elif all(key in data for key in ['name', 'device_model', 'type']):
-            result = delete_image(
+        if 'action_id' in data:
+            result = delete_action(team_id=team_id, action_id=data['action_id'])
+        elif all(key in data for key in ['name', 'device_model', 'action_type']):
+            result = delete_action(
                 team_id=team_id,
                 name=data['name'],
                 device_model=data['device_model'],
-                image_type=data['type']
+                action_type=data['action_type']
             )
         else:
             return jsonify({
                 'success': False,
-                'error': 'Must provide either image_id or name/device_model/type'
+                'error': 'Must provide either action_id or name/device_model/action_type'
             }), 400
         
         if result['success']:
             return jsonify({
                 'success': True,
-                'message': 'Image deleted successfully'
+                'message': 'Action deleted successfully'
             })
         else:
             return jsonify({
@@ -181,29 +184,29 @@ def delete_image_endpoint():
             }), 500
             
     except Exception as e:
-        print(f"[@server_images_routes:delete_image_endpoint] Error: {e}")
+        print(f"[@server_actions_routes:delete_action_endpoint] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_images_bp.route('/server/images/all', methods=['GET'])
-def get_all_images_endpoint():
+@server_actions_bp.route('/server/actions/all', methods=['GET'])
+def get_all_actions_endpoint():
     """
-    Get all images for the current team.
+    Get all actions for the current team.
     """
     try:        
         # Use default team ID
         team_id = DEFAULT_TEAM_ID
         
-        # Get all images
-        result = get_all_images(team_id=team_id)
+        # Get all actions
+        result = get_all_actions(team_id=team_id)
         
         if result['success']:
             return jsonify({
                 'success': True,
-                'images': result['images'],
-                'count': len(result['images'])
+                'actions': result['actions'],
+                'count': len(result['actions'])
             })
         else:
             return jsonify({
@@ -212,23 +215,23 @@ def get_all_images_endpoint():
             }), 500
             
     except Exception as e:
-        print(f"[@server_images_routes:get_all_images_endpoint] Error: {e}")
+        print(f"[@server_actions_routes:get_all_actions_endpoint] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
 
 # Health check endpoint
-@server_images_bp.route('/server/images/health', methods=['GET'])
+@server_actions_bp.route('/server/actions/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for images API."""
+    """Health check endpoint for actions API."""
     return jsonify({
         'success': True,
-        'message': 'Images API is healthy',
+        'message': 'Actions API is healthy',
         'endpoints': [
-            '/server/images/save',
-            '/server/images/list', 
-            '/server/images/delete',
-            '/server/images/all'
+            '/server/actions/save',
+            '/server/actions/list', 
+            '/server/actions/delete',
+            '/server/actions/all'
         ]
     }) 
