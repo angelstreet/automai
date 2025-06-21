@@ -62,8 +62,38 @@ export const useNavigationActionsHook = () => {
 
       // Optional config state (when available)
       ...(configHook && {
-        loadFromConfig: configHook.loadFromConfig,
-        saveToConfig: configHook.saveToConfig,
+        loadFromConfig: (userInterfaceId: string) => {
+          // Create state object with all required functions for NavigationConfig
+          const configState = {
+            nodes: nodesContext.nodes,
+            edges: nodesContext.edges,
+            userInterface: flowContext.userInterface,
+            setNodes: nodesContext.setNodes,
+            setEdges: nodesContext.setEdges,
+            setUserInterface: flowContext.setUserInterface,
+            setInitialState: nodesContext.setInitialState,
+            setHasUnsavedChanges: uiContext.setHasUnsavedChanges,
+            setIsLoading: uiContext.setIsLoadingInterface,
+            setError: uiContext.setError,
+          };
+          return configHook.loadFromConfig(userInterfaceId, configState);
+        },
+        saveToConfig: (userInterfaceId: string) => {
+          // Create state object with all required functions for NavigationConfig
+          const configState = {
+            nodes: nodesContext.nodes,
+            edges: nodesContext.edges,
+            userInterface: flowContext.userInterface,
+            setNodes: nodesContext.setNodes,
+            setEdges: nodesContext.setEdges,
+            setUserInterface: flowContext.setUserInterface,
+            setInitialState: nodesContext.setInitialState,
+            setHasUnsavedChanges: uiContext.setHasUnsavedChanges,
+            setIsLoading: uiContext.setIsLoadingInterface,
+            setError: uiContext.setError,
+          };
+          return configHook.saveToConfig(userInterfaceId, configState);
+        },
         isLocked: configHook.isLocked,
         lockInfo: configHook.lockInfo,
         showReadOnlyOverlay: configHook.showReadOnlyOverlay,
@@ -73,7 +103,22 @@ export const useNavigationActionsHook = () => {
         unlockNavigationTree: configHook.unlockNavigationTree,
         setupAutoUnlock: configHook.setupAutoUnlock,
         listAvailableTrees: configHook.listAvailableUserInterfaces,
-        createEmptyTreeConfig: configHook.createEmptyTree,
+        createEmptyTreeConfig: (userInterfaceId: string) => {
+          // Create state object with all required functions for NavigationConfig
+          const configState = {
+            nodes: nodesContext.nodes,
+            edges: nodesContext.edges,
+            userInterface: flowContext.userInterface,
+            setNodes: nodesContext.setNodes,
+            setEdges: nodesContext.setEdges,
+            setUserInterface: flowContext.setUserInterface,
+            setInitialState: nodesContext.setInitialState,
+            setHasUnsavedChanges: uiContext.setHasUnsavedChanges,
+            setIsLoading: uiContext.setIsLoadingInterface,
+            setError: uiContext.setError,
+          };
+          return configHook.createEmptyTree(userInterfaceId, configState);
+        },
         loadAvailableTrees: async () => {
           try {
             return await configHook.listAvailableUserInterfaces();
@@ -86,23 +131,62 @@ export const useNavigationActionsHook = () => {
 
       // Fallback config functions when NavigationConfig context is not available
       ...(!configHook && {
-        loadFromConfig: () =>
-          console.warn('[@hook:useNavigationActionsHook] NavigationConfig not available'),
-        saveToConfig: () =>
-          console.warn('[@hook:useNavigationActionsHook] NavigationConfig not available'),
+        loadFromConfig: (userInterfaceId: string, state?: any) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - loadFromConfig called',
+          );
+          return Promise.resolve();
+        },
+        saveToConfig: (userInterfaceId: string, state?: any) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - saveToConfig called',
+          );
+          return Promise.resolve();
+        },
         isLocked: false,
         lockInfo: null,
         showReadOnlyOverlay: false,
-        setCheckingLockState: () =>
-          console.warn('[@hook:useNavigationActionsHook] NavigationConfig not available'),
+        setCheckingLockState: (checking: boolean) =>
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - setCheckingLockState called',
+          ),
         sessionId: 'fallback-session',
-        lockNavigationTree: () => Promise.resolve(false),
-        unlockNavigationTree: () => Promise.resolve(true),
-        setupAutoUnlock: () => () => {},
-        listAvailableTrees: () => Promise.resolve([]),
-        createEmptyTreeConfig: () =>
-          console.warn('[@hook:useNavigationActionsHook] NavigationConfig not available'),
-        loadAvailableTrees: () => Promise.resolve([]),
+        lockNavigationTree: (userInterfaceId: string) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - lockNavigationTree called',
+          );
+          return Promise.resolve(false);
+        },
+        unlockNavigationTree: (userInterfaceId: string) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - unlockNavigationTree called',
+          );
+          return Promise.resolve(true);
+        },
+        setupAutoUnlock: (userInterfaceId: string) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - setupAutoUnlock called',
+          );
+          return () => {};
+        },
+        listAvailableTrees: () => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - listAvailableTrees called',
+          );
+          return Promise.resolve([]);
+        },
+        createEmptyTreeConfig: (userInterfaceId: string, state?: any) => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - createEmptyTreeConfig called',
+          );
+          return Promise.resolve();
+        },
+        loadAvailableTrees: () => {
+          console.warn(
+            '[@hook:useNavigationActionsHook] NavigationConfig not available - loadAvailableTrees called',
+          );
+          return Promise.resolve([]);
+        },
       }),
 
       // Optional device state (when available)
