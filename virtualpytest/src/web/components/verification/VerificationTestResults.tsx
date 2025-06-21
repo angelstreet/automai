@@ -128,98 +128,90 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
           />
         )}
 
-      {/* ADB element details for ADB verifications */}
-      {verification.verification_type === 'adb' && testResult && (
-        <Box
-          sx={{
-            mt: 1,
-            p: 1,
-            bgcolor: testResult.success ? 'rgba(76, 175, 80, 0.05)' : 'rgba(244, 67, 54, 0.05)',
-            borderRadius: 1,
-            border: `1px solid ${testResult.success ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'}`,
-          }}
-        >
-          {testResult.success && testResult.matches && testResult.matches.length > 0 && (
-            <>
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  color: '#4caf50',
-                  display: 'block',
-                  mb: 0.5,
-                }}
-              >
-                Found {testResult.total_matches} element(s) after {testResult.wait_time?.toFixed(1)}
-                s
-              </Typography>
 
-              {testResult.matches.map((match: any, matchIndex: number) => (
-                <Box
-                  key={matchIndex}
+              <>
+                <Typography
+                  variant="caption"
                   sx={{
-                    mb: 1,
-                    p: 0.5,
-                    bgcolor: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 0.5,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    color: '#4caf50',
+                    display: 'block',
+                    mb: 0.5,
                   }}
                 >
-                  <Typography
-                    variant="caption"
+                  Found {testResult.total_matches} element(s) after{' '}
+                  {testResult.wait_time?.toFixed(1)}s
+                </Typography>
+
+                {testResult.matches.map((match: any, matchIndex: number) => (
+                  <Box
+                    key={matchIndex}
                     sx={{
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      display: 'block',
+                      mb: 1,
+                      p: 0.5,
+                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: 0.5,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                   >
-                    Element {match.element_id}: {match.match_reason}
-                  </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        display: 'block',
+                      }}
+                    >
+                      Element {match.element_id}: {match.match_reason}
+                    </Typography>
 
-                  {match.full_element && (
-                    <Box sx={{ mt: 0.5, fontSize: '0.6rem', color: 'text.secondary' }}>
-                      {match.full_element.text && match.full_element.text !== '<no text>' && (
+                    {match.full_element && (
+                      <Box sx={{ mt: 0.5, fontSize: '0.6rem', color: 'text.secondary' }}>
+                        {match.full_element.text && match.full_element.text !== '<no text>' && (
+                          <Typography
+                            variant="caption"
+                            sx={{ fontSize: '0.6rem', display: 'block' }}
+                          >
+                            <strong>Text:</strong> {match.full_element.text}
+                          </Typography>
+                        )}
+                        {match.full_element.contentDesc &&
+                          match.full_element.contentDesc !== '<no content-desc>' && (
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: '0.6rem', display: 'block' }}
+                            >
+                              <strong>Content-Desc:</strong> {match.full_element.contentDesc}
+                            </Typography>
+                          )}
+                        {match.full_element.resourceId &&
+                          match.full_element.resourceId !== '<no resource-id>' && (
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: '0.6rem', display: 'block' }}
+                            >
+                              <strong>Resource-ID:</strong> {match.full_element.resourceId}
+                            </Typography>
+                          )}
                         <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
-                          <strong>Text:</strong> {match.full_element.text}
+                          <strong>Class:</strong> {match.full_element.className || 'N/A'}
                         </Typography>
-                      )}
-                      {match.full_element.contentDesc &&
-                        match.full_element.contentDesc !== '<no content-desc>' && (
-                          <Typography
-                            variant="caption"
-                            sx={{ fontSize: '0.6rem', display: 'block' }}
-                          >
-                            <strong>Content-Desc:</strong> {match.full_element.contentDesc}
-                          </Typography>
-                        )}
-                      {match.full_element.resourceId &&
-                        match.full_element.resourceId !== '<no resource-id>' && (
-                          <Typography
-                            variant="caption"
-                            sx={{ fontSize: '0.6rem', display: 'block' }}
-                          >
-                            <strong>Resource-ID:</strong> {match.full_element.resourceId}
-                          </Typography>
-                        )}
-                      <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
-                        <strong>Class:</strong> {match.full_element.className || 'N/A'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
-                        <strong>Bounds:</strong> {match.full_element.bounds || 'N/A'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
-                        <strong>Clickable:</strong> {match.full_element.clickable ? 'Yes' : 'No'} |
-                        <strong> Enabled:</strong> {match.full_element.enabled ? 'Yes' : 'No'}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              ))}
-            </>
-          )}
-        </Box>
-      )}
+                        <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                          <strong>Bounds:</strong> {match.full_element.bounds || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                          <strong>Clickable:</strong> {match.full_element.clickable ? 'Yes' : 'No'}{' '}
+                          |<strong> Enabled:</strong> {match.full_element.enabled ? 'Yes' : 'No'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </>
+            )}
+          </Box>
+        )}
     </Box>
   );
 };
