@@ -20,6 +20,7 @@ import {
 } from '../../types/verification/VerificationTypes';
 
 import { VerificationImageComparisonDialog } from './VerificationImageComparisonDialog';
+import { VerificationTextComparisonDialog } from './VerificationTextComparisonDialog';
 import { VerificationItem } from './VerificationItem';
 
 export interface VerificationsListProps {
@@ -74,6 +75,26 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     userThreshold: undefined,
     matchingResult: undefined,
     resultType: undefined,
+    imageFilter: undefined,
+  });
+
+  const [textComparisonDialog, setTextComparisonDialog] = useState<{
+    open: boolean;
+    searchedText: string;
+    extractedText: string;
+    sourceUrl?: string;
+    resultType?: 'PASS' | 'FAIL' | 'ERROR';
+    detectedLanguage?: string;
+    languageConfidence?: number;
+    imageFilter?: 'none' | 'greyscale' | 'binary';
+  }>({
+    open: false,
+    searchedText: '',
+    extractedText: '',
+    sourceUrl: undefined,
+    resultType: undefined,
+    detectedLanguage: undefined,
+    languageConfidence: undefined,
     imageFilter: undefined,
   });
 
@@ -304,6 +325,27 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
       userThreshold: undefined,
       matchingResult: undefined,
       imageFilter: undefined,
+    });
+  };
+
+  const handleTextSourceImageClick = (
+    searchedText: string,
+    extractedText: string,
+    sourceUrl?: string,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    detectedLanguage?: string,
+    languageConfidence?: number,
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => {
+    setTextComparisonDialog({
+      open: true,
+      searchedText,
+      extractedText,
+      sourceUrl,
+      resultType,
+      detectedLanguage,
+      languageConfidence,
+      imageFilter,
     });
   };
 
