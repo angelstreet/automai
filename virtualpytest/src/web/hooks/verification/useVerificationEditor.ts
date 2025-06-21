@@ -389,6 +389,7 @@ export const useVerificationEditor = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            host: selectedHost, // Add missing host object
             reference_name: referenceName,
             model: selectedHost.device_model,
             r2_url: uploadResult.r2_url,
