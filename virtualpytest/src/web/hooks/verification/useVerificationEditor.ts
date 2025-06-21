@@ -349,10 +349,8 @@ export const useVerificationEditor = ({
           );
         }
       } else {
-        // Image references use new two-step pattern: HOST upload + SERVER database save
-
-        // Step 2a: Upload to R2 via SERVER (proxy to HOST)
-        const uploadResponse = await fetch('/server/verification/image/save-image-reference', {
+        // Image references: Single call uploads to R2 and saves to database
+        const response = await fetch('/server/verification/image/save-image-reference', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -370,41 +368,10 @@ export const useVerificationEditor = ({
           }),
         });
 
-        const uploadResult = await uploadResponse.json();
+        const result = await response.json();
 
-        if (!uploadResult.success) {
-          console.error(
-            '[@hook:useVerificationEditor] Failed to upload image to R2:',
-            uploadResult.error,
-          );
-          return;
-        }
-
-        console.log('[@hook:useVerificationEditor] Image uploaded to R2:', uploadResult.r2_url);
-
-        // Step 2b: Save metadata to database via SERVER (using exact same pattern as navigation trees)
-        const dbResponse = await fetch('/server/verification/image/save-image-reference', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost, // Add missing host object
-            reference_name: referenceName,
-            model: selectedHost.device_model,
-            r2_url: uploadResult.r2_url,
-            area:
-              imageProcessingOptions.autocrop && captureResult.processed_area
-                ? captureResult.processed_area
-                : selectedArea,
-            reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
-          }),
-        });
-
-        const dbResult = await dbResponse.json();
-
-        if (dbResult.success) {
-          console.log('[@hook:useVerificationEditor] Reference saved successfully:', dbResult);
+        if (result.success) {
+          console.log('[@hook:useVerificationEditor] Reference saved successfully:', result);
           verification.setSuccessMessage(`Reference "${referenceName}" saved successfully`);
           // Don't clear UI state - keep the captured image and name for user reference
           // Only increment counter to refresh reference list
@@ -412,7 +379,7 @@ export const useVerificationEditor = ({
         } else {
           console.error(
             '[@hook:useVerificationEditor] Failed to save reference to database:',
-            dbResult.error,
+            result.error,
           );
         }
       }
