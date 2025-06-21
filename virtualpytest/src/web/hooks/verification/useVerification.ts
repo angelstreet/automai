@@ -231,6 +231,15 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
         const batchResult = await response.json();
 
         console.log('[@hook:useVerification] Raw batch result:', batchResult);
+        console.log(
+          '[@hook:useVerification] Response status:',
+          response.status,
+          response.statusText,
+        );
+        console.log('[@hook:useVerification] Batch result keys:', Object.keys(batchResult));
+        console.log('[@hook:useVerification] Batch result.results:', batchResult.results);
+        console.log('[@hook:useVerification] Batch result.success:', batchResult.success);
+        console.log('[@hook:useVerification] Batch result.error:', batchResult.error);
 
         // Process results if we have them, regardless of overall batch success
         if (batchResult.results && batchResult.results.length > 0) {
