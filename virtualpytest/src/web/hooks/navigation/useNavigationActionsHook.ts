@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
-import { useDeviceControl, useNavigationConfig, useNodeEdgeManagement } from '../../contexts';
+import { useDeviceControl, useNavigationConfig } from '../../contexts';
 import { useNavigationActions } from '../../contexts/navigation';
 import { useNavigationNodes, useNavigationUI, useNavigationFlow } from '../../contexts/navigation';
 
@@ -15,7 +15,6 @@ export const useNavigationActionsHook = () => {
 
   // Use existing context hooks
   const configHook = useNavigationConfig();
-  const nodeEdgeHook = useNodeEdgeManagement();
   const deviceControl = useDeviceControl();
 
   // Create config state object for context operations
@@ -182,16 +181,43 @@ export const useNavigationActionsHook = () => {
       unlockNavigationTree: configHook.unlockNavigationTree,
       setupAutoUnlock: configHook.setupAutoUnlock,
 
-      // Actions from Node/Edge management hook
-      handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,
-      handleEdgeFormSubmit: nodeEdgeHook.saveEdgeChanges,
-      handleDeleteNode: nodeEdgeHook.deleteSelected,
-      handleDeleteEdge: nodeEdgeHook.deleteSelected,
-      addNewNode: nodeEdgeHook.addNewNode,
-      cancelNodeChanges: nodeEdgeHook.cancelNodeChanges,
-      closeSelectionPanel: nodeEdgeHook.closeSelectionPanel,
-      deleteSelected: nodeEdgeHook.deleteSelected,
-      resetNode: nodeEdgeHook.resetNode,
+      // Placeholder functions for NodeEdge management (will be provided by NodeEdgeManagementProvider)
+      handleNodeFormSubmit: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] handleNodeFormSubmit not available - use NodeEdgeManagement context',
+        ),
+      handleEdgeFormSubmit: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] handleEdgeFormSubmit not available - use NodeEdgeManagement context',
+        ),
+      handleDeleteNode: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] handleDeleteNode not available - use NodeEdgeManagement context',
+        ),
+      handleDeleteEdge: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] handleDeleteEdge not available - use NodeEdgeManagement context',
+        ),
+      addNewNode: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] addNewNode not available - use NodeEdgeManagement context',
+        ),
+      cancelNodeChanges: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] cancelNodeChanges not available - use NodeEdgeManagement context',
+        ),
+      closeSelectionPanel: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] closeSelectionPanel not available - use NodeEdgeManagement context',
+        ),
+      deleteSelected: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] deleteSelected not available - use NodeEdgeManagement context',
+        ),
+      resetNode: () =>
+        console.warn(
+          '[@hook:useNavigationActionsHook] resetNode not available - use NodeEdgeManagement context',
+        ),
 
       // Device control state
       selectedHost: deviceControl.selectedHost,
@@ -208,19 +234,15 @@ export const useNavigationActionsHook = () => {
       handleConnectionChange: deviceControl.handleConnectionChange,
       handleDisconnectComplete: deviceControl.handleDisconnectComplete,
 
-      // Host data (filtered by interface models)
+      // Host data
       availableHosts: deviceControl.availableHosts,
       getHostByName: deviceControl.getHostByName,
       fetchHosts: deviceControl.fetchHosts,
     }),
     [
-      actionsContext.resetAll,
-      actionsContext.resetSelectionAndDialogs,
-      actionsContext.closeAllDialogs,
-      actionsContext.markUnsavedChanges,
-      actionsContext.clearUnsavedChanges,
-      actionsContext.resetToHome,
-      actionsContext.fitViewToNodes,
+      actionsContext,
+      configHook,
+      deviceControl,
       openNodeDialogWithSetup,
       openEdgeDialogWithSetup,
       performSaveOperation,
@@ -229,36 +251,6 @@ export const useNavigationActionsHook = () => {
       saveToConfig,
       createEmptyTreeConfig,
       loadAvailableTrees,
-      configHook.listAvailableUserInterfaces,
-      configHook.isLocked,
-      configHook.lockInfo,
-      configHook.showReadOnlyOverlay,
-      configHook.setCheckingLockState,
-      configHook.sessionId,
-      configHook.lockNavigationTree,
-      configHook.unlockNavigationTree,
-      configHook.setupAutoUnlock,
-      nodeEdgeHook.saveNodeChanges,
-      nodeEdgeHook.saveEdgeChanges,
-      nodeEdgeHook.deleteSelected,
-      nodeEdgeHook.addNewNode,
-      nodeEdgeHook.cancelNodeChanges,
-      nodeEdgeHook.closeSelectionPanel,
-      nodeEdgeHook.resetNode,
-      deviceControl.selectedHost,
-      deviceControl.isControlActive,
-      deviceControl.isRemotePanelOpen,
-      deviceControl.showRemotePanel,
-      deviceControl.showAVPanel,
-      deviceControl.isVerificationActive,
-      deviceControl.handleDeviceSelect,
-      deviceControl.handleControlStateChange,
-      deviceControl.handleToggleRemotePanel,
-      deviceControl.handleConnectionChange,
-      deviceControl.handleDisconnectComplete,
-      deviceControl.availableHosts,
-      deviceControl.getHostByName,
-      deviceControl.fetchHosts,
     ],
   );
 };

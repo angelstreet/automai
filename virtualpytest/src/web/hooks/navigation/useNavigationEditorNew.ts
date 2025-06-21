@@ -5,6 +5,9 @@ import { useNavigationUIHook } from './useNavigationUIHook';
 import { useNavigationFlowHook } from './useNavigationFlowHook';
 import { useNavigationActionsHook } from './useNavigationActionsHook';
 
+// Optional import for NodeEdgeManagement - will be available when wrapped with NodeEdgeManagementProvider
+import { useNodeEdgeManagement } from '../../contexts/navigation/NodeEdgeManagementContext';
+
 export const useNavigationEditorNew = () => {
   console.log('[@hook:useNavigationEditorNew] Initializing new navigation editor hook');
 
@@ -13,6 +16,16 @@ export const useNavigationEditorNew = () => {
   const uiHook = useNavigationUIHook();
   const flowHook = useNavigationFlowHook();
   const actionsHook = useNavigationActionsHook();
+
+  // Try to get NodeEdgeManagement context if available (will be undefined if not wrapped with provider)
+  let nodeEdgeHook;
+  try {
+    nodeEdgeHook = useNodeEdgeManagement();
+  } catch (error) {
+    // NodeEdgeManagementProvider not available - this is expected in some contexts
+    console.log('[@hook:useNavigationEditorNew] NodeEdgeManagement context not available');
+    nodeEdgeHook = null;
+  }
 
   // Combine all hook returns into the same interface as the original useNavigationEditor
   return useMemo(
@@ -122,16 +135,16 @@ export const useNavigationEditorNew = () => {
       unlockNavigationTree: actionsHook.unlockNavigationTree,
       setupAutoUnlock: actionsHook.setupAutoUnlock,
 
-      // Node/Edge management actions
-      handleNodeFormSubmit: actionsHook.handleNodeFormSubmit,
-      handleEdgeFormSubmit: actionsHook.handleEdgeFormSubmit,
-      handleDeleteNode: actionsHook.handleDeleteNode,
-      handleDeleteEdge: actionsHook.handleDeleteEdge,
-      addNewNode: actionsHook.addNewNode,
-      cancelNodeChanges: actionsHook.cancelNodeChanges,
-      closeSelectionPanel: actionsHook.closeSelectionPanel,
-      deleteSelected: actionsHook.deleteSelected,
-      resetNode: actionsHook.resetNode,
+      // Node/Edge management actions - use NodeEdgeManagement context if available, otherwise fallback to actions hook
+      handleNodeFormSubmit: nodeEdgeHook?.saveNodeChanges || actionsHook.handleNodeFormSubmit,
+      handleEdgeFormSubmit: nodeEdgeHook?.saveEdgeChanges || actionsHook.handleEdgeFormSubmit,
+      handleDeleteNode: nodeEdgeHook?.deleteSelected || actionsHook.handleDeleteNode,
+      handleDeleteEdge: nodeEdgeHook?.deleteSelected || actionsHook.handleDeleteEdge,
+      addNewNode: nodeEdgeHook?.addNewNode || actionsHook.addNewNode,
+      cancelNodeChanges: nodeEdgeHook?.cancelNodeChanges || actionsHook.cancelNodeChanges,
+      closeSelectionPanel: nodeEdgeHook?.closeSelectionPanel || actionsHook.closeSelectionPanel,
+      deleteSelected: nodeEdgeHook?.deleteSelected || actionsHook.deleteSelected,
+      resetNode: nodeEdgeHook?.resetNode || actionsHook.resetNode,
 
       // Additional actions
       discardChanges: uiHook.discardChanges,
@@ -173,6 +186,6 @@ export const useNavigationEditorNew = () => {
       getHostByName: actionsHook.getHostByName,
       fetchHosts: actionsHook.fetchHosts,
     }),
-    [nodesHook, uiHook, flowHook, actionsHook],
+    [nodesHook, uiHook, flowHook, actionsHook, nodeEdgeHook],
   );
 };
