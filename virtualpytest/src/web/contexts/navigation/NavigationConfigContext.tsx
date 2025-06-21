@@ -446,6 +446,28 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   const saveToConfig = useCallback(
     async (userInterfaceId: string, state: NavigationConfigState) => {
       try {
+        console.log('[@context:NavigationConfigProvider:saveToConfig] === STARTING TREE SAVE ===');
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] UserInterface ID:',
+          userInterfaceId,
+        );
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Current nodes count:',
+          state.nodes.length,
+        );
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Current edges count:',
+          state.edges.length,
+        );
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Full nodes data:',
+          state.nodes,
+        );
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Full edges data:',
+          state.edges,
+        );
+
         state.setIsLoading(true);
         state.setError(null);
 
@@ -455,26 +477,47 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           edges: state.edges,
         };
 
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Tree data prepared for saving:',
+          treeDataForSaving,
+        );
+
+        const requestBody = {
+          name: 'root', // Always use 'root' as the name
+          userinterface_id: userInterfaceId,
+          tree_data: treeDataForSaving,
+          description: `Navigation tree for userInterface: ${userInterfaceId}`,
+          modification_type: 'update',
+          changes_summary: 'Updated navigation tree from editor',
+        };
+
+        console.log('[@context:NavigationConfigProvider:saveToConfig] Request body:', requestBody);
+
         const response = await fetch(`/server/navigation-trees/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: 'root', // Always use 'root' as the name
-            userinterface_id: userInterfaceId,
-            tree_data: treeDataForSaving,
-            description: `Navigation tree for userInterface: ${userInterfaceId}`,
-            modification_type: 'update',
-            changes_summary: 'Updated navigation tree from editor',
-          }),
+          body: JSON.stringify(requestBody),
         });
 
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Response status:',
+          response.status,
+        );
+        console.log('[@context:NavigationConfigProvider:saveToConfig] Response ok:', response.ok);
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error(
+            '[@context:NavigationConfigProvider:saveToConfig] Response error text:',
+            errorText,
+          );
+          throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('[@context:NavigationConfigProvider:saveToConfig] Response data:', data);
 
         if (data.success) {
           // Update initial state to reflect saved state
@@ -483,7 +526,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           console.log(
             `[@context:NavigationConfigProvider:saveToConfig] Successfully saved tree for userInterface: ${userInterfaceId}`,
           );
+          console.log(
+            '[@context:NavigationConfigProvider:saveToConfig] === TREE SAVE COMPLETED SUCCESSFULLY ===',
+          );
         } else {
+          console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
           throw new Error(data.message || 'Failed to save navigation tree to database');
         }
       } catch (error) {

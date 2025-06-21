@@ -92,7 +92,10 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
   // Save node changes with database persistence
   const saveNodeChanges = useCallback(
     async (formData: any) => {
-      console.log('[@context:NodeEdgeManagementProvider] Saving node changes:', formData);
+      console.log('[@context:NodeEdgeManagementProvider] === STARTING NODE SAVE ===');
+      console.log('[@context:NodeEdgeManagementProvider] Form data received:', formData);
+      console.log('[@context:NodeEdgeManagementProvider] Current selected node:', selectedNode);
+      console.log('[@context:NodeEdgeManagementProvider] Is new node:', isNewNode);
 
       try {
         // Step 1: Save verifications to database and get their IDs
@@ -148,51 +151,84 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           verificationIds,
         );
 
-        // Step 2: Update node in memory with verification IDs
-        const nodeDataWithVerificationIds = {
-          ...formData,
-          data: {
-            ...formData.data,
-            // ✅ Add verification IDs to the node data
-            verifications: verificationIds,
-          },
-        };
+        // Step 2: Prepare node data for saving
+        let updatedNodeData;
 
-        // Step 3: Update nodes state
+        if (isNewNode) {
+          // For new nodes, use form data as base
+          updatedNodeData = {
+            ...formData,
+            data: {
+              ...formData.data,
+              verifications: verificationIds, // ✅ Correct field name
+            },
+          };
+          console.log(
+            '[@context:NodeEdgeManagementProvider] NEW node data prepared:',
+            updatedNodeData,
+          );
+        } else if (selectedNode) {
+          // For existing nodes, preserve original node structure and only update modified fields
+          console.log(
+            '[@context:NodeEdgeManagementProvider] ORIGINAL node before update:',
+            selectedNode,
+          );
+
+          updatedNodeData = {
+            ...selectedNode, // ✅ Preserve original node structure (id, position, type, etc.)
+            // Only update the specific fields that can be modified
+            label: formData.label, // Update label if changed
+            data: {
+              ...selectedNode.data, // ✅ Preserve existing data structure
+              // Update only the fields from the form
+              ...formData.data, // Apply form changes
+              verifications: verificationIds, // ✅ Correct field name - store verification IDs
+            },
+          };
+          console.log(
+            '[@context:NodeEdgeManagementProvider] UPDATED node data prepared:',
+            updatedNodeData,
+          );
+        } else {
+          throw new Error('No selected node for update and not creating new node');
+        }
+
         if (isNewNode) {
           // Create new node
           const newNode: UINavigationNode = {
-            ...nodeDataWithVerificationIds,
-            id: nodeDataWithVerificationIds.id || `node-${Date.now()}`,
-            position: nodeDataWithVerificationIds.position || { x: 100, y: 100 },
+            ...updatedNodeData,
+            id: updatedNodeData.id || `node-${Date.now()}`,
+            position: updatedNodeData.position || { x: 100, y: 100 },
           };
 
+          console.log('[@context:NodeEdgeManagementProvider] Final NEW node to be added:', newNode);
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
           console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode.id);
         } else if (selectedNode) {
           // Update existing node
-          setNodes((nds: UINavigationNode[]) =>
-            nds.map((node) => {
-              if (node.id === selectedNode.id) {
-                return { ...node, ...nodeDataWithVerificationIds };
-              }
-              return node;
-            }),
-          );
+          const updatedNodes = nodes.map((node) => {
+            if (node.id === selectedNode.id) {
+              console.log('[@context:NodeEdgeManagementProvider] Replacing node:', node.id);
+              console.log('[@context:NodeEdgeManagementProvider] OLD node data:', node);
+              console.log('[@context:NodeEdgeManagementProvider] NEW node data:', updatedNodeData);
+              return updatedNodeData; // ✅ Use the carefully prepared node data
+            }
+            return node;
+          });
+
+          setNodes(updatedNodes);
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
         }
 
-        // Step 4: Auto-save tree after a brief delay to ensure React state has updated
+        // Step 3: Auto-save tree to persist verifications to database
         console.log(
-          '[@context:NodeEdgeManagementProvider] Auto-saving tree with verification IDs to database',
+          '[@context:NodeEdgeManagementProvider] Auto-saving tree with verifications to database',
         );
 
-        // Use a small delay to ensure React state updates are processed
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
         await saveToConfig(userInterfaceId);
+
         console.log(
-          '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with verification IDs',
+          '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with verifications',
         );
 
         // ✅ Mark as saved (no unsaved changes) since auto-save succeeded
@@ -201,25 +237,44 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
         console.error('[@context:NodeEdgeManagementProvider] Error saving node or tree:', error);
 
         // Still update the node in memory even if database operations fail
-        const fallbackNodeData = {
-          ...formData,
-          data: {
-            ...formData.data,
-            verifications: [], // Empty array if verification save failed
-          },
-        };
+        let fallbackNodeData;
 
         if (isNewNode) {
+          fallbackNodeData = {
+            ...formData,
+            data: {
+              ...formData.data,
+              verifications: [], // ✅ Correct field name - empty array if verification save failed
+            },
+          };
+        } else if (selectedNode) {
+          fallbackNodeData = {
+            ...selectedNode, // ✅ Preserve original node structure
+            label: formData.label,
+            data: {
+              ...selectedNode.data, // ✅ Preserve existing data structure
+              ...formData.data, // Apply form changes
+              verifications: [], // ✅ Correct field name - empty array if verification save failed
+            },
+          };
+        }
+
+        if (isNewNode && fallbackNodeData) {
           const newNode: UINavigationNode = {
             ...fallbackNodeData,
             id: fallbackNodeData.id || `node-${Date.now()}`,
             position: fallbackNodeData.position || { x: 100, y: 100 },
           };
+          console.log('[@context:NodeEdgeManagementProvider] Creating fallback NEW node:', newNode);
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
-        } else if (selectedNode) {
+        } else if (selectedNode && fallbackNodeData) {
           const updatedNodes = nodes.map((node) => {
             if (node.id === selectedNode.id) {
-              return { ...node, ...fallbackNodeData };
+              console.log(
+                '[@context:NodeEdgeManagementProvider] Using fallback node data:',
+                fallbackNodeData,
+              );
+              return fallbackNodeData;
             }
             return node;
           });
