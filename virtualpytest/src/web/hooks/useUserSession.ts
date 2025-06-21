@@ -16,36 +16,34 @@ export const useUserSession = () => {
       return globalSessionData;
     }
 
-    let userId: string | null = null;
+    // Use hardcoded default user ID for demo mode (no browser-user fallback)
+    const DEFAULT_USER_ID = 'eb6cfd93-44ab-4783-bd0c-129b734640f3';
+    let userId = DEFAULT_USER_ID;
 
-    // Try to get user ID from browser storage
+    // Try to get user ID from browser storage if available (optional enhancement)
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('cached_user');
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
-          userId = user.id;
-          if (userId) {
-            console.log(`[@hook:useUserSession] Using user ID: ${userId}`);
+          if (user.id && user.id !== 'browser-user') {
+            userId = user.id;
+            console.log(`[@hook:useUserSession] Using stored user ID: ${userId}`);
           } else {
-            console.error(`[@hook:useUserSession] ERROR: No user ID found in cached user data`);
-            throw new Error('No user ID available - authentication required');
+            console.log(
+              `[@hook:useUserSession] Invalid stored user ID, using default: ${DEFAULT_USER_ID}`,
+            );
           }
         } catch (e) {
-          console.error(`[@hook:useUserSession] ERROR: Failed to parse cached user data:`, e);
-          throw new Error('Invalid user session data - authentication required');
+          console.log(
+            `[@hook:useUserSession] Failed to parse cached user, using default: ${DEFAULT_USER_ID}`,
+          );
         }
       } else {
-        console.error(`[@hook:useUserSession] ERROR: No cached user found in localStorage`);
-        throw new Error('No user session found - authentication required');
+        console.log(
+          `[@hook:useUserSession] No cached user found, using default: ${DEFAULT_USER_ID}`,
+        );
       }
-    } else {
-      console.error(`[@hook:useUserSession] ERROR: Window object not available`);
-      throw new Error('Browser environment not available - authentication required');
-    }
-
-    if (!userId) {
-      throw new Error('User ID is required but not available - authentication required');
     }
 
     // Generate a stable session ID using the resolved userId
