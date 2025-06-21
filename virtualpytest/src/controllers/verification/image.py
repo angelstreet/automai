@@ -427,6 +427,114 @@ class ImageVerificationController(VerificationControllerInterface):
             }
         ]
 
+    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+        """
+        Unified verification execution interface for centralized controller.
+        
+        Args:
+            verification_config: {
+                'verification_type': 'image',
+                'command': 'waitForImageToAppear',
+                'params': {
+                    'image_path': 'reference.jpg',
+                    'threshold': 0.8,
+                    'area': {'x': 100, 'y': 100, 'width': 200, 'height': 200},
+                    'image_filter': 'none'
+                }
+            }
+            source_path: Path to source image (if None, will take screenshot)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'details': dict
+            }
+        """
+        try:
+            # Take screenshot if not provided
+            if not source_path:
+                source_path = self.av_controller.take_screenshot()
+                if not source_path:
+                    return {
+                        'success': False,
+                        'message': 'Failed to capture screenshot for image verification',
+                        'confidence': 0.0,
+                        'details': {'error': 'Screenshot capture failed'}
+                    }
+            
+            # Extract parameters
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'waitForImageToAppear')
+            
+            # Required parameters
+            image_path = params.get('image_path', '')
+            if not image_path:
+                return {
+                    'success': False,
+                    'message': 'No reference image specified for image verification',
+                    'confidence': 0.0,
+                    'details': {'error': 'Missing image_path parameter'}
+                }
+            
+            # Optional parameters with defaults
+            threshold = params.get('threshold', 0.8)
+            timeout = params.get('timeout', 1.0)
+            area = params.get('area')
+            image_filter = params.get('image_filter', 'none')
+            
+            print(f"[@controller:ImageVerification] Executing {command} with image: {image_path}")
+            print(f"[@controller:ImageVerification] Parameters: threshold={threshold}, area={area}, filter={image_filter}")
+            
+            # Execute verification based on command
+            if command == 'waitForImageToAppear':
+                success, message, details = self.waitForImageToAppear(
+                    image_path=image_path,
+                    timeout=timeout,
+                    threshold=threshold,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=None,  # Not needed for direct execution
+                    verification_index=0,
+                    image_filter=image_filter
+                )
+            elif command == 'waitForImageToDisappear':
+                success, message, details = self.waitForImageToDisappear(
+                    image_path=image_path,
+                    timeout=timeout,
+                    threshold=threshold,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=None,  # Not needed for direct execution
+                    verification_index=0,
+                    image_filter=image_filter
+                )
+            else:
+                return {
+                    'success': False,
+                    'message': f'Unknown image verification command: {command}',
+                    'confidence': 0.0,
+                    'details': {'error': f'Unsupported command: {command}'}
+                }
+            
+            # Return unified format
+            return {
+                'success': success,
+                'message': message,
+                'confidence': details.get('threshold', 0.0),
+                'details': details
+            }
+            
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Image verification execution error: {str(e)}',
+                'confidence': 0.0,
+                'details': {'error': str(e)}
+            }
+
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
         """
         Save a cropped version of the source image for UI comparison display.

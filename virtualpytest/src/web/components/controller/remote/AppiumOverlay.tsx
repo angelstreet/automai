@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Box, Tooltip, Paper, Typography, Chip } from '@mui/material';
+import React, { useState, useCallback, useRef } from 'react';
+
 import { AppiumElement } from '../../../types/controller/Remote_Types';
 
 interface AppiumOverlayProps {

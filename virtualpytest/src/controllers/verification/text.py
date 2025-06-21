@@ -849,6 +849,115 @@ class TextVerificationController(VerificationControllerInterface):
             }
         ]
 
+    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+        """
+        Unified verification execution interface for centralized controller.
+        
+        Args:
+            verification_config: {
+                'verification_type': 'text',
+                'command': 'waitForTextToAppear',
+                'params': {
+                    'text': 'Hello World',
+                    'timeout': 10.0,
+                    'case_sensitive': False,
+                    'area': {'x': 100, 'y': 100, 'width': 200, 'height': 200},
+                    'image_filter': 'none'
+                }
+            }
+            source_path: Path to source image (if None, will take screenshot)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'details': dict
+            }
+        """
+        try:
+            # Take screenshot if not provided
+            if not source_path:
+                source_path = self.av_controller.take_screenshot()
+                if not source_path:
+                    return {
+                        'success': False,
+                        'message': 'Failed to capture screenshot for text verification',
+                        'confidence': 0.0,
+                        'details': {'error': 'Screenshot capture failed'}
+                    }
+            
+            # Extract parameters
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'waitForTextToAppear')
+            
+            # Required parameters
+            text = params.get('text', '')
+            if not text:
+                return {
+                    'success': False,
+                    'message': 'No text specified for text verification',
+                    'confidence': 0.0,
+                    'details': {'error': 'Missing text parameter'}
+                }
+            
+            # Optional parameters with defaults
+            timeout = params.get('timeout', 10.0)
+            case_sensitive = params.get('case_sensitive', False)
+            area = params.get('area')
+            image_filter = params.get('image_filter')
+            
+            print(f"[@controller:TextVerification] Executing {command} with text: '{text}'")
+            print(f"[@controller:TextVerification] Parameters: timeout={timeout}, case_sensitive={case_sensitive}, area={area}, filter={image_filter}")
+            
+            # Execute verification based on command
+            if command == 'waitForTextToAppear':
+                success, message, details = self.waitForTextToAppear(
+                    text=text,
+                    timeout=timeout,
+                    case_sensitive=case_sensitive,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=None,  # Not needed for direct execution
+                    verification_index=0,
+                    image_filter=image_filter
+                )
+            elif command == 'waitForTextToDisappear':
+                success, message, details = self.waitForTextToDisappear(
+                    text=text,
+                    timeout=timeout,
+                    case_sensitive=case_sensitive,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=None,  # Not needed for direct execution
+                    verification_index=0,
+                    image_filter=image_filter
+                )
+            else:
+                return {
+                    'success': False,
+                    'message': f'Unknown text verification command: {command}',
+                    'confidence': 0.0,
+                    'details': {'error': f'Unsupported command: {command}'}
+                }
+            
+            # Return unified format
+            return {
+                'success': success,
+                'message': message,
+                'confidence': details.get('threshold', 1.0 if success else 0.0),
+                'details': details
+            }
+            
+        except Exception as e:
+            print(f"[@controller:TextVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Text verification execution error: {str(e)}',
+                'confidence': 0.0,
+                'details': {'error': str(e)}
+            }
+
     def save_text_reference(self, text: str, reference_name: str, model: str, 
                            area: dict, font_size: float = 12.0, confidence: float = 0.8) -> str:
         """

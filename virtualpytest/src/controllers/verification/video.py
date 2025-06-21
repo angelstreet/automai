@@ -674,6 +674,150 @@ class VideoVerificationController(VerificationControllerInterface):
             }
         ]
 
+    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+        """
+        Unified verification execution interface for centralized controller.
+        
+        Args:
+            verification_config: {
+                'verification_type': 'video',
+                'command': 'waitForVideoToAppear',
+                'params': {
+                    'motion_threshold': 5.0,
+                    'duration': 3.0,
+                    'timeout': 10.0
+                }
+            }
+            source_path: Optional source image path (video controller can use screenshots)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'details': dict
+            }
+        """
+        try:
+            # Extract parameters
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'waitForVideoToAppear')
+            
+            print(f"[@controller:VideoVerification] Executing {command}")
+            print(f"[@controller:VideoVerification] Parameters: {params}")
+            
+            # Execute verification based on command
+            if command == 'waitForVideoToAppear':
+                motion_threshold = params.get('motion_threshold', 5.0)
+                duration = params.get('duration', 3.0)
+                timeout = params.get('timeout', 10.0)
+                
+                success = self.waitForVideoToAppear(motion_threshold, duration, timeout)
+                message = f"Video {'appeared' if success else 'did not appear'} (motion threshold: {motion_threshold}%)"
+                details = {
+                    'motion_threshold': motion_threshold,
+                    'duration': duration,
+                    'timeout': timeout
+                }
+                
+            elif command == 'waitForVideoToDisappear':
+                motion_threshold = params.get('motion_threshold', 5.0)
+                duration = params.get('duration', 3.0)
+                timeout = params.get('timeout', 10.0)
+                
+                success = self.waitForVideoToDisappear(motion_threshold, duration, timeout)
+                message = f"Video {'disappeared' if success else 'still present'} (motion threshold: {motion_threshold}%)"
+                details = {
+                    'motion_threshold': motion_threshold,
+                    'duration': duration,
+                    'timeout': timeout
+                }
+                
+            elif command == 'detect_motion':
+                duration = params.get('duration', 3.0)
+                threshold = params.get('threshold', self.motion_threshold)
+                
+                success = self.detect_motion(duration, threshold)
+                message = f"Motion {'detected' if success else 'not detected'}"
+                details = {
+                    'duration': duration,
+                    'threshold': threshold
+                }
+                
+            elif command == 'wait_for_video_change':
+                timeout = params.get('timeout', 10.0)
+                threshold = params.get('threshold', self.frame_comparison_threshold)
+                
+                success = self.wait_for_video_change(timeout, threshold)
+                message = f"Video change {'detected' if success else 'not detected'}"
+                details = {
+                    'timeout': timeout,
+                    'threshold': threshold
+                }
+                
+            elif command == 'verify_color_present':
+                color = params.get('color')
+                if not color:
+                    return {
+                        'success': False,
+                        'message': 'No color specified for color verification',
+                        'confidence': 0.0,
+                        'details': {'error': 'Missing color parameter'}
+                    }
+                
+                tolerance = params.get('tolerance', 10.0)
+                
+                success = self.verify_color_present(color, tolerance)
+                message = f"Color '{color}' {'found' if success else 'not found'}"
+                details = {
+                    'color': color,
+                    'tolerance': tolerance
+                }
+                
+            elif command == 'verify_screen_state':
+                expected_state = params.get('expected_state')
+                if not expected_state:
+                    return {
+                        'success': False,
+                        'message': 'No expected state specified for screen state verification',
+                        'confidence': 0.0,
+                        'details': {'error': 'Missing expected_state parameter'}
+                    }
+                
+                timeout = params.get('timeout', 5.0)
+                
+                success = self.verify_screen_state(expected_state, timeout)
+                message = f"Screen state '{expected_state}' {'verified' if success else 'not verified'}"
+                details = {
+                    'expected_state': expected_state,
+                    'timeout': timeout
+                }
+                
+            else:
+                return {
+                    'success': False,
+                    'message': f'Unknown video verification command: {command}',
+                    'confidence': 0.0,
+                    'details': {'error': f'Unsupported command: {command}'}
+                }
+            
+            # Return unified format
+            return {
+                'success': success,
+                'message': message,
+                'confidence': 1.0 if success else 0.0,
+                'details': details
+            }
+            
+        except Exception as e:
+            print(f"[@controller:VideoVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Video verification execution error: {str(e)}',
+                'confidence': 0.0,
+                'details': {'error': str(e)}
+            }
+
     def waitForVideoToAppear(self, motion_threshold: float = 5.0, duration: float = 3.0, timeout: float = 10.0) -> bool:
         """
         Wait for video content to appear (motion detected).

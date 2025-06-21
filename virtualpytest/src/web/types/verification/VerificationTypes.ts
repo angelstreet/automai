@@ -42,11 +42,54 @@ export interface AdbVerificationParams {
   check_interval?: number; // Optional: check interval in seconds, default 1.0
 }
 
+// Appium verification parameters
+export interface AppiumVerificationParams {
+  search_term: string; // Required: element search term
+  timeout?: number; // Optional: timeout in seconds, default 10.0
+  check_interval?: number; // Optional: check interval in seconds, default 1.0
+}
+
+// Audio verification parameters
+export interface AudioVerificationParams {
+  // For detect_silence command
+  threshold?: number; // Optional: silence threshold percentage
+  duration?: number; // Optional: analysis duration in seconds
+  audio_file?: string; // Optional: audio file path
+
+  // For verify_audio_playing command
+  min_level?: number; // Optional: minimum audio level percentage
+
+  // For verify_audio_contains_frequency command
+  target_freq?: number; // Required for frequency verification: target frequency in Hz
+  tolerance?: number; // Optional: frequency tolerance in Hz
+}
+
+// Video verification parameters
+export interface VideoVerificationParams {
+  // For motion detection commands
+  motion_threshold?: number; // Optional: motion threshold percentage
+  duration?: number; // Optional: analysis duration in seconds
+  timeout?: number; // Optional: timeout in seconds
+
+  // For color verification
+  color?: string; // Required for color verification: color name or hex
+  tolerance?: number; // Optional: color matching tolerance
+
+  // For screen state verification
+  expected_state?: string; // Required for state verification: expected state name
+
+  // For video change detection
+  threshold?: number; // Optional: change threshold percentage
+}
+
 // Union type for all verification parameters
 export type VerificationParams =
   | ImageVerificationParams
   | TextVerificationParams
-  | AdbVerificationParams;
+  | AdbVerificationParams
+  | AppiumVerificationParams
+  | AudioVerificationParams
+  | VideoVerificationParams;
 
 // =====================================================
 // VERIFICATION INTERFACES
@@ -55,7 +98,7 @@ export type VerificationParams =
 // Base verification interface
 interface BaseVerification {
   command: string; // Required: command to execute
-  verification_type: 'text' | 'image' | 'adb'; // Required: type of verification
+  verification_type: 'text' | 'image' | 'adb' | 'appium' | 'audio' | 'video'; // Required: type of verification
 
   // Result state (optional, populated after execution)
   success?: boolean;
@@ -119,8 +162,29 @@ export interface AdbVerification extends BaseVerification {
   params: AdbVerificationParams;
 }
 
+export interface AppiumVerification extends BaseVerification {
+  verification_type: 'appium';
+  params: AppiumVerificationParams;
+}
+
+export interface AudioVerification extends BaseVerification {
+  verification_type: 'audio';
+  params: AudioVerificationParams;
+}
+
+export interface VideoVerification extends BaseVerification {
+  verification_type: 'video';
+  params: VideoVerificationParams;
+}
+
 // Unified verification type (discriminated union)
-export type Verification = ImageVerification | TextVerification | AdbVerification;
+export type Verification =
+  | ImageVerification
+  | TextVerification
+  | AdbVerification
+  | AppiumVerification
+  | AudioVerification
+  | VideoVerification;
 
 // Verifications grouped by verification type
 export interface Verifications {

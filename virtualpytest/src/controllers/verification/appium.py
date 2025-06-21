@@ -629,4 +629,94 @@ class AppiumVerificationController:
                     'check_interval': {'type': 'float', 'required': False, 'default': 1.0}
                 }
             }
-        ] 
+        ]
+
+    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+        """
+        Unified verification execution interface for centralized controller.
+        
+        Args:
+            verification_config: {
+                'verification_type': 'appium',
+                'command': 'waitForElementToAppear',
+                'params': {
+                    'search_term': 'Settings',
+                    'timeout': 10.0,
+                    'check_interval': 1.0
+                }
+            }
+            source_path: Not used for Appium verification (Appium doesn't need screenshots)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'details': dict
+            }
+        """
+        try:
+            # Extract parameters
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'waitForElementToAppear')
+            
+            # Required parameters
+            search_term = params.get('search_term', '')
+            if not search_term:
+                return {
+                    'success': False,
+                    'message': 'No search term specified for Appium verification',
+                    'confidence': 0.0,
+                    'details': {'error': 'Missing search_term parameter'}
+                }
+            
+            # Optional parameters with defaults
+            timeout = params.get('timeout', 10.0)
+            check_interval = params.get('check_interval', 1.0)
+            
+            print(f"[@controller:AppiumVerification] Executing {command} with search term: '{search_term}'")
+            print(f"[@controller:AppiumVerification] Parameters: timeout={timeout}, check_interval={check_interval}, platform={self.platform_name}")
+            
+            # Execute verification based on command
+            if command == 'waitForElementToAppear':
+                success, message, details = self.waitForElementToAppear(
+                    search_term=search_term,
+                    timeout=timeout,
+                    check_interval=check_interval
+                )
+            elif command == 'waitForElementToDisappear':
+                success, message, details = self.waitForElementToDisappear(
+                    search_term=search_term,
+                    timeout=timeout,
+                    check_interval=check_interval
+                )
+            else:
+                return {
+                    'success': False,
+                    'message': f'Unknown Appium verification command: {command}',
+                    'confidence': 0.0,
+                    'details': {'error': f'Unsupported command: {command}'}
+                }
+            
+            # Return unified format
+            return {
+                'success': success,
+                'message': message,
+                'confidence': 1.0 if success else 0.0,
+                'details': details,
+                # Appium-specific fields for frontend compatibility
+                'search_term': search_term,
+                'wait_time': details.get('wait_time', 0),
+                'total_matches': details.get('total_matches', 0),
+                'matches': details.get('matches', []),
+                'platform': self.platform_name
+            }
+            
+        except Exception as e:
+            print(f"[@controller:AppiumVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Appium verification execution error: {str(e)}',
+                'confidence': 0.0,
+                'details': {'error': str(e)}
+            } 

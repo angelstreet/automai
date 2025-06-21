@@ -97,22 +97,16 @@ export const useVerificationEditor = ({
 
     // If it's an image reference, display it in the preview area
     if (referenceData && referenceData.type === 'image') {
-      // Use the complete URL directly from reference data with cache busting
-      const baseUrl = referenceData.url;
-      const timestamp = new Date().getTime();
-      const cacheBustedUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
+      // Use the complete URL directly from reference data
+      const referenceUrl = referenceData.url;
 
-      console.log(
-        '[@hook:useVerificationEditor] Setting reference image preview with cache busting:',
-        {
-          referenceName,
-          baseUrl,
-          cacheBustedUrl,
-          referenceData,
-        },
-      );
+      console.log('[@hook:useVerificationEditor] Setting reference image preview:', {
+        referenceName,
+        referenceUrl,
+        referenceData,
+      });
 
-      setSelectedReferenceImage(cacheBustedUrl);
+      setSelectedReferenceImage(referenceUrl);
       setSelectedReferenceInfo({
         name: referenceName,
         type: 'image',
@@ -357,8 +351,8 @@ export const useVerificationEditor = ({
       } else {
         // Image references use new two-step pattern: HOST upload + SERVER database save
 
-        // Step 2a: Upload to R2 via HOST
-        const uploadResponse = await fetch('/host/verification/image/save-image-reference', {
+        // Step 2a: Upload to R2 via SERVER (proxy to HOST)
+        const uploadResponse = await fetch('/server/verification/image/save-image-reference', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -411,29 +405,6 @@ export const useVerificationEditor = ({
         if (dbResult.success) {
           console.log('[@hook:useVerificationEditor] Reference saved successfully:', dbResult);
           verification.setSuccessMessage(`Reference "${referenceName}" saved successfully`);
-
-          // If the saved reference is currently selected, update its preview with cache busting
-          if (
-            selectedReferenceInfo &&
-            selectedReferenceInfo.name === referenceName &&
-            selectedReferenceInfo.type === 'image'
-          ) {
-            const timestamp = new Date().getTime();
-            const baseUrl = uploadResult.r2_url;
-            const cacheBustedUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
-
-            console.log(
-              '[@hook:useVerificationEditor] Updating selected reference preview after save:',
-              {
-                referenceName,
-                baseUrl,
-                cacheBustedUrl,
-              },
-            );
-
-            setSelectedReferenceImage(cacheBustedUrl);
-          }
-
           // Don't clear UI state - keep the captured image and name for user reference
           // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
@@ -458,7 +429,6 @@ export const useVerificationEditor = ({
     referenceText,
     imageProcessingOptions,
     verification,
-    selectedReferenceInfo,
   ]);
 
   // Handle auto-detect text

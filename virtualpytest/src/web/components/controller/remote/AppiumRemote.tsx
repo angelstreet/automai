@@ -1,4 +1,27 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import {
+  PhoneAndroid,
+  PhoneIphone,
+  Laptop,
+  DesktopMac,
+  Refresh,
+  Screenshot,
+  Apps,
+  TouchApp,
+  Visibility,
+  VisibilityOff,
+  Launch,
+  Stop,
+  Home,
+  ArrowBack,
+  VolumeUp,
+  VolumeDown,
+  PowerSettingsNew,
+  Camera,
+  Menu,
+  Call,
+  CallEnd,
+  DeviceHub,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -13,47 +36,19 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Divider,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  Badge,
   CircularProgress,
 } from '@mui/material';
-import {
-  PhoneAndroid,
-  PhoneIphone,
-  Laptop,
-  DesktopMac,
-  Refresh,
-  Screenshot,
-  Apps,
-  TouchApp,
-  Visibility,
-  VisibilityOff,
-  Settings,
-  Launch,
-  Stop,
-  Home,
-  ArrowBack,
-  VolumeUp,
-  VolumeDown,
-  PowerSettingsNew,
-  Camera,
-  Menu,
-  Call,
-  CallEnd,
-  DeviceHub,
-} from '@mui/icons-material';
+import React, { useState, useCallback } from 'react';
 
-import { Host } from '../../../types/common/Host_Types';
-import { AppiumElement, AppiumApp } from '../../../types/controller/Remote_Types';
 import { useAppiumRemote } from '../../../hooks/controller/useAppiumRemote';
+import { Host } from '../../../types/common/Host_Types';
+import { AppiumApp } from '../../../types/controller/Remote_Types';
+
 import { AppiumOverlay } from './AppiumOverlay';
 
 interface AppiumRemoteProps {
@@ -115,7 +110,6 @@ export const AppiumRemote: React.FC<AppiumRemoteProps> = ({
 
   // Local state for UI
   const [showAppDialog, setShowAppDialog] = useState(false);
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [coordinateX, setCoordinateX] = useState('');
   const [coordinateY, setCoordinateY] = useState('');

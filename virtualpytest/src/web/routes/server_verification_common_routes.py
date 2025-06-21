@@ -78,147 +78,17 @@ def execute_adb_verification():
             'error': str(e)
         }), 500
 
-# =====================================================
-# BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
-# =====================================================
-
-@server_verification_common_bp.route('/batch/execute', methods=['POST'])
-def execute_batch_verification():
-    """Execute batch verification by dispatching individual requests to host endpoints"""
+@server_verification_common_bp.route('/appium/execute', methods=['POST'])
+def execute_appium_verification():
+    """Proxy single Appium verification to host"""
     try:
-        print("[@route:server_verification_common:execute_batch_verification] Starting batch verification coordination")
+        print("[@route:server_verification_common:execute_appium_verification] Proxying Appium verification request")
         
         # Get request data
-        data = request.get_json() or {}
-        verifications = data.get('verifications', [])
-        source_filename = data.get('source_filename')
-        host = data.get('host', {})
+        request_data = request.get_json() or {}
         
-        # Extract model from host device (required)
-        model = data.get('model') or host.get('device_model')
-        
-        if not model:
-            return jsonify({
-                'success': False,
-                'error': 'Device model is required. Host device must have device_model specified.'
-            }), 400
-        
-        print(f"[@route:server_verification_common:execute_batch_verification] Processing {len(verifications)} verifications")
-        print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {model}")
-        
-        # Validate required parameters
-        if not verifications:
-            return jsonify({
-                'success': False,
-                'error': 'verifications are required'
-            }), 400
-        
-        # Require source_filename - no fallbacks (capture-first approach)
-        if not source_filename:
-            return jsonify({
-                'success': False,
-                'error': 'source_filename is required - please capture screenshot first'
-            }), 400
-        
-        results = []
-        passed_count = 0
-        
-        for i, verification in enumerate(verifications):
-            verification_type = verification['verification_type']
-            
-            print(f"[@route:server_verification_common:execute_batch_verification] Processing verification {i+1}/{len(verifications)}: {verification_type}")
-            
-            # Prepare individual request data
-            individual_request = {
-                'verification': verification,
-                'source_filename': source_filename,
-                'model': model
-            }
-            
-            # Dispatch to appropriate host endpoint based on verification type
-            if verification_type == 'image':
-                result, status = proxy_to_host('/host/verification/image/execute', 'POST', individual_request, timeout=60)
-            elif verification_type == 'text':
-                result, status = proxy_to_host('/host/verification/text/execute', 'POST', individual_request, timeout=60)
-            elif verification_type == 'adb':
-                result, status = proxy_to_host('/host/verification/adb/execute', 'POST', individual_request, timeout=60)
-            else:
-                result = {
-                    'success': False,
-                    'error': f'Unknown verification type: {verification_type}',
-                    'verification_type': verification_type
-                }
-                status = 400
-            
-            # Handle proxy errors and flatten verification results
-            if status != 200 and isinstance(result, dict):
-                result['verification_type'] = verification_type
-                flattened_result = result
-            elif status != 200:
-                flattened_result = {
-                    'success': False,
-                    'error': f'Host request failed with status {status}',
-                    'verification_type': verification_type
-                }
-            else:
-                # Flatten the nested verification_result structure
-                verification_result = result.get('verification_result', {})
-                flattened_result = {
-                    'success': verification_result.get('success', False),
-                    'message': verification_result.get('message'),
-                    'error': verification_result.get('error'),
-                    'threshold': verification_result.get('threshold') or verification_result.get('confidence'),
-                    'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
-                    'sourceImageUrl': verification_result.get('source_image_url'),
-                    'referenceImageUrl': verification_result.get('reference_image_url'),
-                    'extractedText': verification_result.get('extracted_text'),
-                    'searchedText': verification_result.get('searched_text'),
-                    'imageFilter': verification_result.get('image_filter'),
-                    'detectedLanguage': verification_result.get('detected_language'),
-                    'languageConfidence': verification_result.get('language_confidence'),
-                    'search_term': verification_result.get('search_term'),
-                    'wait_time': verification_result.get('wait_time'),
-                    'total_matches': verification_result.get('total_matches'),
-                    'matches': verification_result.get('matches'),
-                    'verification_type': verification_result.get('verification_type', verification_type)
-                }
-                
-                print(f"[@route:server_verification_common:execute_batch_verification] Flattened result {i+1}: {flattened_result}")
-            
-            results.append(flattened_result)
-            
-            # Count successful verifications
-            if flattened_result.get('success'):
-                passed_count += 1
-        
-        # Calculate overall batch success
-        overall_success = passed_count == len(verifications)
-        
-        print(f"[@route:server_verification_common:execute_batch_verification] Batch completed: {passed_count}/{len(verifications)} passed")
-        
-        return jsonify({
-            'success': overall_success,
-            'total_count': len(verifications),
-            'passed_count': passed_count,
-            'failed_count': len(verifications) - passed_count,
-            'results': results
-        })
-        
-    except Exception as e:
-        print(f"[@route:server_verification_common:execute_batch_verification] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Batch verification coordination error: {str(e)}'
-        }), 500
-
-@server_verification_common_bp.route('/batch/status', methods=['GET'])
-def get_batch_status():
-    """Get batch verification status from host"""
-    try:
-        print("[@route:server_verification_common:get_batch_status] Proxying batch status request")
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/getStatus', 'GET')
+        # Proxy to host Appium verification endpoint
+        response_data, status_code = proxy_to_host('/host/verification/appium/execute', 'POST', request_data, timeout=60)
         
         return jsonify(response_data), status_code
         
@@ -228,21 +98,37 @@ def get_batch_status():
             'error': str(e)
         }), 500
 
-# =====================================================
-# IMAGE VERIFICATION SPECIFIC ENDPOINTS
-# =====================================================
-
-@server_verification_common_bp.route('/image/crop-image', methods=['POST'])
-def crop_image():
-    """Proxy crop image request to host for reference image cropping"""
+@server_verification_common_bp.route('/audio/execute', methods=['POST'])
+def execute_audio_verification():
+    """Proxy single audio verification to host"""
     try:
-        print("[@route:server_verification_common:crop_image] Proxying crop image request")
+        print("[@route:server_verification_common:execute_audio_verification] Proxying audio verification request")
         
         # Get request data
         request_data = request.get_json() or {}
         
-        # Proxy to host verification image crop endpoint
-        response_data, status_code = proxy_to_host('/host/verification/image/crop-image', 'POST', request_data)
+        # Proxy to host audio verification endpoint
+        response_data, status_code = proxy_to_host('/host/verification/audio/execute', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_verification_common_bp.route('/video/execute', methods=['POST'])
+def execute_video_verification():
+    """Proxy single video verification to host"""
+    try:
+        print("[@route:server_verification_common:execute_video_verification] Proxying video verification request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video verification endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/execute', 'POST', request_data, timeout=60)
         
         return jsonify(response_data), status_code
         
@@ -272,71 +158,39 @@ def process_image():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/image/save-image-reference', methods=['POST'])
-def save_image_reference():
-    """Save image reference directly on server (database operation)"""
+@server_verification_common_bp.route('/image/crop-image', methods=['POST'])
+def crop_image():
+    """Proxy crop image request to host for reference image cropping"""
     try:
-        print("[@route:server_verification_common:save_image_reference] Saving image reference on server")
-        
-        # Get team ID from request headers
-        from src.utils.app_utils import get_team_id
-        team_id = get_team_id()
+        print("[@route:server_verification_common:crop_image] Proxying crop image request")
         
         # Get request data
-        data = request.get_json() or {}
+        request_data = request.get_json() or {}
         
-        # Extract required fields
-        name = data.get('reference_name') or data.get('name')
-        model = data.get('model')
-        r2_url = data.get('r2_url')  # The image should already be uploaded to R2
-        reference_type = data.get('reference_type', 'reference_image')
+        # Proxy to host verification image crop endpoint
+        response_data, status_code = proxy_to_host('/host/verification/image/crop-image', 'POST', request_data)
         
-        # Ensure we only use valid database types
-        if reference_type not in ['screenshot', 'reference_image', 'reference_text']:
-            reference_type = 'reference_image'  # Default to reference_image for safety
-        area = data.get('area', {})
+        return jsonify(response_data), status_code
         
-        if not all([name, model, r2_url]):
-            return jsonify({
-                'success': False,
-                'error': 'Missing required fields: name, model, r2_url'
-            }), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_verification_common_bp.route('/image/save-image-reference', methods=['POST'])
+def save_image_reference():
+    """Proxy save image reference request to host"""
+    try:
+        print("[@route:server_verification_common:save_image_reference] Proxying save image reference request to host")
         
-        print(f'[@route:server_verification_common:save_image_reference] Saving image: {name} for model: {model}')
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Save to database
-        from src.lib.supabase.images_db import save_image
+        # Proxy to host verification image save endpoint
+        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data)
         
-        # Extract R2 path from URL for the database
-        r2_path = r2_url.split('/')[-1] if r2_url else ''
-        
-        result = save_image(
-            name=name,
-            device_model=model,
-            type=reference_type,
-            r2_path=r2_path,
-            r2_url=r2_url,
-            team_id=team_id,
-            area=area
-        )
-        
-        if result.get('success'):
-            return jsonify({
-                'success': True,
-                'message': 'Image reference saved successfully',
-                'image': result.get('image', {
-                    'name': name,
-                    'model': model,
-                    'team_id': team_id,
-                    'type': reference_type,
-                    'url': r2_url
-                })
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Failed to save image reference')
-            }), 500
+        return jsonify(response_data), status_code
         
     except Exception as e:
         print(f"[@route:server_verification_common:save_image_reference] ERROR: {e}")
@@ -501,9 +355,9 @@ def wait_for_element_to_disappear():
 
 @server_verification_common_bp.route('/image/get-references', methods=['POST'])
 def get_image_references():
-    """Get image references from database"""
+    """Get image references from database - Uses verification controller"""
     try:
-        print("[@route:server_verification_common:get_image_references] Getting image references from database")
+        print("[@route:server_verification_common:get_image_references] Getting image references using verification controller")
         
         # Get host info for model filtering
         host_info, error = get_host_from_request()
@@ -513,38 +367,13 @@ def get_image_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Get device model with fallback
-        device_model = host_info.get('device_model', 'default')
-        print(f"[@route:server_verification_common:get_image_references] Using device model: {device_model}")
-        
-        # Get references from database
-        from src.lib.supabase.images_db import get_images
+        # Use verification controller instead of direct database access
+        from src.controllers.verification_controller import get_image_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        # Get image references for this device model
-        result = get_images(
-            team_id=DEFAULT_TEAM_ID,
-            device_model=device_model,
-            image_type='reference_image'
-        )
+        result = get_image_references(host_info, DEFAULT_TEAM_ID)
         
-        if result['success']:
-            images = result['images']
-            print(f"[@route:server_verification_common:get_image_references] Found {len(images)} image references from database")
-            
-            return jsonify({
-                'success': True,
-                'images': images,
-                'count': len(images),
-                'device_model': device_model
-            })
-        else:
-            print(f"[@route:server_verification_common:get_image_references] Database query failed: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Database query failed'),
-                'device_model': device_model
-            })
+        return jsonify(result)
             
     except Exception as e:
         print(f"[@route:server_verification_common:get_image_references] Error: {str(e)}")
@@ -555,9 +384,9 @@ def get_image_references():
 
 @server_verification_common_bp.route('/text/get-references', methods=['POST'])
 def get_text_references():
-    """Get text references from database"""
+    """Get text references from database - Uses verification controller"""
     try:
-        print("[@route:server_verification_common:get_text_references] Getting text references from database")
+        print("[@route:server_verification_common:get_text_references] Getting text references using verification controller")
         
         # Get host info for model filtering
         host_info, error = get_host_from_request()
@@ -567,38 +396,13 @@ def get_text_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Get device model with fallback
-        device_model = host_info.get('device_model', 'default')
-        print(f"[@route:server_verification_common:get_text_references] Using device model: {device_model}")
-        
-        # Get references from database
-        from src.lib.supabase.images_db import get_images
+        # Use verification controller instead of direct database access
+        from src.controllers.verification_controller import get_text_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        # Get text references for this device model
-        result = get_images(
-            team_id=DEFAULT_TEAM_ID,
-            device_model=device_model,
-            image_type='reference_text'
-        )
+        result = get_text_references(host_info, DEFAULT_TEAM_ID)
         
-        if result['success']:
-            images = result['images']
-            print(f"[@route:server_verification_common:get_text_references] Found {len(images)} text references from database")
-            
-            return jsonify({
-                'success': True,
-                'images': images,
-                'count': len(images),
-                'device_model': device_model
-            })
-        else:
-            print(f"[@route:server_verification_common:get_text_references] Database query failed: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Database query failed'),
-                'device_model': device_model
-            })
+        return jsonify(result)
         
     except Exception as e:
         print(f"[@route:server_verification_common:get_text_references] Error: {str(e)}")
@@ -609,9 +413,9 @@ def get_text_references():
 
 @server_verification_common_bp.route('/getAllReferences', methods=['GET', 'POST'])
 def get_all_references():
-    """Get all references from database - Legacy endpoint"""
+    """Get all references from database - Uses verification controller"""
     try:
-        print("[@route:server_verification_common:get_all_references] Getting references from database")
+        print("[@route:server_verification_common:get_all_references] Getting references using verification controller")
         
         # Get host info for model filtering
         host_info, error = get_host_from_request()
@@ -621,79 +425,16 @@ def get_all_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Get device model with fallback
-        device_model = host_info.get('device_model', 'default')
-        print(f"[@route:server_verification_common:get_all_references] Using device model: {device_model}")
-        
-        # Get references from database
-        from src.lib.supabase.images_db import get_images
+        # Use verification controller instead of direct database access
+        from src.controllers.verification_controller import get_all_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        # Get all images for this device model
-        result = get_images(
-            team_id=DEFAULT_TEAM_ID,
-            device_model=device_model
-        )
+        result = get_all_references(host_info, DEFAULT_TEAM_ID)
         
-        if result['success']:
-            images = result['images']
-            print(f"[@route:server_verification_common:get_all_references] Found {len(images)} images from database")
-            
-            return jsonify({
-                'success': True,
-                'images': images,
-                'count': len(images),
-                'device_model': device_model
-            })
-        else:
-            print(f"[@route:server_verification_common:get_all_references] Database query failed: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Database query failed'),
-                'device_model': device_model
-            })
+        return jsonify(result)
         
     except Exception as e:
         print(f"[@route:server_verification_common:get_all_references] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-# =====================================================
-# LEGACY ENDPOINTS (FOR BACKWARD COMPATIBILITY)
-# =====================================================
-
-@server_verification_common_bp.route('/getAllVerifications', methods=['GET', 'POST'])
-def get_verification_types():
-    """Get available verification types from host's stored verification data."""
-    try:
-        # For now, return error indicating this route should not be used
-        # Verification types should be retrieved from host's stored data during registration
-        return jsonify({
-            'success': False,
-            'error': 'This route is deprecated. Verification types should be retrieved from host registration data.',
-            'message': 'Use host.available_verification_types from the host object instead'
-        }), 400
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Error getting verification types: {str(e)}'
-        }), 500
-
-@server_verification_common_bp.route('/getStatus', methods=['GET'])
-def verification_status():
-    """Proxy verification status request to selected host"""
-    try:
-        print("[@route:server_verification_common:verification_status] Proxying verification status request")
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/getStatus', 'GET')
-        
-        return jsonify(response_data), status_code
-        
-    except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)

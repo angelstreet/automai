@@ -525,6 +525,108 @@ class AudioVerificationController(VerificationControllerInterface):
             }
         ]
 
+    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+        """
+        Unified verification execution interface for centralized controller.
+        
+        Args:
+            verification_config: {
+                'verification_type': 'audio',
+                'command': 'verify_audio_playing',
+                'params': {
+                    'min_level': 10.0,
+                    'duration': 2.0
+                }
+            }
+            source_path: Not used for audio verification (audio is captured live)
+            
+        Returns:
+            {
+                'success': bool,
+                'message': str,
+                'confidence': float,
+                'details': dict
+            }
+        """
+        try:
+            # Extract parameters
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'verify_audio_playing')
+            
+            print(f"[@controller:AudioVerification] Executing {command}")
+            print(f"[@controller:AudioVerification] Parameters: {params}")
+            
+            # Execute verification based on command
+            if command == 'detect_silence':
+                threshold = params.get('threshold', self.silence_threshold)
+                duration = params.get('duration', self.analysis_duration)
+                audio_file = params.get('audio_file')
+                
+                success = self.detect_silence(threshold, duration, audio_file)
+                message = f"Silence {'detected' if success else 'not detected'}"
+                details = {
+                    'threshold': threshold,
+                    'duration': duration,
+                    'audio_file': audio_file
+                }
+                
+            elif command == 'verify_audio_playing':
+                min_level = params.get('min_level', 10.0)
+                duration = params.get('duration', 2.0)
+                
+                success = self.verify_audio_playing(min_level, duration)
+                message = f"Audio {'playing' if success else 'not playing'} above {min_level}% level"
+                details = {
+                    'min_level': min_level,
+                    'duration': duration
+                }
+                
+            elif command == 'verify_audio_contains_frequency':
+                target_freq = params.get('target_freq')
+                if not target_freq:
+                    return {
+                        'success': False,
+                        'message': 'No target frequency specified for audio frequency verification',
+                        'confidence': 0.0,
+                        'details': {'error': 'Missing target_freq parameter'}
+                    }
+                
+                tolerance = params.get('tolerance', 50.0)
+                duration = params.get('duration', self.analysis_duration)
+                
+                success = self.verify_audio_contains_frequency(target_freq, tolerance, duration)
+                message = f"Frequency {target_freq}Hz {'detected' if success else 'not detected'}"
+                details = {
+                    'target_frequency': target_freq,
+                    'tolerance': tolerance,
+                    'duration': duration
+                }
+                
+            else:
+                return {
+                    'success': False,
+                    'message': f'Unknown audio verification command: {command}',
+                    'confidence': 0.0,
+                    'details': {'error': f'Unsupported command: {command}'}
+                }
+            
+            # Return unified format
+            return {
+                'success': success,
+                'message': message,
+                'confidence': 1.0 if success else 0.0,
+                'details': details
+            }
+            
+        except Exception as e:
+            print(f"[@controller:AudioVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Audio verification execution error: {str(e)}',
+                'confidence': 0.0,
+                'details': {'error': str(e)}
+            }
+
 
 # Backward compatibility alias
 AudioVerificationController = AudioVerificationController 
