@@ -58,9 +58,23 @@ export const useVerificationReferences = (
 
           // Handle new format: { images: [...], count: N }
           if (result.images && Array.isArray(result.images)) {
-            result.images.forEach((ref: any) => {
-              const filename = ref.name || ref.filename || 'unknown.png';
+            result.images.forEach((ref: any, index: number) => {
+              const baseName = ref.name || ref.filename || 'unknown';
               const refType = ref.type === 'reference_text' ? 'text' : 'image';
+
+              // Create unique key: for text references, use the base name, for images add suffix if needed
+              let filename = baseName;
+              if (refType === 'image' && modelRefs[baseName]) {
+                // If base name already exists (likely a text reference), add suffix for image
+                filename = `${baseName}_image`;
+                console.log(
+                  `[@hook:useVerificationReferences] Duplicate name detected: ${baseName} (${refType}) -> ${filename}`,
+                );
+              }
+
+              console.log(
+                `[@hook:useVerificationReferences] Processing ref ${index + 1}: ${baseName} (${refType}) -> ${filename}`,
+              );
 
               modelRefs[filename] = {
                 type: refType,
