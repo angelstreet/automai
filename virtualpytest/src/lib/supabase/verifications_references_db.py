@@ -98,6 +98,7 @@ def get_references(team_id: str, reference_type: str = None, device_model: str =
         supabase = get_supabase()
         
         print(f"[@db:verifications_references:get_references] Getting references with filters: type={reference_type}, model={device_model}, name={name}")
+        print(f"[@db:verifications_references:get_references] Using team_id: {team_id}")
         
         # Start with base query
         query = supabase.table('verifications_references').select('*').eq('team_id', team_id)

@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 """
-Simple Get All References Test
+Test Get All References
 
-Tests the /server/verification/getAllReferences endpoint to verify the new references architecture.
-This script gets host information and calls the server endpoint to fetch all references.
-
-Usage:
-    cd virtualpytest
-    python3 scripts/test_get_all_references.py
+Tests the /server/verification/getAllReferences endpoint using the same approach as test_verification_simple.py
 """
 
 import sys
@@ -57,7 +52,7 @@ def get_host_info_from_flask():
 
 
 def test_get_all_references():
-    """Test the getAllReferences endpoint using the server API."""
+    """Test the /server/verification/getAllReferences endpoint"""
     print(f"\n📋 TESTING GET ALL REFERENCES")
     print(f"=" * 50)
     
@@ -71,26 +66,19 @@ def test_get_all_references():
         print(f"🏠 Connected to host: {host_device.get('host_name', 'unknown')}")
         print(f"📱 Device: {host_device.get('device_model', 'unknown')}")
         
-        # Get the server URL (usually different from host URL)
-        # For testing, we'll use the same URL but call the server endpoint
-        server_url = host_device.get('host_url', 'http://localhost:6109')
-        references_url = f"{server_url}/server/verification/getAllReferences"
+        # Call the server endpoint directly (just replace /host/ with /server/)
+        host_url = host_device.get('host_url')
+        references_url = f"{host_url}/server/verification/getAllReferences"
         
-        print(f"🔗 Calling server references API: {references_url}")
-        
-        # Create the payload with host information
+        # Create the payload with host information (same format as host endpoints)
         payload = {
-            'host': {
-                'device_name': host_device.get('device_name'),
-                'device_model': host_device.get('device_model'),
-                'host_name': host_device.get('host_name'),
-                'status': host_device.get('status')
-            }
+            'host': host_device
         }
         
-        print(f"📤 Sending payload: {json.dumps(payload, indent=2)}")
+        print(f"🔗 Calling server API: {references_url}")
+        print(f"📋 Payload: {json.dumps(payload, indent=2)}")
         
-        # Make the API call to the server
+        # Make the API call
         response = requests.post(
             references_url,
             json=payload,
@@ -101,7 +89,7 @@ def test_get_all_references():
         
         if response.status_code == 200:
             result = response.json()
-            print(f"📄 Response data: {json.dumps(result, indent=2)}")
+            print(f"📄 Response: {json.dumps(result, indent=2)}")
             
             if result.get('success'):
                 images = result.get('images', [])
@@ -110,41 +98,29 @@ def test_get_all_references():
                 
                 print(f"✅ SUCCESS - Found {count} references!")
                 print(f"   Device model: {device_model}")
-                print(f"   References:")
+                print(f"   Images count: {len(images)}")
                 
-                # Group by type for better display
-                image_refs = [img for img in images if img.get('type') == 'reference_image']
-                text_refs = [img for img in images if img.get('type') == 'reference_text']
+                if images:
+                    print(f"\n📄 References found:")
+                    for i, ref in enumerate(images, 1):
+                        name = ref.get('name', 'unknown')
+                        ref_type = ref.get('type', 'unknown')
+                        print(f"   {i}. {name} ({ref_type})")
+                        if ref_type == 'reference_image':
+                            r2_url = ref.get('r2_url', 'no URL')
+                            print(f"      URL: {r2_url}")
+                        elif ref_type == 'reference_text':
+                            area = ref.get('area', {})
+                            text = area.get('text', 'no text') if area else 'no text'
+                            print(f"      Text: '{text}'")
                 
-                print(f"   📸 Image references ({len(image_refs)}):")
-                for i, img in enumerate(image_refs, 1):
-                    name = img.get('name', 'unknown')
-                    r2_url = img.get('r2_url', 'no URL')
-                    created_at = img.get('created_at', 'unknown')
-                    print(f"      {i}. {name} (created: {created_at[:10]})")
-                    print(f"         URL: {r2_url}")
-                
-                print(f"   📝 Text references ({len(text_refs)}):")
-                for i, txt in enumerate(text_refs, 1):
-                    name = txt.get('name', 'unknown')
-                    area = txt.get('area', {})
-                    text_content = area.get('text', 'no text') if area else 'no text'
-                    created_at = txt.get('created_at', 'unknown')
-                    print(f"      {i}. {name} (created: {created_at[:10]})")
-                    print(f"         Text: '{text_content[:50]}{'...' if len(str(text_content)) > 50 else ''}'")
-                
-                return True
+                return count > 0
             else:
                 error = result.get('error', 'Unknown error')
                 print(f"❌ FAILED - Server returned error: {error}")
                 return False
         else:
-            print(f"❌ FAILED - HTTP {response.status_code}")
-            try:
-                error_data = response.json()
-                print(f"   Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"   Error text: {response.text}")
+            print(f"❌ FAILED - HTTP {response.status_code}: {response.text}")
             return False
             
     except Exception as e:
@@ -153,21 +129,17 @@ def test_get_all_references():
 
 
 def main():
-    """Main test function."""
+    """Main test function"""
     print("🧪 VirtualPyTest - Get All References Test")
     print("=" * 60)
-    print("Testing the new references architecture...")
-    print("This should fetch references from the verifications_references table")
     
     success = test_get_all_references()
     
     print("\n" + "=" * 60)
     if success:
         print("🎉 Test completed successfully!")
-        print("✅ The new references architecture is working correctly!")
     else:
         print("⚠️  Test failed. Check the output above for details.")
-        print("❌ The references architecture may need debugging.")
     
     return success
 
