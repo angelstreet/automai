@@ -5,7 +5,7 @@ import {
   UINavigationEdge,
   NodeForm,
   EdgeForm,
-} from '../types/pages/Navigation_Types';
+} from '../../types/pages/Navigation_Types';
 
 // ========================================
 // TYPES
@@ -48,6 +48,8 @@ interface NodeEdgeManagementState {
 interface NodeEdgeManagementProviderProps {
   children: React.ReactNode;
   state: NodeEdgeManagementState;
+  saveToConfig?: (userInterfaceId: string) => Promise<void>;
+  userInterfaceId?: string;
 }
 
 // ========================================
@@ -59,6 +61,8 @@ const NodeEdgeManagementContext = createContext<NodeEdgeManagementContextType | 
 export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProps> = ({
   children,
   state,
+  saveToConfig,
+  userInterfaceId,
 }) => {
   console.log('[@context:NodeEdgeManagementProvider] Initializing node edge management context');
 
@@ -203,6 +207,18 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
         console.log(
           '[@context:NodeEdgeManagementProvider] Node saved successfully with verifications',
         );
+
+        // Step 3: Auto-save tree to persist verification IDs
+        if (saveToConfig && userInterfaceId) {
+          console.log(
+            '[@context:NodeEdgeManagementProvider] Auto-saving tree with verification IDs',
+          );
+          await saveToConfig(userInterfaceId);
+          console.log('[@context:NodeEdgeManagementProvider] Tree auto-saved successfully');
+        } else {
+          // Just mark as having unsaved changes if auto-save not available
+          setHasUnsavedChanges(true);
+        }
       } catch (error) {
         console.error('[@context:NodeEdgeManagementProvider] Error saving node:', error);
         // Still update the node in memory even if database save fails
@@ -228,7 +244,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       // Don't close dialog or clear selection - just mark as saved
       // This prevents the interface reload feeling
     },
-    [isNewNode, selectedNode, nodes, setNodes, setHasUnsavedChanges],
+    [isNewNode, selectedNode, nodes, setNodes, setHasUnsavedChanges, saveToConfig, userInterfaceId],
   );
 
   // Save edge changes

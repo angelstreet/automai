@@ -7,7 +7,7 @@ import {
   UINavigationEdge,
   NodeForm,
   EdgeForm,
-} from '../types/pages/Navigation_Types';
+} from '../../types/pages/Navigation_Types';
 
 // ========================================
 // TYPES
@@ -432,13 +432,5 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
 NavigationStateProvider.displayName = 'NavigationStateProvider';
 
 // ========================================
-// HOOK
+// HOOK - Moved to hooks/navigation/useNavigationState.ts
 // ========================================
-
-export const useNavigationState = (): NavigationStateContextType => {
-  const context = useContext(NavigationStateContext);
-  if (!context) {
-    throw new Error('useNavigationState must be used within a NavigationStateProvider');
-  }
-  return context;
-};

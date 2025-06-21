@@ -2,12 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
-import {
-  useDeviceControl,
-  useNavigationState,
-  useNavigationConfig,
-  useNodeEdgeManagement,
-} from '../../contexts';
+import { useDeviceControl, useNavigationConfig, useNodeEdgeManagement } from '../../contexts';
+import { useNavigationState } from '../navigation/useNavigationState';
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -578,200 +574,203 @@ export const useNavigationEditor = () => {
   }, [configHook]);
 
   // Memoize the return object to prevent unnecessary re-renders
-  return useMemo(() => ({
-    // State (filtered views for ReactFlow display)
-    nodes: filteredNodes,
-    edges: filteredEdges,
-    // Raw data (single source of truth)
-    allNodes: navigationState.nodes,
-    allEdges: navigationState.edges,
-    treeName: navigationState.currentTreeName,
-    isLoadingInterface: navigationState.isLoadingInterface,
-    selectedNode: navigationState.selectedNode,
-    selectedEdge: navigationState.selectedEdge,
-    isNodeDialogOpen: navigationState.isNodeDialogOpen,
-    isEdgeDialogOpen: navigationState.isEdgeDialogOpen,
-    nodeForm: navigationState.nodeForm,
-    edgeForm: navigationState.edgeForm,
-    isLoading: navigationState.isSaving,
-    error: navigationState.saveError,
-    success: navigationState.saveSuccess ? 'Navigation tree saved successfully!' : null,
-    pendingConnection,
-    reactFlowWrapper: navigationState.reactFlowWrapper,
-    reactFlowInstance: navigationState.reactFlowInstance,
-    treeId: navigationState.currentTreeId,
-    interfaceId: navigationState.interfaceId,
+  return useMemo(
+    () => ({
+      // State (filtered views for ReactFlow display)
+      nodes: filteredNodes,
+      edges: filteredEdges,
+      // Raw data (single source of truth)
+      allNodes: navigationState.nodes,
+      allEdges: navigationState.edges,
+      treeName: navigationState.currentTreeName,
+      isLoadingInterface: navigationState.isLoadingInterface,
+      selectedNode: navigationState.selectedNode,
+      selectedEdge: navigationState.selectedEdge,
+      isNodeDialogOpen: navigationState.isNodeDialogOpen,
+      isEdgeDialogOpen: navigationState.isEdgeDialogOpen,
+      nodeForm: navigationState.nodeForm,
+      edgeForm: navigationState.edgeForm,
+      isLoading: navigationState.isSaving,
+      error: navigationState.saveError,
+      success: navigationState.saveSuccess ? 'Navigation tree saved successfully!' : null,
+      pendingConnection,
+      reactFlowWrapper: navigationState.reactFlowWrapper,
+      reactFlowInstance: navigationState.reactFlowInstance,
+      treeId: navigationState.currentTreeId,
+      interfaceId: navigationState.interfaceId,
 
-    // Tree state (simplified)
-    currentTreeId: navigationState.currentTreeId,
-    currentTreeName: navigationState.currentTreeName,
-    navigationPath: navigationState.navigationPath,
-    navigationNamePath: navigationState.navigationNamePath,
-    hasUnsavedChanges: navigationState.hasUnsavedChanges,
-    isDiscardDialogOpen: navigationState.isDiscardDialogOpen,
-    userInterface: navigationState.userInterface,
-    rootTree: navigationState.rootTree,
+      // Tree state (simplified)
+      currentTreeId: navigationState.currentTreeId,
+      currentTreeName: navigationState.currentTreeName,
+      navigationPath: navigationState.navigationPath,
+      navigationNamePath: navigationState.navigationNamePath,
+      hasUnsavedChanges: navigationState.hasUnsavedChanges,
+      isDiscardDialogOpen: navigationState.isDiscardDialogOpen,
+      userInterface: navigationState.userInterface,
+      rootTree: navigationState.rootTree,
 
-    // History state removed - using page reload for cancel changes
+      // History state removed - using page reload for cancel changes
 
-    // View state for single-level navigation
-    viewPath: navigationState.viewPath,
+      // View state for single-level navigation
+      viewPath: navigationState.viewPath,
 
-    // Tree filtering state and functions
-    focusNodeId: navigationState.focusNodeId,
-    maxDisplayDepth: navigationState.maxDisplayDepth,
-    availableFocusNodes: navigationState.availableFocusNodes,
-    isNodeDescendantOf,
-    setFocusNode,
-    setDisplayDepth,
-    resetFocus,
+      // Tree filtering state and functions
+      focusNodeId: navigationState.focusNodeId,
+      maxDisplayDepth: navigationState.maxDisplayDepth,
+      availableFocusNodes: navigationState.availableFocusNodes,
+      isNodeDescendantOf,
+      setFocusNode,
+      setDisplayDepth,
+      resetFocus,
 
-    // Setters (work with raw data, filtering happens automatically)
-    setNodes: navigationState.setNodes,
-    setEdges: navigationState.setEdges,
-    setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
-    setTreeName: navigationState.setCurrentTreeName,
-    setIsLoadingInterface: navigationState.setIsLoadingInterface,
-    setSelectedNode: navigationState.setSelectedNode,
-    setSelectedEdge: navigationState.setSelectedEdge,
-    setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
-    setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
-    setNodeForm: navigationState.setNodeForm,
-    setEdgeForm: navigationState.setEdgeForm,
-    setIsLoading: navigationState.setIsSaving,
-    setError: navigationState.setSaveError,
-    setSuccess: navigationState.setSaveSuccess,
-    setPendingConnection,
-    setReactFlowInstance: navigationState.setReactFlowInstance,
-    setIsDiscardDialogOpen: navigationState.setIsDiscardDialogOpen,
+      // Setters (work with raw data, filtering happens automatically)
+      setNodes: navigationState.setNodes,
+      setEdges: navigationState.setEdges,
+      setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+      setTreeName: navigationState.setCurrentTreeName,
+      setIsLoadingInterface: navigationState.setIsLoadingInterface,
+      setSelectedNode: navigationState.setSelectedNode,
+      setSelectedEdge: navigationState.setSelectedEdge,
+      setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
+      setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
+      setNodeForm: navigationState.setNodeForm,
+      setEdgeForm: navigationState.setEdgeForm,
+      setIsLoading: navigationState.setIsSaving,
+      setError: navigationState.setSaveError,
+      setSuccess: navigationState.setSaveSuccess,
+      setPendingConnection,
+      setReactFlowInstance: navigationState.setReactFlowInstance,
+      setIsDiscardDialogOpen: navigationState.setIsDiscardDialogOpen,
 
-    // Event handlers (work with raw data)
-    onNodesChange: customOnNodesChange,
-    onEdgesChange,
-    onConnect,
-    onNodeClick,
-    onEdgeClick,
-    onNodeDoubleClick: onNodeDoubleClickUpdated,
-    onPaneClick,
+      // Event handlers (work with raw data)
+      onNodesChange: customOnNodesChange,
+      onEdgesChange,
+      onConnect,
+      onNodeClick,
+      onEdgeClick,
+      onNodeDoubleClick: onNodeDoubleClickUpdated,
+      onPaneClick,
 
-    // Config operations (single source of truth) - memoized to prevent re-renders
-    loadFromConfig,
-    saveToConfig,
-    listAvailableTrees: configHook.listAvailableUserInterfaces,
-    createEmptyTreeConfig,
+      // Config operations (single source of truth) - memoized to prevent re-renders
+      loadFromConfig,
+      saveToConfig,
+      listAvailableTrees: configHook.listAvailableUserInterfaces,
+      createEmptyTreeConfig,
 
-    // Lock management from Config hook
-    isLocked: configHook.isLocked,
-    lockInfo: configHook.lockInfo,
-    showReadOnlyOverlay: configHook.showReadOnlyOverlay,
-    setCheckingLockState: configHook.setCheckingLockState,
-    sessionId: configHook.sessionId,
-    lockNavigationTree: configHook.lockNavigationTree,
-    unlockNavigationTree: configHook.unlockNavigationTree,
-    setupAutoUnlock: configHook.setupAutoUnlock,
+      // Lock management from Config hook
+      isLocked: configHook.isLocked,
+      lockInfo: configHook.lockInfo,
+      showReadOnlyOverlay: configHook.showReadOnlyOverlay,
+      setCheckingLockState: configHook.setCheckingLockState,
+      sessionId: configHook.sessionId,
+      lockNavigationTree: configHook.lockNavigationTree,
+      unlockNavigationTree: configHook.unlockNavigationTree,
+      setupAutoUnlock: configHook.setupAutoUnlock,
 
-    // Actions from Node/Edge management hook - memoized to prevent re-renders
-    handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,
-    handleEdgeFormSubmit: nodeEdgeHook.saveEdgeChanges,
-    handleDeleteNode: nodeEdgeHook.deleteSelected,
-    handleDeleteEdge: nodeEdgeHook.deleteSelected,
-    addNewNode: nodeEdgeHook.addNewNode,
-    cancelNodeChanges: nodeEdgeHook.cancelNodeChanges,
-    closeSelectionPanel: nodeEdgeHook.closeSelectionPanel,
-    deleteSelected: nodeEdgeHook.deleteSelected,
-    resetNode: nodeEdgeHook.resetNode,
+      // Actions from Node/Edge management hook - memoized to prevent re-renders
+      handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,
+      handleEdgeFormSubmit: nodeEdgeHook.saveEdgeChanges,
+      handleDeleteNode: nodeEdgeHook.deleteSelected,
+      handleDeleteEdge: nodeEdgeHook.deleteSelected,
+      addNewNode: nodeEdgeHook.addNewNode,
+      cancelNodeChanges: nodeEdgeHook.cancelNodeChanges,
+      closeSelectionPanel: nodeEdgeHook.closeSelectionPanel,
+      deleteSelected: nodeEdgeHook.deleteSelected,
+      resetNode: nodeEdgeHook.resetNode,
 
-    // History actions removed
+      // History actions removed
 
-    // Additional actions
-    discardChanges,
-    performDiscardChanges,
-    fitView,
+      // Additional actions
+      discardChanges,
+      performDiscardChanges,
+      fitView,
 
-    // Navigation actions
-    navigateToTreeLevel,
-    goBackToParent,
-    navigateToParentView,
-    navigateToParent,
+      // Navigation actions
+      navigateToTreeLevel,
+      goBackToParent,
+      navigateToParentView,
+      navigateToParent,
 
-    // Configuration
-    defaultEdgeOptions,
+      // Configuration
+      defaultEdgeOptions,
 
-    // Connection rules and debugging
-    getConnectionRulesSummary: getRulesSummary,
+      // Connection rules and debugging
+      getConnectionRulesSummary: getRulesSummary,
 
-    // User interface management
-    setUserInterfaceFromProps,
+      // User interface management
+      setUserInterfaceFromProps,
 
-    // ========================================
-    // NAVIGATION PANELS STATE & HANDLERS
-    // ========================================
+      // ========================================
+      // NAVIGATION PANELS STATE & HANDLERS
+      // ========================================
 
-    // Panel state
-    selectedHost: deviceControl.selectedHost,
-    isControlActive: deviceControl.isControlActive,
-    isRemotePanelOpen: deviceControl.isRemotePanelOpen,
-    showRemotePanel: deviceControl.showRemotePanel,
-    showAVPanel: deviceControl.showAVPanel,
-    isVerificationActive: deviceControl.isVerificationActive,
+      // Panel state
+      selectedHost: deviceControl.selectedHost,
+      isControlActive: deviceControl.isControlActive,
+      isRemotePanelOpen: deviceControl.isRemotePanelOpen,
+      showRemotePanel: deviceControl.showRemotePanel,
+      showAVPanel: deviceControl.showAVPanel,
+      isVerificationActive: deviceControl.isVerificationActive,
 
-    // Panel handlers
-    handleDeviceSelect: deviceControl.handleDeviceSelect,
-    handleControlStateChange: deviceControl.handleControlStateChange,
-    handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
-    handleConnectionChange: deviceControl.handleConnectionChange,
-    handleDisconnectComplete: deviceControl.handleDisconnectComplete,
+      // Panel handlers
+      handleDeviceSelect: deviceControl.handleDeviceSelect,
+      handleControlStateChange: deviceControl.handleControlStateChange,
+      handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
+      handleConnectionChange: deviceControl.handleConnectionChange,
+      handleDisconnectComplete: deviceControl.handleDisconnectComplete,
 
-    // Host data (filtered by interface models)
-    availableHosts: deviceControl.availableHosts,
-    getHostByName: deviceControl.getHostByName,
-    fetchHosts: deviceControl.fetchHosts,
+      // Host data (filtered by interface models)
+      availableHosts: deviceControl.availableHosts,
+      getHostByName: deviceControl.getHostByName,
+      fetchHosts: deviceControl.fetchHosts,
 
-    // Load available trees
-    loadAvailableTrees,
-  }), [
-    // Only include values that actually change, not stable function references
-    filteredNodes,
-    filteredEdges,
-    navigationState.nodes,
-    navigationState.edges,
-    navigationState.currentTreeName,
-    navigationState.isLoadingInterface,
-    navigationState.selectedNode,
-    navigationState.selectedEdge,
-    navigationState.isNodeDialogOpen,
-    navigationState.isEdgeDialogOpen,
-    navigationState.nodeForm,
-    navigationState.edgeForm,
-    navigationState.isSaving,
-    navigationState.saveError,
-    navigationState.saveSuccess,
-    pendingConnection,
-    navigationState.reactFlowWrapper,
-    navigationState.reactFlowInstance,
-    navigationState.currentTreeId,
-    navigationState.interfaceId,
-    navigationState.navigationPath,
-    navigationState.navigationNamePath,
-    navigationState.hasUnsavedChanges,
-    navigationState.isDiscardDialogOpen,
-    navigationState.userInterface,
-    navigationState.rootTree,
-    navigationState.viewPath,
-    navigationState.focusNodeId,
-    navigationState.maxDisplayDepth,
-    navigationState.availableFocusNodes,
-    configHook.isLocked,
-    configHook.lockInfo,
-    configHook.showReadOnlyOverlay,
-    configHook.sessionId,
-    deviceControl.selectedHost,
-    deviceControl.isControlActive,
-    deviceControl.isRemotePanelOpen,
-    deviceControl.showRemotePanel,
-    deviceControl.showAVPanel,
-    deviceControl.isVerificationActive,
-    deviceControl.availableHosts,
-    // Exclude stable functions from dependencies to prevent unnecessary re-renders
-  ]);
+      // Load available trees
+      loadAvailableTrees,
+    }),
+    [
+      // Only include values that actually change, not stable function references
+      filteredNodes,
+      filteredEdges,
+      navigationState.nodes,
+      navigationState.edges,
+      navigationState.currentTreeName,
+      navigationState.isLoadingInterface,
+      navigationState.selectedNode,
+      navigationState.selectedEdge,
+      navigationState.isNodeDialogOpen,
+      navigationState.isEdgeDialogOpen,
+      navigationState.nodeForm,
+      navigationState.edgeForm,
+      navigationState.isSaving,
+      navigationState.saveError,
+      navigationState.saveSuccess,
+      pendingConnection,
+      navigationState.reactFlowWrapper,
+      navigationState.reactFlowInstance,
+      navigationState.currentTreeId,
+      navigationState.interfaceId,
+      navigationState.navigationPath,
+      navigationState.navigationNamePath,
+      navigationState.hasUnsavedChanges,
+      navigationState.isDiscardDialogOpen,
+      navigationState.userInterface,
+      navigationState.rootTree,
+      navigationState.viewPath,
+      navigationState.focusNodeId,
+      navigationState.maxDisplayDepth,
+      navigationState.availableFocusNodes,
+      configHook.isLocked,
+      configHook.lockInfo,
+      configHook.showReadOnlyOverlay,
+      configHook.sessionId,
+      deviceControl.selectedHost,
+      deviceControl.isControlActive,
+      deviceControl.isRemotePanelOpen,
+      deviceControl.showRemotePanel,
+      deviceControl.showAVPanel,
+      deviceControl.isVerificationActive,
+      deviceControl.availableHosts,
+      // Exclude stable functions from dependencies to prevent unnecessary re-renders
+    ],
+  );
 };

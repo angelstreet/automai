@@ -1,17 +1,13 @@
-// Navigation Contexts
-export { NavigationStateProvider, useNavigationState } from './NavigationStateContext';
-
+// Navigation Contexts (moved to navigation/ directory)
 export {
+  NavigationStateProvider,
   NavigationConfigProvider,
   useNavigationConfig,
   type NavigationConfigState,
-} from './NavigationConfigContext';
-
-export {
   NodeEdgeManagementProvider,
   useNodeEdgeManagement,
   type NodeEdgeManagementState,
-} from './NodeEdgeManagementContext';
+} from './navigation';
 
 export { DeviceControlProvider, useDeviceControl } from './DeviceControlContext';
 

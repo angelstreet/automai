@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
-import { useUserSession } from '../hooks/useUserSession';
-import { UINavigationNode, UINavigationEdge } from '../types/pages/Navigation_Types';
+import { useUserSession } from '../../hooks/useUserSession';
+import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
 
 // ========================================
 // TYPES

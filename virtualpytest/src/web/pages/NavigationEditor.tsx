@@ -33,11 +33,10 @@ import { UINavigationNode } from '../components/navigation/Navigation_Navigation
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { DeviceControlProvider, useDeviceControl } from '../contexts/DeviceControlContext';
-import { NavigationConfigProvider } from '../contexts/NavigationConfigContext';
-import { NavigationStateProvider } from '../contexts/NavigationStateContext';
-import { NodeEdgeManagementProvider } from '../contexts/NodeEdgeManagementContext';
-import { useNavigationEditor } from '../hooks';
-import { useNavigationState } from '../hooks/useNavigationState';
+import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
+import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
+import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
+import { useNavigationEditorNew } from '../hooks/navigation/useNavigationEditorNew';
 import {
   UINavigationNode as UINavigationNodeType,
   UINavigationEdge as UINavigationEdgeType,
@@ -213,7 +212,7 @@ const NavigationEditorContent: React.FC = React.memo(
       setHasUnsavedChanges,
       setEdges,
       setSelectedEdge,
-    } = useNavigationEditor();
+    } = useNavigationEditorNew();
 
     // Get device control from context
     const {
@@ -755,67 +754,100 @@ const NavigationEditorContent: React.FC = React.memo(
 const NavigationEditor: React.FC = () => {
   return (
     <ReactFlowProvider>
-      <NavigationStateProvider>
+      <NavigationEditorProvider>
         <NavigationConfigProvider>
           <NavigationEditorWithAllProviders />
         </NavigationConfigProvider>
-      </NavigationStateProvider>
+      </NavigationEditorProvider>
     </ReactFlowProvider>
   );
 };
 
 const NavigationEditorWithAllProviders: React.FC = () => {
-  // Get navigation state to pass to both device control and node edge management providers
-  const navigationState = useNavigationState();
-
   // Get userInterface directly from location.state to avoid timing issues
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
+  // Use the new focused contexts to get the state for the old providers
+  // This is a temporary bridge until we can fully migrate away from the old providers
+  const {
+    nodes,
+    edges,
+    selectedNode,
+    selectedEdge,
+    nodeForm,
+    edgeForm,
+    isNewNode,
+    setNodes,
+    setEdges,
+    setSelectedNode,
+    setSelectedEdge,
+    setNodeForm,
+    setEdgeForm,
+    setIsNodeDialogOpen,
+    setIsEdgeDialogOpen,
+    setIsNewNode,
+    setHasUnsavedChanges,
+  } = useNavigationEditorNew();
+
   // Create memoized state objects for providers to prevent unnecessary re-renders
   const nodeEdgeState = useMemo(() => {
     return {
-      nodes: navigationState.nodes,
-      edges: navigationState.edges,
-      selectedNode: navigationState.selectedNode,
-      selectedEdge: navigationState.selectedEdge,
-      nodeForm: navigationState.nodeForm,
-      edgeForm: navigationState.edgeForm,
-      isNewNode: navigationState.isNewNode,
+      nodes,
+      edges,
+      selectedNode,
+      selectedEdge,
+      nodeForm,
+      edgeForm,
+      isNewNode,
       // Cast setters to match NodeEdgeManagementState interface
-      setNodes: navigationState.setNodes as (
+      setNodes: setNodes as (
         nodes: UINavigationNodeType[] | ((prev: UINavigationNodeType[]) => UINavigationNodeType[]),
       ) => void,
-      setEdges: navigationState.setEdges as (
+      setEdges: setEdges as (
         edges: UINavigationEdgeType[] | ((prev: UINavigationEdgeType[]) => UINavigationEdgeType[]),
       ) => void,
-      setSelectedNode: navigationState.setSelectedNode,
-      setSelectedEdge: navigationState.setSelectedEdge,
-      setNodeForm: navigationState.setNodeForm as (form: NodeForm | null) => void,
-      setEdgeForm: navigationState.setEdgeForm as (form: EdgeForm | null) => void,
-      setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
-      setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
-      setIsNewNode: navigationState.setIsNewNode,
-      setHasUnsavedChanges: navigationState.setHasUnsavedChanges,
+      setSelectedNode,
+      setSelectedEdge,
+      setNodeForm: setNodeForm as (form: NodeForm | null) => void,
+      setEdgeForm: setEdgeForm as (form: EdgeForm | null) => void,
+      setIsNodeDialogOpen,
+      setIsEdgeDialogOpen,
+      setIsNewNode,
+      setHasUnsavedChanges,
     };
   }, [
-    // Only include state values that actually change, not setter functions
-    // Setter functions from useState are stable and don't need to be in dependencies
-    navigationState.nodes,
-    navigationState.edges,
-    navigationState.selectedNode,
-    navigationState.selectedEdge,
-    navigationState.nodeForm,
-    navigationState.edgeForm,
-    navigationState.isNewNode,
-    // Remove setter functions from dependencies - they are stable from useState
+    nodes,
+    edges,
+    selectedNode,
+    selectedEdge,
+    nodeForm,
+    edgeForm,
+    isNewNode,
+    setNodes,
+    setEdges,
+    setSelectedNode,
+    setSelectedEdge,
+    setNodeForm,
+    setEdgeForm,
+    setIsNodeDialogOpen,
+    setIsEdgeDialogOpen,
+    setIsNewNode,
+    setHasUnsavedChanges,
   ]);
 
   // Memoize userInterface to prevent DeviceControlProvider re-renders
   const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
 
+  // Get saveToConfig function from the hook
+  const { saveToConfig } = useNavigationEditorNew();
+
   return (
-    <NodeEdgeManagementProvider state={nodeEdgeState}>
+    <NodeEdgeManagementProvider
+      state={nodeEdgeState}
+      saveToConfig={saveToConfig}
+      userInterfaceId={stableUserInterface?.id}
+    >
       <DeviceControlProvider userInterface={stableUserInterface}>
         <NavigationEditorContent />
       </DeviceControlProvider>
