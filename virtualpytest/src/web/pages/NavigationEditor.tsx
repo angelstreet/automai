@@ -107,7 +107,7 @@ const miniMapNodeColor = (node: any) => {
   }
 };
 
-const NavigationEditorContent: React.FC = () => {
+const NavigationEditorContent: React.FC = React.memo(() => {
   // DEBUG: Track re-renders
   console.log('[@component:NavigationEditorContent] Re-rendering...');
 
@@ -717,7 +717,7 @@ const NavigationEditorContent: React.FC = () => {
       )}
     </Box>
   );
-};
+});
 
 const NavigationEditor: React.FC = () => {
   return (
