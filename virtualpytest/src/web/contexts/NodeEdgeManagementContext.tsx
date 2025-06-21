@@ -109,8 +109,8 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                   device_model: verification.device_model || 'android_mobile',
                   verification_type: verification.verification_type || 'image',
                   command: verification.command || '',
-                  parameters: verification.parameters || {},
-                  timeout: verification.timeout,
+                  parameters: verification.params || {},
+                  timeout: verification.params?.timeout || null,
                   // Optional fields for image verifications with references
                   r2_path: verification.params?.image_path || null,
                   r2_url: verification.params?.image_url || null,
@@ -123,6 +123,9 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                 console.log(
                   `[@context:NodeEdgeManagementProvider] Saved verification to database: ${result.verification_id}`,
                 );
+                // Store the database ID in the verification for future reference
+                verification._db_id = result.verification_id;
+                verification._db_name = `${formData.label || 'node'}_${verification.verification_type}_${Date.now()}`;
               } else {
                 console.error(
                   `[@context:NodeEdgeManagementProvider] Failed to save verification: ${result.error}`,

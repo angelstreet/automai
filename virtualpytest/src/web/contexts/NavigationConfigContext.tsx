@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
-import { UINavigationNode, UINavigationEdge } from '../types/pages/Navigation_Types';
-
 import { useUserSession } from '../hooks/useUserSession';
+import { UINavigationNode, UINavigationEdge } from '../types/pages/Navigation_Types';
 
 // ========================================
 // TYPES
@@ -340,8 +339,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                       const nodeVerification = {
                         verification_type: verification.verification_type,
                         command: verification.command,
-                        params: verification.parameters || {},
-                        timeout: verification.timeout,
+                        params: {
+                          ...(verification.parameters || {}),
+                          // Ensure timeout is in params for UI consistency
+                          timeout: verification.timeout,
+                        },
                         device_model: verification.device_model,
                         // Add database metadata
                         _db_id: verification.id,
