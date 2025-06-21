@@ -319,9 +319,9 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get references from database
-            from src.lib.supabase.verifications_db import get_verifications
+            from src.lib.supabase.verifications_references_db import get_references
             
-            result = get_verifications(
+            result = get_references(
                 team_id=team_id,
                 device_model=device_model
             )
@@ -404,12 +404,12 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get image references from database
-            from src.lib.supabase.verifications_db import get_verifications
+            from src.lib.supabase.verifications_references_db import get_references
             
-            result = get_verifications(
+            result = get_references(
                 team_id=team_id,
                 device_model=device_model,
-                image_type='reference_image'
+                reference_type='reference_image'
             )
             
             if result['success']:
@@ -478,12 +478,12 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get text references from database
-            from src.lib.supabase.verifications_db import get_verifications
+            from src.lib.supabase.verifications_references_db import get_references
             
-            result = get_verifications(
+            result = get_references(
                 team_id=team_id,
                 device_model=device_model,
-                image_type='reference_text'
+                reference_type='reference_text'
             )
             
             if result['success']:
@@ -551,12 +551,12 @@ class VerificationController:
                 team_id = DEFAULT_TEAM_ID
             
             # Get references from database
-            from src.lib.supabase.verifications_db import get_verifications
+            from src.lib.supabase.verifications_references_db import get_references
             
-            result = get_verifications(
+            result = get_references(
                 team_id=team_id,
                 device_model=device_model,
-                image_type=reference_type,
+                reference_type=reference_type,
                 name=reference_name
             )
             

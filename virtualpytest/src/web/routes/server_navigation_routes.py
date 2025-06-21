@@ -566,7 +566,7 @@ def save_navigation_screenshot():
             
             # Save to database
             try:
-                from src.lib.supabase.verifications_db import save_image
+                from src.lib.supabase.verifications_references_db import save_image
                 from src.utils.app_utils import get_team_id
                 
                 team_id = get_team_id()
