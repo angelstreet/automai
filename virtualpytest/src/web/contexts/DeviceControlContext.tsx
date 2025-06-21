@@ -200,6 +200,7 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
       handleDisconnectComplete,
     }),
     [
+      // Only include state values that actually change
       selectedHost,
       isControlActive,
       isRemotePanelOpen,
@@ -207,8 +208,10 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
       showAVPanel,
       isVerificationActive,
       filteredAvailableHosts,
+      // Functions from useRegistration are stable, but include them for completeness
       getHostByName,
       fetchHosts,
+      // Handlers are stable due to useCallback - but include them for safety
       handleDeviceSelect,
       handleControlStateChange,
       handleToggleRemotePanel,

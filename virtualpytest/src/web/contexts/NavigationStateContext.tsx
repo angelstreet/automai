@@ -379,7 +379,7 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       resetSelection,
     };
   }, [
-    // Route params
+    // Route params - only include if they actually change
     treeId,
     treeName,
     interfaceId,
@@ -406,10 +406,11 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     stableNodes,
     stableEdges,
     reactFlowInstance,
-    onNodesChange,
-    onEdgesChange,
-    setNodes,
-    setEdges,
+    // Remove function dependencies that are stable
+    // onNodesChange,
+    // onEdgesChange,
+    // setNodes,
+    // setEdges,
 
     // Tree state
     initialState,
@@ -435,11 +436,11 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
     focusNodeId,
     maxDisplayDepth,
 
-    // Callbacks are stable due to useCallback
-    resetToInitialState,
-    validateNavigationPath,
-    updateNavigationPath,
-    resetSelection,
+    // Callbacks are stable due to useCallback - remove them from dependencies
+    // resetToInitialState,
+    // validateNavigationPath,
+    // updateNavigationPath,
+    // resetSelection,
 
     // reactFlowWrapper is a ref and doesn't need to be in dependencies
   ]);

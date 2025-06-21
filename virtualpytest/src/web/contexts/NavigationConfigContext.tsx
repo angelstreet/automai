@@ -495,19 +495,23 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       userId,
     }),
     [
+      // Lock state
       isLocked,
       lockInfo,
       isCheckingLock,
       showReadOnlyOverlay,
-      setCheckingLockState,
-      lockNavigationTree,
-      unlockNavigationTree,
-      checkTreeLockStatus,
-      setupAutoUnlock,
-      loadFromConfig,
-      saveToConfig,
-      listAvailableUserInterfaces,
-      createEmptyTree,
+      // Functions are stable due to useCallback - remove from dependencies
+      // setCheckingLockState,
+      // lockNavigationTree,
+      // unlockNavigationTree,
+      // checkTreeLockStatus,
+      // setupAutoUnlock,
+      // loadFromConfig,
+      // saveToConfig,
+      // listAvailableUserInterfaces,
+      // createEmptyTree,
+
+      // User session data is stable from singleton
       sessionId,
       userId,
     ],

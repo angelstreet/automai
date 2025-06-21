@@ -38,6 +38,12 @@ import { NavigationStateProvider } from '../contexts/NavigationStateContext';
 import { NodeEdgeManagementProvider } from '../contexts/NodeEdgeManagementContext';
 import { useNavigationEditor } from '../hooks';
 import { useNavigationState } from '../hooks/useNavigationState';
+import {
+  UINavigationNode as UINavigationNodeType,
+  UINavigationEdge as UINavigationEdgeType,
+  NodeForm,
+  EdgeForm,
+} from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
@@ -743,12 +749,17 @@ const NavigationEditorWithAllProviders: React.FC = () => {
       nodeForm: navigationState.nodeForm,
       edgeForm: navigationState.edgeForm,
       isNewNode: navigationState.isNewNode,
-      setNodes: navigationState.setNodes,
-      setEdges: navigationState.setEdges,
+      // Cast setters to match NodeEdgeManagementState interface
+      setNodes: navigationState.setNodes as (
+        nodes: UINavigationNodeType[] | ((prev: UINavigationNodeType[]) => UINavigationNodeType[]),
+      ) => void,
+      setEdges: navigationState.setEdges as (
+        edges: UINavigationEdgeType[] | ((prev: UINavigationEdgeType[]) => UINavigationEdgeType[]),
+      ) => void,
       setSelectedNode: navigationState.setSelectedNode,
       setSelectedEdge: navigationState.setSelectedEdge,
-      setNodeForm: navigationState.setNodeForm,
-      setEdgeForm: navigationState.setEdgeForm,
+      setNodeForm: navigationState.setNodeForm as (form: NodeForm | null) => void,
+      setEdgeForm: navigationState.setEdgeForm as (form: EdgeForm | null) => void,
       setIsNodeDialogOpen: navigationState.setIsNodeDialogOpen,
       setIsEdgeDialogOpen: navigationState.setIsEdgeDialogOpen,
       setIsNewNode: navigationState.setIsNewNode,
@@ -766,9 +777,12 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     navigationState.isNewNode,
   ]);
 
+  // Memoize userInterface to prevent DeviceControlProvider re-renders
+  const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
+
   return (
     <NodeEdgeManagementProvider state={nodeEdgeState}>
-      <DeviceControlProvider userInterface={userInterfaceFromState}>
+      <DeviceControlProvider userInterface={stableUserInterface}>
         <NavigationEditorContent />
       </DeviceControlProvider>
     </NodeEdgeManagementProvider>
