@@ -10,7 +10,8 @@ from src.lib.supabase.verifications_db import (
     save_verification, 
     get_verifications, 
     delete_verification, 
-    get_all_verifications
+    get_all_verifications,
+    get_verifications_by_ids
 )
 from src.lib.supabase.verifications_references_db import (
     save_reference,
@@ -289,6 +290,55 @@ def get_all_verifications_endpoint():
             
     except Exception as e:
         print(f"[@server_verifications_routes:get_all_verifications_endpoint] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+@server_verifications_bp.route('/server/verifications/load-by-ids', methods=['POST'])
+def load_verifications_by_ids_endpoint():
+    """
+    Load verification definitions by their database IDs.
+    
+    Expected JSON payload:
+    {
+        "verification_ids": ["uuid1", "uuid2", ...]
+    }
+    """
+    try:
+        data = request.get_json()
+        verification_ids = data.get('verification_ids', [])
+        
+        if not verification_ids:
+            return jsonify({
+                'success': True,
+                'verifications': [],
+                'count': 0
+            })
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        
+        # Load verifications by their IDs
+        result = get_verifications_by_ids(
+            team_id=team_id,
+            verification_ids=verification_ids
+        )
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'verifications': result['verifications'],
+                'count': len(result['verifications'])
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        print(f"[@server_verifications_routes:load_verifications_by_ids_endpoint] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'

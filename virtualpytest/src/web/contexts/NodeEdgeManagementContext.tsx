@@ -140,14 +140,26 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           }
         }
 
-        // Step 2: Update node in memory (verifications are stored in the node for tree persistence)
+        // Step 2: Update node in memory with verification IDs for tree persistence
+        // We store only verification IDs in the tree, not full verification objects
+        const formDataWithVerificationIds = {
+          ...formData,
+          data: {
+            ...formData.data,
+            // Store only verification IDs in the tree
+            verification_ids:
+              formData.verifications?.map((v: any) => v._db_id).filter(Boolean) || [],
+            // Keep full verification objects for UI (will be reloaded from DB when tree loads)
+            verifications: formData.verifications || [],
+          },
+        };
 
         if (isNewNode) {
           // Create new node
           const newNode: UINavigationNode = {
-            ...formData,
-            id: formData.id || `node-${Date.now()}`,
-            position: formData.position || { x: 100, y: 100 },
+            ...formDataWithVerificationIds,
+            id: formDataWithVerificationIds.id || `node-${Date.now()}`,
+            position: formDataWithVerificationIds.position || { x: 100, y: 100 },
           };
 
           // Add node to nodes array (single source of truth)
@@ -158,7 +170,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           // Update existing node
           const updatedNodes = nodes.map((node) => {
             if (node.id === selectedNode.id) {
-              return { ...node, ...formData };
+              return { ...node, ...formDataWithVerificationIds };
             }
             return node;
           });

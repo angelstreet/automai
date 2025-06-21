@@ -27,7 +27,8 @@ export interface UINavigationNodeData {
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
 
   // NEW: Verification support
-  verifications?: Verification[]; // Array of verifications for this node
+  verifications?: Verification[]; // Array of verifications for this node (UI only)
+  verification_ids?: string[]; // Array of verification database IDs (persisted in tree)
 }
 
 // Define the navigation node type using ReactFlow's Node with our data type
@@ -102,6 +103,7 @@ export interface NodeForm {
 
   // Add verifications field to preserve during editing
   verifications?: Verification[];
+  verification_ids?: string[]; // Database IDs for persistence
 }
 
 // Updated EdgeForm interface for multiple actions

@@ -157,6 +157,39 @@ def get_all_verifications(team_id: str) -> Dict:
             'verifications': []
         }
 
+def get_verifications_by_ids(team_id: str, verification_ids: List[str]) -> Dict:
+    """
+    Get verifications by their database IDs.
+    
+    Args:
+        team_id: Team ID for RLS
+        verification_ids: List of verification IDs to load
+        
+    Returns:
+        Dict: {'success': bool, 'verifications': List[Dict], 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        print(f"[@db:verifications:get_verifications_by_ids] Getting {len(verification_ids)} verifications for team: {team_id}")
+        
+        # Use the 'in_' filter to get verifications by their IDs
+        result = supabase.table('verifications').select('*').eq('team_id', team_id).in_('id', verification_ids).execute()
+        
+        print(f"[@db:verifications:get_verifications_by_ids] Found {len(result.data)} verifications")
+        return {
+            'success': True,
+            'verifications': result.data
+        }
+        
+    except Exception as e:
+        print(f"[@db:verifications:get_verifications_by_ids] Error getting verifications: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'verifications': []
+        }
+
 def delete_verification(team_id: str, verification_id: str = None, name: str = None, device_model: str = None, verification_type: str = None) -> Dict:
     """
     Delete verification by ID or by identifiers.
