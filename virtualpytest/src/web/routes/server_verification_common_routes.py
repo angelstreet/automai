@@ -426,9 +426,9 @@ def save_text_reference():
                 'error': 'Team ID not found in request'
             }), 400
         
-        # Extract data from host response
+        # Extract data from host response and original request
         reference_name = host_response_data.get('reference_name')
-        model = host_response_data.get('model')
+        model = request_data.get('model')  # Get model from original request, not host response
         area = host_response_data.get('area')
         text_data = host_response_data.get('text_data', {})
         
