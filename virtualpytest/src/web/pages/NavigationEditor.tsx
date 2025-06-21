@@ -257,6 +257,46 @@ const NavigationEditorContent: React.FC = React.memo(() => {
     setCaptureMode(mode);
   }, []);
 
+  // Memoize the selectedHost to prevent unnecessary re-renders
+  const stableSelectedHost = useMemo(
+    () => selectedHost,
+    [selectedHost?.host_name, selectedHost?.device_model, selectedHost?.device_ip],
+  );
+
+  // Memoize the RemotePanel props to prevent unnecessary re-renders
+  const remotePanelProps = useMemo(
+    () => ({
+      host: stableSelectedHost,
+      onReleaseControl: handleDisconnectComplete,
+      streamCollapsed: isAVPanelCollapsed,
+      streamMinimized: isAVPanelMinimized,
+      captureMode: captureMode,
+    }),
+    [
+      stableSelectedHost,
+      handleDisconnectComplete,
+      isAVPanelCollapsed,
+      isAVPanelMinimized,
+      captureMode,
+    ],
+  );
+
+  // Memoize the HDMIStream props to prevent unnecessary re-renders
+  const hdmiStreamProps = useMemo(
+    () => ({
+      host: stableSelectedHost,
+      onCollapsedChange: handleAVPanelCollapsedChange,
+      onMinimizedChange: handleAVPanelMinimizedChange,
+      onCaptureModeChange: handleCaptureModeChange,
+    }),
+    [
+      stableSelectedHost,
+      handleAVPanelCollapsedChange,
+      handleAVPanelMinimizedChange,
+      handleCaptureModeChange,
+    ],
+  );
+
   // Reset AV panel to collapsed state when taking control (only on initial activation)
   const wasControlActiveRef = useRef(false);
   useEffect(() => {
@@ -343,6 +383,7 @@ const NavigationEditorContent: React.FC = React.memo(() => {
     lockNavigationTree,
     setupAutoUnlock,
     setCheckingLockState,
+    loadFromConfig,
   ]);
 
   // ========================================
@@ -367,7 +408,7 @@ const NavigationEditorContent: React.FC = React.memo(() => {
       }
       setHasUnsavedChanges(true);
     },
-    [setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode],
+    [nodes, setNodes, setSelectedNode, setHasUnsavedChanges, selectedNode],
   );
 
   // Wrapper for node form submission to handle the form data
@@ -398,7 +439,7 @@ const NavigationEditorContent: React.FC = React.memo(() => {
       }
       setHasUnsavedChanges(true);
     },
-    [setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge],
+    [edges, setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge],
   );
 
   // ========================================
@@ -605,14 +646,14 @@ const NavigationEditorContent: React.FC = React.memo(() => {
                     onEdit={() => {}}
                     onDelete={deleteSelected}
                     onAddChildren={() => {}}
-                    setNodeForm={setNodeForm}
+                    setNodeForm={setNodeForm as React.Dispatch<React.SetStateAction<NodeForm>>}
                     setIsNodeDialogOpen={setIsNodeDialogOpen}
                     onReset={resetNode}
                     treeId={currentTreeId || ''}
                     currentNodeId={focusNodeId || undefined}
                     onUpdateNode={handleUpdateNode}
                     isControlActive={isControlActive}
-                    selectedHost={selectedHost}
+                    selectedHost={selectedHost || undefined}
                   />
                 )}
 
@@ -622,11 +663,11 @@ const NavigationEditorContent: React.FC = React.memo(() => {
                     onClose={closeSelectionPanel}
                     onEdit={() => {}}
                     onDelete={deleteSelected}
-                    setEdgeForm={setEdgeForm}
+                    setEdgeForm={setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>}
                     setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                     onUpdateEdge={handleUpdateEdge}
                     isControlActive={isControlActive}
-                    selectedHost={selectedHost}
+                    selectedHost={selectedHost || undefined}
                   />
                 )}
               </>
@@ -638,31 +679,16 @@ const NavigationEditorContent: React.FC = React.memo(() => {
       </Box>
 
       {/* Autonomous Panels - Now self-positioning with configurable layouts */}
-      {showRemotePanel && selectedHost && (
-        <RemotePanel
-          host={selectedHost}
-          onReleaseControl={handleDisconnectComplete}
-          streamCollapsed={isAVPanelCollapsed}
-          streamMinimized={isAVPanelMinimized}
-          captureMode={captureMode}
-        />
-      )}
+      {showRemotePanel && selectedHost && <RemotePanel {...remotePanelProps} />}
 
-      {showAVPanel && selectedHost && (
-        <HDMIStream
-          host={selectedHost}
-          onCollapsedChange={handleAVPanelCollapsedChange}
-          onMinimizedChange={handleAVPanelMinimizedChange}
-          onCaptureModeChange={handleCaptureModeChange}
-        />
-      )}
+      {showAVPanel && selectedHost && <HDMIStream {...hdmiStreamProps} />}
 
       {/* Node Edit Dialog */}
       <NodeEditDialog
         isOpen={isNodeDialogOpen}
         nodeForm={nodeForm}
         nodes={nodes}
-        setNodeForm={setNodeForm}
+        setNodeForm={setNodeForm as (form: NodeForm | null) => void}
         onSubmit={handleNodeFormSubmitWrapper}
         onClose={cancelNodeChanges}
         onResetNode={() => selectedNode && resetNode(selectedNode.id)}
@@ -676,7 +702,7 @@ const NavigationEditorContent: React.FC = React.memo(() => {
         <EdgeEditDialog
           isOpen={isEdgeDialogOpen}
           edgeForm={edgeForm}
-          setEdgeForm={setEdgeForm}
+          setEdgeForm={setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>}
           onSubmit={handleEdgeFormSubmit}
           onClose={() => setIsEdgeDialogOpen(false)}
           selectedEdge={selectedEdge}
@@ -775,6 +801,17 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     navigationState.nodeForm,
     navigationState.edgeForm,
     navigationState.isNewNode,
+    // Add the setter functions to dependencies as they are referenced in the object
+    navigationState.setEdgeForm,
+    navigationState.setEdges,
+    navigationState.setHasUnsavedChanges,
+    navigationState.setIsEdgeDialogOpen,
+    navigationState.setIsNewNode,
+    navigationState.setIsNodeDialogOpen,
+    navigationState.setNodeForm,
+    navigationState.setNodes,
+    navigationState.setSelectedEdge,
+    navigationState.setSelectedNode,
   ]);
 
   // Memoize userInterface to prevent DeviceControlProvider re-renders

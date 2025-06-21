@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 
 import { useRegistrationLogic } from '../hooks/useRegistration';
 import { Host } from '../types/common/Host_Types';
@@ -63,7 +63,7 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     return availableHosts;
   }, [availableHosts]);
 
-  const value: RegistrationContextType = {
+  const value: RegistrationContextType = useMemo(() => ({
     // State
     availableHosts,
     selectedHost,
@@ -78,7 +78,19 @@ export const RegistrationProvider: React.FC<RegistrationProviderProps> = ({ chil
     // Convenience getters
     getHostByName,
     getAvailableHosts,
-  };
+  }), [
+    // Only include state values that actually change
+    availableHosts,
+    selectedHost,
+    isLoading,
+    error,
+    // Functions are already memoized with useCallback, so we can include them
+    fetchHosts,
+    selectHost,
+    clearSelection,
+    getHostByName,
+    getAvailableHosts,
+  ]);
 
   return <RegistrationContext.Provider value={value}>{children}</RegistrationContext.Provider>;
 };

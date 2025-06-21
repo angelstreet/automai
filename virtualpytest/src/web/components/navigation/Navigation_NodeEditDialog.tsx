@@ -14,13 +14,14 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Import proper types from navigationTypes
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 import { VerificationsList } from '../verification/VerificationsList';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { Verification } from '../../types/verification/VerificationTypes';
 import { useVerification } from '../../hooks/verification/useVerification';
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
 
@@ -73,53 +74,34 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [gotoResult, setGotoResult] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Initialize verifications from nodeForm when dialog opens
+  // Initialize verifications from nodeForm when dialog opens - ONLY ONCE
   useEffect(() => {
     if (isOpen && nodeForm?.verifications) {
-      // Only initialize if verifications are actually different to avoid clearing test results
-      const currentVerifications = verification.verifications;
-      const nodeVerifications = nodeForm.verifications;
-
-      // Deep comparison to check if verifications are actually different
-      const areVerificationsDifferent =
-        currentVerifications.length !== nodeVerifications.length ||
-        currentVerifications.some((current, index) => {
-          const node = nodeVerifications[index];
-          return (
-            !node ||
-            current.command !== node.command ||
-            current.verification_type !== node.verification_type ||
-            JSON.stringify(current.params) !== JSON.stringify(node.params)
-          );
-        });
-
-      if (areVerificationsDifferent) {
-        console.log(
-          `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
-          nodeForm.verifications,
-        );
-        verification.handleVerificationsChange(nodeForm.verifications);
-      } else {
-        console.log(
-          `[@component:NodeEditDialog] Skipping verification initialization - no changes detected`,
-        );
-      }
+      console.log(
+        `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
+        nodeForm.verifications,
+      );
+      verification.handleVerificationsChange(nodeForm.verifications);
     }
-  }, [isOpen, nodeForm?.verifications]);
+  }, [isOpen, verification.handleVerificationsChange]); // Add verification handler to prevent stale closures
 
-  // Update nodeForm when verifications change
-  useEffect(() => {
-    if (verification.verifications !== nodeForm?.verifications) {
+  // Handle verification changes by creating a custom handler that updates nodeForm
+  const handleVerificationsChange = useCallback(
+    (newVerifications: Verification[]) => {
       console.log(
         `[@component:NodeEditDialog] Updating nodeForm with new verifications:`,
-        verification.verifications,
+        newVerifications,
       );
+
+      // Update both the verification hook and the nodeForm
+      verification.handleVerificationsChange(newVerifications);
       setNodeForm({
         ...nodeForm,
-        verifications: verification.verifications,
+        verifications: newVerifications,
       });
-    }
-  }, [verification.verifications]);
+    },
+    [nodeForm, verification.handleVerificationsChange, setNodeForm],
+  );
 
   // Handle reference selection
   const handleReferenceSelected = (referenceName: string, referenceData: any) => {
@@ -589,7 +571,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           <VerificationsList
             verifications={verification.verifications}
             availableVerifications={verification.availableVerificationTypes}
-            onVerificationsChange={verification.handleVerificationsChange}
+            onVerificationsChange={handleVerificationsChange}
             loading={verification.loading}
             error={verification.error}
             model={verification.selectedHost?.device_model || model}

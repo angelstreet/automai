@@ -31,6 +31,30 @@ export function useAndroidMobile(host: Host) {
     host,
   );
 
+  // Memoize the host object to prevent unnecessary callback recreations
+  const stableHost = useMemo(() => {
+    return {
+      host_name: host.host_name,
+      device_model: host.device_model,
+      device_ip: host.device_ip,
+      device_name: host.device_name,
+      host_url: host.host_url,
+      // Include other essential host properties but exclude volatile ones
+      capabilities: host.capabilities,
+      controller_configs: host.controller_configs,
+      controller_types: host.controller_types,
+      available_actions: host.available_actions,
+      available_verification_types: host.available_verification_types,
+    };
+  }, [
+    host.host_name,
+    host.device_model,
+    host.device_ip,
+    host.device_name,
+    host.host_url,
+    // Only include stable properties in dependencies
+  ]);
+
   // Configuration
   const layoutConfig: AndroidMobileLayoutConfig = useMemo(
     () => ({
@@ -72,18 +96,18 @@ export function useAndroidMobile(host: Host) {
   // Track host object changes
   useEffect(() => {
     console.log('[@hook:useAndroidMobile] Host object changed:', {
-      host_name: host.host_name,
-      device_model: host.device_model,
-      device_ip: host.device_ip,
+      host_name: stableHost.host_name,
+      device_model: stableHost.device_model,
+      device_ip: stableHost.device_ip,
       timestamp: Date.now(),
     });
-  }, [host]);
+  }, [stableHost]);
 
   // API calls
   const dump = useCallback(async () => {
     console.log(
       '[@hook:useAndroidMobile] Starting UI dump (without screenshot) for host:',
-      host.host_name,
+      stableHost.host_name,
     );
     setIsDumpingUI(true);
 
@@ -91,7 +115,7 @@ export function useAndroidMobile(host: Host) {
       const response = await fetch('/server/remote/dump-ui', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host: host }),
+        body: JSON.stringify({ host: stableHost }),
       });
       const result = await response.json();
 
@@ -113,17 +137,17 @@ export function useAndroidMobile(host: Host) {
     } finally {
       setIsDumpingUI(false);
     }
-  }, [host]);
+  }, [stableHost]);
 
   const getApps = useCallback(async () => {
-    console.log('[@hook:useAndroidMobile] Getting apps for host:', host.host_name);
+    console.log('[@hook:useAndroidMobile] Getting apps for host:', stableHost.host_name);
     setIsRefreshingApps(true);
 
     try {
       const response = await fetch('/server/remote/get-apps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host: host }),
+        body: JSON.stringify({ host: stableHost }),
       });
       const result = await response.json();
 
@@ -141,7 +165,7 @@ export function useAndroidMobile(host: Host) {
     } finally {
       setIsRefreshingApps(false);
     }
-  }, [host]);
+  }, [stableHost]);
 
   const clickElement = useCallback(
     async (element: AndroidElement) => {
@@ -152,7 +176,7 @@ export function useAndroidMobile(host: Host) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: host,
+            host: stableHost,
             elementId: element.id.toString(),
           }),
         });
@@ -170,7 +194,7 @@ export function useAndroidMobile(host: Host) {
         return { success: false, error: error };
       }
     },
-    [host],
+    [stableHost],
   );
 
   const executeCommand = useCallback(
@@ -182,7 +206,7 @@ export function useAndroidMobile(host: Host) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: host,
+            host: stableHost,
             command,
             params,
           }),
@@ -201,7 +225,7 @@ export function useAndroidMobile(host: Host) {
         return { success: false, error: error };
       }
     },
-    [host],
+    [stableHost],
   );
 
   // Business logic
@@ -308,8 +332,8 @@ export function useAndroidMobile(host: Host) {
     // Session info for backward compatibility
     session: {
       connected: isConnected,
-      device_ip: host.host_name,
-      connectionInfo: `Connected to ${host.device_name}`,
+      device_ip: stableHost.host_name,
+      connectionInfo: `Connected to ${stableHost.device_name}`,
     },
   };
 }

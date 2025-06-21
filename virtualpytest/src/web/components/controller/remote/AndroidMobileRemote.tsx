@@ -577,20 +577,48 @@ export const AndroidMobileRemote = React.memo(
     );
   },
   (prevProps, nextProps) => {
-    // Only re-render if host object properties or stream props have actually changed
-    return (
-      prevProps.host?.host_name === nextProps.host?.host_name &&
-      prevProps.host?.device_model === nextProps.host?.device_model &&
-      prevProps.host?.device_ip === nextProps.host?.device_ip &&
-      prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
-      JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
-      prevProps.isCollapsed === nextProps.isCollapsed &&
-      prevProps.panelWidth === nextProps.panelWidth &&
-      prevProps.panelHeight === nextProps.panelHeight &&
-      JSON.stringify(prevProps.deviceResolution) === JSON.stringify(nextProps.deviceResolution) &&
-      prevProps.streamCollapsed === nextProps.streamCollapsed &&
-      prevProps.streamMinimized === nextProps.streamMinimized &&
-      prevProps.captureMode === nextProps.captureMode
-    );
+    // Custom comparison function to prevent unnecessary re-renders
+    const hostChanged = JSON.stringify(prevProps.host) !== JSON.stringify(nextProps.host);
+    const sxChanged = JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx);
+    const isCollapsedChanged = prevProps.isCollapsed !== nextProps.isCollapsed;
+    const panelWidthChanged = prevProps.panelWidth !== nextProps.panelWidth;
+    const panelHeightChanged = prevProps.panelHeight !== nextProps.panelHeight;
+    const deviceResolutionChanged =
+      JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution);
+    const streamCollapsedChanged = prevProps.streamCollapsed !== nextProps.streamCollapsed;
+    const streamMinimizedChanged = prevProps.streamMinimized !== nextProps.streamMinimized;
+    const captureModeChanged = prevProps.captureMode !== nextProps.captureMode;
+    const onDisconnectCompleteChanged =
+      prevProps.onDisconnectComplete !== nextProps.onDisconnectComplete;
+
+    // Return true if props are equal (don't re-render), false if they changed (re-render)
+    const shouldSkipRender =
+      !hostChanged &&
+      !sxChanged &&
+      !isCollapsedChanged &&
+      !panelWidthChanged &&
+      !panelHeightChanged &&
+      !deviceResolutionChanged &&
+      !streamCollapsedChanged &&
+      !streamMinimizedChanged &&
+      !captureModeChanged &&
+      !onDisconnectCompleteChanged;
+
+    if (!shouldSkipRender) {
+      console.log(`[@component:AndroidMobileRemote] Re-rendering due to prop changes:`, {
+        hostChanged,
+        sxChanged,
+        isCollapsedChanged,
+        panelWidthChanged,
+        panelHeightChanged,
+        deviceResolutionChanged,
+        streamCollapsedChanged,
+        streamMinimizedChanged,
+        captureModeChanged,
+        onDisconnectCompleteChanged,
+      });
+    }
+
+    return shouldSkipRender;
   },
 );
