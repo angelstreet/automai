@@ -13,7 +13,56 @@ def get_supabase():
     """Get the Supabase client instance."""
     return get_supabase_client()
 
-def save_verification(name: str, device_model: str, verification_type: str, command: str, team_id: str, parameters: Dict = None, timeout: int = None, r2_path: str = None, r2_url: str = None, area: Dict = None) -> Dict:
+def find_existing_verification(team_id: str, device_model: str, verification_type: str, command: str, parameters: Dict = None) -> Dict:
+    """
+    Find existing verification with the same parameters to avoid duplicates.
+    
+    Args:
+        team_id: Team ID for RLS
+        device_model: Device model (e.g., 'android_mobile')
+        verification_type: Verification type ('adb', 'image', 'text', etc.)
+        command: The verification command
+        parameters: Parameters to match (includes timeout if applicable)
+        
+    Returns:
+        Dict: {'success': bool, 'verification': Dict | None, 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        print(f"[@db:verifications:find_existing_verification] Looking for existing verification: {verification_type}/{command}")
+        
+        # Query for verifications with matching basic criteria
+        result = supabase.table('verifications').select('*').eq('team_id', team_id).eq('device_model', device_model).eq('verification_type', verification_type).eq('command', command).execute()
+        
+        if result.data:
+            # Check for exact parameter match (timeout is included in parameters)
+            for verification in result.data:
+                existing_params = verification.get('parameters', {})
+                
+                # Compare parameters (which includes timeout)
+                if existing_params == (parameters or {}):
+                    print(f"[@db:verifications:find_existing_verification] Found matching verification: {verification['id']}")
+                    return {
+                        'success': True,
+                        'verification': verification
+                    }
+        
+        print(f"[@db:verifications:find_existing_verification] No matching verification found")
+        return {
+            'success': True,
+            'verification': None
+        }
+        
+    except Exception as e:
+        print(f"[@db:verifications:find_existing_verification] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'verification': None
+        }
+
+def save_verification(name: str, device_model: str, verification_type: str, command: str, team_id: str, parameters: Dict = None) -> Dict:
     """
     Save verification definition to database.
     
@@ -23,51 +72,65 @@ def save_verification(name: str, device_model: str, verification_type: str, comm
         verification_type: Verification type ('adb', 'image', 'text', etc.)
         command: The verification command/search term
         team_id: Team ID for RLS
-        parameters: Additional parameters (optional)
-        timeout: Timeout in milliseconds (optional)
-        r2_path: Path in R2 storage (for image verifications)
-        r2_url: Complete R2 URL (for image verifications)
-        area: Area coordinates (for image verifications)
+        parameters: JSONB parameters including timeout, references, etc. (optional)
         
     Returns:
-        Dict: {'success': bool, 'verification_id': str, 'error': str}
+        Dict: {'success': bool, 'verification_id': str, 'verification': Dict, 'reused': bool, 'error': str}
     """
     try:
+        # First, check if a verification with the same parameters already exists
+        existing_result = find_existing_verification(
+            team_id=team_id,
+            device_model=device_model,
+            verification_type=verification_type,
+            command=command,
+            parameters=parameters
+        )
+        
+        if not existing_result['success']:
+            return existing_result
+        
+        if existing_result['verification']:
+            # Reuse existing verification
+            existing_verification = existing_result['verification']
+            print(f"[@db:verifications:save_verification] Reusing existing verification: {existing_verification['id']}")
+            return {
+                'success': True,
+                'verification_id': existing_verification['id'],
+                'verification': existing_verification,
+                'reused': True
+            }
+        
+        # No existing verification found, create a new one
         supabase = get_supabase()
         
-        # Prepare verification data
+        # Prepare verification data - only store essential fields
         verification_data = {
             'name': name,
             'device_model': device_model,
             'verification_type': verification_type,
             'command': command,
             'team_id': team_id,
-            'parameters': parameters,  # Store as JSONB directly
-            'timeout': timeout,
-            'r2_path': r2_path,
-            'r2_url': r2_url,
-            'area': area,  # Store as JSONB directly
+            'parameters': parameters or {},  # Store as JSONB directly (includes timeout, references, etc.)
             'updated_at': datetime.now().isoformat()
         }
         
-        print(f"[@db:verifications:save_verification] Saving verification: {name} ({verification_type}) for model: {device_model}")
+        print(f"[@db:verifications:save_verification] Creating new verification: {name} ({verification_type}) for model: {device_model}")
         
-        # Use upsert to handle duplicates (INSERT or UPDATE)
-        result = supabase.table('verifications').upsert(
-            verification_data,
-            on_conflict='team_id,name,device_model,verification_type'
-        ).execute()
+        # Use insert since we checked for duplicates already
+        result = supabase.table('verifications').insert(verification_data).execute()
         
         if result.data:
             saved_verification = result.data[0]
-            print(f"[@db:verifications:save_verification] Successfully saved verification: {saved_verification['id']}")
+            print(f"[@db:verifications:save_verification] Successfully created verification: {saved_verification['id']}")
             return {
                 'success': True,
                 'verification_id': saved_verification['id'],
-                'verification': saved_verification
+                'verification': saved_verification,
+                'reused': False
             }
         else:
-            print(f"[@db:verifications:save_verification] No data returned from upsert")
+            print(f"[@db:verifications:save_verification] No data returned from insert")
             return {
                 'success': False,
                 'error': 'No data returned from database'

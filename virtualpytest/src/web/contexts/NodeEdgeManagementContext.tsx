@@ -109,19 +109,17 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                   device_model: verification.device_model || 'android_mobile',
                   verification_type: verification.verification_type || 'image',
                   command: verification.command || '',
-                  parameters: verification.params || {},
-                  timeout: verification.params?.timeout || null,
-                  // Optional fields for image verifications with references
-                  r2_path: verification.params?.image_path || null,
-                  r2_url: verification.params?.image_url || null,
-                  area: verification.params?.area || null,
+                  parameters: verification.params || {}, // All verification data goes in parameters
                 }),
               });
 
               const result = await response.json();
               if (result.success) {
+                const message = result.reused
+                  ? 'Reused existing verification'
+                  : 'Saved new verification';
                 console.log(
-                  `[@context:NodeEdgeManagementProvider] Saved verification to database: ${result.verification_id}`,
+                  `[@context:NodeEdgeManagementProvider] ${message}: ${result.verification_id}`,
                 );
                 // Store the database ID in the verification for future reference
                 verification._db_id = result.verification_id;
@@ -142,13 +140,29 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
         // Step 2: Update node in memory with verification IDs for tree persistence
         // We store only verification IDs in the tree, not full verification objects
+
+        // Extract verification IDs from verifications that have been saved to database
+        const verificationIds =
+          formData.verifications?.map((v: any) => v._db_id).filter(Boolean) || [];
+
+        console.log(
+          `[@context:NodeEdgeManagementProvider] Verification IDs for tree storage:`,
+          verificationIds,
+        );
+        console.log(
+          `[@context:NodeEdgeManagementProvider] Full verification objects:`,
+          formData.verifications?.map((v: any) => ({
+            type: v.verification_type,
+            _db_id: v._db_id,
+          })),
+        );
+
         const formDataWithVerificationIds = {
           ...formData,
           data: {
             ...formData.data,
             // Store only verification IDs in the tree
-            verification_ids:
-              formData.verifications?.map((v: any) => v._db_id).filter(Boolean) || [],
+            verification_ids: verificationIds,
             // Keep full verification objects for UI (will be reloaded from DB when tree loads)
             verifications: formData.verifications || [],
           },

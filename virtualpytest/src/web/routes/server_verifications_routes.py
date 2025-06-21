@@ -11,7 +11,8 @@ from src.lib.supabase.verifications_db import (
     get_verifications, 
     delete_verification, 
     get_all_verifications,
-    get_verifications_by_ids
+    get_verifications_by_ids,
+    find_existing_verification
 )
 from src.lib.supabase.verifications_references_db import (
     save_reference,
@@ -101,8 +102,13 @@ def save_verification_endpoint():
         "device_model": "android_mobile", 
         "verification_type": "image" | "text" | "adb" | "appium" | "audio" | "video",
         "command": "verification_command",
-        "parameters": {...}, // Optional parameters
-        "timeout": 5000 // Optional timeout in ms
+        "parameters": {
+            "timeout": 5000,           // Optional timeout in ms
+            "search_term": "text",     // For text/adb verifications
+            "reference_id": "uuid",    // For image verifications (links to references table)
+            "check_interval": 1000,    // Optional check interval
+            // ... other verification-specific parameters
+        }
     }
     """
     try:
@@ -135,18 +141,16 @@ def save_verification_endpoint():
             verification_type=data['verification_type'],
             command=data['command'],
             team_id=team_id,
-            parameters=data.get('parameters'),
-            timeout=data.get('timeout'),
-            r2_path=data.get('r2_path'),  # Optional for image verifications
-            r2_url=data.get('r2_url'),    # Optional for image verifications
-            area=data.get('area')         # Optional for image verifications
+            parameters=data.get('parameters')  # All verification data (timeout, references, etc.) goes in parameters
         )
         
         if result['success']:
+            message = 'Verification reused from existing' if result.get('reused') else 'Verification saved successfully'
             return jsonify({
                 'success': True,
-                'message': 'Verification saved successfully',
-                'verification_id': result.get('verification_id')
+                'message': message,
+                'verification_id': result.get('verification_id'),
+                'reused': result.get('reused', False)
             })
         else:
             return jsonify({

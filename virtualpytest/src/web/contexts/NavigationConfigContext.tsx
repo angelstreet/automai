@@ -336,11 +336,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                     const nodeVerification = {
                       verification_type: verification.verification_type,
                       command: verification.command,
-                      params: {
-                        ...(verification.parameters || {}),
-                        // Ensure timeout is in params for UI consistency
-                        timeout: verification.timeout,
-                      },
+                      params: verification.parameters || {}, // Parameters already contain timeout and references
                       device_model: verification.device_model,
                       // Add database metadata
                       _db_id: verification.id,
