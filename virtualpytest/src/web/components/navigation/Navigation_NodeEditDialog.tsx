@@ -18,12 +18,11 @@ import React, { useState, useEffect } from 'react';
 
 // Import proper types from navigationTypes
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
-import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationsList } from '../verification/VerificationsList';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { useVerification } from '../../hooks/verification/useVerification';
 import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-// ❌ REMOVED: Direct database access - using API endpoints instead
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
@@ -42,20 +41,44 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     return null;
   }
 
-  const [verifications, setVerifications] = useState<Verifications>({});
-  const [loadingVerifications, setLoadingVerifications] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
-  const [isRunningVerifications, setIsRunningVerifications] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<string | null>(null);
-  const [isRunningGoto, setIsRunningGoto] = useState(false);
-  const [gotoResult, setGotoResult] = useState<string | null>(null);
-  const [referenceSaveCounter, setReferenceSaveCounter] = useState(0);
+  // Use the same verification hooks as VerificationEditor
+  const verification = useVerification({
+    selectedHost: selectedHost || ({} as Host),
+    captureSourcePath: undefined, // NodeEditDialog doesn't capture images
+  });
 
-  // Use verification references hook
   const { getModelReferences, referencesLoading } = useVerificationReferences(
-    referenceSaveCounter,
+    0, // No save counter needed since we don't create references
     selectedHost,
   );
+
+  const [isRunningGoto, setIsRunningGoto] = useState(false);
+  const [gotoResult, setGotoResult] = useState<string | null>(null);
+
+  // Initialize verifications from nodeForm when dialog opens
+  useEffect(() => {
+    if (isOpen && nodeForm?.verifications) {
+      console.log(
+        `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
+        nodeForm.verifications,
+      );
+      verification.handleVerificationsChange(nodeForm.verifications);
+    }
+  }, [isOpen, nodeForm?.verifications]);
+
+  // Update nodeForm when verifications change
+  useEffect(() => {
+    if (verification.verifications !== nodeForm?.verifications) {
+      console.log(
+        `[@component:NodeEditDialog] Updating nodeForm with new verifications:`,
+        verification.verifications,
+      );
+      setNodeForm({
+        ...nodeForm,
+        verifications: verification.verifications,
+      });
+    }
+  }, [verification.verifications]);
 
   // Handle reference selection
   const handleReferenceSelected = (referenceName: string, referenceData: any) => {
@@ -63,29 +86,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     // Reference selection is handled internally by VerificationsList
   };
 
-  // Utility function to update last run results (keeps last 10 results)
-  const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
-    const updatedResults = [newResult, ...results];
-    return updatedResults.slice(0, 10); // Keep only last 10 results
-  };
-
-  // Calculate confidence score from last run results (0-1 scale)
-  const calculateConfidenceScore = (results?: boolean[]): number => {
-    if (!results || results.length === 0) return 0.5; // Default confidence for new verifications
-    const successCount = results.filter((result) => result).length;
-    return successCount / results.length;
-  };
-
-  // Use same logic as EdgeEditDialog
-  const canRunVerifications =
-    isControlActive &&
-    selectedHost &&
-    nodeForm?.verifications &&
-    nodeForm.verifications.length > 0 &&
-    !isRunningVerifications;
-
   // Can run goto if we have control and device, and not already running goto
-  const canRunGoto = isControlActive && selectedHost && !isRunningGoto && !isRunningVerifications;
+  const canRunGoto = isControlActive && selectedHost && !isRunningGoto && !verification.loading;
 
   // Helper function to get parent names from IDs
   const getParentNames = (parentIds: string[]): string => {
@@ -102,48 +104,25 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
-      setVerificationResult(null);
       setGotoResult(null);
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen && selectedHost?.available_verification_types) {
-      console.log(`[@component:NodeEditDialog] Loading verifications from host data`);
-      console.log(
-        `[@component:NodeEditDialog] Node has ${nodeForm?.verifications?.length || 0} existing verifications:`,
-        nodeForm?.verifications,
-      );
-      setVerifications(selectedHost.available_verification_types);
-      setLoadingVerifications(false);
-      setVerificationError(null);
-    } else if (isOpen && selectedHost && !selectedHost.available_verification_types) {
-      console.log(`[@component:NodeEditDialog] No verification types available from host`);
-      console.log(
-        `[@component:NodeEditDialog] Node has ${nodeForm?.verifications?.length || 0} existing verifications:`,
-        nodeForm?.verifications,
-      );
-      setVerifications({});
-      setLoadingVerifications(false);
-      setVerificationError('No verification types available from host');
-    }
-  }, [isOpen, selectedHost, nodeForm?.verifications]);
-
   const isFormValid = () => {
     const basicFormValid = nodeForm?.label?.trim();
     const verificationsValid =
-      !nodeForm?.verifications ||
-      nodeForm.verifications.every((verification) => {
+      !verification.verifications ||
+      verification.verifications.every((verificationItem) => {
         // Skip verifications that don't have a command (not configured yet)
-        if (!verification.command) return true;
+        if (!verificationItem.command) return true;
 
-        if (verification.verification_type === 'image') {
+        if (verificationItem.verification_type === 'image') {
           // Image verifications need a reference image
-          const hasImagePath = verification.params?.image_path;
+          const hasImagePath = verificationItem.params?.image_path;
           return Boolean(hasImagePath);
-        } else if (verification.verification_type === 'text') {
+        } else if (verificationItem.verification_type === 'text') {
           // Text verifications need text to search for
-          const hasText = verification.params?.text;
+          const hasText = verificationItem.params?.text;
           return Boolean(hasText);
         }
 
@@ -154,198 +133,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const handleRunVerifications = async () => {
-    if (!nodeForm?.verifications || nodeForm.verifications.length === 0) return;
-
-    if (!selectedHost) {
-      setVerificationResult('❌ No host device selected');
-      return;
-    }
-
-    console.log('[@component:NodeEditDialog] === VERIFICATION TEST DEBUG ===');
-    console.log(
-      '[@component:NodeEditDialog] Number of verifications before filtering:',
-      nodeForm.verifications.length,
-    );
-
-    // Filter out empty/invalid verifications before testing
-    const validVerifications = nodeForm.verifications.filter((verification, index) => {
-      // Check if verification has a command (is configured)
-      if (!verification.command || verification.command.trim() === '') {
-        console.log(
-          `[@component:NodeEditDialog] Removing verification ${index}: No verification type selected`,
-        );
-        return false;
-      }
-
-      // Check if verification has required input based on verification type
-      if (verification.verification_type === 'image') {
-        // Image verifications need a reference image
-        const hasImagePath = verification.params?.image_path;
-        if (!hasImagePath) {
-          console.log(
-            `[@component:NodeEditDialog] Removing verification ${index}: No image reference specified`,
-          );
-          return false;
-        }
-      } else if (verification.verification_type === 'text') {
-        // Text verifications need text to search for
-        const hasText = verification.params?.text;
-        if (!hasText) {
-          console.log(
-            `[@component:NodeEditDialog] Removing verification ${index}: No text specified`,
-          );
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Update verifications list if any were filtered out
-    if (validVerifications.length !== nodeForm.verifications.length) {
-      console.log(
-        `[@component:NodeEditDialog] Filtered out ${nodeForm.verifications.length - validVerifications.length} empty verifications`,
-      );
-      setNodeForm({
-        ...nodeForm,
-        verifications: validVerifications,
-      });
-
-      // Show message about removed verifications
-      if (validVerifications.length === 0) {
-        setVerificationResult(
-          'All verifications were empty and have been removed. Please add valid verifications.',
-        );
-        return;
-      }
-    }
-
-    console.log(
-      '[@component:NodeEditDialog] Number of valid verifications:',
-      validVerifications.length,
-    );
-
-    setIsRunningVerifications(true);
-    setVerificationResult(null);
-
-    try {
-      // Step 1: Take screenshot first (capture-first approach)
-      console.log('[@component:NodeEditDialog] Taking screenshot before verification...');
-      const screenshotResponse = await fetch('/server/navigation/save-screenshot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: selectedHost,
-          filename: `${nodeForm?.label || 'node'}_verification`, // Use node name for verification screenshot
-        }),
-      });
-
-      const screenshotResult = await screenshotResponse.json();
-
-      if (!screenshotResult.success || !screenshotResult.filename) {
-        setVerificationResult('❌ Failed to capture screenshot for verification');
-        return;
-      }
-
-      console.log('[@component:NodeEditDialog] Screenshot captured:', screenshotResult.filename);
-
-      // Step 2: Execute verifications using the captured screenshot
-      let results: string[] = [];
-      // ❌ REMOVED: No longer updating verification confidence // Use filtered verifications
-      let executionStopped = false;
-
-      // Show message about removed verifications if any
-      if (validVerifications.length !== nodeForm.verifications.length) {
-        results.push(
-          `ℹ️ Removed ${nodeForm.verifications.length - validVerifications.length} empty verification(s)`,
-        );
-        results.push('');
-      }
-
-      for (let i = 0; i < validVerifications.length; i++) {
-        const verification = validVerifications[i];
-
-        console.log(
-          `[@component:NodeEditDialog] Executing verification ${i + 1}/${validVerifications.length}: ${verification.command}`,
-        );
-
-        const verificationToExecute = {
-          ...verification,
-          params: { ...verification.params },
-        };
-
-        let verificationSuccess = false;
-
-        try {
-          // Use server route for verification execution with actual screenshot
-          const response = await fetch(`/server/verification/batch/execute`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              host: selectedHost, // Use full host object (like VerificationEditor)
-              verifications: [verificationToExecute],
-              source_filename: screenshotResult.filename, // Use actual screenshot filename
-            }),
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-            results.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-            verificationSuccess = true;
-          } else {
-            results.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
-            verificationSuccess = false;
-          }
-        } catch (err: any) {
-          results.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
-          verificationSuccess = false;
-        }
-
-        // ❌ REMOVED: Confidence tracking moved to database
-        // TODO: Add database reporting in Step 2
-
-        console.log(
-          `[@component:NodeEditDialog] Verification ${i + 1} completed. Success: ${verificationSuccess}`,
-        );
-
-        // Stop execution if verification failed
-        if (!verificationSuccess) {
-          results.push(`⏹️ Execution stopped due to failed verification ${i + 1}`);
-          executionStopped = true;
-          break;
-        }
-
-        // Small delay between verifications
-        await delay(1000);
-      }
-
-      // ❌ REMOVED: No longer updating verification confidence in node form
-
-      setVerificationResult(results.join('\n'));
-
-      if (executionStopped) {
-        console.log(`[@component:NodeEditDialog] Verification execution stopped due to failure`);
-      } else {
-        console.log(`[@component:NodeEditDialog] All verifications completed successfully`);
-      }
-    } catch (err: any) {
-      console.error('[@component:NodeEditDialog] Error executing verifications:', err);
-      setVerificationResult(`❌ ${err.message}`);
-    } finally {
-      setIsRunningVerifications(false);
-    }
-  };
-
   const handleRunGoto = async () => {
     setIsRunningGoto(true);
     setGotoResult(null);
-    setVerificationResult(null);
 
     try {
       let gotoResults: string[] = [];
@@ -450,7 +240,11 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       // Step 2: Execute Verifications (only if navigation succeeded)
       let verificationSuccess = true;
 
-      if (navigationSuccess && nodeForm?.verifications && nodeForm.verifications.length > 0) {
+      if (
+        navigationSuccess &&
+        verification.verifications &&
+        verification.verifications.length > 0
+      ) {
         gotoResults.push('\n🔍 Running node verifications...');
         console.log(
           `[@component:NodeEditDialog] Starting verifications after successful navigation`,
@@ -459,10 +253,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         // Small delay before verifications
         await delay(1500);
 
-        for (let i = 0; i < nodeForm.verifications.length; i++) {
-          const verification = nodeForm.verifications[i];
+        for (let i = 0; i < verification.verifications.length; i++) {
+          const verificationItem = verification.verifications[i];
 
-          if (!verification.command) {
+          if (!verificationItem.command) {
             gotoResults.push(`❌ Verification ${i + 1}: No verification selected`);
             verificationSuccess = false;
 
@@ -470,16 +264,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             const failedVerificationRecord = {
               execution_category: 'verification',
               execution_type:
-                verification.verification_type === 'adb'
+                verificationItem.verification_type === 'adb'
                   ? 'adb_verification'
-                  : `${verification.verification_type || 'image'}_verification`,
+                  : `${verificationItem.verification_type || 'image'}_verification`,
               initiator_type: 'node',
               initiator_id: nodeForm?.id || 'unknown',
               initiator_name: nodeForm?.label || 'Unknown Node',
               host_name: selectedHost?.host_name || 'unknown',
               device_model: selectedHost?.device_model,
               command: 'No verification selected',
-              parameters: verification.params || {},
+              parameters: verificationItem.params || {},
               execution_order: executionOrder++,
               success: false,
               message: 'No verification selected',
@@ -491,12 +285,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           }
 
           console.log(
-            `[@component:NodeEditDialog] Executing verification ${i + 1}/${nodeForm.verifications.length}: ${verification.command}`,
+            `[@component:NodeEditDialog] Executing verification ${i + 1}/${verification.verifications.length}: ${verificationItem.command}`,
           );
 
           const verificationToExecute = {
-            ...verification,
-            params: { ...verification.params },
+            ...verificationItem,
+            params: { ...verificationItem.params },
           };
 
           let individualVerificationSuccess = false;
@@ -529,16 +323,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               const verificationRecord = {
                 execution_category: 'verification',
                 execution_type:
-                  verification.verification_type === 'adb'
+                  verificationItem.verification_type === 'adb'
                     ? 'adb_verification'
-                    : `${verification.verification_type || 'image'}_verification`,
+                    : `${verificationItem.verification_type || 'image'}_verification`,
                 initiator_type: 'node',
                 initiator_id: nodeForm?.id || 'unknown',
                 initiator_name: nodeForm?.label || 'Unknown Node',
                 host_name: selectedHost.host_name,
                 device_model: selectedHost.device_model,
-                command: verification.command,
-                parameters: verification.params || {},
+                command: verificationItem.command,
+                parameters: verificationItem.params || {},
                 source_filename: 'verification_screenshot.jpg',
                 execution_order: executionOrder++,
                 success: result.success,
@@ -568,16 +362,16 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             const failedVerificationRecord = {
               execution_category: 'verification',
               execution_type:
-                verification.verification_type === 'adb'
+                verificationItem.verification_type === 'adb'
                   ? 'adb_verification'
-                  : `${verification.verification_type || 'image'}_verification`,
+                  : `${verificationItem.verification_type || 'image'}_verification`,
               initiator_type: 'node',
               initiator_id: nodeForm?.id || 'unknown',
               initiator_name: nodeForm?.label || 'Unknown Node',
               host_name: selectedHost?.host_name || 'unknown',
               device_model: selectedHost?.device_model,
-              command: verification.command,
-              parameters: verification.params || {},
+              command: verificationItem.command,
+              parameters: verificationItem.params || {},
               execution_order: executionOrder++,
               success: false,
               message: err.message || 'Network error',
@@ -596,7 +390,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         }
       } else if (
         navigationSuccess &&
-        (!nodeForm?.verifications || nodeForm.verifications.length === 0)
+        (!verification.verifications || verification.verifications.length === 0)
       ) {
         gotoResults.push('ℹ️ No verifications configured for this node');
       }
@@ -643,7 +437,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       if (overallSuccess) {
         gotoResults.push('🎉 Goto operation completed successfully!');
         gotoResults.push(`✅ Navigation: Success`);
-        gotoResults.push(`✅ Verifications: ${nodeForm?.verifications?.length || 0} passed`);
+        gotoResults.push(`✅ Verifications: ${verification.verifications?.length || 0} passed`);
       } else {
         gotoResults.push('⚠️ Goto operation completed with issues:');
         gotoResults.push(
@@ -743,20 +537,22 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Verification Section - always available after capture-first implementation */}
+          {/* Verification Section - using same hooks as VerificationEditor */}
           <VerificationsList
-            verifications={nodeForm?.verifications || []}
-            availableVerifications={verifications}
-            onVerificationsChange={(verifications) => setNodeForm({ ...nodeForm, verifications })}
-            loading={loadingVerifications}
-            error={verificationError}
-            model={selectedHost?.device_model || model}
-            selectedHost={selectedHost}
-            onTest={handleRunVerifications}
-            testResults={[]} // Node edit dialog doesn't show individual test results
-            reloadTrigger={referenceSaveCounter}
+            verifications={verification.verifications}
+            availableVerifications={verification.availableVerificationTypes}
+            onVerificationsChange={verification.handleVerificationsChange}
+            loading={verification.loading}
+            error={verification.error}
+            model={verification.selectedHost?.device_model || model}
+            selectedHost={verification.selectedHost}
+            onTest={verification.handleTest}
+            testResults={verification.testResults}
+            reloadTrigger={0}
             onReferenceSelected={handleReferenceSelected}
-            modelReferences={getModelReferences(selectedHost?.device_model || model || '')}
+            modelReferences={getModelReferences(
+              verification.selectedHost?.device_model || model || '',
+            )}
             referencesLoading={referencesLoading}
           />
 
@@ -780,22 +576,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             </Box>
           )}
 
-          {verificationResult && (
-            <Box
-              sx={{
-                p: 2,
-                bgcolor: verificationResult.includes('❌') ? 'error.light' : 'success.light',
-                borderRadius: 1,
-                maxHeight: 200,
-                overflow: 'auto',
-              }}
-            >
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {verificationResult}
-              </Typography>
-            </Box>
-          )}
-
           {/* Entry node note */}
           {nodeForm?.type === 'entry' && (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
@@ -815,12 +595,25 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           Save
         </Button>
         <Button
-          onClick={handleRunVerifications}
+          onClick={verification.handleTest}
           variant="contained"
-          disabled={!canRunVerifications}
-          sx={{ opacity: !canRunVerifications ? 0.5 : 1 }}
+          disabled={
+            !isControlActive ||
+            !selectedHost ||
+            verification.verifications.length === 0 ||
+            verification.loading
+          }
+          sx={{
+            opacity:
+              !isControlActive ||
+              !selectedHost ||
+              verification.verifications.length === 0 ||
+              verification.loading
+                ? 0.5
+                : 1,
+          }}
         >
-          {isRunningVerifications ? 'Running...' : 'Run'}
+          {verification.loading ? 'Running...' : 'Run'}
         </Button>
         <Button
           onClick={handleRunGoto}
