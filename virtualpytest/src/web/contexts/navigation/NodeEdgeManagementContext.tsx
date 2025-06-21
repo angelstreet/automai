@@ -101,12 +101,31 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
         // Step 1: Save verifications to database and get their IDs
         const verificationIds: string[] = [];
 
-        if (formData.verifications && formData.verifications.length > 0) {
+        console.log(
+          '[@context:NodeEdgeManagementProvider] Checking for verifications in formData:',
+        );
+        console.log(
+          '[@context:NodeEdgeManagementProvider] formData.verifications:',
+          formData.verifications,
+        );
+        console.log(
+          '[@context:NodeEdgeManagementProvider] formData.data?.verifications:',
+          formData.data?.verifications,
+        );
+
+        // Check both possible locations for verifications
+        const verificationsToSave = formData.verifications || formData.data?.verifications;
+        console.log(
+          '[@context:NodeEdgeManagementProvider] verificationsToSave:',
+          verificationsToSave,
+        );
+
+        if (verificationsToSave && verificationsToSave.length > 0) {
           console.log(
-            `[@context:NodeEdgeManagementProvider] Saving ${formData.verifications.length} verifications to database`,
+            `[@context:NodeEdgeManagementProvider] Saving ${verificationsToSave.length} verifications to database`,
           );
 
-          for (const verification of formData.verifications) {
+          for (const verification of verificationsToSave) {
             try {
               const response = await fetch('/server/verifications/save-verification', {
                 method: 'POST',
