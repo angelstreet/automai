@@ -361,6 +361,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                   variant="outlined"
                   sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
                   onClick={handleEdit}
+                  disabled={!isControlActive || !selectedHost}
+                  title={
+                    !isControlActive || !selectedHost ? 'Device control required to edit nodes' : ''
+                  }
                 >
                   Edit
                 </Button>

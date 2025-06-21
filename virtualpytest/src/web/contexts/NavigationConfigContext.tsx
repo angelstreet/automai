@@ -301,7 +301,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               );
 
               // Get userInterface to determine device model
-              const uiResponse = await fetch(`/server/userinterfaces/${userInterfaceId}`);
+              const uiResponse = await fetch(
+                `/server/navigation/userinterfaces/${userInterfaceId}`,
+              );
               if (uiResponse.ok) {
                 const uiData = await uiResponse.json();
                 const deviceModel = uiData.userinterface?.models?.[0] || 'android_mobile';
@@ -504,7 +506,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
     // List available user interfaces
     const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
       try {
-        const response = await fetch('/server/userinterfaces/list');
+        const response = await fetch('/server/navigation/userinterfaces');
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -512,11 +514,8 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         const data = await response.json();
 
-        if (data.success) {
-          return data.userinterfaces || [];
-        } else {
-          throw new Error(data.message || 'Failed to list available user interfaces');
-        }
+        // The navigation endpoint returns the data directly, not wrapped in success object
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error(
           `[@context:NavigationConfigProvider:listAvailableUserInterfaces] Error:`,

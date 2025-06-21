@@ -6,6 +6,7 @@ import {
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 
 import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
 import { Host } from '../../../types/common/Host_Types';
@@ -28,7 +29,7 @@ interface RemotePanelProps {
   captureMode?: 'stream' | 'screenshot' | 'video';
 }
 
-export function RemotePanel({
+export const RemotePanel = React.memo(function RemotePanel({
   host,
   onReleaseControl,
   initialCollapsed = true,
@@ -355,4 +356,4 @@ export function RemotePanel({
       </Box>
     </Box>
   );
-}
+});

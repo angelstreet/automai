@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import React from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
@@ -30,7 +31,7 @@ interface HDMIStreamProps {
   sx?: any;
 }
 
-export function HDMIStream({
+export const HDMIStream = React.memo(function HDMIStream({
   host,
   onCollapsedChange,
   onMinimizedChange,
@@ -562,4 +563,4 @@ export function HDMIStream({
       )}
     </>
   );
-}
+});

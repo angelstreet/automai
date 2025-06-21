@@ -577,7 +577,8 @@ export const useNavigationEditor = () => {
     }
   }, [configHook]);
 
-  return {
+  // Memoize the return object to prevent unnecessary re-renders
+  return useMemo(() => ({
     // State (filtered views for ReactFlow display)
     nodes: filteredNodes,
     edges: filteredEdges,
@@ -728,5 +729,49 @@ export const useNavigationEditor = () => {
 
     // Load available trees
     loadAvailableTrees,
-  };
+  }), [
+    // Only include values that actually change, not stable function references
+    filteredNodes,
+    filteredEdges,
+    navigationState.nodes,
+    navigationState.edges,
+    navigationState.currentTreeName,
+    navigationState.isLoadingInterface,
+    navigationState.selectedNode,
+    navigationState.selectedEdge,
+    navigationState.isNodeDialogOpen,
+    navigationState.isEdgeDialogOpen,
+    navigationState.nodeForm,
+    navigationState.edgeForm,
+    navigationState.isSaving,
+    navigationState.saveError,
+    navigationState.saveSuccess,
+    pendingConnection,
+    navigationState.reactFlowWrapper,
+    navigationState.reactFlowInstance,
+    navigationState.currentTreeId,
+    navigationState.interfaceId,
+    navigationState.navigationPath,
+    navigationState.navigationNamePath,
+    navigationState.hasUnsavedChanges,
+    navigationState.isDiscardDialogOpen,
+    navigationState.userInterface,
+    navigationState.rootTree,
+    navigationState.viewPath,
+    navigationState.focusNodeId,
+    navigationState.maxDisplayDepth,
+    navigationState.availableFocusNodes,
+    configHook.isLocked,
+    configHook.lockInfo,
+    configHook.showReadOnlyOverlay,
+    configHook.sessionId,
+    deviceControl.selectedHost,
+    deviceControl.isControlActive,
+    deviceControl.isRemotePanelOpen,
+    deviceControl.showRemotePanel,
+    deviceControl.showAVPanel,
+    deviceControl.isVerificationActive,
+    deviceControl.availableHosts,
+    // Exclude stable functions from dependencies to prevent unnecessary re-renders
+  ]);
 };
